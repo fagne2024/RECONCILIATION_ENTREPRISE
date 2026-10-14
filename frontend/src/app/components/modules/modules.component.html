@@ -1,0 +1,360 @@
+<div class="modules-page">
+  <!-- TOP NAV -->
+  <nav class="topnav">
+    <div class="nav-brand">
+      <div class="nav-brand-dot"></div>
+      ReconciliApp
+    </div>
+    <div class="nav-sep"></div>
+    <div class="nav-path">
+      <strong>{{ 'TBL.modules' | translate }}</strong>
+    </div>
+    <div class="nav-spacer"></div>
+  </nav>
+
+  <!-- PAGE HEADER -->
+  <div class="page-header-modules">
+    <div class="ph-modules-left">
+      <div class="ph-eyebrow"><span></span>{{ 'MOD.eyebrow.administration' | translate }}</div>
+      <h1 class="ph-title-modules">{{ 'LBL.managementOf' | translate }}<em>{{ 'MOD.title.entity' | translate }}</em></h1>
+      <p class="ph-subtitle-modules">
+        {{ 'MOD.subtitle' | translate }}
+      </p>
+    </div>
+    <div class="ph-modules-metrics">
+      <div class="hero-kpi-strip">
+        <div class="hk-strip-item">
+          <div class="hk-strip-label">{{ 'TBL.modules' | translate }}</div>
+          <div class="hk-strip-value">{{ filteredModules.length }}</div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <div class="main">
+    <div class="modules-container">
+      <div class="header">
+        <div class="header-title">
+          <h2><i class="fas fa-cube"></i> {{ 'MOD.sectionTitle' | translate }}</h2>
+          <span class="modules-count">{{ 'MOD.count' | translate: { count: filteredModules.length } }}</span>
+        </div>
+        <button class="btn btn-primary" (click)="showAddForm = true">
+          <i class="fas fa-plus"></i> {{ 'MOD.newModuleBtn' | translate }}
+        </button>
+      </div>
+
+      <!-- Barre de recherche -->
+      <div class="search-filters-bar">
+        <div class="search-box">
+          <i class="fas fa-search"></i>
+          <input 
+            type="text" 
+            [(ngModel)]="searchTerm" 
+            [placeholder]="'MOD.searchPlaceholder' | translate"
+            class="search-input"
+            (input)="applyFilters()">
+        </div>
+        <button *ngIf="searchTerm" class="btn-clear-filters" (click)="clearFilters()">
+          <i class="fas fa-times"></i> {{ 'ACT.clear' | translate }}
+        </button>
+      </div>
+
+      <div class="table-container">
+        <div *ngIf="isLoading" class="loading">
+          <i class="fas fa-spinner fa-spin"></i>{{ 'MSG.loading' | translate }}</div>
+
+        <div *ngIf="!isLoading && filteredModules.length === 0" class="no-data">
+          <i class="fas fa-cube"></i>
+          <h3>{{ 'MOD.empty.title' | translate }}</h3>
+          <p *ngIf="searchTerm" class="help-text">
+            {{ 'MOD.empty.searchHint' | translate }}
+            <button class="btn-link" (click)="clearFilters()">{{ 'ACT.clearFilters' | translate }}</button>
+          </p>
+          <p *ngIf="!searchTerm">{{ 'MOD.empty.firstModuleHint' | translate }}</p>
+        </div>
+        
+        <div *ngIf="!isLoading && filteredModules.length > 0" class="table-wrapper">
+          <table class="modules-table">
+            <thead>
+              <tr>
+                <th>{{ 'MOD.table.name' | translate }}</th>
+                <th>{{ 'MOD.table.visible' | translate }}</th>
+                <th>{{ 'MOD.table.linkedProfils' | translate }}</th>
+                <th>{{ 'TBL.actions' | translate }}</th>
+              </tr>
+            </thead>
+            <tbody>
+              <tr *ngFor="let module of pagedModules">
+                <td class="module-name">
+                  {{ module.nom }}
+                  <span
+                    *ngIf="!isModuleActiveForCompany(module)"
+                    class="badge-not-activated"
+                    [title]="'MOD.notActivated.hint' | translate">
+                    <i class="fas fa-lock"></i> {{ 'MOD.notActivated.badge' | translate }}
+                  </span>
+                </td>
+                <td class="text-center">
+                  <label class="switch">
+                    <input type="checkbox" [checked]="module.visible !== false" (change)="toggleModuleVisibility(module, $event)">
+                    <span class="slider"></span>
+                  </label>
+                </td>
+                <td>
+                  <span class="profils-count-badge">{{ 'MOD.profilCount' | translate: { count: getProfilsForModule(module).length } }}</span>
+                </td>
+                <td class="actions">
+                  <button class="btn icon-btn" (click)="openProfilsModal(module)" [title]="'MOD.manageProfilsTitle' | translate">
+                    <i class="fas fa-users" style="color: #007bff;"></i>
+                  </button>
+                  <button class="btn icon-btn" (click)="openSubmenuVisibilityModal(module)" [title]="'MOD.manageSubmenuVisibilityTitle' | translate">
+                    <i class="fas fa-eye" style="color: var(--theme-primary, #667eea);"></i>
+                  </button>
+                  <button class="btn icon-btn" (click)="editModule(module)" title="{{ 'ACT.edit' | translate }}">
+                    <i class="fas fa-edit" style="color: #28a745;"></i>
+                  </button>
+                  <button class="btn icon-btn" (click)="deleteModule(module)" title="{{ 'ACT.delete' | translate }}">
+                    <i class="fas fa-trash" style="color: #dc3545;"></i>
+                  </button>
+                </td>
+              </tr>
+            </tbody>
+          </table>
+        </div>
+      </div>
+
+      <!-- Pagination -->
+      <div class="pagination-section" *ngIf="filteredModules.length > 0 && !isLoading">
+        <div class="pagination-controls">
+          <div class="items-per-page">
+            <label>{{ 'PAG.rowsPerPage' | translate }}</label>
+            <select [(ngModel)]="itemsPerPage" (change)="onItemsPerPageChange()" class="form-control">
+              <option [value]="10">10</option>
+              <option [value]="20">20</option>
+              <option [value]="50">50</option>
+              <option [value]="100">100</option>
+            </select>
+          </div>
+          
+          <button 
+            class="btn pagination-btn" 
+            [disabled]="currentPage === 1"
+            (click)="onPageChange(currentPage - 1)">
+            <i class="fas fa-chevron-left"></i>{{ 'PAG.previous' | translate }}</button>
+          
+          <div class="page-numbers">
+            <button 
+              *ngFor="let page of getVisiblePages()"
+              class="btn page-btn"
+              [class.active]="currentPage === page"
+              (click)="onPageChange(page)">
+              {{ page }}
+            </button>
+          </div>
+          
+          <button 
+            class="btn pagination-btn" 
+            [disabled]="currentPage === totalPages"
+            (click)="onPageChange(currentPage + 1)">{{ 'PAG.next' | translate }}<i class="fas fa-chevron-right"></i>
+          </button>
+        </div>
+        
+        <div class="pagination-info">
+          {{ 'MOD.pagination.info' | translate: { from: getStartIndex() + 1, to: getEndIndex(), total: filteredModules.length } }}
+          {{ 'MOD.pagination.page' | translate: { current: currentPage, total: totalPages } }}
+        </div>
+      </div>
+
+      <!-- Modal d'ajout -->
+      <div *ngIf="showAddForm" class="modal-overlay" (click)="closeAddModal()">
+        <div class="modal-container" (click)="$event.stopPropagation()">
+          <div class="modal-header">
+            <h3>{{ 'MOD.modal.addTitle' | translate }}</h3>
+            <button class="close-btn" (click)="cancelAdd()">
+              <i class="fas fa-times"></i>
+            </button>
+          </div>
+          <form [formGroup]="addForm" (ngSubmit)="createModule()">
+            <div class="modal-body">
+              <div class="form-section">
+                <div class="form-group">
+                  <label for="nom">{{ 'MOD.field.selectMenuLabel' | translate }}</label>
+                  <select 
+                    id="nom" 
+                    class="text-input" 
+                    formControlName="nom"
+                  >
+                    <option value="">{{ 'MOD.field.selectMenuPlaceholder' | translate }}</option>
+                    <option *ngFor="let menu of appMenus" [value]="menu">{{ menu }}</option>
+                  </select>
+                  <div *ngIf="addForm.get('nom')?.invalid && addForm.get('nom')?.touched" class="error-message">
+                    <span *ngIf="addForm.get('nom')?.errors?.['required']">{{ 'MOD.validation.selectMenu' | translate }}</span>
+                  </div>
+                </div>
+                <div class="form-group checkbox-group">
+                  <label class="checkbox-label">
+                    <input type="checkbox" formControlName="visible">
+                    <span>{{ 'MOD.field.visible' | translate }}</span>
+                  </label>
+                </div>
+              </div>
+            </div>
+            <div class="modal-footer">
+              <div class="modal-actions">
+                <button type="button" class="btn btn-secondary" (click)="cancelAdd()">{{ 'COMMON.actions.cancel' | translate }}</button>
+                <button type="submit" class="btn btn-primary" [disabled]="addForm.invalid || isAdding">
+                  <span *ngIf="!isAdding">{{ 'ACT.create' | translate }}</span>
+                  <span *ngIf="isAdding">
+                    <i class="fas fa-spinner fa-spin"></i> {{ 'MOD.submitting' | translate }}
+                  </span>
+                </button>
+              </div>
+            </div>
+          </form>
+        </div>
+      </div>
+
+      <!-- Modal d'édition -->
+      <div *ngIf="showEditForm" class="modal-overlay" (click)="closeEditModal()">
+        <div class="modal-container" (click)="$event.stopPropagation()">
+          <div class="modal-header">
+            <h3>{{ 'MOD.modal.editTitle' | translate }}</h3>
+            <button class="close-btn" (click)="closeEditModal()">
+              <i class="fas fa-times"></i>
+            </button>
+          </div>
+          <form [formGroup]="editForm" (ngSubmit)="updateModule()">
+            <div class="modal-body">
+              <div class="form-section">
+                <div class="form-group">
+                  <label for="edit-nom">{{ 'MOD.field.selectMenuLabel' | translate }}</label>
+                  <select 
+                    id="edit-nom" 
+                    class="text-input" 
+                    formControlName="nom"
+                  >
+                    <option value="">{{ 'MOD.field.selectMenuPlaceholder' | translate }}</option>
+                    <option *ngFor="let menu of appMenus" [value]="menu">{{ menu }}</option>
+                  </select>
+                  <div *ngIf="editForm.get('nom')?.invalid && editForm.get('nom')?.touched" class="error-message">
+                    <span *ngIf="editForm.get('nom')?.errors?.['required']">{{ 'MOD.validation.selectMenu' | translate }}</span>
+                  </div>
+                </div>
+                <div class="form-group checkbox-group">
+                  <label class="checkbox-label">
+                    <input type="checkbox" formControlName="visible">
+                    <span>{{ 'MOD.field.visible' | translate }}</span>
+                  </label>
+                </div>
+              </div>
+            </div>
+            <div class="modal-footer">
+              <div class="modal-actions">
+                <button type="button" class="btn btn-secondary" (click)="cancelEdit()">{{ 'COMMON.actions.cancel' | translate }}</button>
+                <button type="submit" class="btn btn-primary" [disabled]="editForm.invalid || isEditing">
+                  <span *ngIf="!isEditing">{{ 'ACT.update' | translate }}</span>
+                  <span *ngIf="isEditing">
+                    <i class="fas fa-spinner fa-spin"></i> {{ 'ACT.updating' | translate }}
+                  </span>
+                </button>
+              </div>
+            </div>
+          </form>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Modal de gestion des profils -->
+  <div *ngIf="showProfilsModal && selectedModule" class="modal-overlay" (click)="closeProfilsModal()">
+    <div class="modal-container profils-modal" (click)="$event.stopPropagation()">
+      <div class="modal-header">
+        <h3>
+          <i class="fas fa-users"></i> 
+          {{ 'MOD.modal.profilsTitle' | translate: { module: selectedModule.nom } }}
+        </h3>
+        <button class="close-btn" (click)="closeProfilsModal()">
+          <i class="fas fa-times"></i>
+        </button>
+      </div>
+      <div class="modal-body">
+        <div *ngIf="isSavingProfils" class="saving-indicator">
+          <i class="fas fa-spinner fa-spin"></i> {{ 'MOD.saving' | translate }}
+        </div>
+        <div class="profils-list-container">
+          <div *ngIf="profils.length === 0" class="no-profils-message">
+            <i class="fas fa-info-circle"></i> {{ 'MOD.noProfils' | translate }}
+          </div>
+          <div *ngFor="let profil of profils" class="profil-item">
+            <label class="profil-checkbox">
+              <input 
+                type="checkbox"
+                [checked]="isModuleAssociatedToProfil(selectedModule, profil)"
+                (change)="toggleProfilAssociation(profil, $event)"
+                [disabled]="isSavingProfils"
+              >
+              <span class="checkmark"></span>
+              <span class="profil-name">{{ profil.nom }}</span>
+              <span *ngIf="profil.description" class="profil-description">{{ profil.description }}</span>
+            </label>
+          </div>
+        </div>
+      </div>
+      <div class="modal-footer">
+        <div class="modal-actions">
+          <button type="button" class="btn btn-secondary" (click)="closeProfilsModal()" [disabled]="isSavingProfils">{{ 'COMMON.actions.close' | translate }}</button>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Modal de gestion visibilité sous-menus -->
+  <div *ngIf="showSubmenuVisibilityModal && selectedModuleForSubmenu" class="modal-overlay" (click)="closeSubmenuVisibilityModal()">
+    <div class="modal-container profils-modal" (click)="$event.stopPropagation()">
+      <div class="modal-header">
+        <h3>
+          <i class="fas fa-eye"></i> 
+          {{ 'MOD.modal.submenuVisibilityTitle' | translate: { module: selectedModuleForSubmenu.nom } }}
+        </h3>
+        <button class="close-btn" (click)="closeSubmenuVisibilityModal()">
+          <i class="fas fa-times"></i>
+        </button>
+      </div>
+      <div class="modal-body">
+        <div *ngIf="isSavingSubmenuVisibility" class="saving-indicator">
+          <i class="fas fa-spinner fa-spin"></i> {{ 'MOD.saving' | translate }}
+        </div>
+        <div class="submenus-visibility-container">
+          <div *ngIf="moduleSubmenus.length === 0" class="no-submenus-message">
+            <i class="fas fa-info-circle"></i> {{ 'MOD.noSubmenus' | translate }}
+          </div>
+          <div *ngFor="let submenu of moduleSubmenus" class="submenu-visibility-item">
+            <label class="submenu-visibility-checkbox">
+              <input 
+                type="checkbox"
+                [checked]="isSubmenuVisible(submenu)"
+                (change)="toggleSubmenuVisibility(submenu, $event)"
+                [disabled]="isSavingSubmenuVisibility"
+              >
+              <span class="checkmark"></span>
+              <span class="submenu-visibility-name">{{ submenu.label }}</span>
+              <span *ngIf="submenu.route" class="submenu-visibility-route">{{ submenu.route }}</span>
+            </label>
+          </div>
+        </div>
+      </div>
+      <div class="modal-footer">
+        <div class="modal-actions">
+          <button type="button" class="btn btn-secondary" (click)="closeSubmenuVisibilityModal()" [disabled]="isSavingSubmenuVisibility">{{ 'COMMON.actions.close' | translate }}</button>
+          <button type="button" class="btn btn-primary" (click)="saveSubmenuVisibility()" [disabled]="isSavingSubmenuVisibility">
+            <span *ngIf="!isSavingSubmenuVisibility">{{ 'ACT.save' | translate }}</span>
+            <span *ngIf="isSavingSubmenuVisibility">
+              <i class="fas fa-spinner fa-spin"></i> {{ 'MOD.submitting' | translate }}
+            </span>
+          </button>
+        </div>
+      </div>
+    </div>
+  </div>
+
+</div>  <!-- Fin .modules-page -->

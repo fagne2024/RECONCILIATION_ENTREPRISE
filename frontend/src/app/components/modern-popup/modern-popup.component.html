@@ -1,0 +1,29 @@
+<div class="modern-popup-overlay" *ngIf="isVisible" (click)="onClose()">
+  <div class="modern-popup" (click)="$event.stopPropagation()">
+    <div class="popup-header">
+      <h3 class="popup-title">{{ config.title || ('POPUP.notification' | translate) }}</h3>
+      <button class="popup-close" (click)="onClose()">×</button>
+    </div>
+    
+    <div class="popup-content">
+      <p class="popup-message">{{ config.message }}</p>
+      <p class="popup-lines-saved" *ngIf="config.linesSaved">
+        {{ 'POPUP.savedLines' | translate: { count: config.linesSaved } }}
+      </p>
+    </div>
+    
+    <div class="popup-actions">
+      <button 
+        class="popup-btn popup-btn-cancel" 
+        *ngIf="config.showCancelButton"
+        (click)="onCancel()">
+        {{ config.cancelText || ('COMMON.actions.cancel' | translate) }}
+      </button>
+      <button 
+        class="popup-btn popup-btn-confirm popup-btn-{{ config.type || 'info' }}"
+        (click)="onConfirm()">
+        {{ config.confirmText || ('COMMON.actions.ok' | translate) }}
+      </button>
+    </div>
+  </div>
+</div>

@@ -1,0 +1,728 @@
+<div class="ci-root">
+  <nav class="topnav">
+    <div class="nav-brand">
+      <div class="nav-brand-dot"></div>
+      ReconciliApp
+    </div>
+    <div class="nav-sep"></div>
+    <div class="nav-path">
+      <strong>{{ 'CIB.nav.title' | translate }}</strong>
+      <span class="nav-path-sub">{{ 'RBP.nav.title' | translate }}</span>
+    </div>
+    <div class="nav-spacer"></div>
+    <div class="nav-actions">
+      <button type="button" class="nav-btn secondary" (click)="refreshData()" [disabled]="loading">
+        <i class="fas" [ngClass]="loading ? 'fa-spinner fa-spin' : 'fa-sync-alt'"></i> {{ 'RBP.nav.refresh' | translate }}
+      </button>
+      <button type="button" class="nav-btn secondary" (click)="retourRapportBo()">
+        <i class="fas fa-arrow-left"></i> {{ 'CIB.nav.back' | translate }}
+      </button>
+    </div>
+  </nav>
+
+  <div class="page-header-report">
+    <div class="ph-report-left">
+      <div class="ph-eyebrow"><span></span>{{ 'CIB.nav.title' | translate }}</div>
+      <h1 class="ph-title-report">{{ 'CIB.title.prefix' | translate }} <em>{{ 'CIB.title.em' | translate }}</em></h1>
+      <p class="ci-subtitle">{{ subtitle }}</p>
+    </div>
+  </div>
+
+  <div class="main">
+    <div class="ci-filters-card">
+      <h2>{{ 'CIB.filters.scope' | translate }}</h2>
+      <div class="ci-filters">
+        <label>
+          <span>{{ 'TBL.country' | translate }}</span>
+          <select [(ngModel)]="selectedCountry" (ngModelChange)="appliquerFiltres()">
+            <option value="">{{ 'RBP.filters.choose' | translate }}</option>
+            <option *ngFor="let c of countries" [value]="c">{{ c }}</option>
+          </select>
+        </label>
+        <label>
+          <span>{{ 'TBL.year' | translate }}</span>
+          <select [(ngModel)]="selectedYear" (ngModelChange)="appliquerFiltres()">
+            <option *ngFor="let y of yearOptions" [value]="y">{{ y }}</option>
+          </select>
+        </label>
+        <label>
+          <span>{{ 'TBL.month' | translate }}</span>
+          <select [(ngModel)]="selectedMonth" (ngModelChange)="appliquerFiltres()">
+            <option *ngFor="let m of monthOptions" [value]="m.value">{{ m.label }}</option>
+          </select>
+        </label>
+        <label>
+          <span>ENV</span>
+          <select [(ngModel)]="selectedEnv" (ngModelChange)="appliquerFiltres()">
+            <option *ngFor="let e of envOptions" [value]="e">{{ e }}</option>
+          </select>
+        </label>
+        <label class="ci-filter-service">
+          <span>{{ 'TBL.service' | translate }}</span>
+          <select [(ngModel)]="selectedService" (ngModelChange)="onServiceFilterChange()">
+            <option value="">{{ 'FILT.allServices' | translate }}</option>
+            <option *ngFor="let s of availableServices" [value]="s">{{ s }}</option>
+          </select>
+        </label>
+      </div>
+      <p class="ci-perm-hint" *ngIf="!canShowValidationActions && !canShowCommentSection">
+        {{ 'CIB.hint.readOnly' | translate }}
+      </p>
+    </div>
+
+    <div *ngIf="error" class="ci-error">{{ error }}</div>
+    <div *ngIf="loading" class="ci-loading">
+      <i class="fas fa-spinner fa-spin"></i> {{ 'CIB.loading' | translate }}
+    </div>
+    <div *ngIf="!loading && loadingValidations" class="ci-loading-inline">
+      <i class="fas fa-spinner fa-spin"></i> {{ 'CIB.loadingValidations' | translate }}
+    </div>
+
+    <ng-container *ngIf="!loading && !error">
+      <div class="ci-toolbar" *ngIf="monthlyRows.length">
+        <button type="button" class="ci-tool-btn" (click)="toggleShowEcartColumns()">
+          <i class="fas" [ngClass]="showEcartColumns ? 'fa-compress-alt' : 'fa-chart-bar'"></i>
+          {{ (showEcartColumns ? 'CIB.toolbar.hideGaps' : 'CIB.toolbar.showGaps') | translate }}
+        </button>
+        <button
+          type="button"
+          class="ci-tool-btn ci-tool-btn--excel"
+          (click)="exportToExcel()"
+          [disabled]="!canExport || isExportingExcel || isExportingPdf"
+        >
+          <i class="fas" [ngClass]="isExportingExcel ? 'fa-spinner fa-spin' : 'fa-file-excel'"></i>
+          {{ 'CIB.export.excel' | translate }}
+        </button>
+        <button
+          type="button"
+          class="ci-tool-btn ci-tool-btn--pdf"
+          (click)="exportToPdf()"
+          [disabled]="!canExport || isExportingPdf || isExportingExcel"
+        >
+          <i class="fas" [ngClass]="isExportingPdf ? 'fa-spinner fa-spin' : 'fa-file-pdf'"></i>
+          {{ 'CIB.export.pdf' | translate }}
+        </button>
+      </div>
+
+      <div #ciExportRoot class="ci-export-root">
+      <div class="ci-section">
+        <div class="ci-section-head">
+          <div>
+            <h2>{{ 'CIB.section.monthlyTitle' | translate }}</h2>
+            <p class="ci-hint">
+              <span [innerHTML]="'CIB.section.hint' | translate: { status: 'TBL.traitement.cdo' | translate }"></span>
+            </p>
+          </div>
+          <button type="button" class="ci-tool-btn ci-section-toggle" (click)="toggleShowEcartColumns()" *ngIf="monthlyRows.length">
+            <i class="fas" [ngClass]="showEcartColumns ? 'fa-eye-slash' : 'fa-eye'"></i>
+            {{ (showEcartColumns ? 'CIB.toolbar.hideGapsShort' : 'CIB.toolbar.showGapsShort') | translate }}
+          </button>
+        </div>
+        <div class="ci-env-validation-bar" *ngIf="envValidationTotalCount">
+          <div class="ci-env-validation-status">
+            <span class="ci-env-validation-title">
+              <i class="fas fa-layer-group"></i>
+              {{ 'CIB.env.title' | translate: { label: envValidationLabel } }}
+            </span>
+            <span class="ci-env-validation-count" [class.ci-env-validation-count--done]="isEnvScopeFullyValidated">
+              {{ 'CIB.env.count' | translate: { validated: envValidationValidatedCount, total: envValidationTotalCount } }}
+            </span>
+            <span class="ci-env-validation-badge ci-pill ci-pill--ok" *ngIf="isEnvScopeFullyValidated">
+              <i class="fas fa-check-circle"></i> {{ 'CIB.env.validated' | translate }}
+            </span>
+            <span class="ci-env-validation-badge ci-pill ci-pill--validation" *ngIf="!isEnvScopeFullyValidated">{{ 'MSG.inProgress' | translate }}</span>
+          </div>
+          <div class="ci-env-validation-actions" *ngIf="canShowValidationActions">
+            <button
+              type="button"
+              class="ci-btn-validate ci-btn-validate--env"
+              *ngIf="canValidateControleInterne && envValidationPendingCount > 0"
+              [disabled]="!canValidateEnvScope"
+              (click)="validerParEnv()"
+            >
+              <i class="fas" [ngClass]="validatingEnvBulk ? 'fa-spinner fa-spin' : 'fa-check-double'"></i>
+              {{ 'CIB.action.validateAllEnv' | translate }}
+            </button>
+            <button
+              type="button"
+              class="ci-btn-revoke ci-btn-revoke--env"
+              *ngIf="canRevokeControleInterne && envValidationValidatedCount > 0"
+              [disabled]="!canRevokeEnvScope"
+              (click)="annulerValidationParEnv()"
+              [title]="'CIB.action.revokeAllEnvTitle' | translate"
+            >
+              <i class="fas" [ngClass]="validatingEnvBulk ? 'fa-spinner fa-spin' : 'fa-undo'"></i>
+              {{ 'CIB.action.revokeAllEnv' | translate }}
+            </button>
+          </div>
+        </div>
+        <div class="ci-section-totals" *ngIf="monthlyRows.length">
+          <div class="ci-total-card ci-total-card--meta">
+            <span class="ci-total-label">{{ 'TBL.rows' | translate }}</span>
+            <span class="ci-total-value">{{ monthlySectionTotals.combinaisons | number:'1.0-0' }}</span>
+          </div>
+          <div class="ci-total-card ci-total-card--nombre">
+            <span class="ci-total-label">{{ 'CIB.total.boCount' | translate }}</span>
+            <span class="ci-total-value">{{ formatCardNombre(monthlySectionTotals.boNombre) }}</span>
+          </div>
+          <div class="ci-total-card ci-total-card--volume">
+            <span class="ci-total-label">{{ 'CIB.total.boVolume' | translate }}</span>
+            <span class="ci-total-value">{{ formatCardVolume(monthlySectionTotals.boVolume) }}</span>
+          </div>
+          <div class="ci-total-card ci-total-card--nombre">
+            <span class="ci-total-label">{{ 'CIB.total.partCount' | translate }}</span>
+            <span class="ci-total-value">{{ formatCardNombre(monthlySectionTotals.partenaireNombre) }}</span>
+          </div>
+          <div class="ci-total-card ci-total-card--volume">
+            <span class="ci-total-label">{{ 'CIB.total.partVolume' | translate }}</span>
+            <span class="ci-total-value">{{ formatCardVolume(monthlySectionTotals.partenaireVolume) }}</span>
+          </div>
+          <ng-container *ngIf="showEcartColumns">
+            <div class="ci-total-card ci-total-card--nombre ci-total-card--ecart">
+              <span class="ci-total-label">{{ 'CIB.total.gapCount' | translate }}</span>
+              <span class="ci-total-value">{{ formatCardNombre(monthlySectionTotals.ecartNombre) }}</span>
+            </div>
+            <div class="ci-total-card ci-total-card--volume ci-total-card--ecart">
+              <span class="ci-total-label">{{ 'CIB.total.gapVolume' | translate }}</span>
+              <span class="ci-total-value">{{ formatCardVolume(monthlySectionTotals.ecartVolume) }}</span>
+            </div>
+            <div class="ci-total-card ci-total-card--meta ci-total-card--ecart">
+              <span class="ci-total-label">{{ 'CIB.total.rate' | translate }}</span>
+              <span class="ci-total-value">{{ libelleTauxTotal(monthlySectionTotals.tauxVolume) }}</span>
+            </div>
+          </ng-container>
+        </div>
+        <div
+          class="ci-table-wrap"
+          [class.ci-table-wrap--wide]="showEcartColumns"
+          *ngIf="monthlyRows.length; else noMonthly"
+        >
+          <table class="ci-table">
+            <thead>
+              <tr>
+                <th class="ci-col-month">{{ 'TBL.month' | translate }}</th>
+                <th class="ci-col-service">{{ 'TBL.service' | translate }}</th>
+                <th class="ci-col-tickets">{{ 'CIB.th.ticketId' | translate }}</th>
+                <th class="ci-col-status ci-col-status-rapport">{{ 'TBL.reportStatus' | translate }}</th>
+                <th class="ci-col-status ci-col-status-ci">{{ 'CIB.th.controleStatus' | translate }}</th>
+                <th class="num ci-col-num">{{ 'CIB.th.boCount' | translate }}</th>
+                <th class="num ci-col-num">{{ 'CIB.th.boVolume' | translate }}</th>
+                <th class="num ci-col-num">{{ 'CIB.th.partCount' | translate }}</th>
+                <th class="num ci-col-num">{{ 'CIB.th.partVolume' | translate }}</th>
+                <th class="num ci-col-num ci-col-ecart" *ngIf="showEcartColumns">{{ 'CIB.th.gapCount' | translate }}</th>
+                <th class="num ci-col-num ci-col-ecart" *ngIf="showEcartColumns">{{ 'CIB.th.gapVolume' | translate }}</th>
+                <th class="num ci-col-num ci-col-ecart" *ngIf="showEcartColumns">{{ 'CIB.th.rate' | translate }}</th>
+                <th class="ci-col-action">{{ 'COMMON.actions.action' | translate }}</th>
+              </tr>
+            </thead>
+            <tbody>
+              <tr *ngFor="let row of paginatedMonthlyRows; trackBy: trackByRow">
+                <td class="ci-col-month">{{ row.monthLabel }}</td>
+                <td class="ci-col-service ci-service" [title]="row.service">{{ row.service }}</td>
+                <td class="ci-col-tickets ci-tickets-cell">
+                  <div class="ci-tickets-cell-inner">
+                    <ng-container *ngIf="row.ticketIds?.length; else noRowTicket">
+                      <button
+                        type="button"
+                        class="ci-ticket-badge ci-ticket-badge--btn"
+                        (click)="openTicketModal(row.ticketIds, row.monthLabel + ' — ' + row.service)"
+                        [title]="'CIB.ticket.viewTitle' | translate: { count: row.ticketIds!.length }"
+                      >{{ formatTicketIdsLabel(row.ticketIds) }}</button>
+                    </ng-container>
+                    <ng-template #noRowTicket><span class="ci-ticket-empty">—</span></ng-template>
+                  </div>
+                </td>
+                <td class="ci-col-status ci-col-status-rapport">
+                  <span [class]="classeStatutRapport(row.traitement)">{{ row.statutRapport }}</span>
+                </td>
+                <td class="ci-col-status ci-col-status-ci">
+                  <span [class]="classeStatutControle(row)">{{ row.statutControleInterne }}</span>
+                  <div class="ci-valid-meta" *ngIf="row.isControleValide && row.controleInterneValidatedBy">
+                    {{ 'CIB.row.validatedBy' | translate: { name: row.controleInterneValidatedBy } }}
+                  </div>
+                </td>
+                <td class="num">{{ formatNumber(row.boNombre) }}</td>
+                <td class="num">{{ formatVolume(row.boVolume) }}</td>
+                <td class="num">{{ formatNumber(row.partenaireNombre) }}</td>
+                <td class="num">{{ formatVolume(row.partenaireVolume) }}</td>
+                <td class="num ci-col-ecart" *ngIf="showEcartColumns">{{ formatNumber(row.ecartNombre) }}</td>
+                <td class="num ci-col-ecart" *ngIf="showEcartColumns">{{ formatVolume(row.ecartVolume) }}</td>
+                <td class="num ci-col-ecart" *ngIf="showEcartColumns">{{ libelleTaux(row) }}</td>
+                <td class="ci-col-action">
+                  <button
+                    type="button"
+                    class="ci-btn-validate"
+                    *ngIf="!row.isControleValide && canValidateControleInterne"
+                    [disabled]="!canValidateRow(row)"
+                    (click)="validerLigne(row)"
+                  >
+                    <i class="fas" [ngClass]="isRowValidating(row) ? 'fa-spinner fa-spin' : 'fa-check'"></i>
+                    {{ 'CIB.action.validate' | translate }}
+                  </button>
+                  <button
+                    type="button"
+                    class="ci-btn-revoke"
+                    *ngIf="row.isControleValide && canRevokeControleInterne"
+                    [disabled]="!canRevokeRow(row)"
+                    (click)="annulerValidation(row)"
+                    [title]="'CIB.action.revokeTitle' | translate"
+                  >
+                    <i class="fas" [ngClass]="isRowValidating(row) ? 'fa-spinner fa-spin' : 'fa-undo'"></i>{{ 'COMMON.actions.cancel' | translate }}</button>
+                  <span class="ci-validated-tag" *ngIf="row.isControleValide && !canRevokeControleInterne">
+                    <i class="fas fa-check-circle"></i> {{ 'CIB.badge.validated' | translate }}
+                  </span>
+                </td>
+              </tr>
+            </tbody>
+            <tfoot>
+              <tr class="ci-table-total-row">
+                <td colspan="5"><strong>{{ 'COMMON.actions.total' | translate }}</strong></td>
+                <td class="num"><strong>{{ formatNumber(monthlySectionTotals.boNombre) }}</strong></td>
+                <td class="num"><strong>{{ formatVolume(monthlySectionTotals.boVolume) }}</strong></td>
+                <td class="num"><strong>{{ formatNumber(monthlySectionTotals.partenaireNombre) }}</strong></td>
+                <td class="num"><strong>{{ formatVolume(monthlySectionTotals.partenaireVolume) }}</strong></td>
+                <td class="num ci-col-ecart" *ngIf="showEcartColumns"><strong>{{ formatNumber(monthlySectionTotals.ecartNombre) }}</strong></td>
+                <td class="num ci-col-ecart" *ngIf="showEcartColumns"><strong>{{ formatVolume(monthlySectionTotals.ecartVolume) }}</strong></td>
+                <td class="num ci-col-ecart" *ngIf="showEcartColumns"><strong>{{ libelleTauxTotal(monthlySectionTotals.tauxVolume) }}</strong></td>
+                <td></td>
+              </tr>
+            </tfoot>
+          </table>
+        </div>
+        <div class="ci-pagination" *ngIf="monthlyRows.length > itemsPerPage">
+          <div class="ci-pagination-info">
+            {{ 'CIB.pagination.info' | translate: { start: getMonthlyPaginationStartIndex(), end: getMonthlyPaginationEndIndex(), total: monthlyRows.length | number: '1.0-0' } }}
+          </div>
+          <div class="ci-pagination-controls">
+            <button
+              type="button"
+              class="ci-pagination-btn"
+              (click)="goToMonthlyPage(1)"
+              [disabled]="currentPage === 1"
+              title="{{ 'PAG.first' | translate }}"
+            >
+              <i class="fas fa-angle-double-left"></i>
+            </button>
+            <button
+              type="button"
+              class="ci-pagination-btn"
+              (click)="previousMonthlyPage()"
+              [disabled]="currentPage === 1"
+              title="{{ 'PAG.previousPage' | translate }}"
+            >
+              <i class="fas fa-angle-left"></i>
+            </button>
+            <div class="ci-page-numbers">
+              <button
+                type="button"
+                *ngFor="let page of getMonthlyPageNumbers()"
+                class="ci-page-number"
+                [class.ci-page-number--active]="page === currentPage"
+                (click)="goToMonthlyPage(page)"
+              >
+                {{ page }}
+              </button>
+            </div>
+            <button
+              type="button"
+              class="ci-pagination-btn"
+              (click)="nextMonthlyPage()"
+              [disabled]="currentPage === totalPages"
+              title="{{ 'PAG.nextPage' | translate }}"
+            >
+              <i class="fas fa-angle-right"></i>
+            </button>
+            <button
+              type="button"
+              class="ci-pagination-btn"
+              (click)="goToMonthlyPage(totalPages)"
+              [disabled]="currentPage === totalPages"
+              title="{{ 'PAG.last' | translate }}"
+            >
+              <i class="fas fa-angle-double-right"></i>
+            </button>
+          </div>
+        </div>
+        <ng-template #noMonthly>
+          <p class="ci-empty" *ngIf="emptyScopeHint; else noMonthlyFilters">{{ emptyScopeHint }}</p>
+          <ng-template #noMonthlyFilters>
+            <p class="ci-empty">{{ 'CIB.empty.noData' | translate }}</p>
+          </ng-template>
+        </ng-template>
+      </div>
+
+      <div class="ci-section ci-tickets-section" *ngIf="ticketsByMonth.length">
+        <h2>{{ 'CIB.tickets.sectionTitle' | translate }}</h2>
+        <p class="ci-hint">{{ 'CIB.hint.clickTickets' | translate }}</p>
+        <div class="ci-month-tickets-grid">
+          <div class="ci-month-tickets-card" *ngFor="let block of ticketsByMonth">
+            <div class="ci-month-tickets-title">{{ block.monthLabel }}</div>
+            <ng-container *ngIf="block.ticketIds.length; else noTicketsForMonth">
+              <button
+                type="button"
+                class="ci-ticket-badge ci-ticket-badge--btn"
+                (click)="openTicketModal(block.ticketIds, ticketModalTitleFor(block.monthLabel))"
+                [title]="'CIB.ticket.viewTitle' | translate: { count: block.ticketIds.length }"
+              >{{ formatTicketIdsLabel(block.ticketIds) }}</button>
+            </ng-container>
+            <ng-template #noTicketsForMonth>
+              <span class="ci-ticket-empty">{{ 'CIB.tickets.none' | translate }}</span>
+            </ng-template>
+          </div>
+        </div>
+      </div>
+
+      <div class="ci-panels">
+        <div class="ci-panel ci-panel--warn">
+          <h3>
+            <i class="fas fa-exclamation-triangle"></i>
+            {{ 'CIB.panel.nonValidesTitle' | translate }}
+          </h3>
+          <div class="ci-section-totals ci-section-totals--compact">
+            <div class="ci-total-card ci-total-card--meta">
+              <span class="ci-total-label">{{ 'CIB.total.combinations' | translate }}</span>
+              <span class="ci-total-value">{{ nonValidesSectionTotals.combinaisons | number:'1.0-0' }}</span>
+            </div>
+            <div class="ci-total-card ci-total-card--nombre">
+              <span class="ci-total-label">{{ 'COMMON.actions.count' | translate }}</span>
+              <span class="ci-total-value">{{ formatCardNombre(nonValidesSectionTotals.rapportNombre) }}</span>
+            </div>
+            <div class="ci-total-card ci-total-card--volume">
+              <span class="ci-total-label">{{ 'TBL.volume' | translate }}</span>
+              <span class="ci-total-value">{{ formatCardVolume(nonValidesSectionTotals.rapportVolume) }}</span>
+            </div>
+          </div>
+          <div class="ci-panel-filters" *ngIf="nonValidesCloturesAll.length">
+            <label>
+              <span>{{ 'TBL.date' | translate }}</span>
+              <select [(ngModel)]="nonValidesPanelFilter.date" (ngModelChange)="onPanelFilterChange('nonValides')">
+                <option value="">{{ 'CIB.filter.allDates' | translate }}</option>
+                <option *ngFor="let d of getPanelDateOptions(nonValidesCloturesAll)" [value]="d">{{ formatFrShort(d) }}</option>
+              </select>
+            </label>
+            <label>
+              <span>{{ 'TBL.service' | translate }}</span>
+              <select [(ngModel)]="nonValidesPanelFilter.service" (ngModelChange)="onPanelFilterChange('nonValides')">
+                <option value="">{{ 'FILT.allServices' | translate }}</option>
+                <option *ngFor="let s of getPanelServiceOptions(nonValidesCloturesAll)" [value]="s">{{ s }}</option>
+              </select>
+            </label>
+            <label>
+              <span>{{ 'TBL.reportStatus' | translate }}</span>
+              <select [(ngModel)]="nonValidesPanelFilter.statut" (ngModelChange)="onPanelFilterChange('nonValides')">
+                <option value="">{{ 'FILT.allStatuses' | translate }}</option>
+                <option *ngFor="let st of getPanelStatutOptions(nonValidesCloturesAll)" [value]="st">{{ st }}</option>
+              </select>
+            </label>
+            <button
+              type="button"
+              class="ci-panel-filter-reset"
+              *ngIf="hasActivePanelFilter('nonValides')"
+              (click)="resetPanelFilters('nonValides')"
+            >{{ 'COMMON.actions.reset' | translate }}</button>
+          </div>
+          <div class="ci-mini-table-wrap ci-mini-table-wrap--paginated" *ngIf="nonValidesCloturesAll.length; else noNonValides">
+            <p class="ci-empty-small" *ngIf="!filteredNonValidesClotures.length">{{ 'CIB.empty.noResult' | translate }}</p>
+            <table class="ci-mini-table" *ngIf="filteredNonValidesClotures.length">
+              <thead>
+                <tr>
+                  <th>{{ 'TBL.date' | translate }}</th>
+                  <th>{{ 'TBL.service' | translate }}</th>
+                  <th>{{ 'TBL.reportStatus' | translate }}</th>
+                  <th class="num">{{ 'CIB.th.countShort' | translate }}</th>
+                  <th class="num">{{ 'TBL.volume' | translate }}</th>
+                </tr>
+              </thead>
+              <tbody>
+                <tr *ngFor="let line of paginatedNonValidesClotures; trackBy: trackByDateService">
+                  <td>{{ formatFrShort(line.date) }}</td>
+                  <td>{{ line.service }}</td>
+                  <td><span class="ci-pill ci-pill--pending">{{ line.statutRapport }}</span></td>
+                  <td class="num">{{ formatNumber(line.nombre) }}</td>
+                  <td class="num">{{ formatVolume(line.volume) }}</td>
+                </tr>
+              </tbody>
+              <tfoot>
+                <tr class="ci-table-total-row">
+                  <td colspan="3"><strong>{{ 'COMMON.actions.total' | translate }}</strong></td>
+                  <td class="num"><strong>{{ formatNumber(nonValidesSectionTotals.rapportNombre) }}</strong></td>
+                  <td class="num"><strong>{{ formatVolume(nonValidesSectionTotals.rapportVolume) }}</strong></td>
+                </tr>
+              </tfoot>
+            </table>
+            <div class="ci-pagination ci-pagination--panel" *ngIf="filteredNonValidesClotures.length > panelItemsPerPage">
+              <div class="ci-pagination-info">
+                {{ 'CIB.pagination.info' | translate: { start: getPanelPaginationStartIndex('nonValides'), end: getPanelPaginationEndIndex('nonValides'), total: filteredNonValidesClotures.length | number: '1.0-0' } }}
+              </div>
+              <div class="ci-pagination-controls">
+                <button
+                  type="button"
+                  class="ci-pagination-btn"
+                  (click)="goToPanelPage('nonValides', 1)"
+                  [disabled]="nonValidesPanelPage === 1"
+                  title="{{ 'PAG.first' | translate }}"
+                >
+                  <i class="fas fa-angle-double-left"></i>
+                </button>
+                <button
+                  type="button"
+                  class="ci-pagination-btn"
+                  (click)="previousPanelPage('nonValides')"
+                  [disabled]="nonValidesPanelPage === 1"
+                  title="{{ 'PAG.previousPage' | translate }}"
+                >
+                  <i class="fas fa-angle-left"></i>
+                </button>
+                <div class="ci-page-numbers">
+                  <button
+                    type="button"
+                    *ngFor="let page of getPanelPageNumbers('nonValides')"
+                    class="ci-page-number"
+                    [class.ci-page-number--active]="page === nonValidesPanelPage"
+                    (click)="goToPanelPage('nonValides', page)"
+                  >
+                    {{ page }}
+                  </button>
+                </div>
+                <button
+                  type="button"
+                  class="ci-pagination-btn"
+                  (click)="nextPanelPage('nonValides')"
+                  [disabled]="nonValidesPanelPage === nonValidesPanelTotalPages"
+                  title="{{ 'PAG.nextPage' | translate }}"
+                >
+                  <i class="fas fa-angle-right"></i>
+                </button>
+                <button
+                  type="button"
+                  class="ci-pagination-btn"
+                  (click)="goToPanelPage('nonValides', nonValidesPanelTotalPages)"
+                  [disabled]="nonValidesPanelPage === nonValidesPanelTotalPages"
+                  title="{{ 'PAG.last' | translate }}"
+                >
+                  <i class="fas fa-angle-double-right"></i>
+                </button>
+              </div>
+            </div>
+          </div>
+          <ng-template #noNonValides>
+            <p class="ci-empty-small">{{ 'CIB.empty.allValidated' | translate }}</p>
+          </ng-template>
+        </div>
+
+        <div class="ci-panel ci-panel--ok">
+          <h3>
+            <i class="fas fa-check-circle"></i>
+            {{ 'CIB.panel.validesTitle' | translate }}
+          </h3>
+          <div class="ci-section-totals ci-section-totals--compact">
+            <div class="ci-total-card ci-total-card--meta">
+              <span class="ci-total-label">{{ 'CIB.total.combinations' | translate }}</span>
+              <span class="ci-total-value">{{ validesSectionTotals.combinaisons | number:'1.0-0' }}</span>
+            </div>
+            <div class="ci-total-card ci-total-card--nombre">
+              <span class="ci-total-label">{{ 'COMMON.actions.count' | translate }}</span>
+              <span class="ci-total-value">{{ formatCardNombre(validesSectionTotals.rapportNombre) }}</span>
+            </div>
+            <div class="ci-total-card ci-total-card--volume">
+              <span class="ci-total-label">{{ 'TBL.volume' | translate }}</span>
+              <span class="ci-total-value">{{ formatCardVolume(validesSectionTotals.rapportVolume) }}</span>
+            </div>
+          </div>
+          <div class="ci-panel-filters" *ngIf="validesCloturesAll.length">
+            <label>
+              <span>{{ 'TBL.date' | translate }}</span>
+              <select [(ngModel)]="validesPanelFilter.date" (ngModelChange)="onPanelFilterChange('valides')">
+                <option value="">{{ 'CIB.filter.allDates' | translate }}</option>
+                <option *ngFor="let d of getPanelDateOptions(validesCloturesAll)" [value]="d">{{ formatFrShort(d) }}</option>
+              </select>
+            </label>
+            <label>
+              <span>{{ 'TBL.service' | translate }}</span>
+              <select [(ngModel)]="validesPanelFilter.service" (ngModelChange)="onPanelFilterChange('valides')">
+                <option value="">{{ 'FILT.allServices' | translate }}</option>
+                <option *ngFor="let s of getPanelServiceOptions(validesCloturesAll)" [value]="s">{{ s }}</option>
+              </select>
+            </label>
+            <label>
+              <span>{{ 'TBL.reportStatus' | translate }}</span>
+              <select [(ngModel)]="validesPanelFilter.statut" (ngModelChange)="onPanelFilterChange('valides')">
+                <option value="">{{ 'FILT.allStatuses' | translate }}</option>
+                <option *ngFor="let st of getPanelStatutOptions(validesCloturesAll)" [value]="st">{{ st }}</option>
+              </select>
+            </label>
+            <button
+              type="button"
+              class="ci-panel-filter-reset"
+              *ngIf="hasActivePanelFilter('valides')"
+              (click)="resetPanelFilters('valides')"
+            >{{ 'COMMON.actions.reset' | translate }}</button>
+          </div>
+          <div class="ci-mini-table-wrap ci-mini-table-wrap--paginated" *ngIf="validesCloturesAll.length; else noValides">
+            <p class="ci-empty-small" *ngIf="!filteredValidesClotures.length">{{ 'CIB.empty.noResult' | translate }}</p>
+            <table class="ci-mini-table" *ngIf="filteredValidesClotures.length">
+              <thead>
+                <tr>
+                  <th>{{ 'TBL.date' | translate }}</th>
+                  <th>{{ 'TBL.service' | translate }}</th>
+                  <th>{{ 'TBL.reportStatus' | translate }}</th>
+                  <th class="num">{{ 'CIB.th.countShort' | translate }}</th>
+                  <th class="num">{{ 'TBL.volume' | translate }}</th>
+                </tr>
+              </thead>
+              <tbody>
+                <tr *ngFor="let line of paginatedValidesClotures; trackBy: trackByDateService">
+                  <td>{{ formatFrShort(line.date) }}</td>
+                  <td>{{ line.service }}</td>
+                  <td><span class="ci-pill ci-pill--ok">{{ line.statutRapport }}</span></td>
+                  <td class="num">{{ formatNumber(line.nombre) }}</td>
+                  <td class="num">{{ formatVolume(line.volume) }}</td>
+                </tr>
+              </tbody>
+              <tfoot>
+                <tr class="ci-table-total-row">
+                  <td colspan="3"><strong>{{ 'COMMON.actions.total' | translate }}</strong></td>
+                  <td class="num"><strong>{{ formatNumber(validesSectionTotals.rapportNombre) }}</strong></td>
+                  <td class="num"><strong>{{ formatVolume(validesSectionTotals.rapportVolume) }}</strong></td>
+                </tr>
+              </tfoot>
+            </table>
+            <div class="ci-pagination ci-pagination--panel" *ngIf="filteredValidesClotures.length > panelItemsPerPage">
+              <div class="ci-pagination-info">
+                {{ 'CIB.pagination.info' | translate: { start: getPanelPaginationStartIndex('valides'), end: getPanelPaginationEndIndex('valides'), total: filteredValidesClotures.length | number: '1.0-0' } }}
+              </div>
+              <div class="ci-pagination-controls">
+                <button
+                  type="button"
+                  class="ci-pagination-btn"
+                  (click)="goToPanelPage('valides', 1)"
+                  [disabled]="validesPanelPage === 1"
+                  title="{{ 'PAG.first' | translate }}"
+                >
+                  <i class="fas fa-angle-double-left"></i>
+                </button>
+                <button
+                  type="button"
+                  class="ci-pagination-btn"
+                  (click)="previousPanelPage('valides')"
+                  [disabled]="validesPanelPage === 1"
+                  title="{{ 'PAG.previousPage' | translate }}"
+                >
+                  <i class="fas fa-angle-left"></i>
+                </button>
+                <div class="ci-page-numbers">
+                  <button
+                    type="button"
+                    *ngFor="let page of getPanelPageNumbers('valides')"
+                    class="ci-page-number"
+                    [class.ci-page-number--active]="page === validesPanelPage"
+                    (click)="goToPanelPage('valides', page)"
+                  >
+                    {{ page }}
+                  </button>
+                </div>
+                <button
+                  type="button"
+                  class="ci-pagination-btn"
+                  (click)="nextPanelPage('valides')"
+                  [disabled]="validesPanelPage === validesPanelTotalPages"
+                  title="{{ 'PAG.nextPage' | translate }}"
+                >
+                  <i class="fas fa-angle-right"></i>
+                </button>
+                <button
+                  type="button"
+                  class="ci-pagination-btn"
+                  (click)="goToPanelPage('valides', validesPanelTotalPages)"
+                  [disabled]="validesPanelPage === validesPanelTotalPages"
+                  title="{{ 'PAG.last' | translate }}"
+                >
+                  <i class="fas fa-angle-double-right"></i>
+                </button>
+              </div>
+            </div>
+          </div>
+          <ng-template #noValides>
+            <p class="ci-empty-small">{{ 'CIB.empty.noneValidated' | translate }}</p>
+          </ng-template>
+        </div>
+      </div>
+      </div><!-- .ci-export-root -->
+
+      <div class="ci-section ci-comment-section" *ngIf="canShowCommentSection">
+        <h2>{{ 'CIB.comment.sectionTitle' | translate }}</h2>
+        <p class="ci-hint">
+          {{ 'CIB.comment.hint' | translate }}
+        </p>
+        <label class="ci-comment-label" *ngIf="canSendEmailControleInterne">
+          <span>{{ 'CIB.comment.recipients' | translate }}</span>
+          <input
+            type="text"
+            [(ngModel)]="destinatairesEmails"
+            placeholder="ex. controle@entreprise.com, audit@entreprise.com"
+            class="ci-comment-input"
+          />
+        </label>
+        <label class="ci-comment-label" *ngIf="canConsultCommentaireControleInterne || canModifyCommentaireControleInterne">
+          <span>{{ 'TBL.comment' | translate }}</span>
+          <textarea
+            rows="4"
+            [(ngModel)]="commentaire"
+            placeholder="{{ 'CIB.comment.placeholder' | translate }}"
+            class="ci-comment-textarea"
+            [readonly]="!canModifyCommentaireControleInterne"
+          ></textarea>
+        </label>
+        <div class="ci-comment-meta" *ngIf="commentUpdatedAt || commentLastEmailedAt">
+          <span *ngIf="commentUpdatedAt">{{ (commentUpdatedBy ? 'CIB.comment.savedBy' : 'CIB.comment.saved') | translate: { name: commentUpdatedBy } }}</span>
+          <span *ngIf="commentLastEmailedAt">{{ (commentLastEmailedBy ? 'CIB.comment.lastSentBy' : 'CIB.comment.lastSent') | translate: { name: commentLastEmailedBy } }}</span>
+        </div>
+        <div class="ci-comment-actions">
+          <button
+            type="button"
+            class="ci-btn-save-comment"
+            *ngIf="canModifyCommentaireControleInterne"
+            (click)="enregistrerCommentaire()"
+            [disabled]="savingComment || sendingCommentEmail || !selectedCountry"
+          >
+            <i class="fas" [ngClass]="savingComment ? 'fa-spinner fa-spin' : 'fa-save'"></i>{{ 'COMMON.actions.save' | translate }}</button>
+          <button
+            type="button"
+            class="ci-btn-send-email"
+            *ngIf="canSendEmailControleInterne"
+            (click)="envoyerCommentaireParMail()"
+            [disabled]="savingComment || sendingCommentEmail || !selectedCountry || !destinatairesEmails.trim()"
+          >
+            <i class="fas" [ngClass]="sendingCommentEmail ? 'fa-spinner fa-spin' : 'fa-envelope'"></i>
+            {{ 'CIB.comment.sendEmail' | translate }}
+          </button>
+        </div>
+      </div>
+    </ng-container>
+  </div>
+</div>
+
+<div class="ci-modal-overlay" *ngIf="ticketModalOpen" (click)="closeTicketModal()">
+  <div class="ci-modal" (click)="$event.stopPropagation()" role="dialog" aria-labelledby="ci-ticket-modal-title">
+    <div class="ci-modal-header">
+      <h3 id="ci-ticket-modal-title">{{ ticketModalTitle }}</h3>
+      <button type="button" class="ci-modal-close" (click)="closeTicketModal()" aria-label="{{ 'COMMON.actions.close' | translate }}">&times;</button>
+    </div>
+    <div class="ci-modal-body">
+      <p class="ci-modal-hint">{{ 'CIB.modal.hint' | translate: { count: ticketModalTicketIds.length } }}</p>
+      <div class="ci-ticket-links ci-ticket-links--modal">
+        <a
+          *ngFor="let ticketId of ticketModalTicketIds"
+          class="ci-ticket-link"
+          [href]="getGlpiTicketUrl(ticketId)"
+          target="_blank"
+          rel="noopener noreferrer"
+          [title]="'CIB.modal.openTitle' | translate: { id: ticketId }"
+        >{{ ticketId }}</a>
+      </div>
+    </div>
+    <div class="ci-modal-footer">
+      <button type="button" class="ci-tool-btn" (click)="closeTicketModal()">{{ 'COMMON.actions.close' | translate }}</button>
+    </div>
+  </div>
+</div>

@@ -1,0 +1,204 @@
+<div class="global-preview-container">
+    <div class="page-header">
+        <div class="breadcrumb">
+            <button class="breadcrumb-link" (click)="goBack()">← Retour au tableau de bord</button>
+        </div>
+    </div>
+    
+    <div class="preview-content">
+        <!-- Header -->
+        <div class="preview-header">
+            <h1>📊 Aperçu Global de Réconciliation</h1>
+            <p class="subtitle">Date: {{ currentDate }} • Niveau Group</p>
+        </div>
+        
+        <!-- Loading -->
+        <div *ngIf="loading" class="loading-container">
+            <div class="loading-spinner">🔄</div>
+            <div class="loading-message">{{ 'MSG.loadingData' | translate }}</div>
+        </div>
+        
+        <!-- Error -->
+        <div *ngIf="error && !loading" class="error-container">
+            <div class="error-icon">❌</div>
+            <div class="error-message">{{ error }}</div>
+            <button class="retry-btn" (click)="loadReportData()">🔄 Réessayer</button>
+        </div>
+        
+        <!-- Filtres -->
+        <div *ngIf="!loading && !error" class="filters-container">
+            <div class="filters-header">
+                <h3>🔍 Filtres</h3>
+                <button class="toggle-filters-btn" (click)="showFilters = !showFilters">
+                    {{ showFilters ? 'Masquer' : 'Afficher' }} les filtres
+                </button>
+            </div>
+            
+            <div *ngIf="showFilters" class="filters-content">
+                <div class="filter-group">
+                    <label class="filter-label">{{ 'LBL.serviceLabel' | translate }}</label>
+                    <input 
+                        type="text" 
+                        [(ngModel)]="selectedService" 
+                        (input)="onFilterChange()"
+                        placeholder="Tapez pour rechercher un service..."
+                        class="filter-input"
+                        list="service-list">
+                    <datalist id="service-list">
+                        <option *ngFor="let service of uniqueServices" [value]="service">{{service}}</option>
+                    </datalist>
+                </div>
+                
+                <div class="filter-group">
+                    <label class="filter-label">{{ 'LBL.countryLabel' | translate }}</label>
+                    <input 
+                        type="text" 
+                        [(ngModel)]="selectedCountry" 
+                        (input)="onFilterChange()"
+                        placeholder="Tapez pour rechercher un pays..."
+                        class="filter-input"
+                        list="country-list">
+                    <datalist id="country-list">
+                        <option *ngFor="let country of uniqueCountries" [value]="country">{{country}}</option>
+                    </datalist>
+                </div>
+                
+                <div class="filter-group">
+                    <label class="filter-label">{{ 'MSG.processed' | translate }}</label>
+                    <input 
+                        type="text" 
+                        [(ngModel)]="selectedAgency" 
+                        (input)="onFilterChange()"
+                        placeholder="Tapez pour rechercher une agence..."
+                        class="filter-input"
+                        list="agency-list">
+                    <datalist id="agency-list">
+                        <option *ngFor="let agency of uniqueAgencies" [value]="agency">{{agency}}</option>
+                    </datalist>
+                </div>
+                
+                <div class="filter-group">
+                    <label class="filter-label">{{ 'LBL.startDateLabel' | translate }}</label>
+                    <input 
+                        type="date" 
+                        [(ngModel)]="selectedDateStart" 
+                        (change)="onFilterChange()"
+                        class="filter-date">
+                </div>
+                
+                <div class="filter-group">
+                    <label class="filter-label">{{ 'LBL.endDateLabel' | translate }}</label>
+                    <input 
+                        type="date" 
+                        [(ngModel)]="selectedDateEnd" 
+                        (change)="onFilterChange()"
+                        class="filter-date">
+                </div>
+                
+                <div class="filter-actions">
+                    <button type="button" 
+                            (click)="resetFilters()" 
+                            class="reset-filters-btn">
+                        🔄 Réinitialiser
+                    </button>
+                </div>
+            </div>
+        </div>
+        
+        <!-- Content -->
+        <div *ngIf="!loading && !error">
+            <!-- KPIs -->
+            <div class="kpi-grid">
+                <div class="kpi-card kpi-blue">
+                    <div class="kpi-icon">💰</div>
+                    <div class="kpi-content">
+                        <div class="kpi-label">Montant Total</div>
+                        <div class="kpi-value">{{ formatAmount(totalAmount) }}</div>
+                    </div>
+                </div>
+                
+                <div class="kpi-card kpi-green">
+                    <div class="kpi-icon">✅</div>
+                    <div class="kpi-content">
+                        <div class="kpi-label">Taux de Réussite</div>
+                        <div class="kpi-value">{{ successRate.toFixed(1) }}%</div>
+                    </div>
+                </div>
+                
+                <div class="kpi-card kpi-orange">
+                    <div class="kpi-icon">⏳</div>
+                    <div class="kpi-content">
+                        <div class="kpi-label">Écarts en Cours</div>
+                        <div class="kpi-value">{{ pendingDiscrepancies }}</div>
+                    </div>
+                </div>
+                
+                <div class="kpi-card kpi-blue-light">
+                    <div class="kpi-icon">✓✓</div>
+                    <div class="kpi-content">
+                        <div class="kpi-label">Écarts Résolus</div>
+                        <div class="kpi-value">{{ resolvedDiscrepancies }}</div>
+                    </div>
+                </div>
+                
+                <div class="kpi-card kpi-purple">
+                    <div class="kpi-icon">📈</div>
+                    <div class="kpi-content">
+                        <div class="kpi-label">{{ 'TBL.matches' | translate }}</div>
+                        <div class="kpi-value">{{ formatNumber(totalMatches) }}</div>
+                    </div>
+                </div>
+            </div>
+            
+            <!-- Graphiques -->
+            <div class="charts-grid">
+                <!-- Top Partenaires -->
+                <div class="chart-card">
+                    <h2 class="chart-title">Top Partenaires (Services) par Montant</h2>
+                    <div class="chart-container">
+                        <canvas baseChart
+                                [data]="barChartData"
+                                [options]="barChartOptions"
+                                [type]="barChartType"
+                                [plugins]="[ChartDataLabels]">
+                        </canvas>
+                    </div>
+                </div>
+                
+                <!-- Statut de Réconciliation -->
+                <div class="chart-card">
+                    <h2 class="chart-title">Statut de Réconciliation</h2>
+                    <div class="chart-container">
+                        <canvas baseChart
+                                [data]="pieChartData"
+                                [options]="pieChartOptions"
+                                [type]="pieChartType"
+                                [plugins]="[ChartDataLabels]">
+                        </canvas>
+                    </div>
+                    <div class="pie-chart-percentages">
+                        <div *ngFor="let item of statusData" class="percentage-item">
+                            <span class="percentage-color" [style.background-color]="item.color"></span>
+                            <span class="percentage-label">{{ item.name }}:</span>
+                            <span class="percentage-value">{{ getPercentage(item.value) }}%</span>
+                        </div>
+                    </div>
+                </div>
+            </div>
+            
+            <!-- Écarts par Partenaire -->
+            <div *ngIf="stackedBarChartData.labels && stackedBarChartData.labels.length > 0" class="chart-card full-width">
+                <h2 class="chart-title">Détails des Écarts par Partenaire (Service)</h2>
+                <div class="chart-container">
+                    <canvas baseChart
+                            [data]="stackedBarChartData"
+                            [options]="stackedBarChartOptions"
+                            [type]="stackedBarChartType"
+                            [plugins]="[ChartDataLabels]">
+                    </canvas>
+                </div>
+            </div>
+            
+        </div>
+    </div>
+</div>

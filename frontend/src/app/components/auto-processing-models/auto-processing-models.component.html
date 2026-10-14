@@ -1,0 +1,2217 @@
+<div class="auto-processing-page">
+  <!-- TOP NAV -->
+  <nav class="topnav">
+    <div class="nav-brand">
+      <div class="nav-brand-dot"></div>
+      {{ 'APM.ReconciliApp' | translate }}
+    </div>
+    <div class="nav-sep"></div>
+    <div class="nav-path">
+      <strong>{{ 'APM.Modèlesautoprocessing' | translate }}</strong>
+    </div>
+    <div class="nav-spacer"></div>
+    <div class="nav-actions">
+      <button class="nav-btn primary" (click)="resetForm()">
+        <i class="fas fa-plus"></i> {{ 'APM.Nouveaumodèle' | translate }}
+      </button>
+    </div>
+  </nav>
+
+  <!-- PAGE HEADER -->
+  <div class="page-header-auto">
+    <div class="ph-auto-left">
+      <div class="ph-eyebrow"><span></span>{{ 'APM.Automation' | translate }}</div>
+      <h1 class="ph-title-auto">{{ 'APM.Modèlesde' | translate }} <em>{{ 'APM.Traitementautomatique' | translate }}</em></h1>
+      <p class="ph-subtitle-auto">
+        {{ 'APM.Configurezdesmodèlesautonomespourpilotervosréconciliationssanscodedur' | translate }}
+      </p>
+    </div>
+    <div class="ph-auto-right">
+      <div class="hero-kpi-strip">
+        <div class="hk-strip-item">
+          <span class="hk-strip-label">{{ 'APM.Modèles' | translate }}</span>
+          <span class="hk-strip-value">{{ models?.length || 0 | number:'1.0-0' }}</span>
+        </div>
+        <div class="hk-strip-sep"></div>
+        <div class="hk-strip-item">
+          <span class="hk-strip-label">{{ 'APM.Groupes' | translate }}</span>
+          <span class="hk-strip-value">{{ availableGroups?.length || 0 | number:'1.0-0' }}</span>
+        </div>
+        <div class="hk-strip-sep"></div>
+        <div class="hk-strip-item">
+          <span class="hk-strip-label">{{ 'TBL.country' | translate }}</span>
+          <span class="hk-strip-value">{{ availableCountries?.length || 0 | number:'1.0-0' }}</span>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <div class="main">
+  <div class="auto-processing-models-container">
+  <div class="header">
+    <h2>{{ 'APM.Modèlesdetraitementautomatique' | translate }}</h2>
+    <button class="btn btn-primary" (click)="resetForm()">
+          <i class="fas fa-plus"></i> {{ 'APM.Nouveaumodèle' | translate }}
+        </button>
+    </div>
+
+  <!-- Messages d'erreur et de succès -->
+  <div class="alert alert-danger" *ngIf="errorMessage">
+    {{ errorMessage }}
+        </div>
+  <div class="alert alert-success" *ngIf="successMessage">
+    {{ successMessage }}
+    </div>
+
+
+
+  <!-- Formulaire de création/édition pour modèles autonomes -->
+  <div class="form-section" *ngIf="editingModel || showCreateForm">
+    <h3>{{ (isDuplicatingModel ? 'APM.DuplicateModel' : (editingModel ? 'APM.EditAutonomousModel' : 'APM.CreateAutonomousModel')) | translate }}</h3>
+    <p class="form-description">
+      <i class="fas fa-robot"></i> 
+      {{ 'APM.Configurezunmodèleautonomequigéreraautomatiquementlaréconciliationsanscodedur' | translate }}
+    </p>
+
+    <div [formGroup]="modelForm">
+      
+      <!-- Section 1: Configuration de base -->
+      <div class="config-section">
+        <h4><i class="fas fa-cog"></i> {{ 'APM.Configurationdebase' | translate }}</h4>
+        
+      <div class="form-row">
+        <div class="form-group">
+          <label for="name">{{ 'APM.Nomdumodèle' | translate }}</label>
+            <input type="text" id="name" formControlName="name" class="form-control" 
+                   placeholder="{{ 'APM.Extrxbooppartautonome' | translate }}">
+            <small class="form-text text-muted">{{ 'APM.Donnezunnomdescriptifàvotremodèle' | translate }}</small>
+        </div>
+
+        <div class="form-group">
+          <label for="filePattern">{{ 'APM.Patterndefichier' | translate }}</label>
+          <input type="text" id="filePattern" formControlName="filePattern" class="form-control" 
+                 [class.is-invalid]="modelForm.get('filePattern')?.invalid && modelForm.get('filePattern')?.touched"
+                   placeholder="{{ 'APM.Extrxboxlsoppartcsv' | translate }}">
+          <div class="invalid-feedback" *ngIf="modelForm.get('filePattern')?.invalid && modelForm.get('filePattern')?.touched">
+            {{ 'APM.Lepatterndefichierestobligatoire' | translate }}
+          </div>
+            <small class="form-text text-muted">{{ 'APM.Utilisezcommewildcardextrxboxls' | translate }}</small>
+        </div>
+      </div>
+
+      <div class="form-row">
+        <div class="form-group">
+          <label for="fileType">{{ 'APM.Typedefichier' | translate }}</label>
+          <select id="fileType" formControlName="fileType" class="form-control">
+              <option value="partner">{{ 'TBL.partner' | translate }}</option>
+            <option value="bo">{{ 'APM.Backofficebo' | translate }}</option>
+          </select>
+            <small class="form-text text-muted">{{ 'APM.Sélectionnezletypedefichierquecemodèletraitera' | translate }}</small>
+        </div>
+
+        <div class="form-group">
+            <label for="templateFile">{{ 'APM.Fichiermodèle' | translate }}</label>
+            <select id="templateFile" formControlName="templateFile" class="form-control" 
+                    [class.is-invalid]="modelForm.get('templateFile')?.invalid && modelForm.get('templateFile')?.touched">
+              <option value="">{{ 'APM.Sélectionnerunfichierdepuiswatchfolder' | translate }}</option>
+            <option *ngFor="let file of availableFiles" [value]="file.fileName">
+              {{ file.fileName }}
+                    </option>
+                  </select>
+            <div class="invalid-feedback" *ngIf="modelForm.get('templateFile')?.invalid && modelForm.get('templateFile')?.touched">
+              {{ 'APM.Lefichiermodèleestobligatoire' | translate }}
+            </div>
+            <small class="form-text text-muted">{{ 'APM.Fichierderéférencepourlastructuredesdonnées' | translate }}</small>
+                </div>
+              </div>
+
+        <div class="form-row">
+                      <div class="form-group">
+                        <label>
+          <input type="checkbox" formControlName="autoApply">
+          {{ 'APM.Appliquerautomatiquement' | translate }}
+                        </label>
+            <small class="form-text text-muted">{{ 'APM.Lemodèleseraappliquéautomatiquementauxfichierscorrespondants' | translate }}</small>
+          </div>
+        </div>
+                  </div>
+
+                    <!-- Section 2: Clés de réconciliation (masquée pour les fichiers BO) -->
+        <div class="config-section" *ngIf="modelForm.get('fileType')?.value !== 'bo'">
+          <h4><i class="fas fa-key"></i> {{ 'APM.Clésderéconciliation' | translate }}</h4>
+          <p class="section-description">{{ 'APM.Configurezlesclésquipermettrontdefairecorrespondrelesenregistrementsentrelesfichiersboetpartenaire' | translate }}</p>
+        
+        <!-- Message d'information si aucun fichier modèle sélectionné -->
+        <div class="alert alert-info" *ngIf="!modelForm.get('templateFile')?.value">
+          <i class="fas fa-info-circle"></i>
+          <strong>{{ 'APM.Information' | translate }}</strong> {{ 'APM.Veuillezdabordsélectionnerunfichiermodèlepourchargerlescolonnesdisponibles' | translate }}
+        </div>
+
+        <!-- Chargement des colonnes du fichier modèle -->
+        <div class="form-row" *ngIf="modelForm.get('templateFile')?.value && !isLoadingTemplateColumns">
+          <div class="form-group">
+            <label>{{ 'APM.Cléspartenaire' | translate }}</label>
+            <div class="key-selection" *ngIf="availableTemplateColumns.length > 0">
+              <div *ngFor="let column of availableTemplateColumns" 
+                   class="key-option"
+                   [class.selected]="selectedPartnerKeys.includes(column)">
+                <label class="key-label">
+                  <input type="checkbox" 
+                         [value]="column" 
+                         [checked]="selectedPartnerKeys.includes(column)"
+                         (change)="togglePartnerKey(column, $event)">
+                  <span class="column-name" [class.selected-text]="selectedPartnerKeys.includes(column)">
+                    <i class="fas fa-check-circle selected-icon" *ngIf="selectedPartnerKeys.includes(column)"></i>
+                    {{ column }}
+                  </span>
+                </label>
+              </div>
+            </div>
+            <div class="no-columns" *ngIf="availableTemplateColumns.length === 0">
+              <small class="text-muted">{{ 'APM.Aucunecolonnedisponiblepourcefichiermodèle' | translate }}</small>
+            </div>
+            <small class="form-text text-muted">{{ 'APM.Sélectionnezlescolonnesclésdufichierpartenaire' | translate }}</small>
+          </div>
+
+          <div class="form-group partner-conditional-keys">
+            <label class="conditional-keys-toggle">
+              <input type="checkbox"
+                     [(ngModel)]="partnerConditionalKeysEnabled"
+                     [ngModelOptions]="{standalone: true}">
+              {{ 'APM.Cléspartenaireconditionnellesoptionnel' | translate }}
+            </label>
+            <small class="form-text text-muted d-block">
+              {{ 'APM.Choisirunecolonnecléselonlavaleurduneautrecolonneservicetypeetcles' | translate }} <strong>{{ 'APM.Cléspartenairepardéfaut' | translate }}</strong> {{ 'APM.Cidessusrestentprioritaireslesrèglesoptionnellesetlacondition' | translate }} {{ envColumnName }} {{ 'APM.Siactivéenesappliquentquelorsqueleursconditionssontremplies' | translate }}
+            </small>
+
+            <div class="conditional-keys-panel" *ngIf="partnerConditionalKeysEnabled">
+              <div class="form-row">
+                <div class="form-group col-md-6">
+                  <label>{{ 'APM.Colonnecondition' | translate }}</label>
+                  <select class="form-control"
+                          [(ngModel)]="partnerConditionColumn"
+                          [ngModelOptions]="{standalone: true}">
+                    <option value="">{{ 'APM.Sélectionner' | translate }}</option>
+                    <option *ngFor="let column of availableTemplateColumns" [value]="column">{{ column }}</option>
+                  </select>
+                </div>
+                <div class="form-group col-md-6">
+                  <label>{{ 'APM.Colonneclépardéfautoptionnel' | translate }}</label>
+                  <select class="form-control"
+                          [(ngModel)]="partnerConditionalDefaultKeyColumn"
+                          [ngModelOptions]="{standalone: true}">
+                    <option value="">{{ 'APM.Aucune' | translate }}</option>
+                    <option *ngFor="let column of availableTemplateColumns" [value]="column">{{ column }}</option>
+                  </select>
+                </div>
+              </div>
+
+              <div class="form-row conditional-env-filter">
+                <div class="form-group col-md-12">
+                  <label class="conditional-keys-toggle">
+                    <input type="checkbox"
+                           [(ngModel)]="partnerConditionalEnvEnabled"
+                           [ngModelOptions]="{standalone: true}">
+                    {{ 'APM.Condition' | translate }} {{ envColumnName }} {{ 'APM.Optionnel' | translate }}
+                  </label>
+                  <small class="form-text text-muted d-block">
+                    {{ 'APM.Lesrèglescidessousnesappliquentquesilacolonne' | translate }} <strong>{{ envColumnName }}</strong> {{ 'APM.Alavaleurchoisie' | translate }}
+                  </small>
+                </div>
+                <div class="form-group col-md-4" *ngIf="partnerConditionalEnvEnabled">
+                  <label>{{ envColumnName }} =</label>
+                  <select class="form-control"
+                          [(ngModel)]="partnerConditionalEnvValue"
+                          [ngModelOptions]="{standalone: true}">
+                    <option value="">{{ 'APM.Choisir' | translate }}</option>
+                    <option *ngFor="let option of envColumnOptions" [value]="option">{{ option }}</option>
+                  </select>
+                </div>
+              </div>
+
+              <div class="conditional-rules-list">
+                <div class="conditional-rule-row"
+                     *ngFor="let rule of partnerConditionalKeyRules; let i = index">
+                  <span>{{ 'APM.Sivaleur' | translate }}</span>
+                  <input type="text"
+                         class="form-control rule-value-input"
+                         [(ngModel)]="rule.whenValue"
+                         [ngModelOptions]="{standalone: true}"
+                         placeholder="{{ 'APM.Apicheckout' | translate }}">
+                  <span>{{ 'APM.Clé' | translate }}</span>
+                  <select class="form-control"
+                          [(ngModel)]="rule.keyColumn"
+                          [ngModelOptions]="{standalone: true}">
+                    <option value="">{{ 'APM.Colonne' | translate }}</option>
+                    <option *ngFor="let column of availableTemplateColumns" [value]="column">{{ column }}</option>
+                  </select>
+                  <ng-container *ngIf="getBoConditionalColumnOptions().length > 0">
+                    <span>{{ 'APM.Clébo' | translate }}</span>
+                    <select class="form-control"
+                            [(ngModel)]="rule.boKeyColumn"
+                            [ngModelOptions]="{standalone: true}">
+                      <option value="">{{ 'APM.Auto' | translate }}</option>
+                      <option *ngFor="let column of getBoConditionalColumnOptions()" [value]="column">{{ column }}</option>
+                    </select>
+                  </ng-container>
+                  <button type="button"
+                          class="btn btn-sm btn-outline-danger"
+                          (click)="removePartnerConditionalKeyRule(i)"
+                          title="{{ 'APM.Supprimerlarègle' | translate }}">
+                    <i class="fas fa-trash"></i>
+                  </button>
+                </div>
+              </div>
+
+              <button type="button"
+                      class="btn btn-sm btn-outline-primary mt-2"
+                      (click)="addPartnerConditionalKeyRule()">
+                <i class="fas fa-plus"></i> {{ 'APM.Ajouterunerègle' | translate }}
+              </button>
+            </div>
+          </div>
+
+          <div class="form-group">
+            <label>{{ 'APM.Modèlesboàutiliser' | translate }}</label>
+            <div class="bo-model-selection" *ngIf="availableBOModels.length > 0">
+              <div *ngFor="let boModel of availableBOModels" 
+                   class="bo-model-option"
+                   [class.selected]="selectedBOModels.includes(boModel.id)">
+                <label class="model-label">
+                  <input type="checkbox" 
+                         [value]="boModel.id" 
+                         [checked]="selectedBOModels.includes(boModel.id)"
+                         (change)="toggleBOModel(boModel.id, $event)">
+                  <span class="model-name" [class.selected-text]="selectedBOModels.includes(boModel.id)">
+                    <i class="fas fa-check-circle selected-icon" *ngIf="selectedBOModels.includes(boModel.id)"></i>
+                    {{ boModel.name }}
+                  </span>
+                  <small class="model-pattern">({{ boModel.filePattern }})</small>
+                </label>
+              </div>
+            </div>
+            <div class="no-models" *ngIf="availableBOModels.length === 0">
+              <small class="text-muted">{{ 'APM.Aucunmodèlebodisponible' | translate }}</small>
+            </div>
+            <small class="form-text text-muted">{{ 'APM.Sélectionnezlesmodèlesbopourlaréconciliation' | translate }}</small>
+          </div>
+        </div>
+
+        <!-- Indicateur de chargement -->
+        <div class="loading-indicator" *ngIf="isLoadingTemplateColumns">
+          <i class="fas fa-spinner fa-spin"></i>
+          <span>{{ 'APM.Chargementdescolonnesdufichiermodèle' | translate }}</span>
+        </div>
+
+        <!-- Colonnes des modèles BO sélectionnés -->
+        <div class="form-row" *ngIf="selectedBOModels.length > 0 && !isLoadingBOColumns">
+          <div class="form-group">
+            <label>{{ 'APM.Colonnesdesmodèlesbosélectionnés' | translate }}</label>
+            <div class="key-selection" *ngIf="getBoConditionalColumnOptions().length > 0">
+              <div *ngFor="let column of getBoConditionalColumnOptions()" 
+                   class="key-option"
+                   [class.selected]="selectedBOKeys.includes(column)">
+                <label class="key-label">
+                  <input type="checkbox" 
+                         [value]="column" 
+                         [checked]="selectedBOKeys.includes(column)"
+                         (change)="toggleBOKey(column, $event)">
+                  <span class="column-name" [class.selected-text]="selectedBOKeys.includes(column)">
+                    <i class="fas fa-check-circle selected-icon" *ngIf="selectedBOKeys.includes(column)"></i>
+                    {{ column }}
+                  </span>
+                </label>
+              </div>
+            </div>
+            <div class="no-columns" *ngIf="availableBOColumns.length === 0">
+              <small class="text-muted">{{ 'APM.Aucunecolonnedisponiblepourlesmodèlesbosélectionnés' | translate }}</small>
+            </div>
+            <small class="form-text text-muted">{{ 'APM.Colonnesdisponiblesdanslesmodèlesbosélectionnés' | translate }}</small>
+          </div>
+        </div>
+
+        <div class="form-group partner-conditional-keys" *ngIf="selectedBOModels.length > 0">
+          <label class="conditional-keys-toggle">
+            <input type="checkbox"
+                   [(ngModel)]="boConditionalKeysEnabled"
+                   [ngModelOptions]="{standalone: true}">
+            {{ 'APM.Clésboconditionnellesoptionnel' | translate }}
+          </label>
+          <small class="form-text text-muted d-block">
+            {{ 'APM.Choisirunecolonnecléboselonlavaleurduneautrecolonnedufichierboexsitypeopération' | translate }} <code>{{ 'APM.CASHIN' | translate }}</code> {{ 'APM.Référencetransactionsi' | translate }} <code>{{ 'APM.PAYOUT' | translate }}</code> {{ 'APM.IDexterne' | translate }}
+          </small>
+
+          <div class="conditional-keys-panel" *ngIf="boConditionalKeysEnabled">
+            <div class="form-row" *ngIf="getBoConditionalColumnOptions().length > 0; else noBoColumnsForConditional">
+              <div class="form-group col-md-6">
+                <label>{{ 'APM.Colonneconditionbo' | translate }}</label>
+                <select class="form-control"
+                        [(ngModel)]="boConditionColumn"
+                        [ngModelOptions]="{standalone: true}">
+                  <option value="">{{ 'APM.Sélectionner' | translate }}</option>
+                  <option *ngFor="let column of getBoConditionalColumnOptions()" [value]="column">{{ column }}</option>
+                </select>
+              </div>
+              <div class="form-group col-md-6">
+                <label>{{ 'APM.Colonneclépardéfautoptionnel' | translate }}</label>
+                <select class="form-control"
+                        [(ngModel)]="boConditionalDefaultKeyColumn"
+                        [ngModelOptions]="{standalone: true}">
+                  <option value="">{{ 'APM.Aucune' | translate }}</option>
+                  <option *ngFor="let column of getBoConditionalColumnOptions()" [value]="column">{{ column }}</option>
+                </select>
+              </div>
+            </div>
+            <ng-template #noBoColumnsForConditional>
+              <small class="text-muted d-block mb-2">{{ 'APM.Chargementdescolonnesbo' | translate }}</small>
+            </ng-template>
+
+            <div class="conditional-rules-list" *ngIf="getBoConditionalColumnOptions().length > 0">
+              <div class="conditional-rule-row"
+                   *ngFor="let rule of boConditionalKeyRules; let i = index">
+                <span>{{ 'APM.Sivaleur' | translate }}</span>
+                <input type="text"
+                       class="form-control rule-value-input"
+                       [(ngModel)]="rule.whenValue"
+                       [ngModelOptions]="{standalone: true}"
+                       placeholder="{{ 'APM.CASHIN' | translate }}">
+                <span>{{ 'APM.Clé' | translate }}</span>
+                <select class="form-control"
+                        [(ngModel)]="rule.keyColumn"
+                        [ngModelOptions]="{standalone: true}">
+                  <option value="">{{ 'APM.Colonne' | translate }}</option>
+                  <option *ngFor="let column of getBoConditionalColumnOptions()" [value]="column">{{ column }}</option>
+                </select>
+                <button type="button"
+                        class="btn btn-sm btn-outline-danger"
+                        (click)="removeBoConditionalKeyRule(i)"
+                        title="{{ 'APM.Supprimerlarègle' | translate }}">
+                  <i class="fas fa-trash"></i>
+                </button>
+              </div>
+            </div>
+
+            <button type="button"
+                    class="btn btn-sm btn-outline-primary mt-2"
+                    *ngIf="getBoConditionalColumnOptions().length > 0"
+                    (click)="addBoConditionalKeyRule()">
+              <i class="fas fa-plus"></i> {{ 'APM.Ajouterunerègle' | translate }}
+            </button>
+          </div>
+        </div>
+
+        <!-- Indicateur de chargement pour les colonnes BO -->
+        <div class="loading-indicator" *ngIf="isLoadingBOColumns">
+          <i class="fas fa-spinner fa-spin"></i>
+          <span>{{ 'APM.Chargementdescolonnesdesmodèlesbo' | translate }}</span>
+        </div>
+
+
+
+        <!-- Résumé des sélections -->
+        <div class="selection-summary" *ngIf="selectedPartnerKeys.length > 0 || selectedBOModels.length > 0 || selectedBOKeys.length > 0 || isPartnerConditionalKeysConfigValid() || isBoConditionalKeysConfigValid()">
+          <h5><i class="fas fa-list"></i> {{ 'APM.Résumédessélections' | translate }}</h5>
+          <div class="summary-items">
+            <div class="summary-item" *ngIf="selectedPartnerKeys.length > 0">
+              <strong>{{ 'APM.Cléspartenaire_1' | translate }}</strong> {{ selectedPartnerKeys.join(', ') }}
+            </div>
+            <div class="summary-item" *ngIf="isPartnerConditionalKeysConfigValid()">
+              <strong>{{ 'APM.Cléspartenaireconditionnelles' | translate }}</strong>
+              <span *ngIf="partnerConditionalEnvEnabled && partnerConditionalEnvValue">
+                [{{ envColumnName }} = {{ partnerConditionalEnvValue }}]
+              </span>
+              {{ partnerConditionColumn }} →
+              <span *ngFor="let rule of partnerConditionalKeyRules; let last = last">
+                <ng-container *ngIf="rule.whenValue && rule.keyColumn">
+                  « {{ rule.whenValue }} » → {{ rule.keyColumn }}<span *ngIf="!last"> ; </span>
+                </ng-container>
+              </span>
+            </div>
+            <div class="summary-item" *ngIf="isBoConditionalKeysConfigValid()">
+              <strong>{{ 'APM.Clésboconditionnelles' | translate }}</strong>
+              {{ boConditionColumn }} →
+              <span *ngFor="let rule of boConditionalKeyRules; let last = last">
+                <ng-container *ngIf="rule.whenValue && rule.keyColumn">
+                  « {{ rule.whenValue }} » → {{ rule.keyColumn }}<span *ngIf="!last"> ; </span>
+                </ng-container>
+              </span>
+            </div>
+            <div class="summary-item" *ngIf="selectedBOModels.length > 0">
+              <strong>{{ 'APM.Modèlesbo' | translate }}</strong> {{ getSelectedBOModelNames() }}
+            </div>
+            <div class="summary-item" *ngIf="selectedBOKeys.length > 0">
+              <strong>{{ 'APM.Clésbo' | translate }}</strong> {{ selectedBOKeys.join(', ') }}
+            </div>
+          </div>
+        </div>
+              </div>
+
+        <!-- Message informatif pour les fichiers BO -->
+        <div class="config-section" *ngIf="modelForm.get('fileType')?.value === 'bo'">
+          <div class="alert alert-info">
+            <i class="fas fa-info-circle"></i>
+            <strong>{{ 'APM.Information' | translate }}</strong> {{ 'APM.Pourlesfichiersdetypebolesclésderéconciliationsontconfiguréesauniveaudesmodèlespartenairescettesectionnestdoncpasnécessaire' | translate }}
+          </div>
+        </div>
+
+        <!-- Section 3: Logique de réconciliation (uniquement pour les modèles partenaires) -->
+      <div class="config-section" *ngIf="modelForm.get('fileType')?.value === 'partner'">
+        <h4>
+          <i class="fas fa-cogs"></i> {{ 'APM.Logiquederéconciliation' | translate }}
+          <button type="button" class="btn btn-sm btn-outline-info" (click)="toggleReconciliationLogicSection()">
+            <i class="fas fa-cog"></i> {{ (showReconciliationLogicSection ? 'APM.Hide' : 'APM.Show') | translate }}
+          </button>
+        </h4>
+        <p class="section-description">{{ 'APM.Définissezlalogiquedecorrespondanceentrelesenregistrementsboetpartenaire' | translate }}</p>
+        
+        <div *ngIf="showReconciliationLogicSection" class="logic-config-container">
+          <!-- Affichage de la logique actuelle -->
+          <div class="logic-display" *ngIf="modelForm.get('logicType')?.value">
+            <div class="logic-item">
+              <div class="logic-header">
+                <span class="logic-type">{{ modelForm.get('logicType')?.value }}</span>
+                <span class="logic-ratio badge badge-primary" *ngIf="modelForm.get('expectedRatio')?.value">
+                  {{ modelForm.get('expectedRatio')?.value }}
+                </span>
+                <div class="logic-actions">
+                  <button type="button" class="btn btn-sm btn-outline-primary" (click)="editReconciliationLogic()">
+                    <i class="fas fa-edit"></i>
+                  </button>
+                </div>
+              </div>
+              <div class="logic-description" *ngIf="modelForm.get('logicDescription')?.value">
+                {{ modelForm.get('logicDescription')?.value }}
+              </div>
+            </div>
+          </div>
+
+          <!-- Formulaire d'édition -->
+          <div *ngIf="editingReconciliationLogic" class="logic-form">
+            <h5>{{ 'APM.Configurationdelalogiquederéconciliation' | translate }}</h5>
+            <div>
+                  <div class="form-row">
+                <div class="form-group">
+                  <label for="logicType">{{ 'APM.Typedelogique' | translate }}</label>
+                  <select id="logicType" formControlName="logicType" class="form-control" (change)="onLogicTypeChange()">
+                    <option value="STANDARD">{{ 'APM.Standard11' | translate }}</option>
+                    <option value="SPECIAL_RATIO">{{ 'APM.Ratiospécial1213etc' | translate }}</option>
+                    <option value="CUSTOM">{{ 'APM.Personnalisée' | translate }}</option>
+                  </select>
+                  <small class="form-text text-muted">{{ 'APM.Choisissezletypedelogiquederéconciliation' | translate }}</small>
+                </div>
+                
+                <div class="form-group" *ngIf="modelForm.get('logicType')?.value === 'SPECIAL_RATIO'">
+                  <label for="expectedRatio">{{ 'APM.Ratioattendu' | translate }}</label>
+                  <select id="expectedRatio" formControlName="expectedRatio" class="form-control" (change)="onExpectedRatioChange()">
+                    <option value="1:2">{{ 'APM.12extrxbooppart' | translate }}</option>
+                    <option value="1:3">1:3</option>
+                    <option value="1:4">1:4</option>
+                    <option value="1:5">1:5</option>
+                      </select>
+                  <small class="form-text text-muted">{{ 'APM.Définissezleratiodecorrespondanceattendu' | translate }}</small>
+                </div>
+              </div>
+
+              <div class="form-row">
+                <div class="form-group">
+                  <label for="logicDescription">{{ 'TBL.description' | translate }}</label>
+                  <textarea id="logicDescription" formControlName="logicDescription" class="form-control" rows="2"
+                            placeholder="{{ 'APM.Décrivezlalogiquederéconciliation' | translate }}"></textarea>
+                  <small class="form-text text-muted">{{ 'APM.Descriptionoptionnelledelalogique' | translate }}</small>
+                </div>
+              </div>
+
+              <!-- Configuration métier TRXBO/OPPART : libellés d'opérations et commentaires -->
+              <div class="trxbo-oppart-config" formGroupName="trxboOppart"
+                   *ngIf="modelForm.get('fileType')?.value === 'partner' && modelForm.get('logicType')?.value === 'SPECIAL_RATIO'">
+                <div class="alert alert-info">
+                  <i class="fas fa-info-circle"></i>
+                  {{ 'APM.Trxbooppartconfighint' | translate }}
+                </div>
+
+                <nav class="po-nav" [attr.aria-label]="'APM.PoNavSections' | translate">
+                  <a href="#po-s-types" (click)="scrollToPoSection('po-s-types', $event)">{{ 'APM.PoTypesTitle' | translate }}</a>
+                  <a href="#po-s-extra" (click)="scrollToPoSection('po-s-extra', $event)">{{ 'APM.Trxboopparttypessupplementaires' | translate }}<b>{{ trxboAdditionalTypesArray.length }}</b></a>
+                  <a href="#po-s-regul" (click)="scrollToPoSection('po-s-regul', $event)">{{ 'APM.RegulRulesTitle' | translate }}<b>{{ trxboRegularisationRulesArray.length }}</b></a>
+                  <a href="#po-s-cases" (click)="scrollToPoSection('po-s-cases', $event)">{{ 'APM.PoCasesTitle' | translate }}</a>
+                  <a href="#po-s-agg" (click)="scrollToPoSection('po-s-agg', $event)">{{ 'APM.AggTypesTitle' | translate }}</a>
+                </nav>
+
+                <section class="po-card" id="po-s-types">
+                  <div class="po-sh">
+                    <div>
+                      <h3 class="po-title">{{ 'APM.PoTypesTitle' | translate }}</h3>
+                      <p class="po-desc">{{ 'APM.PoTypesDesc' | translate }}</p>
+                    </div>
+                  </div>
+                  <div class="po-grid po-g3">
+                    <div class="po-fld">
+                      <label for="trxboImpactType">{{ 'APM.Trxboopparttypeimpact' | translate }}</label>
+                      <input id="trxboImpactType" formControlName="impactType" class="po-inp po-mono" placeholder="IMPACT_COMPTE_GENERAL">
+                    </div>
+                    <div class="po-fld">
+                      <label for="trxboFeesType">{{ 'APM.Trxboopparttypefrais' | translate }}</label>
+                      <input id="trxboFeesType" formControlName="feesType" class="po-inp po-mono" placeholder="FRAIS_TRANSACTION">
+                    </div>
+                    <div class="po-fld">
+                      <label for="trxboCommissionType">{{ 'APM.Trxboopparttypecommission' | translate }}</label>
+                      <input id="trxboCommissionType" formControlName="commissionType" class="po-inp po-mono" placeholder="VERSEMENT_COMMISSION">
+                    </div>
+                  </div>
+                </section>
+
+                <section class="po-card" id="po-s-extra">
+                  <div class="po-sh">
+                    <div>
+                      <h3 class="po-title">{{ 'APM.Trxboopparttypessupplementaires' | translate }}</h3>
+                      <p class="po-desc">{{ 'APM.Trxboopparttypessupplementairesdesc' | translate }}</p>
+                    </div>
+                    <div class="po-acts">
+                      <button type="button" class="btn btn-sm btn-outline-primary" (click)="addTrxboAdditionalType()">
+                        <i class="bi bi-plus-circle"></i> {{ 'APM.Trxbooppartajoutertype' | translate }}
+                      </button>
+                    </div>
+                  </div>
+                  <div formArrayName="additionalTypes">
+                    <div class="po-xrow" *ngFor="let additionalType of trxboAdditionalTypesArray.controls; let i = index" [formGroupName]="i">
+                      <div class="po-fld">
+                        <label>{{ 'APM.Trxbooppartnouveautypelibelle' | translate }}</label>
+                        <input formControlName="label" class="po-inp po-mono" placeholder="TRANSFERT_PARTENAIRE">
+                      </div>
+                      <div class="po-fld">
+                        <label>{{ 'APM.Trxbooppartnouveautypecommentairebo' | translate }}</label>
+                        <input formControlName="commentBo" class="po-inp" placeholder="{{ 'APM.Trxbooppartnouveautypecommentairebovide' | translate }}">
+                      </div>
+                      <div class="po-fld">
+                        <label>{{ 'APM.Trxbooppartnouveautypecommentairepartenaire' | translate }}</label>
+                        <input formControlName="commentPartner" class="po-inp" placeholder="TRXTRF">
+                      </div>
+                      <button type="button" class="po-ib" (click)="removeTrxboAdditionalType(i)"
+                              [title]="'APM.Trxbooppartsupprimertype' | translate">
+                        <i class="bi bi-trash"></i>
+                      </button>
+                    </div>
+                    <div class="po-empty" *ngIf="trxboAdditionalTypesArray.length === 0">
+                      {{ 'APM.PoExtrasEmpty' | translate }}
+                    </div>
+                  </div>
+                </section>
+
+                <section class="po-card" id="po-s-regul">
+                  <div class="po-sh">
+                    <div>
+                      <h3 class="po-title">{{ 'APM.RegulRulesTitle' | translate }}</h3>
+                      <p class="po-desc">{{ 'APM.RegulRulesDesc' | translate }}</p>
+                    </div>
+                    <div class="po-acts">
+                      <button type="button" class="btn btn-sm btn-outline-primary" (click)="addTrxboRegularisationRule()">
+                        <i class="bi bi-plus-circle"></i> {{ 'APM.RegulRulesAdd' | translate }}
+                      </button>
+                    </div>
+                  </div>
+
+                  <div formArrayName="regularisationRules">
+                    <div class="po-rule" *ngFor="let rule of trxboRegularisationRulesArray.controls; let ri = index" [formGroupName]="ri">
+                      <div class="po-rhead">
+                        <div class="po-fld po-grow">
+                          <label>{{ 'APM.RegulRuleCase' | translate }}</label>
+                          <input formControlName="case" class="po-inp" list="regulCaseOptions" placeholder="TSOP">
+                        </div>
+                        <button type="button" class="po-ib" (click)="removeTrxboRegularisationRule(ri)"
+                                [title]="'APM.RegulRuleRemove' | translate">
+                          <i class="bi bi-trash"></i>
+                        </button>
+                      </div>
+
+                      <div class="po-comps">
+                        <div class="po-chead">
+                          <span>{{ 'APM.RegulComponentSource' | translate }}</span>
+                          <span>{{ 'APM.RegulComponentType' | translate }}</span>
+                          <span>{{ 'APM.RegulComponentSign' | translate }}</span>
+                          <span>{{ 'APM.RegulComponentNegativeTokens' | translate }}</span>
+                          <span>{{ 'APM.RegulComponentDefaultSign' | translate }}</span>
+                          <span>{{ 'APM.RegulComponentCoefficient' | translate }}</span>
+                          <span></span>
+                        </div>
+                        <div formArrayName="components">
+                          <div class="po-crow" *ngFor="let component of trxboRegularisationComponents(ri).controls; let ci = index" [formGroupName]="ci">
+                            <div>
+                              <span class="po-ml">{{ 'APM.RegulComponentSource' | translate }}</span>
+                              <select formControlName="source" class="po-sel">
+                                <option *ngFor="let source of getRegularisationSources()" [value]="source.value">
+                                  {{ source.label | translate }}
+                                </option>
+                              </select>
+                            </div>
+                            <div>
+                              <span class="po-ml">{{ 'APM.RegulComponentType' | translate }}</span>
+                              <input formControlName="type" class="po-inp po-mono" list="regulTypeOptions"
+                                     placeholder="IMPACT_COMPTE_GENERAL"
+                                     [disabled]="component.get('source')?.value !== 'OPPART_TYPE'">
+                            </div>
+                            <div>
+                              <span class="po-ml">{{ 'APM.RegulComponentSign' | translate }}</span>
+                              <select formControlName="sign" class="po-sel">
+                                <option *ngFor="let sign of getRegularisationSigns()" [value]="sign.value">
+                                  {{ sign.label | translate }}
+                                </option>
+                              </select>
+                            </div>
+                            <div>
+                              <span class="po-ml">{{ 'APM.RegulComponentNegativeTokens' | translate }}</span>
+                              <input formControlName="negativeTokens" class="po-inp po-mono" placeholder="CASHIN, CASHOUT"
+                                     [disabled]="component.get('sign')?.value !== 'SERVICE_BASED'">
+                            </div>
+                            <div>
+                              <span class="po-ml">{{ 'APM.RegulComponentDefaultSign' | translate }}</span>
+                              <select formControlName="defaultSign" class="po-sel"
+                                      [disabled]="component.get('sign')?.value !== 'SERVICE_BASED'">
+                                <option value="POSITIVE">{{ 'APM.RegulSignPositive' | translate }}</option>
+                                <option value="NEGATIVE">{{ 'APM.RegulSignNegative' | translate }}</option>
+                              </select>
+                            </div>
+                            <div>
+                              <span class="po-ml">{{ 'APM.RegulComponentCoefficient' | translate }}</span>
+                              <input formControlName="coefficient" type="number" step="any" class="po-inp po-num" placeholder="1">
+                            </div>
+                            <button type="button" class="po-ib" (click)="removeTrxboRegularisationComponent(ri, ci)"
+                                    [title]="'APM.RegulComponentRemove' | translate">
+                              <i class="bi bi-trash"></i>
+                            </button>
+                          </div>
+                        </div>
+                        <div class="po-cfoot">
+                          <button type="button" class="btn btn-sm btn-outline-secondary" (click)="addTrxboRegularisationComponent(ri)">
+                            <i class="bi bi-plus-circle"></i> {{ 'APM.RegulComponentAdd' | translate }}
+                          </button>
+                          <span class="po-hint">{{ 'APM.Trxbooppartcommentaires' | translate }}</span>
+                        </div>
+                      </div>
+                    </div>
+                    <div class="po-empty" *ngIf="trxboRegularisationRulesArray.length === 0">
+                      {{ 'APM.RegulRulesEmpty' | translate }}
+                    </div>
+                  </div>
+                </section>
+
+                <datalist id="regulCaseOptions">
+                  <option *ngFor="let caseLabel of getRegularisationCaseOptions()" [value]="caseLabel"></option>
+                </datalist>
+                <datalist id="regulTypeOptions">
+                  <option *ngFor="let type of getKnownOperationTypes()" [value]="type"></option>
+                </datalist>
+
+                <section class="po-card" id="po-s-cases">
+                  <div class="po-sh">
+                    <div>
+                      <h3 class="po-title">{{ 'APM.PoCasesTitle' | translate }}</h3>
+                      <p class="po-desc">{{ 'APM.PoCasesDesc' | translate }}</p>
+                    </div>
+                  </div>
+                  <div class="po-grid po-g2">
+                    <div class="po-fld">
+                      <label for="trxboCommentTsop">{{ 'APM.Trxbooppartcommenttsop' | translate }}</label>
+                      <input id="trxboCommentTsop" formControlName="commentTsop" class="po-inp" placeholder="TSOP">
+                    </div>
+                    <div class="po-fld">
+                      <label for="trxboCommentTrxsf">{{ 'APM.Trxbooppartcommenttrxsf' | translate }}</label>
+                      <input id="trxboCommentTrxsf" formControlName="commentTrxsf" class="po-inp" placeholder="TRXSF">
+                    </div>
+                    <div class="po-fld">
+                      <label for="trxboCommentRgfrais">{{ 'APM.Trxbooppartcommentrgfrais' | translate }}</label>
+                      <input id="trxboCommentRgfrais" formControlName="commentRgfrais" class="po-inp" placeholder="RGFRAIS">
+                    </div>
+                    <div class="po-fld">
+                      <label for="trxboCommentTrxsvc">{{ 'APM.Trxbooppartcommenttrxsvc' | translate }}</label>
+                      <input id="trxboCommentTrxsvc" formControlName="commentTrxsvc" class="po-inp" placeholder="TRXSVC">
+                    </div>
+                    <div class="po-fld">
+                      <label for="trxboCommentFraisSansCommission">{{ 'APM.Trxbooppartcommentfraissanscommission' | translate }}</label>
+                      <input id="trxboCommentFraisSansCommission" formControlName="commentFraisSansCommission" class="po-inp" placeholder="TRXSC">
+                      <span class="po-hint">{{ 'APM.Trxbooppartcommentfraissanscommissionsample' | translate }}</span>
+                    </div>
+                    <div class="po-fld">
+                      <label for="trxboCommentRegcom">{{ 'APM.Trxbooppartcommentregcom' | translate }}</label>
+                      <input id="trxboCommentRegcom" formControlName="commentRegcom" class="po-inp" placeholder="REGCOM">
+                      <span class="po-hint">{{ 'APM.Trxbooppartcommentregcomsample' | translate }}</span>
+                    </div>
+                    <div class="po-fld">
+                      <label for="trxboCommentFraisEtCommission">{{ 'APM.Trxbooppartcommentfraisetcommission' | translate }}</label>
+                      <input id="trxboCommentFraisEtCommission" formControlName="commentFraisEtCommission" class="po-inp" placeholder="RGFRAIS &amp; REGCOM">
+                      <span class="po-hint">{{ 'APM.Trxbooppartcommentfraisetcommissionsample' | translate }}</span>
+                    </div>
+                    <div class="po-fld">
+                      <label for="trxboCommentTrxsfTrxsvc">{{ 'APM.Trxbooppartcommentcombiné' | translate }}</label>
+                      <input id="trxboCommentTrxsfTrxsvc" formControlName="commentTrxsfTrxsvc" class="po-inp" placeholder="TRXSF &amp; TRXSVC">
+                    </div>
+                    <div class="po-fld">
+                      <label for="trxboCommentEcart">{{ 'APM.Trxbooppartcommentecart' | translate }}</label>
+                      <input id="trxboCommentEcart" formControlName="commentEcart" class="po-inp" placeholder="Ecart">
+                    </div>
+                    <div class="po-fld">
+                      <label for="trxboCommentPartnerOnly">{{ 'APM.Trxbooppartcommentpartenairesansbo' | translate }}</label>
+                      <input id="trxboCommentPartnerOnly" formControlName="commentPartnerOnly" class="po-inp" placeholder="Ecart">
+                    </div>
+                  </div>
+                </section>
+
+                <section class="po-card" id="po-s-agg">
+                  <div class="po-sh">
+                    <div>
+                      <h3 class="po-title">{{ 'APM.AggTypesTitle' | translate }}</h3>
+                      <p class="po-desc">{{ 'APM.AggTypesDesc' | translate }}</p>
+                    </div>
+                    <div class="po-acts">
+                      <button type="button" class="btn btn-sm btn-outline-secondary" (click)="generateTrxboAggregationTypesFromComments()">
+                        <i class="bi bi-arrow-repeat"></i> {{ 'APM.AggTypesGenerate' | translate }}
+                      </button>
+                      <button type="button" class="btn btn-sm btn-outline-primary" (click)="addTrxboAggregationType()">
+                        <i class="bi bi-plus-circle"></i> {{ 'APM.AggTypesAdd' | translate }}
+                      </button>
+                    </div>
+                  </div>
+
+                <div class="agg-tools" *ngIf="trxboAggregationTypesArray.length > 0">
+                  <input #aggTypeFilterInput
+                          type="search"
+                          class="form-control form-control-sm agg-filter"
+                          [value]="aggTypesFilter"
+                          (input)="aggTypesFilter = aggTypeFilterInput.value"
+                          [placeholder]="'APM.AggTypesFilter' | translate"
+                          [attr.aria-label]="'APM.AggTypesFilter' | translate">
+                  <span class="agg-meta">
+                    {{ (filteredAggTypeIndexes().length === trxboAggregationTypesArray.length
+                        ? 'APM.AggTypesMetaTotal'
+                        : 'APM.AggTypesMetaFiltered')
+                      | translate: { shown: filteredAggTypeIndexes().length, total: trxboAggregationTypesArray.length } }}
+                  </span>
+                </div>
+
+                <div class="agg-panel" *ngIf="trxboAggregationTypesArray.length > 0" formArrayName="aggregationTypes">
+                  <div class="agg-band">
+                    <div class="agg-side agg-side-bo">
+                      <span class="agg-dot"></span>{{ 'APM.AggTypesSideBo' | translate }}
+                    </div>
+                    <div class="agg-side agg-side-partner">
+                      <span class="agg-dot"></span>{{ 'APM.AggTypesSidePartner' | translate }}
+                    </div>
+                    <div></div>
+                  </div>
+                  <div class="agg-cols">
+                    <div class="agg-side">
+                      <span>{{ 'APM.AggTypesComment' | translate }}</span>
+                      <span>{{ 'APM.AggTypesLabel' | translate }}</span>
+                      <span>{{ 'APM.AggTypesMode' | translate }}</span>
+                    </div>
+                    <div class="agg-side">
+                      <span>{{ 'APM.AggTypesComment' | translate }}</span>
+                      <span>{{ 'APM.AggTypesLabel' | translate }}</span>
+                      <span>{{ 'APM.AggTypesMode' | translate }}</span>
+                    </div>
+                    <div></div>
+                  </div>
+
+                  <div class="agg-row" *ngFor="let i of filteredAggTypeIndexes()" [formGroupName]="i">
+                    <div class="agg-side agg-side-bo">
+                      <div class="agg-cell">
+                        <span class="agg-ml">{{ 'APM.AggTypesCommentBo' | translate }}</span>
+                        <input formControlName="commentBo" class="form-control form-control-sm" placeholder="TSOP">
+                      </div>
+                      <div class="agg-cell">
+                        <span class="agg-ml">{{ 'APM.AggTypesBoLabel' | translate }}</span>
+                        <input formControlName="boLabel" class="form-control form-control-sm" placeholder="{{ 'APM.AggTypesLabelPlaceholder' | translate }}">
+                      </div>
+                      <div class="agg-cell">
+                        <span class="agg-ml">{{ 'APM.AggTypesBoMode' | translate }}</span>
+                        <div class="d-flex flex-wrap" style="gap: .25rem;">
+                          <button type="button"
+                                  *ngFor="let mode of getAggregationBoModes()"
+                                  class="btn btn-sm"
+                                  [class.btn-primary]="aggModeControl(i, 'boMode').value === mode.value"
+                                  [class.btn-outline-secondary]="aggModeControl(i, 'boMode').value !== mode.value"
+                                  (click)="setAggMode(i, 'boMode', mode.value)">
+                            {{ mode.label | translate }}
+                          </button>
+                        </div>
+                      </div>
+                    </div>
+                    <div class="agg-side agg-side-partner">
+                      <div class="agg-cell">
+                        <span class="agg-ml">{{ 'APM.AggTypesCommentPartner' | translate }}</span>
+                        <input formControlName="commentPartner" class="form-control form-control-sm" placeholder="TSOP">
+                      </div>
+                      <div class="agg-cell">
+                        <span class="agg-ml">{{ 'APM.AggTypesPartnerLabel' | translate }}</span>
+                        <input formControlName="partnerLabel" class="form-control form-control-sm" placeholder="OP SANS FRAIS">
+                      </div>
+                      <div class="agg-cell">
+                        <span class="agg-ml">{{ 'APM.AggTypesPartnerMode' | translate }}</span>
+                        <div class="d-flex flex-wrap" style="gap: .25rem;">
+                          <button type="button"
+                                  *ngFor="let mode of getAggregationPartnerModes()"
+                                  class="btn btn-sm"
+                                  [class.btn-primary]="aggModeControl(i, 'partnerMode').value === mode.value"
+                                  [class.btn-outline-secondary]="aggModeControl(i, 'partnerMode').value !== mode.value"
+                                  (click)="setAggMode(i, 'partnerMode', mode.value)">
+                            {{ mode.label | translate }}
+                          </button>
+                        </div>
+                      </div>
+                    </div>
+                    <button type="button" class="btn btn-sm btn-outline-danger agg-del" (click)="removeTrxboAggregationType(i)"
+                            [title]="'APM.AggTypesRemove' | translate">
+                      <i class="bi bi-trash"></i>
+                    </button>
+                  </div>
+
+                  <div class="agg-empty" *ngIf="filteredAggTypeIndexes().length === 0">
+                    {{ 'APM.AggTypesEmpty' | translate }}
+                  </div>
+                </div>
+
+                <div class="agg-empty" *ngIf="trxboAggregationTypesArray.length === 0">
+                  {{ 'APM.AggTypesEmptyList' | translate }}
+                </div>
+
+                <div class="agg-undo" *ngIf="canUndoAggTypeRemoval()">
+                  <span>{{ 'APM.AggTypesRemoved' | translate }}</span>
+                  <button type="button" class="btn btn-sm btn-outline-secondary" (click)="undoRemoveTrxboAggregationType()">
+                    <i class="bi bi-arrow-counterclockwise"></i> {{ 'APM.AggTypesUndo' | translate }}
+                  </button>
+                </div>
+                </section>
+              </div>
+
+              <div class="form-actions">
+                <button type="button" class="btn btn-primary" (click)="saveReconciliationLogic()">{{ 'APM.Sauvegarder' | translate }}</button>
+                <button type="button" class="btn btn-secondary" (click)="cancelReconciliationLogicEdit()">{{ 'COMMON.actions.cancel' | translate }}</button>
+              </div>
+            </div>
+          </div>
+
+          <!-- Bouton d'ajout si aucune logique n'est configurée -->
+          <div class="add-logic-section" *ngIf="!modelForm.get('logicType')?.value && !editingReconciliationLogic">
+            <button type="button" class="btn btn-success" (click)="editReconciliationLogic()">
+              <i class="fas fa-plus"></i> {{ 'APM.Configurerlalogiquederéconciliation' | translate }}
+            </button>
+          </div>
+        </div>
+      </div>
+
+
+
+
+
+      <!-- Messages informatifs pour les modèles autonomes -->
+      <div class="info-message" *ngIf="modelForm.get('fileType')?.value === 'partner' && !modelForm.get('templateFile')?.value">
+        <div class="alert alert-warning">
+          <i class="fas fa-exclamation-triangle"></i>
+          <strong>{{ 'APM.Attention' | translate }}</strong> {{ 'APM.Veuillezsélectionnerunfichiermodèledepuisledossierwatchfolderpourconfigurerlesclésderéconciliation' | translate }}
+        </div>
+      </div>
+
+      <div class="info-message" *ngIf="modelForm.get('fileType')?.value === 'partner' && 
+                                   modelForm.get('templateFile')?.value && 
+                                   isLoadingTemplateColumns">
+        <div class="alert alert-warning">
+          <i class="fas fa-exclamation-triangle"></i>
+          <strong>{{ 'APM.Attention' | translate }}</strong> {{ 'APM.Lescolonnesdufichiermodèlesontencoursdechargement' | translate }}
+        </div>
+      </div>
+
+      <div class="info-message" *ngIf="modelForm.get('templateFile')?.value &&
+                                   !isLoadingTemplateColumns &&
+                                   getPreProcessingColumns().length === 0">
+        <div class="alert alert-warning">
+          <i class="fas fa-exclamation-triangle"></i>
+          <strong>{{ 'APM.Attention' | translate }}</strong> {{ 'APM.Aucunecolonnenapuêtrechargéepourcefichiermodèlevérifiezquelefichierestprésentdansledossierwatchfolder' | translate }}
+        </div>
+      </div>
+
+      <!-- Message informatif pour les règles de traitement des colonnes -->
+      <div class="info-message" *ngIf="showColumnRulesSection && !isLoadingTemplateColumns && getPreProcessingColumns().length === 0 && !modelForm.get('templateFile')?.value">
+        <div class="alert alert-info">
+          <i class="fas fa-info-circle"></i>
+          <strong>{{ 'APM.Information' | translate }}</strong> {{ 'APM.Lescolonnesdumodèleserontautomatiquementchargéespourtouslestypespartnerbobothavecencodageettypagecorrects' | translate }}
+        </div>
+      </div>
+
+      <!-- Règles de traitement des colonnes -->
+      <div class="config-section">
+        <h4>
+          <i class="fas fa-tools"></i> {{ 'APM.Règlesdetraitementdescolonnes' | translate }}
+          <button type="button" class="btn btn-sm btn-outline-info" (click)="toggleColumnProcessingSection()">
+            <i class="fas fa-tools"></i> {{ (showColumnProcessingSection ? 'APM.Hide' : 'APM.Show') | translate }}
+          </button>
+        </h4>
+        <p class="section-description">
+          {{ 'APM.Configurezlenettoyagedescolonneslesfiltresleformatagelaconcaténationetlerenommagedesvaleursavantlaréconciliation' | translate }}
+        </p>
+        
+        <div *ngIf="showColumnProcessingSection" class="processing-config-container">
+          <!-- Liste des règles existantes -->
+          <div class="processing-rules-list" *ngIf="columnProcessingRules.length > 0">
+            <h5>{{ 'APM.rulesConfiguredCount' | translate: { count: columnProcessingRules.length } }}</h5>
+            <div *ngFor="let rule of columnProcessingRules; let i = index; trackBy: trackByRule" class="processing-rule-item">
+              <div class="rule-header">
+                <span class="rule-order" [title]="'APM.ruleOrderTooltip' | translate: { order: rule.ruleOrder !== undefined ? rule.ruleOrder : i + 1 }">
+                  {{ rule.ruleOrder !== undefined ? rule.ruleOrder : i + 1 }}
+                </span>
+                <span class="rule-title">
+                  <i class="fas fa-columns"></i> 
+                  {{ rule.sourceColumns ? rule.sourceColumns.length : 1 }} {{ 'APM.Colonnes' | translate }}
+                  <small class="text-muted" *ngIf="rule.sourceColumn">
+                    ({{ rule.sourceColumn }})
+                  </small>
+                </span>
+                <div class="rule-actions">
+                  <button type="button" class="btn btn-sm btn-outline-primary" (click)="editColumnProcessingRule(i)">
+                    <i class="fas fa-edit"></i>
+                  </button>
+                  <button type="button" class="btn btn-sm btn-outline-danger" (click)="deleteColumnProcessingRule(i)">
+                    <i class="fas fa-trash"></i>
+                  </button>
+                </div>
+              </div>
+              <div class="rule-details">
+                <div class="rule-columns">
+                  <strong>{{ 'APM.Colonnes_1' | translate }}</strong>
+                  <div class="columns-badges">
+                    <span *ngFor="let col of rule.sourceColumns || [rule.sourceColumn]" class="column-badge badge badge-primary">
+                      {{ col }}
+                    </span>
+                  </div>
+                </div>
+                <div class="rule-badges">
+                  <span class="rule-action badge badge-warning" *ngIf="rule.removeSpecialChars">
+                    <i class="fas fa-magic"></i> {{ 'APM.Supprimercaractèresspéciaux' | translate }}
+                  </span>
+                  <span class="rule-action badge badge-info" *ngIf="rule.removeAccents">
+                    <i class="fas fa-language"></i> {{ 'APM.Supprimeraccents' | translate }}
+                  </span>
+                  <span class="rule-action badge badge-secondary" *ngIf="rule.toUpperCase">
+                    <i class="fas fa-arrow-up"></i> {{ 'APM.Majuscules' | translate }}
+                  </span>
+                  <span class="rule-action badge badge-secondary" *ngIf="rule.toLowerCase">
+                    <i class="fas fa-arrow-down"></i> {{ 'APM.Minuscules' | translate }}
+                  </span>
+                  <span class="rule-action badge badge-light" *ngIf="rule.trimSpaces">
+                    <i class="fas fa-cut"></i> {{ 'APM.Nettoyerespaces' | translate }}
+                  </span>
+                </div>
+                <div class="rule-details-text" *ngIf="rule.stringToRemove">
+                  <small class="text-muted">
+                    {{ 'APM.Chaîneàsupprimer' | translate }} <code>{{ rule.stringToRemove }}</code>
+                  </small>
+                </div>
+              </div>
+            </div>
+          </div>
+
+          <div class="add-processing-rule-section">
+            <button type="button" class="btn btn-success" (click)="addColumnProcessingRule()">
+              <i class="fas fa-plus"></i> {{ 'APM.Ajouterunerègledenettoyage' | translate }}
+            </button>
+          </div>
+
+          <!-- Ordre d'exécution des sections de pré-traitement -->
+          <div class="preprocessing-subsection preprocessing-section-order">
+            <h5>
+              <i class="fas fa-sort"></i> {{ 'APM.Ordredexécutiondessections' | translate }}
+            </h5>
+            <p class="section-description">
+              {{ 'APM.Glissezlesrubriquespourdéfinirlordredapplicationduprétraitement123commepourleformatageautomatique' | translate }}
+            </p>
+            <div
+              class="format-actions-drop-list"
+              cdkDropList
+              cdkDropListLockAxis="y"
+              (cdkDropListDropped)="onPreProcessingSectionDrop($event)">
+              <div
+                class="preprocessing-section-order-item"
+                *ngFor="let sectionId of preProcessingSectionOrder; let i = index"
+                cdkDrag>
+                <div class="format-action-order-bar">
+                  <button
+                    type="button"
+                    class="btn btn-sm btn-outline-secondary format-order-btn"
+                    [disabled]="i === 0"
+                    (click)="movePreProcessingSectionUp(i)"
+                    title="{{ 'APM.Monter' | translate }}">
+                    <i class="fas fa-chevron-up"></i>
+                  </button>
+                  <span class="format-action-order-badge" cdkDragHandle title="{{ 'APM.Glisserpourréordonner' | translate }}">
+                    <i class="fas fa-grip-vertical"></i>
+                    {{ i + 1 }}
+                  </span>
+                  <button
+                    type="button"
+                    class="btn btn-sm btn-outline-secondary format-order-btn"
+                    [disabled]="i === preProcessingSectionOrder.length - 1"
+                    (click)="movePreProcessingSectionDown(i)"
+                    title="{{ 'APM.Descendre' | translate }}">
+                    <i class="fas fa-chevron-down"></i>
+                  </button>
+                </div>
+                <span class="preprocessing-section-order-label">{{ preProcessingSectionLabelKeys[sectionId] | translate }}</span>
+              </div>
+            </div>
+          </div>
+
+          <!-- Filtres de lignes (comme /traitement) -->
+          <div class="preprocessing-subsection">
+            <h5>
+              <span class="format-action-order-badge preprocessing-section-order-badge">{{ getPreProcessingSectionOrderIndex('rowFilters') + 1 }}</span>
+              <i class="fas fa-filter"></i> {{ 'APM.Filtrerleslignes' | translate }}
+              <button type="button" class="btn btn-sm btn-outline-info" (click)="toggleRowFiltersSection()">
+                {{ (showRowFiltersSection ? 'APM.Hide' : 'APM.Show') | translate }}
+              </button>
+            </h5>
+            <p class="section-description">
+              {{ 'APM.Conserveuniquementleslignesdontlacolonnecorrespondauxvaleursindiquéesappliquéavantréconciliation' | translate }}
+            </p>
+
+            <div *ngIf="showRowFiltersSection">
+              <div *ngIf="modelRowFilters.length === 0" class="alert alert-light">
+                {{ 'APM.Aucunfiltreconfiguréajoutezunfiltrepourreproduirelasectionfiltrerleslignesdelapagetraitement' | translate }}
+              </div>
+
+              <div *ngFor="let filter of modelRowFilters; let i = index" class="preprocessing-filter-item">
+                <div class="form-row">
+                  <div class="form-group col-md-3">
+                    <label>{{ 'TBL.column' | translate }}</label>
+                    <select class="form-control" [(ngModel)]="filter.column" [ngModelOptions]="{standalone: true}">
+                      <option value="">{{ 'LBL.chooseDash' | translate }}</option>
+                      <option *ngFor="let col of getPreProcessingColumns()" [value]="col">{{ col }}</option>
+                    </select>
+                  </div>
+                  <div class="form-group col-md-6">
+                    <label>{{ 'APM.Valeursàconserverséparéesparvirguleouretourligne' | translate }}</label>
+                    <textarea class="form-control" rows="2"
+                              [value]="getFilterValuesInput(filter)"
+                              (input)="updateFilterValuesInput(filter, $any($event.target).value)"
+                              placeholder="{{ 'APM.Exsuccessvalidated' | translate }}"></textarea>
+                  </div>
+                  <div class="form-group col-md-2">
+                    <label>
+                      <input type="checkbox" [(ngModel)]="filter.enabled" [ngModelOptions]="{standalone: true}">{{ 'TBL.confidence' | translate }}</label>
+                  </div>
+                  <div class="form-group col-md-1">
+                    <label>&nbsp;</label>
+                    <button type="button" class="btn btn-sm btn-outline-danger btn-block" (click)="removeModelRowFilter(i)">
+                      <i class="fas fa-trash"></i>
+                    </button>
+                  </div>
+                </div>
+              </div>
+
+              <button type="button" class="btn btn-outline-primary btn-sm" (click)="addModelRowFilter()">
+                <i class="fas fa-plus"></i> {{ 'APM.Ajouterunfiltre' | translate }}
+              </button>
+            </div>
+          </div>
+
+          <!-- Formatage automatique (comme /traitement) -->
+          <div class="preprocessing-subsection">
+            <h5>
+              <span class="format-action-order-badge preprocessing-section-order-badge">{{ getPreProcessingSectionOrderIndex('formatActions') + 1 }}</span>
+              <i class="fas fa-magic"></i> {{ 'APM.Formatageautomatique' | translate }}
+              <button type="button" class="btn btn-sm btn-outline-info" (click)="toggleFormatActionsSection()">
+                {{ (showFormatActionsSection ? 'APM.Hide' : 'APM.Show') | translate }}
+              </button>
+            </h5>
+            <p class="section-description">
+              {{ 'APM.Actionsdeformatageappliquéessuruneouplusieurscolonnesavecdesparamètresdistinctsparcolonnesibesoinvouspouvezajouterplusieursfoislamêmeactionexplusieurssupprimerconserverdescaractèresavecdesconditionsdifférentesglissezlesrubriquespourdéfinirlordredexécution123' | translate }}
+            </p>
+
+            <div *ngIf="showFormatActionsSection">
+              <div
+                class="format-actions-drop-list"
+                cdkDropList
+                cdkDropListLockAxis="y"
+                (cdkDropListDropped)="onFormatActionDrop($event)">
+                <div
+                  class="preprocessing-format-item"
+                  *ngFor="let action of modelFormatActions; let i = index"
+                  cdkDrag>
+                  <div class="format-action-order-bar">
+                    <button
+                      type="button"
+                      class="btn btn-sm btn-outline-secondary format-order-btn"
+                      [disabled]="i === 0"
+                      (click)="moveFormatActionUp(i)"
+                      title="{{ 'APM.Monter' | translate }}">
+                      <i class="fas fa-chevron-up"></i>
+                    </button>
+                    <span class="format-action-order-badge" cdkDragHandle title="{{ 'APM.Glisserpourréordonner' | translate }}">
+                      <i class="fas fa-grip-vertical"></i>
+                      {{ i + 1 }}
+                    </span>
+                    <button
+                      type="button"
+                      class="btn btn-sm btn-outline-secondary format-order-btn"
+                      [disabled]="i === modelFormatActions.length - 1"
+                      (click)="moveFormatActionDown(i)"
+                      title="{{ 'APM.Descendre' | translate }}">
+                      <i class="fas fa-chevron-down"></i>
+                    </button>
+                  </div>
+
+                  <div class="format-action-header">
+                    <label>
+                      <input type="checkbox" [(ngModel)]="action.enabled" [ngModelOptions]="{standalone: true}">
+                      {{ getFormatActionLabelKey(action.type) | translate }}{{ getFormatActionInstanceSuffix(action, i) }}
+                    </label>
+                    <div class="format-action-header-actions">
+                      <button
+                        type="button"
+                        class="btn btn-sm btn-outline-secondary"
+                        title="{{ 'APM.Dupliquercetteaction' | translate }}"
+                        (click)="duplicateFormatAction(i)">
+                        <i class="fas fa-copy"></i>
+                      </button>
+                      <button
+                        type="button"
+                        class="btn btn-sm btn-outline-danger"
+                        title="{{ 'APM.Supprimercetteaction' | translate }}"
+                        (click)="removeFormatAction(i)">
+                        <i class="fas fa-trash"></i>
+                      </button>
+                    </div>
+                  </div>
+
+                  <div *ngIf="action.enabled" class="format-action-body">
+                    <div class="form-group">
+                      <label>{{ 'APM.Colonnesconcernéesplusieurscolonnespossibles' | translate }}</label>
+                      <div class="format-columns-toolbar" *ngIf="getPreProcessingColumns().length > 0">
+                        <button
+                          type="button"
+                          class="btn btn-sm btn-outline-primary"
+                          (click)="selectAllFormatActionColumns(action)"
+                          [disabled]="areAllFormatActionColumnsSelected(action)">{{ 'ACT.selectAll' | translate }}</button>
+                        <button
+                          type="button"
+                          class="btn btn-sm btn-outline-secondary"
+                          (click)="deselectAllFormatActionColumns(action)"
+                          [disabled]="!(action.columns?.length)">
+                          {{ 'APM.Toutdésélectionner' | translate }}
+                        </button>
+                        <span class="format-columns-count" *ngIf="action.columns?.length">
+                          {{ action.columns.length }} {{ 'APM.Colonnessélectionnées' | translate }}
+                        </span>
+                      </div>
+                      <div class="columns-checkboxes">
+                        <label *ngFor="let col of getPreProcessingColumns(); trackBy: trackByString" class="column-checkbox">
+                          <input type="checkbox"
+                                 [checked]="isFormatActionColumnSelected(action, col)"
+                                 (change)="toggleFormatActionColumn(action, col, $any($event.target).checked)">
+                          {{ col }}
+                        </label>
+                        <small *ngIf="getPreProcessingColumns().length === 0" class="text-muted">
+                          {{ 'APM.Chargezdabordunfichiermodèlepourlisterlescolonnes' | translate }}
+                        </small>
+                      </div>
+                    </div>
+
+                    <div *ngIf="!action.columns?.length" class="format-columns-empty-hint">
+                      {{ 'APM.Sélectionnezaumoinsunecolonnepourconfigurerleformatage' | translate }}
+                    </div>
+
+                    <div *ngIf="action.columns?.length" class="format-action-condition">
+                      <div class="format-column-settings-title">{{ 'APM.Conditiondapplicationoptionnelle' | translate }}</div>
+                      <label class="format-condition-toggle">
+                        <input type="checkbox"
+                               [(ngModel)]="action.applyConditionEnabled"
+                               [ngModelOptions]="{standalone: true}">
+                        {{ 'APM.Appliquerseulementsiunecolonneestégaleàunevaleur' | translate }}
+                      </label>
+                      <div class="form-row" *ngIf="action.applyConditionEnabled">
+                        <div class="form-group col-md-5">
+                          <label>{{ 'TBL.column' | translate }}</label>
+                          <select class="form-control"
+                                  [(ngModel)]="action.conditionColumn"
+                                  [ngModelOptions]="{standalone: true}">
+                            <option value="">{{ 'APM.Choisirunecolonne' | translate }}</option>
+                            <option *ngFor="let col of getPreProcessingColumns()" [value]="col">{{ col }}</option>
+                          </select>
+                        </div>
+                        <div class="form-group col-md-5">
+                          <label>{{ 'APM.Valeursattendues' | translate }}</label>
+                          <input type="text"
+                                 class="form-control"
+                                 [(ngModel)]="action.conditionValue"
+                                 [ngModelOptions]="{standalone: true}"
+                                 placeholder="{{ 'APM.Excashincashouttransfer' | translate }}">
+                        </div>
+                      </div>
+                      <small class="text-muted" *ngIf="action.applyConditionEnabled">
+                        {{ 'APM.Plusieursvaleurspossiblesséparéespardesvirgulesletraitementsappliquesilacolonnecorrespondàlunedelles' | translate }}
+                      </small>
+                    </div>
+
+                    <div *ngIf="action.columns?.length && actionNeedsPerColumnSettings(action.type)" class="format-column-settings-list">
+                      <div class="format-column-settings-toolbar">
+                        <span class="format-column-settings-title">{{ 'APM.Paramètresparcolonne' | translate }}</span>
+                        <button
+                          type="button"
+                          class="btn btn-sm btn-outline-secondary"
+                          (click)="applyDefaultSettingsToAllFormatColumns(action)">
+                          {{ 'APM.Copierlesvaleurspardéfautsurtouteslescolonnes' | translate }}
+                        </button>
+                      </div>
+
+                      <div *ngFor="let col of action.columns" class="format-column-settings-item">
+                        <div class="format-column-settings-header">
+                          <i class="fas fa-columns"></i> {{ col }}
+                        </div>
+
+                        <div *ngIf="action.type === 'removeSpecialStrings'" class="form-row">
+                          <div class="form-group col-md-6">
+                            <label>{{ 'APM.Chaîneàsupprimer_1' | translate }}</label>
+                            <input type="text" class="form-control"
+                                   [(ngModel)]="getFormatColumnSettings(action, col).specialStringToRemove"
+                                   [ngModelOptions]="{standalone: true}">
+                          </div>
+                          <div class="form-group col-md-6">
+                            <label>{{ 'APM.Mode' | translate }}</label>
+                            <select class="form-control"
+                                    [(ngModel)]="getFormatColumnSettings(action, col).specialStringRemovalMode"
+                                    [ngModelOptions]="{standalone: true}">
+                              <option value="all">{{ 'APM.Touteslesoccurrences' | translate }}</option>
+                              <option value="start">{{ 'FILT.startOnly' | translate }}</option>
+                              <option value="end">{{ 'FILT.endOnly' | translate }}</option>
+                            </select>
+                          </div>
+                        </div>
+
+                        <div *ngIf="action.type === 'removeCharacters'" class="form-row">
+                          <div class="form-group col-md-3">
+                            <label>{{ 'COMMON.actions.action' | translate }}</label>
+                            <select class="form-control"
+                                    [(ngModel)]="getFormatColumnSettings(action, col).removeCharMode"
+                                    [ngModelOptions]="{standalone: true}">
+                              <option value="remove">{{ 'ACT.delete' | translate }}</option>
+                              <option value="keep">{{ 'APM.Conserver' | translate }}</option>
+                            </select>
+                          </div>
+                          <div class="form-group col-md-3">
+                            <label>{{ 'TBL.position' | translate }}</label>
+                            <select class="form-control"
+                                    [(ngModel)]="getFormatColumnSettings(action, col).removeCharPosition"
+                                    [ngModelOptions]="{standalone: true}">
+                              <option value="start">{{ 'APM.Début' | translate }}</option>
+                              <option value="end">{{ 'APM.Fin' | translate }}</option>
+                              <option value="specific">{{ 'APM.Positionspécifique' | translate }}</option>
+                            </select>
+                          </div>
+                          <div class="form-group col-md-3">
+                            <label>{{ 'APM.Nombredecaractères' | translate }}</label>
+                            <input type="number" min="1" class="form-control"
+                                   [(ngModel)]="getFormatColumnSettings(action, col).removeCharCount"
+                                   [ngModelOptions]="{standalone: true}">
+                          </div>
+                          <div class="form-group col-md-3" *ngIf="getFormatColumnSettings(action, col).removeCharPosition === 'specific'">
+                            <label>{{ 'APM.Position1based' | translate }}</label>
+                            <input type="number" min="1" class="form-control"
+                                   [(ngModel)]="getFormatColumnSettings(action, col).removeCharSpecificPosition"
+                                   [ngModelOptions]="{standalone: true}">
+                          </div>
+                          <div class="form-group col-md-6">
+                            <label>{{ 'APM.Zéroinitial' | translate }} <span class="text-muted">{{ 'APM.Nombrestéléphones' | translate }}</span></label>
+                            <select class="form-control"
+                                    [(ngModel)]="getFormatColumnSettings(action, col).leadingZeroMode"
+                                    [ngModelOptions]="{standalone: true}">
+                              <option value="none">{{ 'APM.Aucuntraitement' | translate }}</option>
+                              <option value="keep">{{ 'APM.Conservercompléterle0initial' | translate }}</option>
+                              <option value="strip">{{ 'APM.Nepasconserverle0initial' | translate }}</option>
+                            </select>
+                          </div>
+                        </div>
+
+                        <div class="format-action-condition format-action-condition-column">
+                          <label class="format-condition-toggle">
+                            <input type="checkbox"
+                                   [(ngModel)]="getFormatColumnSettings(action, col).applyConditionEnabled"
+                                   [ngModelOptions]="{standalone: true}">
+                            {{ 'APM.conditionSpecificForColumn' | translate: { column: col } }}
+                          </label>
+                          <div class="form-row" *ngIf="getFormatColumnSettings(action, col).applyConditionEnabled">
+                            <div class="form-group col-md-5">
+                              <label>{{ 'TBL.column' | translate }}</label>
+                              <select class="form-control"
+                                      [(ngModel)]="getFormatColumnSettings(action, col).conditionColumn"
+                                      [ngModelOptions]="{standalone: true}">
+                                <option value="">{{ 'APM.Choisirunecolonne' | translate }}</option>
+                                <option *ngFor="let c of getPreProcessingColumns()" [value]="c">{{ c }}</option>
+                              </select>
+                            </div>
+                            <div class="form-group col-md-5">
+                              <label>{{ 'APM.Valeursattendues' | translate }}</label>
+                              <input type="text"
+                                     class="form-control"
+                                     [(ngModel)]="getFormatColumnSettings(action, col).conditionValue"
+                                     [ngModelOptions]="{standalone: true}"
+                                     placeholder="{{ 'APM.Excashincashout' | translate }}">
+                            </div>
+                          </div>
+                        </div>
+
+                        <div *ngIf="action.type === 'removeIndicatif'" class="form-row">
+                          <div class="form-group col-md-4">
+                            <label>{{ 'APM.Typedindicatif' | translate }}</label>
+                            <select class="form-control"
+                                    [(ngModel)]="getFormatColumnSettings(action, col).indicatifType"
+                                    [ngModelOptions]="{standalone: true}">
+                              <option value="international">{{ 'APM.Internationalxx' | translate }}</option>
+                              <option value="national">{{ 'APM.National0x' | translate }}</option>
+                              <option value="custom">{{ 'LBL.custom' | translate }}</option>
+                            </select>
+                          </div>
+                          <div class="form-group col-md-4" *ngIf="getFormatColumnSettings(action, col).indicatifType === 'custom'">
+                            <label>{{ 'APM.Indicatifpersonnalisé' | translate }}</label>
+                            <input type="text" class="form-control"
+                                   [(ngModel)]="getFormatColumnSettings(action, col).customIndicatif"
+                                   [ngModelOptions]="{standalone: true}">
+                          </div>
+                        </div>
+
+                        <div *ngIf="action.type === 'removeDecimals'" class="form-row">
+                          <div class="form-group col-md-4">
+                            <label>{{ 'APM.Séparateurdécimal' | translate }}</label>
+                            <select class="form-control"
+                                    [(ngModel)]="getFormatColumnSettings(action, col).decimalSeparator"
+                                    [ngModelOptions]="{standalone: true}">
+                              <option value=",">{{ 'APM.Virgulefrançais' | translate }}</option>
+                              <option value=".">{{ 'APM.Pointanglais' | translate }}</option>
+                            </select>
+                          </div>
+                          <div class="form-group col-md-4">
+                            <label>
+                              <input type="checkbox"
+                                     [(ngModel)]="getFormatColumnSettings(action, col).keepTrailingZeros"
+                                     [ngModelOptions]="{standalone: true}">
+                              {{ 'APM.Conserversidécimalesnonnulles' | translate }}
+                            </label>
+                          </div>
+                        </div>
+
+                        <div *ngIf="action.type === 'keepLastDigits'" class="form-row">
+                          <div class="form-group col-md-4">
+                            <label>{{ 'APM.Nombredechiffresàgarder' | translate }}</label>
+                            <input type="number" min="1" class="form-control"
+                                   [(ngModel)]="getFormatColumnSettings(action, col).keepLastDigitsCount"
+                                   [ngModelOptions]="{standalone: true}">
+                          </div>
+                        </div>
+
+                        <div *ngIf="action.type === 'removeSpaces'" class="form-row">
+                          <div class="form-group col-md-4">
+                            <label>{{ 'APM.Typedesuppression' | translate }}</label>
+                            <select class="form-control"
+                                    [(ngModel)]="getFormatColumnSettings(action, col).removeSpacesType"
+                                    [ngModelOptions]="{standalone: true}">
+                              <option value="all">{{ 'APM.Touslesespaces' | translate }}</option>
+                              <option value="leading">{{ 'FILT.startOnly' | translate }}</option>
+                              <option value="trailing">{{ 'FILT.endOnly' | translate }}</option>
+                              <option value="multiple">{{ 'APM.Espacesmultiplesunseul' | translate }}</option>
+                            </select>
+                          </div>
+                        </div>
+                      </div>
+                    </div>
+
+                    <div *ngIf="action.columns?.length && !actionNeedsPerColumnSettings(action.type)" class="format-columns-simple-hint">
+                      {{ 'APM.Cetteactionsappliquetelquelsurles' | translate }} {{ action.columns.length }} {{ 'APM.Colonnessélectionnéessansparamètresupplémentaire' | translate }}
+                    </div>
+
+                    <details class="format-action-defaults" *ngIf="actionNeedsPerColumnSettings(action.type)">
+                      <summary>{{ 'APM.Valeurspardéfaututiliséespourlesnouvellescolonnes' | translate }}</summary>
+                      <div *ngIf="action.type === 'removeSpecialStrings'" class="form-row">
+                        <div class="form-group col-md-6">
+                          <label>{{ 'APM.Chaîneàsupprimer_1' | translate }}</label>
+                          <input type="text" class="form-control" [(ngModel)]="action.specialStringToRemove" [ngModelOptions]="{standalone: true}">
+                        </div>
+                        <div class="form-group col-md-6">
+                          <label>{{ 'APM.Mode' | translate }}</label>
+                          <select class="form-control" [(ngModel)]="action.specialStringRemovalMode" [ngModelOptions]="{standalone: true}">
+                            <option value="all">{{ 'APM.Touteslesoccurrences' | translate }}</option>
+                            <option value="start">{{ 'FILT.startOnly' | translate }}</option>
+                            <option value="end">{{ 'FILT.endOnly' | translate }}</option>
+                          </select>
+                        </div>
+                      </div>
+                      <div *ngIf="action.type === 'removeCharacters'" class="form-row">
+                        <div class="form-group col-md-3">
+                          <label>{{ 'COMMON.actions.action' | translate }}</label>
+                          <select class="form-control" [(ngModel)]="action.removeCharMode" [ngModelOptions]="{standalone: true}">
+                            <option value="remove">{{ 'ACT.delete' | translate }}</option>
+                            <option value="keep">{{ 'APM.Conserver' | translate }}</option>
+                          </select>
+                        </div>
+                        <div class="form-group col-md-3">
+                          <label>{{ 'TBL.position' | translate }}</label>
+                          <select class="form-control" [(ngModel)]="action.removeCharPosition" [ngModelOptions]="{standalone: true}">
+                            <option value="start">{{ 'APM.Début' | translate }}</option>
+                            <option value="end">{{ 'APM.Fin' | translate }}</option>
+                            <option value="specific">{{ 'APM.Positionspécifique' | translate }}</option>
+                          </select>
+                        </div>
+                        <div class="form-group col-md-3">
+                          <label>{{ 'APM.Nombredecaractères' | translate }}</label>
+                          <input type="number" min="1" class="form-control" [(ngModel)]="action.removeCharCount" [ngModelOptions]="{standalone: true}">
+                        </div>
+                        <div class="form-group col-md-3" *ngIf="action.removeCharPosition === 'specific'">
+                          <label>{{ 'APM.Position1based' | translate }}</label>
+                          <input type="number" min="1" class="form-control" [(ngModel)]="action.removeCharSpecificPosition" [ngModelOptions]="{standalone: true}">
+                        </div>
+                        <div class="form-group col-md-6">
+                          <label>{{ 'APM.Zéroinitial' | translate }} <span class="text-muted">{{ 'APM.Nombrestéléphones' | translate }}</span></label>
+                          <select class="form-control" [(ngModel)]="action.leadingZeroMode" [ngModelOptions]="{standalone: true}">
+                            <option value="none">{{ 'APM.Aucuntraitement' | translate }}</option>
+                            <option value="keep">{{ 'APM.Conservercompléterle0initial' | translate }}</option>
+                            <option value="strip">{{ 'APM.Nepasconserverle0initial' | translate }}</option>
+                          </select>
+                        </div>
+                      </div>
+                      <div *ngIf="action.type === 'removeIndicatif'" class="form-row">
+                        <div class="form-group col-md-4">
+                          <label>{{ 'APM.Typedindicatif' | translate }}</label>
+                          <select class="form-control" [(ngModel)]="action.indicatifType" [ngModelOptions]="{standalone: true}">
+                            <option value="international">{{ 'APM.Internationalxx' | translate }}</option>
+                            <option value="national">{{ 'APM.National0x' | translate }}</option>
+                            <option value="custom">{{ 'LBL.custom' | translate }}</option>
+                          </select>
+                        </div>
+                        <div class="form-group col-md-4" *ngIf="action.indicatifType === 'custom'">
+                          <label>{{ 'APM.Indicatifpersonnalisé' | translate }}</label>
+                          <input type="text" class="form-control" [(ngModel)]="action.customIndicatif" [ngModelOptions]="{standalone: true}">
+                        </div>
+                      </div>
+                      <div *ngIf="action.type === 'removeDecimals'" class="form-row">
+                        <div class="form-group col-md-4">
+                          <label>{{ 'APM.Séparateurdécimal' | translate }}</label>
+                          <select class="form-control" [(ngModel)]="action.decimalSeparator" [ngModelOptions]="{standalone: true}">
+                            <option value=",">{{ 'APM.Virgulefrançais' | translate }}</option>
+                            <option value=".">{{ 'APM.Pointanglais' | translate }}</option>
+                          </select>
+                        </div>
+                        <div class="form-group col-md-4">
+                          <label>
+                            <input type="checkbox" [(ngModel)]="action.keepTrailingZeros" [ngModelOptions]="{standalone: true}">
+                            {{ 'APM.Conserversidécimalesnonnulles' | translate }}
+                          </label>
+                        </div>
+                      </div>
+                      <div *ngIf="action.type === 'keepLastDigits'" class="form-row">
+                        <div class="form-group col-md-4">
+                          <label>{{ 'APM.Nombredechiffresàgarder' | translate }}</label>
+                          <input type="number" min="1" class="form-control" [(ngModel)]="action.keepLastDigitsCount" [ngModelOptions]="{standalone: true}">
+                        </div>
+                      </div>
+                      <div *ngIf="action.type === 'removeSpaces'" class="form-row">
+                        <div class="form-group col-md-4">
+                          <label>{{ 'APM.Typedesuppression' | translate }}</label>
+                          <select class="form-control" [(ngModel)]="action.removeSpacesType" [ngModelOptions]="{standalone: true}">
+                            <option value="all">{{ 'APM.Touslesespaces' | translate }}</option>
+                            <option value="leading">{{ 'FILT.startOnly' | translate }}</option>
+                            <option value="trailing">{{ 'FILT.endOnly' | translate }}</option>
+                            <option value="multiple">{{ 'APM.Espacesmultiplesunseul' | translate }}</option>
+                          </select>
+                        </div>
+                      </div>
+                    </details>
+                  </div>
+                </div>
+              </div>
+
+              <div class="format-actions-add-bar">
+                <select class="form-control format-actions-add-select"
+                        [(ngModel)]="newFormatActionType"
+                        [ngModelOptions]="{standalone: true}">
+                  <option *ngFor="let item of formatActionTypes" [ngValue]="item.type">{{ item.labelKey | translate }}</option>
+                </select>
+                <button type="button" class="btn btn-outline-primary btn-sm" (click)="addFormatAction()">
+                  <i class="fas fa-plus"></i> {{ 'APM.Ajouteruneactiondeformatage' | translate }}
+                </button>
+              </div>
+            </div>
+          </div>
+
+          <!-- Concaténer plusieurs colonnes -->
+          <div class="preprocessing-subsection">
+            <h5>
+              <span class="format-action-order-badge preprocessing-section-order-badge">{{ getPreProcessingSectionOrderIndex('columnConcatRules') + 1 }}</span>
+              <i class="fas fa-link"></i> {{ 'APM.Concaténerplusieurscolonnes' | translate }}
+              <button type="button" class="btn btn-sm btn-outline-info" (click)="toggleColumnConcatSection()">
+                {{ (showColumnConcatSection ? 'APM.Hide' : 'APM.Show') | translate }}
+              </button>
+            </h5>
+            <p class="section-description">
+              {{ 'APM.Fusionneplusieurscolonnesenunenouvellecolonnecommesurlapagetraitementappliquéaprèsleformatageetavantlerenommagedesvaleurs' | translate }}
+            </p>
+
+            <div *ngIf="showColumnConcatSection">
+              <div *ngIf="modelColumnConcatRules.length === 0" class="alert alert-light">
+                {{ 'APM.Aucuneconcaténationconfiguréeajoutezunerèglepourcréerunecolonneàpartirdeplusieurscolonnessources' | translate }}
+              </div>
+
+              <div *ngFor="let rule of modelColumnConcatRules; let i = index" class="preprocessing-filter-item">
+                <div class="form-row">
+                  <div class="form-group col-md-4">
+                    <label>{{ 'APM.Nouvellecolonne' | translate }}</label>
+                    <input type="text" class="form-control" [(ngModel)]="rule.targetColumn" [ngModelOptions]="{standalone: true}"
+                           placeholder="{{ 'APM.Exdaterefcomplete' | translate }}">
+                  </div>
+                  <div class="form-group col-md-4">
+                    <label>{{ 'APM.Séparateur' | translate }}</label>
+                    <input type="text" class="form-control" [(ngModel)]="rule.separator" [ngModelOptions]="{standalone: true}"
+                           placeholder="{{ 'APM.Exespace' | translate }}">
+                  </div>
+                  <div class="form-group col-md-2">
+                    <label>
+                      <input type="checkbox" [(ngModel)]="rule.enabled" [ngModelOptions]="{standalone: true}">{{ 'TBL.confidence' | translate }}</label>
+                  </div>
+                  <div class="form-group col-md-2">
+                    <label>&nbsp;</label>
+                    <button type="button" class="btn btn-sm btn-outline-danger btn-block" (click)="removeModelColumnConcatRule(i)">
+                      <i class="fas fa-trash"></i>{{ 'ACT.delete' | translate }}</button>
+                  </div>
+                </div>
+
+                <div class="form-group">
+                  <label>{{ 'APM.Colonnessourcesminimum2' | translate }}</label>
+                  <div class="columns-checkboxes">
+                    <label *ngFor="let col of getPreProcessingColumns(); trackBy: trackByString" class="column-checkbox">
+                      <input type="checkbox"
+                             [checked]="isConcatSourceColumnSelected(rule, col)"
+                             (change)="toggleConcatSourceColumn(rule, col, $any($event.target).checked)">
+                      {{ col }}
+                    </label>
+                    <small *ngIf="getPreProcessingColumns().length === 0" class="text-muted">
+                      {{ 'APM.Chargezdabordunfichiermodèlepourlisterlescolonnes' | translate }}
+                    </small>
+                  </div>
+                </div>
+
+                <div class="concat-order-list" *ngIf="rule.sourceColumns.length > 0">
+                  <label>{{ 'APM.Ordredeconcaténation' | translate }}</label>
+                  <div *ngFor="let col of rule.sourceColumns; let colIndex = index" class="concat-order-item">
+                    <span class="concat-order-index">{{ colIndex + 1 }}.</span>
+                    <span class="concat-order-name">{{ col }}</span>
+                    <button type="button" class="btn btn-sm btn-outline-secondary"
+                            (click)="moveConcatSourceColumnUp(rule, colIndex)" [disabled]="colIndex === 0">
+                      <i class="fas fa-arrow-up"></i>
+                    </button>
+                    <button type="button" class="btn btn-sm btn-outline-secondary"
+                            (click)="moveConcatSourceColumnDown(rule, colIndex)" [disabled]="colIndex === rule.sourceColumns.length - 1">
+                      <i class="fas fa-arrow-down"></i>
+                    </button>
+                  </div>
+                </div>
+              </div>
+
+              <button type="button" class="btn btn-outline-primary btn-sm" (click)="addModelColumnConcatRule()">
+                <i class="fas fa-plus"></i> {{ 'APM.Ajouteruneconcaténation' | translate }}
+              </button>
+            </div>
+          </div>
+
+          <!-- Addition / soustraction entre colonnes -->
+          <div class="preprocessing-subsection">
+            <h5>
+              <span class="format-action-order-badge preprocessing-section-order-badge">{{ getPreProcessingSectionOrderIndex('columnMathRules') + 1 }}</span>
+              <i class="fas fa-calculator"></i> {{ 'APM.Additionsoustractiondecolonnes' | translate }}
+              <button type="button" class="btn btn-sm btn-outline-info" (click)="toggleColumnMathSection()">
+                {{ (showColumnMathSection ? 'APM.Hide' : 'APM.Show') | translate }}
+              </button>
+            </h5>
+            <p class="section-description">
+              {{ 'APM.Calculeunenouvellecolonneàpartirdedeuxcolonnesnumériquesadditionousoustraction' | translate }}
+            </p>
+
+            <div *ngIf="showColumnMathSection">
+              <div *ngIf="modelColumnMathRules.length === 0" class="alert alert-light">
+                {{ 'APM.Aucuncalculconfiguréajoutezunerèglepourcréerunecolonneàpartirdedeuxcolonnessources' | translate }}
+              </div>
+
+              <div *ngFor="let rule of modelColumnMathRules; let i = index" class="preprocessing-filter-item">
+                <div class="form-row">
+                  <div class="form-group col-md-3">
+                    <label>{{ 'APM.Colonnea' | translate }}</label>
+                    <select class="form-control" [(ngModel)]="rule.sourceColumnA" [ngModelOptions]="{standalone: true}">
+                      <option value="">{{ 'LBL.chooseDash' | translate }}</option>
+                      <option *ngFor="let col of getPreProcessingColumns()" [value]="col">{{ col }}</option>
+                    </select>
+                  </div>
+                  <div class="form-group col-md-2">
+                    <label>{{ 'APM.Opération' | translate }}</label>
+                    <select class="form-control" [(ngModel)]="rule.operation" [ngModelOptions]="{standalone: true}">
+                      <option value="add">{{ 'APM.Addition' | translate }}</option>
+                      <option value="subtract">{{ 'APM.Soustraction' | translate }}</option>
+                    </select>
+                  </div>
+                  <div class="form-group col-md-3">
+                    <label>{{ 'APM.Colonneb' | translate }}</label>
+                    <select class="form-control" [(ngModel)]="rule.sourceColumnB" [ngModelOptions]="{standalone: true}">
+                      <option value="">{{ 'LBL.chooseDash' | translate }}</option>
+                      <option *ngFor="let col of getPreProcessingColumns()" [value]="col">{{ col }}</option>
+                    </select>
+                  </div>
+                  <div class="form-group col-md-2">
+                    <label>{{ 'APM.Nouvellecolonne' | translate }}</label>
+                    <input type="text" class="form-control" [(ngModel)]="rule.targetColumn" [ngModelOptions]="{standalone: true}"
+                           placeholder="{{ 'APM.Extotal' | translate }}">
+                  </div>
+                  <div class="form-group col-md-1">
+                    <label>
+                      <input type="checkbox" [(ngModel)]="rule.enabled" [ngModelOptions]="{standalone: true}">{{ 'TBL.confidence' | translate }}</label>
+                  </div>
+                  <div class="form-group col-md-1">
+                    <label>&nbsp;</label>
+                    <button type="button" class="btn btn-sm btn-outline-danger btn-block" (click)="removeModelColumnMathRule(i)">
+                      <i class="fas fa-trash"></i>
+                    </button>
+                  </div>
+                </div>
+              </div>
+
+              <button type="button" class="btn btn-outline-primary btn-sm" (click)="addModelColumnMathRule()">
+                <i class="fas fa-plus"></i> {{ 'APM.Ajouteruncalcul' | translate }}
+              </button>
+            </div>
+          </div>
+
+          <!-- Renommage des valeurs de colonnes -->
+          <div class="preprocessing-subsection">
+            <h5>
+              <span class="format-action-order-badge preprocessing-section-order-badge">{{ getPreProcessingSectionOrderIndex('valueMappings') + 1 }}</span>
+              <i class="fas fa-exchange-alt"></i> {{ 'APM.Renommerlesvaleursdecolonnes' | translate }}
+              <button type="button" class="btn btn-sm btn-outline-info" (click)="toggleValueMappingsSection()">
+                {{ (showValueMappingsSection ? 'APM.Hide' : 'APM.Show') | translate }}
+              </button>
+            </h5>
+            <p class="section-description">
+              {{ 'APM.Remplaceunlibelléparunautredansunecolonneexsurtransactiontypeaffichercashinaulieudempvouspouvezajouterune2evaleuractuelleoptionnelledansuneautrecolonnelerenommagenesappliquequesilesdeuxconditionssontrempliesappliquéaprèslesfiltresetleformatage' | translate }}
+            </p>
+
+            <div *ngIf="showValueMappingsSection">
+              <div *ngIf="modelValueMappings.length === 0" class="alert alert-light">
+                {{ 'APM.Aucunrenommageconfiguréajoutezunecorrespondancevaleuractuellenouveaulibellé' | translate }}
+              </div>
+
+              <div *ngFor="let mapping of modelValueMappings; let i = index" class="preprocessing-filter-item">
+                <div class="form-row">
+                  <div class="form-group col-md-3">
+                    <label>{{ 'TBL.column' | translate }}</label>
+                    <select class="form-control" [(ngModel)]="mapping.column" [ngModelOptions]="{standalone: true}">
+                      <option value="">{{ 'LBL.chooseDash' | translate }}</option>
+                      <option *ngFor="let col of getPreProcessingColumns()" [value]="col">{{ col }}</option>
+                    </select>
+                  </div>
+                  <div class="form-group col-md-2">
+                    <label>{{ 'APM.1revaleuractuelle' | translate }}</label>
+                    <input type="text" class="form-control" [(ngModel)]="mapping.fromValue" [ngModelOptions]="{standalone: true}"
+                           placeholder="{{ 'APM.Exmp' | translate }}">
+                  </div>
+                  <div class="form-group col-md-2">
+                    <label>{{ 'APM.2evaleuractuelle' | translate }} <span class="text-muted">{{ 'LBL.optional' | translate }}</span></label>
+                    <input type="text" class="form-control" [(ngModel)]="mapping.conditionValue" [ngModelOptions]="{standalone: true}"
+                           placeholder="{{ 'APM.Exsn' | translate }}">
+                  </div>
+                  <div class="form-group col-md-2">
+                    <label>{{ 'APM.Nouveaulibellé' | translate }}</label>
+                    <input type="text" class="form-control" [(ngModel)]="mapping.toValue" [ngModelOptions]="{standalone: true}"
+                           placeholder="{{ 'APM.Excashin' | translate }}">
+                  </div>
+                  <div class="form-group col-md-2">
+                    <label>
+                      <input type="checkbox" [(ngModel)]="mapping.enabled" [ngModelOptions]="{standalone: true}">{{ 'TBL.confidence' | translate }}</label>
+                  </div>
+                  <div class="form-group col-md-1">
+                    <label>&nbsp;</label>
+                    <button type="button" class="btn btn-sm btn-outline-danger btn-block" (click)="removeModelValueMapping(i)">
+                      <i class="fas fa-trash"></i>
+                    </button>
+                  </div>
+                </div>
+                <div class="form-row" *ngIf="mapping.conditionValue?.trim()">
+                  <div class="form-group col-md-4">
+                    <label>{{ 'APM.Colonnedela2evaleur' | translate }} <span class="text-muted">{{ 'APM.Requissi2evaleurrenseignée' | translate }}</span></label>
+                    <select class="form-control" [(ngModel)]="mapping.conditionColumn" [ngModelOptions]="{standalone: true}">
+                      <option value="">{{ 'LBL.chooseDash' | translate }}</option>
+                      <option *ngFor="let col of getPreProcessingColumns()" [value]="col">{{ col }}</option>
+                    </select>
+                  </div>
+                  <div class="form-group col-md-8">
+                    <small class="text-muted">
+                      {{ 'APM.Lerenommagesappliqueseulementsila1revaleuractuelle' | translate }} <strong>{{ 'APM.Et' | translate }}</strong> {{ 'APM.La2evaleuractuelledanslacolonnechoisiecorrespondent' | translate }}
+                    </small>
+                  </div>
+                </div>
+              </div>
+
+              <button type="button" class="btn btn-outline-primary btn-sm" (click)="addModelValueMapping()">
+                <i class="fas fa-plus"></i> {{ 'APM.Ajouterunrenommage' | translate }}
+              </button>
+            </div>
+          </div>
+
+          <!-- Renommage des en-têtes de colonnes -->
+          <div class="preprocessing-subsection">
+            <h5>
+              <span class="format-action-order-badge preprocessing-section-order-badge">{{ getPreProcessingSectionOrderIndex('columnRenameRules') + 1 }}</span>
+              <i class="fas fa-i-cursor"></i> {{ 'APM.Renommerunentêtedecolonne' | translate }}
+              <button type="button" class="btn btn-sm btn-outline-info" (click)="toggleColumnRenameSection()">
+                {{ (showColumnRenameSection ? 'APM.Hide' : 'APM.Show') | translate }}
+              </button>
+            </h5>
+            <p class="section-description">
+              {{ 'APM.Changelenomdunecolonneentêtesansmodifierlesvaleursappliéendernierdanslepipelinedeprétraitementlacolonnerenomméeconservesapositiondoriginedanslefichierexporté' | translate }}
+            </p>
+
+            <div *ngIf="showColumnRenameSection">
+              <div *ngIf="modelColumnRenameRules.length === 0" class="alert alert-light">
+                {{ 'APM.Aucunrenommagedentêteconfiguréajoutezunecorrespondancecolonneactuellenouveaunom' | translate }}
+              </div>
+
+              <div *ngFor="let rule of modelColumnRenameRules; let i = index" class="preprocessing-filter-item">
+                <div class="form-row">
+                  <div class="form-group col-md-4">
+                    <label>{{ 'APM.Colonneactuelle' | translate }}</label>
+                    <select class="form-control" [(ngModel)]="rule.sourceColumn" [ngModelOptions]="{standalone: true}">
+                      <option value="">{{ 'LBL.chooseDash' | translate }}</option>
+                      <option *ngFor="let col of getPreProcessingColumns()" [value]="col">{{ col }}</option>
+                    </select>
+                  </div>
+                  <div class="form-group col-md-4">
+                    <label>{{ 'APM.Nouveaunomdentête' | translate }}</label>
+                    <input type="text" class="form-control" [(ngModel)]="rule.targetColumn" [ngModelOptions]="{standalone: true}"
+                           placeholder="{{ 'APM.Exmontant' | translate }}">
+                  </div>
+                  <div class="form-group col-md-2">
+                    <label>
+                      <input type="checkbox" [(ngModel)]="rule.enabled" [ngModelOptions]="{standalone: true}">{{ 'TBL.confidence' | translate }}</label>
+                  </div>
+                  <div class="form-group col-md-2">
+                    <label>&nbsp;</label>
+                    <button type="button" class="btn btn-sm btn-outline-danger btn-block" (click)="removeModelColumnRenameRule(i)">
+                      <i class="fas fa-trash"></i>
+                    </button>
+                  </div>
+                </div>
+              </div>
+
+              <button type="button" class="btn btn-outline-primary btn-sm" (click)="addModelColumnRenameRule()">
+                <i class="fas fa-plus"></i> {{ 'APM.Ajouterunrenommagedentête' | translate }}
+              </button>
+            </div>
+          </div>
+
+          <!-- Colonne ENV -->
+          <div class="preprocessing-subsection">
+            <h5>
+              <i class="fas fa-globe"></i> {{ 'APM.Colonne_1' | translate }} {{ envColumnName }}
+            </h5>
+            <p class="section-description">
+              {{ 'APM.Ajouteunecolonne' | translate }} <strong>{{ envColumnName }}</strong> {{ 'APM.Surchaquelignedufichierfinalaveclavaleurchoisie' | translate }}
+            </p>
+
+            <div class="form-row">
+              <div class="form-group col-md-3">
+                <label>
+                  <input type="checkbox" [(ngModel)]="modelEnvColumnEnabled" [ngModelOptions]="{standalone: true}">
+                  {{ 'APM.Activerlacolonne' | translate }} {{ envColumnName }}
+                </label>
+              </div>
+              <div class="form-group col-md-4" *ngIf="modelEnvColumnEnabled">
+                <label>{{ 'APM.Valeur' | translate }} {{ envColumnName }}</label>
+                <select class="form-control" [(ngModel)]="modelEnvColumnValue" [ngModelOptions]="{standalone: true}">
+                  <option value="">{{ 'LBL.chooseDash' | translate }}</option>
+                  <option *ngFor="let option of envColumnOptions" [value]="option">{{ option }}</option>
+                </select>
+              </div>
+            </div>
+          </div>
+
+          <!-- Filtrer les colonnes à l'export -->
+          <div class="preprocessing-subsection">
+            <h5>
+              <i class="fas fa-columns"></i> {{ 'APM.Colonnesàlexport' | translate }}
+            </h5>
+            <p class="section-description">
+              {{ 'APM.Commesurletraitementautomatiquelimitezlescolonnesprésentesdanslefichierfinal' | translate }}
+            </p>
+            <div class="form-row">
+              <div class="form-group col-md-12">
+                <label>
+                  <input
+                    type="checkbox"
+                    [checked]="modelExportColumnFilterEnabled"
+                    (change)="onModelExportColumnFilterToggle($any($event.target).checked)"
+                    [ngModelOptions]="{standalone: true}">
+                  {{ 'APM.Filtrerlescolonnesàlexport' | translate }}
+                </label>
+              </div>
+            </div>
+            <p class="section-description" *ngIf="!modelExportColumnFilterEnabled">
+              {{ 'APM.Pardéfauttouteslescolonnestraitéessontexportéesactivezloptionpourchoisircellesàconserver' | translate }}
+            </p>
+            <ng-container *ngIf="modelExportColumnFilterEnabled">
+              <p class="section-description">
+                {{ 'APM.Décochezlescolonnesàexcluredufichierexportélorsdutraitementautomatique' | translate }}
+              </p>
+              <div class="model-export-columns-empty" *ngIf="!modelExportColumns.length">
+                {{ 'APM.Aucunecolonnedétectéerenseignezlefichiermodèleetlesrèglesdetraitementpuisactualisez' | translate }}
+                <button type="button" class="btn btn-sm btn-outline-secondary ml-2" (click)="refreshModelExportColumnCatalog()">
+                  <i class="fas fa-sync-alt"></i> {{ 'APM.Actualiserlaliste' | translate }}
+                </button>
+              </div>
+              <ng-container *ngIf="modelExportColumns.length">
+                <div class="model-export-columns-toolbar">
+                  <span class="model-export-columns-count">
+                    {{ getModelExportColumnsKeptCount() }} / {{ modelExportColumns.length }} {{ 'APM.Colonnesconservées' | translate }}
+                  </span>
+                  <div class="model-export-columns-actions">
+                    <button type="button" class="btn btn-sm btn-outline-secondary" (click)="setAllModelExportColumnsKept(true)">{{ 'APM.Toutgarder' | translate }}</button>
+                    <button type="button" class="btn btn-sm btn-outline-secondary" (click)="setAllModelExportColumnsKept(false)">{{ 'APM.Toutsupprimer' | translate }}</button>
+                    <button type="button" class="btn btn-sm btn-outline-secondary" (click)="resetModelExportColumnKeepDefaults()">{{ 'COMMON.actions.reset' | translate }}</button>
+                    <button type="button" class="btn btn-sm btn-outline-secondary" (click)="refreshModelExportColumnCatalog()">
+                      <i class="fas fa-sync-alt"></i>
+                    </button>
+                  </div>
+                </div>
+                <div class="model-export-columns-list">
+                  <label
+                    class="model-export-column-item"
+                    *ngFor="let col of modelExportColumns"
+                    [class.model-export-column-item-excluded]="!isModelExportColumnKept(col)">
+                    <input
+                      type="checkbox"
+                      [checked]="isModelExportColumnKept(col)"
+                      (change)="toggleModelExportColumnKeep(col, $any($event.target).checked)">
+                    <span class="model-export-column-name">{{ col }}</span>
+                    <span class="model-export-column-badge" [class.badge-keep]="isModelExportColumnKept(col)" [class.badge-drop]="!isModelExportColumnKept(col)">
+                      {{ (isModelExportColumnKept(col) ? 'APM.Keep' : 'ACT.delete') | translate }}
+                    </span>
+                  </label>
+                </div>
+              </ng-container>
+            </ng-container>
+          </div>
+                 
+          <!-- Formulaire d'ajout/édition de règle de traitement -->
+          <div *ngIf="editingColumnProcessingRule !== null" class="processing-rule-form">
+            <h5>{{ (editingColumnProcessingRule === -1 ? 'APM.NewRule' : 'APM.EditRule') | translate }}</h5>
+            <form [formGroup]="columnProcessingRuleForm" (ngSubmit)="saveColumnProcessingRule()">
+              <div class="form-row">
+                <div class="form-group">
+                  <label>{{ 'APM.Colonnesànettoyer' | translate }}</label>
+                  <div class="columns-selection-container">
+                    <div class="columns-list">
+                      <div *ngFor="let col of availableTemplateColumns" class="column-checkbox-item">
+                        <label class="column-checkbox-label">
+                          <input type="checkbox" 
+                                 [value]="col" 
+                                 (change)="toggleColumnSelection(col, $event.target.checked)"
+                                 [checked]="isColumnSelected(col)">
+                          <span class="column-name">{{ col }}</span>
+                        </label>
+                      </div>
+                    </div>
+                    <div class="columns-selection-summary">
+                      <small class="form-text text-info">
+                        <i class="fas fa-info-circle"></i> 
+                        {{ getSelectedColumnsCount() }} {{ 'APM.Colonnessélectionnéessur' | translate }} {{ availableTemplateColumns.length }} {{ 'APM.Disponibles' | translate }}
+                      </small>
+                      <button type="button" class="btn btn-sm btn-outline-secondary" (click)="selectAllColumns()">
+                        <i class="fas fa-check-double"></i>{{ 'ACT.selectAll' | translate }}</button>
+                      <button type="button" class="btn btn-sm btn-outline-secondary" (click)="deselectAllColumns()">
+                        <i class="fas fa-times"></i> {{ 'APM.Toutdésélectionner' | translate }}
+                      </button>
+                    </div>
+                  </div>
+                  <small class="form-text text-muted" *ngIf="availableTemplateColumns.length === 0">
+                    <i class="fas fa-spinner fa-spin"></i> {{ 'APM.Chargementdescolonnesdumodèle' | translate }}
+                  </small>
+                  <small class="form-text text-success" *ngIf="availableTemplateColumns.length > 0">
+                    <i class="fas fa-check"></i> {{ availableTemplateColumns.length }} {{ 'APM.Colonnesdumodèledisponibles' | translate }}
+                  </small>
+                </div>
+              </div>
+
+              <div class="form-row">
+                <div class="form-group">
+                  <label>
+                    <input type="checkbox" formControlName="removeSpecialChars" [checked]="true">
+                    {{ 'APM.Supprimerlescaractèresspéciaux' | translate }}
+                  </label>
+                  <small class="form-text text-muted">
+                    {{ 'APM.Cetteoptionsupprimeautomatiquementlescaractèresspéciauxdelacolonnesélectionnée' | translate }}
+                  </small>
+                </div>
+              </div>
+
+              <div class="form-row">
+                <div class="form-group">
+                  <label>
+                    <input type="checkbox" formControlName="removeAccents">
+                    {{ 'APM.Supprimerlesaccents' | translate }}
+                  </label>
+                  <small class="form-text text-muted">
+                    {{ 'APM.Cetteoptionsupprimeautomatiquementtouslesaccentsdesvaleurséèàçetc' | translate }}
+                    <br>{{ 'APM.Exempletéléphonetelephonenuméronumero' | translate }}
+                  </small>
+                </div>
+              </div>
+
+              <div class="form-row">
+                <div class="form-group">
+                  <label>
+                    <input type="checkbox" formControlName="toUpperCase">
+                    {{ 'APM.Convertirenmajuscules' | translate }}
+                  </label>
+                  <small class="form-text text-muted">
+                    {{ 'APM.Convertittoutesleslettresenmajuscules' | translate }}
+                    <br>{{ 'APM.Exemplehelloworldhelloworld' | translate }}
+                  </small>
+                </div>
+              </div>
+
+              <div class="form-row">
+                <div class="form-group">
+                  <label>
+                    <input type="checkbox" formControlName="toLowerCase">
+                    {{ 'APM.Convertirenminuscules' | translate }}
+                  </label>
+                  <small class="form-text text-muted">
+                    {{ 'APM.Convertittoutesleslettresenminuscules' | translate }}
+                    <br>{{ 'APM.Exemplehelloworldhelloworld_1' | translate }}
+                  </small>
+                </div>
+              </div>
+
+              <div class="form-row">
+                <div class="form-group">
+                  <label>
+                    <input type="checkbox" formControlName="trimSpaces">
+                    {{ 'APM.Nettoyerlesespaces' | translate }}
+                  </label>
+                  <small class="form-text text-muted">
+                    {{ 'APM.Supprimelesespacesendébutetfindechaîne' | translate }}
+                    <br>{{ 'APM.Exemplehelloworldhelloworld_2' | translate }}
+                  </small>
+                </div>
+              </div>
+                
+              <!-- Champ pour spécifier les chaînes à supprimer -->
+              <div class="form-row">
+                <div class="form-group">
+                  <label>{{ 'APM.Chaîneàsupprimer_1' | translate }}</label>
+                  <input type="text" formControlName="stringToRemove" class="form-control" 
+                         placeholder="{{ 'APM.Excmouabc123' | translate }}">
+                  <small class="form-text text-muted">
+                    <strong>{{ 'APM.Sensibleàlacasse' | translate }}</strong><br>
+                    {{ 'APM.Cetteoptionsupprimeautomatiquementlachaînespécifiéedelacolonnesélectionnée' | translate }}<br>
+                    {{ 'APM.Exemple' | translate }} <code>{{ 'APM.CM' | translate }}</code> {{ 'APM.Supprimera' | translate }} <code>{{ 'APM.CM' | translate }}</code> {{ 'APM.Dans' | translate }} <code>{{ 'APM.IDcm123' | translate }}</code> → <code>{{ 'APM.ID123' | translate }}</code><br>
+                    {{ 'APM.Exemple' | translate }} <code>{{ 'APM.ML' | translate }}</code> {{ 'APM.Supprimera' | translate }} <code>{{ 'APM.ML' | translate }}</code> {{ 'APM.Dans' | translate }} <code>{{ 'APM.REFml456' | translate }}</code> → <code>{{ 'APM.REF456' | translate }}</code><br>
+                    {{ 'APM.Cetteoptionpeutêtrecombinéeavecdautresrèglesdenettoyage' | translate }}
+                  </small>
+                </div>
+              </div>
+
+              <div class="form-actions">
+                <button type="submit" class="btn btn-primary">{{ 'APM.Sauvegarder' | translate }}</button>
+                <button type="button" class="btn btn-secondary" (click)="cancelColumnProcessingRuleEdit()">{{ 'COMMON.actions.cancel' | translate }}</button>
+              </div>
+            </form>
+           </div>
+         </div>
+      </div>
+
+      <div class="form-actions">
+        <button type="button" class="btn btn-primary" [disabled]="!isFormValid()" (click)="saveModel()">
+          {{ (isDuplicatingModel ? 'APM.Duplicate' : (editingModel ? 'COMMON.actions.edit' : 'APM.Create')) | translate }}
+        </button>
+        <button type="button" class="btn btn-secondary" (click)="cancelEdit()">
+          {{ ((editingModel || isDuplicatingModel) ? 'COMMON.actions.cancel' : 'APM.Close') | translate }}
+        </button>
+        
+
+        
+        <!-- Message d'aide pour la validation -->
+        <div class="validation-help" *ngIf="!isFormValid() && modelForm.get('fileType')?.value !== 'bo'">
+          <div class="alert alert-info">
+            <i class="fas fa-info-circle"></i>
+            <strong>{{ 'APM.Pouractiverleboutoncréer' | translate }}</strong>
+            <ul>
+              <li *ngIf="selectedPartnerKeys.length === 0 && !isPartnerConditionalKeysConfigValid()">{{ 'APM.Sélectionnezaumoinsuneclépartenaireouconfigurezlescléspartenaireconditionnelles' | translate }}</li>
+              <li *ngIf="selectedPartnerKeys.length > 0">{{ 'APM.Cléspartenairesélectionnées' | translate }}{{ selectedPartnerKeys.length }})</li>
+              <li *ngIf="isPartnerConditionalKeysConfigValid()">{{ 'APM.Cléspartenaireconditionnellesconfigurées' | translate }}</li>
+              <li *ngIf="selectedBOModels.length === 0">{{ 'APM.Sélectionnezaumoinsunmodèlebo' | translate }}</li>
+              <li *ngIf="selectedBOModels.length > 0">{{ 'APM.Modèlesbosélectionnés' | translate }}{{ selectedBOModels.length }})</li>
+              <li *ngIf="selectedBOKeys.length === 0 && !isBoConditionalKeysConfigValid()">{{ 'APM.Sélectionnezaumoinsunecléboouconfigurezlesclésboconditionnelles' | translate }}</li>
+              <li *ngIf="selectedBOKeys.length > 0">{{ 'APM.Clésbosélectionnées' | translate }}{{ selectedBOKeys.length }})</li>
+              <li *ngIf="isBoConditionalKeysConfigValid()">{{ 'APM.Clésboconditionnellesconfigurées' | translate }}</li>
+            </ul>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Section de filtrage -->
+  <div class="filters-section" *ngIf="models.length > 0">
+    <h3><i class="fas fa-filter"></i>{{ 'LBL.filters' | translate }}</h3>
+    <div class="filters-container">
+      <div class="filter-row">
+        <div class="filter-group">
+          <label for="filterGroup">{{ 'APM.Groupe' | translate }}</label>
+          <select id="filterGroup" [(ngModel)]="filterGroup" (change)="applyFilters()" class="form-control">
+            <option value="">{{ 'APM.Touslesgroupes' | translate }}</option>
+            <option *ngFor="let group of availableGroups" [value]="group">
+              {{ getCategoryLabelKey(group) | translate }}
+            </option>
+          </select>
+        </div>
+        
+        <div class="filter-group">
+          <label for="filterCountry">{{ 'TBL.country' | translate }}</label>
+          <select id="filterCountry" [(ngModel)]="filterCountry" (change)="applyFilters()" class="form-control">
+            <option value="">{{ 'FILT.allCountries' | translate }}</option>
+            <option *ngFor="let country of availableCountries" [value]="country">
+              {{ country }}
+            </option>
+          </select>
+        </div>
+        
+        <div class="filter-group">
+          <label for="filterName">{{ 'APM.Nomdumodèle_1' | translate }}</label>
+          <input type="text" id="filterName" [(ngModel)]="filterName" 
+                 (input)="applyFilters()" class="form-control" 
+                 placeholder="{{ 'APM.Rechercherdanslenom' | translate }}">
+        </div>
+        
+        <div class="filter-actions">
+          <button type="button" class="btn btn-outline-secondary" (click)="resetFilters()" 
+                  [disabled]="!hasActiveFilters()">
+            <i class="fas fa-times"></i>{{ 'COMMON.actions.reset' | translate }}</button>
+        </div>
+      </div>
+      
+      <!-- Indicateur de filtres actifs -->
+      <div class="active-filters" *ngIf="hasActiveFilters()">
+        <span class="filter-badge">
+          <i class="fas fa-filter"></i>
+          {{ getFilteredModelsCount() }} {{ 'APM.Modèlestrouvéssur' | translate }} {{ models.length }}
+        </span>
+        <span class="filter-badge" *ngIf="filterGroup">
+          <i class="fas fa-tag"></i> {{ 'APM.Groupe_1' | translate }} {{ getCategoryLabelKey(filterGroup) | translate }}
+        </span>
+        <span class="filter-badge" *ngIf="filterCountry">
+          <i class="fas fa-flag"></i> {{ 'APM.Pays' | translate }} {{ filterCountry }}
+        </span>
+        <span class="filter-badge" *ngIf="filterName">
+          <i class="fas fa-search"></i> {{ 'APM.Nom' | translate }}{{ filterName }}"
+        </span>
+      </div>
+    </div>
+  </div>
+
+  <!-- Liste des modèles regroupés par catégorie -->
+  <div class="models-list" *ngIf="models.length > 0">
+    <h3>{{ 'APM.Modèlesexistants' | translate }}{{ getFilteredModelsCount() }})</h3>
+    
+    <!-- Message si aucun modèle ne correspond aux filtres -->
+    <div class="no-results" *ngIf="getFilteredModelsCount() === 0 && hasActiveFilters()">
+      <div class="alert alert-info">
+        <i class="fas fa-search"></i>
+        <strong>{{ 'APM.Aucunmodèletrouvé' | translate }}</strong>
+        <p>{{ 'APM.Aucunmodèlenecorrespondauxcritèresdefiltragesélectionnés' | translate }}</p>
+        <button type="button" class="btn btn-outline-primary" (click)="resetFilters()">
+          <i class="fas fa-times"></i> {{ 'APM.Réinitialiserlesfiltres' | translate }}
+        </button>
+      </div>
+    </div>
+    
+    <!-- Parcourir les catégories actives -->
+    <div class="category-section" 
+         [ngClass]="{
+           'category-cashin': category === 'Partenaire CASHIN',
+           'category-paiement': category === 'Partenaire PAIEMENT',
+           'category-backoffice': category === 'Back Office'
+         }"
+         *ngFor="let category of filteredCategories; trackBy: trackByString">
+      <div class="category-header">
+        <h4 class="category-title">
+          <i [class]="getCategoryIcon(category)"></i>
+          {{ getCategoryLabelKey(category) | translate }} ({{ modelsByCategory[category]?.length || 0 }})
+        </h4>
+        <p class="category-description">{{ getCategoryDescriptionKey(category) | translate }}</p>
+      </div>
+      
+      <div class="models-grid">
+        <div class="model-card" *ngFor="let model of modelsByCategory[category]; trackBy: trackByModel">
+          <div class="model-header">
+            <h4>{{ model.name }}</h4>
+            <div class="model-actions">
+              <button (click)="editModel(model)" class="btn btn-sm btn-edit" title="{{ 'ACT.edit' | translate }}">
+                <i class="fas fa-edit"></i>
+              </button>
+              <button (click)="duplicateModel(model)" class="btn btn-sm btn-duplicate" title="{{ 'APM.Dupliquer' | translate }}">
+                <i class="fas fa-copy"></i>
+              </button>
+              <button (click)="deleteModel(model)" class="btn btn-sm btn-delete" title="{{ 'ACT.delete' | translate }}">
+                <i class="fas fa-trash"></i>
+              </button>
+            </div>
+          </div>
+
+          <div class="model-info">
+            <p><strong>{{ 'APM.Pattern' | translate }}</strong> {{ model.filePattern }}</p>
+            <p><strong>{{ 'LBL.typeLabel' | translate }}</strong> {{ model.fileType }}</p>
+            <p><strong>{{ 'APM.Autoappliqué' | translate }}</strong> {{ (model.autoApply ? 'FU.Yes' : 'FU.No') | translate }}</p>
+            <p *ngIf="model.templateFile"><strong>{{ 'APM.Fichiermodèle_1' | translate }}</strong> {{ model.templateFile }}</p>
+
+            <!-- Affichage de la logique de réconciliation (pour modèles partenaires) -->
+            <div class="model-logic" *ngIf="model.reconciliationLogic?.type">
+              <p><strong>{{ 'APM.Logiquederéconciliation' | translate }}</strong>
+                <span class="logic-type-badge" [ngClass]="{
+                  'logic-standard': model.reconciliationLogic.type === 'STANDARD',
+                  'logic-special': model.reconciliationLogic.type === 'SPECIAL_RATIO',
+                  'logic-custom': model.reconciliationLogic.type === 'CUSTOM'
+                }">
+                  {{ model.reconciliationLogic.type }}
+                </span>
+                <span class="logic-ratio" *ngIf="model.reconciliationLogic.parameters?.expectedRatio">
+                  ({{ model.reconciliationLogic.parameters.expectedRatio }})
+                </span>
+              </p>
+              <p *ngIf="model.reconciliationLogic.parameters?.description" class="logic-desc">
+                <small>{{ model.reconciliationLogic.parameters.description }}</small>
+              </p>
+            </div>
+
+            <!-- Affichage des règles de traitement des colonnes -->
+            <div class="model-rules" *ngIf="model.columnProcessingRules && model.columnProcessingRules.length > 0">
+              <p><strong>{{ 'APM.Règlesdetraitement' | translate }}</strong> {{ model.columnProcessingRules.length }} {{ 'APM.Règles' | translate }}</p>
+              <div class="rules-preview">
+                <span class="rule-badge" *ngFor="let rule of model.columnProcessingRules.slice(0, 3); trackBy: trackByRule">
+                  {{ rule.sourceColumn }} → {{ rule.targetColumn }}
+                </span>
+                <span class="rule-more" *ngIf="model.columnProcessingRules.length > 3">
+                  +{{ model.columnProcessingRules.length - 3 }} {{ 'APM.Autres' | translate }}
+                </span>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- État de chargement -->
+  <div class="loading" *ngIf="loading">
+    <i class="fas fa-spinner fa-spin"></i>{{ 'MSG.loading' | translate }}</div>
+  </div><!-- .auto-processing-models-container -->
+  </div><!-- .main -->
+</div> 

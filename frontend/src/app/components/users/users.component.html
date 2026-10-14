@@ -1,0 +1,267 @@
+<div class="users-page">
+  <!-- TOP NAV -->
+  <nav class="topnav">
+    <div class="nav-brand">
+      <div class="nav-brand-dot"></div>
+      ReconciliApp
+    </div>
+    <div class="nav-crumb">{{ 'USR.eyebrow.administration' | translate }} › {{ 'USR.nav.users' | translate }}</div>
+    <div class="nav-spacer"></div>
+    <button type="button" class="nav-ghost" (click)="goBack()" [title]="'COMMON.actions.back' | translate">
+      <i class="fas fa-arrow-left"></i><span>{{ 'COMMON.actions.back' | translate }}</span>
+    </button>
+    <button type="button" class="nav-ghost" (click)="goToAide()" [title]="'SOP.shared.nav.helpPage' | translate">
+      <i class="fas fa-question-circle"></i><span>{{ 'LBL.help' | translate }}</span>
+    </button>
+    <button type="button" class="nav-ghost icon-only" (click)="goHome()" [title]="'SOP.shared.nav.home' | translate">
+      <i class="fas fa-home"></i>
+    </button>
+  </nav>
+
+  <div class="wrap">
+    <!-- PAGE HEADER -->
+    <div class="page-header-users">
+      <div class="ph-users-left">
+        <div class="ph-eyebrow"><span></span>{{ 'USR.eyebrow.administration' | translate }}</div>
+        <h1 class="ph-title-users">{{ 'LBL.managementOf' | translate }}<em>{{ 'USR.title.entity' | translate }}</em></h1>
+        <p class="ph-subtitle-users">{{ 'USR.subtitle' | translate }}</p>
+      </div>
+      <div class="ph-users-actions">
+        <button type="button" class="btn btn-ghost" (click)="refresh()" [title]="'USR.refreshBtnTitle' | translate">
+          <i class="fas fa-sync-alt"></i> {{ 'USR.refreshBtn' | translate }}
+        </button>
+        <button type="button" class="btn btn-primary" (click)="openCreateDrawer()">
+          <i class="fas fa-plus"></i> {{ 'USR.newUserBtn' | translate }}
+        </button>
+      </div>
+    </div>
+
+    <!-- STATS -->
+    <div class="stats">
+      <button type="button" class="stat card" [attr.aria-pressed]="statusFilter === 'all'" (click)="setStatusFilter('all')">
+        <span>{{ 'USR.kpi.users' | translate }}</span><b>{{ users.length }}</b>
+      </button>
+      <button type="button" class="stat card" [attr.aria-pressed]="statusFilter === 'on'" (click)="setStatusFilter('on')">
+        <span>{{ 'USR.stats.active' | translate }}</span><b>{{ activeCount }}</b>
+      </button>
+      <button type="button" class="stat card" [attr.aria-pressed]="statusFilter === 'off'" (click)="setStatusFilter('off')">
+        <span>{{ 'USR.stats.inactive' | translate }}</span><b>{{ inactiveCount }}</b>
+      </button>
+      <button type="button" class="stat card" [attr.aria-pressed]="statusFilter === 'notfa'" (click)="setStatusFilter('notfa')">
+        <span>{{ 'USR.stats.no2fa' | translate }}</span><b>{{ no2faCount }}</b>
+      </button>
+    </div>
+
+    <!-- SECURITY BANNER -->
+    <div class="security" *ngIf="securityVisible" role="status">
+      <i class="fas fa-shield-alt"></i>
+      <span class="security-text">
+        <strong>{{ 'USR.security.label' | translate }}</strong>
+        {{ 'USR.security.summary' | translate: { on: twoFaCount, total: users.length } }}
+        <ng-container *ngIf="adminsNo2faCount > 0"> · {{ 'USR.security.adminsNo2fa' | translate: { count: adminsNo2faCount } }}</ng-container>
+      </span>
+      <span class="security-bar"><i [style.width.%]="securityPercent"></i></span>
+    </div>
+
+    <!-- MAIN CARD -->
+    <section class="card main-card">
+      <div class="tools">
+        <label class="search-box">
+          <i class="fas fa-search"></i>
+          <input type="search" [(ngModel)]="searchTerm" (input)="applyFilters()"
+                 [placeholder]="'USR.searchPlaceholder' | translate" />
+        </label>
+        <select class="profile-select" [(ngModel)]="selectedProfilFilter" (change)="applyFilters()">
+          <option value="">{{ 'USR.allProfilsFilter' | translate }}</option>
+          <option *ngFor="let profil of profils" [value]="profil.id">{{ profil.nom }}</option>
+        </select>
+      </div>
+
+      <div *ngIf="errorMessage" class="alert alert-danger">
+        <i class="fas fa-exclamation-circle"></i> {{ errorMessage }}
+      </div>
+
+      <div class="sc">
+        <table class="users-table">
+          <thead>
+            <tr>
+              <th>{{ 'USR.table.user' | translate }}</th>
+              <th>{{ 'USR.table.profile' | translate }}</th>
+              <th>{{ 'USR.table.status' | translate }}</th>
+              <th>{{ 'USR.table.twofa' | translate }}</th>
+              <th>{{ 'USR.table.lastLogin' | translate }}</th>
+              <th></th>
+            </tr>
+          </thead>
+          <tbody>
+            <tr *ngFor="let user of pagedUsers" [class.row-disabled]="!isUserEnabled(user)">
+              <td>
+                <div class="us">
+                  <span class="av" [ngStyle]="avatarStyle(user)" aria-hidden="true">{{ initials(user) }}</span>
+                  <div class="us-info">
+                    <b>{{ user.username }}</b>
+                    <span *ngIf="user.username === 'admin'" class="tag">{{ 'USR.badge.admin' | translate }}</span>
+                    <small>
+                      <ng-container *ngIf="user.email; else noEmail">{{ user.email }}</ng-container>
+                      <ng-template #noEmail><a (click)="openEditDrawer(user)">{{ 'USR.table.addEmail' | translate }}</a></ng-template>
+                      · ID {{ user.id }}
+                    </small>
+                  </div>
+                </div>
+              </td>
+              <td>
+                <span class="pf" [class.no]="!user.profil">{{ user.profil?.nom || ('USR.card.noProfil' | translate) }}</span>
+              </td>
+              <td>
+                <span class="stt" [class.off]="!isUserEnabled(user)">
+                  <i></i>{{ isUserEnabled(user) ? ('USR.table.active' | translate) : ('USR.table.inactive' | translate) }}
+                </span>
+              </td>
+              <td>
+                <span class="tf" [class.on]="isUser2FA(user)" [class.off]="!isUser2FA(user)">
+                  <i class="fas" [class.fa-shield-alt]="!loading2FAStatus.has(user.id)" [class.fa-spinner]="loading2FAStatus.has(user.id)" [class.fa-spin]="loading2FAStatus.has(user.id)"></i>
+                  {{ isUser2FA(user) ? ('USR.table.twofaEnabled' | translate) : ('USR.table.twofaDisabled' | translate) }}
+                </span>
+              </td>
+              <td class="muted">{{ formatLastLogin(user) }}</td>
+              <td>
+                <div class="ac">
+                  <button type="button" class="btn btn-sm" (click)="openEditDrawer(user)">{{ 'USR.menu.edit' | translate }}</button>
+                  <button type="button" class="btn btn-sm btn-dots" (click)="openMenu(user, $event)"
+                          [attr.aria-label]="'USR.table.actions' | translate" aria-haspopup="menu">
+                    <i class="fas fa-ellipsis-h"></i>
+                  </button>
+                </div>
+              </td>
+            </tr>
+
+            <tr *ngIf="isLoading">
+              <td colspan="6" class="empty-cell">
+                <i class="fas fa-spinner fa-spin"></i> {{ 'MSG.loading' | translate }}
+              </td>
+            </tr>
+
+            <tr *ngIf="!isLoading && filteredUsers.length === 0">
+              <td colspan="6" class="empty-cell">
+                <div class="empty">
+                  <i class="fas fa-user-slash"></i>
+                  <p>{{ 'USR.empty.title' | translate }}</p>
+                  <a (click)="clearFilters()">{{ 'USR.empty.resetFilters' | translate }}</a>
+                </div>
+              </td>
+            </tr>
+          </tbody>
+        </table>
+      </div>
+
+      <div class="ft">{{ 'USR.footer.shown' | translate: { shown: filteredUsers.length, total: users.length } }}</div>
+    </section>
+
+    <!-- PAGINATION -->
+    <div *ngIf="filteredUsers.length > pageSize" class="pagination-bar">
+      <div class="pagination-info">
+        {{ 'USR.pagination.info' | translate: { from: (currentPage - 1) * pageSize + 1, to: Math.min(currentPage * pageSize, filteredUsers.length), total: filteredUsers.length } }}
+      </div>
+      <div class="pagination-controls">
+        <button type="button" class="btn-page" (click)="prevPage()" [disabled]="currentPage === 1" [title]="'PAG.previous' | translate">
+          <i class="fas fa-chevron-left"></i>
+        </button>
+        <button type="button"
+                *ngFor="let page of visiblePages"
+                class="btn-page"
+                [class.active]="page === currentPage"
+                (click)="goToPage(page)">
+          {{ page }}
+        </button>
+        <button type="button" class="btn-page" (click)="nextPage()" [disabled]="currentPage === totalPages" [title]="'PAG.next' | translate">
+          <i class="fas fa-chevron-right"></i>
+        </button>
+      </div>
+      <div class="pagination-size">
+        <label>{{ 'USR.pagination.perPage' | translate }}</label>
+        <select [(ngModel)]="pageSize" (change)="currentPage = 1">
+          <option [ngValue]="5">5</option>
+          <option [ngValue]="10">10</option>
+          <option [ngValue]="20">20</option>
+          <option [ngValue]="50">50</option>
+        </select>
+      </div>
+    </div>
+  </div>
+
+  <!-- ROW ACTION MENU -->
+  <div class="row-menu" *ngIf="menuUser as u" [style.top.px]="menuPos.top" [style.left.px]="menuPos.left" role="menu">
+    <button type="button" role="menuitem" (click)="menuEdit(u)">{{ 'USR.menu.edit' | translate }}</button>
+    <button type="button" role="menuitem" [disabled]="!u.email" (click)="menuResetPassword(u)">
+      {{ 'USR.menu.resetPassword' | translate }}
+      <small *ngIf="!u.email">{{ 'USR.menu.emailRequired' | translate }}</small>
+    </button>
+    <button type="button" role="menuitem" *ngIf="!isUser2FA(u)" (click)="menuToggle2FA(u)">{{ 'USR.menu.enable2fa' | translate }}</button>
+    <ng-container *ngIf="isUser2FA(u)">
+      <button type="button" role="menuitem" (click)="menuReset2FA(u)">{{ 'USR.menu.reset2fa' | translate }}</button>
+      <button type="button" role="menuitem" (click)="menuToggle2FA(u)">{{ 'USR.menu.disable2fa' | translate }}</button>
+    </ng-container>
+    <button type="button" role="menuitem" [disabled]="u.username === 'admin'" (click)="menuToggleEnabled(u)">
+      {{ isUserEnabled(u) ? ('USR.menu.disableAccount' | translate) : ('USR.menu.enableAccount' | translate) }}
+      <small *ngIf="u.username === 'admin'">{{ 'USR.menu.adminProtected' | translate }}</small>
+    </button>
+    <hr />
+    <button type="button" role="menuitem" class="danger" [disabled]="u.username === 'admin'" (click)="menuDelete(u)">
+      {{ 'USR.menu.delete' | translate }}
+      <small *ngIf="u.username === 'admin'">{{ 'USR.menu.adminProtected' | translate }}</small>
+    </button>
+  </div>
+
+  <!-- DRAWER (création / édition) -->
+  <div class="overlay" [class.on]="drawerOpen" (click)="closeDrawer()"></div>
+  <aside class="drawer" [class.on]="drawerOpen" [attr.aria-hidden]="!drawerOpen">
+    <h2>
+      {{ drawerMode === 'create'
+        ? ('USR.drawer.createTitle' | translate)
+        : ('USR.drawer.editTitle' | translate: { username: drawerUser.username }) }}
+    </h2>
+
+    <div class="fg">
+      <label for="drawerUsername">{{ 'USR.drawer.usernameLabel' | translate }}</label>
+      <input id="drawerUsername" type="text" [(ngModel)]="drawerUser.username" autocomplete="off" />
+    </div>
+
+    <div class="fg">
+      <label for="drawerEmail">{{ 'USR.drawer.emailLabel' | translate }}</label>
+      <input id="drawerEmail" type="email" [(ngModel)]="drawerUser.email" />
+      <small class="fg-hint" *ngIf="drawerMode === 'create'">{{ 'USR.drawer.emailHint' | translate }}</small>
+    </div>
+
+    <div class="fg">
+      <label for="drawerProfil">{{ 'USR.drawer.profilLabel' | translate }}</label>
+      <select id="drawerProfil" [(ngModel)]="drawerUser.profil">
+        <option [ngValue]="noProfilValue">{{ 'USR.drawer.noneProfile' | translate }}</option>
+        <option *ngFor="let profil of profils" [ngValue]="profil">{{ profil.nom }}</option>
+      </select>
+    </div>
+
+    <div class="fg" *ngIf="drawerMode === 'edit'">
+      <label for="drawerPassword">{{ 'USR.drawer.passwordLabel' | translate }}</label>
+      <input id="drawerPassword" type="password" [(ngModel)]="drawerPassword"
+             [placeholder]="'USR.drawer.passwordPlaceholder' | translate" autocomplete="new-password" />
+    </div>
+
+    <label class="sw">
+      {{ 'USR.drawer.activeLabel' | translate }}
+      <input type="checkbox" [(ngModel)]="drawerActive" />
+    </label>
+    <label class="sw">
+      {{ 'USR.drawer.twoFaLabel' | translate }}
+      <input type="checkbox" [(ngModel)]="drawer2FA" />
+    </label>
+
+    <div class="drawer-actions">
+      <button type="button" class="btn btn-ghost" (click)="closeDrawer()">{{ 'USR.drawer.cancelBtn' | translate }}</button>
+      <button type="button" class="btn btn-primary" [disabled]="isSavingDrawer" (click)="saveDrawer()">
+        {{ isSavingDrawer
+          ? ('USR.create.submitting' | translate)
+          : (drawerMode === 'create' ? ('USR.drawer.createBtn' | translate) : ('USR.drawer.saveBtn' | translate)) }}
+      </button>
+    </div>
+  </aside>
+</div>

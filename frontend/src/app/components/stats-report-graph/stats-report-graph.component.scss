@@ -1,0 +1,294 @@
+:host {
+  --rd-bg: #f2f0eb;
+  --rd-surface: #fdfcfa;
+  --rd-border: #e6e1d8;
+  --rd-text1: #1c1916;
+  --rd-text2: #5a5349;
+  --rd-text3: #9c9388;
+  --rd-blue: #1e4e8c;
+  --rd-blue-l: #e8f0fb;
+  --rd-green: #2a6644;
+  --rd-green-m: #4a9e6a;
+  --rd-amber: #8c4e1a;
+  --rd-navy: #1a2535;
+  --rd-navy2: #243044;
+  --rd-r: 16px;
+  --rd-shadow: 0 2px 16px rgba(28, 25, 22, 0.07);
+}
+
+.stats-graph-page {
+  min-height: 100vh;
+  background: var(--rd-bg);
+  color: var(--rd-text1);
+  font-family: 'Sora', sans-serif;
+}
+
+.topnav {
+  background: var(--rd-navy);
+  height: 52px;
+  display: flex;
+  align-items: center;
+  gap: 16px;
+  padding: 0 24px;
+  position: sticky;
+  top: 0;
+  z-index: 100;
+}
+
+.nav-brand {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  color: #fff;
+  font-family: 'Instrument Serif', serif;
+  font-size: 17px;
+}
+
+.nav-brand-dot {
+  width: 7px;
+  height: 7px;
+  border-radius: 50%;
+  background: var(--rd-green-m);
+}
+
+.nav-sep {
+  width: 1px;
+  height: 20px;
+  background: rgba(255, 255, 255, 0.12);
+}
+
+.nav-path {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  color: rgba(255, 255, 255, 0.72);
+  font-size: 13px;
+}
+
+.nav-path strong {
+  color: #fff;
+  font-weight: 600;
+}
+
+.nav-spacer { flex: 1; }
+.nav-actions { display: flex; align-items: center; gap: 8px; }
+
+.nav-btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  min-height: 36px;
+  padding: 7px 14px;
+  border: none;
+  border-radius: 8px;
+  cursor: pointer;
+  color: #fff;
+  font-size: 13px;
+  font-weight: 600;
+}
+
+.nav-btn.secondary { background: rgba(255, 255, 255, 0.08); border: 1px solid rgba(255, 255, 255, 0.12); }
+.nav-btn.png { background: #2f855a; }
+.nav-btn.pdf { background: #c62828; }
+.nav-btn:disabled { opacity: 0.5; cursor: not-allowed; }
+
+.page { padding: 28px 24px 60px; }
+
+.page-head { margin-bottom: 20px; }
+
+.ph-eyebrow {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin-bottom: 8px;
+  font-size: 11px;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.12em;
+  color: var(--rd-text3);
+}
+
+.ph-eyebrow span { width: 16px; height: 1.5px; border-radius: 2px; background: var(--rd-text3); }
+
+.ph-title {
+  margin: 0;
+  font-family: 'Instrument Serif', serif;
+  font-size: 30px;
+  font-weight: 400;
+}
+
+.ph-title em { color: var(--rd-blue); font-style: italic; }
+.ph-sub { margin-top: 6px; color: var(--rd-text3); font-size: 12px; }
+
+.filters-section,
+.info-state,
+.graph-card {
+  background: var(--rd-surface);
+  border: 1px solid var(--rd-border);
+  border-radius: var(--rd-r);
+  box-shadow: var(--rd-shadow);
+}
+
+.filters-section { padding: 18px; margin-bottom: 18px; }
+
+.filter-form {
+  display: grid;
+  grid-template-columns: repeat(6, minmax(0, 1fr)) 180px;
+  gap: 16px;
+  align-items: end;
+}
+
+.filter-group { display: flex; flex-direction: column; gap: 6px; }
+
+.filter-group label {
+  font-size: 10px;
+  font-weight: 700;
+  color: var(--rd-text3);
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+}
+
+.filter-group select,
+.filter-group input,
+.graph-agency-toolbar select {
+  min-height: 40px;
+  padding: 8px 12px;
+  border: 1px solid var(--rd-border);
+  border-radius: 8px;
+  background: #fff;
+  color: var(--rd-text1);
+  font-size: 13px;
+}
+
+.filter-select {
+  width: 100%;
+}
+
+.apply-btn {
+  min-height: 40px;
+  border: none;
+  border-radius: 8px;
+  background: var(--rd-blue);
+  color: #fff;
+  font-size: 13px;
+  font-weight: 600;
+  cursor: pointer;
+}
+
+.kpi-strip {
+  display: grid;
+  grid-template-columns: repeat(5, minmax(0, 1fr));
+  gap: 12px;
+  margin-bottom: 20px;
+}
+
+.kpi {
+  background: var(--rd-surface);
+  border: 1px solid var(--rd-border);
+  border-radius: 10px;
+  padding: 14px 16px;
+}
+
+.kpi-l {
+  margin-bottom: 6px;
+  color: var(--rd-text3);
+  font-size: 10px;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+}
+
+.kpi-v {
+  font-family: 'Instrument Serif', serif;
+  font-size: 24px;
+  font-weight: 600;
+}
+
+.kpi-v.blue { color: var(--rd-blue); }
+.kpi-v.green { color: var(--rd-green); }
+.kpi-v.amber { color: var(--rd-amber); }
+.kpi-s { margin-top: 4px; color: var(--rd-text3); font-size: 11px; }
+
+.graph-topbar {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 12px;
+  margin-bottom: 14px;
+  flex-wrap: wrap;
+}
+
+.graph-view-tabs,
+.graph-metric-tabs {
+  display: flex;
+  gap: 8px;
+  flex-wrap: wrap;
+}
+
+.graph-view-tabs button,
+.graph-metric-tabs button {
+  min-height: 38px;
+  padding: 8px 16px;
+  border: 1px solid #cfd6df;
+  border-radius: 10px;
+  background: #fff;
+  color: var(--rd-text1);
+  font-size: 13px;
+  font-weight: 600;
+  cursor: pointer;
+}
+
+.graph-view-tabs button.active,
+.graph-metric-tabs button.active {
+  background: var(--rd-navy);
+  color: #fff;
+  border-color: var(--rd-navy);
+}
+
+.graph-agency-toolbar { margin-bottom: 14px; }
+
+.graph-grid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 16px;
+}
+
+.graph-card {
+  padding: 14px 16px 16px;
+}
+
+.graph-card-wide { grid-column: 1 / -1; }
+
+.graph-card-title {
+  margin-bottom: 12px;
+  color: #4b433a;
+  font-size: 12px;
+  font-weight: 700;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+}
+
+.graph-canvas-wrap {
+  position: relative;
+  height: 320px;
+}
+
+.donut-wrap { height: 380px; }
+
+.info-state { padding: 28px; text-align: center; color: var(--rd-text2); }
+.info-state.error { color: #a61f1f; }
+
+@media (max-width: 1400px) {
+  .filter-form { grid-template-columns: repeat(4, minmax(0, 1fr)); }
+  .kpi-strip { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+  .graph-grid { grid-template-columns: 1fr; }
+  .graph-card-wide { grid-column: auto; }
+}
+
+@media (max-width: 768px) {
+  .page { padding: 18px 12px 32px; }
+  .topnav, .nav-actions, .graph-topbar { flex-wrap: wrap; }
+  .filter-form, .kpi-strip { grid-template-columns: 1fr; }
+  .graph-view-tabs, .graph-metric-tabs { width: 100%; }
+  .graph-agency-toolbar select { width: 100%; }
+}

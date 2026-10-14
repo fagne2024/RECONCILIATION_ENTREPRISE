@@ -1,0 +1,375 @@
+<div class="profil-detail-page">
+  <!-- Toast notification -->
+  <div class="toast" [class.show]="toastMessage" [class.toast-success]="toastType === 'success'" [class.toast-error]="toastType === 'error'" [class.toast-warning]="toastType === 'warning'" [class.toast-info]="toastType === 'info'">
+    <span class="toast-icon">
+      <i *ngIf="toastType === 'success'" class="fa fa-check-circle"></i>
+      <i *ngIf="toastType === 'error'" class="fa fa-times-circle"></i>
+      <i *ngIf="toastType === 'warning'" class="fa fa-exclamation-triangle"></i>
+      <i *ngIf="toastType === 'info'" class="fa fa-info-circle"></i>
+    </span>
+    <span class="toast-message">{{ toastMessage }}</span>
+  </div>
+
+  <div *ngIf="isLoading" class="loading-overlay">
+    <i class="fas fa-spinner fa-spin"></i>
+    <p>{{ 'PROF.Chargementduprofil' | translate }}</p>
+  </div>
+
+  <div *ngIf="!isLoading && !profil" class="error-state">
+    <i class="fas fa-exclamation-triangle"></i>
+    <h3>{{ 'PROF.Profilintrouvable' | translate }}</h3>
+    <button class="btn btn-primary" (click)="goBack()">
+      <i class="fas fa-arrow-left"></i> {{ 'COMMON.Back' | translate }}
+    </button>
+  </div>
+
+  <div *ngIf="!isLoading && profil" class="detail-container">
+    <!-- Header avec navigation -->
+    <div class="detail-header">
+      <button class="btn btn-secondary back-btn" (click)="goBack()">
+        <i class="fas fa-arrow-left"></i> {{ 'COMMON.Back' | translate }}
+      </button>
+      
+      <div class="profil-header-info">
+        <div class="profil-avatar">
+          <i class="fas fa-user-shield"></i>
+        </div>
+        <div class="profil-title-section">
+          <h1>{{ profil.nom }}</h1>
+          <p class="profil-description">{{ profil.description || 'Aucune description' }}</p>
+          <div class="profil-meta">
+            <span class="meta-item">
+              <i class="fas fa-cube"></i>
+              {{ getAssociatedModules().length }} {{ 'PROF.Modulesassociés' | translate }}
+            </span>
+            <span class="meta-item">
+              <i class="fas fa-key"></i>
+              {{ profilPermissions.length }} {{ 'PROF.Permissions' | translate }}
+            </span>
+            <span class="meta-item">
+              <i class="fas fa-globe"></i>
+              {{ profilPaysCount }} {{ 'PROF.Pays' | translate }}
+            </span>
+          </div>
+        </div>
+      </div>
+
+      <div class="detail-header-actions">
+        <button class="btn btn-primary" (click)="savePendingChanges()" [disabled]="!hasPendingChanges || isSavingPermissions">
+          <i class="fas fa-save"></i> {{ isSavingPermissions ? ('PROF.Sauvegardeencours' | translate) : ('PROF.Sauvegarder' | translate) }} {{ hasPendingChanges ? '(' + pendingChangesCount + ')' : '' }}
+        </button>
+        <button class="btn btn-secondary" (click)="discardPendingChanges()" [disabled]="!hasPendingChanges || isSavingPermissions">
+          <i class="fas fa-undo"></i> {{ 'PROF.Annuler' | translate }}
+        </button>
+        <button class="btn btn-primary" (click)="openPaysModal(profil!)">
+          <i class="fas fa-globe"></i> {{ 'PROF.Gérerlespays' | translate }}
+        </button>
+      </div>
+    </div>
+
+    <!-- Barre de modifications en attente -->
+    <div class="pending-changes-bar" *ngIf="hasPendingChanges">
+      <div class="pending-info">
+        <i class="fas fa-exclamation-triangle"></i>
+        <span>{{ 'PROF.Modificationsenattente' | translate }}: <strong>{{ pendingChangesCount }}</strong></span>
+      </div>
+      <div class="pending-actions">
+        <button type="button" class="btn btn-primary" (click)="savePendingChanges()" [disabled]="isSavingPermissions">
+          <i class="fas fa-save"></i>
+          {{ isSavingPermissions ? ('PROF.Sauvegardeencours' | translate) : ('PROF.Sauvegarder' | translate) }}
+        </button>
+        <button type="button" class="btn btn-secondary" (click)="discardPendingChanges()" [disabled]="isSavingPermissions">
+          <i class="fas fa-undo"></i> {{ 'PROF.Annuler' | translate }}
+        </button>
+      </div>
+    </div>
+
+    <!-- Navigation par onglets -->
+    <div class="detail-tabs">
+      <button 
+        class="tab-btn" 
+        [class.active]="activeTab === 'navigation'" 
+        (click)="activeTab = 'navigation'">
+        <i class="fas fa-sitemap"></i> {{ 'PROF.Navigation' | translate }}
+      </button>
+      <button 
+        class="tab-btn" 
+        [class.active]="activeTab === 'modules'" 
+        (click)="activeTab = 'modules'">
+        <i class="fas fa-cubes"></i> {{ 'PROF.Modules' | translate }} ({{ getAssociatedModules().length }})
+      </button>
+      <button 
+        class="tab-btn" 
+        [class.active]="activeTab === 'permissions'" 
+        (click)="activeTab = 'permissions'">
+        <i class="fas fa-key"></i> {{ 'PROF.Permissions' | translate }} ({{ profilPermissions.length }})
+      </button>
+    </div>
+
+    <!-- Onglet Navigation (Arbre menus/sous-menus) -->
+    <div *ngIf="activeTab === 'navigation'" class="tab-content">
+      <div class="navigation-toolbar">
+        <div class="nav-search">
+          <i class="fas fa-search"></i>
+          <input 
+            type="text" 
+            [(ngModel)]="navMenuSearch" 
+            placeholder="{{ 'PROF.Filtrerunmenuousousmenu' | translate }}"
+            (input)="onNavMenuSearchChange()"
+            class="search-input">
+          <button *ngIf="navMenuSearch" class="btn-clear" (click)="clearNavMenuSearch()">
+            <i class="fas fa-times"></i>
+          </button>
+        </div>
+        <div class="nav-actions">
+          <button class="btn btn-sm btn-secondary" (click)="expandAllNavGroups()">
+            <i class="fas fa-expand"></i> {{ 'PROF.Toutdéplier' | translate }}
+          </button>
+          <button class="btn btn-sm btn-secondary" (click)="collapseAllNavGroups()">
+            <i class="fas fa-compress"></i> {{ 'PROF.Toutreplier' | translate }}
+          </button>
+        </div>
+      </div>
+
+      <div class="navigation-tree" *ngIf="filteredNavigationCatalog.length > 0; else noNavMatch">
+        <div *ngFor="let group of filteredNavigationCatalog" class="nav-group">
+          <div class="nav-group-header" (click)="toggleNavGroup(group.key)">
+            <div class="nav-group-main">
+              <i class="fas" [ngClass]="isNavGroupExpanded(group.key) ? 'fa-chevron-down' : 'fa-chevron-right'"></i>
+              <i class="fas" [ngClass]="group.icon"></i>
+              <span class="nav-group-label">{{ group.label }}</span>
+              <span class="nav-group-progress" [ngClass]="getNavGroupStatusClass(group)">
+                {{ getNavGroupProgressPercent(group) }}%
+              </span>
+            </div>
+            <div class="nav-group-access">
+              <label class="access-toggle" *ngIf="!group.children?.length && group.moduleName">
+                <input type="checkbox" 
+                       [checked]="hasGrantedStandaloneMenu(group)" 
+                       (change)="onSingleMenuAccessChange(group, $event)">
+                <span class="toggle-slider"></span>
+              </label>
+            </div>
+          </div>
+
+          <div class="nav-submenus" *ngIf="group.children?.length && isNavGroupExpanded(group.key)">
+            <div *ngFor="let submenu of group.children" class="nav-submenu">
+              <div class="nav-submenu-header">
+                <div class="nav-submenu-main" [class.granted]="hasNavigationAccess(getNavigationContext(group, submenu)!)" [class.disabled]="!hasNavigationAccess(getNavigationContext(group, submenu)!)" (click)="toggleSubmenuActions(submenu.key, getNavigationContext(group, submenu))">
+                  <i class="fas" [ngClass]="isSubmenuActionsExpanded(submenu.key) ? 'fa-chevron-down' : 'fa-chevron-right'"></i>
+                  <i class="fas" [ngClass]="submenu.icon"></i>
+                  <span class="nav-submenu-label">{{ submenu.label }}</span>
+                  <span class="submenu-summary">{{ getSubmenuActionsSummaryLabel(submenu.accessModuleName) }}</span>
+                </div>
+                <div class="nav-submenu-access">
+                  <label class="access-toggle">
+                    <input type="checkbox" 
+                           [checked]="hasNavigationAccess(getNavigationContext(group, submenu)!)" 
+                           (change)="onNavigationAccessChange(getNavigationContext(group, submenu)!, $event)">
+                    <span class="toggle-slider"></span>
+                  </label>
+                </div>
+              </div>
+
+              <div class="submenu-actions" *ngIf="isSubmenuActionsExpanded(submenu.key)">
+                <div class="submenu-toolbar">
+                  <div class="action-search">
+                    <i class="fas fa-search"></i>
+                    <input 
+                      type="text" 
+                      [(ngModel)]="actionSearchByModule[submenu.accessModuleName]"
+                      (input)="setActionSearchTerm(submenu.accessModuleName, $event.target.value)"
+                      placeholder="{{ 'PROF.Filtrerparnomlibelléouendpoint' | translate }}">
+                  </div>
+                  <div class="submenu-actions-header">
+                    <span class="actions-count">{{ getFilteredSubmenuActionDetails(submenu.accessModuleName).length }} actions</span>
+                    <button class="btn btn-sm btn-primary" (click)="selectAllSubmenuActions(submenu.accessModuleName)" [disabled]="isModuleActionsLoading(submenu.accessModuleName) || isModuleActionsSyncing(submenu.accessModuleName)">
+                      <i class="fas" [ngClass]="isModuleActionsSyncing(submenu.accessModuleName) ? 'fa-spinner fa-spin' : 'fa-check-double'"></i>
+                      {{ isModuleActionsSyncing(submenu.accessModuleName) ? ('PROF.Synchronisation' | translate) : ('PROF.Toutcocher' | translate) }}
+                    </button>
+                    <button class="btn btn-sm btn-secondary" (click)="syncModuleActions(submenu.accessModuleName, getNavigationContext(group, submenu))" [disabled]="isModuleActionsLoading(submenu.accessModuleName) || isModuleActionsSyncing(submenu.accessModuleName)" *ngIf="hasUnsyncedActions(submenu.accessModuleName)">
+                      <i class="fas" [ngClass]="isModuleActionsSyncing(submenu.accessModuleName) ? 'fa-spinner fa-spin' : 'fa-sync'"></i>
+                      {{ 'PROF.Synchroniser' | translate }}
+                    </button>
+                  </div>
+                </div>
+
+                <div class="actions-list" *ngIf="getFilteredSubmenuActionDetails(submenu.accessModuleName).length > 0; else noActions">
+                  <div *ngFor="let actionCategory of getGroupedSubmenuActions(submenu.accessModuleName)" class="action-category">
+                    <h5 class="action-category-title">{{ actionCategory.category }}</h5>
+                    <div class="action-items">
+                      <label *ngFor="let action of actionCategory.actions" class="action-item">
+                        <input type="checkbox"
+                               [checked]="hasActionForModuleName(submenu.accessModuleName, action.action)"
+                               (change)="toggleActionForModuleName(submenu.accessModuleName, action.action, $event)"
+                               [disabled]="isModuleActionsLoading(submenu.accessModuleName)">
+                        <span class="action-info">
+                          <span class="action-name">{{ getActionLabel(action.action) }}</span>
+                          <span class="action-http" *ngIf="action.httpMethod" [ngClass]="'http-' + action.httpMethod.toLowerCase()">{{ action.httpMethod }}</span>
+                        </span>
+                        <span class="action-path" *ngIf="action.path">{{ action.path }}</span>
+                      </label>
+                    </div>
+                  </div>
+                </div>
+                <ng-template #noActions>
+                  <div class="no-data-message">
+                    <i class="fas fa-info-circle"></i>
+                    <p>{{ 'PROF.Aucuneactionnecorrespondaufiltre' | translate }}</p>
+                  </div>
+                </ng-template>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+      <ng-template #noNavMatch>
+        <div class="no-data-message">
+          <i class="fas fa-search"></i>
+          <p>{{ 'PROF.Aucunmenunecorrespondà' | translate }} «{{ navMenuSearch }}»</p>
+        </div>
+      </ng-template>
+    </div>
+
+    <!-- Onglet Modules -->
+    <div *ngIf="activeTab === 'modules'" class="tab-content">
+      <div class="modules-overview">
+        <div class="modules-grid">
+          <div *ngFor="let module of modules" 
+               class="module-card"
+               [class.associated]="isModuleAssociated(module)"
+               [class.available]="!isModuleAssociated(module)">
+            <div class="module-card-header">
+              <div class="module-icon">
+                <i class="fas fa-folder"></i>
+              </div>
+              <div class="module-info">
+                <h5>{{ module.nom }}</h5>
+                <span class="module-status" [class.associated]="isModuleAssociated(module)">
+                  <i class="fas" [class.fa-check-circle]="isModuleAssociated(module)" [class.fa-plus-circle]="!isModuleAssociated(module)"></i>
+                  {{ isModuleAssociated(module) ? ('PROF.Associé' | translate) : ('PROF.Disponible' | translate) }}
+                </span>
+              </div>
+              <div class="module-toggle">
+                <label class="module-checkbox">
+                  <input type="checkbox"
+                         [checked]="isModuleAssociated(module)"
+                         (change)="toggleModuleAssociation(module, $event)"
+                         [id]="'module-' + module.id">
+                  <span class="checkmark"></span>
+                </label>
+              </div>
+            </div>
+            
+            <div class="module-card-content" *ngIf="isModuleAssociated(module)">
+              <div class="module-permissions-preview">
+                <span class="perm-count">
+                  <i class="fas fa-key"></i> {{ getModulePermissionsCount(module) }} {{ 'PROF.Permissions' | translate }}
+                </span>
+                <button class="btn btn-sm btn-outline" (click)="activeTab = 'permissions'">
+                  <i class="fas fa-eye"></i> {{ 'PROF.Voirlespermissions' | translate }}
+                </button>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Onglet Permissions (Vue détaillée par module) -->
+    <div *ngIf="activeTab === 'permissions'" class="tab-content">
+      <div class="modules-permissions">
+        <div *ngFor="let module of getAssociatedModules()" class="module-card">
+          <div class="module-header">
+            <h5><i class="fas fa-folder"></i> {{ module.nom }}</h5>
+            <span class="module-permissions-count">
+              {{ isModulePermissionsLoading(module) ? '...' : getModulePermissionsCount(module) }} {{ 'PROF.Permissions' | translate }}
+            </span>
+          </div>
+          
+          <div class="permissions-list scrollable-list">
+            <div *ngIf="isModulePermissionsLoading(module)" class="permissions-loading">
+              <i class="fas fa-spinner fa-spin"></i>
+              <p>{{ 'PROF.Chargementdespermissions' | translate }}</p>
+            </div>
+            <div *ngIf="!isModulePermissionsLoading(module) && getDisplayedPermissions(module).length === 0" class="no-permissions-message">
+              <i class="fas fa-info-circle"></i>
+              <p>{{ 'PROF.Aucunepermissiondisponiblepourcemodule' | translate }}</p>
+            </div>
+            <div *ngFor="let permission of getDisplayedPermissions(module)" class="permission-item">
+              <label class="permission-checkbox">
+                <input type="checkbox"
+                  [checked]="hasPermission(module, permission)"
+                  (change)="togglePermission(module, permission, $event)"
+                  [id]="'perm-' + module.id + '-' + permission.id"
+                  [disabled]="isSavingPermissions">
+                <span class="checkmark"></span>
+                <span class="permission-label">{{ permission.nom }}</span>
+              </label>
+            </div>
+          </div>
+
+          <div class="module-actions">
+            <button class="btn-action" (click)="selectAllPermissions(module)" 
+                    [disabled]="hasAllPermissions(module) || isModulePermissionsLoading(module) || isSavingPermissions">
+              <i class="fas fa-check-double"></i>{{ 'ACT.selectAll' | translate }}
+            </button>
+            <button class="btn-action" (click)="deselectAllPermissions(module)"
+                    [disabled]="!hasAnyPermission(module) || isModulePermissionsLoading(module) || isSavingPermissions">
+              <i class="fas fa-times"></i> {{ 'APM.Toutdésélectionner' | translate }}
+            </button>
+          </div>
+        </div>
+
+        <div *ngIf="getAssociatedModules().length === 0" class="no-data-message">
+          <i class="fas fa-cube"></i>
+          <p>{{ 'PROF.Aucunmoduleassocié' | translate }}</p>
+          <button class="btn btn-primary" (click)="activeTab = 'modules'">
+            <i class="fas fa-plus"></i> {{ 'PROF.Ajouterdesmodules' | translate }}
+          </button>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Modal Pays -->
+  <div *ngIf="showPaysModal" class="modal-overlay" (click)="closePaysModal()">
+    <div class="modal-container" (click)="$event.stopPropagation()">
+      <div class="modal-header">
+        <h3><i class="fas fa-globe"></i> {{ 'PROF.Gérerlespayspourleprofil' | translate }} {{ selectedProfilForPays?.nom }}</h3>
+        <button type="button" class="modal-close" (click)="closePaysModal()">
+          <i class="fas fa-times"></i>
+        </button>
+      </div>
+      <div class="modal-body">
+        <div class="pays-selection">
+          <div class="pays-summary">
+            <span>{{ profilPaysCount }} / {{ pays.length }} {{ 'PROF.Pays' | translate }}</span>
+          </div>
+          <div class="pays-grid">
+            <label *ngFor="let p of pays" class="pays-checkbox">
+              <input type="checkbox"
+                     [checked]="isPaysAssociated(p.code)"
+                     (change)="togglePaysAssociation(p.code, $event)"
+                     [id]="'pays-' + p.code">
+              <span class="checkmark"></span>
+              <div class="pays-info">
+                <span class="pays-flag">
+                  <img *ngIf="p.flagUrl" [src]="p.flagUrl" [alt]="p.nom" (error)="flagLoadError[p.code] = true" />
+                  <i *ngIf="!p.flagUrl || flagLoadError[p.code]" class="fas fa-flag"></i>
+                </span>
+                <span class="pays-name">{{ p.nom }}</span>
+                <span class="pays-code">{{ p.code }}</span>
+              </div>
+            </label>
+          </div>
+        </div>
+      </div>
+      <div class="modal-footer">
+        <button class="btn btn-secondary" (click)="closePaysModal()">
+          <i class="fas fa-times"></i> {{ 'COMMON.Close' | translate }}
+        </button>
+      </div>
+    </div>
+  </div>
+</div>

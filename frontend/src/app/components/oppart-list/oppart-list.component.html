@@ -1,0 +1,817 @@
+<div class="oppart-page">
+  <!-- TOP NAV (même design que impact-op) -->
+  <nav class="topnav">
+    <div class="nav-brand">
+      <div class="nav-brand-dot"></div>
+      {{ 'OPL.ReconciliApp' | translate }}
+    </div>
+    <div class="nav-sep"></div>
+    <div class="nav-path">
+      <strong>{{ 'TBL.operations' | translate }}</strong>
+    </div>
+    <div class="nav-spacer"></div>
+    <div class="nav-actions">
+      <button class="nav-btn secondary" (click)="downloadImportTemplate()" [disabled]="isImportBusy"
+              title="{{ 'OPL.Téléchargerlemodèlexlsxàremplirpourlimport' | translate }}">
+        <i class="fas fa-file-excel"></i> {{ 'BQ.Modèle' | translate }}
+      </button>
+      <button class="nav-btn secondary" (click)="toggleImportPanel()" [disabled]="isUploadingImport"
+              [class.active]="isImportPanelOpen"
+              title="{{ 'OPL.Importerdeslignesopérationsdepuisunfichiercsvouexcel' | translate }}">
+        <i class="fas fa-upload"></i> {{ 'COMMON.actions.import' | translate }}
+      </button>
+      <button class="nav-btn secondary" (click)="loadOpparts()" [disabled]="isLoading">
+        <i class="fas fa-sync-alt"></i> {{ 'CPT.Actualiser' | translate }}
+      </button>
+      <button class="nav-btn secondary" (click)="exportLinkedPdf()"
+              [disabled]="!canExportLinkedPdf"
+              [title]="'PDF des lignes liees (Token) presentes dans le filtre courant, source principale a gauche, autres sources a droite. Plusieurs groupes par page.'">
+        <i class="fas fa-file-pdf"></i>
+        {{ isExportingPdf ? 'Generation...' : 'PDF lignes liees (' + linkedGroupsCount + ')' }}
+      </button>
+      <button class="nav-btn primary" (click)="exportOpparts()" [disabled]="filteredOpparts.length === 0">
+        <i class="fas fa-download"></i> {{ 'COMMON.actions.export' | translate }}
+      </button>
+    </div>
+  </nav>
+
+  <!-- PAGE HEADER (titre + KPIs) -->
+  <div class="page-header-oppart">
+    <div class="ph-oppart-left">
+      <div class="ph-eyebrow"><span></span>{{ 'OPL.Écartspartenaires' | translate }}</div>
+      <h1 class="ph-title-oppart">{{ 'LBL.managementOf' | translate }}<em>{{ 'TBL.operations' | translate }}</em></h1>
+    </div>
+    <div class="ph-oppart-right">
+      <div class="hero-kpi-strip">
+        <div class="hk-strip-item">
+          <span class="hk-strip-label">{{ 'TBL.rows' | translate }}</span>
+          <span class="hk-strip-value">{{ filteredOpparts.length | number:'1.0-0' }}</span>
+        </div>
+        <div class="hk-strip-sep"></div>
+        <div class="hk-strip-item">
+          <span class="hk-strip-label">{{ 'MSG.inProgress' | translate }}</span>
+          <span class="hk-strip-value hk-strip-amber">{{ stats.enCoursCount | number:'1.0-0' }}</span>
+        </div>
+        <div class="hk-strip-sep"></div>
+        <div class="hk-strip-item">
+          <span class="hk-strip-label">{{ 'COMMON.actions.ok' | translate }}</span>
+          <span class="hk-strip-value hk-strip-green">{{ stats.okCount | number:'1.0-0' }}</span>
+        </div>
+        <div class="hk-strip-sep"></div>
+        <div class="hk-strip-item">
+          <span class="hk-strip-label">{{ 'OPL.Clientsdistincts' | translate }}</span>
+          <span class="hk-strip-value">{{ stats.clientCount | number:'1.0-0' }}</span>
+        </div>
+        <div class="hk-strip-sep"></div>
+        <div class="hk-strip-item">
+          <span class="hk-strip-label">{{ 'TBL.totalAmount' | translate }}</span>
+          <span class="hk-strip-value">{{ formatMontant(stats.montantTotal) }}</span>
+      </div>
+    </div>
+  </div>
+
+
+  <div class="main">
+  <div class="oppart-container">
+  <div class="header">
+    <h2>{{ 'OPL.Gestiondesopérations' | translate }}</h2>
+    <div class="header-actions">
+      <button class="btn btn-success" (click)="openCreateModal()">
+        <i class="fas fa-plus"></i> {{ 'OPL.Nouvelleopération' | translate }}
+      </button>
+    </div>
+  </div>
+
+  <!-- Statistiques -->
+  <div class="stats-section">
+    <div class="stats-grid">
+      <div class="stat-card">
+        <div class="stat-value">{{ stats.total }}</div>
+        <div class="stat-label">{{ 'OPL.Totalfiltré' | translate }}</div>
+      </div>
+      <div class="stat-card stat-encours">
+        <div class="stat-value">{{ stats.enCoursCount }}</div>
+        <div class="stat-label">{{ 'MSG.inProgress' | translate }}</div>
+      </div>
+      <div class="stat-card stat-ok">
+        <div class="stat-value">{{ stats.okCount }}</div>
+        <div class="stat-label">{{ 'COMMON.actions.ok' | translate }}</div>
+      </div>
+      <div class="stat-card stat-client">
+        <div class="stat-value">{{ stats.clientCount }}</div>
+        <div class="stat-label">{{ 'OPL.Clientsdistincts' | translate }}</div>
+      </div>
+      <div class="stat-card stat-montant">
+        <div class="stat-value">{{ formatMontant(stats.montantTotal) }}</div>
+        <div class="stat-label">{{ 'OPL.Montanttotalfiltré' | translate }}</div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Import de fichier -->
+  <div class="import-section" *ngIf="isImportPanelOpen">
+    <div class="import-head">
+      <h3><i class="fas fa-file-import"></i> {{ 'OPL.Importdefichieropérations' | translate }}</h3>
+      <button type="button" class="btn btn-sm btn-link import-close" (click)="toggleImportPanel()"
+              title="{{ 'COMMON.actions.close' | translate }}">
+        <i class="fas fa-times"></i>
+      </button>
+    </div>
+
+    <p class="import-hint">
+      {{ 'OPL.Formatsacceptéscsvtsvxlsxlsxcolonnesattendues' | translate }}
+      <code>{{ 'TBL.client' | translate }}</code>, <code>Type_OP</code>, <code>{{ 'TBL.amount' | translate }}</code>, <code>{{ 'TBL.date' | translate }}</code>,
+      <code>{{ 'TBL.transactionId' | translate }}</code>, <code>{{ 'TBL.country' | translate }}</code>, <code>Source</code>{{ 'OPL.Les4premièressontobligatoireslescolonnes' | translate }} <code>ID</code>, <code>{{ 'TBL.status' | translate }}</code> {{ 'APM.Et' | translate }}
+      <code>Token</code> {{ 'OPL.Dunexportsontignoréeschaqueligneimportéeestcrééeenstatutencourssanstoken' | translate }}
+    </p>
+
+    <div class="import-actions">
+      <button type="button" class="btn btn-outline-primary" (click)="downloadImportTemplate()" [disabled]="isImportBusy">
+        <i class="fas fa-download"></i> {{ 'BQ.Téléchargerlemodèle' | translate }}
+      </button>
+      <button type="button" class="btn btn-primary" (click)="triggerImportInput()" [disabled]="isImportBusy">
+        <i class="fas fa-folder-open"></i> {{ 'BQ.Choisirunfichier' | translate }}
+      </button>
+      <input #importFileInput type="file" [attr.accept]="importFileAccept" hidden
+             (change)="onImportFileSelected($event)">
+
+      <button type="button" class="btn btn-success" (click)="uploadImportFile()" [disabled]="!canUploadImport">
+        <i class="fas fa-upload"></i>
+        {{ isUploadingImport ? ('OPL.Importencours' | translate) : ('COMMON.actions.import' | translate) }}
+        <span *ngIf="!isUploadingImport && importableCount > 0">({{ importableCount }})</span>
+      </button>
+
+      <span class="import-file-name" *ngIf="selectedImportFile">
+        <i class="fas fa-file"></i> {{ selectedImportFile.name }}
+        <button type="button" class="import-clear" (click)="resetImportState()" title="{{ 'OPL.Retirerlefichier' | translate }}">
+          <i class="fas fa-times"></i>
+        </button>
+      </span>
+    </div>
+
+    <div class="import-loading" *ngIf="isValidatingImport">
+      <i class="fas fa-spinner fa-spin"></i> {{ 'OPL.Analysedufichierencours' | translate }}
+    </div>
+
+    <!-- Résumé de l'analyse -->
+    <div class="import-summary" *ngIf="validationResult && !isValidatingImport">
+      <div class="is-item is-total">
+        <span class="is-value">{{ validationResult.totalReceived }}</span>
+        <span class="is-label">{{ 'OPL.Ligneslues' | translate }}</span>
+      </div>
+      <div class="is-sep"></div>
+      <div class="is-item is-ok">
+        <span class="is-value">{{ importableCount }}</span>
+        <span class="is-label">{{ 'OPL.Àimporter' | translate }}</span>
+      </div>
+      <div class="is-sep"></div>
+      <div class="is-item is-dup">
+        <span class="is-value">{{ validationResult.duplicates }}</span>
+        <span class="is-label">{{ 'OPL.Doublonsignorés' | translate }}</span>
+      </div>
+      <div class="is-sep"></div>
+      <div class="is-item" [class.is-error]="validationResult.errorLines > 0">
+        <span class="is-value">{{ validationResult.errorLines }}</span>
+        <span class="is-label">{{ 'OPL.Lignesinvalides' | translate }}</span>
+      </div>
+    </div>
+
+    <!-- Aperçu -->
+    <div class="import-preview" *ngIf="importPreviewRows.length > 0">
+      <div class="import-preview-head">
+        <h4>
+          {{ 'OPL.Aperçudes' | translate }} {{ importPreviewRows.length }} {{ 'OPL.Premièreslignes' | translate }}
+          <span *ngIf="importPreviewTruncated" class="import-preview-note">
+            ({{ validationResult?.totalReceived }} {{ 'OPL.Lignesautotaldanslefichier' | translate }}
+          </span>
+        </h4>
+      </div>
+      <div class="table-wrapper">
+        <table class="import-table">
+          <thead>
+            <tr>
+              <th>{{ 'OPL.Ligne' | translate }}</th>
+              <th>{{ 'OPL.État' | translate }}</th>
+              <th>{{ 'TBL.client' | translate }}</th>
+              <th>Type_OP</th>
+              <th>{{ 'TBL.amount' | translate }}</th>
+              <th>{{ 'TBL.date' | translate }}</th>
+              <th>{{ 'TBL.transactionId' | translate }}</th>
+              <th>{{ 'TBL.country' | translate }}</th>
+              <th>Source</th>
+            </tr>
+          </thead>
+          <tbody>
+            <tr *ngFor="let row of importPreviewRows" [class.row-error]="row.status === 'ERREUR'">
+              <td>{{ row.line }}</td>
+              <td>
+                <span class="row-badge" [class.badge-error]="row.status === 'ERREUR'">{{ row.status }}</span>
+              </td>
+              <td>{{ row.client }}</td>
+              <td>{{ row.typeOp }}</td>
+              <td class="cell-num">{{ row.montant }}</td>
+              <td>{{ row.date }}</td>
+              <td>{{ row.idTransaction }}</td>
+              <td>{{ row.pays }}</td>
+              <td>{{ row.source }}</td>
+            </tr>
+          </tbody>
+        </table>
+      </div>
+    </div>
+
+    <!-- Erreurs -->
+    <div class="import-errors" *ngIf="importErrors.length > 0">
+      <h4><i class="fas fa-exclamation-triangle"></i> {{ importErrors.length }} {{ 'OPL.Anomaliesdétectées' | translate }}</h4>
+      <ul>
+        <li *ngFor="let err of importErrors.slice(0, 20)">{{ err }}</li>
+      </ul>
+      <p *ngIf="importErrors.length > 20" class="import-errors-more">
+        {{ 'OPL.Et' | translate }} {{ importErrors.length - 20 }} {{ 'OPL.Autres' | translate }}
+      </p>
+    </div>
+  </div>
+
+  <!-- Filtres -->
+  <div class="filters-section">
+    <h3>{{ 'LBL.filters' | translate }}</h3>
+    <form [formGroup]="filterForm" class="filter-form">
+      <div class="filter-row">
+        <div class="filter-group">
+          <label>{{ 'OPL.Client' | translate }}</label>
+          <select formControlName="client" class="form-control">
+            <option value="">{{ 'OPL.Touslesclients' | translate }}</option>
+            <option *ngFor="let client of clients" [value]="client">{{ client }}</option>
+          </select>
+        </div>
+
+        <div class="filter-group">
+          <label>Type_OP :</label>
+          <select formControlName="typeOp" class="form-control">
+            <option value="">{{ 'FILT.allTypes' | translate }}</option>
+            <option *ngFor="let type of typeOps" [value]="type">{{ type }}</option>
+          </select>
+        </div>
+
+        <div class="filter-group">
+          <label>{{ 'OPS.Pays' | translate }}</label>
+          <select formControlName="pays" class="form-control">
+            <option value="">{{ 'FILT.allCountries' | translate }}</option>
+            <option *ngFor="let pay of pays" [value]="pay">{{ pay }}</option>
+          </select>
+        </div>
+
+        <div class="filter-group">
+          <label>{{ 'TRT.Source' | translate }}</label>
+          <select formControlName="source" class="form-control">
+            <option value="">{{ 'OPL.Touteslessources' | translate }}</option>
+            <option *ngFor="let source of sources" [value]="source">{{ source }}</option>
+          </select>
+        </div>
+
+        <div class="filter-group">
+          <label>{{ 'TBL.environment' | translate }}</label>
+          <select formControlName="statut" class="form-control">
+            <option value="">{{ 'FILT.allStatuses' | translate }}</option>
+            <option [value]="STATUT_EN_COURS">{{ 'MSG.inProgress' | translate }}</option>
+            <option [value]="STATUT_OK">{{ 'COMMON.actions.ok' | translate }}</option>
+          </select>
+        </div>
+      </div>
+
+      <div class="filter-row">
+        <div class="filter-group">
+          <label>{{ 'CPT.Datedébut' | translate }}</label>
+          <input type="date" formControlName="dateDebut" class="form-control">
+        </div>
+
+        <div class="filter-group">
+          <label>{{ 'CPT.Datefin' | translate }}</label>
+          <input type="date" formControlName="dateFin" class="form-control">
+        </div>
+
+        <div class="filter-group">
+          <label>{{ 'CPT.Montantmin' | translate }}</label>
+          <input type="number" formControlName="montantMin" class="form-control" step="0.01">
+        </div>
+
+        <div class="filter-group">
+          <label>{{ 'CPT.Montantmax' | translate }}</label>
+          <input type="number" formControlName="montantMax" class="form-control" step="0.01">
+        </div>
+
+        <div class="filter-group">
+          <label>{{ 'OPL.Token' | translate }}</label>
+          <input type="text" formControlName="token" class="form-control"
+                 placeholder="{{ 'OPL.Recherchepartielledansletoken' | translate }}"
+                 title="Filtre sur le token de correspondance (recherche partielle, insensible à la casse).">
+        </div>
+      </div>
+
+      <div class="filter-actions">
+        <button type="button" class="btn btn-secondary" (click)="clearFilters()">
+          <i class="fas fa-times"></i>{{ 'ACT.clearFilters' | translate }}</button>
+      </div>
+    </form>
+  </div>
+
+  <!-- Recherche de correspondance -->
+  <div class="match-section">
+    <div class="match-head">
+      <div class="match-head-left">
+        <h3><i class="fas fa-link"></i> {{ 'OPL.Recherchedecorrespondance' | translate }}</h3>
+        <p class="match-hint">
+          {{ 'OPL.Recherchedespairesdelignes' | translate }} <strong>{{ 'MSG.inProgress' | translate }}</strong> {{ 'OPL.Dutableaufiltréayantlemême' | translate }}
+          <strong>{{ 'OPL.Client_1' | translate }}</strong>{{ 'OPL.Lemême' | translate }} <strong>{{ 'OPL.Pays' | translate }}</strong> {{ 'OPL.Etlemême' | translate }} <strong>{{ 'OPL.Type' | translate }}</strong>
+          {{ 'OPL.Comparésurlaracine' | translate }} <code>COMPENSE_BO</code> {{ 'APM.Et' | translate }} <code>COMPENSE_PART</code> {{ 'OPL.Partagentlaracine' | translate }} <code>COMPENSE</code>{{ 'OPL.Pourun' | translate }} <strong>{{ 'OPL.Montant' | translate }}</strong> {{ 'OPL.Danslatolérancedéfinie' | translate }}
+          <br>
+          {{ 'OPL.Rechercheégalementles' | translate }} <strong>{{ 'OPL.Sommes' | translate }}</strong> {{ 'OPL.Ungroupedelignesdontladditiondesmontantstombesurlemontantduneautrelignedumêmegroupeex7lignes' | translate }} <code>AIRTEL_PARTNER</code> {{ 'OPL.1ligne' | translate }} <code>BO</code> {{ 'OPL.Globale' | translate }}
+          <span class="match-eligible" *ngIf="!canSearchMatch">
+            {{ 'OPL.Aucunerecherchepossibleilfautaumoins2lignesencourssanstokenetavecclienttypemontantetpaysrenseignés' | translate }}
+          </span>
+        </p>
+      </div>
+      <div class="match-head-right" [formGroup]="matchForm">
+        <div class="match-tolerance">
+          <label for="matchTolerance">{{ 'OPL.Tolérancemontant' | translate }}</label>
+          <input id="matchTolerance" type="number" formControlName="tolerance"
+                 class="form-control" min="0" step="0.01" placeholder="0">
+        </div>
+        <label class="match-relaxed" for="matchRelaxedTypes"
+               [title]="'Somme : cherche aussi des combinaisons mêlant plusieurs Types_OP (ex. COMPENSE + AJUSTEMENT_SOLDE = COMPENSE_PART). L\'appariement par paires reste inchangé.'">
+          <input id="matchRelaxedTypes" type="checkbox" formControlName="relaxedTypes">
+          <span>{{ 'OPL.Sommetypesdifférentsautorisés' | translate }}</span>
+        </label>
+        <button type="button" class="btn btn-primary match-btn" (click)="searchMatches()"
+                [disabled]="isLoading">
+          <i class="fas fa-magnifying-glass"></i> {{ 'OPL.Recherchedecorrespondance' | translate }}
+        </button>
+      </div>
+    </div>
+
+    <div class="match-result" *ngIf="hasSearchedMatch">
+      <div class="match-summary" [class.match-summary-ok]="matchPairs.length > 0 || aggregateMatches.length > 0">
+        <i class="fas" [ngClass]="(matchPairs.length > 0 || aggregateMatches.length > 0) ? 'fa-circle-check' : 'fa-circle-info'"></i>
+        <span *ngIf="matchPairs.length > 0">
+          {{ matchPairs.length }} {{ 'OPL.Correspondancestrouvéesvalidezlaliaisonpourgénérerletoken' | translate }}
+        </span>
+        <span *ngIf="matchPairs.length === 0 && aggregateMatches.length === 0">
+          {{ 'OPL.Aucunecorrespondancetrouvéedansletableaufiltré' | translate }}
+        </span>
+      </div>
+
+      <div class="match-list" *ngIf="matchPairs.length > 0">
+        <div class="match-pair" *ngFor="let pair of matchPairs">
+          <div class="match-side">
+            <span class="match-side-tag">{{ 'OPL.Ligne_1' | translate }}{{ pair.gauche.id }}</span>
+            <span class="match-field">{{ pair.gauche.client }}</span>
+            <span class="match-field match-field-type">{{ pair.gauche.typeOp }}</span>
+            <span class="match-field match-field-pays">{{ pair.gauche.pays }}</span>
+            <span class="match-amount">{{ formatMontant(pair.gauche.montant) }}</span>
+          </div>
+
+          <div class="match-ecart" [class.match-ecart-exact]="pair.ecart === 0">
+            <i class="fas fa-arrows-left-right"></i>
+            <span class="match-ecart-value">{{ 'OPL.Écart' | translate }} {{ formatMontant(pair.ecart) }}</span>
+          </div>
+
+          <div class="match-side">
+            <span class="match-side-tag">{{ 'OPL.Ligne_1' | translate }}{{ pair.droite.id }}</span>
+            <span class="match-field">{{ pair.droite.client }}</span>
+            <span class="match-field match-field-type">{{ pair.droite.typeOp }}</span>
+            <span class="match-field match-field-pays">{{ pair.droite.pays }}</span>
+            <span class="match-amount">{{ formatMontant(pair.droite.montant) }}</span>
+          </div>
+
+          <div class="match-actions">
+            <button type="button" class="btn btn-sm btn-success" (click)="linkMatchPair(pair)"
+                    [disabled]="isPairLinked(pair)">
+              <i class="fas fa-link"></i> {{ isPairLinked(pair) ? 'Liaison...' : 'Lier' }}
+            </button>
+          </div>
+        </div>
+      </div>
+
+      <!-- ================= Correspondances par agrégation (somme des montants) ================= -->
+      <div class="match-aggregate" *ngIf="aggregateMatches.length > 0">
+        <div class="match-aggregate-head">
+          <i class="fas fa-calculator"></i>
+          <strong>{{ aggregateMatches.length }} {{ 'OPL.Correspondancesparsomme' | translate }}</strong>
+          <span class="match-hint">
+            {{ 'OPL.La' | translate }} <strong>{{ 'OPL.Somme' | translate }}</strong> {{ 'OPL.Deslignescidessousestégaleaumontantdelaligneciblevalidezpourliertoutesleslignesdunseulcoupunmêmetokenstatutok' | translate }}
+          </span>
+        </div>
+
+        <div class="match-list" *ngFor="let match of aggregateMatches">
+          <div class="match-pair match-pair-aggregate">
+            <div class="match-side match-side-sum">
+              <span class="match-side-tag match-side-tag-sum">
+                {{ 'OPL.Sommede' | translate }} {{ match.lignes.length }} {{ 'CPT.Lignes' | translate }}
+              </span>
+              <span class="match-badge-mixed" *ngIf="match.typesMelanges"
+                    title="{{ 'OPL.Leslignesadditionnéesnontpastouteslamêmeracinetypeopquelacible' | translate }}">
+                <i class="fas fa-code-branch"></i> {{ 'OPL.Typesdifférents' | translate }}
+              </span>
+              <div class="match-sum-lines">
+                <span class="match-sum-line" *ngFor="let l of match.lignes">
+                  <span class="match-side-tag">#{{ l.id }}</span>
+                  <span class="match-field match-field-type">{{ l.typeOp }}</span>
+                  <span class="match-field match-field-pays">{{ l.pays }}</span>
+                  <span class="match-amount">{{ formatMontant(l.montant) }}</span>
+                </span>
+              </div>
+            </div>
+
+            <div class="match-ecart" [class.match-ecart-exact]="match.ecart === 0">
+              <i class="fas fa-equals"></i>
+              <span class="match-ecart-value">
+                {{ formatMontant(match.somme) }} {{ 'OPL.Vs' | translate }} {{ formatMontant(match.montantCible) }}
+                {{ 'OPL.Écart_1' | translate }} {{ formatMontant(match.ecart) }})
+              </span>
+            </div>
+
+            <div class="match-side">
+              <span class="match-side-tag">{{ 'OPL.Ligne_1' | translate }}{{ match.cible.id }}</span>
+              <span class="match-field">{{ match.cible.client }}</span>
+              <span class="match-field match-field-type">{{ match.cible.typeOp }}</span>
+              <span class="match-field match-field-pays">{{ match.cible.pays }}</span>
+              <span class="match-amount">{{ formatMontant(match.cible.montant) }}</span>
+            </div>
+
+            <div class="match-actions">
+              <button type="button" class="btn btn-sm btn-success"
+                      (click)="linkAggregateMatch(match)"
+                      [disabled]="isAggregateLinked(match)">
+                <i class="fas fa-link"></i>
+                {{ isAggregateLinked(match) ? 'Liaison...' : 'Lier ' + (match.lignes.length + 1) + ' lignes' }}
+              </button>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <div class="match-warning" *ngIf="aggregateSkippedGroups > 0 || aggregateTruncated">
+        <i class="fas fa-triangle-exclamation"></i>
+        <span *ngIf="aggregateSkippedGroups > 0">
+          {{ aggregateSkippedGroups }} {{ 'OPL.Groupesignorésilscontiennentplusde' | translate }}
+          {{ maxAggregatePool }} {{ 'OPL.Ligneslarecherchedesommeyseraittropcoûteuse' | translate }}
+        </span>
+        <span *ngIf="aggregateTruncated">
+          {{ 'OPL.Recherchedesommeinterrompuesurcertainsgroupeslimitedecalculatteintedescorrespondancespeuventmanquer' | translate }}
+        </span>
+      </div>
+    </div>
+  </div>
+
+  <!-- Tableau des Opérations -->
+  <div class="table-section">
+    <div class="table-header">
+      <h3>{{ 'OPS.Listedesopérations' | translate }}</h3>
+      <div class="table-info">
+        {{ 'CPT.Affichage' | translate }} {{ (currentPage - 1) * pageSize + 1 }} - {{ Math.min(currentPage * pageSize, filteredOpparts.length) }}
+        {{ 'CPT.Sur' | translate }} {{ filteredOpparts.length }} {{ 'FU.Lignes' | translate }}
+      </div>
+
+      <!-- Contrôles de sélection multiple -->
+      <div class="selection-controls" *ngIf="isSelectionMode">
+        <div class="selection-info">
+          <span class="selected-count">{{ getSelectedCount() }} {{ 'OPL.Sélectionnés' | translate }}</span>
+          <span class="selection-hint">{{ 'CPT.Sur' | translate }} {{ filteredOpparts.length }} {{ 'OPL.Élémentsfiltrés' | translate }}</span>
+          <span class="selection-sum" *ngIf="getSelectedCount() > 0">
+            {{ 'OPL.Somme_1' | translate }} {{ formatMontant(selectedTotal) }}
+          </span>
+        </div>
+        <div class="selection-actions">
+          <button class="btn btn-outline-primary" (click)="selectAll()" [disabled]="filteredOpparts.length === 0">
+            <i class="fas fa-check-square"></i>{{ 'ACT.selectAll' | translate }}</button>
+          <button class="btn btn-outline-secondary" (click)="clearSelection()" [disabled]="!hasSelection()">
+            <i class="fas fa-square"></i> {{ 'APM.Toutdésélectionner' | translate }}
+          </button>
+          <button class="btn btn-success" (click)="linkSelected()"
+                  [disabled]="getSelectedCount() < 2 || isLinkingSelection"
+                  title="{{ 'OPL.Lieleslignescochéessousunmêmetokenetlespasseaustatutok' | translate }}">
+            <i class="fas fa-link"></i>
+            {{ isLinkingSelection ? ('OPL.Liaisonencours' | translate) : ('OPL.Lierlasélection' | translate) }}
+          </button>
+          <button class="btn btn-danger" (click)="deleteSelected()" [disabled]="getSelectedCount() === 0">
+            <i class="fas fa-trash"></i> {{ 'OPL.Supprimersélection' | translate }}
+          </button>
+        </div>
+      </div>
+
+      <div class="table-actions">
+        <button class="btn" [class.active]="isSelectionMode" (click)="toggleSelectionMode()">
+          <i class="fas fa-check-square"></i>
+          {{ isSelectionMode ? ('ACT.exitMultipleSelection' | translate) : ('ACT.enableMultipleSelection' | translate) }}
+        </button>
+      </div>
+    </div>
+
+    <div class="table-container" *ngIf="!isLoading">
+      <table class="oppart-table">
+        <colgroup>
+          <col *ngIf="isSelectionMode" class="col-select">
+          <col class="col-id">
+          <col class="col-client">
+          <col class="col-typeop">
+          <col class="col-montant">
+          <col class="col-date">
+          <col class="col-idtx">
+          <col class="col-pays">
+          <col class="col-source">
+          <col class="col-statut">
+          <col class="col-token">
+          <col class="col-actions">
+        </colgroup>
+        <thead>
+          <tr>
+            <th *ngIf="isSelectionMode" class="checkbox-header">
+              <input type="checkbox" [checked]="isSelectAll" (change)="toggleSelectAll()" class="select-all-checkbox">
+            </th>
+            <th>ID</th>
+            <th>{{ 'TBL.client' | translate }}</th>
+            <th>Type_OP</th>
+            <th>{{ 'TBL.amount' | translate }}</th>
+            <th>{{ 'OPL.Dateopération' | translate }}</th>
+            <th>{{ 'TBL.transactionId' | translate }}</th>
+            <th>{{ 'TBL.country' | translate }}</th>
+            <th>Source</th>
+            <th>{{ 'TBL.status' | translate }}</th>
+            <th>Token</th>
+            <th>{{ 'TBL.actions' | translate }}</th>
+          </tr>
+        </thead>
+        <tbody>
+          <tr *ngFor="let oppart of pagedOpparts"
+              [class.selected]="isItemSelected(oppart)">
+            <td *ngIf="isSelectionMode" class="checkbox-cell">
+              <input type="checkbox" [checked]="isItemSelected(oppart)" (change)="toggleItemSelection(oppart)" class="item-checkbox">
+            </td>
+            <td class="oppart-id">{{ oppart.id }}</td>
+            <td>{{ oppart.client || '-' }}</td>
+            <td>
+              <span class="type-op-badge">{{ oppart.typeOp || '-' }}</span>
+            </td>
+            <td [ngClass]="(oppart.montant || 0) < 0 ? 'montant-negatif' : 'montant-positif'">
+              {{ formatMontant(oppart.montant) }}
+            </td>
+            <td>{{ formatDate(oppart.dateOperation) }}</td>
+            <td>
+              <span class="transaction-id">{{ oppart.idTransaction || '-' }}</span>
+            </td>
+            <td>{{ oppart.pays || '-' }}</td>
+            <td>
+              <span class="source-badge">{{ oppart.source || 'MANUEL' }}</span>
+            </td>
+            <td>
+              <button type="button" class="statut-badge"
+                      [ngClass]="isStatutOk(oppart) ? 'statut-ok' : 'statut-encours'"
+                      (click)="toggleStatut(oppart)"
+                      title="{{ 'OPL.Cliquerpourbasculerlestatut' | translate }}">
+                <i class="fas" [ngClass]="isStatutOk(oppart) ? 'fa-check-circle' : 'fa-clock'"></i>
+                {{ statutLabel(oppart) }}
+              </button>
+            </td>
+            <td>
+              <span class="token-badge" *ngIf="hasToken(oppart)" [title]="'Token de correspondance : ' + oppart.token">
+                <i class="fas fa-link"></i> {{ oppart.token }}
+              </span>
+              <span class="token-empty" *ngIf="!hasToken(oppart)">-</span>
+            </td>
+            <td>
+              <div class="action-buttons">
+                <button class="btn btn-sm btn-primary" (click)="openEditModal(oppart)" title="{{ 'ACT.edit' | translate }}">
+                  <i class="fas fa-edit"></i>
+                </button>
+                <button class="btn btn-sm btn-warning" *ngIf="hasToken(oppart)"
+                        (click)="unlinkOppart(oppart)" title="{{ 'OPL.Déliersupprimerletoken' | translate }}">
+                  <i class="fas fa-unlink"></i>
+                </button>
+                <button class="btn btn-sm btn-danger" (click)="deleteOppart(oppart.id!)" title="{{ 'ACT.delete' | translate }}">
+                  <i class="fas fa-trash"></i>
+                </button>
+              </div>
+            </td>
+          </tr>
+          <tr *ngIf="pagedOpparts.length === 0">
+            <td [attr.colspan]="isSelectionMode ? 12 : 11" class="no-data-cell">
+              {{ 'OPL.Aucuneligneopérationtrouvée' | translate }}
+            </td>
+          </tr>
+        </tbody>
+      </table>
+    </div>
+
+    <!-- Loading -->
+    <div class="loading-container" *ngIf="isLoading">
+      <div class="loading-spinner">
+        <i class="fas fa-spinner fa-spin"></i>
+        <span>{{ 'CPT.Chargementencours' | translate }}</span>
+      </div>
+    </div>
+
+    <!-- Pagination -->
+    <div class="pagination" *ngIf="totalPages > 1">
+      <button (click)="prevPage()" [disabled]="currentPage === 1" class="btn pagination-btn">
+        <i class="fas fa-chevron-left"></i>{{ 'PAG.previous' | translate }}</button>
+
+      <div class="pagination-indicators">
+        <span *ngFor="let page of getVisiblePages()"
+              class="page-indicator"
+              [class.active]="currentPage === page"
+              (click)="goToPage(page)">
+          {{ page }}
+        </span>
+      </div>
+
+      <button (click)="nextPage()" [disabled]="currentPage === totalPages" class="btn pagination-btn">{{ 'PAG.next' | translate }}<i class="fas fa-chevron-right"></i>
+      </button>
+    </div>
+  </div>
+  </div><!-- .oppart-container -->
+  </div><!-- .main -->
+</div><!-- .oppart-page -->
+
+<!-- Modal de création/édition -->
+<div class="modal-overlay" *ngIf="showEditModal">
+  <div class="modal-content">
+    <div class="modal-header">
+      <h4>{{ editingOppart ? 'Modifier l\'Opération' : 'Nouvelle Opération' }}</h4>
+      <button class="close-btn" (click)="closeEditModal()" [disabled]="isSaving">
+        <i class="fas fa-times"></i>
+      </button>
+    </div>
+
+    <div class="modal-body">
+      <form [formGroup]="editForm">
+        <div class="form-row">
+          <div class="form-group">
+            <label>{{ 'TBL.client' | translate }}<span class="required">*</span> :</label>
+            <input type="text" formControlName="client" class="form-control" placeholder="{{ 'OPL.Exclient001' | translate }}">
+          </div>
+
+          <div class="form-group">
+            <label>Type_OP :</label>
+            <input type="text" formControlName="typeOp" class="form-control" placeholder="{{ 'OPL.Excashin' | translate }}">
+          </div>
+        </div>
+
+        <div class="form-row">
+          <div class="form-group">
+            <label>{{ 'TBL.amount' | translate }}<span class="required">*</span> :</label>
+            <input type="number" formControlName="montant" class="form-control" step="0.01">
+          </div>
+
+          <div class="form-group">
+            <label>{{ 'OPL.IDtransaction' | translate }}</label>
+            <input type="text" formControlName="idTransaction" class="form-control" placeholder="{{ 'OPL.Exgu123456789' | translate }}">
+          </div>
+        </div>
+
+        <div class="form-row">
+          <div class="form-group">
+            <label>{{ 'OPL.Dateopération_1' | translate }}</label>
+            <input type="datetime-local" formControlName="dateOperation" class="form-control">
+          </div>
+
+          <div class="form-group">
+            <label>{{ 'OPS.Pays' | translate }}</label>
+            <input type="text" formControlName="pays" class="form-control" placeholder="{{ 'OPL.Exci' | translate }}">
+          </div>
+        </div>
+
+        <div class="form-row">
+          <div class="form-group">
+            <label for="oppartSource">{{ 'TRT.Source' | translate }}</label>
+            <input id="oppartSource" type="text" formControlName="source" class="form-control"
+                   list="oppartSourceOptions" placeholder="{{ 'OPL.Exmanuelecartpartner' | translate }}"
+                   autocomplete="off">
+            <datalist id="oppartSourceOptions">
+              <option *ngFor="let source of sourceOptions" [value]="source"></option>
+            </datalist>
+            <small class="form-hint">{{ 'OPL.Valeurlibreunesourcedéjàutiliséeouunenouvelle' | translate }}</small>
+          </div>
+
+          <div class="form-group">
+            <label>{{ 'TBL.environment' | translate }}</label>
+            <select formControlName="statut" class="form-control">
+              <option [value]="STATUT_EN_COURS">{{ 'MSG.inProgress' | translate }}</option>
+              <option [value]="STATUT_OK">{{ 'COMMON.actions.ok' | translate }}</option>
+            </select>
+          </div>
+        </div>
+
+        <div class="form-row" *ngIf="editingOppart">
+          <div class="form-group">
+            <label>{{ 'OPL.Token' | translate }}</label>
+            <input type="text" class="form-control token-input" [value]="editingOppart.token || ''" readonly
+                   placeholder="{{ 'OPL.Générélorsdelaliaisonde2lignes' | translate }}">
+          </div>
+        </div>
+      </form>
+    </div>
+
+    <div class="modal-footer">
+      <button class="btn btn-secondary" (click)="closeEditModal()" [disabled]="isSaving">{{ 'COMMON.actions.cancel' | translate }}</button>
+      <button class="btn btn-primary" (click)="saveOppart()" [disabled]="isSaving || !editForm.valid">
+        <i class="fas fa-save"></i>
+        {{ isSaving ? 'Sauvegarde...' : 'Enregistrer' }}
+      </button>
+    </div>
+  </div>
+</div>
+
+<!-- ============ Zone offscreen capturée par html2canvas pour le PDF ============ -->
+<!-- Hors du modal-overlay (qui porte *ngIf="showEditModal") : la racine doit exister -->
+<!-- même modale fermée, sinon @ViewChild ne résout pas. -->
+<!-- 1 bloc = 1 groupe de lignes liées = 1 page du PDF -->
+<div class="pdf-linked-root" #pdfLinkedRoot>
+    <div class="pdf-linked-block" *ngFor="let g of linkedGroups; trackBy: trackByLinkedGroup">
+      <div class="pdf-linked-header">
+        <div>
+          <div class="pdf-linked-eyebrow">{{ 'OPL.ReconciliAppecartspartenaires' | translate }}</div>
+          <h1 class="pdf-linked-title">{{ 'OPL.Rapprochementdesopérationsde' | translate }} {{ g.libelleOperation }}</h1>
+          <div class="pdf-linked-token">{{ 'OPL.Token' | translate }} <strong>{{ g.token }}</strong></div>
+        </div>
+        <div class="pdf-linked-header-right">
+          <div class="pdf-linked-kv"><span>{{ 'OPL.Generele' | translate }}</span><strong>{{ todayLabel }}</strong></div>
+          <div class="pdf-linked-kv"><span>{{ 'TBL.client' | translate }}</span><strong>{{ g.client }}</strong></div>
+          <div class="pdf-linked-kv"><span>{{ 'TBL.country' | translate }}</span><strong>{{ g.pays }}</strong></div>
+          <div class="pdf-linked-kv"><span>{{ 'OPL.Periode' | translate }}</span><strong>{{ g.dateDebut }} &rarr; {{ g.dateFin }}</strong></div>
+        </div>
+      </div>
+
+      <table class="pdf-linked-table">
+        <thead>
+          <tr>
+            <th class="pdf-th-left">
+              <div class="pdf-th-label">{{ g.mainSource }}</div>
+              <div class="pdf-th-sub">{{ g.mainLines.length }} {{ 'CPT.Lignes' | translate }}</div>
+            </th>
+            <th class="pdf-th-mid">&nbsp;</th>
+            <th class="pdf-th-right">
+              <div class="pdf-th-label">{{ g.otherSources.length ? g.otherSources.join(' / ') : '—' }}</div>
+              <div class="pdf-th-sub">{{ g.otherLines.length }} {{ 'CPT.Lignes' | translate }}</div>
+            </th>
+            <th class="pdf-th-mid">&nbsp;</th>
+          </tr>
+        </thead>
+        <tbody>
+          <tr class="pdf-linked-row" *ngFor="let row of linkedRowPairs(g); let i = index; trackBy: trackByLinkedRowIndex">
+            <td class="pdf-td-left">
+              <ng-container *ngIf="row.left">
+                <span class="pdf-line-id">#{{ row.left.id }}</span>
+                <span class="pdf-line-type">{{ row.left.typeOp }}</span>
+                <span class="pdf-line-meta">{{ formatDate(row.left.dateOperation) }} &middot; {{ row.left.pays }}</span>
+                <span class="pdf-line-trans">{{ 'OPL.IDtrans' | translate }} {{ row.left.idTransaction || '-' }}</span>
+              </ng-container>
+              <span *ngIf="!row.left" class="pdf-line-empty">&mdash;</span>
+            </td>
+            <td class="pdf-td-mid">
+              <span *ngIf="row.left" class="pdf-amount">{{ formatMontant(row.left.montant) }}</span>
+            </td>
+            <td class="pdf-td-right">
+              <ng-container *ngIf="row.right">
+                <span class="pdf-line-id">#{{ row.right.id }}</span>
+                <span class="pdf-line-type">{{ row.right.typeOp }}</span>
+                <span class="pdf-line-meta">{{ formatDate(row.right.dateOperation) }} &middot; {{ row.right.source }}</span>
+                <span class="pdf-line-trans">{{ 'OPL.IDtrans' | translate }} {{ row.right.idTransaction || '-' }}</span>
+              </ng-container>
+              <span *ngIf="!row.right" class="pdf-line-empty">&mdash;</span>
+            </td>
+            <td class="pdf-td-mid">
+              <span *ngIf="row.right" class="pdf-amount">{{ formatMontant(row.right.montant) }}</span>
+            </td>
+          </tr>
+        </tbody>
+        <tfoot>
+          <tr class="pdf-total-row">
+            <td class="pdf-td-left pdf-total-label">{{ 'COMMON.actions.total' | translate }}</td>
+            <td class="pdf-td-mid pdf-total-amount">{{ formatMontant(g.mainTotal) }}</td>
+            <td class="pdf-td-right pdf-total-label">{{ 'COMMON.actions.total' | translate }}</td>
+            <td class="pdf-td-mid pdf-total-amount">{{ formatMontant(g.otherTotal) }}</td>
+          </tr>
+        </tfoot>
+      </table>
+
+      <div class="pdf-linked-solde" [class.pdf-solde-ok]="g.solde === 0">
+        <span class="pdf-solde-label">{{ 'OPL.Solde' | translate }}{{ g.otherSources.join(' / ') || '—' }} {{ 'OPL.Moins' | translate }} {{ g.mainSource }})</span>
+        <span class="pdf-solde-value">
+          {{ g.solde === 0 ? 'Equilibre' : formatMontant(g.solde) }}
+        </span>
+      </div>
+
+      <div class="pdf-linked-notes" *ngIf="g.distinctTypes.length > 1 || g.distinctClients.length > 1 || g.distinctPays.length > 1">
+        <span class="pdf-note" *ngIf="g.distinctTypes.length > 1">
+          {{ 'OPL.Typesopdistincts' | translate }} {{ g.distinctTypes.join(', ') }}
+        </span>
+        <span class="pdf-note" *ngIf="g.distinctClients.length > 1">
+          {{ 'OPL.Clientsdistincts_1' | translate }} {{ g.distinctClients.join(', ') }}
+        </span>
+        <span class="pdf-note" *ngIf="g.distinctPays.length > 1">
+          {{ 'OPL.Paysdistincts' | translate }} {{ g.distinctPays.join(', ') }}
+        </span>
+      </div>
+    </div>
+  </div>
+</div>

@@ -1,0 +1,19 @@
+<div class="app-container">
+    <app-sidebar *ngIf="showSidebar"></app-sidebar>
+    
+    <button class="sidebar-toggle-btn" *ngIf="showSidebarToggle" (click)="toggleSidebar()" [class.sidebar-hidden]="!showSidebar" [attr.title]="(showSidebar ? 'APP.toggleSidebarHide' : 'APP.toggleSidebarShow') | translate">
+        <i class="fas" [ngClass]="showSidebar ? 'fa-times' : 'fa-bars'"></i>
+    </button>
+    
+    <main class="main-content" [class.full-width]="!showSidebar">
+        <div class="page-content" [class.page-content--flush]="isFlushPage">
+            <router-outlet></router-outlet>
+        </div>
+    </main>
+    
+    <!-- Indicateur de progression global -->
+    <app-progress-indicator></app-progress-indicator>
+
+    <!-- Bandeau de traitement automatique en arrière-plan -->
+    <app-traitement-job-banner></app-traitement-job-banner>
+</div> 

@@ -1,0 +1,165 @@
+<div class="platform-page">
+  <!-- PAGE HEADER -->
+  <div class="pf-header">
+    <div class="pf-header-left">
+      <div class="pf-eyebrow"><span></span>{{ 'PLT.eyebrow' | translate }}</div>
+      <h1 class="pf-title">{{ 'PLT.acc.titleTop' | translate }}<em>{{ 'PLT.acc.titleAccent' | translate }}</em></h1>
+      <p class="pf-subtitle">{{ 'PLT.acc.subtitle' | translate }}</p>
+    </div>
+    <div class="pf-header-right">
+      <div class="kpi-strip">
+        <div class="kpi">
+          <span class="kpi-label">{{ 'PLT.acc.kpiTotal' | translate }}</span>
+          <span class="kpi-value">{{ kpiTotal }}</span>
+        </div>
+        <div class="kpi">
+          <span class="kpi-label">{{ 'PLT.acc.kpiActive' | translate }}</span>
+          <span class="kpi-value">{{ kpiActive }}</span>
+        </div>
+        <div class="kpi">
+          <span class="kpi-label">{{ 'PLT.acc.kpi2FA' | translate }}</span>
+          <span class="kpi-value">{{ kpi2FA }}</span>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <div class="pf-body">
+    <div *ngIf="error" class="pf-alert pf-alert-danger">
+      <i class="fas fa-exclamation-circle"></i>
+      <span>{{ error }}</span>
+    </div>
+
+    <div class="pf-card">
+      <div class="pf-card-head">
+        <h2><i class="fas fa-users"></i> {{ 'PLT.acc.sectionTitle' | translate }}</h2>
+        <div class="pf-card-actions">
+          <button class="btn-rd btn-rd-ghost" (click)="loadComptes()" [disabled]="loading">
+            <i class="fas fa-sync-alt"></i> {{ 'PLT.acc.refresh' | translate }}
+          </button>
+        </div>
+      </div>
+
+      <div class="pf-filters">
+        <input
+          type="text"
+          class="pf-input pf-search"
+          [(ngModel)]="searchText"
+          [placeholder]="'PLT.acc.searchPlaceholder' | translate">
+        <select class="pf-input pf-select" [(ngModel)]="entrepriseFilter">
+          <option value="">{{ 'PLT.acc.filterEntreprise' | translate }}</option>
+          <option *ngFor="let e of entreprises" [value]="e.code">{{ e.code }} — {{ e.nom }}</option>
+        </select>
+        <label class="pf-toggle">
+          <input type="checkbox" [(ngModel)]="showDisabledOnly">
+          <span>{{ 'PLT.acc.filterDisabled' | translate }}</span>
+        </label>
+      </div>
+
+      <div *ngIf="loading" class="pf-state">
+        <span class="pf-spinner"></span>
+        <span>{{ 'PLT.loading' | translate }}</span>
+      </div>
+
+      <div *ngIf="!loading" class="pf-table-wrap">
+        <table class="pf-table">
+          <thead>
+            <tr>
+              <th>{{ 'PLT.acc.colUsername' | translate }}</th>
+              <th>{{ 'PLT.acc.colEmail' | translate }}</th>
+              <th>{{ 'PLT.acc.colEntreprise' | translate }}</th>
+              <th>{{ 'PLT.acc.colProfil' | translate }}</th>
+              <th>{{ 'PLT.acc.colEnabled' | translate }}</th>
+              <th>{{ 'PLT.acc.col2FA' | translate }}</th>
+              <th>{{ 'PLT.acc.colActions' | translate }}</th>
+            </tr>
+          </thead>
+          <tbody>
+            <tr *ngFor="let c of filteredComptes">
+              <td><strong>{{ c.username }}</strong></td>
+              <td>{{ c.email || '—' }}</td>
+              <td>
+                <span class="pf-id">{{ c.entrepriseCode }}</span>
+                <span *ngIf="c.entrepriseNom !== c.entrepriseCode"> · {{ c.entrepriseNom }}</span>
+              </td>
+              <td><span class="pf-badge badge-info">{{ c.profilNom || '—' }}</span></td>
+              <td>
+                <span class="pf-badge" [ngClass]="c.enabled ? 'badge-success' : 'badge-secondary'">
+                  {{ (c.enabled ? 'PLT.acc.enabledTrue' : 'PLT.acc.enabledFalse') | translate }}
+                </span>
+              </td>
+              <td>
+                <span class="pf-badge" [ngClass]="c.enabled2fa ? 'badge-success' : 'badge-secondary'">
+                  {{ (c.enabled2fa ? 'PLT.acc.enabledTrue' : 'PLT.acc.enabledFalse') | translate }}
+                </span>
+              </td>
+              <td>
+                <div class="pf-row-actions">
+                  <button class="btn-rd btn-rd-ghost btn-rd-sm" (click)="openEdit(c)" [title]="'PLT.acc.actionEdit' | translate">
+                    <i class="fas fa-pen"></i> <span class="btn-label">{{ 'PLT.acc.actionEdit' | translate }}</span>
+                  </button>
+                  <button class="btn-rd btn-rd-info btn-rd-sm" (click)="resetPassword(c)" [title]="'PLT.acc.actionResetPassword' | translate">
+                    <i class="fas fa-key"></i> <span class="btn-label">{{ 'PLT.acc.actionResetPasswordShort' | translate }}</span>
+                  </button>
+                  <button class="btn-rd btn-rd-warn btn-rd-sm" (click)="reset2FA(c)" [title]="'PLT.acc.actionReset2FA' | translate">
+                    <i class="fas fa-shield-halved"></i> <span class="btn-label">{{ 'PLT.acc.actionReset2FAShort' | translate }}</span>
+                  </button>
+                  <button class="btn-rd btn-rd-danger btn-rd-sm" (click)="deleteCompte(c)" [title]="'PLT.acc.actionDelete' | translate">
+                    <i class="fas fa-trash"></i> <span class="btn-label">{{ 'PLT.acc.actionDelete' | translate }}</span>
+                  </button>
+                </div>
+              </td>
+            </tr>
+            <tr *ngIf="filteredComptes.length === 0">
+              <td [attr.colspan]="7">
+                <div class="pf-state">
+                  <i class="fas fa-users-slash"></i>
+                  <span>{{ 'PLT.acc.empty' | translate }}</span>
+                </div>
+              </td>
+            </tr>
+          </tbody>
+        </table>
+      </div>
+    </div>
+  </div>
+
+  <!-- Modal Modification -->
+  <div *ngIf="showEditModal">
+    <div class="pf-modal-backdrop" (click)="closeEdit()"></div>
+    <div class="pf-modal" role="dialog" aria-modal="true">
+      <div class="pf-modal-head">
+        <h3><i class="fas fa-pen"></i> {{ 'PLT.acc.editTitle' | translate }}</h3>
+        <button type="button" class="pf-modal-close" (click)="closeEdit()" [attr.aria-label]="'COMMON.actions.close' | translate">&times;</button>
+      </div>
+      <form id="editCompteForm" (ngSubmit)="saveEdit()">
+        <div class="pf-modal-body">
+          <div class="pf-alert pf-alert-info">
+            <i class="fas fa-info-circle"></i>
+            <span>{{ 'PLT.acc.editInfo' | translate:{ entreprise: selectedCompte?.entrepriseNom || '', profil: selectedCompte?.profilNom || '' } }}</span>
+          </div>
+          <div class="pf-field">
+            <label for="pc-username">{{ 'PLT.acc.editUsername' | translate }} *</label>
+            <input id="pc-username" type="text" class="pf-input" [(ngModel)]="editForm.username" name="editUsername" required maxlength="255">
+          </div>
+          <div class="pf-field">
+            <label for="pc-email">{{ 'PLT.acc.editEmail' | translate }} *</label>
+            <input id="pc-email" type="email" class="pf-input" [(ngModel)]="editForm.email" name="editEmail" required maxlength="255">
+          </div>
+          <label class="pf-toggle pf-toggle-block">
+            <input type="checkbox" [(ngModel)]="editForm.enabled" name="editEnabled">
+            <span>{{ 'PLT.acc.editEnabled' | translate }}</span>
+          </label>
+        </div>
+        <div class="pf-modal-foot">
+          <button type="button" class="btn-rd btn-rd-ghost" (click)="closeEdit()" [disabled]="submitting">
+            {{ 'COMMON.actions.cancel' | translate }}
+          </button>
+          <button type="submit" class="btn-rd btn-rd-primary" [disabled]="submitting">
+            <i class="fas fa-check"></i> {{ 'COMMON.actions.save' | translate }}
+          </button>
+        </div>
+      </form>
+    </div>
+  </div>
+</div>

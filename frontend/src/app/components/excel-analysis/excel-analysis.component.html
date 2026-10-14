@@ -1,0 +1,250 @@
+<div class="excel-analysis-container">
+  <!-- En-tête -->
+  <div class="analysis-header">
+    <h2>
+      <i class="icon">📊</i>
+      Analyse Excel - {{ fileName }}
+    </h2>
+    <div class="loading-indicator" *ngIf="loading">
+      <div class="spinner"></div>
+      <span>Analyse en cours...</span>
+    </div>
+  </div>
+
+  <!-- Message d'erreur -->
+  <div class="error-message" *ngIf="error">
+    <i class="icon">❌</i>
+    <span>{{ error }}</span>
+  </div>
+
+  <!-- Contenu de l'analyse -->
+  <div class="analysis-content" *ngIf="hasAnalysis() && !loading">
+    
+    <!-- Informations générales -->
+    <div class="file-info">
+      <div class="card">
+        <div class="card-header">
+          <h3>Informations du fichier</h3>
+        </div>
+        <div class="card-content">
+          <div class="info-grid">
+            <div class="info-item">
+              <strong>{{ 'LBL.typeLabel' | translate }}</strong> {{ getAnalysis()?.fileType?.toUpperCase() || 'N/A' }}
+            </div>
+            <div class="info-item">
+              <strong>Lignes:</strong> {{ getAnalysis()?.totalRows?.toLocaleString('fr-FR') || '0' }}
+            </div>
+            <div class="info-item">
+              <strong>Colonnes:</strong> {{ getAnalysis()?.totalColumns || '0' }}
+            </div>
+            <div class="info-item">
+              <strong>Feuilles:</strong> {{ getAnalysis()?.sheetCount || '0' }}
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Qualité des données -->
+    <div class="data-quality">
+      <div class="card">
+        <div class="card-header">
+          <h3>Qualité des données</h3>
+        </div>
+        <div class="card-content">
+          <div class="quality-metrics">
+            <div class="quality-item">
+              <div class="quality-label">Complétude</div>
+              <div class="quality-bar">
+                <div class="quality-fill" 
+                     [style.width.%]="(getAnalysis()?.dataQuality?.completeness || 0) * 100"
+                     [style.background-color]="getQualityColor(getAnalysis()?.dataQuality?.completeness || 0)">
+                </div>
+              </div>
+              <div class="quality-value">{{ ((getAnalysis()?.dataQuality?.completeness || 0) * 100).toFixed(1) }}%</div>
+            </div>
+            <div class="quality-item">
+              <div class="quality-label">Cohérence</div>
+              <div class="quality-bar">
+                <div class="quality-fill" 
+                     [style.width.%]="(getAnalysis()?.dataQuality?.consistency || 0) * 100"
+                     [style.background-color]="getQualityColor(getAnalysis()?.dataQuality?.consistency || 0)">
+                </div>
+              </div>
+              <div class="quality-value">{{ ((getAnalysis()?.dataQuality?.consistency || 0) * 100).toFixed(1) }}%</div>
+            </div>
+            <div class="quality-item">
+              <div class="quality-label">Précision</div>
+              <div class="quality-bar">
+                <div class="quality-fill" 
+                     [style.width.%]="(getAnalysis()?.dataQuality?.accuracy || 0) * 100"
+                     [style.background-color]="getQualityColor(getAnalysis()?.dataQuality?.accuracy || 0)">
+                </div>
+              </div>
+              <div class="quality-value">{{ ((getAnalysis()?.dataQuality?.accuracy || 0) * 100).toFixed(1) }}%</div>
+            </div>
+          </div>
+          
+          <!-- Problèmes détectés -->
+          <div class="issues-section" *ngIf="getAnalysis()?.dataQuality?.issues?.length">
+            <h4>Problèmes détectés:</h4>
+            <ul class="issues-list">
+              <li *ngFor="let issue of getAnalysis()?.dataQuality?.issues">
+                <i class="icon">⚠️</i>
+                {{ issue }}
+              </li>
+            </ul>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Analyse des colonnes -->
+    <div class="columns-analysis">
+      <div class="card">
+        <div class="card-header">
+          <h3>Analyse des colonnes</h3>
+        </div>
+        <div class="card-content">
+          <div class="columns-grid">
+            <div class="column-card" 
+                 *ngFor="let column of getAnalysis()?.columns"
+                 [class.selected]="getSelectedColumn() === column"
+                 (click)="selectColumn(column)">
+              <div class="column-header">
+                <div class="column-name">{{ column.columnName }}</div>
+                <div class="column-type" 
+                     [style.background-color]="getTypeColor(column.type)">
+                  {{ column.type }}
+                </div>
+              </div>
+              <div class="column-stats">
+                <div class="stat-item">
+                  <span class="stat-label">Confiance:</span>
+                  <span class="stat-value" 
+                        [style.color]="getConfidenceColor(column.confidence)">
+                    {{ (column.confidence * 100).toFixed(0) }}%
+                  </span>
+                </div>
+                <div class="stat-item">
+                  <span class="stat-label">Valeurs:</span>
+                  <span class="stat-value">{{ column.totalCount }}</span>
+                </div>
+                <div class="stat-item">
+                  <span class="stat-label">Uniques:</span>
+                  <span class="stat-value">{{ column.uniqueCount }}</span>
+                </div>
+                <div class="stat-item">
+                  <span class="stat-label">Nulles:</span>
+                  <span class="stat-value">{{ column.nullCount }}</span>
+                </div>
+              </div>
+              
+              <!-- Propriétés Excel spécifiques -->
+              <div class="excel-properties" *ngIf="column.hasFormulas || column.hasErrors">
+                <div class="property-item" *ngIf="column.hasFormulas">
+                  <i class="icon">🔧</i>
+                  <span>Formules</span>
+                </div>
+                <div class="property-item" *ngIf="column.hasErrors">
+                  <i class="icon">❌</i>
+                  <span>Erreurs</span>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Détails de la colonne sélectionnée -->
+    <div class="column-details" *ngIf="hasSelectedColumn()">
+      <div class="card">
+        <div class="card-header">
+          <h3>Détails: {{ getSelectedColumn()?.columnName }}</h3>
+        </div>
+        <div class="card-content">
+          <div class="details-grid">
+            <div class="detail-section">
+              <h4>Informations générales</h4>
+              <div class="detail-item">
+                <strong>Type détecté:</strong> {{ getSelectedColumn()?.type }}
+              </div>
+              <div class="detail-item">
+                <strong>Confiance:</strong> {{ ((getSelectedColumn()?.confidence || 0) * 100).toFixed(1) }}%
+              </div>
+              <div class="detail-item">
+                <strong>Format suggéré:</strong> {{ getSelectedColumn()?.format || 'Non spécifié' }}
+              </div>
+              <div class="detail-item" *ngIf="getSelectedColumn()?.currency">
+                <strong>Devise:</strong> {{ getSelectedColumn()?.currency }}
+              </div>
+            </div>
+            
+            <div class="detail-section">
+              <h4>Statistiques</h4>
+              <div class="detail-item" *ngIf="getSelectedColumn()?.minValue !== undefined">
+                <strong>Min:</strong> {{ formatValue(getSelectedColumn()?.minValue) }}
+              </div>
+              <div class="detail-item" *ngIf="getSelectedColumn()?.maxValue !== undefined">
+                <strong>Max:</strong> {{ formatValue(getSelectedColumn()?.maxValue) }}
+              </div>
+              <div class="detail-item" *ngIf="getSelectedColumn()?.averageValue !== undefined">
+                <strong>Moyenne:</strong> {{ formatValue(getSelectedColumn()?.averageValue) }}
+              </div>
+            </div>
+            
+            <div class="detail-section">
+              <h4>Valeurs d'exemple</h4>
+              <div class="sample-values">
+                <span class="sample-value" *ngFor="let value of getSelectedColumn()?.sampleValues?.slice(0, 5)">
+                  {{ formatValue(value) }}
+                </span>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Recommandations -->
+    <div class="recommendations">
+      <div class="card">
+        <div class="card-header">
+          <h3>Recommandations de formatage</h3>
+        </div>
+        <div class="card-content">
+          <div class="recommendations-list">
+            <div class="recommendation-item" 
+                 *ngFor="let recommendation of getAnalysis()?.recommendations"
+                 [style.border-left-color]="getPriorityColor(recommendation.priority)">
+              <div class="recommendation-header">
+                <i class="icon">{{ getRecommendationIcon(recommendation.type) }}</i>
+                <div class="recommendation-title">
+                  <strong>{{ recommendation.columnName }}</strong>
+                  <span class="recommendation-type">{{ recommendation.type }}</span>
+                </div>
+                <div class="recommendation-priority" 
+                     [style.background-color]="getPriorityColor(recommendation.priority)">
+                  {{ recommendation.priority }}
+                </div>
+              </div>
+              <div class="recommendation-content">
+                <div class="recommendation-description">{{ recommendation.description }}</div>
+                <div class="recommendation-impact">{{ recommendation.impact }}</div>
+                <div class="recommendation-confidence">
+                  Confiance: {{ (recommendation.confidence * 100).toFixed(0) }}%
+                </div>
+              </div>
+              <div class="recommendation-actions">
+                <button class="btn btn-primary" 
+                        (click)="applyRecommendation(recommendation)">
+                  <i class="icon">▶️</i>{{ 'ACT.apply' | translate }}</button>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+</div> 

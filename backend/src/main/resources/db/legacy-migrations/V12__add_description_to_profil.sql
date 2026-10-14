@@ -1,0 +1,1 @@
+ALTER TABLE profil ADD COLUMN description TEXT; 

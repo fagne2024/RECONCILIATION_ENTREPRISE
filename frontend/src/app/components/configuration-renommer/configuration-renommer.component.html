@@ -1,0 +1,516 @@
+<div class="config-renommer-container">
+  <div class="page-header">
+    <h1><i class="fas fa-edit"></i> {{ 'CFG.RENOMMER.TITLE' | translate }}</h1>
+    <p class="subtitle">{{ 'CFG.RENOMMER.SUBTITLE' | translate }}</p>
+  </div>
+
+  <!-- Sélecteur de mode -->
+  <div class="mode-selector card">
+    <div class="card-body">
+      <div class="mode-tabs">
+        <button 
+          class="mode-tab" 
+          [class.active]="viewMode === 'data'" 
+          (click)="viewMode = 'data'"
+          type="button">
+          <i class="fas fa-database"></i> {{ 'CFG.RENOMMER.MODE_DATA' | translate }}
+        </button>
+        <button 
+          class="mode-tab" 
+          [class.active]="viewMode === 'navigation'" 
+          (click)="viewMode = 'navigation'"
+          type="button">
+          <i class="fas fa-sitemap"></i> {{ 'CFG.RENOMMER.MODE_NAVIGATION' | translate }}
+        </button>
+      </div>
+    </div>
+  </div>
+
+  <!-- ===== MODE DONNÉES ===== -->
+  <div *ngIf="viewMode === 'data'">
+    <!-- Sélection du module -->
+    <div class="module-selector card">
+      <div class="card-header">
+        <h3><i class="fas fa-layer-group"></i> {{ 'CFG.RENOMMER.SELECT_MODULE' | translate }}</h3>
+      </div>
+      <div class="card-body">
+        <div class="module-grid">
+          <button 
+            *ngFor="let module of modulesConfig" 
+            class="module-btn"
+            [class.active]="selectedModule === module.key"
+            (click)="selectedModule = module.key; onModuleChange()"
+            type="button">
+            <i class="fas" [ngClass]="module.icon"></i>
+            <span>{{ module.label }}</span>
+          </button>
+        </div>
+      </div>
+    </div>
+
+    <!-- Zone de recherche et actions -->
+    <div *ngIf="selectedModule" class="toolbar card">
+      <div class="card-body">
+        <div class="toolbar-row">
+          <div class="search-box">
+            <i class="fas fa-search"></i>
+            <input 
+              type="text" 
+              [(ngModel)]="searchTerm" 
+              (input)="applyFilter()"
+              placeholder="{{ 'CFG.RENOMMER.SEARCH_PLACEHOLDER' | translate }}"
+              class="search-input">
+            <button *ngIf="searchTerm" class="btn-clear" (click)="searchTerm = ''; applyFilter()" type="button">
+              <i class="fas fa-times"></i>
+            </button>
+          </div>
+
+          <div class="toolbar-actions">
+            <span class="entity-count">
+              {{ filteredEntities.length }} / {{ entities.length }} {{ 'CFG.RENOMMER.ENTITIES' | translate }}
+            </span>
+            <button 
+              class="btn btn-secondary" 
+              (click)="discardAll()" 
+              [disabled]="!hasAnyChanges()"
+              type="button">
+              <i class="fas fa-undo"></i> {{ 'CFG.RENOMMER.DISCARD_ALL' | translate }}
+            </button>
+            <button 
+              class="btn btn-primary" 
+              (click)="saveAll()" 
+              [disabled]="!hasAnyChanges() || isSaving"
+              type="button">
+              <i class="fas" [ngClass]="isSaving ? 'fa-spinner fa-spin' : 'fa-save'"></i>
+              {{ isSaving ? ('CFG.RENOMMER.SAVING' | translate) : ('CFG.RENOMMER.SAVE' | translate) }}
+              <span *ngIf="hasAnyChanges()" class="badge">{{ getEntitiesWithChanges().length }}</span>
+            </button>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Résultats de sauvegarde -->
+    <div *ngIf="showResults" class="save-results card">
+      <div class="card-body">
+        <div class="result-item success">
+          <i class="fas fa-check-circle"></i>
+          <span>{{ saveResults.success }} {{ 'CFG.RENOMMER.SAVED' | translate }}</span>
+        </div>
+        <div *ngIf="saveResults.errors > 0" class="result-item error">
+          <i class="fas fa-times-circle"></i>
+          <span>{{ saveResults.errors }} {{ 'CFG.RENOMMER.ERRORS' | translate }}</span>
+        </div>
+        <button class="btn btn-sm btn-secondary" (click)="showResults = false" type="button">
+          <i class="fas fa-times"></i>
+        </button>
+      </div>
+    </div>
+
+    <!-- Liste des entités -->
+    <div *ngIf="selectedModule && !isLoading" class="entities-list card">
+      <div class="card-header">
+        <h3>
+          <i class="fas" [ngClass]="getConfig()?.icon"></i> 
+          {{ getConfig()?.label }} 
+          <span *ngIf="hasAnyChanges()" class="changes-badge">
+            {{ getEntitiesWithChanges().length }} {{ 'CFG.RENOMMER.MODIFIED' | translate }}
+          </span>
+        </h3>
+      </div>
+      <div class="card-body p-0">
+        <div *ngIf="filteredEntities.length === 0" class="empty-state">
+          <i class="fas fa-search"></i>
+          <p>{{ searchTerm ? ('CFG.RENOMMER.NO_RESULTS' | translate) : ('CFG.RENOMMER.NO_ENTITIES' | translate) }}</p>
+        </div>
+        
+        <div class="table-responsive" *ngIf="filteredEntities.length > 0">
+          <table class="entities-table">
+            <thead>
+              <tr>
+                <th>{{ 'CFG.RENOMMER.TYPE' | translate }}</th>
+                <th>{{ 'CFG.RENOMMER.TITLE' | translate }}</th>
+                <th *ngIf="hasLabelField()">{{ 'CFG.RENOMMER.LABEL' | translate }}</th>
+                <th *ngIf="hasCommentField()">{{ 'CFG.RENOMMER.COMMENT' | translate }}</th>
+                <th *ngIf="hasDescriptionField()">{{ 'CFG.RENOMMER.DESCRIPTION' | translate }}</th>
+                <th class="actions-col">{{ 'CFG.RENOMMER.ACTIONS' | translate }}</th>
+              </tr>
+            </thead>
+            <tbody>
+              <tr *ngFor="let entity of pagedEntities" [class.has-changes]="entity.hasChanges">
+                <td>
+                  <span class="entity-type">{{ entity.entityType }}</span>
+                </td>
+                <td>
+                  <input 
+                    type="text" 
+                    [(ngModel)]="entity.newTitle" 
+                    (ngModelChange)="onFieldChange(entity)"
+                    class="edit-input"
+                    [class.modified]="entity.newTitle !== entity.currentTitle"
+                    placeholder="{{ 'CFG.RENOMMER.ENTER_TITLE' | translate }}">
+                  <small *ngIf="entity.newTitle !== entity.currentTitle" class="original-value">
+                    {{ 'CFG.RENOMMER.ORIGINAL' | translate }}: {{ entity.currentTitle }}
+                  </small>
+                </td>
+                <td *ngIf="hasLabelField()">
+                  <input 
+                    type="text" 
+                    [(ngModel)]="entity.newLabel" 
+                    (ngModelChange)="onFieldChange(entity)"
+                    class="edit-input"
+                    [class.modified]="entity.newLabel !== entity.currentLabel"
+                    placeholder="{{ 'CFG.RENOMMER.ENTER_LABEL' | translate }}">
+                  <small *ngIf="entity.newLabel !== entity.currentLabel" class="original-value">
+                    {{ 'CFG.RENOMMER.ORIGINAL' | translate }}: {{ entity.currentLabel }}
+                  </small>
+                </td>
+                <td *ngIf="hasCommentField()">
+                  <input 
+                    type="text" 
+                    [(ngModel)]="entity.newComment" 
+                    (ngModelChange)="onFieldChange(entity)"
+                    class="edit-input"
+                    [class.modified]="entity.newComment !== entity.currentComment"
+                    placeholder="{{ 'CFG.RENOMMER.ENTER_COMMENT' | translate }}">
+                  <small *ngIf="entity.newComment !== entity.currentComment" class="original-value">
+                    {{ 'CFG.RENOMMER.ORIGINAL' | translate }}: {{ entity.currentComment }}
+                  </small>
+                </td>
+                <td *ngIf="hasDescriptionField()">
+                  <textarea 
+                    [(ngModel)]="entity.newDescription" 
+                    (ngModelChange)="onFieldChange(entity)"
+                    class="edit-textarea"
+                    [class.modified]="entity.newDescription !== entity.currentDescription"
+                    placeholder="{{ 'CFG.RENOMMER.ENTER_DESCRIPTION' | translate }}"
+                    rows="2"></textarea>
+                  <small *ngIf="entity.newDescription !== entity.currentDescription" class="original-value">
+                    {{ 'CFG.RENOMMER.ORIGINAL' | translate }}: {{ entity.currentDescription }}
+                  </small>
+                </td>
+                <td class="actions-col">
+                  <div class="action-buttons">
+                    <button 
+                      *ngIf="entity.hasChanges"
+                      class="btn-icon btn-save" 
+                      (click)="saveEntity(entity)"
+                      [disabled]="isSaving"
+                      type="button"
+                      title="{{ 'CFG.RENOMMER.SAVE_ENTITY' | translate }}">
+                      <i class="fas fa-save"></i>
+                    </button>
+                    <button 
+                      *ngIf="entity.hasChanges"
+                      class="btn-icon btn-discard" 
+                      (click)="discardChanges(entity)"
+                      type="button"
+                      title="{{ 'CFG.RENOMMER.DISCARD' | translate }}">
+                      <i class="fas fa-undo"></i>
+                    </button>
+                    <span *ngIf="!entity.hasChanges" class="no-changes">
+                      <i class="fas fa-check-circle text-success"></i>
+                    </span>
+                  </div>
+                </td>
+              </tr>
+            </tbody>
+          </table>
+        </div>
+
+        <!-- Pagination -->
+        <div *ngIf="totalPages > 1 && filteredEntities" class="pagination-bar">
+          <div class="pagination-info">
+            <span>{{ 'CFG.RENOMMER.SHOWING' | translate }} {{ (currentPage - 1) * itemsPerPage + 1 }} - {{ getPaginationEnd() }} {{ 'CFG.RENOMMER.OF' | translate }} {{ filteredEntities?.length || 0 }} {{ 'CFG.RENOMMER.ENTITIES' | translate }}</span>
+          </div>
+          <div class="pagination-controls">
+            <select 
+              class="page-size-select" 
+              [(ngModel)]="itemsPerPage" 
+              (ngModelChange)="onItemsPerPageChange()">
+              <option value="10">10 {{ 'CFG.RENOMMER.PER_PAGE' | translate }}</option>
+              <option value="20">20 {{ 'CFG.RENOMMER.PER_PAGE' | translate }}</option>
+              <option value="50">50 {{ 'CFG.RENOMMER.PER_PAGE' | translate }}</option>
+              <option value="100">100 {{ 'CFG.RENOMMER.PER_PAGE' | translate }}</option>
+            </select>
+            <button 
+              class="btn btn-sm btn-secondary" 
+              (click)="onPageChange(currentPage - 1)" 
+              [disabled]="currentPage === 1"
+              type="button">
+              <i class="fas fa-chevron-left"></i>
+            </button>
+            <span class="page-numbers">
+              <button 
+                *ngFor="let page of getPageNumbers()" 
+                class="page-btn" 
+                [class.active]="page === currentPage"
+                (click)="onPageChange(page)"
+                type="button">
+                {{ page }}
+              </button>
+            </span>
+            <button 
+              class="btn btn-sm btn-secondary" 
+              (click)="onPageChange(currentPage + 1)" 
+              [disabled]="currentPage === totalPages"
+              type="button">
+              <i class="fas fa-chevron-right"></i>
+            </button>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Loading state -->
+    <div *ngIf="selectedModule && isLoading" class="loading-card card">
+      <div class="card-body text-center">
+        <i class="fas fa-spinner fa-spin fa-2x"></i>
+        <p class="mt-2">{{ 'CFG.RENOMMER.LOADING' | translate }}</p>
+      </div>
+    </div>
+
+    <!-- État initial -->
+    <div *ngIf="!selectedModule" class="initial-state card">
+      <div class="card-body text-center">
+        <i class="fas fa-mouse-pointer fa-4x text-muted mb-3"></i>
+        <h3>{{ 'CFG.RENOMMER.SELECT_MODULE_FIRST' | translate }}</h3>
+        <p class="text-muted">{{ 'CFG.RENOMMER.SELECT_MODULE_HINT' | translate }}</p>
+      </div>
+    </div>
+  </div>
+
+  <!-- ===== MODE NAVIGATION ===== -->
+  <div *ngIf="viewMode === 'navigation'">
+    <!-- Zone de recherche et actions -->
+    <div class="toolbar card">
+      <div class="card-body">
+        <div class="toolbar-row">
+          <div class="search-box">
+            <i class="fas fa-search"></i>
+            <input 
+              type="text" 
+              [(ngModel)]="navSearchTerm" 
+              (input)="applyNavFilter()"
+              placeholder="{{ 'CFG.RENOMMER.NAV_SEARCH_PLACEHOLDER' | translate }}"
+              class="search-input">
+            <button *ngIf="navSearchTerm" class="btn-clear" (click)="navSearchTerm = ''; applyNavFilter()" type="button">
+              <i class="fas fa-times"></i>
+            </button>
+          </div>
+
+          <div class="toolbar-actions">
+            <span class="entity-count">
+              {{ filteredNavItems.length }} / {{ navItems.length }} {{ 'CFG.RENOMMER.NAV_ITEMS' | translate }}
+            </span>
+            <button 
+              class="btn btn-secondary" 
+              (click)="discardAllNav()" 
+              [disabled]="!hasAnyNavChanges()"
+              type="button">
+              <i class="fas fa-undo"></i> {{ 'CFG.RENOMMER.DISCARD_ALL' | translate }}
+            </button>
+            <button 
+              class="btn btn-primary" 
+              (click)="saveNavChanges()" 
+              [disabled]="!hasAnyNavChanges() || isSaving"
+              type="button">
+              <i class="fas" [ngClass]="isSaving ? 'fa-spinner fa-spin' : 'fa-save'"></i>
+              {{ isSaving ? ('CFG.RENOMMER.SAVING' | translate) : ('CFG.RENOMMER.SAVE' | translate) }}
+              <span *ngIf="hasAnyNavChanges()" class="badge">{{ getNavItemsWithChanges().length }}</span>
+            </button>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Résultats de sauvegarde -->
+    <div *ngIf="showResults" class="save-results card">
+      <div class="card-body">
+        <div class="result-item success">
+          <i class="fas fa-check-circle"></i>
+          <span>{{ saveResults.success }} {{ 'CFG.RENOMMER.SAVED' | translate }}</span>
+        </div>
+        <div *ngIf="saveResults.errors > 0" class="result-item error">
+          <i class="fas fa-times-circle"></i>
+          <span>{{ saveResults.errors }} {{ 'CFG.RENOMMER.ERRORS' | translate }}</span>
+        </div>
+        <button class="btn btn-sm btn-secondary" (click)="showResults = false" type="button">
+          <i class="fas fa-times"></i>
+        </button>
+      </div>
+    </div>
+
+    <!-- Liste des éléments de navigation -->
+    <div class="entities-list card">
+      <div class="card-header">
+        <h3>
+          <i class="fas fa-sitemap"></i> {{ 'CFG.RENOMMER.NAVIGATION_TITLE' | translate }}
+          <span *ngIf="hasAnyNavChanges()" class="changes-badge">
+            {{ getNavItemsWithChanges().length }} {{ 'CFG.RENOMMER.MODIFIED' | translate }}
+          </span>
+        </h3>
+      </div>
+      <div class="card-body p-0">
+        <div *ngIf="filteredNavItems.length === 0" class="empty-state">
+          <i class="fas fa-search"></i>
+          <p>{{ navSearchTerm ? ('CFG.RENOMMER.NO_RESULTS' | translate) : ('CFG.RENOMMER.NO_NAV_ITEMS' | translate) }}</p>
+        </div>
+        
+        <div class="table-responsive" *ngIf="filteredNavItems.length > 0">
+          <table class="entities-table">
+            <thead>
+              <tr>
+                <th>{{ 'CFG.RENOMMER.NAV_TYPE' | translate }}</th>
+                <th>{{ 'CFG.RENOMMER.NAV_PATH' | translate }}</th>
+                <th>{{ 'CFG.RENOMMER.TITLE' | translate }}</th>
+                <th class="actions-col">{{ 'CFG.RENOMMER.ACTIONS' | translate }}</th>
+              </tr>
+            </thead>
+            <tbody>
+              <tr *ngFor="let item of filteredNavItems" [class.has-changes]="item.hasChanges">
+                <td>
+                  <span class="entity-type nav-type" [ngClass]="item.type">
+                    {{ getNavItemTypeLabel(item) }}
+                  </span>
+                </td>
+                <td>
+                  <div class="nav-path-cell">
+                    <span class="nav-path-text">{{ getNavItemPath(item) }}</span>
+                    <small class="nav-path-keys">({{ item.groupKey }}{{ item.submenuKey ? ':' + item.submenuKey : '' }}{{ item.nestedKey ? ':' + item.nestedKey : '' }})</small>
+                  </div>
+                </td>
+                <td>
+                  <input 
+                    type="text" 
+                    [(ngModel)]="item.label" 
+                    (ngModelChange)="onNavFieldChange(item)"
+                    class="edit-input"
+                    [class.modified]="item.hasChanges"
+                    placeholder="{{ 'CFG.RENOMMER.ENTER_TITLE' | translate }}">
+                  <small *ngIf="item.hasChanges" class="original-value">
+                    {{ 'CFG.RENOMMER.ORIGINAL' | translate }}: {{ item.originalLabel }}
+                  </small>
+                </td>
+                <td class="actions-col">
+                  <div class="action-buttons">
+                    <button 
+                      class="btn-icon btn-history" 
+                      (click)="openHistory(item)"
+                      type="button"
+                      title="{{ 'CFG.RENOMMER.HISTORY' | translate }}">
+                      <i class="fas fa-history"></i>
+                    </button>
+                    <button 
+                      *ngIf="item.hasChanges"
+                      class="btn-icon btn-save" 
+                      (click)="discardNavChanges(item)"
+                      [disabled]="isSaving"
+                      type="button"
+                      title="{{ 'CFG.RENOMMER.DISCARD' | translate }}">
+                      <i class="fas fa-undo"></i>
+                    </button>
+                    <span *ngIf="!item.hasChanges" class="no-changes">
+                      <i class="fas fa-check-circle text-success"></i>
+                    </span>
+                  </div>
+                </td>
+              </tr>
+            </tbody>
+          </table>
+        </div>
+      </div>
+    </div>
+
+    <!-- État initial -->
+    <div *ngIf="!navLabels.isLoaded()" class="loading-card card">
+      <div class="card-body text-center">
+        <i class="fas fa-spinner fa-spin fa-2x"></i>
+        <p class="mt-2">{{ 'CFG.RENOMMER.LOADING' | translate }}</p>
+      </div>
+    </div>
+  </div>
+<!-- ===== PANNEAU HISTORIQUE ===== -->
+  <div *ngIf="showHistory" class="history-panel-overlay" (click)="closeHistory()">
+    <div class="history-panel" (click)="$event.stopPropagation()">
+      <div class="history-header">
+        <h3><i class="fas fa-history"></i> {{ 'CFG.RENOMMER.HISTORY_TITLE' | translate }}</h3>
+        <div class="history-path">
+          <span class="history-type" 
+                [class.group]="historyLabelType === 'group'" 
+                [class.submenu]="historyLabelType === 'submenu'" 
+                [class.nested]="historyLabelType === 'nested'">
+            {{ historyTypeLabel }}
+          </span>
+          <span class="history-group">{{ historyGroupKey }}</span>
+        </div>
+        <button class="btn-close" (click)="closeHistory()" type="button">
+          <i class="fas fa-times"></i>
+        </button>
+      </div>
+
+      <div class="history-toolbar">
+        <button class="btn btn-sm btn-secondary" (click)="loadAllHistory()" type="button">
+          <i class="fas fa-globe"></i> {{ 'CFG.RENOMMER.HISTORY_ALL' | translate }}
+        </button>
+        <button class="btn btn-sm btn-secondary" (click)="loadGroupHistory(historyGroupKey)" type="button">
+          <i class="fas fa-folder"></i> {{ 'CFG.RENOMMER.HISTORY_GROUP' | translate }}
+        </button>
+      </div>
+
+      <div class="history-list" *ngIf="historyItems.length > 0; else noHistory">
+        <div class="history-item" *ngFor="let entry of historyItems; let i = index">
+          <div class="history-item-header">
+            <span class="history-action" 
+                  [class.update]="entry.actionType === 'UPDATE'" 
+                  [class.restore]="entry.actionType === 'RESTORE'" 
+                  [class.create]="entry.actionType === 'CREATE'" 
+                  [class.delete]="entry.actionType === 'DELETE'">
+              <i class="fas" 
+                 [class.fa-edit]="entry.actionType === 'UPDATE'" 
+                 [class.fa-rotate-left]="entry.actionType === 'RESTORE'" 
+                 [class.fa-plus]="entry.actionType === 'CREATE'" 
+                 [class.fa-trash]="entry.actionType === 'DELETE'"></i>
+              {{ entry.actionLabel }}
+            </span>
+            <span class="history-meta">
+              <span class="history-user"><i class="fas fa-user"></i> {{ entry.username }}</span>
+              <span class="history-date"><i class="fas fa-clock"></i> {{ entry.formattedDate }}</span>
+            </span>
+          </div>
+          <div class="history-changes">
+            <div class="change-row old" *ngIf="entry.oldLabel">
+              <span class="change-label">{{ 'CFG.RENOMMER.HISTORY_OLD' | translate }}</span>
+              <span class="change-value">{{ entry.oldLabel }}</span>
+            </div>
+            <div class="change-row new" *ngIf="entry.newLabel">
+              <span class="change-label">{{ 'CFG.RENOMMER.HISTORY_NEW' | translate }}</span>
+              <span class="change-value">{{ entry.newLabel }}</span>
+            </div>
+            <div class="change-row detail" *ngIf="entry.detail">
+              <span class="change-label">{{ 'CFG.RENOMMER.HISTORY_DETAIL' | translate }}</span>
+              <span class="change-value">{{ entry.detail }}</span>
+            </div>
+          </div>
+          <div class="history-actions">
+            <button 
+              class="btn btn-sm btn-primary" 
+              (click)="restoreVersion(i)"
+              [disabled]="i === 0"
+              type="button"
+              title="{{ 'CFG.RENOMMER.HISTORY_RESTORE' | translate }}">
+              <i class="fas fa-rotate-left"></i> {{ 'CFG.RENOMMER.HISTORY_RESTORE_THIS' | translate }}
+            </button>
+          </div>
+        </div>
+      </div>
+
+      <ng-template #noHistory>
+        <div class="no-history">
+          <i class="fas fa-history"></i>
+          <p>{{ 'CFG.RENOMMER.NO_HISTORY' | translate }}</p>
+        </div>
+      </ng-template>
+    </div>
+  </div>
+</div>

@@ -1,0 +1,609 @@
+/* Espace SUPER_ADMIN — aligné sur le design system ReconciliApp
+   (palette chaude, titres « Instrument Serif », police « Sora »). */
+:host {
+  --rd-bg: #F2F0EB;
+  --rd-surface: #FAFAF8;
+  --rd-border: #E4E0D8;
+  --rd-navy: #1A2535;
+  --rd-text1: #1A1714;
+  --rd-text2: #5C5650;
+  --rd-text3: #9B9489;
+  --rd-green-m: #5A9E74;
+  --rd-amber: #A85F1E;
+  --rd-r: 18px;
+  --rd-r-sm: 11px;
+  --rd-shadow: 0 2px 16px rgba(26, 23, 20, 0.07);
+
+  display: block;
+  min-height: 100%;
+}
+
+.platform-page {
+  font-family: 'Sora', sans-serif;
+  background: var(--rd-bg);
+  min-height: 100%;
+  color: var(--rd-text1);
+  font-size: 15px;
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+  box-sizing: border-box;
+
+  * {
+    box-sizing: border-box;
+  }
+}
+
+/* ---------- En-tête de page ---------- */
+.pf-header {
+  background: var(--rd-surface);
+  border-bottom: 1px solid var(--rd-border);
+  padding: 24px 28px;
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 20px;
+  flex-wrap: wrap;
+}
+
+.pf-eyebrow {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-size: 12px;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.12em;
+  color: var(--rd-text3);
+  margin-bottom: 6px;
+
+  span {
+    display: inline-block;
+    width: 16px;
+    height: 1.5px;
+    background: var(--rd-text3);
+    border-radius: 2px;
+  }
+}
+
+.pf-title {
+  font-family: 'Instrument Serif', serif;
+  font-size: 28px;
+  font-weight: 400;
+  color: var(--rd-text1);
+  letter-spacing: -0.02em;
+  line-height: 1.2;
+  margin: 0 0 6px 0;
+
+  em {
+    font-style: italic;
+    color: var(--rd-amber);
+  }
+}
+
+.pf-subtitle {
+  margin: 0;
+  font-size: 13px;
+  color: var(--rd-text2);
+  max-width: 640px;
+}
+
+.pf-header-right {
+  display: flex;
+  align-items: center;
+}
+
+.kpi-strip {
+  display: flex;
+  gap: 10px;
+  flex-wrap: wrap;
+}
+
+.kpi {
+  background: #F4F1EA;
+  border: 1px solid rgba(0, 0, 0, 0.03);
+  border-radius: 999px;
+  padding: 8px 16px;
+  display: flex;
+  align-items: baseline;
+  gap: 8px;
+}
+
+.kpi-label {
+  font-size: 11px;
+  text-transform: uppercase;
+  letter-spacing: 0.12em;
+  color: var(--rd-text3);
+}
+
+.kpi-value {
+  font-size: 16px;
+  font-weight: 600;
+  color: var(--rd-text1);
+}
+
+/* ---------- Corps ---------- */
+.pf-body {
+  padding: 24px 28px 60px;
+}
+
+/* ---------- Alertes ---------- */
+.pf-alert {
+  display: flex;
+  align-items: flex-start;
+  gap: 10px;
+  padding: 12px 16px;
+  border-radius: var(--rd-r-sm);
+  font-size: 13.5px;
+  line-height: 1.5;
+  margin-bottom: 18px;
+
+  i {
+    margin-top: 2px;
+  }
+
+  &.pf-alert-danger {
+    background: #FBEAE9;
+    color: #8A2E27;
+    border: 1px solid #F0C9C5;
+  }
+
+  &.pf-alert-info {
+    background: #EDF2F8;
+    color: #2C4A73;
+    border: 1px solid #CFDDEE;
+  }
+
+  &.pf-alert-warn {
+    background: #FBF0E4;
+    color: #8A5A12;
+    border: 1px solid #EBD6BB;
+  }
+}
+
+/* ---------- Carte ---------- */
+.pf-card {
+  background: var(--rd-surface);
+  border: 1px solid var(--rd-border);
+  border-radius: var(--rd-r);
+  box-shadow: var(--rd-shadow);
+  overflow: hidden;
+}
+
+.pf-card-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 16px;
+  flex-wrap: wrap;
+  padding: 18px 20px;
+  border-bottom: 1px solid var(--rd-border);
+
+  h2 {
+    margin: 0;
+    font-size: 16px;
+    font-weight: 600;
+    color: var(--rd-text1);
+    display: flex;
+    align-items: center;
+    gap: 10px;
+
+    i {
+      color: var(--rd-amber);
+    }
+  }
+}
+
+.pf-card-actions {
+  display: flex;
+  gap: 10px;
+  flex-wrap: wrap;
+}
+
+/* ---------- Tableau ---------- */
+.pf-table-wrap {
+  overflow-x: auto;
+}
+
+.pf-table {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 13.5px;
+
+  th {
+    text-align: left;
+    padding: 12px 16px;
+    font-size: 11px;
+    text-transform: uppercase;
+    letter-spacing: 0.1em;
+    color: var(--rd-text3);
+    font-weight: 600;
+    background: #F7F5F0;
+    border-bottom: 1px solid var(--rd-border);
+    white-space: nowrap;
+  }
+
+  td {
+    padding: 14px 16px;
+    border-bottom: 1px solid var(--rd-border);
+    vertical-align: middle;
+    color: var(--rd-text2);
+
+    strong {
+      color: var(--rd-text1);
+      font-weight: 600;
+    }
+  }
+
+  tbody tr:hover {
+    background: #FCFBF8;
+  }
+}
+
+.pf-id {
+  color: var(--rd-text3);
+  font-variant-numeric: tabular-nums;
+}
+
+.pf-count {
+  display: inline-flex;
+  min-width: 26px;
+  justify-content: center;
+  padding: 2px 8px;
+  border-radius: 999px;
+  background: #EFEDE8;
+  color: var(--rd-text2);
+  font-weight: 600;
+}
+
+/* ---------- Badges ---------- */
+.pf-badge {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 4px 10px;
+  border-radius: 999px;
+  font-size: 11.5px;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+
+  &.badge-success {
+    background: #E6F2EA;
+    color: #2E6B45;
+  }
+
+  &.badge-warning {
+    background: #FBEFDD;
+    color: #8A5A12;
+  }
+
+  &.badge-info {
+    background: #E7EEF7;
+    color: #2C4A73;
+  }
+
+  &.badge-secondary {
+    background: #EFEDE8;
+    color: #5C5650;
+  }
+}
+
+/* ---------- Actions de ligne ---------- */
+.pf-row-actions {
+  display: flex;
+  gap: 6px;
+  flex-wrap: wrap;
+}
+
+/* ---------- Boutons ---------- */
+.btn-rd {
+  font-family: inherit;
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  padding: 9px 16px;
+  border-radius: var(--rd-r-sm);
+  border: 1px solid transparent;
+  font-size: 13px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: background 0.15s ease, border-color 0.15s ease, color 0.15s ease;
+  white-space: nowrap;
+
+  &:disabled {
+    opacity: 0.55;
+    cursor: not-allowed;
+  }
+
+  &.btn-rd-primary {
+    background: var(--rd-navy);
+    color: #fff;
+
+    &:hover:not(:disabled) {
+      background: #25344a;
+    }
+  }
+
+  &.btn-rd-ghost {
+    background: #fff;
+    border-color: var(--rd-border);
+    color: var(--rd-text2);
+
+    &:hover:not(:disabled) {
+      border-color: var(--rd-text3);
+      color: var(--rd-text1);
+    }
+  }
+
+  &.btn-rd-success {
+    background: var(--rd-green-m);
+    color: #fff;
+
+    &:hover:not(:disabled) {
+      background: #4c8a63;
+    }
+  }
+
+  &.btn-rd-warn {
+    background: #fff;
+    border-color: #E6C9A8;
+    color: var(--rd-amber);
+
+    &:hover:not(:disabled) {
+      background: #FBF0E4;
+    }
+  }
+
+  &.btn-rd-info {
+    background: #fff;
+    border-color: var(--rd-border);
+    color: var(--rd-navy);
+
+    &:hover:not(:disabled) {
+      background: #EEF2F7;
+    }
+  }
+
+  &.btn-rd-danger {
+    background: #fff;
+    border-color: #EDB8B2;
+    color: #A63A2E;
+
+    &:hover:not(:disabled) {
+      background: #FBEAE9;
+    }
+  }
+
+  &.btn-rd-sm {
+    padding: 6px 12px;
+    font-size: 12.5px;
+  }
+}
+
+/* ---------- Toggle archiver ---------- */
+.pf-toggle {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  font-size: 13px;
+  font-weight: 600;
+  color: var(--rd-text2);
+  cursor: pointer;
+  user-select: none;
+  padding: 9px 4px;
+
+  input {
+    accent-color: var(--rd-amber);
+    width: 16px;
+    height: 16px;
+    cursor: pointer;
+  }
+
+  &:hover {
+    color: var(--rd-text1);
+  }
+}
+
+/* ---------- Bloc admin (modale modification) ---------- */
+.pf-admin-box {
+  background: #F7F5F0;
+  border: 1px solid var(--rd-border);
+  border-radius: var(--rd-r-sm);
+  padding: 14px;
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+.pf-admin-head {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-size: 11.5px;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+  color: var(--rd-text3);
+
+  i {
+    color: var(--rd-amber);
+  }
+}
+
+/* ---------- États vide / chargement ---------- */
+.pf-state {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 12px;
+  padding: 48px 20px;
+  text-align: center;
+  color: var(--rd-text3);
+  font-size: 14px;
+
+  i {
+    font-size: 26px;
+    opacity: 0.6;
+  }
+}
+
+.pf-spinner {
+  width: 26px;
+  height: 26px;
+  border: 3px solid var(--rd-border);
+  border-top-color: var(--rd-amber);
+  border-radius: 50%;
+  animation: pf-spin 0.8s linear infinite;
+}
+
+@keyframes pf-spin {
+  to {
+    transform: rotate(360deg);
+  }
+}
+
+/* ---------- Modales ---------- */
+.pf-modal-backdrop {
+  position: fixed;
+  inset: 0;
+  background: rgba(26, 23, 20, 0.5);
+  backdrop-filter: blur(2px);
+  z-index: 1040;
+}
+
+.pf-modal {
+  position: fixed;
+  top: 50%;
+  left: 50%;
+  transform: translate(-50%, -50%);
+  z-index: 1050;
+  width: min(560px, calc(100vw - 32px));
+  max-height: calc(100vh - 48px);
+  overflow: auto;
+  background: var(--rd-surface);
+  border-radius: var(--rd-r);
+  box-shadow: 0 24px 60px rgba(26, 23, 20, 0.28);
+  font-family: 'Sora', sans-serif;
+  color: var(--rd-text1);
+
+  &.pf-modal-lg {
+    width: min(760px, calc(100vw - 32px));
+  }
+}
+
+.pf-modal-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  padding: 18px 22px;
+  border-bottom: 1px solid var(--rd-border);
+
+  h3 {
+    margin: 0;
+    font-family: 'Instrument Serif', serif;
+    font-weight: 400;
+    font-size: 21px;
+    display: flex;
+    align-items: center;
+    gap: 10px;
+
+    i {
+      color: var(--rd-amber);
+      font-size: 17px;
+    }
+  }
+}
+
+.pf-modal-close {
+  background: none;
+  border: none;
+  font-size: 20px;
+  line-height: 1;
+  color: var(--rd-text3);
+  cursor: pointer;
+  padding: 4px 6px;
+
+  &:hover {
+    color: var(--rd-text1);
+  }
+}
+
+.pf-modal-body {
+  padding: 22px;
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+
+  .pf-alert {
+    margin-bottom: 0;
+  }
+}
+
+.pf-modal-text {
+  margin: 0;
+  font-size: 14px;
+  color: var(--rd-text2);
+  line-height: 1.55;
+}
+
+.pf-modal-foot {
+  display: flex;
+  justify-content: flex-end;
+  gap: 10px;
+  padding: 16px 22px;
+  border-top: 1px solid var(--rd-border);
+}
+
+/* ---------- Formulaires ---------- */
+.pf-grid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 16px;
+
+  @media (max-width: 640px) {
+    grid-template-columns: 1fr;
+  }
+}
+
+.pf-field {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+
+  label {
+    font-size: 12px;
+    font-weight: 600;
+    color: var(--rd-text2);
+  }
+}
+
+.pf-input {
+  font-family: inherit;
+  font-size: 14px;
+  padding: 10px 12px;
+  border: 1px solid var(--rd-border);
+  border-radius: var(--rd-r-sm);
+  background: #fff;
+  color: var(--rd-text1);
+  width: 100%;
+
+  &:focus {
+    outline: none;
+    border-color: var(--rd-amber);
+    box-shadow: 0 0 0 3px rgba(168, 95, 30, 0.12);
+  }
+}
+
+.pf-hint {
+  font-size: 12px;
+  color: var(--rd-text3);
+}
+
+/* Sur petits écrans, on masque le libellé des actions de ligne (icône seule). */
+@media (max-width: 1100px) {
+  .pf-row-actions .btn-label {
+    display: none;
+  }
+}

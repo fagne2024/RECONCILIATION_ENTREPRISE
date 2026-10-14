@@ -1,0 +1,236 @@
+<div class="login-container">
+  <div class="background-particles">
+    <div class="particle" *ngFor="let i of particles" [attr.data-index]="i"></div>
+  </div>
+
+  <app-language-switcher class="login-lang-switch" [compact]="true"></app-language-switcher>
+
+  <!-- Formulaire de mot de passe oublié -->
+  <form *ngIf="showForgotPassword && !requires2FA" (ngSubmit)="onSubmitForgotPassword()" [formGroup]="forgotPasswordForm" class="login-form">
+    <div class="logo-section">
+      <div class="logo-icon-wrapper" *ngIf="logoService.logo$ | async as logoSrc; else forgotDefaultIcon">
+        <img [src]="logoSrc" class="login-logo" alt="">
+      </div>
+      <ng-template #forgotDefaultIcon>
+        <div class="logo-icon-wrapper">
+          <i class="fas fa-key logo-icon"></i>
+        </div>
+      </ng-template>
+      <h2>{{ 'LOGIN.forgotTitle' | translate }}</h2>
+      <p class="subtitle">{{ 'LOGIN.forgotSubtitle' | translate }}</p>
+    </div>
+
+    <div class="info-message">
+      <mat-icon>info</mat-icon>
+      <p>{{ 'LOGIN.forgotInfo' | translate }}</p>
+    </div>
+
+    <mat-form-field appearance="outline" class="login-field">
+      <mat-label>{{ 'LOGIN.email' | translate }}</mat-label>
+      <input matInput formControlName="email" type="email" autocomplete="email" required>
+      <mat-icon matSuffix>email</mat-icon>
+      <mat-error *ngIf="forgotPasswordForm.get('email')?.hasError('required')">
+        {{ 'LOGIN.emailRequired' | translate }}
+      </mat-error>
+      <mat-error *ngIf="forgotPasswordForm.get('email')?.hasError('email')">
+        {{ 'LOGIN.emailInvalid' | translate }}
+      </mat-error>
+    </mat-form-field>
+
+    <div class="button-group">
+      <button mat-raised-button color="primary" type="submit" [disabled]="forgotPasswordForm.invalid || loading" class="login-button">
+        <mat-icon *ngIf="!loading">send</mat-icon>
+        <mat-spinner *ngIf="loading" diameter="20"></mat-spinner>
+        {{ loading ? ('LOGIN.sending' | translate) : ('COMMON.actions.send' | translate) }}
+      </button>
+
+      <button mat-button type="button" (click)="backToLoginFromForgotPassword()" [disabled]="loading" class="back-button">
+        <mat-icon>arrow_back</mat-icon>
+        {{ 'COMMON.actions.back' | translate }}
+      </button>
+    </div>
+
+    <div *ngIf="error" class="login-error">
+      <mat-icon>error</mat-icon>
+      {{ error }}
+    </div>
+
+    <div *ngIf="success" class="login-success">
+      <mat-icon>check_circle</mat-icon>
+      {{ success }}
+    </div>
+  </form>
+
+  <!-- Formulaire de connexion (username/password) -->
+  <form *ngIf="!showForgotPassword && !requires2FA" (ngSubmit)="onSubmit()" [formGroup]="loginForm" class="login-form">
+    <div class="logo-section">
+      <div class="logo-icon-wrapper" *ngIf="logoService.logo$ | async as logoSrc; else loginDefaultIcon">
+        <img [src]="logoSrc" class="login-logo" alt="">
+      </div>
+      <ng-template #loginDefaultIcon>
+        <div class="logo-icon-wrapper">
+          <i class="fas fa-sync-alt logo-icon"></i>
+        </div>
+      </ng-template>
+      <h2>{{ 'LOGIN.title' | translate }}</h2>
+      <p class="subtitle">{{ 'LOGIN.subtitle' | translate }}</p>
+      <p class="subtitle-brand">{{ 'LOGIN.brand' | translate }}</p>
+    </div>
+
+    <div class="login-security-notice">
+      <mat-icon>lock</mat-icon>
+      <p>{{ 'LOGIN.securityNotice' | translate }}</p>
+    </div>
+
+    <mat-form-field appearance="outline" class="login-field">
+      <mat-label>{{ 'LOGIN.username' | translate }}</mat-label>
+      <input matInput formControlName="username" autocomplete="username" required>
+      <mat-icon matSuffix>person</mat-icon>
+    </mat-form-field>
+
+    <mat-form-field appearance="outline" class="login-field">
+      <mat-label>{{ 'LOGIN.password' | translate }}</mat-label>
+      <input
+        matInput
+        [type]="hidePassword ? 'password' : 'text'"
+        formControlName="password"
+        autocomplete="current-password"
+        required>
+      <button
+        matSuffix
+        mat-icon-button
+        type="button"
+        (click)="togglePasswordVisibility()"
+        [attr.aria-label]="'LOGIN.showHidePassword' | translate"
+        class="password-toggle">
+        <mat-icon>{{ hidePassword ? 'visibility_off' : 'visibility' }}</mat-icon>
+      </button>
+    </mat-form-field>
+
+    <div class="login-options">
+      <a href="#" class="forgot-password" (click)="$event.preventDefault(); onForgotPassword()">
+        {{ 'LOGIN.forgotPassword' | translate }}
+      </a>
+    </div>
+
+    <button mat-raised-button color="primary" type="submit" [disabled]="loginForm.invalid || loading" class="login-button">
+      <mat-icon *ngIf="!loading">login</mat-icon>
+      <mat-spinner *ngIf="loading" diameter="20"></mat-spinner>
+      {{ loading ? ('LOGIN.signingIn' | translate) : ('LOGIN.signIn' | translate) }}
+    </button>
+
+    <div *ngIf="error" class="login-error">
+      <mat-icon>error</mat-icon>
+      {{ error }}
+    </div>
+
+    <div class="login-warning" *ngIf="!adminExists">
+      <mat-icon>warning</mat-icon>
+      <p><strong>{{ 'LOGIN.noAdminWarning' | translate }}</strong></p>
+      <p>{{ 'LOGIN.noAdminHint' | translate }}</p>
+    </div>
+  </form>
+
+  <!-- Formulaire 2FA (code à 6 chiffres) -->
+  <form *ngIf="requires2FA" (ngSubmit)="onVerify2FA()" [formGroup]="twoFactorForm" class="login-form">
+    <div class="logo-section">
+      <div class="logo-icon-wrapper" *ngIf="logoService.logo$ | async as logoSrc; else twoFaDefaultIcon">
+        <img [src]="logoSrc" class="login-logo" alt="">
+      </div>
+      <ng-template #twoFaDefaultIcon>
+        <div class="logo-icon-wrapper">
+          <i class="fas fa-shield-alt logo-icon"></i>
+        </div>
+      </ng-template>
+      <h2>{{ 'LOGIN.twoFactor.title' | translate }}</h2>
+      <p class="subtitle">{{ 'LOGIN.twoFactor.subtitle' | translate }}</p>
+    </div>
+
+    <!-- QR Code à scanner lors de la première connexion -->
+    <div *ngIf="showQRCode && qrCodeBase64" class="qr-code-section">
+      <div class="info-message">
+        <mat-icon>qr_code_scanner</mat-icon>
+        <p><strong>{{ 'LOGIN.twoFactor.scanIntro' | translate }}</strong><br>{{ 'LOGIN.twoFactor.scanInfo' | translate }}</p>
+      </div>
+
+      <div class="qr-code-container">
+        <img [src]="qrCodeBase64" alt="QR Code 2FA" class="qr-code-image">
+        <p class="qr-code-hint">{{ 'LOGIN.twoFactor.scanHint' | translate }}</p>
+      </div>
+
+      <div class="secret-info" *ngIf="secret && otpAuthUrl">
+        <details>
+          <summary>
+            <mat-icon>info</mat-icon>
+            {{ 'LOGIN.twoFactor.manualEntry' | translate }}
+          </summary>
+          <div class="secret-details">
+            <div class="secret-item">
+              <label>{{ 'LOGIN.twoFactor.secretKey' | translate }}</label>
+              <div class="secret-value">
+                <code>{{ secret }}</code>
+                <button mat-icon-button (click)="copySecret()" [matTooltip]="'LOGIN.twoFactor.copyKey' | translate">
+                  <mat-icon>content_copy</mat-icon>
+                </button>
+              </div>
+            </div>
+            <div class="secret-item">
+              <label>{{ 'LOGIN.twoFactor.otpUrl' | translate }}</label>
+              <div class="secret-value">
+                <code class="url-code">{{ otpAuthUrl }}</code>
+              </div>
+              <p class="hint">
+                {{ 'LOGIN.twoFactor.manualSteps' | translate: { username: currentUsername } }}
+              </p>
+            </div>
+          </div>
+        </details>
+      </div>
+
+      <div class="divider"></div>
+    </div>
+
+    <div class="info-message">
+      <mat-icon>info</mat-icon>
+      <p>{{ 'LOGIN.twoFactor.codeInfo' | translate }}</p>
+    </div>
+
+    <mat-form-field appearance="outline" class="login-field">
+      <mat-label>{{ 'LOGIN.twoFactor.code' | translate }}</mat-label>
+      <input
+        matInput
+        formControlName="code"
+        placeholder="000000"
+        maxlength="6"
+        pattern="[0-9]{6}"
+        autocomplete="off"
+        required>
+      <mat-icon matSuffix>vpn_key</mat-icon>
+      <mat-hint>{{ 'LOGIN.twoFactor.codeHint' | translate }}</mat-hint>
+      <mat-error *ngIf="twoFactorForm.get('code')?.hasError('required')">
+        {{ 'LOGIN.twoFactor.codeRequired' | translate }}
+      </mat-error>
+      <mat-error *ngIf="twoFactorForm.get('code')?.hasError('pattern')">
+        {{ 'LOGIN.twoFactor.codePattern' | translate }}
+      </mat-error>
+    </mat-form-field>
+
+    <div class="button-group">
+      <button mat-raised-button color="primary" type="submit" [disabled]="twoFactorForm.invalid || loading" class="login-button">
+        <mat-icon *ngIf="!loading">verified_user</mat-icon>
+        <mat-spinner *ngIf="loading" diameter="20"></mat-spinner>
+        {{ loading ? ('LOGIN.twoFactor.verifying' | translate) : ('COMMON.actions.verify' | translate) }}
+      </button>
+
+      <button mat-button type="button" (click)="backToLogin()" [disabled]="loading" class="back-button">
+        <mat-icon>arrow_back</mat-icon>
+        {{ 'COMMON.actions.back' | translate }}
+      </button>
+    </div>
+
+    <div *ngIf="error" class="login-error">
+      <mat-icon>error</mat-icon>
+      {{ error }}
+    </div>
+  </form>
+</div>

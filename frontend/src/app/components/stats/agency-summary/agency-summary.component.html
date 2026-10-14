@@ -1,0 +1,6 @@
+<div class="export-container">
+  <button mat-raised-button color="primary" (click)="exportToExcel()" [disabled]="loading">
+    <mat-icon>download</mat-icon>
+    {{ (loading ? 'STA.exportInProgress' : 'STA.exportAllData') | translate }}
+  </button>
+</div> 

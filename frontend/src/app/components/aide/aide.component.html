@@ -1,0 +1,125 @@
+<div class="aide-page">
+  <nav class="topnav">
+    <div class="nav-brand">
+      <div class="nav-brand-dot"></div>
+      ReconciliApp
+    </div>
+    <div class="nav-sep"></div>
+    <a class="nav-link active" routerLink="/aide">{{ 'LBL.help' | translate }}</a>
+    <div class="nav-spacer"></div>
+    <button class="nav-close" type="button" (click)="goHome()" [attr.aria-label]="'AIDE.navAriaCloseHome' | translate">
+      <i class="fas fa-times"></i>
+    </button>
+  </nav>
+
+  <div class="page">
+    <div class="page-header">
+      <div class="header-eyebrow"><span></span>{{ 'AIDE.eyebrow' | translate }}</div>
+      <h1 class="header-title">{{ 'AIDE.titleBefore' | translate }}<em>{{ 'AIDE.titleAccent' | translate }}</em>{{ 'AIDE.titleSuffix' | translate }}</h1>
+      <p class="header-sub">{{ 'AIDE.subtitle' | translate }}</p>
+    </div>
+
+    <div class="header-actions">
+      <button class="header-btn secondary" type="button" (click)="goBack()">
+        <i class="fas fa-arrow-left"></i>{{ 'COMMON.actions.back' | translate }}</button>
+      <button class="header-btn" type="button" (click)="goHome()">
+        <i class="fas fa-home"></i>{{ 'AIDE.home' | translate }}</button>
+    </div>
+
+    <div class="search-bar" (click)="focusSearch()">
+      <i class="fas fa-search search-icon"></i>
+      <input
+        #searchInput
+        type="text"
+        [(ngModel)]="searchQuery"
+        [placeholder]="'AIDE.searchPlaceholder' | translate"
+        [attr.aria-label]="'AIDE.searchAria' | translate"
+      >
+      <button
+        *ngIf="searchQuery"
+        class="search-clear"
+        type="button"
+        (click)="clearSearch(); $event.stopPropagation()"
+        [attr.aria-label]="'AIDE.clearSearchAria' | translate">
+        <i class="fas fa-times"></i>
+      </button>
+      <span class="search-hint">{{ shortcutHint }}</span>
+    </div>
+
+    <ng-container *ngIf="hasResults; else emptyState">
+      <section *ngFor="let section of filteredSections" class="section-block">
+        <div class="section-label">{{ section.labelKey | translate }}</div>
+
+        <div class="cards-grid">
+          <article
+            *ngFor="let option of section.options; trackBy: trackByOption"
+            class="module-card"
+            [class.is-clickable]="!!option.route"
+            [class.is-disabled]="!option.route"
+            (click)="openOption(option)"
+            (keydown.enter)="openOption(option)"
+            (keydown.space)="openOption(option); $event.preventDefault()"
+            [attr.tabindex]="option.route ? 0 : -1"
+            [attr.role]="option.route ? 'link' : 'article'">
+
+            <div *ngIf="option.badgeKey" class="notif-badge">{{ option.badgeKey | translate }}</div>
+            <div class="card-strip" [style.background]="option.accent"></div>
+
+            <div class="card-body">
+              <div class="card-icon-wrap" [style.background]="option.accentLight">
+                <i class="card-icon" [class]="option.icon" [style.color]="option.accent"></i>
+              </div>
+
+              <div class="card-name">{{ option.nameKey | translate }}</div>
+              <div class="card-title">{{ option.titleKey | translate }}</div>
+              <div class="card-desc">{{ option.descriptionKey | translate }}</div>
+            </div>
+
+            <div class="card-footer">
+              <span class="card-tag" [style.background]="option.accentLight" [style.color]="option.accent">
+                {{ option.tagKey | translate }}
+              </span>
+
+              <button
+                class="card-cta"
+                type="button"
+                [class.disabled]="!option.route"
+                [disabled]="!option.route"
+                [style.background]="option.route ? option.accent : 'var(--surface-2)'"
+                [style.color]="option.route ? '#fff' : 'var(--text3)'"
+                (click)="openOption(option); $event.stopPropagation()">
+                {{ option.actionKey | translate }}
+                <i class="fas" [class.fa-arrow-right]="option.route" [class.fa-lock]="!option.route"></i>
+              </button>
+            </div>
+          </article>
+        </div>
+      </section>
+    </ng-container>
+
+    <ng-template #emptyState>
+      <div class="empty-state">
+        <div class="empty-state-icon">
+          <i class="fas fa-search"></i>
+        </div>
+        <h2>{{ 'AIDE.emptyTitle' | translate }}</h2>
+        <p>{{ 'AIDE.emptyText' | translate }}</p>
+        <button class="header-btn" type="button" (click)="goToGuide()">{{ 'AIDE.openFullGuide' | translate }}</button>
+      </div>
+    </ng-template>
+
+    <div class="footer-hint">
+      <div class="footer-hint-icon">
+        <i class="fas fa-info-circle"></i>
+      </div>
+      <div class="footer-hint-text">
+        <div class="footer-hint-title">{{ 'AIDE.footerTitle' | translate }}</div>
+        <div class="footer-hint-sub">{{ 'AIDE.footerText' | translate }}</div>
+      </div>
+      <button class="footer-hint-btn" type="button" (click)="goToGuide()">
+        <i class="fas fa-book-open"></i>
+        {{ 'AIDE.consultGuide' | translate }}
+      </button>
+    </div>
+  </div>
+</div>

@@ -1,0 +1,339 @@
+<div class="ranking-page">
+  <!-- TOP NAV (design redevance-loterie) -->
+  <nav class="topnav">
+    <div class="nav-brand">
+      <div class="nav-brand-dot"></div>
+      ReconciliApp
+    </div>
+    <div class="nav-sep"></div>
+    <div class="nav-path">
+      <strong>{{ 'RNK.navTitle' | translate }}</strong>
+    </div>
+    <div class="nav-spacer"></div>
+    <div class="nav-actions">
+      <button
+        type="button"
+        class="nav-btn secondary"
+        (click)="refreshRankingData()"
+        [disabled]="loadingAgencies || loadingServices"
+        title="{{ 'ACT.refreshKeepFilters' | translate }}"
+      >
+        <i class="fas" [ngClass]="(loadingAgencies || loadingServices) ? 'fa-spinner fa-spin' : 'fa-sync-alt'"></i> {{ 'STA.refresh' | translate }}
+      </button>
+      <button
+        type="button"
+        class="nav-btn secondary"
+        (click)="exportAgencyPdf()"
+        [disabled]="loadingAgencies || !agencyRankings.length || isExportingAgencyPdf">
+        <i class="fas fa-file-pdf"></i> {{ 'RNK.pdfClients' | translate }}
+      </button>
+      <button 
+        type="button" 
+        class="nav-btn secondary" 
+        (click)="exportAgencyExcel()" 
+        [disabled]="loadingAgencies || !agencyRankings.length">
+        <i class="fas fa-file-excel"></i> {{ 'RNK.exportClients' | translate }}
+      </button>
+      <button
+        type="button"
+        class="nav-btn primary"
+        (click)="exportServicePdf()"
+        [disabled]="loadingServices || !serviceRankings.length || isExportingServicePdf">
+        <i class="fas fa-file-pdf"></i> {{ 'RNK.pdfServices' | translate }}
+      </button>
+      <button 
+        type="button" 
+        class="nav-btn primary" 
+        (click)="exportServiceExcel()" 
+        [disabled]="loadingServices || !serviceRankings.length">
+        <i class="fas fa-file-excel"></i> {{ 'RNK.exportServices' | translate }}
+      </button>
+    </div>
+  </nav>
+
+  <!-- PAGE HEADER (titre + KPIs) -->
+  <div class="page-header-ranking">
+    <div class="ph-ranking-left">
+      <div class="ph-eyebrow"><span></span>{{ 'RNK.title' | translate }}</div>
+      <h1 class="ph-title-ranking">{{ 'LBL.viewOf' | translate }}<em>{{ 'RNK.titleEm' | translate }}</em></h1>
+      <p class="ph-subtitle">{{ 'RNK.subtitle' | translate }}</p>
+    </div>
+    <div class="ph-ranking-right">
+      <div class="hero-kpi-strip">
+        <div class="hk-strip-item">
+          <span class="hk-strip-label">{{ 'RNK.rankedClients' | translate }}</span>
+          <span class="hk-strip-value">{{ formatNumber(agencyRankings.length) }}</span>
+        </div>
+        <div class="hk-strip-sep"></div>
+        <div class="hk-strip-item">
+          <span class="hk-strip-label">{{ 'RNK.rankedServices' | translate }}</span>
+          <span class="hk-strip-value">{{ formatNumber(serviceRankings.length) }}</span>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <div class="main">
+  <div class="ranking-container">
+  <div class="ranking-header">
+    <h1 class="ranking-title">🏆 {{ 'RNK.title' | translate }}</h1>
+    <p>{{ 'RNK.subtitleShort' | translate }}</p>
+    
+    <!-- Message de mise à jour -->
+    <div *ngIf="showUpdateMessage" 
+         style="margin-top: 15px; padding: 10px 20px; background: linear-gradient(135deg, #27ae60 0%, #2ecc71 100%); color: white; border-radius: 8px; font-weight: 500; animation: fadeIn 0.3s ease-in;">
+      {{ updateMessage }}
+    </div>
+  </div>
+
+  <div class="ranking-filter-bar" style="margin-bottom: 24px;">
+    <div style="display: flex; flex-wrap: wrap; gap: 24px; align-items: flex-start; justify-content: space-between;">
+      <!-- Filtre par pays -->
+      <div style="min-width: 200px;">
+        <mat-form-field appearance="fill" class="filter-select">
+          <mat-label>{{ 'TBL.country' | translate }}</mat-label>
+          <mat-select #paysSelect [(ngModel)]="selectedCountries" multiple (selectionChange)="onCountryChange()">
+            <mat-option>
+              <ngx-mat-select-search [formControl]="paysSearchCtrl" [placeholderLabel]="'STA.searchCountry' | translate" [noEntriesFoundLabel]="'STA.noCountryFound' | translate"></ngx-mat-select-search>
+            </mat-option>
+            <mat-option *ngFor="let country of filteredCountries" [value]="country" [disabled]="country === ALL_COUNTRIES">
+              {{ countryLabel(country) }}
+            </mat-option>
+          </mat-select>
+        </mat-form-field>
+      </div>
+      <!-- Filtre par période -->
+      <div style="min-width: 200px;">
+        <mat-form-field appearance="fill" class="filter-select">
+          <mat-label>{{ 'RNK.calculationPeriod' | translate }}</mat-label>
+          <mat-select [(ngModel)]="selectedPeriod" (selectionChange)="onPeriodChange()">
+            <mat-option value="all">{{ 'RNK.periodAll' | translate }}</mat-option>
+            <mat-option value="day">{{ 'RNK.periodDay' | translate }}</mat-option>
+            <mat-option value="week">{{ 'RNK.periodWeek' | translate }}</mat-option>
+            <mat-option value="month">{{ 'RNK.periodMonth' | translate }}</mat-option>
+            <mat-option value="lastMonth">{{ 'RNK.periodLastMonth' | translate }}</mat-option>
+            <mat-option value="thisYear">{{ 'RNK.periodThisYear' | translate }}</mat-option>
+            <mat-option value="lastYear">{{ 'RNK.periodLastYear' | translate }}</mat-option>
+            <mat-option value="custom">{{ 'RNK.periodCustom' | translate }}</mat-option>
+          </mat-select>
+        </mat-form-field>
+      </div>
+    </div>
+
+    <!-- Filtre personnalisé -->
+    <div *ngIf="selectedPeriod === 'custom'" style="margin-top: 16px;">
+      <div style="display: flex; gap: 12px; align-items: center; justify-content: flex-end;">
+        <div style="min-width: 200px;">
+          <label style="display: block; margin-bottom: 4px; font-size: 0.9rem; color: #666;">{{ 'LBL.startDateLabel' | translate }}</label>
+          <input 
+            type="date" 
+            [(ngModel)]="customStartDate"
+            (change)="onCustomDateChange()"
+            [disabled]="loadingAgencies || loadingServices"
+            style="width: 100%; padding: 8px; border-radius: 6px; border: 1px solid #ddd; background-color: white;">
+        </div>
+        <div style="min-width: 200px;">
+          <label style="display: block; margin-bottom: 4px; font-size: 0.9rem; color: #666;">{{ 'LBL.endDateLabel' | translate }}</label>
+          <input 
+            type="date" 
+            [(ngModel)]="customEndDate"
+            (change)="onCustomDateChange()"
+            [disabled]="loadingAgencies || loadingServices"
+            style="width: 100%; padding: 8px; border-radius: 6px; border: 1px solid #ddd; background-color: white;">
+        </div>
+      </div>
+      <div *ngIf="customStartDate && customEndDate" style="margin-top: 4px; font-size: 0.8rem; color: #27ae60; font-weight: 500; text-align: right;">
+        ✓ {{ 'RNK.periodLabel' | translate }} : {{ formatCustomPeriod() }}
+      </div>
+      <div *ngIf="customDateError" style="margin-top: 4px; font-size: 0.8rem; color: #e74c3c; font-weight: 500; text-align: right;">
+        ⚠ {{ customDateError }}
+      </div>
+    </div>
+  </div>
+
+  <div class="ranking-content">
+    <!-- Classement des Clients -->
+    <div class="ranking-section" #agencyPdfContent>
+      <div class="section-header">
+        <h2 class="section-title">🏢 {{ getAgencyRankingTitle() }}</h2>
+        <div style="text-align: center; margin-top: 5px; font-size: 0.9rem; opacity: 0.9;">
+          📅 {{ getPeriodDescription() }}
+        </div>
+        <div class="ranking-controls">
+          <label for="agency-ranking-type">{{ 'RNK.sortBy' | translate }}</label>
+          <select 
+            id="agency-ranking-type" 
+            [(ngModel)]="agencyRankingType" 
+            (change)="onAgencyRankingTypeChange()"
+            class="ranking-select control-same-width">
+            <option value="transactions">{{ 'TBL.transactionCount' | translate }}</option>
+            <option value="volume">{{ 'TBL.totalVolume' | translate }}</option>
+            <option value="fees">{{ 'RNK.revenue' | translate }}</option>
+          </select>
+          <button (click)="exportAgencyCSV()" class="export-btn control-same-width">{{ 'RNK.exportCsv' | translate }}</button>
+          <button (click)="exportAgencyExcel()" class="export-btn control-same-width">{{ 'ACT.importFile' | translate }}</button>
+          <button
+            (click)="exportAgencyPdf()"
+            class="export-btn control-same-width"
+            [disabled]="loadingAgencies || !agencyRankings.length || isExportingAgencyPdf">
+            {{ isExportingAgencyPdf ? ('RNK.exporting' | translate) : ('ACT.exportPdf' | translate) }}
+          </button>
+        </div>
+      </div>
+
+      <div class="ranking-table-container">
+        <div *ngIf="loadingAgencies" class="loading">
+          <div class="spinner"></div>
+          <p>{{ 'RNK.loading' | translate }}</p>
+        </div>
+
+        <div *ngIf="errorAgencies" class="error-message">
+          <p>{{ errorAgencies }}</p>
+          <button (click)="loadAgencyRankings()" class="retry-btn">{{ 'COMMON.actions.retry' | translate }}</button>
+        </div>
+
+        <table *ngIf="!loadingAgencies && !errorAgencies && paginatedAgencyRankings.length > 0" class="ranking-table">
+          <thead>
+            <tr>
+              <th class="position">{{ 'TBL.position' | translate }}</th>
+              <th class="agency-name">{{ 'TBL.client' | translate }}</th>
+              <th class="country">{{ 'TBL.country' | translate }}</th>
+              <th class="transaction-count">{{ 'TBL.transactions' | translate }}</th>
+              <th class="total-volume">{{ 'TBL.totalVolume' | translate }}</th>
+              <th class="total-fees">{{ 'RNK.revenue' | translate }}</th>
+              <th class="average-volume">{{ 'RNK.avgVolume' | translate: { period: getPeriodLabel() } }}</th>
+              <th class="average-fees">{{ 'RNK.avgRevenue' | translate: { period: getPeriodLabel() } }}</th>
+            </tr>
+          </thead>
+          <tbody>
+            <tr *ngFor="let item of paginatedAgencyRankings; let i = index" [class]="getPositionClass(getAgencyPosition(i))">
+              <td class="position">
+                <span class="position-number">{{ getAgencyPosition(i) }}</span>
+                <span *ngIf="getAgencyPosition(i) <= 3" class="medal">🏅</span>
+              </td>
+              <td class="agency-name">{{ item.agency }}</td>
+              <td class="country">{{ item.country || '-' }}</td>
+              <td class="transaction-count">{{ formatNumber(item.transactionCount) }}</td>
+              <td class="total-volume">{{ formatAmount(item.totalVolume) }}</td>
+              <td class="total-fees">{{ formatAmount(item.totalFees) }}</td>
+              <td class="average-volume">{{ formatAmount(item.averageVolume) }}</td>
+              <td class="average-fees">{{ formatAmount(item.averageFees) }}</td>
+            </tr>
+          </tbody>
+        </table>
+
+        <!-- Pagination clients -->
+        <div *ngIf="!showAllAgencies && agencyTotalPages > 1" class="pagination">
+          <button (click)="prevAgencyPage()" [disabled]="agencyPage === 1">&lt;</button>
+          <button *ngFor="let p of [].constructor(agencyTotalPages); let idx = index" (click)="setAgencyPage(idx+1)" [class.active]="agencyPage === (idx+1)">{{ idx+1 }}</button>
+          <button (click)="nextAgencyPage()" [disabled]="agencyPage === agencyTotalPages">&gt;</button>
+        </div>
+        
+        <!-- Bouton Voir plus / Voir moins pour clients -->
+        <div *ngIf="agencyRankings.length > agencyPageSize" class="view-more-container">
+          <button (click)="toggleShowAllAgencies()" class="view-more-btn">
+            {{ (showAllAgencies ? 'STA.seeLess' : 'STA.seeMore') | translate }}
+          </button>
+        </div>
+
+        <div *ngIf="!loadingAgencies && !errorAgencies && agencyRankings.length === 0" class="no-data">
+          <p>{{ 'RNK.noClientData' | translate }}</p>
+        </div>
+      </div>
+    </div>
+
+    <!-- Classement des Services -->
+    <div class="ranking-section" #servicePdfContent>
+      <div class="section-header">
+        <h2 class="section-title">🔧 {{ getServiceRankingTitle() }}</h2>
+        <div style="text-align: center; margin-top: 5px; font-size: 0.9rem; opacity: 0.9;">
+          📅 {{ getPeriodDescription() }}
+        </div>
+        <div class="ranking-controls">
+          <label for="service-ranking-type">{{ 'RNK.sortBy' | translate }}</label>
+          <select 
+            id="service-ranking-type" 
+            [(ngModel)]="serviceRankingType" 
+            (change)="onServiceRankingTypeChange()"
+            class="ranking-select control-same-width">
+            <option value="transactions">{{ 'TBL.transactionCount' | translate }}</option>
+            <option value="volume">{{ 'TBL.totalVolume' | translate }}</option>
+            <option value="fees">{{ 'RNK.revenue' | translate }}</option>
+          </select>
+          <button (click)="exportServiceCSV()" class="export-btn control-same-width">{{ 'RNK.exportCsv' | translate }}</button>
+          <button (click)="exportServiceExcel()" class="export-btn control-same-width">{{ 'ACT.importFile' | translate }}</button>
+          <button
+            (click)="exportServicePdf()"
+            class="export-btn control-same-width"
+            [disabled]="loadingServices || !serviceRankings.length || isExportingServicePdf">
+            {{ isExportingServicePdf ? ('RNK.exporting' | translate) : ('ACT.exportPdf' | translate) }}
+          </button>
+        </div>
+      </div>
+
+      <div class="ranking-table-container">
+        <div *ngIf="loadingServices" class="loading">
+          <div class="spinner"></div>
+          <p>{{ 'RNK.loading' | translate }}</p>
+        </div>
+
+        <div *ngIf="errorServices" class="error-message">
+          <p>{{ errorServices }}</p>
+          <button (click)="loadServiceRankings()" class="retry-btn">{{ 'COMMON.actions.retry' | translate }}</button>
+        </div>
+
+        <table *ngIf="!loadingServices && !errorServices && paginatedServiceRankings.length > 0" class="ranking-table">
+          <thead>
+            <tr>
+              <th class="position">{{ 'TBL.position' | translate }}</th>
+              <th class="service-name">{{ 'TBL.service' | translate }}</th>
+              <th class="country">{{ 'TBL.country' | translate }}</th>
+              <th class="transaction-count">{{ 'TBL.transactions' | translate }}</th>
+              <th class="total-volume">{{ 'TBL.totalVolume' | translate }}</th>
+              <th class="total-fees">{{ 'RNK.revenue' | translate }}</th>
+              <th class="unique-agencies">{{ 'RNK.clientsCount' | translate }}</th>
+              <th class="average-volume">{{ 'RNK.avgVolume' | translate: { period: getPeriodLabel() } }}</th>
+              <th class="average-fees">{{ 'RNK.avgRevenue' | translate: { period: getPeriodLabel() } }}</th>
+            </tr>
+          </thead>
+          <tbody>
+            <tr *ngFor="let item of paginatedServiceRankings; let i = index" [class]="getPositionClass(getServicePosition(i))">
+              <td class="position">
+                <span class="position-number">{{ getServicePosition(i) }}</span>
+                <span *ngIf="getServicePosition(i) <= 3" class="medal">🏅</span>
+              </td>
+              <td class="service-name">{{ item.service }}</td>
+              <td class="country">{{ item.country || '-' }}</td>
+              <td class="transaction-count">{{ formatNumber(item.transactionCount) }}</td>
+              <td class="total-volume">{{ formatAmount(item.totalVolume) }}</td>
+              <td class="total-fees">{{ formatAmount(item.totalFees) }}</td>
+              <td class="unique-agencies">{{ formatNumber(item.uniqueAgencies || 0) }}</td>
+              <td class="average-volume">{{ formatAmount(item.averageVolume) }}</td>
+              <td class="average-fees">{{ formatAmount(item.averageFees) }}</td>
+            </tr>
+          </tbody>
+        </table>
+
+        <!-- Pagination services -->
+        <div *ngIf="!showAllServices && serviceTotalPages > 1" class="pagination">
+          <button (click)="prevServicePage()" [disabled]="servicePage === 1">&lt;</button>
+          <button *ngFor="let p of [].constructor(serviceTotalPages); let idx = index" (click)="setServicePage(idx+1)" [class.active]="servicePage === (idx+1)">{{ idx+1 }}</button>
+          <button (click)="nextServicePage()" [disabled]="servicePage === serviceTotalPages">&gt;</button>
+        </div>
+        
+        <!-- Bouton Voir plus / Voir moins pour services -->
+        <div *ngIf="serviceRankings.length > servicePageSize" class="view-more-container">
+          <button (click)="toggleShowAllServices()" class="view-more-btn">
+            {{ (showAllServices ? 'STA.seeLess' : 'STA.seeMore') | translate }}
+          </button>
+        </div>
+
+        <div *ngIf="!loadingServices && !errorServices && serviceRankings.length === 0" class="no-data">
+          <p>{{ 'RNK.noServiceData' | translate }}</p>
+        </div>
+      </div>
+    </div>
+  </div>
+  </div><!-- .ranking-container -->
+  </div><!-- .main -->
+</div><!-- .ranking-page --> 

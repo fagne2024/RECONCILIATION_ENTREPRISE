@@ -1,0 +1,95 @@
+<div class="platform-page">
+  <!-- PAGE HEADER -->
+  <div class="pf-header">
+    <div class="pf-header-left">
+      <button class="btn-rd btn-rd-ghost btn-rd-sm pf-back" (click)="goBack()">
+        <i class="fas fa-arrow-left"></i> {{ 'PLT.mod.back' | translate }}
+      </button>
+      <div class="pf-eyebrow"><span></span>{{ 'PLT.eyebrow' | translate }}</div>
+      <h1 class="pf-title">{{ 'PLT.mod.titleTop' | translate }}<em>{{ entreprise?.nom || ('PLT.mod.titleAccent' | translate) }}</em></h1>
+      <p class="pf-subtitle">{{ 'PLT.mod.subtitle' | translate }}</p>
+    </div>
+    <div class="pf-header-right" *ngIf="entreprise">
+      <div class="kpi-strip">
+        <div class="kpi">
+          <span class="kpi-label">{{ entreprise.code }}</span>
+          <span class="kpi-value">{{ 'PLT.mod.activeCount' | translate: { count: entreprise.modulesActives ?? 0 } }}</span>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <div class="pf-body">
+    <div *ngIf="error" class="pf-alert pf-alert-danger">
+      <i class="fas fa-exclamation-circle"></i>
+      <span>{{ error }}</span>
+    </div>
+
+    <div *ngIf="loading" class="pf-card pf-state">
+      <span class="pf-spinner"></span>
+      <span>{{ 'PLT.loading' | translate }}</span>
+    </div>
+
+    <div *ngIf="!loading && !entreprise" class="pf-card pf-state">
+      <i class="fas fa-cubes"></i>
+      <span>{{ 'PLT.mod.empty' | translate }}</span>
+    </div>
+
+    <div *ngIf="!loading && entreprise" class="pf-card">
+      <div class="pf-card-head">
+        <div class="pf-search">
+          <i class="fas fa-search"></i>
+          <input type="text" class="pf-input" [placeholder]="'PLT.mod.searchPlaceholder' | translate" [(ngModel)]="searchText">
+        </div>
+        <div class="pf-card-actions">
+          <button class="btn-rd btn-rd-ghost" (click)="showOnlyActive = !showOnlyActive">
+            <i class="fas fa-filter"></i>
+            {{ (showOnlyActive ? 'PLT.mod.filterAll' : 'PLT.mod.filterActive') | translate }}
+          </button>
+          <button class="btn-rd btn-rd-primary" (click)="saveModules()" [disabled]="saving || loading">
+            <i class="fas" [ngClass]="saving ? 'fa-spinner fa-spin' : 'fa-save'"></i>
+            {{ (saving ? 'PLT.mod.saving' : 'PLT.mod.save') | translate }}
+          </button>
+        </div>
+      </div>
+
+      <div class="pf-tree">
+        <ng-container *ngFor="let parent of parents; trackBy: trackByModuleId">
+          <div class="pf-node pf-node-parent">
+            <label class="pf-check">
+              <input type="checkbox"
+                [checked]="parent.actif"
+                (change)="toggleModule(parent); checkAllChildren(parent, $event.target.checked)">
+              <span class="pf-node-name">
+                <i class="fas fa-folder"></i> {{ parent.nom }}
+                <span class="pf-node-meta" *ngIf="getChildren(parent).length">({{ getActiveChildrenCount(parent) }}/{{ getChildrenCount(parent) }})</span>
+              </span>
+            </label>
+          </div>
+          <div class="pf-children">
+            <div *ngFor="let child of getChildren(parent); trackBy: trackByModuleId" class="pf-node pf-node-child">
+              <label class="pf-check">
+                <input type="checkbox"
+                  [checked]="child.actif"
+                  (change)="toggleModule(child)">
+                <span class="pf-node-name"><i class="fas fa-file"></i> {{ child.nom }}</span>
+              </label>
+            </div>
+          </div>
+        </ng-container>
+
+        <div class="pf-standalone" *ngIf="standaloneModules.length">
+          <h6>{{ 'PLT.mod.standalone' | translate }}</h6>
+          <div *ngFor="let module of standaloneModules; trackBy: trackByModuleId" class="pf-node pf-node-parent">
+            <label class="pf-check">
+              <input type="checkbox"
+                [checked]="module.actif"
+                (change)="toggleModule(module)">
+              <span class="pf-node-name"><i class="fas fa-cube"></i> {{ module.nom }}</span>
+            </label>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>

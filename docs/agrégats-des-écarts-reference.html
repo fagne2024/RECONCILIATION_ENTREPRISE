@@ -1,0 +1,183 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Agrégats des écarts – ReconciliApp</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Instrument+Serif:ital@0;1&family=Sora:wght@400;500;600;700&display=swap" rel="stylesheet">
+<style>
+:root{
+  --bg:#F3F0E9;--surface:#fff;--soft:#FAF8F3;--ink:#16233B;--muted:#6A7383;--line:#E6E0D2;
+  --primary:#2D6BE0;--bo:#2D6BE0;--part:#1E8F58;--danger:#C93C37;
+  --m-montant_frais:#2D6BE0;--m-montant:#0F8F8F;--m-frais:#B7791F;--m-simple:#6757E0;--m-aucun:#7C8594;--m-aucun_montant:#1E8F58;
+  --font-ui:'Sora',system-ui,-apple-system,'Segoe UI',sans-serif;--font-display:'Instrument Serif',Georgia,serif;
+  box-sizing:border-box;padding-top:env(safe-area-inset-top,0px);padding-bottom:env(safe-area-inset-bottom,0px)
+}
+@media (prefers-color-scheme:dark){:root:not([data-theme="light"]){
+  --bg:#0E1526;--surface:#16203A;--soft:#121B33;--ink:#E8ECF4;--muted:#9AA6BC;--line:#26335A;
+  --primary:#6E9CF5;--bo:#6E9CF5;--part:#3CC283;--danger:#F0706B;
+  --m-montant_frais:#6E9CF5;--m-montant:#35C2C2;--m-frais:#E6B04F;--m-simple:#9E94F7;--m-aucun:#9AA6BC;--m-aucun_montant:#3CC283}}
+:root[data-theme="dark"]{--bg:#0E1526;--surface:#16203A;--soft:#121B33;--ink:#E8ECF4;--muted:#9AA6BC;--line:#26335A;
+  --primary:#6E9CF5;--bo:#6E9CF5;--part:#3CC283;--danger:#F0706B;
+  --m-montant_frais:#6E9CF5;--m-montant:#35C2C2;--m-frais:#E6B04F;--m-simple:#9E94F7;--m-aucun:#9AA6BC;--m-aucun_montant:#3CC283}
+*,*::before,*::after{box-sizing:inherit}
+html{height:100%}
+body{margin:0;min-height:100%;background:var(--bg);color:var(--ink);font:14px/1.5 var(--font-ui);-webkit-font-smoothing:antialiased}
+button,input,select{font:inherit;color:inherit}
+:is(button,input,select):focus-visible{outline:3px solid color-mix(in srgb,var(--primary) 40%,transparent);outline-offset:2px}
+.page{max-width:1320px;margin:0 auto;padding:30px 28px 110px}
+
+.top{display:flex;gap:16px;align-items:flex-start;flex-wrap:wrap;margin-bottom:20px}
+.top h1{font:400 clamp(30px,4vw,42px)/1.05 var(--font-display);margin:0 0 6px}
+.top p{margin:0;color:var(--muted);max-width:60ch}
+.acts{margin-left:auto;display:flex;gap:10px;flex-wrap:wrap}
+.btn{border:1px solid var(--line);background:var(--surface);border-radius:11px;padding:10px 16px;font-weight:600;cursor:pointer;display:inline-flex;gap:8px;align-items:center;transition:filter .15s,background .15s}
+.btn svg{width:16px;height:16px}
+.btn:hover{background:var(--soft)}
+.btn.p{background:var(--primary);border-color:var(--primary);color:#fff}.btn.p:hover{filter:brightness(1.08);background:var(--primary)}
+
+.tools{display:flex;gap:12px;align-items:center;margin-bottom:14px;flex-wrap:wrap}
+.search{position:relative;flex:1 1 260px;max-width:360px}
+.search svg{position:absolute;left:12px;top:50%;transform:translateY(-50%);width:16px;height:16px;color:var(--muted)}
+.search input{width:100%;padding:10px 12px 10px 36px;border:1px solid var(--line);border-radius:11px;background:var(--surface)}
+.meta{color:var(--muted);font-size:13px}
+
+.panel{background:var(--surface);border:1px solid var(--line);border-radius:16px;overflow:clip}
+.band,.row{display:grid;grid-template-columns:1fr 1fr 52px}
+.side{display:grid;grid-template-columns:minmax(120px,1fr) minmax(120px,1fr) minmax(190px,.95fr);gap:12px;padding:0 18px}
+.side+.side{border-left:1px solid var(--line)}
+.band .side{padding-top:12px;padding-bottom:6px;font:600 11.5px var(--font-ui);letter-spacing:.07em;text-transform:uppercase;align-items:center}
+.band .side.bo{color:var(--bo);background:color-mix(in srgb,var(--bo) 8%,transparent)}
+.band .side.pa{color:var(--part);background:color-mix(in srgb,var(--part) 8%,transparent)}
+.band .title{grid-column:1/-1;display:flex;gap:8px;align-items:center}
+.band .title i{width:8px;height:8px;border-radius:50%;background:currentColor}
+.cols{display:grid;grid-template-columns:1fr 1fr 52px;background:var(--soft);border-bottom:1px solid var(--line);font-size:12px;font-weight:600;color:var(--muted)}
+.cols .side{padding-top:8px;padding-bottom:10px}
+.row{border-top:0;border-bottom:1px solid var(--line);transition:background .15s}
+.row:last-child{border-bottom:0}
+.row:hover{background:color-mix(in srgb,var(--primary) 3.5%,transparent)}
+.row .side{padding-top:14px;padding-bottom:14px;align-items:center}
+.cell{min-width:0}
+.ml{display:none;font-size:11.5px;font-weight:600;color:var(--muted);margin-bottom:4px}
+.inp{width:100%;padding:9px 11px;border:1px solid var(--line);border-radius:9px;background:var(--surface);transition:border-color .15s}
+.inp:hover{border-color:color-mix(in srgb,var(--primary) 40%,var(--line))}
+.sel{--m:var(--m-aucun);position:relative}
+.sel::before{content:"";position:absolute;left:12px;top:50%;width:8px;height:8px;margin-top:-4px;border-radius:50%;background:var(--m);pointer-events:none}
+.sel select{width:100%;appearance:none;-webkit-appearance:none;padding:9px 30px 9px 28px;border-radius:9px;cursor:pointer;font-weight:600;font-size:13px;
+  border:1px solid color-mix(in srgb,var(--m) 35%,var(--line));background:color-mix(in srgb,var(--m) 11%,var(--surface));color:var(--m)}
+.sel::after{content:"";position:absolute;right:12px;top:50%;width:6px;height:6px;margin-top:-5px;border-right:2px solid var(--m);border-bottom:2px solid var(--m);transform:rotate(45deg);pointer-events:none}
+.sel select option{color:var(--ink);background:var(--surface);font-weight:400}
+.del{align-self:center;justify-self:center;width:34px;height:34px;border:0;border-radius:9px;background:none;color:var(--muted);cursor:pointer;display:grid;place-items:center;opacity:.55;transition:all .15s}
+.del svg{width:17px;height:17px}
+.row:hover .del,.del:focus-visible{opacity:1}
+.del:hover{background:color-mix(in srgb,var(--danger) 11%,transparent);color:var(--danger)}
+.empty{padding:50px 20px;text-align:center;color:var(--muted)}
+
+.dirty{position:fixed;left:50%;bottom:calc(20px + env(safe-area-inset-bottom,0px));transform:translate(-50%,140%);background:var(--ink);color:var(--surface);border-radius:14px;padding:10px 12px 10px 18px;display:flex;gap:14px;align-items:center;box-shadow:0 14px 34px -10px #0007;transition:transform .25s;z-index:6;max-width:calc(100% - 24px)}
+.dirty.show{transform:translate(-50%,0)}
+.dirty .btn{padding:8px 14px;font-size:13px}
+.dirty .btn.g{background:transparent;color:inherit;border-color:#ffffff40}
+.toast{position:fixed;left:50%;bottom:calc(84px + env(safe-area-inset-bottom,0px));transform:translate(-50%,20px);opacity:0;pointer-events:none;background:var(--surface);color:var(--ink);border:1px solid var(--line);border-radius:12px;padding:10px 16px;box-shadow:0 10px 30px -12px #0005;display:flex;gap:14px;align-items:center;transition:all .2s;z-index:7}
+.toast.show{opacity:1;transform:translate(-50%,0);pointer-events:auto}
+.toast button{border:0;background:none;color:var(--primary);font-weight:600;cursor:pointer}
+
+@media (max-width:1100px){
+  .band .side,.cols{display:none}
+  .band .title{display:none}.band{display:none}
+  .row{grid-template-columns:1fr 46px;position:relative;margin:0;padding:6px 0}
+  .row .side{grid-template-columns:1fr 1fr;grid-column:1;padding:12px 16px 4px}
+  .row .side.bo{border-left:3px solid var(--bo);margin:8px 0 0 12px;padding-left:12px}
+  .row .side.pa{border-left:3px solid var(--part);border-top:0;margin:4px 0 8px 12px;padding-left:12px}
+  .side .cell:nth-child(3){grid-column:1/-1}
+  .ml{display:block}
+  .row .del{grid-column:2;grid-row:1;align-self:start;margin-top:10px}
+  .page{padding:22px 14px 110px}
+}
+@media (max-width:560px){.row .side{grid-template-columns:1fr}.side .cell:nth-child(3){grid-column:auto}}
+@media (prefers-reduced-motion:reduce){*{transition:none!important}}
+</style>
+</head>
+<body>
+<div class="page">
+  <header class="top">
+    <div>
+      <h1>Agrégats des écarts</h1>
+      <p>Pour chaque type de commentaire, définissez son agrégation et sa régularisation côté BO et côté partenaire.</p>
+    </div>
+    <div class="acts">
+      <button class="btn" id="gen" type="button"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"><path d="M12 4l1.8 4.2L18 10l-4.2 1.8L12 16l-1.8-4.2L6 10l4.2-1.8z"/><path d="M19 15l.7 1.8L21.5 18l-1.8.7L19 20.5l-.7-1.8L16.5 18l1.8-.7z"/></svg>Générer depuis les commentaires</button>
+      <button class="btn p" id="add" type="button"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round"><path d="M12 5v14M5 12h14"/></svg>Ajouter un type d'agrégat</button>
+    </div>
+  </header>
+
+  <div class="tools">
+    <label class="search"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><circle cx="11" cy="11" r="7"/><path d="M20 20l-3.5-3.5"/></svg>
+      <input id="q" type="search" placeholder="Filtrer par commentaire ou libellé…" aria-label="Filtrer les agrégats"></label>
+    <span class="meta" id="meta"></span>
+  </div>
+
+  <div class="panel">
+    <div class="band">
+      <div class="side bo"><div class="title"><i></i>Côté BO</div></div>
+      <div class="side pa"><div class="title"><i></i>Côté partenaire</div></div>
+      <div></div>
+    </div>
+    <div class="cols">
+      <div class="side"><span>Commentaire</span><span>Libellé</span><span>Mode</span></div>
+      <div class="side"><span>Commentaire</span><span>Libellé</span><span>Mode</span></div>
+      <div></div>
+    </div>
+    <div id="list"></div>
+  </div>
+</div>
+
+<div class="dirty" id="dirty" role="status"><span>Modifications non enregistrées</span><button class="btn g" id="cancel" type="button">Annuler</button><button class="btn p" id="save" type="button">Enregistrer</button></div>
+<div class="toast" id="toast" role="status"><span id="tmsg"></span><button id="undo" type="button" hidden>Annuler</button></div>
+
+<script>
+var BO=[['montant_frais','Montant + frais'],['montant','Montant'],['frais','Frais seuls'],['simple','Simple (montant, sans détail)'],['aucun','Aucun']];
+var PA=[['montant','Montant'],['frais','Frais seuls'],['aucun_montant','Aucun montant (déjà régularisé)'],['aucun','Aucun']];
+var uid=0,mk=function(a,b,c,d,e,f){return {id:++uid,cb:a,cp:b,lb:c,lp:d,mb:e,mp:f}};
+var rows=[
+ mk('TRX SANS OP','TRX SANS OP','TRX SANS OP','TRX SANS OP','montant_frais','aucun_montant'),
+ mk('TRX SANS FRAIS','OP SANS FRAIS','TRX SANS FRAIS','OP SANS FRAIS','frais','aucun_montant'),
+ mk('REGUL FRAIS','REGUL FRAIS','REGUL FRAIS','REGUL FRAIS','aucun','frais'),
+ mk('Ecart BO','Ecart BO','Écart BO','Écart Partenaire','simple','montant'),
+ mk('Régularisation TRX','Régularisation TRX','Régularisation TRX','Régularisation TRX','aucun','montant'),
+ mk('TRX SANS COMMISSION','TRX SANS COMMISSION','TRX SANS COMMISSION','TRX SANS COMMISSION','montant_frais','montant')
+];
+var snap=JSON.stringify(rows),q='',last=null,tt;
+var $=function(i){return document.getElementById(i)};
+function esc(s){return String(s).replace(/&/g,'&amp;').replace(/"/g,'&quot;').replace(/</g,'&lt;')}
+function opts(list,cur){return list.map(function(o){return '<option value="'+o[0]+'"'+(o[0]===cur?' selected':'')+'>'+o[1]+'</option>'}).join('')}
+function cell(lbl,k,r,ph){return '<div class="cell"><span class="ml">'+lbl+'</span><input class="inp" data-id="'+r.id+'" data-k="'+k+'" value="'+esc(r[k])+'" placeholder="'+ph+'" aria-label="'+lbl+'"></div>'}
+function mode(lbl,k,list,r){return '<div class="cell"><span class="ml">'+lbl+'</span><div class="sel" style="--m:var(--m-'+r[k]+')"><select data-id="'+r.id+'" data-k="'+k+'" aria-label="'+lbl+'">'+opts(list,r[k])+'</select></div></div>'}
+function render(focusId){
+  var f=rows.filter(function(r){var s=(r.cb+r.cp+r.lb+r.lp).toLowerCase();return !q||s.indexOf(q)>-1});
+  $('list').innerHTML=f.length?f.map(function(r){
+    return '<div class="row" data-row="'+r.id+'"><div class="side bo">'+cell('Commentaire BO','cb',r,'ex. TRX SANS OP')+cell('Libellé BO','lb',r,'Libellé affiché')+mode('Mode BO','mb',BO,r)+'</div>'
+    +'<div class="side pa">'+cell('Commentaire partenaire','cp',r,'ex. TRX SANS OP')+cell('Libellé partenaire','lp',r,'Libellé affiché')+mode('Mode partenaire','mp',PA,r)+'</div>'
+    +'<button class="del" data-del="'+r.id+'" aria-label="Supprimer l’agrégat '+esc(r.cb||'sans nom')+'"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M5 7h14M10 7V4h4v3M7 7l1 13h8l1-13"/></svg></button></div>'}).join('')
+    :'<div class="empty">Aucun agrégat ne correspond à votre filtre.</div>';
+  $('meta').textContent=rows.length+' type'+(rows.length>1?'s':'')+' d’agrégat'+(q?' · '+f.length+' affiché'+(f.length>1?'s':''):'');
+  $('dirty').classList.toggle('show',JSON.stringify(rows)!==snap);
+  if(focusId){var el=document.querySelector('input[data-id="'+focusId+'"]');if(el){el.focus();el.scrollIntoView({block:'center',behavior:'smooth'})}}
+}
+function toast(m,u){$('tmsg').textContent=m;$('undo').hidden=!u;$('toast').classList.add('show');clearTimeout(tt);tt=setTimeout(function(){$('toast').classList.remove('show')},u?5000:2400)}
+$('q').addEventListener('input',function(e){q=e.target.value.trim().toLowerCase();render()});
+$('list').addEventListener('input',function(e){var t=e.target,r=rows.filter(function(x){return x.id==t.dataset.id})[0];if(!r)return;r[t.dataset.k]=t.value;
+  if(t.tagName==='SELECT')t.parentNode.style.setProperty('--m','var(--m-'+t.value+')');
+  $('dirty').classList.toggle('show',JSON.stringify(rows)!==snap)});
+$('list').addEventListener('click',function(e){var b=e.target.closest('.del');if(!b)return;
+  var i=rows.findIndex(function(x){return x.id==b.dataset.del});last={r:rows[i],i:i};rows.splice(i,1);render();toast('Agrégat supprimé',1)});
+$('undo').addEventListener('click',function(){if(last){rows.splice(last.i,0,last.r);last=null;render();$('toast').classList.remove('show')}});
+$('add').addEventListener('click',function(){var r=mk('','','','','montant_frais','montant');rows.push(r);q='';$('q').value='';render(r.id)});
+$('gen').addEventListener('click',function(){toast('Génération à brancher sur votre service')});
+$('save').addEventListener('click',function(){snap=JSON.stringify(rows);render();toast('Modifications enregistrées')});
+$('cancel').addEventListener('click',function(){rows=JSON.parse(snap);render()});
+render();
+</script>
+</body>
+</html>

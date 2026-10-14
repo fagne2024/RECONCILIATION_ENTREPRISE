@@ -1,0 +1,148 @@
+<div class="impact-op-tab">
+  <div class="tab-header">
+    <h3>Impacts OP pour {{ agence }} - {{ formatDate(dateTransaction) }}</h3>
+    <div class="tab-summary">
+      <span>Total: {{ impactOPs.length }} impact(s)</span>
+      <span *ngIf="impactOPs.length > pageSize">
+        Affichage: {{ (currentPage - 1) * pageSize + 1 }} - {{ Math.min(currentPage * pageSize, impactOPs.length) }} sur {{ impactOPs.length }}
+      </span>
+    </div>
+  </div>
+
+  <!-- Contrôles de sélection multiple -->
+  <div class="selection-controls" *ngIf="impactOPs.length > 0">
+    <div class="selection-header">
+      <div class="selection-info">
+        <label class="checkbox-container">
+          <input type="checkbox" 
+                 [checked]="isSelectAll" 
+                 (change)="toggleSelectAll()"
+                 [disabled]="isValidatingMass">
+          <span class="checkmark"></span>
+          Sélectionner tout
+        </label>
+        <span class="selected-count" *ngIf="selectedItems.size > 0">
+          {{ selectedItems.size }} élément(s) sélectionné(s)
+        </span>
+      </div>
+      <div class="selection-actions" *ngIf="selectedItems.size > 0">
+        <button class="btn btn-success btn-sm" 
+                (click)="validateSelectedImpactOPs()"
+                [disabled]="isValidatingMass || selectedItems.size === 0">
+          <i class="fas fa-check" *ngIf="!isValidatingMass"></i>
+          <i class="fas fa-spinner fa-spin" *ngIf="isValidatingMass"></i>
+          {{ isValidatingMass ? 'Validation...' : 'Valider sélection' }}
+        </button>
+        <button class="btn btn-secondary btn-sm" 
+                (click)="clearSelection()"
+                [disabled]="isValidatingMass">
+          <i class="fas fa-times"></i>{{ 'COMMON.actions.cancel' | translate }}</button>
+      </div>
+    </div>
+  </div>
+
+  <div *ngIf="isLoading" class="loading">
+    <i class="fas fa-spinner fa-spin"></i> Chargement des impacts OP...
+  </div>
+
+  <div *ngIf="!isLoading && impactOPs.length === 0" class="no-data">
+    <i class="fas fa-info-circle"></i>
+    <span>Aucun impact OP trouvé pour cette date et ce compte.</span>
+  </div>
+
+  <div *ngIf="!isLoading && impactOPs.length > 0" class="impact-op-content">
+    <table class="table table-bordered table-hover table-sm">
+      <thead>
+        <tr>
+          <th class="checkbox-header">
+            <input type="checkbox" 
+                   [checked]="isSelectAll" 
+                   (change)="toggleSelectAll()"
+                   [disabled]="isValidatingMass">
+          </th>
+          <th>{{ 'TBL.operationType' | translate }}</th>
+          <th>{{ 'TBL.amount' | translate }}</th>
+          <th>Solde avant</th>
+          <th>Solde après</th>
+          <th>Code propriétaire</th>
+          <th>Date opération</th>
+          <th>{{ 'TBL.guTransactionNumber' | translate }}</th>
+          <th>Groupe réseau</th>
+          <th>{{ 'TBL.status' | translate }}</th>
+          <th>{{ 'TBL.comment' | translate }}</th>
+          <th>{{ 'TBL.actions' | translate }}</th>
+        </tr>
+      </thead>
+      <tbody>
+        <tr *ngFor="let impact of pagedImpactOPs" [class.selected]="isItemSelected(impact)">
+          <td class="checkbox-cell">
+            <input type="checkbox" 
+                   [checked]="isItemSelected(impact)" 
+                   (change)="toggleItemSelection(impact)"
+                   [disabled]="isValidatingMass || impact.statut === 'TRAITE'">
+          </td>
+          <td>{{ impact.typeOperation }}</td>
+          <td [ngClass]="impact.montant >= 0 ? 'montant-positif' : 'montant-negatif'">
+            {{ formatMontant(impact.montant) }}
+          </td>
+          <td>{{ formatMontant(impact.soldeAvant) }}</td>
+          <td>{{ formatMontant(impact.soldeApres) }}</td>
+          <td>{{ impact.codeProprietaire }}</td>
+          <td>{{ formatDate(impact.dateOperation) }}</td>
+          <td>{{ impact.numeroTransGU }}</td>
+          <td>{{ impact.groupeReseau }}</td>
+          <td>
+            <span class="statut-badge" [ngClass]="getStatutClass(impact.statut || 'EN_ATTENTE')">
+              {{ getStatutLabel(impact.statut || 'EN_ATTENTE') }}
+            </span>
+          </td>
+          <td>{{ impact.commentaire || '-' }}</td>
+          <td class="actions-cell">
+            <div class="action-buttons">
+              <button *ngIf="impact.statut === 'EN_ATTENTE'" 
+                      class="btn btn-success btn-sm validate-btn" 
+                      (click)="validateImpactOP(impact)"
+                      title="Valider l'impact OP">
+                <i class="fas fa-check"></i>
+                Valider
+              </button>
+              <span *ngIf="impact.statut === 'TRAITE'" class="status-validated">
+                <i class="fas fa-check-circle"></i>
+                Validé
+              </span>
+            </div>
+          </td>
+        </tr>
+      </tbody>
+      <tfoot>
+        <tr class="total-row">
+          <td colspan="10" class="total-label">
+            <strong>MONTANT TOTAL :</strong>
+          </td>
+          <td colspan="1" class="total-amount">
+            <strong>{{ formatTotalMontant() }}</strong>
+          </td>
+          <td class="actions-cell"></td>
+        </tr>
+      </tfoot>
+    </table>
+
+    <!-- Pagination -->
+    <div class="pagination" *ngIf="totalPages > 1">
+      <button (click)="prevPage()" [disabled]="currentPage === 1" class="btn pagination-btn">
+        <i class="fas fa-chevron-left"></i>{{ 'PAG.previous' | translate }}</button>
+      
+      <div class="pagination-indicators">
+        <span *ngFor="let page of getVisiblePages()" 
+              class="page-indicator"
+              [class.active]="currentPage === page"
+              (click)="goToPage(page)">
+          {{ page }}
+        </span>
+      </div>
+      
+      <button (click)="nextPage()" [disabled]="currentPage === totalPages" class="btn pagination-btn">{{ 'PAG.next' | translate }}<i class="fas fa-chevron-right"></i>
+      </button>
+    </div>
+  </div>
+</div> 

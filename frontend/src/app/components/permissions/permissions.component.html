@@ -1,0 +1,381 @@
+<div class="permissions-page">
+  <!-- TOP NAV -->
+  <nav class="topnav">
+    <div class="nav-brand">
+      <div class="nav-brand-dot"></div>
+      ReconciliApp
+    </div>
+    <div class="nav-sep"></div>
+    <div class="nav-path">
+      <strong>{{ 'NAV.permissions' | translate }}</strong>
+    </div>
+    <div class="nav-spacer"></div>
+  </nav>
+
+  <!-- PAGE HEADER -->
+  <div class="page-header-permissions">
+    <div class="ph-permissions-left">
+      <div class="ph-eyebrow"><span></span>{{ 'PRM.eyebrow.security' | translate }}</div>
+      <h1 class="ph-title-permissions">{{ 'LBL.managementOf' | translate }}<em>{{ 'PRM.title.entity' | translate }}</em></h1>
+      <p class="ph-subtitle-permissions">
+        {{ 'PRM.subtitle' | translate }}
+      </p>
+    </div>
+    <div class="ph-permissions-metrics">
+      <div class="hero-kpi-strip">
+        <div class="hk-strip-item">
+          <div class="hk-strip-label">{{ 'PRM.kpi.permissions' | translate }}</div>
+          <div class="hk-strip-value">{{ filteredPermissions.length }}</div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <div class="main">
+  <div class="permissions-container">
+  <div class="header">
+    <div class="header-title">
+      <h2><i class="fas fa-key"></i> {{ 'PRM.sectionTitle' | translate }}</h2>
+      <span class="permissions-count">{{ 'PRM.count' | translate: { count: filteredPermissions.length } }}</span>
+    </div>
+    <div class="header-actions">
+      <button class="btn btn-info" (click)="analyzeModuleActions()" [disabled]="isAnalyzing">
+        <i class="fas fa-search"></i> 
+        <span *ngIf="!isAnalyzing">{{ 'PRM.analyzeBtn' | translate }}</span>
+        <span *ngIf="isAnalyzing">
+          <i class="fas fa-spinner fa-spin"></i> {{ 'PRM.analyzing' | translate }}
+        </span>
+      </button>
+      <button class="btn btn-success" (click)="generatePermissions()" [disabled]="isGenerating">
+        <i class="fas fa-magic"></i> 
+        <span *ngIf="!isGenerating">{{ 'PRM.generateBtn' | translate }}</span>
+        <span *ngIf="isGenerating">
+          <i class="fas fa-spinner fa-spin"></i> {{ 'PRM.generating' | translate }}
+        </span>
+      </button>
+      <button class="btn btn-primary" (click)="showAddForm = true">
+        <i class="fas fa-plus"></i> {{ 'PRM.newPermissionBtn' | translate }}
+      </button>
+    </div>
+  </div>
+
+  <div *ngIf="generationResult" class="generation-result" [class.success]="generationResult.totalCreated > 0" [class.info]="generationResult.totalCreated === 0">
+    <div class="result-header">
+      <i class="fas" [class.fa-check-circle]="generationResult.totalCreated > 0" [class.fa-info-circle]="generationResult.totalCreated === 0"></i>
+      <strong>{{ generationResult.message }}</strong>
+      <button class="close-result" (click)="generationResult = null">
+        <i class="fas fa-times"></i>
+      </button>
+    </div>
+    <div *ngIf="generationResult.createdPermissions && generationResult.createdPermissions.length > 0" class="result-details">
+      <strong>{{ 'PRM.generation.createdTitle' | translate }}</strong>
+      <ul>
+        <li *ngFor="let perm of generationResult.createdPermissions">{{ perm }}</li>
+      </ul>
+    </div>
+  </div>
+
+  <!-- Barre de recherche -->
+  <div class="search-filters-bar">
+    <div class="search-box">
+      <i class="fas fa-search"></i>
+      <input 
+        type="text" 
+        [(ngModel)]="searchTerm" 
+        [placeholder]="'PRM.searchPlaceholder' | translate"
+        class="search-input"
+        (input)="applyFilters()">
+    </div>
+    <button *ngIf="searchTerm" class="btn-clear-filters" (click)="clearFilters()">
+      <i class="fas fa-times"></i> {{ 'ACT.clear' | translate }}
+    </button>
+  </div>
+
+  <div class="list-container">
+    <div *ngIf="isLoading" class="loading">
+      <i class="fas fa-spinner fa-spin"></i>{{ 'MSG.loading' | translate }}</div>
+
+    <div *ngIf="!isLoading && filteredPermissions.length === 0" class="no-data">
+      <i class="fas fa-key"></i>
+      <h3>{{ 'PRM.empty.title' | translate }}</h3>
+      <p *ngIf="searchTerm" class="help-text">
+        {{ 'PRM.empty.searchHint' | translate }}
+        <button class="btn-link" (click)="clearFilters()">{{ 'ACT.clearFilters' | translate }}</button>
+      </p>
+      <p *ngIf="!searchTerm">{{ 'PRM.empty.generateHint' | translate }}</p>
+    </div>
+
+    <div *ngIf="!isLoading && filteredPermissions.length > 0" class="permissions-list">
+      <!-- Affichage par module -->
+      <div *ngFor="let moduleName of getModuleNames()" class="module-section">
+        <div class="module-header-section" (click)="toggleModule(moduleName)">
+          <div class="module-title">
+            <i class="fas" [class.fa-chevron-down]="isModuleExpanded(moduleName)" [class.fa-chevron-right]="!isModuleExpanded(moduleName)"></i>
+            <i class="fas fa-folder"></i>
+            <span class="module-name">{{ moduleName }}</span>
+            <span class="module-permissions-count">{{ 'PRM.count' | translate: { count: getPermissionCountForModule(moduleName) } }}</span>
+          </div>
+        </div>
+        
+        <div *ngIf="isModuleExpanded(moduleName)" class="module-permissions-list">
+          <div *ngFor="let permission of filteredPermissionsByModule[moduleName]" class="permission-item">
+            <div class="permission-content">
+              <div class="permission-name">
+                <i class="fas fa-key"></i>
+                <span>{{ permission.nom }}</span>
+              </div>
+            </div>
+            <div class="permission-actions">
+              <button class="btn icon-btn edit-btn" (click)="editPermission(permission)" title="{{ 'ACT.edit' | translate }}">
+                <i class="fas fa-edit"></i>
+              </button>
+              <button class="btn icon-btn delete-btn" (click)="deletePermission(permission)" title="{{ 'ACT.delete' | translate }}">
+                <i class="fas fa-trash"></i>
+              </button>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Pagination (désactivée avec l'affichage par module) -->
+  <!-- <div class="pagination-section" *ngIf="filteredPermissions.length > 0 && !isLoading">
+    <div class="pagination-controls">
+      <div class="items-per-page">
+        <label>{{ 'PAG.rowsPerPage' | translate }}</label>
+        <select [(ngModel)]="itemsPerPage" (change)="onItemsPerPageChange()" class="form-control">
+          <option [value]="10">10</option>
+          <option [value]="20">20</option>
+          <option [value]="50">50</option>
+          <option [value]="100">100</option>
+        </select>
+      </div>
+      
+      <button 
+        class="btn pagination-btn" 
+        [disabled]="currentPage === 1"
+        (click)="onPageChange(currentPage - 1)">
+        <i class="fas fa-chevron-left"></i>{{ 'PAG.previous' | translate }}</button>
+      
+      <div class="page-numbers">
+        <button 
+          *ngFor="let page of getVisiblePages()"
+          class="btn page-btn"
+          [class.active]="currentPage === page"
+          (click)="onPageChange(page)">
+          {{ page }}
+        </button>
+      </div>
+      
+      <button 
+        class="btn pagination-btn" 
+        [disabled]="currentPage === totalPages"
+        (click)="onPageChange(currentPage + 1)">{{ 'PAG.next' | translate }}<i class="fas fa-chevron-right"></i>
+      </button>
+    </div>
+    
+    <div class="pagination-info">
+      {{ 'PRM.pagination.info' | translate: { from: getStartIndex() + 1, to: getEndIndex(), total: filteredPermissions.length } }}
+      {{ 'PRM.pagination.page' | translate: { current: currentPage, total: totalPages } }}
+    </div>
+  </div> -->
+
+  <!-- Modal d'ajout -->
+  <div *ngIf="showAddForm" class="modal-overlay" (click)="closeAddModal()">
+    <div class="modal-container" (click)="$event.stopPropagation()">
+      <div class="modal-header">
+        <h3>{{ 'PRM.modal.addTitle' | translate }}</h3>
+        <button class="close-btn" (click)="cancelAdd()">
+          <i class="fas fa-times"></i>
+        </button>
+      </div>
+      <form [formGroup]="addForm" (ngSubmit)="createPermission()">
+        <div class="modal-body">
+          <div class="form-section">
+            <div class="form-group">
+              <label for="nom">{{ 'PRM.field.nameLabel' | translate }}</label>
+              <input 
+                type="text" 
+                id="nom" 
+                class="text-input" 
+                formControlName="nom" 
+                [placeholder]="'PRM.field.namePlaceholder' | translate"
+              >
+              <div *ngIf="addForm.get('nom')?.invalid && addForm.get('nom')?.touched" class="error-message">
+                <span *ngIf="addForm.get('nom')?.errors?.['required']">{{ 'PRM.validation.required' | translate }}</span>
+                <span *ngIf="addForm.get('nom')?.errors?.['minlength']">{{ 'PRM.validation.minLength' | translate }}</span>
+              </div>
+            </div>
+          </div>
+        </div>
+        <div class="modal-footer">
+          <div class="modal-actions">
+            <button type="button" class="btn btn-secondary" (click)="cancelAdd()">{{ 'COMMON.actions.cancel' | translate }}</button>
+            <button type="submit" class="btn btn-primary" [disabled]="addForm.invalid || isAdding">
+              <span *ngIf="!isAdding">{{ 'ACT.create' | translate }}</span>
+              <span *ngIf="isAdding">
+                <i class="fas fa-spinner fa-spin"></i> {{ 'PRM.submitting' | translate }}
+              </span>
+            </button>
+          </div>
+        </div>
+      </form>
+    </div>
+  </div>
+
+  <!-- Modal d'édition -->
+  <div *ngIf="showEditForm" class="modal-overlay" (click)="cancelEdit()">
+    <div class="modal-container" (click)="$event.stopPropagation()">
+      <div class="modal-header">
+        <h3>{{ 'PRM.modal.editTitle' | translate }}</h3>
+        <button class="close-btn" (click)="cancelEdit()">
+          <i class="fas fa-times"></i>
+        </button>
+      </div>
+      <form [formGroup]="editForm" (ngSubmit)="updatePermission()">
+        <div class="modal-body">
+          <div class="form-section">
+            <div class="form-group">
+              <label for="edit-nom">{{ 'PRM.field.nameLabel' | translate }}</label>
+              <input 
+                type="text" 
+                id="edit-nom" 
+                class="text-input" 
+                formControlName="nom" 
+                [placeholder]="'PRM.field.namePlaceholder' | translate"
+              >
+              <div *ngIf="editForm.get('nom')?.invalid && editForm.get('nom')?.touched" class="error-message">
+                <span *ngIf="editForm.get('nom')?.errors?.['required']">{{ 'PRM.validation.required' | translate }}</span>
+                <span *ngIf="editForm.get('nom')?.errors?.['minlength']">{{ 'PRM.validation.minLength' | translate }}</span>
+              </div>
+            </div>
+          </div>
+        </div>
+        <div class="modal-footer">
+          <div class="modal-actions">
+            <button type="button" class="btn btn-secondary" (click)="cancelEdit()">{{ 'COMMON.actions.cancel' | translate }}</button>
+            <button type="submit" class="btn btn-primary" [disabled]="editForm.invalid || isEditing">
+              <span *ngIf="!isEditing">{{ 'ACT.update' | translate }}</span>
+              <span *ngIf="isEditing">
+                <i class="fas fa-spinner fa-spin"></i> {{ 'ACT.updating' | translate }}
+              </span>
+            </button>
+          </div>
+        </div>
+      </form>
+    </div>
+  </div>
+
+  <!-- Modal d'analyse des actions -->
+  <div *ngIf="showActionsAnalysis" class="modal-overlay" (click)="closeActionsAnalysis()">
+    <div class="modal-container large-modal" (click)="$event.stopPropagation()">
+      <div class="modal-header">
+        <h3><i class="fas fa-search"></i> {{ 'PRM.analysis.title' | translate }}</h3>
+        <button class="close-btn" (click)="closeActionsAnalysis()">
+          <i class="fas fa-times"></i>
+        </button>
+      </div>
+      <div class="modal-body">
+        <div *ngIf="isAnalyzing" class="loading">
+          <i class="fas fa-spinner fa-spin"></i> {{ 'PRM.analyzing' | translate }}
+        </div>
+
+        <div *ngIf="!isAnalyzing && actionsAnalysis" class="actions-analysis">
+          <div class="analysis-summary">
+            <div class="summary-card">
+              <i class="fas fa-layer-group"></i>
+              <div>
+                <strong>{{ actionsAnalysis.totalModules }}</strong>
+                <span>{{ 'TBL.modules' | translate }}</span>
+              </div>
+            </div>
+            <div class="summary-card">
+              <i class="fas fa-tasks"></i>
+              <div>
+                <strong>{{ actionsAnalysis.totalActions }}</strong>
+                <span>{{ 'PRM.analysis.totalActions' | translate }}</span>
+              </div>
+            </div>
+          </div>
+
+          <div class="modules-list">
+            <h4><i class="fas fa-folder"></i> {{ 'PRM.analysis.availableModules' | translate }}</h4>
+            <div class="modules-grid">
+              <div 
+                *ngFor="let moduleName of getAvailableModules()" 
+                class="module-card"
+                [class.active]="selectedModule === moduleName"
+                (click)="loadModuleActions(moduleName)">
+                <div class="module-header">
+                  <i class="fas fa-folder"></i>
+                  <span class="module-name">{{ moduleName }}</span>
+                  <span class="action-count badge">{{ 'PRM.analysis.actionCount' | translate: { count: getActionCountForModule(moduleName) } }}</span>
+                </div>
+              </div>
+            </div>
+          </div>
+
+          <div *ngIf="selectedModule" class="module-actions-detail">
+            <h4>
+              <i class="fas fa-list"></i> {{ 'PRM.analysis.moduleActions' | translate: { module: selectedModule } }}
+              <button class="btn-close-detail" (click)="selectedModule = null; moduleActions = []">
+                <i class="fas fa-times"></i>
+              </button>
+            </h4>
+            
+            <div *ngIf="isLoadingModuleActions" class="loading">
+              <i class="fas fa-spinner fa-spin"></i> {{ 'PRM.analysis.loadingActions' | translate }}
+            </div>
+
+            <div *ngIf="!isLoadingModuleActions && moduleActions.length > 0" class="actions-table">
+              <table>
+                <thead>
+                  <tr>
+                    <th><i class="fas fa-tasks"></i>{{ 'COMMON.actions.action' | translate }}</th>
+                    <th><i class="fas fa-code"></i> {{ 'PRM.analysis.httpMethod' | translate }}</th>
+                    <th><i class="fas fa-link"></i> {{ 'PRM.analysis.apiPath' | translate }}</th>
+                    <th><i class="fas fa-file-code"></i> {{ 'PRM.analysis.controller' | translate }}</th>
+                    <th><i class="fas fa-function"></i> {{ 'PRM.analysis.method' | translate }}</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  <tr *ngFor="let action of moduleActions">
+                    <td>
+                      <span class="action-badge">{{ action.action }}</span>
+                    </td>
+                    <td>
+                      <span class="http-method" [class]="'method-' + action.httpMethod.toLowerCase()">
+                        {{ action.httpMethod }}
+                      </span>
+                    </td>
+                    <td>
+                      <code class="path-code">{{ action.path }}</code>
+                    </td>
+                    <td>{{ action.controller }}</td>
+                    <td><code>{{ action.method }}</code></td>
+                  </tr>
+                </tbody>
+              </table>
+            </div>
+
+            <div *ngIf="!isLoadingModuleActions && moduleActions.length === 0" class="no-data">
+              <i class="fas fa-info-circle"></i>
+              <p>{{ 'PRM.analysis.noActions' | translate }}</p>
+            </div>
+          </div>
+
+          <div *ngIf="!isAnalyzing && !actionsAnalysis" class="no-data">
+            <i class="fas fa-info-circle"></i>
+            <p>{{ 'PRM.analysis.startHint' | translate }}</p>
+          </div>
+        </div>
+      </div>
+      <div class="modal-footer">
+        <button type="button" class="btn btn-secondary" (click)="closeActionsAnalysis()">{{ 'COMMON.actions.close' | translate }}</button>
+      </div>
+    </div>
+  </div>
+  </div><!-- .permissions-container -->
+  </div><!-- .main -->
+</div> 

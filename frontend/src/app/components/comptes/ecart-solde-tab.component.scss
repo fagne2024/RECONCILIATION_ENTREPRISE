@@ -1,0 +1,768 @@
+.ecart-solde-tab-container {
+  padding: 20px;
+  background-color: #f8f9fa;
+  border-radius: 8px;
+  margin: 10px 0;
+
+  .tab-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 20px;
+    padding-bottom: 10px;
+    border-bottom: 2px solid #dee2e6;
+
+    h3 {
+      margin: 0;
+      color: #495057;
+      font-weight: 600;
+      font-size: 16px;
+    }
+
+    .tab-info {
+      display: flex;
+      gap: 15px;
+      align-items: center;
+
+      .date-info {
+        background-color: #e3f2fd;
+        color: #1976d2;
+        padding: 4px 8px;
+        border-radius: 4px;
+        font-size: 12px;
+        font-weight: 500;
+      }
+
+      .count-info {
+        background-color: #f3e5f5;
+        color: #7b1fa2;
+        padding: 4px 8px;
+        border-radius: 4px;
+        font-size: 12px;
+        font-weight: 500;
+
+        .revenu-info {
+          font-size: 11px;
+          color: #856404;
+          margin-left: 5px;
+        }
+      }
+
+      .export-btn {
+        background-color: #28a745;
+        border-color: #28a745;
+        color: white;
+        padding: 6px 12px;
+        font-size: 12px;
+        border-radius: 4px;
+        display: flex;
+        align-items: center;
+        gap: 6px;
+        transition: all 0.3s ease;
+        border: none;
+        cursor: pointer;
+
+        &:hover {
+          background-color: #218838;
+          border-color: #1e7e34;
+        }
+
+        &:disabled {
+          background-color: #6c757d;
+          border-color: #6c757d;
+          cursor: not-allowed;
+          opacity: 0.6;
+        }
+
+        i {
+          font-size: 14px;
+        }
+      }
+    }
+  }
+
+  .loading-container {
+    text-align: center;
+    padding: 40px;
+
+    .spinner {
+      border: 4px solid #f3f3f3;
+      border-top: 4px solid #007bff;
+      border-radius: 50%;
+      width: 40px;
+      height: 40px;
+      animation: spin 1s linear infinite;
+      margin: 0 auto 20px;
+    }
+
+    p {
+      color: #6c757d;
+      margin: 0;
+    }
+  }
+
+  .error-container {
+    margin: 20px 0;
+
+    .alert {
+      padding: 12px 16px;
+      border-radius: 6px;
+      display: flex;
+      align-items: center;
+      gap: 8px;
+
+      &.alert-danger {
+        background-color: #f8d7da;
+        border: 1px solid #f5c6cb;
+        color: #721c24;
+      }
+
+      i {
+        font-size: 16px;
+      }
+    }
+  }
+
+  .no-data-container {
+    margin: 20px 0;
+
+    .alert {
+      padding: 12px 16px;
+      border-radius: 6px;
+      display: flex;
+      align-items: center;
+      gap: 8px;
+
+      &.alert-info {
+        background-color: #d1ecf1;
+        border: 1px solid #bee5eb;
+        color: #0c5460;
+      }
+
+      i {
+        font-size: 16px;
+      }
+    }
+  }
+
+  .table-container {
+    background-color: white;
+    border-radius: 8px;
+    overflow: auto;
+    box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+    max-width: 100%;
+    min-width: 100%;
+
+    .table {
+      margin: 0;
+      font-size: 14px;
+      table-layout: fixed;
+      width: 100%;
+
+      thead {
+        background-color: #f8f9fa;
+        border-bottom: 2px solid #dee2e6;
+
+        th {
+          padding: 10px 4px;
+          font-weight: 600;
+          color: #495057;
+          border: none;
+          text-align: left;
+          font-size: 13px;
+          white-space: nowrap;
+          overflow: hidden;
+          text-overflow: ellipsis;
+
+          &:nth-child(1) { width: 11%; } // ID Transaction
+          &:nth-child(2) { width: 9%; }  // Téléphone Client
+          &:nth-child(3) { width: 9%; }  // Montant
+          &:nth-child(4) { width: 16%; } // Service
+          &:nth-child(5) { width: 9%; }  // Agence
+          &:nth-child(6) { width: 9%; }  // Date Transaction
+          &:nth-child(7) { width: 11%; } // Numéro Trans GU
+          &:nth-child(8) { width: 4%; }  // Pays
+          &:nth-child(9) { width: 7%; }  // Statut
+          &:nth-child(10) { width: 9%; } // Frais
+          &:nth-child(11) { width: 8%; } // Commentaire
+          &:nth-child(12) { width: 6%; } // Date Import
+          &:nth-child(13) { width: 8%; } // Actions
+        }
+      }
+
+      tbody {
+        tr {
+          border-bottom: 1px solid #f1f3f4;
+
+          &:hover {
+            background-color: #f8f9fa;
+          }
+
+          &.revenu-journalier-row {
+            background-color: #fff9e6;
+            border-left: 4px solid #ffc107;
+
+            &:hover {
+              background-color: #fff3cd;
+            }
+          }
+
+          &.ecart-solde-row {
+            background-color: white;
+          }
+
+          td {
+            padding: 8px 4px;
+            vertical-align: middle;
+            border: none;
+            font-size: 13px;
+            white-space: nowrap;
+            overflow: hidden;
+            text-overflow: ellipsis;
+
+            &:nth-child(1) { width: 11%; } // ID Transaction
+            &:nth-child(2) { width: 9%; }  // Téléphone Client
+            &:nth-child(3) { width: 9%; }  // Montant
+            &:nth-child(4) { width: 16%; } // Service
+            &:nth-child(5) { width: 9%; }  // Agence
+            &:nth-child(6) { width: 9%; }  // Date Transaction
+            &:nth-child(7) { width: 11%; } // Numéro Trans GU
+            &:nth-child(8) { width: 4%; }  // Pays
+            &:nth-child(9) { width: 7%; }  // Statut
+            &:nth-child(10) { width: 9%; } // Frais
+            &:nth-child(11) { width: 8%; } // Commentaire
+            &:nth-child(12) { width: 6%; } // Date Import
+            &:nth-child(13) { width: 8%; } // Actions
+          }
+        }
+      }
+    }
+
+    .amount-cell {
+      font-weight: 600;
+      color: #28a745;
+      background-color: #d4edda;
+      border-radius: 4px;
+      padding: 4px 6px;
+      text-align: right;
+    }
+
+    .id-cell {
+      font-weight: 600;
+      color: #495057;
+      background-color: #e9ecef;
+      border-radius: 4px;
+      padding: 4px 6px;
+      font-family: 'Courier New', monospace;
+    }
+
+    .phone-cell {
+      color: #007bff;
+      font-weight: 500;
+    }
+
+    .service-cell {
+      font-weight: 600;
+      color: #6f42c1;
+      background-color: #f8f9fa;
+      border-radius: 4px;
+      padding: 4px 6px;
+    }
+
+    .agence-cell {
+      font-weight: 600;
+      color: #fd7e14;
+      background-color: #fff3cd;
+      border-radius: 4px;
+      padding: 4px 6px;
+    }
+
+    .date-cell {
+      color: #6c757d;
+      font-style: italic;
+    }
+
+    .gu-cell {
+      font-family: 'Courier New', monospace;
+      color: #495057;
+      background-color: #f8f9fa;
+      border-radius: 4px;
+      padding: 4px 6px;
+    }
+
+    .pays-cell {
+      color: #20c997;
+      font-weight: 500;
+    }
+
+    .import-cell {
+      color: #6c757d;
+      font-size: 12px;
+    }
+
+    .commentaire-cell {
+      max-width: 150px;
+
+      .commentaire-content {
+        background-color: #e8f4fd;
+        padding: 6px;
+        border-radius: 4px;
+        border-left: 2px solid #007bff;
+        position: relative;
+
+        .commentaire-text {
+          font-size: 12px;
+          color: #495057;
+          line-height: 1.3;
+          word-wrap: break-word;
+          display: block;
+          white-space: normal;
+          overflow: hidden;
+          text-overflow: ellipsis;
+          max-height: 60px;
+        }
+
+        &::before {
+          content: '"';
+          position: absolute;
+          top: 2px;
+          left: 4px;
+          font-size: 12px;
+          color: #007bff;
+          font-weight: bold;
+        }
+
+        &::after {
+          content: '"';
+          position: absolute;
+          bottom: 2px;
+          right: 4px;
+          font-size: 12px;
+          color: #007bff;
+          font-weight: bold;
+        }
+      }
+
+      .no-commentaire {
+        background-color: #f8f9fa;
+        padding: 6px;
+        border-radius: 4px;
+        border: 1px solid #e9ecef;
+        text-align: center;
+
+        .no-commentaire-text {
+          font-size: 11px;
+          color: #6c757d;
+          font-style: italic;
+        }
+      }
+    }
+
+    .status-badge {
+      padding: 4px 6px;
+      border-radius: 12px;
+      font-size: 11px;
+      font-weight: 600;
+      text-transform: uppercase;
+      display: inline-block;
+      min-width: 60px;
+      text-align: center;
+
+      &.status-attente {
+        background-color: #fff3cd;
+        color: #856404;
+        border: 1px solid #ffeaa7;
+      }
+
+      &.status-traite {
+        background-color: #d4edda;
+        color: #155724;
+        border: 1px solid #c3e6cb;
+      }
+
+      &.status-erreur {
+        background-color: #f8d7da;
+        color: #721c24;
+        border: 1px solid #f5c6cb;
+      }
+
+      &.status-default {
+        background-color: #e2e3e5;
+        color: #383d41;
+        border: 1px solid #d6d8db;
+      }
+
+      &.revenu-badge {
+        background-color: #ffc107;
+        color: #856404;
+        border: 1px solid #ffb300;
+        font-weight: 700;
+      }
+    }
+
+    .frais-cell {
+      .frais-info {
+        display: flex;
+        flex-direction: column;
+        gap: 2px;
+        background-color: #fff5f5;
+        padding: 6px;
+        border-radius: 4px;
+        border: 1px solid #fed7d7;
+
+        .frais-amount {
+          font-weight: 600;
+          color: #dc3545;
+          font-size: 12px;
+        }
+
+        .frais-type {
+          font-size: 10px;
+          padding: 2px 4px;
+          border-radius: 3px;
+          font-weight: 500;
+
+          &.frais-type-percentage {
+            background-color: #e3f2fd;
+            color: #1976d2;
+            border: 1px solid #bbdefb;
+          }
+
+          &.frais-type-nominal {
+            background-color: #f3e5f5;
+            color: #7b1fa2;
+            border: 1px solid #e1bee7;
+          }
+
+          &.frais-type-default {
+            background-color: #f5f5f5;
+            color: #616161;
+            border: 1px solid #e0e0e0;
+          }
+        }
+
+        .frais-percentage {
+          font-size: 10px;
+          color: #6c757d;
+          font-style: italic;
+        }
+      }
+
+      .no-frais {
+        background-color: #f8f9fa;
+        padding: 6px;
+        border-radius: 4px;
+        border: 1px solid #e9ecef;
+
+        .no-frais-text {
+          font-size: 11px;
+          color: #6c757d;
+          font-style: italic;
+        }
+      }
+    }
+
+    // Styles pour le footer avec le total d'écart
+    tfoot {
+      background: linear-gradient(135deg, var(--theme-primary, #667eea) 0%, var(--theme-accent, #764ba2) 100%);
+      border-top: 3px solid #dee2e6;
+
+      .total-row {
+        border-bottom: none;
+
+        .total-label {
+          padding: 12px 4px;
+          text-align: right;
+          font-size: 12px;
+          color: white;
+          border: none;
+          font-weight: 600;
+          width: 90%;
+        }
+
+        .total-amount {
+          padding: 12px 4px;
+          text-align: right;
+          font-size: 14px;
+          color: #fff;
+          border: none;
+          background: linear-gradient(135deg, #ff6b6b 0%, #ee5a24 100%);
+          border-radius: 6px;
+          margin: 5px;
+          font-weight: 700;
+          text-shadow: 1px 1px 2px rgba(0, 0, 0, 0.3);
+          box-shadow: 0 2px 4px rgba(0, 0, 0, 0.2);
+          width: 10%;
+        }
+      }
+    }
+  }
+
+  // Styles pour la pagination
+  .pagination-container {
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    gap: 15px;
+    margin-top: 20px;
+    padding: 15px 0;
+    border-top: 1px solid #e0e0e0;
+
+    .pagination-btn {
+      background: #007bff;
+      color: white;
+      border: none;
+      padding: 8px 16px;
+      border-radius: 4px;
+      cursor: pointer;
+      font-size: 14px;
+      display: flex;
+      align-items: center;
+      gap: 6px;
+      transition: background-color 0.2s;
+
+      &:hover:not(:disabled) {
+        background: #0056b3;
+      }
+
+      &:disabled {
+        background: #6c757d;
+        cursor: not-allowed;
+        opacity: 0.6;
+      }
+    }
+
+    .pagination-indicators {
+      display: flex;
+      gap: 5px;
+
+      .page-indicator {
+        width: 32px;
+        height: 32px;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        border-radius: 50%;
+        background: #e9ecef;
+        color: #495057;
+        cursor: pointer;
+        font-size: 14px;
+        font-weight: 500;
+        transition: all 0.2s;
+        border: 1px solid #dee2e6;
+
+        &:hover {
+          background: #dee2e6;
+          color: #212529;
+        }
+
+        &.active {
+          background: #007bff;
+          color: white;
+          border-color: #007bff;
+        }
+      }
+    }
+  }
+  }
+
+  // Styles pour les contrôles de sélection multiple
+  .selection-controls {
+    background: linear-gradient(135deg, #f8f9fa 0%, #e9ecef 100%);
+    border: 1px solid #dee2e6;
+    border-radius: 8px;
+    padding: 15px;
+    margin-bottom: 20px;
+    box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+
+    .selection-header {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      gap: 20px;
+
+      .selection-info {
+        display: flex;
+        align-items: center;
+        gap: 15px;
+
+        .checkbox-container {
+          display: flex;
+          align-items: center;
+          gap: 8px;
+          cursor: pointer;
+          font-weight: 500;
+          color: #495057;
+
+          input[type="checkbox"] {
+            width: 18px;
+            height: 18px;
+            cursor: pointer;
+          }
+
+          .checkmark {
+            font-size: 14px;
+          }
+        }
+
+        .selected-count {
+          background: #007bff;
+          color: white;
+          padding: 4px 12px;
+          border-radius: 20px;
+          font-size: 12px;
+          font-weight: 600;
+        }
+      }
+
+      .selection-actions {
+        display: flex;
+        gap: 10px;
+
+        .btn {
+          padding: 6px 12px;
+          font-size: 12px;
+          border-radius: 4px;
+          display: flex;
+          align-items: center;
+          gap: 6px;
+          transition: all 0.3s ease;
+
+          &.btn-success {
+            background: #28a745;
+            border-color: #28a745;
+            color: white;
+
+            &:hover:not(:disabled) {
+              background: #218838;
+              border-color: #1e7e34;
+              transform: translateY(-1px);
+              box-shadow: 0 2px 4px rgba(40, 167, 69, 0.3);
+            }
+          }
+
+          &.btn-secondary {
+            background: #6c757d;
+            border-color: #6c757d;
+            color: white;
+
+            &:hover:not(:disabled) {
+              background: #5a6268;
+              border-color: #545b62;
+            }
+          }
+
+          &:disabled {
+            opacity: 0.6;
+            cursor: not-allowed;
+            transform: none;
+            box-shadow: none;
+          }
+
+          i {
+            font-size: 10px;
+          }
+        }
+      }
+    }
+  }
+
+  // Styles pour les checkboxes dans le tableau
+  .checkbox-header,
+  .checkbox-cell {
+    text-align: center;
+    vertical-align: middle;
+    width: 40px;
+    padding: 8px 4px;
+
+    input[type="checkbox"] {
+      width: 16px;
+      height: 16px;
+      cursor: pointer;
+    }
+  }
+
+  // Styles pour les lignes sélectionnées
+  .data-row.selected {
+    background-color: #e3f2fd !important;
+    border-left: 4px solid #007bff;
+  }
+
+  // Styles pour la colonne Actions
+  .actions-cell {
+    text-align: center;
+    vertical-align: middle;
+    padding: 8px 4px;
+
+    .action-buttons {
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      gap: 4px;
+
+      .validate-btn {
+        background-color: #28a745;
+        border-color: #28a745;
+        color: white;
+        padding: 4px 8px;
+        font-size: 11px;
+        border-radius: 4px;
+        border: none;
+        cursor: pointer;
+        display: flex;
+        align-items: center;
+        gap: 4px;
+        transition: all 0.3s ease;
+        font-weight: 500;
+        min-width: 70px;
+        justify-content: center;
+
+        &:hover {
+          background-color: #218838;
+          border-color: #1e7e34;
+          transform: translateY(-1px);
+          box-shadow: 0 2px 4px rgba(40, 167, 69, 0.3);
+        }
+
+        &:active {
+          transform: translateY(0);
+          box-shadow: 0 1px 2px rgba(40, 167, 69, 0.3);
+        }
+
+        &:disabled {
+          background-color: #6c757d;
+          border-color: #6c757d;
+          cursor: not-allowed;
+          opacity: 0.6;
+          transform: none;
+          box-shadow: none;
+        }
+
+        i {
+          font-size: 10px;
+        }
+      }
+
+      .status-validated {
+        display: flex;
+        align-items: center;
+        gap: 4px;
+        color: #28a745;
+        font-size: 11px;
+        font-weight: 500;
+        background-color: #d4edda;
+        padding: 4px 8px;
+        border-radius: 4px;
+        border: 1px solid #c3e6cb;
+
+        i {
+          font-size: 10px;
+        }
+      }
+    }
+  }
+
+@keyframes spin {
+  0% { transform: rotate(0deg); }
+  100% { transform: rotate(360deg); }
+} 

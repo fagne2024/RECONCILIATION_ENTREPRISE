@@ -1,0 +1,1322 @@
+<div class="dashboard-page">
+  <!-- TOP NAV -->
+  <nav class="topnav">
+    <div class="nav-brand">
+      <div class="nav-brand-dot"></div>
+      ReconciliApp
+    </div>
+    <div class="nav-sep"></div>
+    <div class="nav-path">
+          <strong>{{ 'DASHBOARD.title' | translate }}</strong>
+    </div>
+    <div class="nav-spacer"></div>
+    <div class="nav-actions">
+      <button
+        type="button"
+        class="nav-btn secondary"
+        (click)="refreshMetrics()"
+        [disabled]="isRefreshButtonBusy"
+        title="{{ 'ACT.refreshMetrics' | translate }}"
+      >
+        <i class="fas fa-sync-alt" [class.fa-spin]="isRefreshButtonBusy"></i>
+        {{ (isRefreshButtonBusy ? 'ACT.refreshing' : 'ACT.refresh') | translate }}
+      </button>
+    </div>
+  </nav>
+
+  <div class="main">
+    <!-- Filtre d'affichage : Transactions (affichage actuel) / Banque (à développer) -->
+    <div class="dashboard-view-filter">
+        <span class="dvf-label">{{ 'DASH.viewTransactions' | translate }} / {{ 'DASH.viewBanque' | translate }}</span>
+        <div class="dvf-segments" role="tablist">
+            <button
+                type="button"
+                class="dvf-seg"
+                [class.active]="dashboardView === 'transaction'"
+                (click)="setDashboardView('transaction')"
+            >
+                <i class="fas fa-exchange-alt"></i>
+                {{ 'DASH.viewTransactions' | translate }}
+            </button>
+            <button
+                type="button"
+                class="dvf-seg"
+                [class.active]="dashboardView === 'banque'"
+                (click)="setDashboardView('banque')"
+            >
+                <i class="fas fa-university"></i>
+                {{ 'DASH.viewBanque' | translate }}
+            </button>
+        </div>
+    </div>
+
+    <ng-container *ngIf="dashboardView === 'transaction'">
+  <div class="dashboard-container">
+    <!-- Référentiel services RECO — synthèse compacte -->
+    <div class="dashboard-section section-service-ref">
+        <div class="sr-ref-wrap">
+            <div class="sr-ref-hdr">
+                <span class="sr-ref-hdr-title">{{ 'DASH.serviceReferences' | translate }}</span>
+                <button
+                    type="button"
+                    class="sr-ref-btn-hide"
+                    (click)="showServiceRefSection = !showServiceRefSection"
+                >
+                    {{ 'ACT.showWithArrow' | translate }} | {{ 'ACT.hideWithArrow' | translate }}
+                </button>
+            </div>
+            <app-service-references-dashboard-panel
+                #serviceRefPanel
+                *ngIf="showServiceRefSection"
+                [loadOwnData]="true"
+                [showImportHint]="false"
+                [showDetailColumns]="false"
+                [compactLayout]="true"
+                [showOpenDetailsButton]="true"
+                (openDetails)="openServiceReferencesDashboard()"
+            >
+            </app-service-references-dashboard-panel>
+        </div>
+    </div>
+
+    <div class="dashboard-info">
+        <div class="info-section reconciliation-state">
+            <div class="bottom-section-header">
+                <h4>📌 {{ 'DASH.reconciliationStatus' | translate }}</h4>
+                <button class="toggle-btn" [class.active]="showReconciliationSection" (click)="showReconciliationSection = !showReconciliationSection">
+                    <span class="toggle-icon">▾</span>
+                    {{ 'ACT.show' | translate }} | {{ 'ACT.hide' | translate }}
+                </button>
+            </div>
+            <div *ngIf="showReconciliationSection">
+            <div class="info-header">
+                <div class="head-left">
+                    <div class="head-title-row">
+                        <div class="head-icon">🔄</div>
+                        <h3 class="head-title">{{ 'DASH.reconciliationStatus' | translate }}</h3>
+                        <button type="button" class="reco-view-btn" (click)="openRecoViewModal()" title="{{ 'ACT.viewFullWeek' | translate }}">
+                            {{ 'ACT.view' | translate }}
+                        </button>
+                    </div>
+                    <p class="reco-subtitle">{{ 'DASH.thisWeekMondayToSunday' | translate }}</p>
+                </div>
+                <div class="head-right">
+                    <div class="reco-controls">
+                        <div class="filter-group">
+                            <span class="filter-label">{{ 'TBL.country' | translate }}</span>
+                            <select
+                                class="filter-select"
+                                [(ngModel)]="reconciliationSummaryCountry"
+                                (change)="loadReconciliationSummary()"
+                            >
+                                <option value="">{{ 'FILT.all' | translate }}</option>
+                                <option *ngFor="let country of reconciliationSummaryCountries" [ngValue]="country">
+                                    {{ country }}
+                                </option>
+                            </select>
+                        </div>
+                        <div class="filter-group">
+                            <span class="filter-label">{{ 'TBL.service' | translate }}</span>
+                            <select
+                                class="filter-select"
+                                [(ngModel)]="reconciliationSummaryService"
+                                (change)="loadReconciliationSummary()"
+                            >
+                                <option value="">{{ 'FILT.all' | translate }}</option>
+                                <option *ngFor="let service of reconciliationSummaryServices" [ngValue]="service">
+                                    {{ service }}
+                                </option>
+                            </select>
+                        </div>
+                        <div class="filter-group">
+                            <span class="filter-label">{{ 'ACT.createOp' | translate }}</span>
+                            <select
+                                class="filter-select"
+                                [(ngModel)]="reconciliationSummaryEnv"
+                                (change)="loadReconciliationSummary()"
+                            >
+                                <option *ngFor="let env of reconciliationEnvOptions" [ngValue]="env">
+                                    {{ formatRecoViewEnvOptionLabel(env) }}
+                                </option>
+                            </select>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <div *ngIf="reconciliationSummaryLoading && !reconciliationSummaryRows.length" class="reco-loading">
+                Loading reconciliation status...
+            </div>
+            <div *ngIf="reconciliationSummaryLoadingMore" class="reco-loading-more">{{ 'MSG.loadingPreviousDates' | translate }}</div>
+            <div *ngIf="!reconciliationSummaryLoading && reconciliationSummaryError" class="reco-error">
+                {{ reconciliationSummaryError }}
+            </div>
+
+            <div *ngIf="(!reconciliationSummaryLoading || reconciliationSummaryRows.length) && !reconciliationSummaryError" class="reco-table-wrapper">
+                <table class="reco-table">
+                    <thead>
+                        <tr>
+                            <th>{{ 'TBL.service' | translate }}</th>
+                            <th
+                                *ngFor="let d of visibleWeekDays; let i = index; trackBy: trackByDate"
+                                class="reco-day-header"
+                            >
+                                <button
+                                    *ngIf="i === 0"
+                                    type="button"
+                                    class="reco-day-nav reco-day-nav-left"
+                                    (click)="prevDaysWindow()"
+                                    [disabled]="!canGoPrevDays()"
+                                    title="{{ 'ACT.previousDays' | translate }}"
+                                >
+                                    ◀
+                                </button>
+                                <span class="reco-day-label">{{ d.label }}</span>
+                                <button
+                                    *ngIf="i === visibleWeekDays.length - 1"
+                                    type="button"
+                                    class="reco-day-nav reco-day-nav-right"
+                                    (click)="nextDaysWindow()"
+                                    [disabled]="!canGoNextDays()"
+                                    title="{{ 'ACT.nextDays' | translate }}"
+                                >
+                                    ▶
+                                </button>
+                            </th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        <tr
+                            *ngFor="let row of getPagedReconciliationRows(); trackBy: trackByIndex"
+                        >
+                            <td class="reco-service" [title]="row.label || row.service">{{ row.label || row.service }}</td>
+                            <td
+                                class="reco-status"
+                                *ngFor="let day of getVisibleDays(row); trackBy: trackByDate"
+                            >
+                                <span
+                                    class="status-pill"
+                                    [ngClass]="getStatusPillNgClass(day)"
+                                    (click)="day.status === 'RECONCILIE' && day.ticketId ? showTicketOptionsPopupFromDashboard(day.ticketId) : null"
+                                >
+                                    <span class="status-label">
+                                        {{ getStatusPillLabel(day) }}
+                                    </span>
+                                    <ng-container *ngIf="day.status === 'RECONCILIE' && day.ticketId">
+                                        <span class="status-id">{{ day.ticketId }}</span>
+                                        <span class="status-link-icon">🔗</span>
+                                    </ng-container>
+                                </span>
+                            </td>
+                        </tr>
+                    </tbody>
+                </table>
+            </div>
+            <div
+                *ngIf="(!reconciliationSummaryLoading || reconciliationSummaryRows.length) && !reconciliationSummaryError && reconciliationSummaryRows.length"
+                class="reco-stats-row"
+            >
+                <div class="reco-stat-item">
+                    <span class="reco-stat-label">{{ 'DASH.weekTotal' | translate }}</span>
+                    <span class="reco-stat-value total">{{ recoStats.total }}</span>
+                </div>
+                <div class="reco-stat-item">
+                    <span class="reco-stat-value ok">{{ recoCoverageCount }}</span>
+                </div>
+                <div class="reco-stat-item">
+                    <span class="reco-stat-value pending-cdo">{{ recoStats.enCoursCdo }}</span>
+                </div>
+                <div class="reco-stat-item">
+                    <span class="reco-stat-value pending-group">{{ recoStats.enCoursGroup }}</span>
+                </div>
+                <div class="reco-stat-item">
+                    <span class="reco-stat-value failed">{{ recoStats.nonReco }}</span>
+                </div>
+                <div class="reco-stat-item">
+                    <span class="reco-stat-label">{{ recoValidatedRateLabel }}</span>
+                    <span class="reco-stat-value ok">
+                        {{ recoCoverageRatePercent | number:'1.0-1' }} %
+                    </span>
+                </div>
+            </div>
+            <div
+                *ngIf="(!reconciliationSummaryLoading || reconciliationSummaryRows.length) && !reconciliationSummaryError && reconciliationSummaryRows.length > reconciliationPageSize"
+                class="reco-pagination"
+            >
+                <button
+                    type="button"
+                    class="reco-page-btn"
+                    (click)="prevReconciliationPage()"
+                    [disabled]="reconciliationPageIndex === 0"
+                >
+                    ‹
+                </button>
+                <span class="reco-page-info">
+                    Page {{ reconciliationPageIndex + 1 }} / {{ getReconciliationTotalPages() }}
+                </span>
+                <button
+                    type="button"
+                    class="reco-page-btn"
+                    (click)="nextReconciliationPage()"
+                    [disabled]="reconciliationPageIndex >= getReconciliationTotalPages() - 1"
+                >
+                    ›
+                </button>
+            </div>
+            </div>
+        </div>
+
+        <div class="info-section">
+            <div class="bottom-section-header">
+                <h4>📊 {{ 'DASH.quickMetrics' | translate }}</h4>
+                <button class="toggle-btn" [class.active]="showMetricsSection" (click)="showMetricsSection = !showMetricsSection">
+                    <span class="toggle-icon">▾</span>
+                    {{ 'ACT.show' | translate }} | {{ 'ACT.hide' | translate }}
+                </button>
+            </div>
+            <div *ngIf="showMetricsSection">
+            <div class="metrics-period-filter">
+                <label for="metricsPeriod">{{ 'LBL.period' | translate }}</label>
+                <select id="metricsPeriod" [(ngModel)]="metricsPeriod" (change)="onMetricsPeriodChange()">
+                    <option value="jour">Day (D-1)</option>
+                    <option value="7_jours">{{ 'LBL.last7Days' | translate }}</option>
+                    <option value="30_jours">{{ 'LBL.last30Days' | translate }}</option>
+                    <option value="semaine">{{ 'LBL.currentWeek' | translate }}</option>
+                    <option value="semaine_passee">{{ 'LBL.lastWeek' | translate }}</option>
+                    <option value="mois">{{ 'TBL.month' | translate }}</option>
+                    <option value="trimestre">{{ 'LBL.quarter' | translate }}</option>
+                    <option value="semestre">{{ 'LBL.semester' | translate }}</option>
+                    <option value="annee">{{ 'TBL.year' | translate }}</option>
+                </select>
+            </div>
+            <div *ngIf="error" class="error-message">
+                {{ error }}
+            </div>
+            <div class="metrics-grid">
+                <div class="metric">
+                    <div class="metric-value">{{totalReconciliations}}</div>
+                    <div class="metric-label">{{ 'DASH.totalReconciliations' | translate }}</div>
+                </div>
+                <div class="metric">
+                    <div class="metric-value">{{totalFilesDisplay}}</div>
+                    <div class="metric-label">{{ 'DASH.processedFiles' | translate }}</div>
+                </div>
+                <div class="metric">
+                    <div class="metric-value">{{todayReconciliationsDisplay}}</div>
+                    <div class="metric-label">{{ 'DASH.reconciliationsToday' | translate }}</div>
+                </div>
+                <div class="metric">
+                    <div class="metric-value">{{lastActivityLabel}}</div>
+                    <div class="metric-label">{{ 'DASH.lastActivity' | translate }}</div>
+                </div>
+            </div>
+            <div class="metrics-actions">
+                                    <button type="button" class="btn-status-reconciliation" (click)="openReleveStatusModal()">
+                    {{ 'DASH.viewReconciliationStatus' | translate }}
+                </button>
+                <button type="button" class="btn-transact-stats-reconciliation" (click)="openTransactStatsModal()" title="{{ 'DASH.aggregatedVolumesFromReports' | translate }}">{{ 'DASH.reconciliationStats' | translate }}</button>
+            </div>
+
+            <!-- Graphiques état des réconciliations (donut + évolution par jour) -->
+            <div *ngIf="(!reconciliationSummaryLoading || reconciliationSummaryRows.length) && !reconciliationSummaryError && reconciliationSummaryRows.length && recoStats.total > 0" class="reco-charts-row">
+                <div class="reco-chart-block reco-chart-donut">
+                    <div class="reco-chart-canvas-wrap">
+                        <canvas baseChart
+                            type="doughnut"
+                            [data]="recoDonutChartData"
+                            [options]="recoDonutChartOptions">
+                        </canvas>
+                    </div>
+                </div>
+                <div class="reco-chart-block reco-chart-evolution">
+                    <div class="reco-chart-canvas-wrap reco-chart-evolution-wrap">
+                        <canvas baseChart
+                            type="bar"
+                            [data]="recoEvolutionChartData"
+                            [options]="recoEvolutionChartOptions">
+                        </canvas>
+                    </div>
+                </div>
+                <div class="reco-chart-legend-detail">
+                    <div><span class="reco-legend-dot ok"></span> {{ recoValidatedStatusLabel }} : {{ recoCoverageCount }} ({{ recoCoverageRatePercent | number:'1.0-0' }} %)</div>
+                    <div><span class="reco-legend-dot pending-support"></span> Processing: {{ recoStats.enCoursSupport }} ({{ (recoStats.total > 0 ? (recoStats.enCoursSupport / recoStats.total * 100) : 0) | number:'1.0-0' }} %)</div>
+                    <div><span class="reco-legend-dot pending-cdo"></span> Validation in progress: {{ recoStats.enCoursCdo }} ({{ (recoStats.total > 0 ? (recoStats.enCoursCdo / recoStats.total * 100) : 0) | number:'1.0-0' }} %)</div>
+                    <div><span class="reco-legend-dot pending-group"></span> Closing in progress: {{ recoStats.enCoursGroup }} ({{ (recoStats.total > 0 ? (recoStats.enCoursGroup / recoStats.total * 100) : 0) | number:'1.0-0' }} %)</div>
+                    <div><span class="reco-legend-dot failed"></span> Not reconciled: {{ recoStats.nonReco }} ({{ (recoStats.total > 0 ? (recoStats.nonReco / recoStats.total * 100) : 0) | number:'1.0-0' }} %)</div>
+                </div>
+            </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Barre récapitulative clients/services/pays -->
+    <div class="dashboard-section section-summary-bar">
+        <div class="bottom-section-header">
+            <h4>📋 {{ 'DASH.clientServiceCountrySummary' | translate }}</h4>
+            <button class="toggle-btn" [class.active]="showSummaryBarSection" (click)="showSummaryBarSection = !showSummaryBarSection">
+                <span class="toggle-icon">▾</span>
+                    {{ 'ACT.show' | translate }} | {{ 'ACT.hide' | translate }}
+            </button>
+        </div>
+        <div *ngIf="showSummaryBarSection" class="dashboard-summary-bar">
+      <div class="summary-bar-item">
+        <div class="summary-bar-label">{{ 'DASH.clientCount' | translate }}</div>
+        <div class="summary-bar-value">{{ totalClientsCount }}</div>
+      </div>
+      <div class="summary-bar-item">
+        <div class="summary-bar-label">{{ 'DASH.serviceCount' | translate }}</div>
+        <div class="summary-bar-value">{{ totalServicesCount }}</div>
+      </div>
+      <div class="summary-bar-item">
+        <div class="summary-bar-label">{{ 'DASH.countryCount' | translate }}</div>
+        <div class="summary-bar-value">{{ totalCountriesCount }}</div>
+      </div>
+    </div>
+        </div>
+    </div>
+
+    <!-- Nouvelle section pour les métriques détaillées -->
+    <div class="dashboard-section detailed-metrics-section">
+        <div class="bottom-section-header">
+            <h4>📈 {{ 'DASHBOARD.detailedMetrics' | translate }}</h4>
+            <button class="toggle-btn" [class.active]="showDetailedMetricsSection" (click)="showDetailedMetricsSection = !showDetailedMetricsSection">
+                <span class="toggle-icon">▾</span>
+                    {{ 'ACT.show' | translate }} | {{ 'ACT.hide' | translate }}
+            </button>
+        </div>
+        <div *ngIf="showDetailedMetricsSection">
+        <div class="detailed-metrics-header" style="display: flex; align-items: center; justify-content: space-between; gap: 16px; margin-bottom: 16px;">
+          <div class="metric-select" style="flex: 1; text-align: left; min-width: 180px;">
+            <mat-form-field appearance="fill" class="filter-select">
+              <mat-label>{{ 'ACT.show' | translate }}</mat-label>
+              <mat-select [(ngModel)]="selectedMetric" (selectionChange)="updateBarChartData()">
+                <mat-option value="volume">{{ 'TBL.totalVolume' | translate }}</mat-option>
+                <mat-option value="transactions">{{ 'DASH.transactionCount' | translate }}</mat-option>
+                <mat-option value="revenu">{{ 'DASH.revenueVolume' | translate }}</mat-option>
+              </mat-select>
+            </mat-form-field>
+          </div>
+          <div style="flex: 2; display: flex; flex-direction: column; align-items: center; gap: 8px;">
+            <h3 style="margin: 0;">📈 {{ 'DASHBOARD.detailedMetrics' | translate }}</h3>
+            <button class="btn-show-graph" (click)="openGraphModal()" [disabled]="(!barChartData?.labels?.length || !barChartData?.datasets?.length) && (!lineChartData?.labels?.length || !lineChartData?.datasets?.length)">
+              <i class="fas fa-chart-line"></i> {{ 'DASHBOARD.showGraph' | translate }}
+            </button>
+          </div>
+          <div class="chart-type-select" style="flex: 1; text-align: right; min-width: 180px;">
+            <mat-form-field appearance="fill" class="filter-select">
+              <mat-label>{{ 'LBL.view' | translate }}</mat-label>
+              <mat-select [(ngModel)]="selectedChartType">
+                <mat-option value="bar">{{ 'LBL.chartBars' | translate }}</mat-option>
+                <mat-option value="line">{{ 'LBL.chartLine' | translate }}</mat-option>
+              </mat-select>
+            </mat-form-field>
+          </div>
+        </div>
+            <!-- Espace réservé pour les futurs graphiques placé ici -->
+            <div class="graph-placeholder">
+              <canvas *ngIf="selectedChartType === 'bar' && barChartData?.labels?.length && barChartData?.datasets?.length" baseChart
+                [data]="barChartData"
+                [options]="barChartOptions"
+                [type]="'bar'"
+                [plugins]="[ChartDataLabels]"
+                (chartClick)="onBarClick($event)">
+              </canvas>
+              <canvas *ngIf="selectedChartType === 'line' && lineChartData?.labels?.length && lineChartData?.datasets?.length" baseChart
+                [data]="lineChartData"
+                [options]="lineChartOptions"
+                [type]="'line'">
+              </canvas>
+              <div *ngIf="(!barChartData?.labels?.length || !barChartData?.datasets?.length) && (!lineChartData?.labels?.length || !lineChartData?.datasets?.length)" class="text">{{ 'MSG.noDataToDisplay' | translate }}</div>
+            </div>
+            <div class="filters-export-row" style="display: flex; justify-content: space-between; align-items: center; gap: 24px; margin-bottom: 16px;">
+              <button class="export-btn" (click)="exportDetailedMetricsExcel()">{{ 'ACT.importFile' | translate }}</button>
+              <div class="filters-container" style="display: flex; gap: 12px; justify-content: center; align-items: center;">
+                <div class="filter-group">
+                  <mat-form-field appearance="fill" class="filter-select">
+                    <mat-label>{{ 'TBL.client' | translate }}</mat-label>
+                    <mat-select #agencySelect [(ngModel)]="selectedAgency" multiple (selectionChange)="onFilterChange()" placeholder="{{ 'LBL.multiSelect' | translate }}">
+                      <mat-option>
+                        <ngx-mat-select-search [formControl]="agenceSearchCtrl" placeholderLabel="Rechercher un client..." noEntriesFoundLabel="Aucun client trouvé"></ngx-mat-select-search>
+                      </mat-option>
+                      <mat-option *ngFor="let agency of filteredAgencies" [value]="agency">
+                        {{ agency }}
+                      </mat-option>
+                    </mat-select>
+                  </mat-form-field>
+                </div>
+                <div class="filter-group">
+                  <mat-form-field appearance="fill" class="filter-select">
+                    <mat-label>{{ 'TBL.service' | translate }}</mat-label>
+                    <mat-select #serviceSelect [(ngModel)]="selectedService" multiple (selectionChange)="onFilterChange()" placeholder="{{ 'LBL.multiSelect' | translate }}">
+                      <mat-option>
+                        <ngx-mat-select-search [formControl]="serviceSearchCtrl" placeholderLabel="Rechercher un service..." noEntriesFoundLabel="Aucun service trouvé"></ngx-mat-select-search>
+                      </mat-option>
+                      <mat-option *ngFor="let service of filteredServices" [value]="service">
+                        {{ service }}
+                      </mat-option>
+                    </mat-select>
+                  </mat-form-field>
+                </div>
+                <div class="filter-group">
+                  <mat-form-field appearance="fill" class="filter-select">
+                    <mat-label>{{ 'TBL.country' | translate }}</mat-label>
+                    <mat-select #countrySelect [(ngModel)]="selectedCountry" multiple (selectionChange)="onFilterChange()" placeholder="{{ 'LBL.multiSelect' | translate }}">
+                      <mat-option>
+                        <ngx-mat-select-search [formControl]="paysSearchCtrl" placeholderLabel="Rechercher un pays..." noEntriesFoundLabel="Aucun pays trouvé"></ngx-mat-select-search>
+                      </mat-option>
+                      <mat-option *ngFor="let country of filteredCountries" [value]="country">
+                        {{ country }}
+                      </mat-option>
+                    </mat-select>
+                  </mat-form-field>
+                </div>
+                <div class="filter-group">
+                  <mat-form-field appearance="fill" class="filter-select">
+                    <mat-label>{{ 'LBL.period' | translate }}</mat-label>
+                    <mat-select [(ngModel)]="selectedTimeFilter" (selectionChange)="onTimeFilterChange()" [disabled]="showAllData">
+                      <mat-option *ngFor="let timeFilter of filterOptions?.timeFilters" [value]="timeFilter">
+                        {{ timeFilter }}
+                      </mat-option>
+                    </mat-select>
+                  </mat-form-field>
+                </div>
+                <div class="filter-group">
+                  <button type="button" (click)="toggleShowAllData()" class="btn-show-more" [class.active]="showAllData">
+                    <i class="fas" [ngClass]="showAllData ? 'fa-eye-slash' : 'fa-eye'"></i>
+                    {{ (showAllData ? 'ACT.showLess' : 'ACT.showMore') | translate }}
+                  </button>
+                </div>
+              </div>
+              <button type="button" (click)="resetFilters()" class="reset-btn">
+                <i class="fas fa-undo"></i>{{ 'COMMON.actions.reset' | translate }}</button>
+            </div>
+        </div>
+
+        <!-- Champs de dates personnalisées -->
+        <div *ngIf="showCustomDateInputs" class="custom-date-inputs">
+            <div class="date-input-group">
+                <label for="startDate">{{ 'LBL.startDateLabel' | translate }}</label>
+                <input type="date" id="startDate" [(ngModel)]="startDate" (change)="onFilterChange()" class="date-input">
+            </div>
+            <div class="date-input-group">
+                <label for="endDate">{{ 'LBL.endDateLabel' | translate }}</label>
+                <input type="date" id="endDate" [(ngModel)]="endDate" (change)="onFilterChange()" class="date-input">
+            </div>
+        </div>
+
+        <div *ngIf="detailedError" class="error-message">
+            {{ detailedError }}
+        </div>
+
+        <div *ngIf="detailedLoading" class="loading-message">
+            Loading detailed metrics...
+        </div>
+
+        <div *ngIf="!detailedLoading && detailedMetrics" class="detailed-metrics-content">
+            <!-- Métriques principales -->
+            <div class="main-metrics-grid">
+                <div class="main-metric">
+                    <div class="main-metric-icon">💰</div>
+                    <div class="main-metric-value">{{detailedMetrics.totalVolume | number:'1.0-0'}}</div>
+                    <div class="main-metric-label">{{ 'TBL.totalVolume' | translate }}</div>
+                </div>
+                <div class="main-metric">
+                    <div class="main-metric-icon">💵</div>
+                    <div class="main-metric-value">{{detailedMetrics.totalFees | number:'1.0-0'}}</div>
+                    <div class="main-metric-label">{{ 'DASH.revenueVolume' | translate }}</div>
+                </div>
+                <div class="main-metric">
+                    <div class="main-metric-icon">📊</div>
+                    <div class="main-metric-value">{{detailedMetrics.totalTransactions}}</div>
+                    <div class="main-metric-label">{{ 'TBL.transactions' | translate }}</div>
+                </div>
+                <div class="main-metric">
+                    <div class="main-metric-icon">👥</div>
+                    <div class="main-metric-value">{{detailedMetrics.totalClients}}</div>
+                    <div class="main-metric-label">{{ 'DASH.clients' | translate }}</div>
+                </div>
+                <div class="main-metric">
+                    <div class="main-metric-icon">📈</div>
+                    <div class="main-metric-value">{{ getAverageTransactionsPerPeriod() }}</div>
+                    <div class="main-metric-label">{{ 'DASH.averageTransactionPerDay' | translate }}</div>
+                </div>
+                <div class="main-metric">
+                    <div class="main-metric-icon">💎</div>
+                    <div class="main-metric-value">{{detailedMetrics.averageVolume | number:'1.0-0'}}</div>
+                    <div class="main-metric-label">{{ 'DASH.averageVolumePerDay' | translate }}</div>
+                </div>
+                <div class="main-metric">
+                    <div class="main-metric-icon">💸</div>
+                    <div class="main-metric-value">{{detailedMetrics.averageFeesPerDay | number:'1.0-0'}}</div>
+                    <div class="main-metric-label">{{ 'DASH.averageRevenuePerDay' | translate }}</div>
+                </div>
+            </div>
+
+            <!-- Statistiques par type d'opération -->
+            <div class="operation-stats-section">
+                <h4>📋 {{ 'DASH.statisticsByOperationType' | translate }}</h4>
+                <div class="operation-stats-grid">
+                    <div *ngFor="let stat of filteredOperationStats; trackBy: trackByIndex" class="operation-stat-card">
+                        <div class="operation-stat-header">
+                            <span class="operation-type">{{stat.operationType}}</span>
+                        </div>
+                        <div class="operation-stat-content">
+                            <div class="operation-stat-item">
+                                <span class="stat-label">{{ 'LBL.transactionsLabel' | translate }}</span>
+                                <span class="stat-value">{{stat.transactionCount}}</span>
+                            </div>
+                            <div class="operation-stat-item">
+                                <span class="stat-label">{{ 'LBL.volumeLabel' | translate }}</span>
+                                <span class="stat-value">{{stat.totalVolume | number:'1.0-0'}}</span>
+                            </div>
+                            <div class="operation-stat-item">
+                                <span class="stat-label">{{ 'LBL.averageLabel' | translate }}</span>
+                                <span class="stat-value">{{stat.averageVolume | number:'1.0-0'}}</span>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Fréquence par type d'opération -->
+            <div class="frequency-stats-section">
+                <h4>📊 {{ 'DASH.frequencyByOperationType' | translate }}</h4>
+                <div class="frequency-stats-grid">
+                    <div *ngFor="let freq of filteredFrequencyStats; trackBy: trackByIndex" class="frequency-stat-card">
+                        <div class="frequency-stat-header">
+                            <span class="operation-type">{{freq.operationType}}</span>
+                        </div>
+                        <div class="frequency-stat-content">
+                            <div class="frequency-bar">
+                                <div class="frequency-fill" [style.width.%]="getFrequencyPercentage(freq.frequency)"></div>
+                            </div>
+                            <span class="frequency-value">{{freq.frequency}}</span>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+        </div>
+
+            <!-- Statistiques des transactions créées par service -->
+            <div class="transaction-created-stats-section">
+                <div class="bottom-section-header">
+                    <h4>🔄 {{ 'DASH.createdTransactionsByService' | translate }}</h4>
+                    <button class="toggle-btn" [class.active]="showBottomSection" (click)="showBottomSection = !showBottomSection">
+                        <span class="toggle-icon">▾</span>
+                        {{ 'ACT.show' | translate }} | {{ 'ACT.hide' | translate }}
+                    </button>
+                </div>
+                <div *ngIf="transactionCreatedLoading && showBottomSection" class="loading-message">
+                    Loading created transactions statistics...
+                </div>
+                <div *ngIf="transactionCreatedError && showBottomSection" class="error-message">
+                    {{ transactionCreatedError }}
+                </div>
+                <div *ngIf="showBottomSection && transactionCreatedStats && !transactionCreatedLoading" class="transaction-stats-container">
+                    <!-- Résumé global -->
+                    <div class="global-stats-summary">
+                        <div class="summary-card">
+                            <div class="summary-icon">🏦</div>
+                            <div class="summary-content">
+                                <div class="summary-value">{{ transactionCreatedStats.totalServices }}</div>
+                                <div class="summary-label">{{ 'DASH.activeServices' | translate }}</div>
+                            </div>
+                        </div>
+                        <div class="summary-card">
+                            <div class="summary-icon">💰</div>
+                            <div class="summary-content">
+                                <div class="summary-value">{{ transactionCreatedStats.totalCashinVolume | number:'1.0-0' }}</div>
+                                <div class="summary-label">{{ 'DASH.totalCashinVolume' | translate }}</div>
+                            </div>
+                        </div>
+                        <div class="summary-card">
+                            <div class="summary-icon">💳</div>
+                            <div class="summary-content">
+                                <div class="summary-value">{{ transactionCreatedStats.totalPaymentVolume | number:'1.0-0' }}</div>
+                                <div class="summary-label">{{ 'DASH.totalPaymentVolume' | translate }}</div>
+                            </div>
+                        </div>
+                        <div class="summary-card">
+                            <div class="summary-icon">📊</div>
+                            <div class="summary-content">
+                                <div class="summary-value">{{ transactionCreatedStats.totalTransactionCount }}</div>
+                                <div class="summary-label">{{ 'DASH.createdTransactions' | translate }}</div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Détail par service -->
+                    <div class="service-stats-table">
+                        <table class="stats-table">
+                            <thead>
+                                <tr>
+                                    <th>{{ 'TBL.service' | translate }}</th>
+                                    <th>{{ 'DASH.cashinVolume' | translate }}</th>
+                                    <th>{{ 'DASH.paymentVolume' | translate }}</th>
+                                    <th>{{ 'DASH.totalCashin' | translate }}</th>
+                                    <th>{{ 'DASH.totalPayment' | translate }}</th>
+                                    <th>{{ 'TBL.transactions' | translate }}</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                <tr *ngFor="let service of transactionCreatedStats.serviceStats; trackBy: trackByIndex">
+                                    <td class="service-name">{{ service.service }}</td>
+                                    <td class="volume-cell cashin">{{ service.totalCashinVolume | number:'1.0-0' }}</td>
+                                    <td class="volume-cell payment">{{ service.totalPaymentVolume | number:'1.0-0' }}</td>
+                                    <td class="count-cell cashin">{{ service.totalCashinCount }}</td>
+                                    <td class="count-cell payment">{{ service.totalPaymentCount }}</td>
+                                    <td class="total-transactions">{{ service.totalTransactions }}</td>
+                                </tr>
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </ng-container>
+
+    <!-- Vue Banque : réconciliation bancaire -->
+    <div class="banque-view" *ngIf="dashboardView === 'banque'">
+        <div class="bv-state" *ngIf="banqueLoading">
+            <i class="fas fa-circle-notch fa-spin"></i>
+            <span>{{ 'DASH.banqueLoading' | translate }}</span>
+        </div>
+
+        <div class="bv-state bv-state-error" *ngIf="!banqueLoading && banqueError">
+            <i class="fas fa-exclamation-triangle"></i>
+            <span>{{ banqueError }}</span>
+            <button type="button" class="bv-retry" (click)="reloadBanqueDashboard()">{{ 'DASH.banqueRetry' | translate }}</button>
+        </div>
+
+        <div class="bv-body" *ngIf="!banqueLoading && !banqueError && banqueStats as stats">
+            <!-- En-tête : Réconciliation bancaire / écart net BO − banque -->
+            <div class="bv-header">
+                <div class="bv-header-main">
+                    <span class="bv-header-icon"><i class="fas fa-university"></i></span>
+                    <div>
+                        <h2 class="bv-title">{{ 'DASH.banqueTitle' | translate }}</h2>
+                        <p class="bv-subtitle">&gt; {{ 'DASH.banqueEcartNet' | translate }}</p>
+                    </div>
+                </div>
+                <div class="bv-header-filters">
+                    <mat-form-field appearance="fill" class="bv-country-filter">
+                        <mat-label>{{ 'DASH.banqueFilterPays' | translate }}</mat-label>
+                        <mat-select [(ngModel)]="banquePays" (selectionChange)="onBanquePaysChange()">
+                            <mat-option value="">{{ 'DASH.banqueAllCountries' | translate }}</mat-option>
+                            <mat-option *ngFor="let option of banquePaysOptions" [value]="option">{{ option }}</mat-option>
+                        </mat-select>
+                    </mat-form-field>
+                </div>
+                <div class="bv-header-ecart" [class.is-negative]="stats.ecartNet < 0">
+                    <span class="bv-ecart-value">{{ stats.ecartNet | number:'1.2-2' }}</span>
+                    <span class="bv-ecart-label">{{ 'DASH.banqueEcartNet' | translate }}</span>
+                </div>
+            </div>
+
+            <!-- Indicateurs clés -->
+            <div class="bv-kpis">
+                <div class="bv-kpi">
+                    <span class="bv-kpi-label">{{ 'DASH.banqueKpiTauxGlobal' | translate }}</span>
+                    <span class="bv-kpi-value">{{ stats.tauxGlobal | number:'1.0-1' }} %</span>
+                    <span class="bv-kpi-sub">{{ (stats.boOk + stats.revOk) | number }} / {{ (stats.boTotal + stats.revTotal) | number }}</span>
+                </div>
+                <div class="bv-kpi">
+                    <span class="bv-kpi-label">{{ 'DASH.banqueKpiBo' | translate }}</span>
+                    <span class="bv-kpi-value">{{ stats.boOk | number }} / {{ stats.boTotal | number }}</span>
+                    <span class="bv-kpi-sub">{{ 'DASH.banqueKpiLignes' | translate }}</span>
+                </div>
+                <div class="bv-kpi">
+                    <span class="bv-kpi-label">{{ 'DASH.banqueKpiBanque' | translate }}</span>
+                    <span class="bv-kpi-value">{{ stats.revOk | number }} / {{ stats.revTotal | number }}</span>
+                    <span class="bv-kpi-sub">{{ 'DASH.banqueKpiLignes' | translate }}</span>
+                </div>
+                <div class="bv-kpi">
+                    <span class="bv-kpi-label">{{ 'DASH.banqueKpiNonRapproches' | translate }}</span>
+                    <span class="bv-kpi-value">{{ ((stats.boTotal - stats.boOk) + (stats.revTotal - stats.revOk)) | number }}</span>
+                    <span class="bv-kpi-sub">{{ stats.boTotal + stats.revTotal | number }} {{ 'DASH.banqueKpiLignes' | translate }}</span>
+                </div>
+            </div>
+
+            <!-- Taux de rapprochement par jour -->
+            <div class="bv-card">
+                <h3 class="bv-section-title">{{ 'DASH.banqueRateTitle' | translate }}</h3>
+                <div class="bv-chart-wrap" *ngIf="stats.daily.length">
+                    <canvas baseChart
+                        type="line"
+                        [data]="banqueRateChartData"
+                        [options]="banqueRateChartOptions">
+                    </canvas>
+                </div>
+                <p class="bv-empty" *ngIf="!stats.daily.length">{{ 'DASH.banqueNoData' | translate }}</p>
+            </div>
+
+            <!-- Origine des écarts -->
+            <div class="bv-card">
+                <h3 class="bv-section-title">{{ 'DASH.banqueOriginsTitle' | translate }}</h3>
+                <div class="bv-chart-wrap bv-chart-donut" *ngIf="stats.origins.length">
+                    <canvas baseChart
+                        type="doughnut"
+                        [data]="banqueOriginChartData"
+                        [options]="banqueOriginChartOptions">
+                    </canvas>
+                </div>
+                <p class="bv-empty" *ngIf="!stats.origins.length">{{ 'DASH.banqueNoData' | translate }}</p>
+            </div>
+
+            <!-- Relevés bancaires -->
+            <div class="bv-card">
+                <h3 class="bv-section-title">{{ 'DASH.banqueStatementsTitle' | translate }}</h3>
+                <div class="bv-table-wrapper" *ngIf="stats.statements.length">
+                    <table class="bv-table">
+                        <thead>
+                            <tr>
+                                <th>{{ 'DASH.banqueColBanque' | translate }}</th>
+                                <th>{{ 'DASH.banqueColReleve' | translate }}</th>
+                                <th class="bv-num">{{ 'DASH.banqueColLignes' | translate }}</th>
+                                <th class="bv-num">{{ 'DASH.banqueColTaux' | translate }}</th>
+                                <th class="bv-num">{{ 'DASH.banqueColEcart' | translate }}</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            <tr *ngFor="let statement of stats.statements; trackBy: trackByIndex">
+                                <td>{{ statement.banque }}</td>
+                                <td class="bv-file"><i class="fas fa-file-invoice"></i> {{ statement.releve }}</td>
+                                <td class="bv-num">{{ statement.lignes | number }} <span class="bv-muted">({{ statement.ok | number }} OK)</span></td>
+                                <td class="bv-num"><span class="bv-taux" [class.is-low]="statement.taux < 100">{{ statement.taux | number:'1.0-1' }} %</span></td>
+                                <td class="bv-num" [class.is-negative]="statement.ecartNet < 0">{{ statement.ecartNet | number:'1.2-2' }}</td>
+                            </tr>
+                        </tbody>
+                    </table>
+                </div>
+                <p class="bv-empty" *ngIf="!stats.statements.length">{{ 'DASH.banqueNoData' | translate }}</p>
+            </div>
+
+            <!-- Ancienneté des non rapprochés -->
+            <div class="bv-card">
+                <h3 class="bv-section-title">{{ 'DASH.banqueAgingTitle' | translate }}</h3>
+                <div class="bv-aging" *ngIf="banqueHasAging">
+                    <div class="bv-aging-row" *ngFor="let bucket of stats.aging; trackBy: trackByIndex">
+                        <span class="bv-aging-label">{{ bucket.label }}</span>
+                        <div class="bv-aging-track">
+                            <div class="bv-aging-fill" [style.width.%]="(bucket.value / banqueAgingMax) * 100"></div>
+                        </div>
+                        <span class="bv-aging-value">{{ bucket.value | number }}</span>
+                    </div>
+                </div>
+                <p class="bv-empty" *ngIf="!banqueHasAging">{{ 'DASH.banqueNoData' | translate }}</p>
+            </div>
+        </div>
+    </div>
+  </div><!-- .dashboard-container -->
+
+    <!-- Modal pour afficher les graphiques en plein écran -->
+    <div *ngIf="showGraphModal" class="graph-modal-overlay" (click)="closeGraphModal()">
+        <div class="graph-modal-container" (click)="$event.stopPropagation()">
+            <div class="graph-modal-header">
+                <h2>📈 {{ 'DASH.detailedCharts' | translate }}</h2>
+                <button class="btn-close-modal" (click)="closeGraphModal()" title="{{ 'COMMON.actions.close' | translate }}">
+                    <i class="fas fa-times"></i>
+                </button>
+            </div>
+            <div class="graph-modal-controls">
+                <div class="modal-controls-row">
+                    <div class="modal-metric-select">
+                        <mat-form-field appearance="fill" class="filter-select">
+                            <mat-label>{{ 'ACT.show' | translate }}</mat-label>
+                            <mat-select [(ngModel)]="selectedMetric" (selectionChange)="updateBarChartData()">
+                                <mat-option value="volume">{{ 'TBL.totalVolume' | translate }}</mat-option>
+                                <mat-option value="transactions">{{ 'DASH.transactionCount' | translate }}</mat-option>
+                                <mat-option value="revenu">{{ 'DASH.revenueVolume' | translate }}</mat-option>
+                            </mat-select>
+                        </mat-form-field>
+                    </div>
+                    <div class="modal-chart-type-select">
+                        <mat-form-field appearance="fill" class="filter-select">
+                            <mat-label>{{ 'LBL.view' | translate }}</mat-label>
+                            <mat-select [(ngModel)]="selectedChartType">
+                                <mat-option value="bar">{{ 'LBL.chartBars' | translate }}</mat-option>
+                                <mat-option value="line">{{ 'LBL.chartLine' | translate }}</mat-option>
+                            </mat-select>
+                        </mat-form-field>
+                    </div>
+                </div>
+                <div class="modal-filters-row">
+                    <div class="filter-group">
+                        <mat-form-field appearance="fill" class="filter-select">
+                            <mat-label>{{ 'TBL.client' | translate }}</mat-label>
+                            <mat-select #agencySelectModal [(ngModel)]="selectedAgency" multiple (selectionChange)="onFilterChange()" placeholder="{{ 'LBL.multiSelect' | translate }}">
+                                <mat-option>
+                        <ngx-mat-select-search [formControl]="agenceSearchCtrl" placeholderLabel="Search for a client..." noEntriesFoundLabel="No client found"></ngx-mat-select-search>
+                                </mat-option>
+                                <mat-option *ngFor="let agency of filteredAgencies" [value]="agency">
+                                    {{ agency }}
+                                </mat-option>
+                            </mat-select>
+                        </mat-form-field>
+                    </div>
+                    <div class="filter-group">
+                        <mat-form-field appearance="fill" class="filter-select">
+                            <mat-label>{{ 'TBL.service' | translate }}</mat-label>
+                            <mat-select #serviceSelectModal [(ngModel)]="selectedService" multiple (selectionChange)="onFilterChange()" placeholder="{{ 'LBL.multiSelect' | translate }}">
+                                <mat-option>
+                        <ngx-mat-select-search [formControl]="serviceSearchCtrl" placeholderLabel="Search for a service..." noEntriesFoundLabel="No service found"></ngx-mat-select-search>
+                                </mat-option>
+                                <mat-option *ngFor="let service of filteredServices" [value]="service">
+                                    {{ service }}
+                                </mat-option>
+                            </mat-select>
+                        </mat-form-field>
+                    </div>
+                    <div class="filter-group">
+                        <mat-form-field appearance="fill" class="filter-select">
+                            <mat-label>{{ 'TBL.country' | translate }}</mat-label>
+                            <mat-select #countrySelectModal [(ngModel)]="selectedCountry" multiple (selectionChange)="onFilterChange()" placeholder="{{ 'LBL.multiSelect' | translate }}">
+                                <mat-option>
+                        <ngx-mat-select-search [formControl]="paysSearchCtrl" placeholderLabel="Search for a country..." noEntriesFoundLabel="No country found"></ngx-mat-select-search>
+                                </mat-option>
+                                <mat-option *ngFor="let country of filteredCountries" [value]="country">
+                                    {{ country }}
+                                </mat-option>
+                            </mat-select>
+                        </mat-form-field>
+                    </div>
+                    <div class="filter-group">
+                        <mat-form-field appearance="fill" class="filter-select">
+                            <mat-label>{{ 'LBL.period' | translate }}</mat-label>
+                            <mat-select [(ngModel)]="selectedTimeFilter" (selectionChange)="onTimeFilterChange()">
+                                <mat-option *ngFor="let timeFilter of filterOptions?.timeFilters" [value]="timeFilter">
+                                    {{ timeFilter }}
+                                </mat-option>
+                            </mat-select>
+                        </mat-form-field>
+                    </div>
+                    <button type="button" (click)="resetFilters()" class="reset-btn-modal">
+                        <i class="fas fa-undo"></i>{{ 'COMMON.actions.reset' | translate }}</button>
+                </div>
+                <!-- Champs de dates personnalisées dans le modal -->
+                <div *ngIf="showCustomDateInputs" class="modal-custom-date-inputs">
+                    <div class="date-input-group">
+                        <label for="startDateModal">{{ 'LBL.startDateLabel' | translate }}</label>
+                        <input type="date" id="startDateModal" [(ngModel)]="startDate" (change)="onFilterChange()" class="date-input">
+                    </div>
+                    <div class="date-input-group">
+                        <label for="endDateModal">{{ 'LBL.endDateLabel' | translate }}</label>
+                        <input type="date" id="endDateModal" [(ngModel)]="endDate" (change)="onFilterChange()" class="date-input">
+                    </div>
+                </div>
+            </div>
+            <div class="graph-modal-content">
+                <canvas *ngIf="selectedChartType === 'bar' && barChartData?.labels?.length && barChartData?.datasets?.length" baseChart
+                    [data]="barChartData"
+                    [options]="barChartOptions"
+                    [type]="'bar'"
+                    [plugins]="[ChartDataLabels]"
+                    (chartClick)="onBarClick($event)">
+                </canvas>
+                <canvas *ngIf="selectedChartType === 'line' && lineChartData?.labels?.length && lineChartData?.datasets?.length" baseChart
+                    [data]="lineChartData"
+                    [options]="lineChartOptions"
+                    [type]="'line'">
+                </canvas>
+                <div *ngIf="(!barChartData?.labels?.length || !barChartData?.datasets?.length) && (!lineChartData?.labels?.length || !lineChartData?.datasets?.length)" class="no-data-modal">{{ 'MSG.noDataToDisplay' | translate }}</div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Modal pour accéder rapidement au relevé (statut des réconciliations) -->
+    <div *ngIf="showReleveStatusModal" class="status-modal-overlay" (click)="closeReleveStatusModal()">
+        <div class="status-modal-container" (click)="$event.stopPropagation()">
+            <div class="status-modal-header">
+                <h3>📋 {{ 'DASH.viewReconciliationStatus' | translate }}</h3>
+                <button type="button" class="btn-close-modal" (click)="closeReleveStatusModal()" title="{{ 'COMMON.actions.close' | translate }}">
+                    <i class="fas fa-times"></i>
+                </button>
+            </div>
+            <div class="status-modal-body">
+                <div class="form-row">
+                    <div class="form-group">
+                        <label>{{ 'TBL.country' | translate }}</label>
+                        <mat-form-field appearance="fill" class="filter-select full-width">
+                            <mat-select [(ngModel)]="releveStatusCountry" (selectionChange)="updateReleveStatusServices()" placeholder="{{ 'ACT.selectCountry' | translate }}">
+                                <mat-option *ngFor="let country of releveStatusCountries" [value]="country">
+                                    {{ country }}
+                                </mat-option>
+                            </mat-select>
+                        </mat-form-field>
+                    </div>
+                    <div class="form-group">
+                        <label>{{ 'TBL.service' | translate }}</label>
+                        <mat-form-field appearance="fill" class="filter-select full-width">
+                            <mat-select [(ngModel)]="releveStatusService" placeholder="{{ 'ACT.selectService' | translate }}">
+                                <mat-option *ngFor="let service of releveStatusServices" [value]="service">
+                                    {{ service }}
+                                </mat-option>
+                            </mat-select>
+                        </mat-form-field>
+                    </div>
+                </div>
+                <div class="form-row">
+                    <div class="form-group">
+                        <label>{{ 'TBL.date' | translate }}</label>
+                        <input type="date" [(ngModel)]="releveStatusDate" (ngModelChange)="onReleveStatusDateChange()" class="status-date-input">
+                    </div>
+                    <div class="form-group">
+                        <label>{{ 'ACT.createOp' | translate }}</label>
+                        <mat-form-field appearance="fill" class="filter-select full-width">
+                            <mat-select [(ngModel)]="releveStatusEnv" (selectionChange)="onReleveStatusEnvChange()">
+                                <mat-option *ngFor="let e of releveStatusEnvSelectOptions" [ngValue]="e">
+                                    {{ formatRecoViewEnvOptionLabel(e) }}
+                                </mat-option>
+                            </mat-select>
+                        </mat-form-field>
+                    </div>
+                </div>
+                <div *ngIf="releveStatusError" class="status-modal-error">
+                    {{ releveStatusError }}
+                </div>
+            </div>
+            <div class="status-modal-footer">
+                <button type="button" class="btn-cancel" (click)="closeReleveStatusModal()">{{ 'COMMON.actions.cancel' | translate }}</button>
+                <button type="button" class="btn-confirm" (click)="confirmReleveStatus()">{{ 'ACT.showStatement' | translate }}</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Modal résultat du relevé (mini-relevé vs réconciliation en cours) -->
+    <div *ngIf="showReleveStatusResultModal" class="status-modal-overlay" (click)="showReleveStatusResultModal = false">
+        <div class="status-modal-container" (click)="$event.stopPropagation()">
+            <div class="status-modal-header">
+                <h3>📋 {{ 'DASH.statementStatus' | translate }}</h3>
+                <button type="button" class="btn-close-modal" (click)="showReleveStatusResultModal = false" title="{{ 'COMMON.actions.close' | translate }}">
+                    <i class="fas fa-times"></i>
+                </button>
+            </div>
+            <div class="status-modal-body">
+                <div *ngIf="releveStatusResultLoading">
+                    Loading reconciliation status...
+                </div>
+                <div *ngIf="!releveStatusResultLoading && (!releveStatusLines || !releveStatusLines.length)">
+                    No reconciliation data found for this country, service and date.
+                </div>
+                <div *ngIf="!releveStatusResultLoading && releveStatusLines && releveStatusLines.length">
+                    <div *ngIf="!releveStatusAllOk" class="status-modal-error">
+                        Reconciliation is in progress for this service and date (processing...).
+                    </div>
+                    <div *ngIf="releveStatusAllOk" class="releve-summary-ok">
+                        <p><strong>{{ 'DASH.reconciliationCompleted' | translate }}</strong> {{ 'DASH.forSelectedServiceAllOk' | translate }}</p>
+                    </div>
+                    <div class="releve-mini-summary">
+                        <div class="form-row">
+                            <div class="form-group">
+                                <label>{{ 'TBL.country' | translate }}</label>
+                                <div>{{ releveStatusCountry }}</div>
+                            </div>
+                            <div class="form-group">
+                                <label>{{ 'TBL.service' | translate }}</label>
+                                <div>{{ releveStatusService }}</div>
+                            </div>
+                            <div class="form-group">
+                                <label>{{ 'TBL.date' | translate }}</label>
+                                <div>{{ releveStatusDate }}</div>
+                            </div>
+                        </div>
+                        <div class="form-row">
+                            <div class="form-group">
+                                <label>{{ 'DASH.rowCount' | translate }}</label>
+                                <div>{{ releveStatusLines.length }}</div>
+                            </div>
+                            <div class="form-group">
+                                <label>{{ 'DASH.boTransactionCount' | translate }}</label>
+                                <div>{{ getReleveStatusTotalTransactions() }}</div>
+                            </div>
+                            <div class="form-group">
+                                <label>{{ 'DASH.boTotalVolume' | translate }}</label>
+                                <div>{{ getReleveStatusTotalVolume() | number:'1.0-2' }}</div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+            <div class="status-modal-footer">
+                <button type="button" class="btn-cancel" (click)="showReleveStatusResultModal = false">{{ 'COMMON.actions.close' | translate }}</button>
+                <button *ngIf="releveStatusAllOk"
+                        type="button"
+                        class="btn-confirm"
+                        (click)="openReleveDetail()">
+                    {{ 'ACT.viewDetail' | translate }}
+                </button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Modal Statistiques réconciliation (transactions / correspondances) -->
+    <div *ngIf="transactStatsModalOpen" class="reco-view-modal-overlay" (click)="closeTransactStatsModal()">
+        <div class="reco-view-modal-container transact-stats-modal-container" (click)="$event.stopPropagation()">
+            <div class="reco-view-modal-header">
+                <h3>{{ 'DASH.reconciliationStats' | translate }}</h3>
+                <button type="button" class="btn-close-modal" (click)="closeTransactStatsModal()" title="{{ 'COMMON.actions.close' | translate }}">
+                    <i class="fas fa-times"></i>
+                </button>
+            </div>
+            <div #transactStatsExportContent class="reco-view-modal-body">
+                <div class="reco-view-date-filter">
+                    <label for="transactStatsWeekDate">{{ 'LBL.weekOf' | translate }}</label>
+                    <input
+                        id="transactStatsWeekDate"
+                        type="date"
+                        [ngModel]="transactStatsWeekStart"
+                        (ngModelChange)="onTransactStatsDateChange($event)"
+                        class="reco-view-date-input"
+                    >
+                </div>
+                <div class="reco-view-date-filter" style="display:flex; gap:12px; align-items:flex-end; flex-wrap:wrap;">
+                    <div>
+                        <label for="transactStatsPeriodStart">{{ 'LBL.from' | translate }}</label>
+                        <input
+                            id="transactStatsPeriodStart"
+                            type="date"
+                            [(ngModel)]="transactStatsPeriodStart"
+                            (ngModelChange)="onTransactStatsPeriodRangeChange()"
+                            class="reco-view-date-input"
+                        >
+                    </div>
+                    <div>
+                        <label for="transactStatsPeriodEnd">{{ 'LBL.to' | translate }}</label>
+                        <input
+                            id="transactStatsPeriodEnd"
+                            type="date"
+                            [(ngModel)]="transactStatsPeriodEnd"
+                            (ngModelChange)="onTransactStatsPeriodRangeChange()"
+                            class="reco-view-date-input"
+                        >
+                    </div>
+                </div>
+                <div class="reco-view-date-filter" style="display:flex; gap:12px; align-items:flex-end; flex-wrap:wrap;">
+                    <div>
+                        <label for="transactStatsDay">{{ 'LBL.day' | translate }}</label>
+                        <select id="transactStatsDay" class="reco-view-date-input" [(ngModel)]="transactStatsSelectedDay" (ngModelChange)="loadTransactStats()">
+                            <option value="">{{ 'FILT.all' | translate }}</option>
+                            <option *ngFor="let d of transactStatsWeekDays" [value]="d.date">{{ d.label }}</option>
+                        </select>
+                    </div>
+                    <div>
+                        <label for="transactStatsCountry">{{ 'TBL.country' | translate }}</label>
+                        <select id="transactStatsCountry" class="reco-view-date-input" [(ngModel)]="transactStatsCountry" (ngModelChange)="onTransactStatsFiltersChange()">
+                            <option value="">{{ 'FILT.all' | translate }}</option>
+                            <option *ngFor="let c of reconciliationSummaryCountries" [value]="c">{{ c }}</option>
+                        </select>
+                    </div>
+                    <div>
+                        <label for="transactStatsEnv">{{ 'ACT.createOp' | translate }}</label>
+                        <select id="transactStatsEnv" class="reco-view-date-input" [(ngModel)]="transactStatsEnv" (ngModelChange)="onTransactStatsFiltersChange()">
+                            <option *ngFor="let env of transactStatsEnvSelectOptions" [ngValue]="env">
+                                {{ formatRecoViewEnvOptionLabel(env) }}
+                            </option>
+                        </select>
+                    </div>
+                    <div class="reco-popup-service-field">
+                        <mat-form-field appearance="fill" class="filter-select reco-popup-service-multiple">
+                            <mat-label>Services</mat-label>
+                            <mat-select multiple [(ngModel)]="transactStatsSelectedServices" (selectionChange)="onTransactStatsFiltersChange()">
+                                <mat-option *ngFor="let s of transactStatsServiceOptions" [value]="s">{{ s }}</mat-option>
+                            </mat-select>
+                            <mat-hint>Empty = all services</mat-hint>
+                        </mat-form-field>
+                    </div>
+                </div>
+                <div *ngIf="transactStatsLoading && !transactStats.totalReference && !transactStatsPerService.length" class="reco-loading">{{ 'MSG.loading' | translate }}</div>
+                <div *ngIf="transactStatsLoadingMore" class="reco-loading-more">{{ 'MSG.loadingPreviousDates' | translate }}</div>
+                <div *ngIf="!transactStatsLoading && transactStatsError" class="reco-error">{{ transactStatsError }}</div>
+                <div *ngIf="(!transactStatsLoading || transactStats.totalReference || transactStatsPerService.length) && !transactStatsError" class="transact-stats-content">
+                    <div *ngFor="let block of transactStatsDisplayBlocks; let isLast = last; trackBy: trackByTitle" class="transact-stats-display-block">
+                        <h4 *ngIf="block.title" class="transact-stats-section-title">{{ block.title }}</h4>
+                        <div class="transact-stats-grid">
+                            <div class="transact-stats-card transact-stats-card--correspondance">
+                                <div class="transact-stats-card-title">{{ 'DASH.match' | translate }}</div>
+                                <p class="transact-stats-card-desc">{{ 'DASH.summary' | translate }}<strong>(report + processed gap)</strong>: sum of <em>totalTransactions</em> (report) + <em>processed trx</em> entered on the statement, per row</p>
+                                <div class="transact-stats-card-value">{{ block.stats.correspondance | number:'1.0-0' }}</div>
+                                <div class="transact-stats-card-volume">Volume: {{ block.stats.correspondanceVolume | number:'1.0-2' }} FCFA</div>
+                                <div class="transact-stats-card-pct">{{ block.stats.pctCorrespondance | number:'1.1-1' }}% of total (summary + refunded)</div>
+                                <div class="transact-stats-card-pct transact-stats-card-pct--vol">{{ block.stats.pctCorrespondanceVolume | number:'1.1-1' }}% vol. of total (summary + refunded)</div>
+                            </div>
+                            <div class="transact-stats-card transact-stats-card--denoue">
+                                <div class="transact-stats-card-title">{{ 'DASH.resolvedTransaction' | translate }}</div>
+                                <p class="transact-stats-card-desc"><strong>{{ 'DASH.manualProcessedTrx' | translate }}</strong> — <em>releve_manual</em></p>
+                                <div class="transact-stats-card-value">{{ block.stats.transactionDenoue | number:'1.0-0' }}</div>
+                                <div class="transact-stats-card-volume">Volume: {{ block.stats.transactionDenoueVolume | number:'1.0-2' }} FCFA</div>
+                                <div class="transact-stats-card-pct">{{ block.stats.pctDenoue | number:'1.1-1' }}% of summary</div>
+                                <div class="transact-stats-card-pct transact-stats-card-pct--vol">{{ block.stats.pctDenoueVolume | number:'1.1-1' }}% vol. of summary</div>
+                            </div>
+                            <div class="transact-stats-card transact-stats-card--echec">
+                                <div class="transact-stats-card-title">{{ 'DASH.failedTransaction' | translate }}</div>
+                                <p class="transact-stats-card-desc"><strong>{{ 'DASH.manualRefundedTrx' | translate }}</strong></p>
+                                <div class="transact-stats-card-value">{{ block.stats.transactionEchec | number:'1.0-0' }}</div>
+                                <div class="transact-stats-card-volume">Volume: {{ block.stats.transactionEchecVolume | number:'1.0-2' }} FCFA</div>
+                                <div class="transact-stats-card-pct">{{ block.stats.pctEchec | number:'1.1-1' }}% of total (summary + refunded)</div>
+                                <div class="transact-stats-card-pct transact-stats-card-pct--vol">{{ block.stats.pctEchecVolume | number:'1.1-1' }}% vol. of total (summary + refunded)</div>
+                            </div>
+                        </div>
+                        <ng-container *ngIf="isLast">
+                            <p class="transact-stats-total-ref">
+                                Total for "summary + refunded" rates: <strong>{{ block.stats.totalReference | number:'1.0-0' }}</strong> trx
+                                · reference volume: <strong>{{ block.stats.totalReferenceVolume | number:'1.0-2' }}</strong> FCFA
+                                (summary + refunded trx; processed trx are already included in the summary).
+                            </p>
+                            <p class="transact-stats-footnote">
+                                Same partitioning as the week view: ENV options derived from <strong>result8rec</strong> data for the displayed period (and day); services filtered the same way.
+                                <span *ngIf="transactStatsPerService.length >= 2"> {{ 'DASH.perServicePercentageNote' | translate }}</span>
+                            </p>
+                        </ng-container>
+                    </div>
+                </div>
+            </div>
+            <div class="reco-view-modal-footer">
+                <button type="button" class="btn-export-pdf" (click)="exportTransactStatsToPdf()" [disabled]="transactStatsLoading" title="{{ 'ACT.exportPdf' | translate }}">
+                    Export PDF
+                </button>
+                <button type="button" class="btn-cancel" (click)="closeTransactStatsModal()">{{ 'COMMON.actions.close' | translate }}</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Modal Vue semaine - État des réconciliations -->
+    <div *ngIf="recoViewModalOpen" class="reco-view-modal-overlay" (click)="closeRecoViewModal()">
+        <div class="reco-view-modal-container" (click)="$event.stopPropagation()">
+            <div class="reco-view-modal-header">
+                <h3>{{ 'DASH.weekViewReconciliationStatus' | translate }}</h3>
+                <button type="button" class="btn-close-modal" (click)="closeRecoViewModal()" title="{{ 'COMMON.actions.close' | translate }}">
+                    <i class="fas fa-times"></i>
+                </button>
+            </div>
+            <div #recoViewExportContent class="reco-view-modal-body">
+                <div class="reco-view-date-filter">
+                    <label for="recoViewDate">{{ 'LBL.weekOf' | translate }}</label>
+                    <input
+                        id="recoViewDate"
+                        type="date"
+                        [ngModel]="recoViewWeekStart"
+                        (ngModelChange)="onRecoViewDateChange($event)"
+                        class="reco-view-date-input"
+                    >
+                </div>
+                <div class="reco-view-date-filter" style="display:flex; gap:12px; align-items:flex-end; flex-wrap:wrap;">
+                    <div>
+                        <label for="recoViewPeriodStart">{{ 'LBL.from' | translate }}</label>
+                        <input
+                            id="recoViewPeriodStart"
+                            type="date"
+                            [(ngModel)]="recoViewPeriodStart"
+                            (ngModelChange)="onRecoViewPeriodRangeChange()"
+                            class="reco-view-date-input"
+                        >
+                    </div>
+                    <div>
+                        <label for="recoViewPeriodEnd">{{ 'LBL.to' | translate }}</label>
+                        <input
+                            id="recoViewPeriodEnd"
+                            type="date"
+                            [(ngModel)]="recoViewPeriodEnd"
+                            (ngModelChange)="onRecoViewPeriodRangeChange()"
+                            class="reco-view-date-input"
+                        >
+                    </div>
+                </div>
+                <div class="reco-view-date-filter" style="display:flex; gap:12px; align-items:flex-end; flex-wrap:wrap;">
+                    <div>
+                        <label for="recoViewDay">{{ 'LBL.day' | translate }}</label>
+                        <select id="recoViewDay" class="reco-view-date-input" [(ngModel)]="recoViewSelectedDay" (ngModelChange)="onRecoViewDayChange()">
+                            <option value="">{{ 'FILT.all' | translate }}</option>
+                            <option *ngFor="let d of recoViewWeekDays" [value]="d.date">{{ d.label }}</option>
+                        </select>
+                    </div>
+                    <div>
+                        <label for="recoViewCountry">{{ 'TBL.country' | translate }}</label>
+                        <select id="recoViewCountry" class="reco-view-date-input" [(ngModel)]="recoViewCountry" (ngModelChange)="onRecoViewFiltersChange()">
+                            <option value="">{{ 'FILT.all' | translate }}</option>
+                            <option *ngFor="let c of reconciliationSummaryCountries" [value]="c">{{ c }}</option>
+                        </select>
+                    </div>
+                    <div>
+                        <label for="recoViewEnv">{{ 'ACT.createOp' | translate }}</label>
+                        <select id="recoViewEnv" class="reco-view-date-input" [(ngModel)]="recoViewEnv" (ngModelChange)="onRecoViewFiltersChange()">
+                            <option *ngFor="let env of recoViewEnvSelectOptions" [ngValue]="env">
+                                {{ formatRecoViewEnvOptionLabel(env) }}
+                            </option>
+                        </select>
+                    </div>
+                    <div class="reco-popup-service-field">
+                        <mat-form-field appearance="fill" class="filter-select reco-popup-service-multiple">
+                            <mat-label>Services</mat-label>
+                            <mat-select multiple [(ngModel)]="recoViewSelectedServices" (selectionChange)="onRecoViewFiltersChange()">
+                                <mat-option *ngFor="let s of recoViewServiceOptions" [value]="s">{{ s }}</mat-option>
+                            </mat-select>
+                            <mat-hint>Empty = all services</mat-hint>
+                        </mat-form-field>
+                    </div>
+                </div>
+                <div *ngIf="recoViewLoading && !recoViewRows.length" class="reco-loading">{{ 'MSG.loading' | translate }}</div>
+                <div *ngIf="recoViewLoadingMore" class="reco-loading-more">{{ 'MSG.loadingPreviousDates' | translate }}</div>
+                <div *ngIf="!recoViewLoading && recoViewError" class="reco-error">{{ recoViewError }}</div>
+                <div *ngIf="(!recoViewLoading || recoViewRows.length) && !recoViewError" class="reco-view-table-wrapper">
+                    <table class="reco-table reco-view-table">
+                        <thead>
+                            <tr>
+                                <th>{{ 'TBL.service' | translate }}</th>
+                                <th *ngFor="let d of getRecoViewDisplayedDays(); trackBy: trackByDate" class="reco-day-header">{{ d.label }}</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            <tr *ngFor="let row of recoViewRows; trackBy: trackByIndex">
+                                <td class="reco-service" [title]="row.label || row.service">{{ row.label || row.service }}</td>
+                                <td class="reco-status" *ngFor="let day of getRecoViewDisplayedRowDays(row); trackBy: trackByDate">
+                                    <span
+                                        class="status-pill"
+                                        [ngClass]="getStatusPillNgClass(day)"
+                                        (click)="day.status === 'RECONCILIE' && day.ticketId ? showTicketOptionsPopupFromDashboard(day.ticketId) : null"
+                                    >
+                                        <span class="status-label">
+                                            {{ getStatusPillLabel(day) }}
+                                        </span>
+                                        <ng-container *ngIf="day.status === 'RECONCILIE' && day.ticketId">
+                                            <span class="status-id">{{ day.ticketId }}</span>
+                                            <span class="status-link-icon">🔗</span>
+                                        </ng-container>
+                                    </span>
+                                </td>
+                            </tr>
+                        </tbody>
+                    </table>
+                </div>
+                <div *ngIf="(!recoViewLoading || recoViewRows.length) && !recoViewError && recoViewRows.length" class="reco-stats-row">
+                    <div class="reco-stat-item">
+                        <span class="reco-stat-label">{{ 'DASH.totalPeriod' | translate }}</span>
+                        <span class="reco-stat-value total">{{ recoViewStats.total }}</span>
+                    </div>
+                    <div class="reco-stat-item">
+                        <span class="reco-stat-value ok">{{ getRecoViewCoverageCount() }}</span>
+                    </div>
+                    <div class="reco-stat-item">
+                        <span class="reco-stat-value pending-cdo">{{ recoViewStats.enCoursCdo }}</span>
+                    </div>
+                    <div class="reco-stat-item">
+                        <span class="reco-stat-value pending-group">{{ recoViewStats.enCoursGroup }}</span>
+                    </div>
+                    <div class="reco-stat-item">
+                        <span class="reco-stat-value failed">{{ recoViewStats.nonReco }}</span>
+                    </div>
+                    <div class="reco-stat-item">
+                        <span class="reco-stat-label">{{ recoValidatedRateLabel }}</span>
+                        <span class="reco-stat-value ok">{{ getRecoViewCoverageRatePercent() | number:'1.0-1' }} %</span>
+                    </div>
+                </div>
+            </div>
+            <div class="reco-view-modal-footer">
+                <button type="button" class="btn-export-pdf" (click)="exportRecoViewToPdf()" [disabled]="recoViewLoading || !recoViewRows.length" title="{{ 'ACT.exportPdf' | translate }}">
+                    Export PDF
+                </button>
+                <button type="button" class="btn-cancel" (click)="closeRecoViewModal()">{{ 'COMMON.actions.close' | translate }}</button>
+            </div>
+        </div>
+    </div>
+</div><!-- .dashboard-page -->

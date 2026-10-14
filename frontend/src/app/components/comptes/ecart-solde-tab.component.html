@@ -1,0 +1,240 @@
+<div class="ecart-solde-tab-container">
+  <div class="tab-header">
+    <h3>Écarts de Solde - {{ agence }}</h3>
+    <div class="tab-info">
+      <span class="date-info" *ngIf="dateTransaction">
+        Date: {{ formatDate(dateTransaction) }}
+      </span>
+      <span class="count-info">
+        Total: {{ combinedRows.length }} résultat(s)
+        <span *ngIf="revenuJournalierRows.length > 0" class="revenu-info">
+          ({{ filteredEcartSoldes.length }} écart(s) de solde, {{ revenuJournalierRows.length }} revenu(s) journalier)
+        </span>
+      </span>
+      <span class="count-info" *ngIf="combinedRows.length > pageSize">
+        Affichage: {{ (currentPage - 1) * pageSize + 1 }} - {{ Math.min(currentPage * pageSize, combinedRows.length) }} sur {{ combinedRows.length }}
+      </span>
+      <button class="btn btn-success export-btn" 
+              (click)="exportEcartSoldes()"
+              [disabled]="filteredEcartSoldes.length === 0">
+        <i class="fas fa-download"></i>
+        Exporter
+      </button>
+    </div>
+  </div>
+
+  <!-- Contrôles de sélection multiple -->
+  <div class="selection-controls" *ngIf="filteredEcartSoldes.length > 0">
+    <div class="selection-header">
+      <div class="selection-info">
+        <label class="checkbox-container">
+          <input type="checkbox" 
+                 [checked]="isSelectAll" 
+                 (change)="toggleSelectAll()"
+                 [disabled]="isValidatingMass">
+          <span class="checkmark"></span>
+          Sélectionner tout
+        </label>
+        <span class="selected-count" *ngIf="selectedItems.size > 0">
+          {{ selectedItems.size }} élément(s) sélectionné(s)
+        </span>
+      </div>
+      <div class="selection-actions" *ngIf="selectedItems.size > 0">
+        <button class="btn btn-success btn-sm" 
+                (click)="validateSelectedEcartSoldes()"
+                [disabled]="isValidatingMass || selectedItems.size === 0">
+          <i class="fas fa-check" *ngIf="!isValidatingMass"></i>
+          <i class="fas fa-spinner fa-spin" *ngIf="isValidatingMass"></i>
+          {{ isValidatingMass ? 'Validation...' : 'Valider sélection' }}
+        </button>
+        <button class="btn btn-secondary btn-sm" 
+                (click)="clearSelection()"
+                [disabled]="isValidatingMass">
+          <i class="fas fa-times"></i>{{ 'COMMON.actions.cancel' | translate }}</button>
+      </div>
+    </div>
+  </div>
+
+  <div class="loading-container" *ngIf="isLoading">
+    <div class="spinner"></div>
+    <p>Chargement des écarts de solde...</p>
+  </div>
+
+  <div class="error-container" *ngIf="error">
+    <div class="alert alert-danger">
+      <i class="fas fa-exclamation-triangle"></i>
+      {{ error }}
+    </div>
+  </div>
+
+  <div class="no-data-container" *ngIf="!isLoading && !error && combinedRows.length === 0">
+    <div class="alert alert-info">
+      <i class="fas fa-info-circle"></i>
+      Aucun écart de solde ou revenu journalier trouvé pour cette agence et cette date.
+    </div>
+  </div>
+
+  <div class="table-container" *ngIf="!isLoading && !error && combinedRows.length > 0">
+    <table class="table table-striped table-hover">
+      <thead>
+        <tr>
+          <th class="checkbox-header">
+            <input type="checkbox" 
+                   [checked]="isSelectAll" 
+                   (change)="toggleSelectAll()"
+                   [disabled]="isValidatingMass">
+          </th>
+          <th>{{ 'TBL.transactionId' | translate }}</th>
+          <th>Téléphone Client</th>
+          <th>{{ 'TBL.amount' | translate }}</th>
+          <th>{{ 'TBL.fees' | translate }}</th>
+          <th>Écart</th>
+          <th>{{ 'TBL.service' | translate }}</th>
+          <th>{{ 'TBL.agency' | translate }}</th>
+          <th>{{ 'ACT.exportExcel' | translate }}</th>
+          <th>{{ 'TBL.guTransactionNumber' | translate }}</th>
+          <th>{{ 'TBL.country' | translate }}</th>
+          <th>{{ 'TBL.status' | translate }}</th>
+          <th>{{ 'TBL.comment' | translate }}</th>
+          <th>Date Import</th>
+          <th>{{ 'TBL.actions' | translate }}</th>
+        </tr>
+      </thead>
+      <tbody>
+        <tr *ngFor="let row of pagedCombinedRows" 
+            class="data-row" 
+            [class.revenu-journalier-row]="isRevenuJournalierRow(row)"
+            [class.ecart-solde-row]="isEcartSoldeRow(row)"
+            [class.selected]="isEcartSoldeRow(row) && isItemSelected(row.data)">
+          <!-- Ligne pour écart de solde -->
+          <ng-container *ngIf="isEcartSoldeRow(row)">
+            <td class="checkbox-cell">
+              <input type="checkbox" 
+                     [checked]="isItemSelected(row.data)" 
+                     (change)="toggleItemSelection(row.data)"
+                     [disabled]="isValidatingMass || row.data.statut === 'TRAITE'">
+            </td>
+            <td class="id-cell">{{ row.data.idTransaction }}</td>
+            <td class="phone-cell">{{ row.data.telephoneClient || '-' }}</td>
+            <td class="amount-cell">{{ formatMontant(row.data.montant) }}</td>
+            <td class="frais-cell">
+              <div *ngIf="row.data.fraisAssocie" class="frais-info">
+                <span class="frais-amount">{{ formatMontantFrais(row.data.fraisAssocie.montant) }}</span>
+                <span class="frais-type" [ngClass]="getFraisTypeClass(row.data.fraisAssocie.typeCalcul)">
+                  {{ getFraisTypeLabel(row.data.fraisAssocie.typeCalcul) }}
+                </span>
+                <span *ngIf="row.data.fraisAssocie.pourcentage" class="frais-percentage">
+                  ({{ row.data.fraisAssocie.pourcentage }}%)
+                </span>
+              </div>
+              <div *ngIf="!row.data.fraisAssocie" class="no-frais">
+                <span class="no-frais-text">Aucun frais</span>
+              </div>
+            </td>
+            <td class="amount-cell ecart-cell">{{ formatMontant(calculateEcart(row.data)) }}</td>
+            <td class="service-cell">{{ row.data.service || '-' }}</td>
+            <td class="agence-cell">{{ row.data.agence || '-' }}</td>
+            <td class="date-cell">{{ formatDate(row.data.dateTransaction) }}</td>
+            <td class="gu-cell">{{ row.data.numeroTransGu || '-' }}</td>
+            <td class="pays-cell">{{ row.data.pays || '-' }}</td>
+            <td>
+              <span class="status-badge" [ngClass]="getStatutClass(row.data.statut || '')">
+                {{ row.data.statut || 'EN_ATTENTE' }}
+              </span>
+            </td>
+            <td class="commentaire-cell">
+              <div *ngIf="row.data.commentaire" class="commentaire-content">
+                <span class="commentaire-text">{{ row.data.commentaire }}</span>
+              </div>
+              <div *ngIf="!row.data.commentaire" class="no-commentaire">
+                <span class="no-commentaire-text">{{ 'MSG.noComment' | translate }}</span>
+              </div>
+            </td>
+            <td class="import-cell">{{ formatDate(row.data.dateImport || '') }}</td>
+            <td class="actions-cell">
+              <div class="action-buttons">
+                <button *ngIf="row.data.statut === 'EN_ATTENTE'" 
+                        class="btn btn-success btn-sm validate-btn" 
+                        (click)="validateEcartSolde(row.data)"
+                        title="Valider l'écart de solde">
+                  <i class="fas fa-check"></i>
+                  Valider
+                </button>
+                <span *ngIf="row.data.statut === 'TRAITE'" class="status-validated">
+                  <i class="fas fa-check-circle"></i>
+                  Validé
+                </span>
+              </div>
+            </td>
+          </ng-container>
+          <!-- Ligne pour revenu journalier -->
+          <ng-container *ngIf="isRevenuJournalierRow(row)">
+            <td class="checkbox-cell">-</td>
+            <td class="id-cell">-</td>
+            <td class="phone-cell">-</td>
+            <td class="amount-cell">-</td>
+            <td class="frais-cell">
+              <div class="frais-info">
+                <span class="frais-amount">{{ formatMontantFrais(row.data.ecartFrais) }}</span>
+                <span class="frais-type">Écart Frais</span>
+              </div>
+            </td>
+            <td class="amount-cell">-</td>
+            <td class="service-cell">Revenu Journalier</td>
+            <td class="agence-cell">{{ agence }}</td>
+            <td class="date-cell">{{ formatDate(row.data.date) }}</td>
+            <td class="gu-cell">-</td>
+            <td class="pays-cell">-</td>
+            <td>
+              <span class="status-badge revenu-badge">
+                REVENU
+              </span>
+            </td>
+            <td class="commentaire-cell">
+              <div class="commentaire-content">
+                <span class="commentaire-text">
+                  Cashin: {{ formatMontant(row.data.totalCashin) }}, 
+                  Paiement: {{ formatMontant(row.data.totalPaiement) }}, 
+                  Frais Cashin: {{ formatMontant(row.data.fraisCashin) }}, 
+                  Frais Paiement: {{ formatMontant(row.data.fraisPaiement) }}, 
+                  Revenu Total: {{ formatMontant(row.data.revenuTotal) }}
+                </span>
+              </div>
+            </td>
+            <td class="import-cell">-</td>
+            <td class="actions-cell">-</td>
+          </ng-container>
+        </tr>
+      </tbody>
+      <tfoot>
+        <tr class="total-row">
+          <td colspan="10" class="total-label">
+            <strong>ÉCART TOTAL :</strong>
+          </td>
+          <td colspan="1" class="total-amount">
+            <strong>{{ formatTotalEcart() }}</strong>
+          </td>
+          <td class="actions-cell"></td>
+        </tr>
+      </tfoot>
+    </table>
+
+    <!-- Pagination -->
+    <div class="pagination-container" *ngIf="totalPages > 1">
+      <button (click)="prevPage()" [disabled]="currentPage === 1" class="btn pagination-btn">
+        <i class="fas fa-chevron-left"></i>{{ 'PAG.previous' | translate }}</button>
+      
+      <div class="pagination-indicators">
+        <span *ngFor="let page of getVisiblePages()" 
+              class="page-indicator"
+              [class.active]="currentPage === page"
+              (click)="goToPage(page)">
+          {{ page }}
+        </span>
+      </div>
+      
+      <button (click)="nextPage()" [disabled]="currentPage === totalPages" class="btn pagination-btn">{{ 'PAG.next' | translate }}<i class="fas fa-chevron-right"></i>
+      </button>
+    </div>
+  </div>
+</div> 

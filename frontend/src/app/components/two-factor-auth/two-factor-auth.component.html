@@ -1,0 +1,207 @@
+<div class="two-factor-auth-container">
+  <div class="header">
+    <h1>
+      <mat-icon>security</mat-icon>
+      {{ 'TFA.title' | translate }}
+    </h1>
+    <p class="subtitle">{{ 'TFA.subtitle' | translate }}</p>
+  </div>
+
+
+  <!-- Statut actuel du 2FA -->
+  <div class="status-card" *ngIf="!showQRCode">
+    <div class="status-header">
+      <mat-icon [class.enabled]="is2FAEnabled" [class.disabled]="!is2FAEnabled">
+        {{ is2FAEnabled ? 'verified_user' : 'lock_open' }}
+      </mat-icon>
+      <div class="status-info">
+        <h2>{{ 'TFA.status.header' | translate }} : {{ is2FAEnabled ? ('TFA.status.enabled' | translate) : ('TFA.status.disabled' | translate) }}</h2>
+        <p *ngIf="is2FAEnabled" class="status-description">
+          {{ 'TFA.status.enabledDesc' | translate }}
+        </p>
+        <p *ngIf="!is2FAEnabled" class="status-description">
+          {{ 'TFA.status.disabledDesc' | translate }}
+        </p>
+      </div>
+    </div>
+
+    <!-- Actions -->
+    <div class="actions">
+      <button 
+        *ngIf="!is2FAEnabled" 
+        mat-raised-button 
+        color="primary" 
+        (click)="setup2FA()" 
+        [disabled]="loading"
+        class="action-button">
+        <mat-icon>security</mat-icon>
+        {{ 'TFA.actions.enable' | translate }}
+      </button>
+
+      <button 
+        *ngIf="is2FAEnabled" 
+        mat-raised-button 
+        color="warn" 
+        (click)="disable2FA()" 
+        [disabled]="loading"
+        class="action-button">
+        <mat-icon>lock_open</mat-icon>
+        {{ 'TFA.actions.disable' | translate }}
+      </button>
+
+      <button 
+        *ngIf="is2FAEnabled && hasSecret" 
+        mat-button 
+        color="primary" 
+        (click)="setup2FA()" 
+        [disabled]="loading"
+        class="action-button secondary">
+        <mat-icon>refresh</mat-icon>
+        {{ 'TFA.actions.regenerate' | translate }}
+      </button>
+    </div>
+  </div>
+
+  <!-- Étape 1 : Affichage du QR Code et de la clé secrète -->
+  <div class="setup-card" *ngIf="showQRCode">
+    <h2>
+      <mat-icon>qr_code_scanner</mat-icon>
+      {{ 'TFA.setup.title' | translate }}
+    </h2>
+
+    <div class="instructions">
+      <ol>
+        <li [innerHTML]="'TFA.setup.steps.install' | translate"></li>
+        <li [innerHTML]="'TFA.setup.steps.open' | translate"></li>
+        <li>{{ 'TFA.setup.steps.scan' | translate }}</li>
+        <li>{{ 'TFA.setup.steps.enter' | translate }}</li>
+      </ol>
+    </div>
+
+    <!-- QR Code -->
+    <div class="qr-code-container" *ngIf="qrCodeBase64">
+      <img [src]="qrCodeBase64" [alt]="'TFA.setup.qrHint' | translate" class="qr-code-image">
+      <p class="qr-code-hint">{{ 'TFA.setup.qrHint' | translate }}</p>
+    </div>
+
+    <!-- Clé secrète et URL OTP (pour saisie manuelle) -->
+    <div class="secret-info" *ngIf="secret && otpAuthUrl">
+      <mat-expansion-panel>
+        <mat-expansion-panel-header>
+          <mat-panel-title>
+            <mat-icon>info</mat-icon>
+            {{ 'TFA.setup.manualTitle' | translate }}
+          </mat-panel-title>
+        </mat-expansion-panel-header>
+        
+        <div class="secret-details">
+          <div class="secret-item">
+            <label>{{ 'TFA.setup.secretLabel' | translate }}</label>
+            <div class="secret-value">
+              <code>{{ secret }}</code>
+              <button mat-icon-button (click)="copySecret()" [matTooltip]="'TFA.setup.copySecretTooltip' | translate">
+                <mat-icon>content_copy</mat-icon>
+              </button>
+            </div>
+          </div>
+
+          <div class="secret-item">
+            <label>{{ 'TFA.setup.otpUrlLabel' | translate }}</label>
+            <div class="secret-value">
+              <code class="url-code">{{ otpAuthUrl }}</code>
+              <button mat-icon-button (click)="copyOtpAuthUrl()" [matTooltip]="'TFA.setup.copyUrlTooltip' | translate">
+                <mat-icon>content_copy</mat-icon>
+              </button>
+            </div>
+            <p class="hint" [innerHTML]="'TFA.setup.manualHint' | translate: { username: username }"></p>
+          </div>
+        </div>
+      </mat-expansion-panel>
+    </div>
+  </div>
+
+  <!-- Étape 2 : Validation avec code -->
+  <div class="validation-card" *ngIf="showValidationForm">
+    <h2>
+      <mat-icon>vpn_key</mat-icon>
+      {{ 'TFA.validation.title' | translate }}
+    </h2>
+
+    <p class="validation-instructions">
+      {{ 'TFA.validation.instructions' | translate }}
+    </p>
+
+    <form [formGroup]="validationForm" (ngSubmit)="enable2FA()">
+      <mat-form-field appearance="outline" class="code-field">
+        <mat-label>{{ 'TFA.validation.label' | translate }}</mat-label>
+        <input 
+          matInput 
+          formControlName="code" 
+          [placeholder]="'TFA.validation.placeholder' | translate"
+          maxlength="6"
+          pattern="[0-9]{6}"
+          autocomplete="off"
+          required>
+        <mat-icon matSuffix>vpn_key</mat-icon>
+        <mat-hint>{{ 'TFA.validation.hint' | translate }}</mat-hint>
+        <mat-error *ngIf="validationForm.get('code')?.hasError('required')">
+          {{ 'TFA.validation.errors.required' | translate }}
+        </mat-error>
+        <mat-error *ngIf="validationForm.get('code')?.hasError('pattern')">
+          {{ 'TFA.validation.errors.pattern' | translate }}
+        </mat-error>
+      </mat-form-field>
+
+      <div class="validation-actions">
+        <button 
+          mat-raised-button 
+          color="primary" 
+          type="submit" 
+          [disabled]="validationForm.invalid || loading"
+          class="validate-button">
+          <mat-icon *ngIf="!loading">verified_user</mat-icon>
+          <mat-spinner *ngIf="loading" diameter="20"></mat-spinner>
+          {{ loading ? ('TFA.actions.validating' | translate) : ('TFA.actions.validate' | translate) }}
+        </button>
+
+        <button 
+          mat-button 
+          type="button" 
+          (click)="cancelSetup()" 
+          [disabled]="loading"
+          class="cancel-button">
+          <mat-icon>cancel</mat-icon>{{ 'COMMON.actions.cancel' | translate }}</button>
+      </div>
+    </form>
+  </div>
+
+  <!-- Informations supplémentaires -->
+  <mat-card class="info-card">
+    <mat-card-header>
+      <mat-card-title>
+        <mat-icon>help_outline</mat-icon>
+        {{ 'TFA.info.title' | translate }}
+      </mat-card-title>
+    </mat-card-header>
+    <mat-card-content>
+      <ul>
+        <li>
+          <strong>{{ 'TFA.info.faq.what.q' | translate }}</strong><br>
+          {{ 'TFA.info.faq.what.a' | translate }}
+        </li>
+        <li>
+          <strong>{{ 'TFA.info.faq.why.q' | translate }}</strong><br>
+          {{ 'TFA.info.faq.why.a' | translate }}
+        </li>
+        <li>
+          <strong>{{ 'TFA.info.faq.lostPhone.q' | translate }}</strong><br>
+          {{ 'TFA.info.faq.lostPhone.a' | translate }}
+        </li>
+        <li>
+          <strong>{{ 'TFA.info.faq.codesChange.q' | translate }}</strong><br>
+          {{ 'TFA.info.faq.codesChange.a' | translate }}
+        </li>
+      </ul>
+    </mat-card-content>
+  </mat-card>
+</div>

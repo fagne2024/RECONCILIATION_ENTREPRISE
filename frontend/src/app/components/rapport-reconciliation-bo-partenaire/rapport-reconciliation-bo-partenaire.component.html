@@ -1,0 +1,536 @@
+<div class="rrbp-root">
+  <nav class="topnav">
+    <div class="nav-brand">
+      <div class="nav-brand-dot"></div>
+      ReconciliApp
+    </div>
+    <div class="nav-sep"></div>
+    <div class="nav-path">
+      <strong>{{ 'RBP.nav.title' | translate }}</strong>
+    </div>
+    <div class="nav-spacer"></div>
+    <div class="nav-actions">
+      <button
+        type="button"
+        class="nav-btn primary"
+        (click)="ouvrirControleInterne()"
+        title="{{ 'RBP.nav.controlInterneTitle' | translate }}"
+      >
+        <i class="fas fa-clipboard-check"></i> {{ 'RBP.nav.controlInterne' | translate }}
+      </button>
+      <button
+        type="button"
+        class="nav-btn secondary"
+        (click)="refreshRapportData()"
+        [disabled]="loading"
+        title="{{ 'ACT.refreshKeepFilters' | translate }}"
+      >
+        <i class="fas" [ngClass]="loading ? 'fa-spinner fa-spin' : 'fa-sync-alt'"></i> {{ 'RBP.nav.refresh' | translate }}
+      </button>
+      <button
+        type="button"
+        class="nav-btn secondary"
+        (click)="exportToExcel()"
+        [disabled]="!canExportExcel || isExportingExcel"
+        title="{{ 'RBP.nav.exportExcelTitle' | translate }}"
+      >
+        <i class="fas fa-file-excel"></i> {{ (isExportingExcel ? 'RBP.nav.exporting' : 'RBP.nav.exportExcel') | translate }}
+      </button>
+      <button
+        type="button"
+        class="nav-btn secondary"
+        (click)="exportToPdf()"
+        [disabled]="!canExportPdf || isExportingPdf"
+        title="{{ 'RBP.nav.exportPdfTitle' | translate }}"
+      >
+        <i class="fas fa-file-pdf"></i> {{ (isExportingPdf ? 'RBP.nav.exporting' : 'RBP.nav.exportPdf') | translate }}
+      </button>
+      <button type="button" class="nav-btn secondary" (click)="retourRapport()">
+        <i class="fas fa-arrow-left"></i> {{ 'RBP.nav.backToReport' | translate }}
+      </button>
+    </div>
+  </nav>
+
+  <div class="rrbp-pdf-export-root" #rrbpPdfExportContent>
+  <div class="page-header-report">
+    <div class="ph-report-left">
+      <div class="ph-eyebrow"><span></span>{{ 'RPT.eyebrow' | translate }}</div>
+      <h1 class="ph-title-report">{{ 'RBP.title.prefix' | translate }} <em>{{ 'RBP.title.em' | translate }}</em></h1>
+      <p class="rrbp-subtitle-inline">{{ subtitle }}</p>
+    </div>
+    <div class="ph-report-right rrbp-header-right">
+      <div class="rrbp-user-pill">
+        <div class="rrbp-user-name">{{ displayUserName }}</div>
+      </div>
+    </div>
+  </div>
+
+  <div class="main">
+    <div class="reconciliation-report-container">
+      <div class="report-header rrbp-filters-header">
+        <h2>{{ 'RBP.filters.section' | translate }}</h2>
+      </div>
+      <div class="rrbp-filters-body">
+        <div class="rrbp-filters">
+          <label>
+            <span>{{ 'TBL.country' | translate }}</span>
+            <select [(ngModel)]="selectedCountry" (ngModelChange)="appliquerFiltres()">
+              <option value="">{{ 'RBP.filters.choose' | translate }}</option>
+              <option *ngFor="let c of countries; trackBy: trackByString" [value]="c">{{ c }}</option>
+            </select>
+          </label>
+          <label class="rrbp-date-range">
+            <span>{{ 'RBP.filters.from' | translate }}</span>
+            <input type="date" [(ngModel)]="dateDebut" (change)="appliquerFiltres()" />
+          </label>
+          <label class="rrbp-date-range">
+            <span>{{ 'RBP.filters.to' | translate }}</span>
+            <input type="date" [(ngModel)]="dateFin" (change)="appliquerFiltres()" />
+          </label>
+          <label>
+            <span>ENV</span>
+            <select [(ngModel)]="selectedEnv" (ngModelChange)="appliquerFiltres()">
+              <option *ngFor="let e of envOptions; trackBy: trackByString" [value]="e">{{ e }}</option>
+            </select>
+          </label>
+          <div class="rrbp-service-field-wrap">
+            <div class="rrbp-service-col">
+              <mat-form-field appearance="fill" class="rrbp-mat-services">
+                <mat-label>{{ 'RBP.filters.services' | translate }}</mat-label>
+                <mat-select
+                  multiple
+                  [(ngModel)]="selectedServices"
+                  [compareWith]="compareServiceOption"
+                  (selectionChange)="appliquerFiltres()"
+                >
+                  <mat-option>
+                    <ngx-mat-select-search
+                      [formControl]="serviceSearchCtrl"
+                      [clearSearchInput]="false"
+                      placeholderLabel="{{ 'RBP.filters.servicesPlaceholder' | translate }}"
+                      noEntriesFoundLabel="{{ 'RBP.filters.noServiceFound' | translate }}"
+                    ></ngx-mat-select-search>
+                  </mat-option>
+                  <mat-option *ngFor="let s of filteredServicesForSelect; trackBy: trackByString" [value]="s">{{ s }}</mat-option>
+                </mat-select>
+              </mat-form-field>
+            </div>
+            <button
+              type="button"
+              class="nav-btn secondary rrbp-nav-btn-sm rrbp-effacer-svc"
+              *ngIf="showClearServicesButton"
+              (click)="clearServiceFilter()"
+              title="{{ 'RBP.filters.resetServices' | translate }}"
+            >
+              <i class="fas fa-eraser"></i> {{ 'RBP.filters.clear' | translate }}
+            </button>
+          </div>
+        </div>
+      </div>
+
+      <div class="rrbp-kpi-section" *ngIf="!error">
+        <div class="rrbp-kpis">
+          <div class="rrbp-kpi">
+            <span class="rrbp-kpi-line">
+              <span class="rrbp-kpi-label">{{ 'RBP.kpi.boTransactions' | translate }}</span>
+              <span class="rrbp-kpi-vals"
+                >{{ formatNombre(totalBoNombre) }} <span class="sep">·</span> vol {{ formatNombre(totalBoVolume) }}</span
+              >
+            </span>
+          </div>
+          <div class="rrbp-kpi">
+            <span class="rrbp-kpi-line">
+              <span class="rrbp-kpi-label">{{ 'RBP.kpi.boMatches' | translate }}</span>
+              <span class="rrbp-kpi-vals">{{ formatNombre(totalMatchesBo) }}</span>
+            </span>
+          </div>
+          <div class="rrbp-kpi">
+            <span class="rrbp-kpi-line">
+              <span class="rrbp-kpi-label">{{ 'RBP.kpi.partnerTotal' | translate }}</span>
+              <span class="rrbp-kpi-vals"
+                >{{ formatNombre(totalPartNombre) }} <span class="sep">·</span> vol {{ formatNombre(totalPartVolume) }}</span
+              >
+            </span>
+          </div>
+          <div class="rrbp-kpi">
+            <span class="rrbp-kpi-line">
+              <span class="rrbp-kpi-label">{{ 'RBP.kpi.gapCount' | translate }}</span>
+              <span class="rrbp-kpi-vals" [ngClass]="classeEcart(totalEcartNombreAjuste)">{{
+                formatNombre(totalEcartNombreAjuste)
+              }}</span>
+            </span>
+          </div>
+          <div class="rrbp-kpi">
+            <span class="rrbp-kpi-line">
+              <span class="rrbp-kpi-label">{{ 'RBP.kpi.gapVolume' | translate }}</span>
+              <span class="rrbp-kpi-vals" [ngClass]="classeEcart(totalEcartVolumeAjuste)">{{
+                formatNombre(totalEcartVolumeAjuste)
+              }}</span>
+            </span>
+          </div>
+          <div class="rrbp-kpi accent">
+            <span class="rrbp-kpi-line">
+              <span class="rrbp-kpi-label">{{ 'RBP.kpi.servicesWithGap' | translate }}</span>
+              <span class="rrbp-kpi-vals warn">{{ 'RBP.kpi.servicesWithGapValue' | translate: { count: servicesAvecEcart, total: totalServices || 0 } }}</span>
+            </span>
+          </div>
+        </div>
+      </div>
+
+      <p class="rrbp-hint" *ngIf="!selectedCountry && countries.length">
+        <span [innerHTML]="'RBP.hint.selectCountry' | translate"></span>
+      </p>
+
+      <p class="rrbp-hint" *ngIf="emptyScopeHint && !error">{{ emptyScopeHint }}</p>
+
+      <p class="rrbp-error" *ngIf="error">{{ error }}</p>
+
+      <div class="rrbp-loading" *ngIf="loading">{{ 'RBP.loading' | translate }}</div>
+      <p class="rrbp-hint rrbp-manual-loading" *ngIf="!loading && manualLoading && selectedCountry">
+        {{ 'RBP.hint.manualLoading' | translate }}
+      </p>
+
+      <p class="rrbp-group-hint" *ngIf="!loading && selectedCountry && !error && hasServiceGroups">
+        <span [innerHTML]="'RBP.hint.groupByFamily' | translate"></span>
+      </p>
+
+      <div class="rrbp-table-section" *ngIf="!loading && selectedCountry && !error">
+        <!-- Historique audit : regroupement par service (nom rapport), puis par ligne result8rec -->
+        <ng-template #rrbpAuditGroupedTpl let-ids="ids">
+          <div class="rrbp-audit-inner" *ngIf="isAuditFingerprintLoading(ids)">{{ 'RPT.loadingHistory' | translate }}</div>
+          <ng-container *ngIf="!isAuditFingerprintLoading(ids) && isAuditBatchLoaded(ids)">
+            <div class="rrbp-audit-by-service" *ngIf="getAuditSectionsGroupedByService(ids).length">
+              <div *ngFor="let sec of getAuditSectionsGroupedByService(ids); trackBy: trackByAuditServiceSection" class="rrbp-audit-service-block">
+                <div class="rrbp-audit-service-title">{{ 'RBP.audit.serviceTitle' | translate: { name: sec.serviceName } }}</div>
+                <div *ngFor="let lg of sec.lignes; trackBy: trackByAuditLine" class="rrbp-audit-ligne-block">
+                  <div class="rrbp-audit-ligne-subtitle">{{ lg.subtitle }}</div>
+                  <div *ngIf="lg.entries.length" class="rrbp-audit-panel-card">
+                    <div class="rrbp-audit-panel-head">{{ 'RPT.actionHistory' | translate }}</div>
+                    <table class="rrbp-audit-mini-table rrbp-audit-mini-table--enhanced">
+                      <thead>
+                        <tr>
+                          <th class="rrbp-audit-th-date">{{ 'TBL.date' | translate }}</th>
+                          <th>{{ 'RPT.event' | translate }}</th>
+                          <th>{{ 'TBL.user' | translate }}</th>
+                          <th class="rrbp-audit-th-pill">{{ 'RPT.level' | translate }}</th>
+                          <th class="rrbp-audit-th-pill">{{ 'TBL.status' | translate }}</th>
+                          <th>{{ 'RPT.detail' | translate }}</th>
+                        </tr>
+                      </thead>
+                      <tbody>
+                        <tr *ngFor="let ar of lg.entries; trackBy: trackByAuditEntry">
+                          <td class="nowrap">{{ formatAuditInstant(ar.createdAt) }}</td>
+                          <td class="rrbp-audit-td-event">{{ formatAuditActionLabel(ar.actionType) }}</td>
+                          <td class="rrbp-audit-td-user">{{ ar.username || '—' }}</td>
+                          <td>
+                            <span [class]="auditSnapshotTraitementClass(ar.traitementSnapshot)">{{ ar.traitementSnapshot || '—' }}</span>
+                          </td>
+                          <td>
+                            <span [class]="auditSnapshotStatutClass(ar.statusSnapshot)">{{ ar.statusSnapshot || '—' }}</span>
+                          </td>
+                          <td class="wrap">{{ ar.detail || '—' }}</td>
+                        </tr>
+                      </tbody>
+                    </table>
+                  </div>
+                  <p *ngIf="!lg.entries.length" class="rrbp-audit-ligne-empty">{{ 'RBP.audit.emptyLine' | translate }}</p>
+                </div>
+              </div>
+            </div>
+          </ng-container>
+        </ng-template>
+        <div class="rrbp-table-wrap">
+          <table class="rrbp-table">
+            <thead>
+              <tr>
+                <th rowspan="3" class="col-audit-expand" [title]="'RBP.audit.thHistTitle' | translate">{{ 'RBP.audit.thHist' | translate }}</th>
+                <th rowspan="3" class="col-service">{{ 'TBL.service' | translate }}</th>
+                <th rowspan="3" class="col-traitement">{{ 'TBL.processing' | translate }}</th>
+                <th rowspan="3" class="col-statut rrbp-th-statut">{{ 'TBL.status' | translate }}</th>
+                <th colspan="2" class="grp bo">
+                  <div class="rrbp-th-main">BO — {{ selectedEnv === 'ALL' ? ('RBP.th.boAllEnvs' | translate) : selectedEnv }}</div>
+                  <div class="rrbp-th-sub" [title]="'RBP.th.boGapsTitle' | translate">
+                    {{ statutEcartBoEntete }}
+                  </div>
+                </th>
+                <th colspan="2" class="grp part">
+                  <div class="rrbp-th-main">{{ 'TBL.partner' | translate }}</div>
+                  <div class="rrbp-th-sub" [title]="'RBP.th.partnerGapsTitle' | translate">
+                    {{ statutEcartPartenaireEntete }}
+                  </div>
+                </th>
+                <th colspan="4" class="grp decal">{{ 'RBP.th.decalage' | translate }}</th>
+                <th colspan="3" class="grp ecart">{{ 'RBP.th.ecart' | translate }}</th>
+              </tr>
+              <tr>
+                <th rowspan="2" class="sub bo">{{ 'RBP.th.transactionsBo' | translate }}</th>
+                <th rowspan="2" class="sub bo">{{ 'TBL.volume' | translate }}</th>
+                <th rowspan="2" class="sub part">{{ 'COMMON.actions.count' | translate }}</th>
+                <th rowspan="2" class="sub part">{{ 'TBL.volume' | translate }}</th>
+                <th colspan="2" class="sub decal">J-1</th>
+                <th colspan="2" class="sub decal">J+1</th>
+                <th rowspan="2" class="sub ecart">Nbre</th>
+                <th rowspan="2" class="sub ecart">{{ 'TBL.volume' | translate }}</th>
+                <th rowspan="2" class="sub ecart">{{ 'RBP.th.taux' | translate }}</th>
+              </tr>
+              <tr>
+                <th class="sub decal">{{ 'COMMON.actions.count' | translate }}</th>
+                <th class="sub decal">{{ 'TBL.volume' | translate }}</th>
+                <th class="sub decal">{{ 'COMMON.actions.count' | translate }}</th>
+                <th class="sub decal">{{ 'TBL.volume' | translate }}</th>
+              </tr>
+            </thead>
+            <tbody>
+              <tr *ngIf="!serviceRows.length">
+                <td colspan="15" class="rrbp-empty">
+                  {{ 'RBP.empty' | translate }}
+                </td>
+              </tr>
+              <ng-container *ngFor="let line of displayLines; trackBy: trackByDisplayLine">
+                <ng-container *ngIf="line.type === 'single'">
+                <tr class="rrbp-row-single">
+                  <td class="col-expand">
+                    <button
+                      type="button"
+                      *ngIf="line.row.result8recIds?.length"
+                      class="btn-rrbp-audit"
+                      [class.open]="isAuditExpandedRow(auditKeySingle(line.row.service))"
+                      (click)="toggleAuditRow(auditKeySingle(line.row.service), line.row.result8recIds, $event)"
+                      [attr.aria-expanded]="isAuditExpandedRow(auditKeySingle(line.row.service))"
+                      [title]="'RPT.auditHistory' | translate"
+                    >
+                      {{ isAuditExpandedRow(auditKeySingle(line.row.service)) ? '▼' : '▶' }}
+                    </button>
+                    <span *ngIf="!line.row.result8recIds?.length" class="rrbp-expand-placeholder" [title]="'RBP.audit.noResult8rec' | translate"></span>
+                  </td>
+                  <td class="col-service">
+                    <div class="svc-main">{{ line.row.service }}</div>
+                  </td>
+                  <td [class]="classeTraitementCell(line.row.traitement)">
+                    <span [class]="getTraitementClass(line.row.traitement)">{{ displayTraitementLabel(line.row.traitement) }}</span>
+                  </td>
+                  <td [class]="classeStatutCell(line.row.traitement)">
+                    <span class="rrbp-statut-pill">{{ libelleStatutFromTraitement(line.row.traitement) }}</span>
+                  </td>
+                  <td class="num rrbp-col-bo">{{ formatNombre(line.row.boNombre) }}</td>
+                  <td class="num rrbp-col-bo">{{ formatNombre(line.row.boVolume) }}</td>
+                  <td class="num rrbp-col-part">{{ formatNombre(line.row.partenaireNombre) }}</td>
+                  <td class="num rrbp-col-part">{{ formatNombre(line.row.partenaireVolume) }}</td>
+                  <td class="num decal-cell rrbp-col-decal" [title]="'RBP.tooltip.countJm1' | translate">
+                    {{ formatNombre(line.row.decalageJm1Nombre) }}
+                  </td>
+                  <td class="num decal-cell rrbp-col-decal" [title]="'RBP.tooltip.volumeJm1' | translate">
+                    {{ formatNombre(line.row.decalageJm1Volume) }}
+                  </td>
+                  <td class="num decal-cell rrbp-col-decal" [title]="'RBP.tooltip.countJp1' | translate">
+                    {{ formatNombre(line.row.decalageJp1Nombre) }}
+                  </td>
+                  <td class="num decal-cell rrbp-col-decal" [title]="'RBP.tooltip.volumeJp1' | translate">
+                    {{ formatNombre(line.row.decalageJp1Volume) }}
+                  </td>
+                  <td class="num rrbp-col-ecart" [ngClass]="classeEcart(line.row.ecartNombre)">
+                    {{ estEcartNul(line.row.ecartNombre) ? '—' : formatNombre(line.row.ecartNombre) }}
+                  </td>
+                  <td class="num rrbp-col-ecart" [ngClass]="classeEcart(line.row.ecartVolume)">
+                    {{ estEcartNul(line.row.ecartVolume) ? '—' : formatNombre(line.row.ecartVolume) }}
+                  </td>
+                  <td class="num rrbp-col-ecart" [ngClass]="classeTaux(line.row)">{{ libelleTaux(line.row) }}</td>
+                </tr>
+                <tr
+                  *ngIf="
+                    line.row.result8recIds?.length &&
+                    isAuditExpandedRow(auditKeySingle(line.row.service))
+                  "
+                  class="rrbp-row-audit-detail"
+                >
+                  <td [attr.colspan]="auditHistoryColspan" class="rrbp-audit-detail-cell">
+                    <ng-container
+                      *ngTemplateOutlet="rrbpAuditGroupedTpl; context: { ids: line.row.result8recIds }"
+                    ></ng-container>
+                  </td>
+                </tr>
+                </ng-container>
+                <tr
+                  *ngIf="line.type === 'group-header'"
+                  class="rrbp-row-group"
+                  (click)="toggleServiceGroup(line.id)"
+                  [title]="'RBP.group.toggleTitle' | translate"
+                >
+                  <td class="col-expand" (click)="$event.stopPropagation()">
+                    <button
+                      type="button"
+                      *ngIf="line.aggregate.result8recIds?.length"
+                      class="btn-rrbp-audit"
+                      [class.open]="isAuditExpandedRow(auditKeyGroupAggregate(line.id))"
+                      (click)="toggleAuditRow(auditKeyGroupAggregate(line.id), line.aggregate.result8recIds, $event)"
+                      [attr.aria-expanded]="isAuditExpandedRow(auditKeyGroupAggregate(line.id))"
+                      [title]="'RBP.audit.groupTitle' | translate"
+                    >
+                      {{ isAuditExpandedRow(auditKeyGroupAggregate(line.id)) ? '▼' : '▶' }}
+                    </button>
+                    <span *ngIf="!line.aggregate.result8recIds?.length" class="rrbp-expand-placeholder"></span>
+                  </td>
+                  <td class="col-service">
+                    <button
+                      type="button"
+                      class="rrbp-group-toggle"
+                      (click)="toggleServiceGroup(line.id, $event)"
+                      [attr.aria-expanded]="isGroupExpanded(line.id)"
+                    >
+                      <i class="fas" [ngClass]="isGroupExpanded(line.id) ? 'fa-chevron-down' : 'fa-chevron-right'"></i>
+                    </button>
+                    <span class="rrbp-group-label">{{ line.label }}</span>
+                    <span class="rrbp-group-meta">{{ 'RBP.group.meta' | translate: { count: line.count } }}</span>
+                  </td>
+                  <td [class]="classeTraitementCell(line.aggregate.traitement)">
+                    <span [class]="getTraitementClass(line.aggregate.traitement)">{{ displayTraitementLabel(line.aggregate.traitement) }}</span>
+                  </td>
+                  <td [class]="classeStatutCell(line.aggregate.traitement)">
+                    <span class="rrbp-statut-pill">{{ libelleStatutFromTraitement(line.aggregate.traitement) }}</span>
+                  </td>
+                  <td class="num rrbp-col-bo">{{ formatNombre(line.aggregate.boNombre) }}</td>
+                  <td class="num rrbp-col-bo">{{ formatNombre(line.aggregate.boVolume) }}</td>
+                  <td class="num rrbp-col-part">{{ formatNombre(line.aggregate.partenaireNombre) }}</td>
+                  <td class="num rrbp-col-part">{{ formatNombre(line.aggregate.partenaireVolume) }}</td>
+                  <td class="num decal-cell rrbp-col-decal" [title]="'RBP.tooltip.countJm1' | translate">
+                    {{ formatNombre(line.aggregate.decalageJm1Nombre) }}
+                  </td>
+                  <td class="num decal-cell rrbp-col-decal" [title]="'RBP.tooltip.volumeJm1' | translate">
+                    {{ formatNombre(line.aggregate.decalageJm1Volume) }}
+                  </td>
+                  <td class="num decal-cell rrbp-col-decal" [title]="'RBP.tooltip.countJp1' | translate">
+                    {{ formatNombre(line.aggregate.decalageJp1Nombre) }}
+                  </td>
+                  <td class="num decal-cell rrbp-col-decal" [title]="'RBP.tooltip.volumeJp1' | translate">
+                    {{ formatNombre(line.aggregate.decalageJp1Volume) }}
+                  </td>
+                  <td class="num rrbp-col-ecart" [ngClass]="classeEcart(line.aggregate.ecartNombre)">
+                    {{ estEcartNul(line.aggregate.ecartNombre) ? '—' : formatNombre(line.aggregate.ecartNombre) }}
+                  </td>
+                  <td class="num rrbp-col-ecart" [ngClass]="classeEcart(line.aggregate.ecartVolume)">
+                    {{ estEcartNul(line.aggregate.ecartVolume) ? '—' : formatNombre(line.aggregate.ecartVolume) }}
+                  </td>
+                  <td class="num rrbp-col-ecart" [ngClass]="classeTaux(line.aggregate)">{{ libelleTaux(line.aggregate) }}</td>
+                </tr>
+                <tr
+                  *ngIf="
+                    line.type === 'group-header' &&
+                    line.aggregate.result8recIds?.length &&
+                    isAuditExpandedRow(auditKeyGroupAggregate(line.id))
+                  "
+                  class="rrbp-row-audit-detail"
+                  (click)="$event.stopPropagation()"
+                >
+                  <td [attr.colspan]="auditHistoryColspan" class="rrbp-audit-detail-cell">
+                    <ng-container
+                      *ngTemplateOutlet="rrbpAuditGroupedTpl; context: { ids: line.aggregate.result8recIds }"
+                    ></ng-container>
+                  </td>
+                </tr>
+                <tr *ngIf="line.type === 'group-detail' && isGroupExpanded(line.groupId)" class="rrbp-row-detail">
+                  <td class="col-expand">
+                    <button
+                      type="button"
+                      *ngIf="line.row.result8recIds?.length"
+                      class="btn-rrbp-audit"
+                      [class.open]="isAuditExpandedRow(auditKeyGroupDetail(line.groupId, line.row.service))"
+                      (click)="toggleAuditRow(auditKeyGroupDetail(line.groupId, line.row.service), line.row.result8recIds, $event)"
+                      [attr.aria-expanded]="isAuditExpandedRow(auditKeyGroupDetail(line.groupId, line.row.service))"
+                      [title]="'RBP.audit.serviceDetailTitle' | translate"
+                    >
+                      {{ isAuditExpandedRow(auditKeyGroupDetail(line.groupId, line.row.service)) ? '▼' : '▶' }}
+                    </button>
+                    <span *ngIf="!line.row.result8recIds?.length" class="rrbp-expand-placeholder"></span>
+                  </td>
+                  <td class="col-service">
+                    <div class="svc-main rrbp-detail-indent">{{ line.row.service }}</div>
+                  </td>
+                  <td [class]="classeTraitementCell(line.row.traitement)">
+                    <span [class]="getTraitementClass(line.row.traitement)">{{ displayTraitementLabel(line.row.traitement) }}</span>
+                  </td>
+                  <td [class]="classeStatutCell(line.row.traitement)">
+                    <span class="rrbp-statut-pill">{{ libelleStatutFromTraitement(line.row.traitement) }}</span>
+                  </td>
+                  <td class="num rrbp-col-bo">{{ formatNombre(line.row.boNombre) }}</td>
+                  <td class="num rrbp-col-bo">{{ formatNombre(line.row.boVolume) }}</td>
+                  <td class="num rrbp-col-part">{{ formatNombre(line.row.partenaireNombre) }}</td>
+                  <td class="num rrbp-col-part">{{ formatNombre(line.row.partenaireVolume) }}</td>
+                  <td class="num decal-cell rrbp-col-decal" [title]="'RBP.tooltip.countJm1' | translate">
+                    {{ formatNombre(line.row.decalageJm1Nombre) }}
+                  </td>
+                  <td class="num decal-cell rrbp-col-decal" [title]="'RBP.tooltip.volumeJm1' | translate">
+                    {{ formatNombre(line.row.decalageJm1Volume) }}
+                  </td>
+                  <td class="num decal-cell rrbp-col-decal" [title]="'RBP.tooltip.countJp1' | translate">
+                    {{ formatNombre(line.row.decalageJp1Nombre) }}
+                  </td>
+                  <td class="num decal-cell rrbp-col-decal" [title]="'RBP.tooltip.volumeJp1' | translate">
+                    {{ formatNombre(line.row.decalageJp1Volume) }}
+                  </td>
+                  <td class="num rrbp-col-ecart" [ngClass]="classeEcart(line.row.ecartNombre)">
+                    {{ estEcartNul(line.row.ecartNombre) ? '—' : formatNombre(line.row.ecartNombre) }}
+                  </td>
+                  <td class="num rrbp-col-ecart" [ngClass]="classeEcart(line.row.ecartVolume)">
+                    {{ estEcartNul(line.row.ecartVolume) ? '—' : formatNombre(line.row.ecartVolume) }}
+                  </td>
+                  <td class="num rrbp-col-ecart" [ngClass]="classeTaux(line.row)">{{ libelleTaux(line.row) }}</td>
+                </tr>
+                <tr
+                  *ngIf="
+                    line.type === 'group-detail' &&
+                    isGroupExpanded(line.groupId) &&
+                    line.row.result8recIds?.length &&
+                    isAuditExpandedRow(auditKeyGroupDetail(line.groupId, line.row.service))
+                  "
+                  class="rrbp-row-audit-detail"
+                >
+                  <td [attr.colspan]="auditHistoryColspan" class="rrbp-audit-detail-cell">
+                    <ng-container
+                      *ngTemplateOutlet="rrbpAuditGroupedTpl; context: { ids: line.row.result8recIds }"
+                    ></ng-container>
+                  </td>
+                </tr>
+              </ng-container>
+            </tbody>
+            <tfoot *ngIf="serviceRows.length">
+              <tr>
+                <td class="col-expand"></td>
+                <td>{{ 'COMMON.actions.total' | translate }}</td>
+                <td class="col-traitement">—</td>
+                <td [class]="classeStatutCell('')">
+                  <span class="rrbp-statut-pill">{{ libelleStatutFromTraitement('') }}</span>
+                </td>
+                <td class="num rrbp-col-bo">{{ formatNombre(totalBoNombre) }}</td>
+                <td class="num rrbp-col-bo">{{ formatNombre(totalBoVolume) }}</td>
+                <td class="num rrbp-col-part">{{ formatNombre(totalPartNombre) }}</td>
+                <td class="num rrbp-col-part">{{ formatNombre(totalPartVolume) }}</td>
+                <td class="num decal-cell rrbp-col-decal">{{ formatNombre(totalDecJm1Nombre) }}</td>
+                <td class="num decal-cell rrbp-col-decal">{{ formatNombre(totalDecJm1Volume) }}</td>
+                <td class="num decal-cell rrbp-col-decal">{{ formatNombre(totalDecJp1Nombre) }}</td>
+                <td class="num decal-cell rrbp-col-decal">{{ formatNombre(totalDecJp1Volume) }}</td>
+                <td class="num rrbp-col-ecart" [ngClass]="classeEcart(totalEcartNombreAjuste)">
+                  {{ formatNombre(totalEcartNombreAjuste) }}
+                </td>
+                <td class="num rrbp-col-ecart" [ngClass]="classeEcart(totalEcartVolumeAjuste)">
+                  {{ formatNombre(totalEcartVolumeAjuste) }}
+                </td>
+                <td class="num rrbp-col-ecart">—</td>
+              </tr>
+            </tfoot>
+          </table>
+        </div>
+      </div>
+
+      <footer class="rrbp-footer">
+        <label for="rrbp-comment">{{ 'RBP.comment.label' | translate }}</label>
+        <textarea
+          id="rrbp-comment"
+          rows="3"
+          [(ngModel)]="commentaire"
+          placeholder="{{ 'RBP.comment.placeholder' | translate }}"
+        ></textarea>
+      </footer>
+    </div>
+  </div>
+  </div>
+</div>

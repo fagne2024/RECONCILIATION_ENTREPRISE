@@ -1,0 +1,202 @@
+<div class="stats-graph-page">
+  <nav class="topnav">
+    <div class="nav-brand">
+      <div class="nav-brand-dot"></div>
+      ReconciliApp
+    </div>
+    <div class="nav-sep"></div>
+    <div class="nav-path">
+      {{ 'STA.title' | translate }}
+      <i class="fas fa-chevron-right"></i>
+          <strong>{{ 'SRG.reportTitle' | translate }}</strong>
+    </div>
+    <div class="nav-spacer"></div>
+    <div class="nav-actions">
+      <button type="button" class="nav-btn secondary" (click)="goBack()" [disabled]="isLoading || isExporting">
+        <i class="fas fa-arrow-left"></i> {{ 'SRG.backToReport' | translate }}
+      </button>
+      <button type="button" class="nav-btn png" (click)="exportGraphsPng()" [disabled]="isLoading || isExporting || !visibleReportRows.length">
+        <i class="fas fa-image"></i> PNG
+      </button>
+      <button type="button" class="nav-btn pdf" (click)="exportGraphsPdf()" [disabled]="isLoading || isExporting || !visibleReportRows.length">
+        <i class="fas fa-file-pdf"></i> PDF
+      </button>
+    </div>
+  </nav>
+
+  <div class="page">
+    <div class="page-head">
+      <div>
+        <div class="ph-eyebrow"><span></span>{{ 'SRP.eyebrow' | translate }}</div>
+        <h1 class="ph-title">{{ 'SRG.titleStart' | translate }}<em>{{ 'SRG.titleEm' | translate }}</em>{{ 'SRG.titleEnd' | translate }}</h1>
+        <div class="ph-sub">{{ formatReportPeriodLabel() }}</div>
+      </div>
+    </div>
+
+    <div *ngIf="isLoading" class="info-state">{{ 'MSG.loadingData' | translate }}</div>
+    <div *ngIf="!isLoading && errorMessage" class="info-state error">{{ errorMessage }}</div>
+
+    <ng-container *ngIf="!isLoading && !errorMessage">
+      <div class="filters-section">
+        <form [formGroup]="filterForm" class="filter-form">
+          <div class="filter-group">
+            <mat-form-field appearance="fill" class="filter-select">
+              <mat-label>{{ 'TBL.agency' | translate }}</mat-label>
+              <mat-select #agenceSelect formControlName="agency" multiple (selectionChange)="onFilterChange()">
+                <mat-option>
+                  <ngx-mat-select-search [formControl]="agenceSearchCtrl" [placeholderLabel]="'STA.searchAgency' | translate" [noEntriesFoundLabel]="'STA.noAgencyFound' | translate"></ngx-mat-select-search>
+                </mat-option>
+                <mat-option *ngFor="let agency of filteredAgencies" [value]="agency">
+                  {{ agency }}
+                </mat-option>
+              </mat-select>
+            </mat-form-field>
+          </div>
+          <div class="filter-group">
+            <mat-form-field appearance="fill" class="filter-select">
+              <mat-label>{{ 'TBL.service' | translate }}</mat-label>
+              <mat-select #serviceSelect formControlName="service" multiple (selectionChange)="onFilterChange()">
+                <mat-option>
+                  <ngx-mat-select-search [formControl]="serviceSearchCtrl" [placeholderLabel]="'STA.searchService' | translate" [noEntriesFoundLabel]="'STA.noServiceFound' | translate"></ngx-mat-select-search>
+                </mat-option>
+                <mat-option *ngFor="let service of filteredServices" [value]="service">
+                  {{ service }}
+                </mat-option>
+              </mat-select>
+            </mat-form-field>
+          </div>
+          <div class="filter-group">
+            <mat-form-field appearance="fill" class="filter-select">
+              <mat-label>{{ 'TBL.country' | translate }}</mat-label>
+              <mat-select #paysSelect formControlName="country" multiple (selectionChange)="onFilterChange()">
+                <mat-option>
+                  <ngx-mat-select-search [formControl]="paysSearchCtrl" [placeholderLabel]="'STA.searchCountry' | translate" [noEntriesFoundLabel]="'STA.noCountryFound' | translate"></ngx-mat-select-search>
+                </mat-option>
+                <mat-option *ngFor="let country of filteredCountries" [value]="country">
+                  {{ country }}
+                </mat-option>
+              </mat-select>
+            </mat-form-field>
+          </div>
+          <div class="filter-group">
+            <label>{{ 'LBL.period' | translate }}</label>
+            <select formControlName="periodType" (change)="onPeriodTypeChange()">
+              <option value="week">{{ 'STA.week' | translate }}</option>
+              <option value="month">{{ 'TBL.month' | translate }}</option>
+            </select>
+          </div>
+          <div class="filter-group">
+            <label>{{ 'LBL.startDate' | translate }}</label>
+            <input type="date" formControlName="startDate">
+          </div>
+          <div class="filter-group">
+            <label>{{ 'LBL.endDate' | translate }}</label>
+            <input type="date" formControlName="endDate">
+          </div>
+          <button type="button" class="apply-btn" (click)="onFilterChange()" [disabled]="isLoading || isExporting">
+            {{ 'STA.applyFilters' | translate }}
+          </button>
+        </form>
+      </div>
+
+      <div class="kpi-strip">
+        <div class="kpi">
+          <div class="kpi-l">{{ 'SRG.totalVolumePeriod' | translate }}</div>
+          <div class="kpi-v blue">{{ visibleReportSummary.totalVolume | number:'1.0-0' }}</div>
+          <div class="kpi-s">{{ 'SRG.currencyOverDays' | translate: { count: reportDateKeys.length } }}</div>
+        </div>
+        <div class="kpi">
+          <div class="kpi-l">{{ 'STA.totalTrxCount' | translate }}</div>
+          <div class="kpi-v blue">{{ visibleReportSummary.totalCount | number:'1.0-0' }}</div>
+          <div class="kpi-s">{{ 'STA.transactions' | translate }}</div>
+        </div>
+        <div class="kpi">
+          <div class="kpi-l">{{ 'STA.activeAgencies' | translate }}</div>
+          <div class="kpi-v green">{{ visibleReportSummary.activeAgencies | number:'1.0-0' }}</div>
+          <div class="kpi-s">{{ 'SRP.overPeriod' | translate }}</div>
+        </div>
+        <div class="kpi">
+          <div class="kpi-l">{{ 'STA.avgVolumePerDay' | translate }}</div>
+          <div class="kpi-v amber">{{ visibleReportSummary.avgVolumePerDay | number:'1.0-0' }}</div>
+          <div class="kpi-s">XOF</div>
+        </div>
+        <div class="kpi">
+          <div class="kpi-l">{{ 'STA.dailyPeak' | translate }}</div>
+          <div class="kpi-v green">{{ visibleReportSummary.peakDayVolume | number:'1.0-0' }}</div>
+          <div class="kpi-s">{{ visibleReportSummary.peakDayKey ? formatReportDateLabel(visibleReportSummary.peakDayKey) : ('STA.noData' | translate) }}</div>
+        </div>
+      </div>
+
+      <section class="graph-section" id="stats-graph-export-area">
+        <div class="graph-topbar">
+          <div class="graph-view-tabs">
+            <button type="button" [class.active]="graphView === 'global'" (click)="setGraphView('global')">{{ 'SRG.viewGlobal' | translate }}</button>
+            <button type="button" [class.active]="graphView === 'agency'" (click)="setGraphView('agency')">{{ 'SRG.viewAgency' | translate }}</button>
+            <button type="button" [class.active]="graphView === 'market'" (click)="setGraphView('market')">{{ 'SRG.viewMarket' | translate }}</button>
+          </div>
+          <div class="graph-metric-tabs">
+            <button type="button" [class.active]="graphMetric === 'volume'" (click)="setGraphMetric('volume')">{{ 'TBL.volume' | translate }}</button>
+            <button type="button" [class.active]="graphMetric === 'count'" (click)="setGraphMetric('count')">{{ 'SRG.metricCount' | translate }}</button>
+          </div>
+        </div>
+
+        <div *ngIf="graphView === 'agency'" class="graph-agency-toolbar">
+          <select [value]="graphSelectedAgency" (change)="onGraphAgencyChange($event)">
+            <option *ngFor="let agency of visibleReportRows" [value]="agency.agency">{{ agency.agency }}</option>
+          </select>
+        </div>
+
+        <div *ngIf="graphView === 'global'" class="graph-grid global-grid">
+          <div class="graph-card graph-card-wide">
+            <div class="graph-card-title">{{ 'SRG.titleGlobalTrend' | translate: { metric: metricWordLower() } }}</div>
+            <div class="graph-canvas-wrap">
+              <canvas baseChart [type]="'bar'" [data]="globalTrendChartData" [options]="graphBarOptions"></canvas>
+            </div>
+          </div>
+          <div class="graph-card">
+            <div class="graph-card-title">{{ 'SRG.titleCumulative' | translate }}</div>
+            <div class="graph-canvas-wrap">
+              <canvas baseChart [type]="'line'" [data]="cumulativeChartData" [options]="graphLineOptions"></canvas>
+            </div>
+          </div>
+          <div class="graph-card">
+            <div class="graph-card-title">{{ 'SRG.titleWeeklyTrend' | translate: { metric: metricWordShortLower() } }}</div>
+            <div class="graph-canvas-wrap">
+              <canvas baseChart [type]="'bar'" [data]="weeklyTrendChartData" [options]="graphBarOptions"></canvas>
+            </div>
+          </div>
+        </div>
+
+        <div *ngIf="graphView === 'agency'" class="graph-grid agency-grid">
+          <div class="graph-card">
+            <div class="graph-card-title">{{ 'SRG.titleAgencyDaily' | translate: { metric: getMetricLabel(), agency: graphSelectedAgency } }}</div>
+            <div class="graph-canvas-wrap">
+              <canvas baseChart [type]="'bar'" [data]="agencyDailyChartData" [options]="graphBarOptions"></canvas>
+            </div>
+          </div>
+          <div class="graph-card">
+            <div class="graph-card-title">{{ 'SRG.titleAgencyCumulative' | translate: { metric: getMetricLabel(), agency: graphSelectedAgency } }}</div>
+            <div class="graph-canvas-wrap">
+              <canvas baseChart [type]="'line'" [data]="agencyCumulativeChartData" [options]="graphLineOptions"></canvas>
+            </div>
+          </div>
+        </div>
+
+        <div *ngIf="graphView === 'market'" class="graph-grid market-grid">
+          <div class="graph-card">
+            <div class="graph-card-title">{{ 'SRG.titleMarketShare' | translate: { metric: metricWordShareLower() } }}</div>
+            <div class="graph-canvas-wrap donut-wrap">
+              <canvas baseChart [type]="'doughnut'" [data]="marketShareChartData" [options]="graphDoughnutOptions"></canvas>
+            </div>
+          </div>
+          <div class="graph-card">
+            <div class="graph-card-title">{{ 'SRG.titleMarketRanking' | translate: { metric: metricWordTotalLower() } }}</div>
+            <div class="graph-canvas-wrap">
+              <canvas baseChart [type]="'bar'" [data]="marketRankingChartData" [options]="graphHorizontalBarOptions"></canvas>
+            </div>
+          </div>
+        </div>
+      </section>
+    </ng-container>
+  </div>
+</div>

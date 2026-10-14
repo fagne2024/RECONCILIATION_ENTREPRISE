@@ -1,0 +1,299 @@
+<div class="dashboard-reconciliation-container">
+    <div class="page-header">
+        <div class="breadcrumb">
+            <a routerLink="/reconciliation-report" class="breadcrumb-link">← Retour au Rapport</a>
+        </div>
+    </div>
+    
+    <div class="dashboard-header">
+        <div class="header-top">
+            <div class="header-title-section">
+                <h2>📈 Tableau de bord de Réconciliation</h2>
+                <p class="subtitle">Vue d'ensemble des pourcentages de correspondance par service et par pays</p>
+                <p class="subtitle-small">Données réelles de la table result8rec</p>
+            </div>
+            <div class="header-actions">
+                <button class="btn-preview-global" (click)="goToGlobalPreview()" title="Afficher l'aperçu global avec graphiques">
+                    📊 Aperçu Global
+                </button>
+            </div>
+        </div>
+        
+        <!-- Résumé des données et période affichée -->
+        <div *ngIf="!loading && !error && countryServiceData && countryServiceData.length > 0" class="data-summary-row">
+            <div class="data-summary">
+                <div class="summary-item">
+                    <span class="summary-label">{{ 'LBL.countryLabel' | translate }}</span>
+                    <span class="summary-value">{{ countryServiceData.length }}</span>
+                </div>
+                <div class="summary-item">
+                    <span class="summary-label">Services:</span>
+                    <span class="summary-value">{{ getTotalServicesCount() }}</span>
+                </div>
+                <div class="summary-item">
+                    <span class="summary-label">Services uniques:</span>
+                    <span class="summary-value">{{ getAllUniqueServices().length }}</span>
+                </div>
+            </div>
+            <div class="period-and-voir-plus">
+                <span *ngIf="!showAllData" class="period-badge">Données du mois en cours</span>
+                <span *ngIf="showAllData" class="period-badge period-badge-all">Toutes les données</span>
+                <button *ngIf="!showAllData" type="button" class="btn-voir-plus" (click)="showAllDataClick()" title="Afficher toutes les données">
+                    Voir plus
+                </button>
+                <button *ngIf="showAllData" type="button" class="btn-voir-mois" (click)="showMonthDataClick()" title="Revenir aux données du mois en cours">
+                    Voir mois en cours
+                </button>
+            </div>
+        </div>
+
+        <div *ngIf="!loading && !error && countryServiceData && countryServiceData.length > 0" class="status-view-toggle">
+            <span class="status-view-label">Vue :</span>
+            <button type="button"
+                    class="status-pill"
+                    [class.active]="statusView === 'encours'"
+                    (click)="changeStatusView('encours')">
+                🔄 En cours
+            </button>
+            <button type="button"
+                    class="status-pill"
+                    [class.active]="statusView === 'traite'"
+                    (click)="changeStatusView('traite')">{{ 'LBL.helpPage' | translate }}</button>
+        </div>
+        <p *ngIf="isTraiteView()" class="status-view-hint">
+            Affichage des statuts OK avec répartition des écarts BO / Partenaire calculée à partir des commentaires.
+        </p>
+    </div>
+
+    <!-- Toggle Filtres -->
+    <div *ngIf="!loading && !error && countryServiceData && countryServiceData.length > 0" class="filters-toggle">
+        <div class="filters-toggle-inner">
+            <h3>🔍 Filtres</h3>
+            <button class="toggle-btn" [class.active]="showFilters" (click)="showFilters = !showFilters">
+                <span class="toggle-icon">▾</span>
+                {{ showFilters ? 'Masquer' : 'Afficher' }}
+            </button>
+        </div>
+    </div>
+
+    <!-- Filtres -->
+    <div *ngIf="showFilters && !loading && !error && countryServiceData && countryServiceData.length > 0" class="filters-container">
+        <div class="filters-header">
+            <h3>🔍 Filtres</h3>
+        </div>
+        <div class="filters-content">
+            <div class="filter-group">
+                <label class="filter-label">{{ 'LBL.countryLabel' | translate }}</label>
+                <mat-form-field appearance="fill" class="filter-select">
+                    <mat-select [(ngModel)]="selectedCountry" multiple (selectionChange)="onCountryFilterChange()" placeholder="Sélectionner un ou plusieurs pays">
+                        <mat-option *ngFor="let country of availableCountries" [value]="country">
+                            {{ country }}
+                        </mat-option>
+                    </mat-select>
+                </mat-form-field>
+            </div>
+            
+            <div class="filter-group">
+                <label for="dateStartFilter" class="filter-label">{{ 'LBL.startDateLabel' | translate }}</label>
+                <div class="date-input-container">
+                    <input matInput 
+                           [matDatepicker]="dateStartPicker" 
+                           [(ngModel)]="selectedDateStart"
+                           (dateChange)="onDateStartChange()"
+                           placeholder="Sélectionner une date de début"
+                           class="filter-date-input">
+                    <mat-datepicker-toggle matSuffix [for]="dateStartPicker"></mat-datepicker-toggle>
+                    <mat-datepicker #dateStartPicker></mat-datepicker>
+                </div>
+            </div>
+            
+            <div class="filter-group">
+                <label for="dateEndFilter" class="filter-label">{{ 'LBL.endDateLabel' | translate }}</label>
+                <div class="date-input-container">
+                    <input matInput 
+                           [matDatepicker]="dateEndPicker" 
+                           [(ngModel)]="selectedDateEnd"
+                           (dateChange)="onDateEndChange()"
+                           placeholder="Sélectionner une date de fin"
+                           class="filter-date-input">
+                    <mat-datepicker-toggle matSuffix [for]="dateEndPicker"></mat-datepicker-toggle>
+                    <mat-datepicker #dateEndPicker></mat-datepicker>
+                </div>
+            </div>
+            
+            <div class="filter-group">
+                <label class="filter-label">{{ 'LBL.serviceLabel' | translate }}</label>
+                <mat-form-field appearance="fill" class="filter-select">
+                    <mat-select [(ngModel)]="selectedService" multiple (selectionChange)="onServiceFilterChange()" [disabled]="selectedCountry.length === 0 && filteredServices.length === 0" placeholder="Sélectionner un ou plusieurs services">
+                        <mat-option *ngFor="let service of filteredServices" [value]="service">
+                            {{ service }}
+                        </mat-option>
+                    </mat-select>
+                </mat-form-field>
+            </div>
+            
+            <div class="filter-actions">
+                <button type="button" 
+                        (click)="resetFilters()" 
+                        class="reset-filters-btn"
+                        [disabled]="!selectedCountry && !selectedService && !selectedDateStart && !selectedDateEnd">
+                    🔄 Réinitialiser
+                </button>
+            </div>
+        </div>
+        
+        <!-- Résumé des filtres appliqués -->
+        <div *ngIf="(selectedCountry && selectedCountry.length) || (selectedService && selectedService.length) || selectedDateStart || selectedDateEnd" class="active-filters">
+            <span class="active-filters-label">Filtres actifs:</span>
+            <span *ngIf="selectedCountry && selectedCountry.length" class="filter-tag">
+                Pays: {{ selectedCountry.join(', ') }}
+            </span>
+            <span *ngIf="selectedDateStart" class="filter-tag">
+                Date début: {{ selectedDateStart | date:'dd/MM/yyyy' }}
+            </span>
+            <span *ngIf="selectedDateEnd" class="filter-tag">
+                Date fin: {{ selectedDateEnd | date:'dd/MM/yyyy' }}
+            </span>
+            <span *ngIf="selectedService && selectedService.length" class="filter-tag">
+                Service: {{ selectedService.join(', ') }}
+            </span>
+            <span class="filter-results">
+                ({{ filteredCountryServiceData.length }} résultat(s))
+            </span>
+        </div>
+    </div>
+
+    <div class="dashboard-content">
+        <!-- Indicateur de chargement -->
+        <div *ngIf="loading" class="loading-container">
+            <div class="loading-spinner">🔄</div>
+            <div class="loading-message">Chargement des données de réconciliation...</div>
+        </div>
+
+        <!-- Message d'erreur -->
+        <div *ngIf="error && !loading" class="error-container">
+            <div class="error-icon">❌</div>
+            <div class="error-message">{{ error }}</div>
+            <button class="retry-btn" (click)="loadReconciliationData()">🔄 Réessayer</button>
+        </div>
+
+
+        <!-- Données du tableau de bord -->
+        <div *ngIf="!loading && !error && countryServiceData && countryServiceData.length > 0" 
+             class="dashboard-grid" 
+             [class.horizontal-layout]="filteredCountryServiceData.length === 1">
+            <div *ngFor="let countryData of getPagedCountries()" 
+                 class="country-section"
+                 [class.single-country]="filteredCountryServiceData.length === 1">
+                <div class="country-header">
+                    <span class="country-code">
+                        <img *ngIf="getCountryFlagUrl(countryData.countryCode) as flagUrl" [src]="flagUrl" (error)="onFlagError($event, countryData.countryCode)" class="country-flag-img" alt="flag"/>
+                        <span *ngIf="!getCountryFlagUrl(countryData.countryCode)" class="country-flag">{{ getCountryFlag(countryData.countryCode) }}</span>
+                        {{ countryData.country || getCountryName(countryData.countryCode) }}
+                    </span>
+                    <span class="services-count">{{ getServiceEntries(countryData.services).length }} service(s)</span>
+                </div>
+                
+                <div class="services-grid" [class.horizontal-services]="filteredCountryServiceData.length === 1">
+                    <div *ngFor="let serviceEntry of getLimitedServiceEntries(countryData)" class="service-metrics">
+                        <div class="service-header">
+                            <span class="service-name">{{ serviceEntry.key }}</span>
+                        </div>
+                        <ng-container [ngSwitch]="statusView">
+                            <div *ngSwitchCase="'encours'" class="metrics-grid">
+                                <div class="metric-item" [ngClass]="getRateClass(serviceEntry.value.trxReconNet)">
+                                    <div class="metric-label">Réconciliation Nette</div>
+                                    <div class="metric-value">{{ formatPercentage(serviceEntry.value.trxReconNet) }}</div>
+                                </div>
+                                
+                                <div class="metric-item" [ngClass]="getRateClass(serviceEntry.value.bkRecoBanque)">
+                                    <div class="metric-label">Taux de Correspondance</div>
+                                    <div class="metric-value">{{ formatPercentage(serviceEntry.value.bkRecoBanque) }}</div>
+                                </div>
+                            </div>
+                            <div *ngSwitchCase="'traite'" class="metrics-grid discrepancy-grid">
+                                <div class="metric-item" [ngClass]="getDiscrepancyRateClass(serviceEntry.value.boDiscrepancyRate)">
+                                    <div class="metric-label">Taux écarts BO</div>
+                                    <div class="metric-value"
+                                         [ngClass]="getPositiveValueClass(serviceEntry.value.boDiscrepancyRate)">
+                                        {{ formatDiscrepancyPercentage(serviceEntry.value.boDiscrepancyRate) }}
+                                    </div>
+                                    <div class="metric-subtext">
+                                        <span class="metric-count-badge"
+                                              [ngClass]="getPositiveValueClass(serviceEntry.value.boDiscrepancyCount)">
+                                            {{ serviceEntry.value.boDiscrepancyCount || 0 }}
+                                        </span>
+                                        écart(s) BO
+                                    </div>
+                                </div>
+                                <div class="metric-item" [ngClass]="getDiscrepancyRateClass(serviceEntry.value.partnerDiscrepancyRate)">
+                                    <div class="metric-label">Taux écarts Partenaire</div>
+                                    <div class="metric-value"
+                                         [ngClass]="getPositiveValueClass(serviceEntry.value.partnerDiscrepancyRate)">
+                                        {{ formatDiscrepancyPercentage(serviceEntry.value.partnerDiscrepancyRate) }}
+                                    </div>
+                                    <div class="metric-subtext">
+                                        <span class="metric-count-badge"
+                                              [ngClass]="getPositiveValueClass(serviceEntry.value.partnerDiscrepancyCount)">
+                                            {{ serviceEntry.value.partnerDiscrepancyCount || 0 }}
+                                        </span>
+                                        écart(s) Part.
+                                    </div>
+                                </div>
+                                <div class="metric-item metric-item-centered discrepancy-total">
+                                    <div class="metric-content">
+                                        <div class="metric-label">Total écarts exploités</div>
+                                        <div class="metric-value"
+                                             [ngClass]="getPositiveValueClass(getTotalDiscrepancies(serviceEntry.value))">
+                                            {{ getTotalDiscrepancies(serviceEntry.value) }}
+                                        </div>
+                                        <div class="metric-subtext">d'après les commentaires</div>
+                                    </div>
+                                </div>
+                            </div>
+                            <div *ngSwitchDefault class="metrics-grid">
+                                <div class="metric-item" [ngClass]="getRateClass(serviceEntry.value.trxReconNet)">
+                                    <div class="metric-label">Réconciliation Nette</div>
+                                    <div class="metric-value">{{ formatPercentage(serviceEntry.value.trxReconNet) }}</div>
+                                </div>
+                                
+                                <div class="metric-item" [ngClass]="getRateClass(serviceEntry.value.bkRecoBanque)">
+                                    <div class="metric-label">Taux de Correspondance</div>
+                                    <div class="metric-value">{{ formatPercentage(serviceEntry.value.bkRecoBanque) }}</div>
+                                </div>
+                            </div>
+                        </ng-container>
+                    </div>
+                </div>
+
+                <!-- Bouton Afficher plus / Afficher moins -->
+                <div class="services-toggle" *ngIf="getServiceEntries(countryData.services).length > 4">
+                    <button class="toggle-btn" [class.active]="isShowingAll(countryData.countryCode)" (click)="toggleShowMore(countryData.countryCode)">
+                        <span class="toggle-icon">▾</span>
+                        {{ isShowingAll(countryData.countryCode) ? 'Afficher moins' : 'Afficher plus' }}
+                    </button>
+                </div>
+            </div>
+        </div>
+
+        <!-- Contrôles de pagination -->
+        <div *ngIf="!loading && !error && countryServiceData && countryServiceData.length > 0" class="pagination-controls">
+            <button (click)="previousPage()" [disabled]="currentPage === 1" class="pagination-btn">
+                ← Précédent
+            </button>
+            <span class="pagination-info">
+                Page {{ currentPage }} sur {{ getTotalPages() }}
+            </span>
+            <button (click)="nextPage()" [disabled]="currentPage === getTotalPages()" class="pagination-btn">
+                Suivant →
+            </button>
+        </div>
+
+        <!-- Message si aucune donnée -->
+        <div *ngIf="!loading && !error && (!countryServiceData || countryServiceData.length === 0)" class="no-data">
+            <div class="no-data-icon">📊</div>
+            <div class="no-data-message">Aucune donnée de réconciliation disponible</div>
+            <div class="no-data-subtitle">Les données seront disponibles après avoir effectué des réconciliations</div>
+        </div>
+    </div>
+</div>

@@ -1,0 +1,15 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="640" height="480" viewBox="0 0 8 6">
+  <!-- Left green stripe -->
+  <rect width="8" height="6" x="0" y="0" fill="#007a5e"/>
+  <!-- Middle red stripe -->
+  <rect width="2.6667" height="6" x="2.6667" y="0" fill="#ce1126"/>
+  <!-- Right yellow stripe -->
+  <rect width="2.6667" height="6" x="5.3333" y="0" fill="#fcd116"/>
+  <!-- Center star on red -->
+  <g transform="translate(4,3)">
+    <g transform="scale(0.85)">
+      <polygon points="0,-1.8 0.527,-0.1909 1.9021,-0.1909 0.804,0.0729 1.236,1.809 0,0.9 -1.236,1.809 -0.804,0.0729 -1.9021,-0.1909 -0.527,-0.1909" fill="#fcd116"/>
+    </g>
+  </g>
+</svg>
+

@@ -1,0 +1,663 @@
+<div class="frais-page">
+  <!-- TOP NAV (design redevance-loterie) -->
+  <nav class="topnav">
+    <div class="nav-brand">
+      <div class="nav-brand-dot"></div>
+      {{ 'FRS.ReconciliApp' | translate }}
+    </div>
+    <div class="nav-sep"></div>
+    <div class="nav-path">
+      <strong>{{ 'FRS.Fraisdetransaction' | translate }}</strong>
+    </div>
+    <div class="nav-spacer"></div>
+    <div class="nav-actions">
+      <button type="button" class="nav-btn primary" (click)="showAddForm = true" *ngIf="!showAddForm && !showEditForm">
+        <i class="fas fa-plus"></i> {{ 'FRS.Ajouterunfrais' | translate }}
+      </button>
+    </div>
+  </nav>
+
+  <!-- PAGE HEADER (titre + KPIs) -->
+  <div class="page-header-frais">
+    <div class="ph-frais-left">
+      <div class="ph-eyebrow"><span></span>{{ 'FRS.Paramétrage' | translate }}</div>
+      <h1 class="ph-title-frais">{{ 'LBL.managementOf' | translate }}<em>{{ 'FRS.Fraisdetransaction_1' | translate }}</em></h1>
+    </div>
+    <div class="ph-frais-right">
+      <div class="hero-kpi-strip">
+        <div class="hk-strip-item">
+          <span class="hk-strip-label">{{ 'FRS.Fraisdéfinis' | translate }}</span>
+          <span class="hk-strip-value">{{ (filteredFrais?.length || 0) | number:'1.0-0' }}</span>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <div class="main">
+  <div class="frais-container">
+    <!-- En-tête -->
+    <div class="header">
+        <h1>{{ 'FRS.Gestiondesfraisdetransaction' | translate }}</h1>
+        <button class="btn-primary" (click)="showAddForm = true" *ngIf="!showAddForm && !showEditForm">
+            <i class="fas fa-plus"></i> {{ 'FRS.Ajouterunfrais' | translate }}
+        </button>
+    </div>
+
+    <!-- Modal d'ajout de frais de transaction -->
+    <div *ngIf="showAddForm" class="modal-overlay" (click)="closeAddModal($event)">
+        <div class="modal-container" (click)="$event.stopPropagation()">
+            <div class="modal-header">
+                <h3><i class="fas fa-plus-circle"></i> {{ 'FRS.Ajouterunnouveaufraisdetransaction' | translate }}</h3>
+                <button type="button" class="modal-close" (click)="cancelAdd()">
+                    <i class="fas fa-times"></i>
+                </button>
+            </div>
+            
+            <div class="modal-body">
+                <form [formGroup]="addForm" (ngSubmit)="addFraisTransaction()" class="add-form">
+                    <!-- Informations de base -->
+                    <div class="form-section">
+                        <h4 class="section-title">
+                            <i class="fas fa-info-circle"></i> {{ 'OPS.Informationsdebase' | translate }}
+                        </h4>
+                        
+                        <div class="form-row">
+                            <div class="form-group">
+                                <label>{{ 'TBL.serviceRequired' | translate }}</label>
+                                <input type="text" formControlName="service" 
+                                    placeholder="{{ 'FRS.Saisirlenomduservice' | translate }}" class="text-input">
+                                <div *ngIf="addForm.get('service')?.invalid && addForm.get('service')?.touched" class="error-message">
+                                    <i class="fas fa-exclamation-circle"></i>
+                                    {{ 'FRS.Leserviceestrequis' | translate }}
+                                </div>
+                            </div>
+                            <div class="form-group">
+                                <label>{{ 'FRS.Clients' | translate }} *</label>
+                                <div class="clients-chips-wrapper">
+                                    <input type="text" [(ngModel)]="newClientInput" (keydown)="onClientInputKeydown($event)"
+                                        (blur)="addClientFromInput()" [ngModelOptions]="{standalone: true}"
+                                        placeholder="{{ 'FRS.Saisirunnomdeclient' | translate }}" class="text-input clients-input" />
+                                    <div class="clients-chips" *ngIf="addClients.length > 0">
+                                        <span class="chip" *ngFor="let c of addClients; let i = index">
+                                            {{ c }}
+                                            <button type="button" class="chip-remove" (click)="removeAddClient(i)"><i class="fas fa-times"></i></button>
+                                        </span>
+                                    </div>
+                                </div>
+                                <div *ngIf="clientsTouched && addClients.length === 0" class="error-message">
+                                    <i class="fas fa-exclamation-circle"></i>
+                                    {{ 'FRS.Leclientestrequis' | translate }}
+                                </div>
+                                <div class="help-text"><i class="fas fa-info-circle"></i> {{ 'FRS.HintMultiClients' | translate }}</div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Configuration des frais -->
+                    <div class="form-section">
+                        <h4 class="section-title">
+                            <i class="fas fa-calculator"></i> {{ 'FRS.Configurationdesfrais' | translate }}
+                        </h4>
+                        
+                        <div class="form-row">
+                            <div class="form-group">
+                                <label>{{ 'FRS.Typedecalcul' | translate }}</label>
+                                <div class="select-wrapper">
+                                    <select formControlName="typeCalcul" (change)="onTypeCalculChange()" class="modern-select">
+                                        <option value="NOMINAL">{{ 'FRS.Fraisfixe' | translate }}</option>
+                                        <option value="POURCENTAGE">{{ 'FRS.Fraisenpourcentage' | translate }}</option>
+                                    </select>
+                                    <i class="fas fa-chevron-down select-arrow"></i>
+                                </div>
+                                <div *ngIf="addForm.get('typeCalcul')?.invalid && addForm.get('typeCalcul')?.touched" class="error-message">
+                                    <i class="fas fa-exclamation-circle"></i>
+                                    {{ 'FRS.Letypedecalculestrequis' | translate }}
+                                </div>
+                            </div>
+                        </div>
+
+                        <div class="form-row" *ngIf="addForm.get('typeCalcul')?.value === 'NOMINAL'">
+                            <div class="form-group full-width">
+                                <label>{{ 'FRS.Montantdufraisfcfa' | translate }}</label>
+                                <div class="amount-input-wrapper">
+                                    <input type="number" formControlName="montantFrais" 
+                                        placeholder="0.00" step="0.01" min="0" class="amount-input">
+                                    <span class="currency-symbol">FCFA</span>
+                                </div>
+                                <div *ngIf="addForm.get('montantFrais')?.invalid && addForm.get('montantFrais')?.touched" class="error-message">
+                                    <i class="fas fa-exclamation-circle"></i>
+                                    {{ 'FRS.Lemontantestrequisetdoitêtrepositif' | translate }}
+                                </div>
+                            </div>
+                        </div>
+
+                        <div class="form-row" *ngIf="addForm.get('typeCalcul')?.value === 'POURCENTAGE'">
+                            <div class="form-group full-width">
+                                <label>{{ 'FRS.Pourcentage' | translate }}</label>
+                                <div class="percentage-input-wrapper">
+                                    <input type="number" formControlName="pourcentage" 
+                                        placeholder="0.00" step="0.01" min="0" max="100" class="percentage-input">
+                                    <span class="percentage-symbol">%</span>
+                                </div>
+                                <div *ngIf="addForm.get('pourcentage')?.invalid && addForm.get('pourcentage')?.touched" class="error-message">
+                                    <i class="fas fa-exclamation-circle"></i>
+                                    {{ 'FRS.Lepourcentageestrequisetdoitêtreentre0et100' | translate }}
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- Aperçu du calcul -->
+                        <div class="calculation-preview" *ngIf="showCalculationPreview()">
+                            <div class="preview-card">
+                                <div class="preview-header">
+                                    <h5>{{ 'FRS.Aperçuducalcul' | translate }}</h5>
+                                </div>
+                                <div class="preview-content">
+                                    <div class="preview-item">
+                                        <span class="preview-label">{{ 'LBL.typeLabel' | translate }}</span>
+                                        <span class="preview-value">{{ getTypeCalculDisplayName() }}</span>
+                                    </div>
+                                    <div class="preview-item" *ngIf="addForm.get('typeCalcul')?.value === 'NOMINAL'">
+                                        <span class="preview-label">{{ 'FRS.Montantfixe' | translate }}</span>
+                                        <span class="preview-value">{{ addForm.get('montantFrais')?.value | currency:'XAF':'symbol':'1.0-0' }}</span>
+                                    </div>
+                                    <div class="preview-item" *ngIf="addForm.get('typeCalcul')?.value === 'POURCENTAGE'">
+                                        <span class="preview-label">{{ 'FRS.Pourcentage_1' | translate }}</span>
+                                        <span class="preview-value">{{ addForm.get('pourcentage')?.value }}%</span>
+                                    </div>
+                                    <div class="preview-item">
+                                        <span class="preview-label">{{ 'LBL.serviceLabel' | translate }}</span>
+                                        <span class="preview-value">{{ addForm.get('service')?.value || 'Non défini' }}</span>
+                                    </div>
+                                    <div class="preview-item">
+                                        <span class="preview-label">{{ 'FRS.Client_1' | translate }}</span>
+                                        <span class="preview-value">{{ addForm.get('agence')?.value || 'Non défini' }}</span>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Détails supplémentaires -->
+                    <div class="form-section">
+                        <h4 class="section-title">
+                            <i class="fas fa-cog"></i> {{ 'FRS.Détailssupplémentaires' | translate }}
+                        </h4>
+                        
+                        <div class="form-row">
+                            <div class="form-group full-width">
+                                <label>{{ 'TBL.description' | translate }}</label>
+                                <input type="text" formControlName="description" 
+                                    placeholder="{{ 'FRS.Descriptiondufraisoptionnel' | translate }}" class="text-input">
+                            </div>
+                        </div>
+
+                        <div class="form-row">
+                            <div class="form-group">
+                                <div class="checkbox-wrapper">
+                                    <label class="checkbox-label">
+                                        <input type="checkbox" formControlName="actif" class="modern-checkbox">
+                                        <span class="checkmark"></span>{{ 'TBL.confidence' | translate }}</label>
+                                    <div class="checkbox-help">
+                                        <i class="fas fa-info-circle"></i>
+                                        {{ 'FRS.Lesfraisinactifsneserontpasappliquésautomatiquement' | translate }}
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </form>
+            </div>
+
+            <div class="modal-footer">
+                <div class="modal-actions">
+                    <button type="button" class="btn-secondary" (click)="cancelAdd()">
+                        <i class="fas fa-times"></i>{{ 'COMMON.actions.cancel' | translate }}</button>
+                    <button type="submit" class="btn-primary" 
+                        [disabled]="!addForm.valid || isAdding"
+                        (click)="addFraisTransaction()">
+                        <i class="fas fa-plus"></i>
+                        {{ isAdding ? 'Ajout en cours...' : 'Ajouter le frais' }}
+                    </button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Modal de modification de frais de transaction -->
+    <div *ngIf="showEditForm && editingFrais" class="modal-overlay" (click)="closeEditModal($event)">
+        <div class="modal-container edit-modal" (click)="$event.stopPropagation()">
+            <div class="modal-header">
+                <h3><i class="fas fa-edit"></i> {{ 'FRS.Modifierlefraisdetransaction' | translate }}{{ editingFrais.id }}</h3>
+                <div class="frais-status">
+                    <span class="status-badge" [class]="'status-' + (editingFrais.actif ? 'actif' : 'inactif')">
+                        {{ editingFrais.actif ? 'Actif' : 'Inactif' }}
+                    </span>
+                </div>
+                <button type="button" class="modal-close" (click)="cancelEdit()">
+                    <i class="fas fa-times"></i>
+                </button>
+            </div>
+            
+            <div class="modal-body">
+                <form [formGroup]="editForm" (ngSubmit)="updateFraisTransaction()" class="edit-form">
+                    <!-- Informations de base -->
+                    <div class="form-section">
+                        <h4 class="section-title">
+                            <i class="fas fa-info-circle"></i> {{ 'OPS.Informationsdebase' | translate }}
+                        </h4>
+                        
+                        <div class="form-row">
+                            <div class="form-group">
+                                <label>{{ 'TBL.serviceRequired' | translate }}</label>
+                                <input type="text" formControlName="service" 
+                                    placeholder="{{ 'FRS.Saisirlenomduservice' | translate }}" class="text-input">
+                                <div *ngIf="editForm.get('service')?.invalid && editForm.get('service')?.touched" class="error-message">
+                                    <i class="fas fa-exclamation-circle"></i>
+                                    {{ 'FRS.Leserviceestrequis' | translate }}
+                                </div>
+                            </div>
+                            <div class="form-group">
+                                <label>{{ 'FRS.Client' | translate }}</label>
+                                <input type="text" formControlName="agence" 
+                                    placeholder="{{ 'FRS.Saisirlenomduclient' | translate }}" class="text-input">
+                                <div *ngIf="editForm.get('agence')?.invalid && editForm.get('agence')?.touched" class="error-message">
+                                    <i class="fas fa-exclamation-circle"></i>
+                                    {{ 'FRS.Leclientestrequis' | translate }}
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Configuration des frais -->
+                    <div class="form-section">
+                        <h4 class="section-title">
+                            <i class="fas fa-calculator"></i> {{ 'FRS.Configurationdesfrais' | translate }}
+                        </h4>
+                        
+                        <div class="form-row">
+                            <div class="form-group">
+                                <label>{{ 'FRS.Typedecalcul' | translate }}</label>
+                                <div class="select-wrapper">
+                                    <select formControlName="typeCalcul" (change)="onTypeCalculChange()" class="modern-select">
+                                        <option value="NOMINAL">{{ 'FRS.Fraisfixe' | translate }}</option>
+                                        <option value="POURCENTAGE">{{ 'FRS.Fraisenpourcentage' | translate }}</option>
+                                    </select>
+                                    <i class="fas fa-chevron-down select-arrow"></i>
+                                </div>
+                                <div *ngIf="editForm.get('typeCalcul')?.invalid && editForm.get('typeCalcul')?.touched" class="error-message">
+                                    <i class="fas fa-exclamation-circle"></i>
+                                    {{ 'FRS.Letypedecalculestrequis' | translate }}
+                                </div>
+                            </div>
+                        </div>
+
+                        <div class="form-row" *ngIf="editForm.get('typeCalcul')?.value === 'NOMINAL'">
+                            <div class="form-group full-width">
+                                <label>{{ 'FRS.Montantdufraisfcfa' | translate }}</label>
+                                <div class="amount-input-wrapper">
+                                    <input type="number" formControlName="montantFrais" 
+                                        placeholder="0.00" step="0.01" min="0" class="amount-input">
+                                    <span class="currency-symbol">FCFA</span>
+                                </div>
+                                <div *ngIf="editForm.get('montantFrais')?.invalid && editForm.get('montantFrais')?.touched" class="error-message">
+                                    <i class="fas fa-exclamation-circle"></i>
+                                    {{ 'FRS.Lemontantestrequisetdoitêtrepositif' | translate }}
+                                </div>
+                            </div>
+                        </div>
+
+                        <div class="form-row" *ngIf="editForm.get('typeCalcul')?.value === 'POURCENTAGE'">
+                            <div class="form-group full-width">
+                                <label>{{ 'FRS.Pourcentage' | translate }}</label>
+                                <div class="percentage-input-wrapper">
+                                    <input type="number" formControlName="pourcentage" 
+                                        placeholder="0.00" step="0.01" min="0" max="100" class="percentage-input">
+                                    <span class="percentage-symbol">%</span>
+                                </div>
+                                <div *ngIf="editForm.get('pourcentage')?.invalid && editForm.get('pourcentage')?.touched" class="error-message">
+                                    <i class="fas fa-exclamation-circle"></i>
+                                    {{ 'FRS.Lepourcentageestrequisetdoitêtreentre0et100' | translate }}
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- Aperçu du calcul -->
+                        <div class="calculation-preview" *ngIf="showEditCalculationPreview()">
+                            <div class="preview-card">
+                                <div class="preview-header">
+                                    <h5>{{ 'FRS.Aperçuducalcul' | translate }}</h5>
+                                </div>
+                                <div class="preview-content">
+                                    <div class="preview-item">
+                                        <span class="preview-label">{{ 'LBL.typeLabel' | translate }}</span>
+                                        <span class="preview-value">{{ getEditTypeCalculDisplayName() }}</span>
+                                    </div>
+                                    <div class="preview-item" *ngIf="editForm.get('typeCalcul')?.value === 'NOMINAL'">
+                                        <span class="preview-label">{{ 'FRS.Montantfixe' | translate }}</span>
+                                        <span class="preview-value">{{ editForm.get('montantFrais')?.value | currency:'XAF':'symbol':'1.0-0' }}</span>
+                                    </div>
+                                    <div class="preview-item" *ngIf="editForm.get('typeCalcul')?.value === 'POURCENTAGE'">
+                                        <span class="preview-label">{{ 'FRS.Pourcentage_1' | translate }}</span>
+                                        <span class="preview-value">{{ editForm.get('pourcentage')?.value }}%</span>
+                                    </div>
+                                    <div class="preview-item">
+                                        <span class="preview-label">{{ 'LBL.serviceLabel' | translate }}</span>
+                                        <span class="preview-value">{{ editForm.get('service')?.value || 'Non défini' }}</span>
+                                    </div>
+                                    <div class="preview-item">
+                                        <span class="preview-label">{{ 'FRS.Client_1' | translate }}</span>
+                                        <span class="preview-value">{{ editForm.get('agence')?.value || 'Non défini' }}</span>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Détails supplémentaires -->
+                    <div class="form-section">
+                        <h4 class="section-title">
+                            <i class="fas fa-cog"></i> {{ 'FRS.Détailssupplémentaires' | translate }}
+                        </h4>
+                        
+                        <div class="form-row">
+                            <div class="form-group full-width">
+                                <label>{{ 'TBL.description' | translate }}</label>
+                                <input type="text" formControlName="description" 
+                                    placeholder="{{ 'FRS.Descriptiondufraisoptionnel' | translate }}" class="text-input">
+                            </div>
+                        </div>
+
+                        <div class="form-row">
+                            <div class="form-group">
+                                <div class="checkbox-wrapper">
+                                    <label class="checkbox-label">
+                                        <input type="checkbox" formControlName="actif" class="modern-checkbox">
+                                        <span class="checkmark"></span>{{ 'TBL.confidence' | translate }}</label>
+                                    <div class="checkbox-help">
+                                        <i class="fas fa-info-circle"></i>
+                                        {{ 'FRS.Lesfraisinactifsneserontpasappliquésautomatiquement' | translate }}
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </form>
+            </div>
+
+            <div class="modal-footer">
+                <div class="modal-actions">
+                    <button type="button" class="btn-secondary" (click)="cancelEdit()">
+                        <i class="fas fa-times"></i>{{ 'COMMON.actions.cancel' | translate }}</button>
+                    <button type="submit" class="btn-primary" 
+                        [disabled]="!editForm.valid || isEditing"
+                        (click)="updateFraisTransaction()">
+                        <i class="fas fa-check"></i>
+                        {{ isEditing ? 'Mise à jour...' : 'Mettre à jour' }}
+                    </button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Filtres -->
+    <div class="filters-section">
+        <h3>{{ 'LBL.filters' | translate }}</h3>
+        <form [formGroup]="filterForm" class="filters-form">
+            <div class="form-row single-line">
+                <div class="form-group">
+                    <label>{{ 'TBL.service' | translate }}</label>
+                    <mat-form-field appearance="fill" class="filter-select">
+                        <mat-label>{{ 'TBL.service' | translate }}</mat-label>
+                        <mat-select #serviceSelect formControlName="services" multiple (selectionChange)="onServiceChange($event)">
+                            <mat-option>
+                                <ngx-mat-select-search [formControl]="serviceSearchCtrl" placeholderLabel="Rechercher un service..." noEntriesFoundLabel="Aucun service trouvé"></ngx-mat-select-search>
+                            </mat-option>
+                            <mat-option *ngFor="let service of filteredServicesList" [value]="service">
+                                {{ service }}
+                            </mat-option>
+                        </mat-select>
+                    </mat-form-field>
+                </div>
+                <div class="form-group">
+                    <label>{{ 'TBL.client' | translate }}</label>
+                    <mat-form-field appearance="fill" class="filter-select">
+                        <mat-label>{{ 'TBL.client' | translate }}</mat-label>
+                        <mat-select #agenceSelect formControlName="agences" multiple (selectionChange)="onAgenceChange($event)">
+                            <mat-option>
+                                <ngx-mat-select-search [formControl]="agenceSearchCtrl" placeholderLabel="Rechercher un client..." noEntriesFoundLabel="Aucun client trouvé"></ngx-mat-select-search>
+                            </mat-option>
+                            <mat-option *ngFor="let agence of filteredAgencesList" [value]="agence">
+                                {{ agence }}
+                            </mat-option>
+                        </mat-select>
+                    </mat-form-field>
+                </div>
+                <div class="form-group">
+                    <label>{{ 'TBL.country' | translate }}</label>
+                    <mat-form-field appearance="fill" class="filter-select">
+                        <mat-label>{{ 'TBL.country' | translate }}</mat-label>
+                        <mat-select #paysSelect formControlName="pays" multiple (selectionChange)="onPaysChange($event)">
+                            <mat-option>
+                                <ngx-mat-select-search [formControl]="paysSearchCtrl" placeholderLabel="Rechercher un pays..." noEntriesFoundLabel="Aucun pays trouvé"></ngx-mat-select-search>
+                            </mat-option>
+                            <mat-option *ngFor="let pays of filteredPaysList" [value]="pays">
+                                {{ pays }}
+                            </mat-option>
+                        </mat-select>
+                    </mat-form-field>
+                </div>
+                <div class="form-group">
+                    <label>{{ 'TBL.status' | translate }}</label>
+                    <select formControlName="actif" (change)="applyFilters()">
+                        <option value="">{{ 'FILT.all' | translate }}</option>
+                        <option [value]="true">{{ 'TBL.confidence' | translate }}</option>
+                        <option [value]="false">{{ 'FRS.Inactif' | translate }}</option>
+                    </select>
+                </div>
+                <div class="form-group">
+                    <label for="dateDebut">{{ 'LBL.startDate' | translate }}</label>
+                    <input id="dateDebut" type="date" [value]="dateDebut" (change)="onDateDebutChange($event)">
+                </div>
+                <div class="form-group">
+                    <label for="dateFin">{{ 'LBL.endDate' | translate }}</label>
+                    <input id="dateFin" type="date" [value]="dateFin" (change)="onDateFinChange($event)">
+                </div>
+                <div class="form-group">
+                    <button type="button" (click)="clearFilters()">{{ 'ACT.clearFilters' | translate }}</button>
+                </div>
+            </div>
+        </form>
+    </div>
+
+    <!-- Liste des frais -->
+    <div class="frais-list">
+        <div class="list-header">
+            <h3>{{ 'FRS.Listedesfraisdetransaction' | translate }}</h3>
+            <div class="export-buttons" *ngIf="!isLoading && pagedFrais.length > 0">
+                <button class="btn-export btn-csv" (click)="exportToCSV()" [disabled]="isExporting">
+                    <i class="fas fa-file-csv"></i>
+                    {{ isExporting ? 'Export en cours...' : 'Exporter CSV' }}
+                </button>
+                <button class="btn-export btn-excel" (click)="exportToExcel()" [disabled]="isExporting">
+                    <i class="fas fa-file-excel"></i>
+                    {{ isExporting ? 'Export en cours...' : 'Exporter Excel' }}
+                </button>
+                <button class="btn-export btn-api" (click)="exportViaAPI()" [disabled]="isExporting">
+                    <i class="fas fa-download"></i>
+                    {{ isExporting ? 'Export en cours...' : 'Export API' }}
+                </button>
+            </div>
+        </div>
+
+        <div *ngIf="isLoading" class="loading">
+            <p>{{ 'FRS.Chargementdesfraisdetransaction' | translate }}</p>
+        </div>
+
+        <div *ngIf="!isLoading && pagedFrais.length === 0" class="no-data">
+            <p>{{ 'FRS.Aucunfraisdetransactiontrouvé' | translate }}</p>
+        </div>
+
+        <div *ngIf="!isLoading && pagedFrais.length > 0" class="table-container">
+            <table class="frais-table">
+                <thead>
+                    <tr>
+                        <th>{{ 'TBL.service' | translate }}</th>
+                        <th>{{ 'TBL.client' | translate }}</th>
+                        <th>{{ 'COMMON.actions.type' | translate }}</th>
+                        <th>{{ 'FRS.Valeurparamétrée' | translate }}</th>
+                        <th>{{ 'TBL.description' | translate }}</th>
+                        <th>{{ 'TBL.status' | translate }}</th>
+                        <th>{{ 'FRS.Datecréation' | translate }}</th>
+                        <th>{{ 'FRS.Datemodification' | translate }}</th>
+                        <th>{{ 'TBL.actions' | translate }}</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    <tr *ngFor="let frais of pagedFrais">
+                        <td>
+                            <span class="badge service-{{ frais.service.toLowerCase() }}">
+                                {{ frais.service }}
+                            </span>
+                        </td>
+                        <td>{{ frais.agence }}</td>
+                        <td>
+                            <span class="badge type-{{ frais.typeCalcul?.toLowerCase() || 'nominal' }}">
+                                {{ frais.typeCalcul === 'POURCENTAGE' ? 'Frais en %' : 'Frais fixe' }}
+                            </span>
+                        </td>
+                        <td>
+                            <span *ngIf="frais.typeCalcul === 'POURCENTAGE'">
+                                {{ frais.pourcentage | number:'1.2-2' }}%
+                            </span>
+                            <span *ngIf="frais.typeCalcul !== 'POURCENTAGE'">
+                                {{ frais.montantFrais | number:'1.2-2' }} FCFA
+                            </span>
+                        </td>
+                        <td>{{ frais.description || '-' }}</td>
+                        <td>
+                            <span class="badge status-{{ frais.actif ? 'actif' : 'inactif' }}">
+                                {{ frais.actif ? 'Actif' : 'Inactif' }}
+                            </span>
+                        </td>
+                        <td>{{ frais.dateCreation | date:'dd/MM/yyyy HH:mm' }}</td>
+                        <td>{{ frais.dateModification | date:'dd/MM/yyyy HH:mm' }}</td>
+                        <td class="actions">
+                            <button class="btn-icon" (click)="editFraisTransaction(frais)">
+                                <i class="fas fa-edit"></i>
+                            </button>
+                            <button class="btn-icon btn-toggle" (click)="toggleFraisTransaction(frais.id)" *ngIf="frais.id">
+                                <i class="fas" [class.fa-toggle-on]="frais.actif" [class.fa-toggle-off]="!frais.actif"></i>
+                            </button>
+                            <button class="btn-icon btn-danger" (click)="deleteFraisTransaction(frais.id)" *ngIf="frais.id">
+                                <i class="fas fa-trash"></i>
+                            </button>
+                        </td>
+                    </tr>
+                </tbody>
+            </table>
+        </div>
+
+        <!-- Pagination -->
+        <div class="pagination" *ngIf="totalPages > 1">
+            <button (click)="prevPage()" [disabled]="currentPage === 1">
+                <i class="fas fa-chevron-left"></i>{{ 'PAG.previous' | translate }}</button>
+            
+            <div class="pagination-indicators">
+                <span *ngFor="let page of getVisiblePages()" 
+                      class="page-indicator"
+                      [class.active]="currentPage === page"
+                      (click)="goToPage(page)">
+                    {{ page }}
+                </span>
+            </div>
+            
+            <button (click)="nextPage()" [disabled]="currentPage === totalPages">{{ 'PAG.next' | translate }}<i class="fas fa-chevron-right"></i>
+            </button>
+        </div>
+    </div>
+
+    <!-- Section d'information sur la logique de calcul -->
+    <div class="info-section">
+        <h3>{{ 'FRS.Logiquedecalculdesfrais' | translate }}</h3>
+        <div class="info-content">
+            <div class="info-card">
+                <h4>{{ 'FRS.Fraisfixesnominal' | translate }}</h4>
+                <p><strong>{{ 'FRS.Formule' | translate }}</strong> {{ 'FRS.Montantconfiguré×nombredetransactions' | translate }}</p>
+                <p><strong>{{ 'FRS.Sourcedunombredetransactions' | translate }}</strong> {{ 'FRS.Donnéesréellesdelagencysummary' | translate }}</p>
+                <p><strong>{{ 'FRS.Exemple' | translate }}</strong> {{ 'FRS.Silemontantconfiguréest500fcfaetquilya10transactionslesfrais500×105000fcfa' | translate }}</p>
+            </div>
+            <div class="info-card">
+                <h4>{{ 'FRS.Fraisenpourcentagepourcentage' | translate }}</h4>
+                <p><strong>{{ 'FRS.Formule' | translate }}</strong> {{ 'FRS.Volumetotaldelopération×pourcentage' | translate }}</p>
+                <p><strong>{{ 'FRS.Sourceduvolume' | translate }}</strong> {{ 'FRS.Montantdelopérationprincipale' | translate }}</p>
+                <p><strong>{{ 'FRS.Exemple' | translate }}</strong> {{ 'FRS.Silevolumeest10000fcfaetlepourcentage25lesfrais10000×25250fcfa' | translate }}</p>
+            </div>
+        </div>
+    </div>
+
+    <!-- Section de test du calcul des frais -->
+    <div class="test-section">
+        <h3>{{ 'FRS.Testducalculdesfrais' | translate }}</h3>
+        <div class="test-form">
+            <div class="form-row">
+                <div class="form-group">
+                    <label>{{ 'TBL.service' | translate }}</label>
+                    <input type="text" [(ngModel)]="testService" placeholder="{{ 'FRS.Exairtime' | translate }}">
+                </div>
+                <div class="form-group">
+                    <label>{{ 'TBL.client' | translate }}</label>
+                    <input type="text" [(ngModel)]="testAgence" placeholder="{{ 'FRS.Excl001' | translate }}">
+                </div>
+                <div class="form-group">
+                    <label>{{ 'FRS.Typedecalcul_1' | translate }}</label>
+                    <select [(ngModel)]="testTypeCalcul" (change)="onTestTypeChange()">
+                        <option value="NOMINAL">{{ 'FRS.Fraisfixe' | translate }}</option>
+                        <option value="POURCENTAGE">{{ 'FRS.Fraisenpourcentage' | translate }}</option>
+                    </select>
+                </div>
+            </div>
+            <div class="form-row">
+                <div class="form-group" *ngIf="testTypeCalcul === 'NOMINAL'">
+                    <label>{{ 'FRS.Montantdufraisfcfa_1' | translate }}</label>
+                    <input type="number" [(ngModel)]="testMontantFrais" placeholder="{{ 'FRS.Ex100' | translate }}">
+                </div>
+                <div class="form-group" *ngIf="testTypeCalcul === 'POURCENTAGE'">
+                    <label>{{ 'FRS.Pourcentage_2' | translate }}</label>
+                    <input type="number" [(ngModel)]="testPourcentage" placeholder="{{ 'FRS.Ex25' | translate }}">
+                </div>
+                <div class="form-group">
+                    <label>{{ 'FRS.Volumedelopérationfcfa' | translate }}</label>
+                    <input type="number" [(ngModel)]="testVolumeOperation" placeholder="{{ 'FRS.Ex10000' | translate }}">
+                </div>
+                <div class="form-group" *ngIf="testTypeCalcul === 'NOMINAL'">
+                    <label>{{ 'DASH.transactionCount' | translate }}</label>
+                    <input type="number" [(ngModel)]="testNombreTransactions" placeholder="{{ 'FRS.Ex50' | translate }}">
+                </div>
+            </div>
+            <div class="form-row">
+                <div class="form-group">
+                    <button type="button" (click)="testFraisCalculation()" class="btn btn-primary">
+                        {{ 'FRS.Testerlecalcul' | translate }}
+                    </button>
+                </div>
+            </div>
+            
+            <!-- Résultat du test -->
+            <div *ngIf="testResult" class="test-result">
+                <h4>{{ 'FRS.Résultatdutest' | translate }}</h4>
+                <div class="result-details">
+                    <p><strong>{{ 'LBL.typeLabel' | translate }}</strong> {{ testResult.type }}</p>
+                    <p><strong>{{ 'FRS.Formule' | translate }}</strong> {{ testResult.formule }}</p>
+                    <p *ngIf="testResult.volumeTotal"><strong>{{ 'FRS.Volumetotal' | translate }}</strong> {{ testResult.volumeTotal | number:'1.2-2' }} FCFA</p>
+                    <p *ngIf="testResult.pourcentage"><strong>{{ 'FRS.Pourcentage_1' | translate }}</strong> {{ testResult.pourcentage }}%</p>
+                    <p *ngIf="testResult.montantParametre"><strong>{{ 'FRS.Montantparamétré' | translate }}</strong> {{ testResult.montantParametre | number:'1.2-2' }} FCFA</p>
+                    <p *ngIf="testResult.nombreTransactions"><strong>{{ 'FRS.Nombredetransactions' | translate }}</strong> {{ testResult.nombreTransactions }}</p>
+                    <p class="result-total"><strong>{{ 'FRS.Montantdesfraiscalculé' | translate }}</strong> <span class="highlight">{{ testResult.montantFraisCalcule | number:'1.2-2' }} FCFA</span></p>
+                </div>
+            </div>
+        </div>
+    </div>
+  </div><!-- .frais-container -->
+  </div><!-- .main -->
+</div><!-- .frais-page --> 

@@ -1,0 +1,320 @@
+<div class="sr-dash" [class.sr-dash--compact]="compactLayout">
+    <div *ngIf="panelLoading" class="sr-dash-loading">
+        Loading data…
+    </div>
+
+    <ng-container *ngIf="!panelLoading">
+        <div class="sr-dash-cards">
+            <div class="sr-dash-card sr-dash-card--neutral">
+                <button
+                    *ngIf="!compactLayout"
+                    type="button"
+                    class="sr-dash-card-menu"
+                    title="More options"
+                    aria-label="More options"
+                >
+                    <i class="fas fa-ellipsis-v"></i>
+                </button>
+                <span class="sr-dash-card-title">{{ cardTotalTitle }}</span>
+                <strong class="sr-dash-card-value">{{ cardTotalValue | number:'1.0-0' }}{{ cardValueSuffix }}</strong>
+                <span class="sr-dash-card-sub">{{ dashboardTotalCardSubtitle }}</span>
+            </div>
+            <div class="sr-dash-card sr-dash-card--blue">
+                <span class="sr-dash-card-title">{{ cardReconciliableTitle }}</span>
+                <strong class="sr-dash-card-value">{{ cardReconciliableValue | number:'1.0-0' }}{{ cardValueSuffix }}</strong>
+                <span class="sr-dash-card-sub">{{ cardReconciliablePercent }}% of {{ cardPercentBasisLabel }}</span>
+            </div>
+            <div class="sr-dash-card sr-dash-card--green">
+                <span class="sr-dash-card-title">{{ cardReconcilieTitle }}</span>
+                <strong class="sr-dash-card-value">{{ cardReconcilieValue | number:'1.0-0' }}{{ cardValueSuffix }}</strong>
+                <span class="sr-dash-card-sub">{{ cardReconciliePercent }}% of {{ cardReconciliePercentBasisLabel }}</span>
+            </div>
+            <div class="sr-dash-card sr-dash-card--red">
+                <span class="sr-dash-card-title">{{ cardNonReconciliableTitle }}</span>
+                <strong class="sr-dash-card-value">{{ cardNonReconciliableValue | number:'1.0-0' }}{{ cardValueSuffix }}</strong>
+                <span class="sr-dash-card-sub">{{ cardNonReconciliablePercent }}% of {{ cardPercentBasisLabel }}</span>
+            </div>
+        </div>
+
+        <p class="sr-dash-import-hint" *ngIf="showImportHint">
+            Import (top button): <strong>.csv</strong> / <strong>.tsv</strong> files allowed; columns
+            <strong>{{ 'TBL.country' | translate }}</strong> + <strong>Service Code</strong> are sufficient (Service and RECO Code = service code if missing).
+            Existing references (same country + service code) are <strong>updated</strong>.
+        </p>
+
+        <!-- Filtres compacts — une seule ligne -->
+        <div class="sr-fbar" *ngIf="compactLayout">
+            <span class="sr-fbar-label">Filters:</span>
+            <mat-form-field appearance="fill" class="sr-fsel sr-fsel--aff">
+                    <mat-label>Display</mat-label>
+                <mat-select [(ngModel)]="displayMode" (selectionChange)="onDisplayModeChange()">
+                    <mat-option *ngFor="let opt of displayModeOptions" [value]="opt.value">{{ opt.label }}</mat-option>
+                </mat-select>
+            </mat-form-field>
+            <mat-form-field appearance="fill" class="sr-fsel sr-fsel--period">
+                <mat-label>{{ 'LBL.period' | translate }}</mat-label>
+                <mat-select [(ngModel)]="periodMonths" (selectionChange)="onPeriodChange()">
+                    <mat-option *ngFor="let opt of periodMonthsOptions" [value]="opt.value">{{ opt.label }}</mat-option>
+                </mat-select>
+            </mat-form-field>
+            <div class="sr-fbar-div" aria-hidden="true"></div>
+            <mat-form-field appearance="fill" class="sr-fsel">
+                <mat-select
+                    [(ngModel)]="selectedPays"
+                    multiple
+                    (selectionChange)="onDashboardFilterChange()"
+                    placeholder="{{ 'FILT.allCountries' | translate }}"
+                >
+                    <mat-option>
+                        <ngx-mat-select-search
+                            [formControl]="paysSearchCtrl"
+                            placeholderLabel="Search..."
+                            noEntriesFoundLabel="No country"
+                        ></ngx-mat-select-search>
+                    </mat-option>
+                    <mat-option *ngFor="let p of filteredPaysOptions" [value]="p">{{ p }}</mat-option>
+                </mat-select>
+            </mat-form-field>
+            <mat-form-field appearance="fill" class="sr-fsel">
+                <mat-select
+                    [(ngModel)]="selectedServiceTypes"
+                    multiple
+                    (selectionChange)="onDashboardFilterChange()"
+                    placeholder="{{ 'FILT.allTypes' | translate }}"
+                >
+                    <mat-option>
+                        <ngx-mat-select-search
+                            [formControl]="serviceTypeSearchCtrl"
+                            placeholderLabel="Search..."
+                            noEntriesFoundLabel="No type"
+                        ></ngx-mat-select-search>
+                    </mat-option>
+                    <mat-option *ngFor="let t of filteredServiceTypeOptions" [value]="t">{{ t }}</mat-option>
+                </mat-select>
+            </mat-form-field>
+            <mat-form-field appearance="fill" class="sr-fsel">
+                <mat-select
+                    [(ngModel)]="selectedOperateurs"
+                    multiple
+                    (selectionChange)="onDashboardFilterChange()"
+                        placeholder="All operators"
+                >
+                    <mat-option>
+                        <ngx-mat-select-search
+                            [formControl]="operateurSearchCtrl"
+                            placeholderLabel="Search..."
+                            noEntriesFoundLabel="No operator"
+                        ></ngx-mat-select-search>
+                    </mat-option>
+                    <mat-option *ngFor="let o of filteredOperateurOptions" [value]="o">{{ o }}</mat-option>
+                </mat-select>
+            </mat-form-field>
+            <mat-form-field appearance="fill" class="sr-fsel">
+                <mat-select
+                    [(ngModel)]="selectedReseaux"
+                    multiple
+                    (selectionChange)="onDashboardFilterChange()"
+                    placeholder="All networks"
+                >
+                    <mat-option>
+                        <ngx-mat-select-search
+                            [formControl]="reseauSearchCtrl"
+                            placeholderLabel="Search..."
+                            noEntriesFoundLabel="No network"
+                        ></ngx-mat-select-search>
+                    </mat-option>
+                    <mat-option *ngFor="let rs of filteredReseauOptions" [value]="rs">{{ rs }}</mat-option>
+                </mat-select>
+            </mat-form-field>
+            <button
+                *ngIf="showOpenDetailsButton"
+                type="button"
+                class="sr-btn-det"
+                (click)="onOpenDetailsClick()"
+            >
+                Open details
+            </button>
+        </div>
+
+        <!-- Filtres page complète -->
+        <div class="filters-export-row sr-dash-filters-row" *ngIf="!compactLayout">
+            <div class="filters-container">
+            <div class="filter-group">
+                <mat-form-field appearance="fill" class="filter-select">
+                <mat-label>Display</mat-label>
+                    <mat-select [(ngModel)]="displayMode" (selectionChange)="onDisplayModeChange()">
+                        <mat-option *ngFor="let opt of displayModeOptions" [value]="opt.value">{{ opt.label }}</mat-option>
+                    </mat-select>
+                </mat-form-field>
+            </div>
+            <div class="filter-group">
+                <mat-form-field appearance="fill" class="filter-select">
+                    <mat-label>{{ 'LBL.period' | translate }}</mat-label>
+                    <mat-select [(ngModel)]="periodMonths" (selectionChange)="onPeriodChange()">
+                        <mat-option *ngFor="let opt of periodMonthsOptions" [value]="opt.value">{{ opt.label }}</mat-option>
+                    </mat-select>
+                </mat-form-field>
+            </div>
+            <div class="filter-group">
+                <mat-form-field appearance="fill" class="filter-select">
+                    <mat-label>{{ 'TBL.country' | translate }}</mat-label>
+                    <mat-select
+                        [(ngModel)]="selectedPays"
+                        multiple
+                        (selectionChange)="onDashboardFilterChange()"
+                        placeholder="{{ 'FILT.allCountries' | translate }}"
+                    >
+                        <mat-option>
+                            <ngx-mat-select-search
+                                [formControl]="paysSearchCtrl"
+                                placeholderLabel="Search for a country..."
+                                noEntriesFoundLabel="No country found"
+                            ></ngx-mat-select-search>
+                        </mat-option>
+                        <mat-option *ngFor="let p of filteredPaysOptions" [value]="p">{{ p }}</mat-option>
+                    </mat-select>
+                </mat-form-field>
+            </div>
+            <div class="filter-group">
+                <mat-form-field appearance="fill" class="filter-select">
+                    <mat-label>Service type</mat-label>
+                    <mat-select
+                        [(ngModel)]="selectedServiceTypes"
+                        multiple
+                        (selectionChange)="onDashboardFilterChange()"
+                        placeholder="{{ 'FILT.allTypes' | translate }}"
+                    >
+                        <mat-option>
+                            <ngx-mat-select-search
+                                [formControl]="serviceTypeSearchCtrl"
+                                placeholderLabel="Search for a type..."
+                                noEntriesFoundLabel="No type found"
+                            ></ngx-mat-select-search>
+                        </mat-option>
+                        <mat-option *ngFor="let t of filteredServiceTypeOptions" [value]="t">{{ t }}</mat-option>
+                    </mat-select>
+                </mat-form-field>
+            </div>
+            <div class="filter-group">
+                <mat-form-field appearance="fill" class="filter-select">
+                    <mat-label>{{ 'TBL.operator' | translate }}</mat-label>
+                    <mat-select
+                        [(ngModel)]="selectedOperateurs"
+                        multiple
+                        (selectionChange)="onDashboardFilterChange()"
+                    placeholder="All operators"
+                    >
+                        <mat-option>
+                            <ngx-mat-select-search
+                                [formControl]="operateurSearchCtrl"
+                                placeholderLabel="Search for an operator..."
+                                noEntriesFoundLabel="No operator found"
+                            ></ngx-mat-select-search>
+                        </mat-option>
+                        <mat-option *ngFor="let o of filteredOperateurOptions" [value]="o">{{ o }}</mat-option>
+                    </mat-select>
+                </mat-form-field>
+            </div>
+            <div class="filter-group">
+                <mat-form-field appearance="fill" class="filter-select">
+                    <mat-label>Network</mat-label>
+                    <mat-select
+                        [(ngModel)]="selectedReseaux"
+                        multiple
+                        (selectionChange)="onDashboardFilterChange()"
+                    placeholder="All networks"
+                    >
+                        <mat-option>
+                            <ngx-mat-select-search
+                                [formControl]="reseauSearchCtrl"
+                                placeholderLabel="Search for a network..."
+                                noEntriesFoundLabel="No network found"
+                            ></ngx-mat-select-search>
+                        </mat-option>
+                        <mat-option *ngFor="let rs of filteredReseauOptions" [value]="rs">{{ rs }}</mat-option>
+                    </mat-select>
+                </mat-form-field>
+            </div>
+            </div>
+        </div>
+
+        <div class="sr-dash-columns" *ngIf="showDetailColumns">
+            <div class="sr-dash-col sr-dash-col--rec">
+                <header class="sr-dash-col-head">
+                    <div class="sr-dash-col-head-left">
+                        <span class="sr-dash-col-icon sr-dash-col-icon--ok"><i class="fas fa-check"></i></span>
+                        <div>
+                            <h3 class="sr-dash-col-title">Reconcilable</h3>
+                            <p class="sr-dash-col-meta">{{ dashboardReconciliableCount }} service(s)</p>
+                        </div>
+                    </div>
+                    <span class="sr-dash-col-badge sr-dash-col-badge--green">{{ dashboardReconciliablePercent }}%</span>
+                </header>
+                <div class="sr-dash-body">
+                    <ng-container *ngIf="groupedDashboardReconciliable.length; else emptyRec">
+                        <section class="sr-dash-group" *ngFor="let g of groupedDashboardReconciliable; trackBy: trackDashboardGroup">
+                            <h4 class="sr-dash-cat">{{ g.serviceTypeLabel }}</h4>
+                            <div class="sr-dash-op-block" *ngFor="let op of g.operators; trackBy: trackDashboardOp">
+                                <h5 class="sr-dash-subcat">{{ op.operateurLabel }}</h5>
+                                <div class="sr-dash-item" *ngFor="let ref of op.items; trackBy: trackDashboardRef">
+                                    <span class="sr-dash-dot" [class.sr-dash-dot--on]="isReferenceActive(ref)" [class.sr-dash-dot--off]="!isReferenceActive(ref)"></span>
+                                    <code class="sr-dash-code">{{ ref.codeService }}</code>
+                                    <span class="sr-dash-item-right">
+                                        <span class="sr-dash-pill">{{ ref.pays }}</span>
+                                        <span class="sr-dash-status" [class.sr-dash-status--on]="isReferenceActive(ref)" [class.sr-dash-status--off]="!isReferenceActive(ref)">
+                                            {{ isReferenceActive(ref) ? 'ACTIF' : 'INACTIF' }}
+                                        </span>
+                                    </span>
+                                </div>
+                            </div>
+                        </section>
+                    </ng-container>
+                    <ng-template #emptyRec>
+                        <p class="sr-dash-empty">No reconcilable service for these filters.</p>
+                    </ng-template>
+                </div>
+            </div>
+
+            <div class="sr-dash-gutter" aria-hidden="true">
+                <div class="sr-dash-gutter-line"></div>
+                <div class="sr-dash-gutter-icon"><i class="fas fa-arrow-down"></i></div>
+            </div>
+
+            <div class="sr-dash-col sr-dash-col--non">
+                <header class="sr-dash-col-head">
+                    <div class="sr-dash-col-head-left">
+                        <span class="sr-dash-col-icon sr-dash-col-icon--ko"><i class="fas fa-times"></i></span>
+                        <div>
+                            <h3 class="sr-dash-col-title">Not reconcilable</h3>
+                            <p class="sr-dash-col-meta">{{ dashboardNonReconciliableCount }} service(s)</p>
+                        </div>
+                    </div>
+                    <span class="sr-dash-col-badge sr-dash-col-badge--red">{{ dashboardNonReconciliablePercent }}%</span>
+                </header>
+                <div class="sr-dash-body">
+                    <ng-container *ngIf="groupedDashboardNonReconciliable.length; else emptyNon">
+                        <section class="sr-dash-group" *ngFor="let g of groupedDashboardNonReconciliable; trackBy: trackDashboardGroup">
+                            <h4 class="sr-dash-cat">{{ g.serviceTypeLabel }}</h4>
+                            <div class="sr-dash-op-block" *ngFor="let op of g.operators; trackBy: trackDashboardOp">
+                                <h5 class="sr-dash-subcat">{{ op.operateurLabel }}</h5>
+                                <div class="sr-dash-item" *ngFor="let ref of op.items; trackBy: trackDashboardRef">
+                                    <span class="sr-dash-dot" [class.sr-dash-dot--on]="isReferenceActive(ref)" [class.sr-dash-dot--off]="!isReferenceActive(ref)"></span>
+                                    <code class="sr-dash-code">{{ ref.codeService }}</code>
+                                    <span class="sr-dash-item-right">
+                                        <span class="sr-dash-pill">{{ ref.pays }}</span>
+                                        <span class="sr-dash-status" [class.sr-dash-status--on]="isReferenceActive(ref)" [class.sr-dash-status--off]="!isReferenceActive(ref)">
+                                            {{ isReferenceActive(ref) ? 'ACTIF' : 'INACTIF' }}
+                                        </span>
+                                    </span>
+                                </div>
+                            </div>
+                        </section>
+                    </ng-container>
+                    <ng-template #emptyNon>
+                        <p class="sr-dash-empty">No non-reconcilable service for these filters.</p>
+                    </ng-template>
+                </div>
+            </div>
+        </div>
+    </ng-container>
+</div>

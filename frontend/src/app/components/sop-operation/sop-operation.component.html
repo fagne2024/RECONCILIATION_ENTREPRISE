@@ -1,0 +1,327 @@
+<div class="sop-operation-page">
+  <!-- TOP NAV -->
+  <nav class="topnav">
+    <div class="nav-brand">
+      <div class="nav-brand-dot"></div>
+      {{ 'SOP.operation.brand' | translate }}
+    </div>
+    <div class="nav-sep"></div>
+    <div class="nav-path">
+      <strong>{{ 'NAV.sopOperations' | translate }}</strong>
+    </div>
+    <div class="nav-spacer"></div>
+  </nav>
+
+  <!-- PAGE HEADER -->
+  <div class="page-header-sop-op">
+    <div class="ph-sop-op-left">
+<div class="ph-eyebrow"><span></span>{{ 'SOP.operation.page.eyebrow' | translate }}</div>
+      <h1 class="ph-title-sop-op">{{ 'SOP.operation.page.titleBefore' | translate }}<em>{{ 'SOP.operation.page.titleAccent' | translate }}</em></h1>
+      <p class="ph-subtitle-sop-op">
+        {{ 'SOP.operation.page.subtitle' | translate }}
+      </p>
+    </div>
+  </div>
+
+  <div class="main">
+  <div class="sop-operation-container">
+  <div class="sop-header">
+    <div class="header-navigation">
+      <button class="btn-back" (click)="goBack()" title="{{ 'COMMON.actions.back' | translate }}">
+        <i class="fas fa-arrow-left"></i>
+        <span>{{ 'COMMON.actions.back' | translate }}</span>
+      </button>
+      <button class="btn-aide" (click)="goToAide()" [title]="'SOP.shared.nav.helpPage' | translate">
+        <i class="fas fa-question-circle"></i>
+        <span>{{ 'LBL.help' | translate }}</span>
+      </button>
+      <button class="btn-home" (click)="goHome()" [title]="'SOP.shared.nav.home' | translate">
+        <i class="fas fa-home"></i>
+      </button>
+    </div>
+    <h1 class="sop-title">{{ 'SOP.shared.title' | translate }}</h1>
+  </div>
+
+  <!-- Visualisation des SOP (maquette) : recherche, arbre repliable, volet de détail -->
+  <div class="sv-view">
+    <!-- Barre : recherche + filtres + plier/déplier -->
+    <div class="sv-bar">
+      <label class="sv-search">
+        <i class="fas fa-search"></i>
+        <input type="search" [(ngModel)]="searchQuery"
+               [placeholder]="'SOP.shared.searchPlaceholder' | translate"
+               [attr.aria-label]="'SOP.shared.searchPlaceholder' | translate">
+      </label>
+      <div class="sv-chips">
+        <button type="button" class="sv-chip" [class.on]="!branchFilter" (click)="setBranchFilter(null)">
+          <span class="sv-dot"></span>{{ 'SOP.shared.filterAll' | translate }} <b>{{ totalItemCount() }}</b>
+        </button>
+        <button type="button" class="sv-chip" *ngFor="let b of branches(); trackBy: trackById"
+                [class.on]="branchFilter === b.id" (click)="setBranchFilter(b.id)">
+          <span class="sv-dot"></span>{{ labelOf(b) }} <b>{{ branchItemCount(b) }}</b>
+        </button>
+      </div>
+      <div class="sv-chips sv-bar-actions">
+        <button type="button" class="sv-btn sv-btn-sm" (click)="expandAll()">{{ 'SOP.shared.expandAll' | translate }}</button>
+        <button type="button" class="sv-btn sv-btn-sm" (click)="collapseAll()">{{ 'SOP.shared.collapseAll' | translate }}</button>
+      </div>
+    </div>
+
+    <!-- Panneau : arbre des SOP -->
+    <div class="sv-panel">
+      <div class="sv-root" *ngIf="sopStructure">
+        <span class="sv-rn"><i class="fas fa-sitemap"></i>{{ labelOf(sopStructure) }}</span>
+        <span class="sv-node-actions">
+          <button type="button" class="sv-na" (click)="openAddModal(sopStructure, $event)" [title]="'ACT.addSubtitle' | translate"><i class="fas fa-plus"></i></button>
+          <button type="button" class="sv-na" (click)="openEditModal(sopStructure, $event)" [title]="'ACT.edit' | translate"><i class="fas fa-pen"></i></button>
+        </span>
+      </div>
+      <div class="sv-rl"></div>
+
+      <div class="sv-brs">
+        <section class="sv-br" *ngFor="let branch of visibleBranches(); trackBy: trackById">
+          <header class="sv-bh">
+            <i class="fas fa-folder-open"></i>
+            <span class="sv-bh-name">{{ labelOf(branch) }}</span>
+            <em>{{ visibleBranchItemCount(branch) }} {{ 'SOP.shared.sopUnit' | translate }}</em>
+            <span class="sv-node-actions">
+              <button type="button" class="sv-na" (click)="openAddModal(branch, $event)" [title]="'ACT.addSubtitle' | translate"><i class="fas fa-plus"></i></button>
+              <button type="button" class="sv-na" (click)="openEditModal(branch, $event)" [title]="'ACT.edit' | translate"><i class="fas fa-pen"></i></button>
+              <button type="button" class="sv-na danger" (click)="openDeleteModal(branch, $event)" [title]="'ACT.delete' | translate"><i class="fas fa-trash"></i></button>
+            </span>
+          </header>
+
+          <div class="sv-cats">
+            <div class="sv-cat" *ngFor="let cat of visibleCategories(branch); trackBy: trackById">
+              <button type="button" class="sv-ch" [attr.aria-expanded]="isCategoryOpen(branch, cat)" (click)="toggleCategory(branch, cat)">
+                <i class="fas fa-folder"></i>
+                <span class="sv-ch-name">{{ labelOf(cat) }}</span>
+                <small>({{ matchedItems(cat).length }})</small>
+                <span class="sv-node-actions" (click)="$event.stopPropagation()">
+                  <span class="sv-na" role="button" tabindex="0" (click)="openAddModal(cat, $event)" [title]="'ACT.addSubtitle' | translate"><i class="fas fa-plus"></i></span>
+                  <span class="sv-na" role="button" tabindex="0" (click)="openEditModal(cat, $event)" [title]="'ACT.edit' | translate"><i class="fas fa-pen"></i></span>
+                  <span class="sv-na danger" role="button" tabindex="0" (click)="openDeleteModal(cat, $event)" [title]="'ACT.delete' | translate"><i class="fas fa-trash"></i></span>
+                </span>
+                <i class="fas fa-chevron-down sv-cv" [class.open]="isCategoryOpen(branch, cat)"></i>
+              </button>
+
+              <div class="sv-its" *ngIf="isCategoryOpen(branch, cat)">
+                <button type="button" class="sv-it" *ngFor="let item of matchedItems(cat); trackBy: trackById" (click)="openDetail(branch, cat, item)">
+                  <span class="sv-bl2"></span>
+                  <span class="sv-nm">{{ labelOf(item) }}</span>
+                  <i class="fas fa-chevron-right sv-go"></i>
+                </button>
+              </div>
+            </div>
+          </div>
+        </section>
+
+        <p class="sv-emp" *ngIf="!visibleBranches().length">{{ 'SOP.shared.noResult' | translate }}</p>
+      </div>
+    </div>
+  </div>
+
+  <!-- Volet de détail d'une SOP -->
+  <div class="sv-ov" [class.on]="showDetail" (click)="closeDetail()"></div>
+  <aside class="sv-drawer" [class.on]="showDetail" *ngIf="detailItem" role="dialog" aria-modal="true" [attr.aria-hidden]="!showDetail">
+    <div class="sv-drawer-top">
+      <div class="sv-cr">
+        <span>{{ labelOf(detailBranch) }}</span>
+        <i class="fas fa-chevron-right"></i>
+        <span>{{ labelOf(detailCategory) }}</span>
+      </div>
+      <button type="button" class="sv-btn sv-btn-sm" (click)="closeDetail()">{{ 'SOP.shared.close' | translate }}</button>
+    </div>
+    <h2 class="sv-drawer-title">{{ labelOf(detailItem) }}</h2>
+    <p class="sv-drawer-desc" *ngIf="detailItem.description">{{ detailItem.description }}</p>
+    <div class="sv-acts">
+      <button type="button" class="sv-btn sv-p" (click)="openSopFromDetail()"><i class="fas fa-book-open"></i> {{ 'SOP.shared.open' | translate }}</button>
+      <button type="button" class="sv-btn" (click)="editDetail($event)"><i class="fas fa-pen"></i> {{ 'ACT.edit' | translate }}</button>
+      <button type="button" class="sv-btn sv-danger" (click)="deleteDetail($event)"><i class="fas fa-trash"></i> {{ 'ACT.delete' | translate }}</button>
+    </div>
+  </aside>
+
+  <!-- Popup pour les options -->
+  <div class="popup-overlay" *ngIf="showPopup && popupNode" (click)="closePopup()">
+    <div class="popup-content" (click)="$event.stopPropagation()">
+      <div class="popup-header">
+        <h3>{{ (popupNode.labelKey || popupNode.label) | translate }}</h3>
+        <button class="btn-close-popup" (click)="closePopup()">
+          <i class="fas fa-times"></i>
+        </button>
+      </div>
+      <div class="popup-body">
+        <p class="popup-description">{{ 'SOP.shared.options.prompt' | translate }}</p>
+        <div class="popup-options">
+          <button class="popup-option-btn" (click)="onOptionClick('grandes-lignes')">
+            <i class="fas fa-list-ul"></i>
+            <span>{{ 'SOP.shared.options.outline' | translate }}</span>
+          </button>
+          <button class="popup-option-btn" (click)="onOptionClick('document-complet')">
+            <i class="fas fa-file-alt"></i>
+            <span>{{ 'SOP.shared.options.full' | translate }}</span>
+          </button>
+        </div>
+      </div>
+    </div>
+  </div>
+
+
+  <!-- Modal d'upload de document -->
+  <div class="modal-overlay" *ngIf="showUploadModal" (click)="closeUploadModal()">
+    <div class="modal-content upload-modal" (click)="$event.stopPropagation()">
+      <div class="modal-header">
+        <h3>{{ 'SOP.shared.upload.modalTitle' | translate }}</h3>
+        <button class="btn-close-modal" (click)="closeUploadModal()">
+          <i class="fas fa-times"></i>
+        </button>
+      </div>
+      <div class="modal-body">
+        <p class="upload-description">
+          {{ 'SOP.shared.upload.description' | translate }}
+        </p>
+        <div class="file-upload-area">
+          <input 
+            type="file" 
+            id="fileInput" 
+            (change)="onFileSelected($event)"
+            accept=".pdf,.png,.jpg,.jpeg,.gif,.txt,.doc,.docx"
+            class="file-input"
+            [disabled]="isExtractingText">
+          <label for="fileInput" class="file-label" [class.extracting]="isExtractingText">
+            <i class="fas fa-cloud-upload-alt" *ngIf="!isExtractingText"></i>
+            <i class="fas fa-spinner fa-spin" *ngIf="isExtractingText"></i>
+            <span *ngIf="!selectedFile && !isExtractingText">{{ 'SOP.shared.upload.clickToSelect' | translate }}</span>
+            <span *ngIf="selectedFile && !isExtractingText" class="selected-file">{{ selectedFile.name }}</span>
+            <span *ngIf="isExtractingText" class="extracting-text">{{ 'SOP.shared.upload.extracting' | translate }}</span>
+          </label>
+        </div>
+        
+        <!-- Zone de saisie manuelle du texte -->
+        <div class="manual-text-section" *ngIf="showManualTextInput || selectedFile">
+          <div class="manual-text-header">
+            <label>
+              <input 
+                type="checkbox" 
+                [(ngModel)]="showManualTextInput"
+                (change)="toggleManualTextInput()">
+              <span>{{ 'SOP.shared.upload.manualCheckbox' | translate }}</span>
+            </label>
+          </div>
+          <div class="manual-text-input" *ngIf="showManualTextInput">
+            <textarea
+              [(ngModel)]="manualText"
+              class="text-input"
+              [placeholder]="'SOP.shared.upload.manualPlaceholder' | translate"
+              rows="10"
+              [disabled]="isUploading"></textarea>
+            <p class="text-hint">
+              <i class="fas fa-info-circle"></i>
+              {{ 'SOP.shared.upload.manualHint' | translate }}
+            </p>
+          </div>
+        </div>
+
+        <div class="upload-error" *ngIf="uploadError">
+          <i class="fas fa-exclamation-circle"></i>
+          {{ uploadError }}
+        </div>
+      </div>
+      <div class="modal-footer">
+        <button class="btn btn-secondary" (click)="closeUploadModal()" [disabled]="isUploading || isExtractingText">{{ 'COMMON.actions.cancel' | translate }}</button>
+        <button class="btn btn-primary" (click)="uploadDocument()" [disabled]="!selectedFile || isUploading || isExtractingText">
+          <span *ngIf="!isUploading">{{ 'ACT.upload' | translate }}</span>
+          <span *ngIf="isUploading">
+            <i class="fas fa-spinner fa-spin"></i> {{ 'ACT.uploading' | translate }}
+          </span>
+        </button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Vue d'affichage du document -->
+  <div class="document-view-overlay" *ngIf="showDocumentView" (click)="closeDocumentView()">
+    <div class="document-view-content" (click)="$event.stopPropagation()">
+      <div class="document-view-header">
+        <h2>{{ documentTitle }}</h2>
+        <div class="document-header-actions">
+          <button class="btn-document-action btn-download" (click)="downloadDocument(); $event.stopPropagation()" [title]="'SOP.shared.document.download' | translate">
+            <i class="fas fa-download"></i>
+          </button>
+          <button class="btn-document-action btn-edit" (click)="openEditDocumentModal(); $event.stopPropagation()" title="{{ 'ACT.edit' | translate }}">
+            <i class="fas fa-edit"></i>
+          </button>
+          <button class="btn-document-action btn-delete" (click)="openDeleteDocumentModal(); $event.stopPropagation()" title="{{ 'ACT.delete' | translate }}">
+            <i class="fas fa-trash"></i>
+          </button>
+          <button class="btn-close-document" (click)="closeDocumentView()">
+            <i class="fas fa-times"></i>
+          </button>
+        </div>
+      </div>
+      <div class="document-view-body">
+        <div class="document-text-content" [innerHTML]="safeDocumentContent"></div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Modal de modification de document -->
+  <div class="modal-overlay" *ngIf="showEditDocumentModal" (click)="closeEditDocumentModal()">
+    <div class="modal-content upload-modal" (click)="$event.stopPropagation()">
+      <div class="modal-header">
+        <h3>{{ 'SOP.shared.edit.modalTitle' | translate }}</h3>
+        <button class="btn-close-modal" (click)="closeEditDocumentModal()">
+          <i class="fas fa-times"></i>
+        </button>
+      </div>
+      <div class="modal-body">
+        <p class="upload-description">
+          {{ 'SOP.shared.edit.description' | translate }}
+        </p>
+        <div class="file-upload-area">
+          <input 
+            type="file" 
+            id="editFileInput" 
+            (change)="onEditFileSelected($event)"
+            accept=".pdf,.png,.jpg,.jpeg,.gif,.txt,.doc,.docx"
+            class="file-input"
+            [disabled]="isEditingDocument">
+          <label for="editFileInput" class="file-label">
+            <i class="fas fa-cloud-upload-alt"></i>
+            <span *ngIf="!editDocumentFile">{{ 'SOP.shared.edit.clickToReplace' | translate }} {{ 'LBL.optional' | translate }}</span>
+            <span *ngIf="editDocumentFile" class="selected-file">{{ editDocumentFile.name }}</span>
+          </label>
+        </div>
+        
+        <div class="manual-text-section">
+          <div class="manual-text-header">
+            <label>
+              <span>{{ 'SOP.shared.edit.textLabel' | translate }}</span>
+            </label>
+          </div>
+          <div class="manual-text-input">
+            <textarea 
+              [(ngModel)]="editDocumentText"
+              class="text-input"
+              [placeholder]="'SOP.shared.edit.textPlaceholder' | translate"
+              rows="10"
+              [disabled]="isEditingDocument"></textarea>
+          </div>
+        </div>
+      </div>
+      <div class="modal-footer">
+        <button class="btn btn-secondary" (click)="closeEditDocumentModal()" [disabled]="isEditingDocument">{{ 'COMMON.actions.cancel' | translate }}</button>
+        <button class="btn btn-primary" (click)="updateDocument()" [disabled]="isEditingDocument || !editDocumentText.trim()">
+          <span *ngIf="!isEditingDocument">{{ 'COMMON.actions.save' | translate }}</span>
+          <span *ngIf="isEditingDocument">
+            <i class="fas fa-spinner fa-spin"></i> {{ 'SOP.shared.edit.inProgress' | translate }}
+          </span>
+        </button>
+      </div>
+    </div>
+  </div>
+
+  </div><!-- .sop-operation-container -->
+  </div><!-- .main -->
+</div>
+

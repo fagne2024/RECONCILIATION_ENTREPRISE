@@ -1,0 +1,261 @@
+<div class="config-calcul-page">
+  <header class="top">
+    <div class="top-text">
+      <h1>{{ 'CFG.calcul.title' | translate }}</h1>
+      <p>{{ 'CFG.calcul.subtitle' | translate }}</p>
+    </div>
+    <div class="top-acts">
+      <button type="button" class="btn p" (click)="openCreate()">
+        <i class="fas fa-plus"></i>
+        {{ 'CFG.calcul.newRule' | translate }}
+      </button>
+      <button type="button" class="icon-btn" (click)="close()" [title]="'CFG.calcul.cancel' | translate">
+        <i class="fas fa-times"></i>
+      </button>
+    </div>
+  </header>
+
+  <div class="sticky">
+    <div class="tools">
+      <label class="search">
+        <i class="fas fa-search"></i>
+        <input type="search" [(ngModel)]="searchTerm" (ngModelChange)="onFilterChange()"
+               [placeholder]="'CFG.calcul.searchPlaceholder' | translate" />
+      </label>
+
+      <select class="fld" [(ngModel)]="moduleFilter" (ngModelChange)="onModuleChange()">
+        <option value="">{{ 'CFG.calcul.allModules' | translate }}</option>
+        <option *ngFor="let m of moduleOptions" [value]="m">{{ moduleLabel(m) }}</option>
+      </select>
+
+      <select class="fld" [(ngModel)]="subModuleFilter" (ngModelChange)="onSubModuleChange()"
+              [disabled]="availableSubModules.length === 0">
+        <option value="">{{ 'CFG.calcul.allSubmodules' | translate }}</option>
+        <option *ngFor="let s of availableSubModules" [value]="s.code">{{ s.label }}</option>
+      </select>
+
+      <div class="seg" role="group">
+        <button type="button" class="chip" [attr.aria-pressed]="typeFilter === ''" (click)="setTypeFilter('')">
+          {{ 'CFG.calcul.allTypes' | translate }} <b>{{ typeCount('') }}</b>
+        </button>
+        <button type="button" class="chip" *ngFor="let t of types"
+                [attr.aria-pressed]="typeFilter === t" (click)="setTypeFilter(t)">
+          {{ typeLabel(t) }} <b>{{ typeCount(t) }}</b>
+        </button>
+      </div>
+    </div>
+  </div>
+
+  <div class="loading" *ngIf="loading">
+    <i class="fas fa-spinner fa-spin"></i> {{ 'CFG.calcul.loading' | translate }}
+  </div>
+
+  <div class="panel" *ngIf="!loading && groups.length > 0">
+    <div class="thead">
+      <span>{{ 'CFG.calcul.colLabel' | translate }}</span>
+      <span>{{ 'CFG.calcul.colCode' | translate }}</span>
+      <span>{{ 'CFG.calcul.colType' | translate }}</span>
+      <span>{{ 'CFG.calcul.colDefinition' | translate }}</span>
+      <span class="th-actif">{{ 'CFG.calcul.colActive' | translate }}</span>
+      <span></span>
+    </div>
+
+    <div class="module" *ngFor="let group of groups">
+      <div class="mhead">
+        <i class="fas fa-layer-group"></i>
+        <h2>{{ group.label }}</h2>
+        <span class="count">{{ group.sousModules.length }}</span>
+      </div>
+
+      <section class="group" *ngFor="let sub of group.sousModules"
+               [class.closed]="isClosed(groupKey(group, sub))">
+        <button type="button" class="ghead" (click)="toggleGroup(groupKey(group, sub))"
+                [attr.aria-expanded]="!isClosed(groupKey(group, sub))">
+          <i class="fas fa-chevron-down chev"></i>
+          <h3>{{ sub.label }}</h3>
+          <span class="count">{{ sub.rules.length }}</span>
+        </button>
+
+        <div class="rows">
+          <div class="row" *ngFor="let rule of sub.rules; trackBy: trackByRule" [class.off]="rule.actif === false">
+            <div class="lab">
+              <strong>{{ rule.libelle }}</strong>
+              <small *ngIf="rule.description">{{ rule.description }}</small>
+            </div>
+
+            <div class="codec"><code class="code">{{ rule.code }}</code></div>
+
+            <div class="type">
+              <span class="tag" [ngClass]="'t-' + rule.type.toLowerCase()">{{ typeLabel(rule.type) }}</span>
+            </div>
+
+            <div class="def">
+              <ng-container [ngSwitch]="rule.type">
+                <ng-container *ngSwitchCase="'FORMULE'">
+                  <ng-container *ngFor="let part of formulaParts(rule)">
+                    <span class="op" *ngIf="part.kind === 'op'">{{ part.text }}</span>
+                    <span class="var" *ngIf="part.kind === 'var'">{{ part.text }}</span>
+                  </ng-container>
+                </ng-container>
+                <ng-container *ngSwitchCase="'LISTE'">
+                  <span class="val" *ngFor="let v of listPreview(rule)">{{ v }}</span>
+                </ng-container>
+                <ng-container *ngSwitchCase="'PARAMETRE'">
+                  <span class="num">{{ rule.valeur }}</span><small class="unit" *ngIf="rule.unite"> {{ rule.unite }}</small>
+                </ng-container>
+              </ng-container>
+            </div>
+
+            <div class="tog">
+              <button type="button" class="sw" role="switch" [attr.aria-checked]="rule.actif !== false"
+                      (click)="toggleActif(rule)" [attr.aria-label]="rule.libelle"></button>
+            </div>
+
+            <div class="act">
+              <button type="button" class="ib" (click)="openEdit(rule)" [title]="'CFG.calcul.edit' | translate">
+                <i class="fas fa-pen"></i>
+              </button>
+              <button type="button" class="ib del" (click)="confirmDelete(rule)"
+                      [disabled]="rule.systeme" [title]="'CFG.calcul.delete' | translate">
+                <i class="fas fa-trash"></i>
+              </button>
+            </div>
+          </div>
+        </div>
+      </section>
+    </div>
+  </div>
+
+  <div class="empty" *ngIf="!loading && groups.length === 0">
+    <i class="fas fa-calculator"></i>
+    <p>{{ 'CFG.calcul.empty' | translate }}</p>
+  </div>
+
+  <div class="foot" *ngIf="!loading && groups.length > 0">
+    {{ displayedCount }} {{ 'CFG.calcul.footShown' | translate }} · {{ activeCount }} {{ 'CFG.calcul.footActive' | translate }}
+  </div>
+</div>
+
+<!-- Modale édition / création -->
+<div class="modal-overlay" *ngIf="showModal" (click)="closeModal()">
+  <div class="modal" (click)="$event.stopPropagation()">
+    <div class="modal-header">
+      <h2>{{ (isNew ? 'CFG.calcul.newRule' : 'CFG.calcul.editRule') | translate }}</h2>
+      <button type="button" class="icon-btn" (click)="closeModal()"><i class="fas fa-times"></i></button>
+    </div>
+
+    <div class="modal-body">
+      <div class="form-row">
+        <div class="form-group">
+          <label>{{ 'CFG.calcul.fieldCode' | translate }}</label>
+          <input type="text" [(ngModel)]="form.code" [disabled]="!isNew" placeholder="CERTIF.MA_REGLE" />
+        </div>
+        <div class="form-group">
+          <label>{{ 'CFG.calcul.fieldType' | translate }}</label>
+          <select [(ngModel)]="form.type" [disabled]="!isNew" (ngModelChange)="onTypeChange()">
+            <option *ngFor="let type of types" [value]="type">{{ typeLabel(type) }}</option>
+          </select>
+        </div>
+      </div>
+
+      <div class="form-row">
+        <div class="form-group">
+          <label>{{ 'CFG.calcul.fieldModule' | translate }}</label>
+          <select [(ngModel)]="form.module">
+            <option *ngFor="let m of moduleOptions" [value]="m">{{ moduleLabel(m) }}</option>
+          </select>
+        </div>
+        <div class="form-group">
+          <label>{{ 'CFG.calcul.fieldSubmodule' | translate }}</label>
+          <input type="text" list="submodule-options" [(ngModel)]="form.sousModule" />
+          <datalist id="submodule-options">
+            <option *ngFor="let s of subModuleOptions" [value]="s"></option>
+          </datalist>
+        </div>
+      </div>
+
+      <div class="form-group">
+        <label>{{ 'CFG.calcul.fieldLabel' | translate }}</label>
+        <input type="text" [(ngModel)]="form.libelle" />
+      </div>
+
+      <div class="form-group">
+        <label>{{ 'CFG.calcul.fieldDescription' | translate }}</label>
+        <textarea rows="2" [(ngModel)]="form.description"></textarea>
+      </div>
+
+      <!-- FORMULE -->
+      <div class="form-group" *ngIf="form.type === 'FORMULE'">
+        <label>{{ 'CFG.calcul.fieldFormula' | translate }}</label>
+        <div class="terms-editor">
+          <div class="term-row" *ngFor="let term of form.terms; let i = index">
+            <select class="term-sign" [(ngModel)]="term.signe">
+              <option value="+">+</option>
+              <option value="-">−</option>
+            </select>
+            <input type="number" class="term-coef" [(ngModel)]="term.coefficient" step="any" />
+            <select class="term-variable" [(ngModel)]="term.variable">
+              <option value="">—</option>
+              <option *ngFor="let v of variables" [value]="v.code">{{ v.label }}</option>
+            </select>
+            <label class="term-abs">
+              <input type="checkbox" [(ngModel)]="term.absolue" />
+              {{ 'CFG.calcul.absolute' | translate }}
+            </label>
+            <button type="button" class="ib del" (click)="removeTerm(i)"><i class="fas fa-times"></i></button>
+          </div>
+        </div>
+        <button type="button" class="btn ghost sm" (click)="addTerm()">
+          <i class="fas fa-plus"></i> {{ 'CFG.calcul.addTerm' | translate }}
+        </button>
+      </div>
+
+      <!-- LISTE -->
+      <div class="form-group" *ngIf="form.type === 'LISTE'">
+        <label>{{ 'CFG.calcul.fieldValues' | translate }}</label>
+        <div class="values-editor">
+          <div class="value-row" *ngFor="let value of form.values; let i = index">
+            <input type="text" [(ngModel)]="form.values[i]" />
+            <button type="button" class="ib del" (click)="removeValue(i)"><i class="fas fa-times"></i></button>
+          </div>
+        </div>
+        <button type="button" class="btn ghost sm" (click)="addValue()">
+          <i class="fas fa-plus"></i> {{ 'CFG.calcul.addValue' | translate }}
+        </button>
+      </div>
+
+      <!-- PARAMETRE -->
+      <div class="form-row" *ngIf="form.type === 'PARAMETRE'">
+        <div class="form-group">
+          <label>{{ 'CFG.calcul.fieldValue' | translate }}</label>
+          <input type="number" step="any" [(ngModel)]="form.valeur" />
+        </div>
+        <div class="form-group">
+          <label>{{ 'CFG.calcul.fieldUnit' | translate }}</label>
+          <input type="text" [(ngModel)]="form.unite" />
+        </div>
+      </div>
+
+      <div class="form-row">
+        <div class="form-group">
+          <label>{{ 'CFG.calcul.fieldOrder' | translate }}</label>
+          <input type="number" [(ngModel)]="form.ordre" />
+        </div>
+        <div class="form-group checkbox-group">
+          <label>
+            <input type="checkbox" [(ngModel)]="form.actif" />
+            {{ 'CFG.calcul.fieldActive' | translate }}
+          </label>
+        </div>
+      </div>
+    </div>
+
+    <div class="modal-footer">
+      <button type="button" class="btn ghost" (click)="closeModal()">{{ 'CFG.calcul.cancel' | translate }}</button>
+      <button type="button" class="btn p" [disabled]="saving" (click)="save()">
+        <i class="fas" [ngClass]="saving ? 'fa-spinner fa-spin' : 'fa-save'"></i>
+        {{ 'CFG.calcul.save' | translate }}
+      </button>
+    </div>
+  </div>
+</div>

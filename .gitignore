@@ -1,0 +1,63 @@
+# ============================================================
+#  ReconciliApp — .gitignore
+# ============================================================
+
+# --- Dépendances ---
+node_modules/
+**/node_modules/
+jspm_packages/
+
+# --- Builds / sorties ---
+target/
+build/
+dist/
+out/
+*.class
+.angular/
+**/.angular/
+coverage/
+.nyc_output/
+
+# --- IDE / OS ---
+.vscode/
+.idea/
+*.iml
+*.swp
+*.swo
+.DS_Store
+ehthumbs.db
+Thumbs.db
+Desktop.ini
+
+# --- Logs ---
+logs/
+*.log
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+
+# --- Secrets / certificats (NE JAMAIS COMMITER) ---
+.env
+.env.*
+*.p12
+*.jks
+*.pfx
+*.pem
+*.key
+*.keystore
+application-local.properties
+
+# --- Données runtime / volumineuses ---
+watch-folder/
+backend/uploads/
+backend/logs/
+
+# --- Dumps base de données (racine uniquement — ne pas masquer les migrations Flyway) ---
+/top20_*.sql
+/top20_*.zip
+
+# --- Divers runtime ---
+pids
+*.pid
+*.seed
+*.pid.lock

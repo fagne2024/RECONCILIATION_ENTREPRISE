@@ -1,0 +1,474 @@
+<div class="service-balance-page">
+  <!-- TOP NAV (design redevance-loterie) -->
+  <nav class="topnav">
+    <div class="nav-brand">
+      <div class="nav-brand-dot"></div>
+      ReconciliApp
+    </div>
+    <div class="nav-sep"></div>
+    <div class="nav-path">
+      <strong>{{ 'SBL.navTitle' | translate }}</strong>
+    </div>
+    <div class="nav-spacer"></div>
+    <div class="nav-actions">
+      <button type="button" class="nav-btn secondary" (click)="loadServiceComptes()" [disabled]="isLoading">
+        <i class="fas fa-sync-alt" [class.fa-spin]="isLoading"></i> {{ 'STA.refresh' | translate }}
+      </button>
+      <button type="button" class="nav-btn secondary" (click)="loadAllComptes()" [disabled]="isLoading">
+        <i class="fas fa-list" [class.fa-spin]="isLoading"></i> {{ 'SBL.allAccounts' | translate }}
+      </button>
+    </div>
+  </nav>
+
+  <!-- PAGE HEADER (titre + KPIs) -->
+  <div class="page-header-service-balance">
+    <div class="ph-sb-left">
+      <div class="ph-eyebrow"><span></span>{{ 'TBL.accounts' | translate }}</div>
+      <h1 class="ph-title-sb">{{ 'SBL.titlePrefix' | translate }} <em>{{ 'SBL.titleEm' | translate }}</em></h1>
+      <p class="ph-subtitle">{{ 'SBL.subtitle' | translate }}</p>
+    </div>
+    <div class="ph-sb-right">
+      <div class="hero-kpi-strip">
+        <div class="hk-strip-item">
+          <span class="hk-strip-label">{{ 'TBL.accounts' | translate }}</span>
+          <span class="hk-strip-value">{{ serviceComptes.length | number:'1.0-0' }}</span>
+        </div>
+        <div class="hk-strip-sep"></div>
+        <div class="hk-strip-item">
+          <span class="hk-strip-label">{{ 'TBL.country' | translate }}</span>
+          <span class="hk-strip-value">{{ getCountries().length | number:'1.0-0' }}</span>
+        </div>
+        <div class="hk-strip-sep"></div>
+        <div class="hk-strip-item">
+          <span class="hk-strip-label">{{ 'SBL.selected' | translate }}</span>
+          <span class="hk-strip-value">{{ getSelectedComptesCount() | number:'1.0-0' }}</span>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <div class="main">
+  <div class="service-balance-container">
+    <!-- En-tête -->
+    <div class="header">
+        <div class="header-content">
+            <h1><i class="fas fa-balance-scale"></i> {{ 'SBL.mergeTitle' | translate }}</h1>
+            <p class="subtitle">{{ 'SBL.subtitleShort' | translate }}</p>
+        </div>
+        <div class="header-actions">
+            <button class="btn btn-secondary" (click)="loadServiceComptes()" [disabled]="isLoading">
+                <i class="fas fa-sync-alt" [class.fa-spin]="isLoading"></i>
+                {{ 'STA.refresh' | translate }}
+            </button>
+            <button class="btn btn-info" (click)="loadAllComptes()" [disabled]="isLoading">
+                <i class="fas fa-list" [class.fa-spin]="isLoading"></i>
+                {{ 'SBL.viewAllAccounts' | translate }}
+            </button>
+        </div>
+    </div>
+
+    <!-- Statistiques globales -->
+    <div class="stats-section" *ngIf="!isLoading">
+        <div class="stat-card">
+            <div class="stat-icon">
+                <i class="fas fa-building"></i>
+            </div>
+            <div class="stat-content">
+                <div class="stat-number">{{ serviceComptes.length }}</div>
+                <div class="stat-label">{{ 'TBL.accounts' | translate }}</div>
+            </div>
+        </div>
+        <div class="stat-card">
+            <div class="stat-icon">
+                <i class="fas fa-globe"></i>
+            </div>
+            <div class="stat-content">
+                <div class="stat-number">{{ getCountries().length }}</div>
+                <div class="stat-label">{{ 'TBL.country' | translate }}</div>
+            </div>
+        </div>
+        <div class="stat-card">
+            <div class="stat-icon">
+                <i class="fas fa-check-circle"></i>
+            </div>
+            <div class="stat-content">
+                <div class="stat-number">{{ getSelectedComptesCount() }}</div>
+                <div class="stat-label">{{ 'SBL.selected' | translate }}</div>
+            </div>
+        </div>
+        <div class="stat-card" *ngIf="getSelectedComptesCount() > 0">
+            <div class="stat-icon">
+                <i class="fas fa-coins"></i>
+            </div>
+            <div class="stat-content">
+                <div class="stat-number">{{ getTotalSelectedSolde() | currency:'XAF':'symbol':'1.0-0' }}</div>
+                <div class="stat-label">{{ 'SBL.totalBalance' | translate }}</div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Sélection du pays -->
+    <div class="country-selection" *ngIf="!isLoading && getCountries().length > 0">
+        <h3><i class="fas fa-map-marker-alt"></i> {{ 'SBL.selectCountry' | translate }}</h3>
+        <div class="country-grid">
+            <div 
+                *ngFor="let country of getCountries()" 
+                class="country-card"
+                [class.selected]="selectedCountry === country"
+                (click)="onCountryChange(country)">
+                <div class="country-name">{{ countryLabel(country) }}</div>
+                <div class="country-stats">
+                    <span class="compte-count">{{ 'SBL.accountsCount' | translate: { count: getComptesForCountry(country).length } }}</span>
+                    <span class="total-solde">{{ getTotalSoldeForCountry(country) | currency:'XAF':'symbol':'1.0-0' }}</span>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Liste des comptes service -->
+    <div class="comptes-section" *ngIf="!isLoading && selectedCountry && filteredServiceComptes.length > 0">
+        <div class="section-header">
+            <h3><i class="fas fa-list"></i> {{ 'SBL.accountsFor' | translate: { country: countryLabel(selectedCountry) } }}</h3>
+            <button 
+                class="btn btn-primary" 
+                (click)="showMergeDialog()"
+                [disabled]="getSelectedComptesCount() < 2">
+                <i class="fas fa-layer-group"></i>
+                {{ 'SBL.mergeSelected' | translate: { count: getSelectedComptesCount() } }}
+            </button>
+        </div>
+
+        <!-- Barre de filtres et recherche -->
+        <div class="filters-section">
+            <div class="filters-row">
+                <div class="search-box">
+                    <i class="fas fa-search"></i>
+                    <input 
+                        type="text" 
+                        [(ngModel)]="searchTerm" 
+                        (input)="onSearchChange()"
+                        placeholder="{{ 'SBL.searchPlaceholder' | translate }}"
+                        class="search-input">
+                </div>
+                
+                <div class="filter-controls">
+                    <select 
+                        [(ngModel)]="filterBySolde" 
+                        (change)="onFilterChange()"
+                        class="filter-select">
+                        <option value="all">{{ 'SBL.allBalances' | translate }}</option>
+                        <option value="positive">{{ 'SBL.positiveBalances' | translate }}</option>
+                        <option value="negative">{{ 'SBL.negativeBalances' | translate }}</option>
+                        <option value="zero">{{ 'SBL.zeroBalances' | translate }}</option>
+                    </select>
+                    
+                    <select 
+                        [(ngModel)]="sortBy" 
+                        (change)="onSortChange()"
+                        class="filter-select">
+                        <option value="numeroCompte">{{ 'SBL.sortByName' | translate }}</option>
+                        <option value="solde">{{ 'SBL.sortByBalance' | translate }}</option>
+                        <option value="dateDerniereMaj">{{ 'SBL.sortByDate' | translate }}</option>
+                    </select>
+                    
+                    <button 
+                        (click)="sortOrder = sortOrder === 'asc' ? 'desc' : 'asc'; onSortChange()"
+                        class="btn btn-secondary sort-btn">
+                        <i class="fas" [class.fa-sort-amount-up]="sortOrder === 'asc'" [class.fa-sort-amount-down]="sortOrder === 'desc'"></i>
+                        {{ (sortOrder === 'asc' ? 'SBL.ascending' : 'SBL.descending') | translate }}
+                    </button>
+                    
+                    <button 
+                        (click)="clearFilters()"
+                        class="btn btn-warning clear-btn">
+                        <i class="fas fa-times"></i>{{ 'ACT.clearFilters' | translate }}</button>
+                </div>
+            </div>
+            
+            <div class="results-info">
+                <span class="results-count">
+                    {{ 'SBL.accountsFound' | translate: { count: getTotalFilteredCount() } }}
+                    <span *ngIf="searchTerm || filterBySolde !== 'all'" class="filtered-indicator">
+                        {{ 'SBL.filteredOn' | translate: { count: filteredServiceComptes.length } }}
+                    </span>
+                </span>
+            </div>
+        </div>
+
+        <!-- Grille des comptes -->
+        <div class="comptes-grid">
+            <div 
+                *ngFor="let compte of paginatedComptes" 
+                class="compte-card"
+                [class.selected]="isCompteSelected(compte)"
+                (click)="toggleCompteSelection(compte)">
+                <div class="compte-header">
+                    <div class="compte-checkbox">
+                        <i class="fas fa-check" *ngIf="isCompteSelected(compte)"></i>
+                    </div>
+                    <div class="compte-info">
+                        <div class="compte-name">{{ compte.numeroCompte }}</div>
+                        <div class="compte-details">
+                            <span class="compte-agence" *ngIf="compte.agence">
+                                <i class="fas fa-building"></i> {{ compte.agence }}
+                            </span>
+                            <span class="compte-date">
+                                <i class="fas fa-calendar"></i> {{ compte.dateDerniereMaj | date:'dd/MM/yyyy HH:mm' }}
+                            </span>
+                        </div>
+                    </div>
+                    <div class="compte-actions">
+                        <button 
+                            type="button"
+                            class="btn btn-danger btn-sm"
+                            (click)="openRejectDialog(compte); $event.stopPropagation()"
+                            [disabled]="isRejecting"
+                            title="{{ 'SBL.rejectTooltip' | translate }}">
+                            <i class="fas fa-ban"></i> {{ 'SBL.reject' | translate }}
+                        </button>
+                    </div>
+                </div>
+                <div class="compte-solde">
+                    <div class="solde-amount" [class.positive]="compte.solde >= 0" [class.negative]="compte.solde < 0">
+                        {{ compte.solde | currency:'XAF':'symbol':'1.0-0' }}
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Pagination -->
+        <div class="pagination-section" *ngIf="totalPages > 1">
+            <div class="pagination-info">
+                {{ 'SBL.pageInfo' | translate: { current: currentPage, total: totalPages } }}
+                {{ 'SBL.pageRange' | translate: { from: (currentPage - 1) * itemsPerPage + 1, to: Math.min(currentPage * itemsPerPage, getTotalFilteredCount()), total: getTotalFilteredCount() } }}
+            </div>
+            
+            <div class="pagination-controls">
+                <button 
+                    (click)="previousPage()"
+                    [disabled]="currentPage === 1"
+                    class="btn btn-secondary pagination-btn">
+                    <i class="fas fa-chevron-left"></i>{{ 'PAG.previous' | translate }}</button>
+                
+                <div class="page-numbers">
+                    <button 
+                        *ngFor="let page of getPageNumbers()"
+                        (click)="goToPage(page)"
+                        [class.active]="page === currentPage"
+                        class="btn page-btn">
+                        {{ page }}
+                    </button>
+                </div>
+                
+                <button 
+                    (click)="nextPage()"
+                    [disabled]="currentPage === totalPages"
+                    class="btn btn-secondary pagination-btn">{{ 'PAG.next' | translate }}<i class="fas fa-chevron-right"></i>
+                </button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Message si aucun compte -->
+    <div class="no-data" *ngIf="!isLoading && serviceComptes.length === 0">
+        <i class="fas fa-info-circle"></i>
+        <h3>{{ 'SBL.noAccountFound' | translate }}</h3>
+        <p>{{ 'SBL.noAccountSystem' | translate }}</p>
+    </div>
+
+    <!-- Message si aucun pays sélectionné -->
+    <div class="no-data" *ngIf="!isLoading && serviceComptes.length > 0 && !selectedCountry">
+        <i class="fas fa-globe"></i>
+        <h3>{{ 'SBL.selectCountryTitle' | translate }}</h3>
+        <p>{{ 'SBL.chooseCountryHint' | translate }}</p>
+    </div>
+
+    <!-- Message si aucun compte pour le pays sélectionné -->
+    <div class="no-data" *ngIf="!isLoading && selectedCountry && filteredServiceComptes.length === 0">
+        <i class="fas fa-building"></i>
+        <h3>{{ 'SBL.noServiceAccountFor' | translate: { country: countryLabel(selectedCountry) } }}</h3>
+        <p>{{ 'SBL.noServiceAccountHint' | translate }}</p>
+    </div>
+
+    <!-- Loading -->
+    <div class="loading" *ngIf="isLoading">
+        <i class="fas fa-spinner fa-spin"></i>
+        <p>{{ 'SBL.loading' | translate }}</p>
+    </div>
+  </div><!-- .service-balance-container -->
+  </div><!-- .main -->
+</div><!-- .service-balance-page -->
+
+<!-- Modal de fusion -->
+<div *ngIf="showMergeForm" class="modal-overlay" (click)="cancelMerge()">
+    <div class="modal-container" (click)="$event.stopPropagation()">
+        <div class="modal-header">
+            <h3><i class="fas fa-layer-group"></i> {{ 'SBL.mergeAccounts' | translate }}</h3>
+            <button type="button" class="modal-close" (click)="cancelMerge()">
+                <i class="fas fa-times"></i>
+            </button>
+        </div>
+        
+        <div class="modal-body">
+            <form [formGroup]="mergeForm" (ngSubmit)="mergeComptes()">
+                <!-- Résumé du regroupement -->
+                <div class="merge-summary">
+                    <h4><i class="fas fa-info-circle"></i> {{ 'SBL.mergeSummary' | translate }}</h4>
+                    <div class="summary-details">
+                        <div class="summary-item">
+                            <span class="label">{{ 'SBL.accountsCountLabel' | translate }}</span>
+                            <span class="value">{{ getSelectedComptesCount() }}</span>
+                        </div>
+                        <div class="summary-item">
+                            <span class="label">{{ 'SBL.totalBalanceLabel' | translate }}</span>
+                            <span class="value">{{ getTotalSelectedSolde() | currency:'XAF':'symbol':'1.0-0' }}</span>
+                        </div>
+                        <div class="summary-item">
+                            <span class="label">{{ 'SBL.countryColon' | translate }}</span>
+                            <span class="value">{{ countryLabel(selectedCountry) }}</span>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Formulaire de fusion -->
+                <div class="form-section">
+                    <h4><i class="fas fa-edit"></i> {{ 'SBL.newAccountDetails' | translate }}</h4>
+                    
+                    <div class="form-group">
+                        <label>{{ 'SBL.newAccountName' | translate }}</label>
+                        <input 
+                            type="text" 
+                            formControlName="newCompteName" 
+                            placeholder="Ex: SERVICE_FUSION_CM_2025"
+                            class="text-input">
+                        <div *ngIf="mergeForm.get('newCompteName')?.invalid && mergeForm.get('newCompteName')?.touched" 
+                             class="error-message">
+                            {{ 'SBL.nameRequired' | translate }}
+                        </div>
+                    </div>
+
+                    <div class="form-group">
+                        <label>{{ 'TBL.countryRequired' | translate }}</label>
+                        <input 
+                            type="text" 
+                            formControlName="selectedCountry" 
+                            [value]="selectedCountry"
+                            readonly
+                            class="text-input readonly">
+                    </div>
+                </div>
+
+                <!-- Liste des comptes à regrouper -->
+                <div class="comptes-to-merge">
+                    <h4><i class="fas fa-list"></i> {{ 'SBL.accountsToMerge' | translate }}</h4>
+                    <div class="comptes-list">
+                        <div *ngFor="let compte of selectedComptes" class="compte-item">
+                            <div class="compte-name">{{ compte.numeroCompte }}</div>
+                            <div class="compte-solde">{{ compte.solde | currency:'XAF':'symbol':'1.0-0' }}</div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Actions -->
+                <div class="modal-actions">
+                    <button type="button" class="btn btn-secondary" (click)="cancelMerge()">
+                        <i class="fas fa-times"></i>{{ 'COMMON.actions.cancel' | translate }}</button>
+                    <button 
+                        type="submit" 
+                        class="btn btn-primary" 
+                        [disabled]="!mergeForm.valid || isMerging">
+                        <i class="fas fa-layer-group" [class.fa-spin]="isMerging"></i>
+                        {{ (isMerging ? 'SBL.merging' : 'SBL.mergeAccounts') | translate }}
+                    </button>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+
+<!-- Modal de rejet -->
+<div *ngIf="showRejectForm" class="modal-overlay" (click)="cancelReject()">
+    <div class="modal-container" (click)="$event.stopPropagation()">
+        <div class="modal-header">
+            <h3><i class="fas fa-ban"></i> {{ 'SBL.rejectAccount' | translate }}</h3>
+            <button type="button" class="modal-close" (click)="cancelReject()">
+                <i class="fas fa-times"></i>
+            </button>
+        </div>
+        
+        <div class="modal-body">
+            <form [formGroup]="rejectForm" (ngSubmit)="rejectCompte()">
+                <!-- Info du compte à rejeter -->
+                <div class="reject-account-info" *ngIf="compteToReject">
+                    <h4><i class="fas fa-info-circle"></i> {{ 'SBL.accountToReject' | translate }}</h4>
+                    <div class="account-details">
+                        <div class="detail-item">
+                            <span class="label">{{ 'SBL.accountNumber' | translate }}</span>
+                            <span class="value">{{ compteToReject.numeroCompte }}</span>
+                        </div>
+                        <div class="detail-item">
+                            <span class="label">{{ 'SBL.country' | translate }}</span>
+                            <span class="value">{{ compteToReject.pays || 'N/A' }}</span>
+                        </div>
+                        <div class="detail-item">
+                            <span class="label">{{ 'SBL.balance' | translate }}</span>
+                            <span class="value" [class.positive]="compteToReject.solde >= 0" [class.negative]="compteToReject.solde < 0">
+                                {{ compteToReject.solde | currency:'XAF':'symbol':'1.0-0' }}
+                            </span>
+                        </div>
+                        <div class="detail-item" *ngIf="compteToReject.agence">
+                            <span class="label">{{ 'SBL.agency' | translate }}</span>
+                            <span class="value">{{ compteToReject.agence }}</span>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Formulaire de rejet -->
+                <div class="form-section">
+                    <h4><i class="fas fa-edit"></i> {{ 'SBL.rejectDetails' | translate }}</h4>
+                    
+                    <div class="form-group">
+                        <label>{{ 'SBL.rejectTitle' | translate }} <span class="required">*</span></label>
+                        <input 
+                            type="text" 
+                            formControlName="titre" 
+                            placeholder="{{ 'SBL.rejectTitlePlaceholder' | translate }}"
+                            class="text-input">
+                        <div *ngIf="rejectForm.get('titre')?.invalid && rejectForm.get('titre')?.touched" 
+                             class="error-message">
+                            <span *ngIf="rejectForm.get('titre')?.errors?.['required']">{{ 'SBL.titleRequired' | translate }}</span>
+                            <span *ngIf="rejectForm.get('titre')?.errors?.['minlength']">{{ 'SBL.titleMinLength' | translate }}</span>
+                        </div>
+                    </div>
+
+                    <div class="form-group">
+                        <label>{{ 'SBL.rejectComment' | translate }} <span class="required">*</span></label>
+                        <textarea 
+                            formControlName="commentaire" 
+                            placeholder="{{ 'SBL.rejectCommentPlaceholder' | translate }}"
+                            class="text-input textarea-input"
+                            rows="4"></textarea>
+                        <div *ngIf="rejectForm.get('commentaire')?.invalid && rejectForm.get('commentaire')?.touched" 
+                             class="error-message">
+                            <span *ngIf="rejectForm.get('commentaire')?.errors?.['required']">{{ 'SBL.commentRequired' | translate }}</span>
+                            <span *ngIf="rejectForm.get('commentaire')?.errors?.['minlength']">{{ 'SBL.commentMinLength' | translate }}</span>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Actions -->
+                <div class="modal-actions">
+                    <button type="button" class="btn btn-secondary" (click)="cancelReject()">
+                        <i class="fas fa-times"></i>{{ 'COMMON.actions.cancel' | translate }}</button>
+                    <button 
+                        type="submit" 
+                        class="btn btn-danger" 
+                        [disabled]="!rejectForm.valid || isRejecting">
+                        <i class="fas fa-ban" [class.fa-spin]="isRejecting"></i>
+                        {{ (isRejecting ? 'SBL.rejecting' : 'SBL.confirmReject') | translate }}
+                    </button>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>

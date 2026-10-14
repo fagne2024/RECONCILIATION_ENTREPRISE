@@ -1,0 +1,448 @@
+<div class="ecart-partner-page">
+  <!-- TOP NAV (design redevance-loterie) -->
+  <nav class="topnav">
+    <div class="nav-brand">
+      <div class="nav-brand-dot"></div>
+      ReconciliApp
+    </div>
+    <div class="nav-sep"></div>
+    <div class="nav-path">
+      <strong>{{ 'EPT.partnerGaps' | translate }}</strong>
+    </div>
+    <div class="nav-spacer"></div>
+    <div class="nav-actions">
+      <button type="button" class="nav-btn secondary" (click)="goBack()">
+        <i class="fas fa-arrow-left"></i>{{ 'COMMON.actions.back' | translate }}</button>
+      <button 
+        type="button" 
+        class="nav-btn primary" 
+        (click)="exportResults()" 
+        [disabled]="isExporting || displayedPartnerOnly.length === 0">
+        <i class="fas fa-file-export"></i> {{ 'COMMON.actions.export' | translate }}
+      </button>
+    </div>
+  </nav>
+
+  <!-- PAGE HEADER (titre + KPIs) -->
+  <div class="page-header-ecart">
+    <div class="ph-ecart-left">
+      <div class="ph-eyebrow"><span></span>{{ 'EPT.gaps' | translate }}</div>
+      <h1 class="ph-title-ecart">{{ 'LBL.viewOf' | translate }}<em>{{ 'EPT.partnerGaps' | translate }}</em><span *ngIf="magicServiceFilterLocked" class="magic-service-badge">{{ magicServiceFilterLocked }}</span></h1>
+    </div>
+    <div class="ph-ecart-right">
+      <div class="hero-kpi-strip">
+        <div class="hk-strip-item">
+          <span class="hk-strip-label">{{ 'TBL.rows' | translate }}</span>
+          <span class="hk-strip-value">{{ filteredPartnerOnly.length | number:'1.0-0' }}</span>
+        </div>
+        <div class="hk-strip-sep"></div>
+        <div class="hk-strip-item">
+          <span class="hk-strip-label">{{ 'TBL.totalVolume' | translate }}</span>
+          <span class="hk-strip-value">{{ calculateTotalVolumePartnerOnly() | number:'1.0-0' }}</span>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <div class="main">
+  <div class="ecart-partner-table-container">
+  <!-- Indicateur de chargement -->
+  <div *ngIf="isLoading" class="loading-overlay">
+    <div class="loading-content">
+      <div class="loading-spinner">⏳</div>
+      <div class="loading-text">{{ 'MSG.loadingData' | translate }}</div>
+      <div class="loading-progress">
+        <div class="progress-bar">
+          <div class="progress-fill" [style.width.%]="loadProgress"></div>
+        </div>
+        <div class="progress-text">{{ loadProgress }}%</div>
+      </div>
+    </div>
+  </div>
+
+  <div class="header-section">
+    <div class="header-top">
+      <button (click)="goBack()" class="back-button">
+        {{ 'COMMON.actions.backToResults' | translate }}
+      </button>
+      <h2>{{ 'EPT.partnerGapsTitle' | translate }}</h2>
+      <div class="header-info">
+        <span class="total-count">{{ 'EPT.partnerGapCount' | translate:{ count: (filteredPartnerOnly.length || 0) } }}</span>
+      </div>
+    </div>
+    
+    <div class="search-section">
+      <input 
+        type="text" 
+        [(ngModel)]="searchKey" 
+        (input)="onSearch()"
+        [placeholder]="'TBL.searchPlaceholder' | translate"
+        class="search-input"
+      >
+      <div class="export-menu-container">
+        <button 
+          (click)="toggleExportMenu($event)" 
+          class="export-menu-button"
+          [disabled]="isExporting || displayedPartnerOnly.length === 0"
+        >
+          {{ 'TBL.exportAndOptions' | translate }}
+          <span class="menu-arrow">{{showExportMenu ? '▲' : '▼'}}</span>
+        </button>
+        <div *ngIf="showExportMenu" class="export-menu-dropdown">
+          <div class="menu-section">
+            <button (click)="openColumnSelector()" class="menu-option-button">
+              {{ 'TBL.chooseColumnsToExport' | translate }}
+            </button>
+            <span class="menu-info">{{ 'TBL.columnsSelected' | translate:{ selected: selectedColumnsCount, total: availableColumnsForExport.length } }}</span>
+          </div>
+          <div class="menu-divider"></div>
+          <div class="menu-section">
+            <button 
+              (click)="exportResults()" 
+              class="menu-export-button"
+              [disabled]="isExporting"
+            >
+              {{ isExporting ? ('TBL.exporting' | translate) : ('EBT.exportOptimized' | translate) }}
+            </button>
+          </div>
+          <div class="menu-divider"></div>
+          <div class="menu-section">
+            <label class="menu-label">{{ 'SV.saveActions' | translate }}</label>
+            <button 
+              (click)="saveEcartPartnerToImpactOP()" 
+              class="menu-option-button save-button"
+              [disabled]="isSavingEcartPartnerToImpactOP || selectedPartnerOnlyKeys.length === 0"
+            >
+              {{ isSavingEcartPartnerToImpactOP ? ('SV.saveInProgress' | translate) : ('SV.saveToImportOp' | translate) }}
+            </button>
+            <span class="menu-info">
+              {{ 'SV.onlyCheckedRows' | translate:{ count: selectedPartnerOnlyKeys.length } }}
+            </span>
+          </div>
+          <div class="menu-divider"></div>
+          <div class="menu-section">
+            <button 
+              (click)="openOppartCreationForSelection()" 
+              class="menu-option-button create-oppart-button"
+              [disabled]="selectedPartnerOnlyKeys.length === 0">
+              {{ 'EPT.createOpart' | translate }}
+            </button>
+            <span class="menu-info">
+              {{ 'EPT.conversionHint' | translate:{ count: selectedPartnerOnlyKeys.length } }}
+            </span>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <div *ngIf="isExporting" class="export-progress">
+    <div class="progress-bar">
+      <div class="progress-fill" [style.width.%]="exportProgress.percentage"></div>
+    </div>
+    <div class="progress-text">{{ exportProgress.message }} - {{ exportProgress.percentage | number:'1.0-0' }}%</div>
+    <div class="progress-details" *ngIf="exportProgress.total > 0">
+      {{ exportProgress.current | number }} / {{ exportProgress.total | number }} {{ 'TBL.lines' | translate }}
+    </div>
+  </div>
+
+  <div class="summary-section">
+    <div class="summary-cards">
+      <div class="summary-card">
+        <div class="summary-label">{{ 'EPT.totalVolumePartner' | translate }}</div>
+        <div class="summary-value">{{calculateTotalVolumePartnerOnly() | number:'1.0-0'}}</div>
+      </div>
+      <div class="summary-card">
+        <div class="summary-label">{{ 'TBL.transactionCount' | translate }}</div>
+        <div class="summary-value">{{filteredPartnerOnly.length}}</div>
+      </div>
+    </div>
+  </div>
+
+  <div class="table-scroll-container">
+    <div class="table-scroll-nav">
+      <span class="scroll-nav-label">{{ 'TBL.scrollHorizontal' | translate }}</span>
+      <button 
+        class="scroll-nav-btn" 
+        (click)="scrollTableLeft()" 
+        [disabled]="tableScrollLeft === 0"
+        [title]="'TBL.scrollLeft' | translate">
+        ◀
+      </button>
+      <button 
+        class="scroll-nav-btn" 
+        (click)="scrollTableRight()" 
+        [disabled]="tableScrollLeft >= tableScrollMax"
+        [title]="'TBL.scrollRight' | translate">
+        ▶
+      </button>
+    </div>
+
+    <div class="table-wrapper" #tableWrapper (scroll)="onTableScroll($event)">
+      <table class="ecart-partner-table">
+        <thead>
+          <tr>
+            <th style="width: 120px;">{{ 'COMMON.actions.action' | translate }}</th>
+            <th style="width: 40px;">
+              <input 
+                type="checkbox" 
+                [checked]="allPartnerSelected" 
+                (change)="toggleSelectAllPartner($event)"
+                [title]="'EPT.selectAllRowsTitle' | translate"
+              >
+            </th>
+            <th *ngFor="let col of displayedColumns; trackBy: trackByValue">{{col}}</th>
+          </tr>
+        </thead>
+        <tbody>
+          <tr *ngFor="let record of getPagedPartnerOnly(); trackBy: trackByPartnerRow">
+            <td class="action-cell">
+              <button 
+                (click)="createOperationFromPartnerRecord(record)" 
+                class="create-op-button" 
+                [disabled]="!isPartnerRecordEligible(record)" 
+                title="{{ 'LBL.agencyLabel' | translate }}">
+                {{ 'EPT.createOp' | translate }}
+              </button>
+              <button 
+                (click)="openOppartCreationFromRow(record)" 
+                class="create-oppart-row-button" 
+                [disabled]="isSavingOppart"
+                [title]="'EPT.createOpartRowTitle' | translate">
+                ➕ OPPART
+              </button>
+            </td>
+            <td>
+              <input 
+                type="checkbox" 
+                [checked]="isPartnerRecordSelected(record)" 
+                (change)="togglePartnerSelection(record, $event)"
+              >
+            </td>
+            <td *ngFor="let col of displayedColumns; trackBy: trackByValue">{{getValue(record, col)}}</td>
+          </tr>
+          <tr *ngIf="getPagedPartnerOnly().length === 0">
+            <td [attr.colspan]="displayedColumns.length + 2" class="no-data">
+              {{ 'EPT.noPartnerGapFound' | translate }}
+            </td>
+          </tr>
+        </tbody>
+      </table>
+    </div>
+  </div>
+
+  <div class="pagination-section">
+    <div class="pagination-info">
+      <span>
+        {{ 'PAG.pageInfo' | translate:{ current: currentPage, total: totalPages, count: displayedPartnerOnly.length } }}
+      </span>
+    </div>
+    <div class="pagination-controls">
+      <button (click)="prevPage()" [disabled]="currentPage === 1" class="page-btn">{{ 'PAG.previous' | translate }}</button>
+      <div class="page-numbers">
+        <button 
+          *ngFor="let page of getPageNumbers(); trackBy: trackByIndex" 
+          (click)="goToPage(page)"
+          [class.active]="page === currentPage"
+          class="page-number-btn"
+        >
+          {{page}}
+        </button>
+      </div>
+      <button (click)="nextPage()" [disabled]="currentPage === totalPages" class="page-btn">{{ 'PAG.next' | translate }}</button>
+    </div>
+  </div>
+
+  <!-- Bouton scroll to top -->
+  <button 
+    *ngIf="showScrollTopBtn" 
+    (click)="scrollToTop()" 
+    class="scroll-to-top-btn" 
+    [title]="'TBL.backToTop' | translate">
+    ↑
+  </button>
+
+  <!-- Popup de sélection des colonnes -->
+  <div *ngIf="showColumnSelector" class="column-selector-overlay" (click)="closeColumnSelector()">
+    <div class="column-selector-popup" (click)="$event.stopPropagation()">
+      <div class="popup-header">
+        <h3>{{ 'TBL.columnSelectorTitle' | translate }}</h3>
+        <button (click)="closeColumnSelector()" class="close-btn">×</button>
+      </div>
+      
+      <div class="popup-content">
+        <div class="selection-controls">
+          <button (click)="toggleAllColumns(true)" class="select-all-btn">
+            {{ 'COMMON.actions.selectAll' | translate }}
+          </button>
+          <button (click)="toggleAllColumns(false)" class="deselect-all-btn">
+            {{ 'COMMON.actions.deselectAll' | translate }}
+          </button>
+          <span class="selection-info">
+            {{ 'TBL.columnsSelected' | translate:{ selected: selectedColumnsCount, total: availableColumnsForExport.length } }}
+          </span>
+        </div>
+        
+        <div class="columns-grid">
+          <div *ngFor="let column of availableColumnsForExport; trackBy: trackByValue" class="column-item">
+            <label class="column-checkbox">
+              <input 
+                type="checkbox" 
+                [(ngModel)]="selectedColumnsForExport[column]"
+                [checked]="selectedColumnsForExport[column]">
+              <span class="column-name">{{column}}</span>
+            </label>
+          </div>
+        </div>
+      </div>
+      
+      <div class="popup-actions">
+        <button (click)="closeColumnSelector()" class="cancel-btn">{{ 'COMMON.actions.close' | translate }}</button>
+        <button 
+          (click)="exportResults(); closeColumnSelector()" 
+          class="export-btn"
+          [disabled]="selectedColumnsCount === 0 || isExporting">
+          {{ isExporting ? ('TBL.exporting' | translate) : ('TBL.exportBtn' | translate) }}
+        </button>
+      </div>
+    </div>
+  </div>
+  <!-- Popup de création OPPART -->
+  <div *ngIf="showOppartCreation" class="oppart-overlay" (click)="closeOppartCreation()">
+    <div class="oppart-popup" (click)="$event.stopPropagation()">
+      <div class="popup-header oppart-header">
+        <h3>{{ 'OPP.title' | translate }}</h3>
+        <button (click)="closeOppartCreation()" class="close-btn">×</button>
+      </div>
+
+      <div class="oppart-content">
+        <div class="oppart-info">
+          <span class="oppart-count">{{ 'OPP.rowsToConvert' | translate:{ count: oppartSourceRecords.length } }}</span>
+          <span class="oppart-note">
+            {{ 'OPP.note' | translate }}
+          </span>
+        </div>
+
+        <!-- Liste de tout ce qui a été sélectionné -->
+        <div class="oppart-source-section">
+          <div class="source-section-header" (click)="toggleOppartSourceList()">
+            <span class="source-section-title">
+              {{ 'OPP.everythingSelected' | translate:{ count: oppartSourceRecords.length } }}
+            </span>
+            <span class="source-section-toggle">{{showOppartSourceList ? '▲' : '▼'}}</span>
+          </div>
+          <div *ngIf="showOppartSourceList" class="source-section-body">
+            <div class="source-filter-row" *ngIf="oppartSourceRecords.length > 1">
+              <input
+                type="text"
+                [(ngModel)]="oppartSourceFilter"
+                [placeholder]="'OPP.filterPlaceholder' | translate"
+                class="source-filter-input">
+              <span class="source-filter-count">{{filteredOppartSourceRecords.length}} / {{oppartSourceRecords.length}}</span>
+            </div>
+            <div class="source-list-wrapper">
+              <table class="oppart-source-list">
+                <thead>
+                  <tr>
+                    <th class="oppart-pos">#</th>
+                    <th *ngFor="let col of oppartMappingSourceColumns; trackBy: trackByValue">{{col}}</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  <tr *ngFor="let record of filteredOppartSourceRecords; let i = index; trackBy: trackByPartnerRow">
+                    <td class="oppart-pos">{{i + 1}}</td>
+                    <td *ngFor="let col of oppartMappingSourceColumns; trackBy: trackByValue">{{getValue(record, col)}}</td>
+                  </tr>
+                  <tr *ngIf="filteredOppartSourceRecords.length === 0">
+                    <td [attr.colspan]="oppartMappingSourceColumns.length + 1" class="no-data-cell">
+                      {{ 'OPP.noRowMatchesFilter' | translate }}
+                    </td>
+                  </tr>
+                </tbody>
+              </table>
+            </div>
+          </div>
+        </div>
+
+        <!-- Mapping des colonnes source -->
+        <div class="oppart-mapping">
+          <div class="mapping-legend">
+            {{ 'OPP.mappingLegend' | translate }}
+          </div>
+          <div class="mapping-grid">
+            <div class="mapping-row" *ngFor="let field of oppartTargetFields; trackBy: trackByOppartField">
+              <label class="mapping-field">
+                <span class="mapping-label">{{ fieldLabel(field) }}</span>
+                <span class="mapping-hint">{{ fieldHint(field) }}</span>
+              </label>
+              <div class="mapping-control">
+                <div class="mapping-source-line">
+                  <span class="mapping-source-type">{{ 'TBL.column' | translate }}</span>
+                  <select 
+                    [(ngModel)]="oppartColumnMapping[field.key]"
+                    (ngModelChange)="onOppartMappingChange()"
+                    class="mapping-select">
+                    <option value="">{{ 'OPP.noColumn' | translate }}</option>
+                    <option *ngFor="let col of oppartMappingSourceColumns; trackBy: trackByValue" [value]="col">{{col}}</option>
+                  </select>
+                </div>
+                <div class="mapping-source-line">
+                  <span class="mapping-source-type">{{ 'OPP.manual' | translate }}</span>
+                  <input
+                    type="text"
+                    [(ngModel)]="oppartManualValues[field.key]"
+                    (ngModelChange)="onOppartManualValueChange()"
+                    [placeholder]="'OPP.manualValuePlaceholder' | translate"
+                    class="mapping-manual-input"
+                    [ngClass]="{'is-set': (oppartManualValues[field.key] || '').trim() !== ''}">
+                  <button
+                    *ngIf="(oppartManualValues[field.key] || '').trim() !== ''"
+                    (click)="clearOppartManualValue(field.key)"
+                    class="mapping-clear-btn"
+                    [title]="'OPP.clearManualValue' | translate">✕</button>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <!-- Table éditable avant sauvegarde -->
+        <div class="oppart-edit-table-wrapper">
+          <table class="oppart-edit-table">
+            <thead>
+              <tr>
+                <th>{{ 'TBL.position' | translate }}</th>
+                <th *ngFor="let field of oppartTargetFields; trackBy: trackByOppartField">{{ fieldLabel(field) }}</th>
+              </tr>
+            </thead>
+            <tbody>
+              <tr *ngFor="let row of oppartDraftRows; let i = index; trackBy: trackByOppartRow">
+                <td class="oppart-pos">{{i + 1}}</td>
+                <td *ngFor="let field of oppartTargetFields; trackBy: trackByOppartField">
+                  <input 
+                    type="text"
+                    [(ngModel)]="row[field.key]"
+                    [placeholder]="fieldLabel(field)"
+                    class="oppart-edit-input"
+                    [ngClass]="{'oppart-missing': isOppartCellEmpty(row[field.key])}">
+                </td>
+              </tr>
+            </tbody>
+          </table>
+        </div>
+      </div>
+
+      <div class="oppart-actions">
+        <button (click)="closeOppartCreation()" class="cancel-btn" [disabled]="isSavingOppart">{{ 'COMMON.actions.cancel' | translate }}</button>
+        <button 
+          (click)="saveOppartRows()" 
+          class="save-oppart-btn"
+          [disabled]="isSavingOppart || oppartDraftRows.length === 0">
+          {{ isSavingOppart ? ('SV.saveInProgress' | translate) : ('OPP.saveOpart' | translate) }}
+        </button>
+      </div>
+    </div>
+  </div>
+  </div><!-- .ecart-partner-table-container -->
+  </div><!-- .main -->
+</div><!-- .ecart-partner-page -->

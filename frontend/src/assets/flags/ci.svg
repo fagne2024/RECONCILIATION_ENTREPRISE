@@ -1,0 +1,7 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="640" height="480" viewBox="0 0 8 6">
+  <!-- Orange, White, Green vertical tricolour -->
+  <rect width="2.6667" height="6" x="0" y="0" fill="#f77f00"/>
+  <rect width="2.6667" height="6" x="2.6667" y="0" fill="#ffffff"/>
+  <rect width="2.6667" height="6" x="5.3333" y="0" fill="#009e60"/>
+</svg>
+

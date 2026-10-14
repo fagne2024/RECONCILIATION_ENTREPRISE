@@ -1,0 +1,1638 @@
+<div class="banque-page">
+  <!-- TOP NAV (design redevance-loterie) -->
+  <nav class="topnav">
+    <div class="nav-brand">
+      <div class="nav-brand-dot"></div>
+      {{ 'BQ.ReconciliApp' | translate }}
+    </div>
+    <div class="nav-sep"></div>
+    <div class="nav-path">
+      <strong>{{ 'TBL.bank' | translate }}</strong>
+    </div>
+    <div class="nav-spacer"></div>
+  </nav>
+
+  <!-- PAGE HEADER (titre + KPIs) -->
+  <div class="page-header-banque">
+    <div class="ph-banque-left">
+      <div class="ph-eyebrow"><span></span>{{ 'TBL.bank' | translate }}</div>
+      <h1 class="ph-title-banque">{{ 'BQ.Vuedensembledes' | translate }} <em>{{ 'BQ.Opérationsbancaires' | translate }}</em></h1>
+    </div>
+    <div class="ph-banque-right">
+      <div class="hero-kpi-strip">
+        <div class="hk-strip-item">
+          <span class="hk-strip-label">{{ 'BQ.Soldetotal' | translate }}</span>
+          <span class="hk-strip-value">{{ totalSoldeComptes | number:'1.0-0' }}</span>
+        </div>
+        <div class="hk-strip-sep"></div>
+        <div class="hk-strip-item">
+          <span class="hk-strip-label">{{ 'TBL.operations' | translate }}</span>
+          <span class="hk-strip-value">{{ totalOperations | number:'1.0-0' }}</span>
+        </div>
+        <div class="hk-strip-sep"></div>
+        <div class="hk-strip-item">
+          <span class="hk-strip-label">{{ 'TBL.accounts' | translate }}</span>
+          <span class="hk-strip-value">{{ totalComptes | number:'1.0-0' }}</span>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <div class="main">
+  <div class="banque-container">
+  <div class="banque-header">
+    <h1>{{ 'BQ.Modulebanque' | translate }}</h1>
+    <p class="banque-description">{{ 'BQ.Gestiondesopérationsbancairesetdescomptes' | translate }}</p>
+  </div>
+
+  <div class="banque-content">
+    <div class="banque-section">
+      <h2>{{ 'BQ.Tableaudebordbancaire' | translate }}</h2>
+      <div class="banque-stats">
+        <div class="stat-card">
+          <div class="stat-icon">💰</div>
+          <div class="stat-info">
+            <h3>{{ 'BQ.Soldetotal_1' | translate }}</h3>
+            <p class="stat-value">{{ totalSoldeComptes | number:'1.0-0' }} FCFA</p>
+          </div>
+        </div>
+        <div class="stat-card">
+          <div class="stat-icon">📈</div>
+          <div class="stat-info">
+            <h3>{{ 'BQ.Opérationsbancaires_1' | translate }}</h3>
+            <p class="stat-value">{{ totalOperations }}</p>
+          </div>
+        </div>
+        <div class="stat-card">
+          <div class="stat-icon">🏛️</div>
+          <div class="stat-info">
+            <h3>{{ 'TBL.accounts' | translate }}</h3>
+            <p class="stat-value">{{ totalComptes }}</p>
+          </div>
+        </div>
+        <div class="stat-card warning">
+          <div class="stat-icon">⏳</div>
+          <div class="stat-info">
+            <h3>{{ 'BQ.Relevébancaire' | translate }}</h3>
+            <p class="stat-value">{{ totalReleveLignes }}</p>
+          </div>
+        </div>
+        <div class="stat-card danger">
+          <div class="stat-icon">🎫</div>
+          <div class="stat-info">
+            <h3>{{ 'BQ.Ticketsàcréer' | translate }}</h3>
+            <p class="stat-value">{{ totalTicketsACreer }}</p>
+          </div>
+        </div>
+        <div class="stat-card">
+          <div class="stat-icon">🧩</div>
+          <div class="stat-info">
+            <h3>{{ 'BQ.Suspens' | translate }}</h3>
+            <p class="stat-value">{{ totalSuspens }}</p>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <div class="banque-section">
+      <h2>{{ 'BQ.Fonctionnalités' | translate }}</h2>
+      <div class="banque-features">
+        <div class="feature-card" (click)="highlightBankAccounts()" (dblclick)="goToComptes()" title="{{ 'BQ.Cliquezpourvoirlescomptesbanqueicidoublecliquezpourouvrirlapagecomptes' | translate }}">
+          <div class="feature-icon">💳</div>
+          <h3>{{ 'CPT.Gestiondescomptes' | translate }}</h3>
+          <p>{{ 'BQ.Créeretgérerlescomptesbancaires' | translate }}</p>
+        </div>
+        <div class="feature-card" (click)="showOperationsTable()">
+          <div class="feature-icon">💸</div>
+          <h3>{{ 'TBL.operations' | translate }}</h3>
+          <p>{{ 'BQ.Effectuerdesvirementsetpaiements' | translate }}</p>
+        </div>
+        <div class="feature-card" (click)="openRapports()">
+          <div class="feature-icon">📋</div>
+          <h3>{{ 'BQ.Relevébancaire_1' | translate }}</h3>
+          <p>{{ 'BQ.Générerunrelevébancaire' | translate }}</p>
+        </div>
+        <div class="feature-card" (click)="openSecurite()">
+          <div class="feature-icon">🔁</div>
+          <h3>{{ 'BQ.Réconciliationbanque' | translate }}</h3>
+          <p>{{ 'BQ.Lancerlaréconciliationbancaire' | translate }}</p>
+        </div>
+      </div>
+    </div>
+
+    <div class="banque-section" *ngIf="activeSection === 'rapports'">
+      <div class="releve-header">
+        <h2>{{ 'BQ.Relevébancaireimport' | translate }}</h2>
+        <div class="actions">
+          <label class="file-btn">
+            <input type="file" (change)="onReleveFileSelected($event)" accept=".xlsx,.xls,.csv" />
+            <i class="fas fa-file-upload"></i> {{ 'BQ.Choisirunfichier' | translate }}
+          </label>
+          <button class="btn-primary" [disabled]="releveUploading || !releveSelectedFile" (click)="uploadReleve()">
+            <i class="fas fa-upload" [class.spin]="releveUploading"></i> {{ 'COMMON.actions.import' | translate }}
+          </button>
+          <button class="btn-primary" (click)="downloadReleveTemplate()" title="{{ 'BQ.Téléchargerlemodèle' | translate }}">
+            <i class="fas fa-file-excel"></i> {{ 'BQ.Modèle' | translate }}
+          </button>
+          <button class="btn-primary" (click)="exportReleveCSV()" [disabled]="!(filteredReleveRowsForImport && filteredReleveRowsForImport.length)" title="{{ 'BQ.Exporterlerelevécsv' | translate }}">
+            <i class="fas fa-file-export"></i> {{ 'BQ.Exportcsv' | translate }}
+          </button>
+          <button class="btn-success" (click)="openCreateOperation()" title="{{ 'BQ.Créerunenouvelleopérationbancaire' | translate }}">
+            <i class="fas fa-plus"></i> {{ 'BQ.Créeropération' | translate }}
+          </button>
+          <button class="btn-primary" (click)="toggleCommentColumn()" [class.active]="showCommentColumn" title="{{ 'BQ.Affichermasquerlacolonnecommentaire' | translate }}">
+            <i class="fas" [class.fa-comment]="!showCommentColumn" [class.fa-comment-slash]="showCommentColumn"></i>
+            {{ showCommentColumn ? 'Masquer Commentaires' : 'Afficher Commentaires' }}
+          </button>
+          <div class="filter-group" style="margin-left:12px; display: none;">
+            <label>{{ 'BQ.Lot' | translate }}</label>
+            <select [(ngModel)]="releveSelectedBatchId" (change)="relevePage = 1">
+              <option value="ALL">{{ 'BQ.Tousleslots' | translate }}</option>
+              <option *ngFor="let b of releveBatchOptions" [value]="b.id">{{ b.label }}</option>
+            </select>
+          </div>
+        </div>
+      </div>
+
+      <div class="batch-bar" *ngIf="releveBatchId" style="display: none;">
+        <span class="batch-badge"><i class="fas fa-hashtag"></i> {{ releveBatchId }}</span>
+        <span class="muted">{{ releveRows.length }} {{ 'BQ.Lignesimportées' | translate }}</span>
+      </div>
+
+      <div *ngIf="releveMessage" class="releve-alert" [ngClass]="releveMessageKind">
+        <i class="fas" [ngClass]="{
+          'fa-info-circle': releveMessageKind==='info',
+          'fa-check-circle': releveMessageKind==='success',
+          'fa-exclamation-triangle': releveMessageKind==='error'
+        }"></i>
+        <span>{{ releveMessage }}</span>
+      </div>
+
+      <!-- Barre de filtres Relevé -->
+      <div class="filters-bar" *ngIf="releveRows.length">
+        <div class="filters-row">
+          <input type="text" placeholder="{{ 'TBL.accountNumber' | translate }}" [(ngModel)]="releveFilterNumeroCompte" (keyup.enter)="applyReleveFilters()">
+          <input type="text" placeholder="{{ 'TBL.bank' | translate }}" [(ngModel)]="releveFilterBanque" (keyup.enter)="applyReleveFilters()">
+          <input type="text" placeholder="{{ 'TBL.currency' | translate }}" [(ngModel)]="releveFilterDevise" (keyup.enter)="applyReleveFilters()" style="width:90px;">
+          <input type="text" placeholder="{{ 'BQ.Paysexci' | translate }}" [(ngModel)]="releveFilterPays" (keyup.enter)="applyReleveFilters()" style="width:80px; text-transform: uppercase;">
+          <select [(ngModel)]="releveFilterReconStatus" (change)="applyReleveFilters()">
+            <option [ngValue]="''">{{ 'BQ.Statuttous' | translate }}</option>
+            <option [ngValue]="'OK'">{{ 'COMMON.actions.ok' | translate }}</option>
+            <option [ngValue]="'KO'">KO</option>
+          </select>
+          <select [(ngModel)]="releveFilterDateField" (change)="applyReleveFilters()">
+            <option [ngValue]="'comptable'">{{ 'BQ.Pardatecomptable' | translate }}</option>
+            <option [ngValue]="'valeur'">{{ 'BQ.Pardatevaleur' | translate }}</option>
+          </select>
+          <input type="date" [(ngModel)]="releveFilterDateDebut" (change)="applyReleveFilters()">
+          <span>→</span>
+          <input type="date" [(ngModel)]="releveFilterDateFin" (change)="applyReleveFilters()">
+          <button (click)="applyReleveFilters()" title="{{ 'ACT.apply' | translate }}"><i class="fas fa-filter"></i></button>
+          <button (click)="resetReleveFilters()" title="{{ 'COMMON.actions.reset' | translate }}"><i class="fas fa-times"></i></button>
+        </div>
+      </div>
+
+      <div class="operations-table-container" *ngIf="releveRows.length">
+        <div class="table-container" style="overflow-x: visible;">
+          <table class="operations-table">
+            <thead>
+              <tr>
+                <th>{{ 'TBL.accountNumber' | translate }}</th>
+                <th>{{ 'TBL.accountName' | translate }}</th>
+                <th>BANQUE</th>
+                <th>{{ 'TBL.accountingDate' | translate }}</th>
+                <th>{{ 'TBL.valueDate' | translate }}</th>
+                <th>{{ 'TBL.labelNarration' | translate }}</th>
+                <th class="right">{{ 'TBL.debit' | translate }}</th>
+                <th class="right">{{ 'TBL.credit' | translate }}</th>
+                <th class="right">{{ 'TBL.amount' | translate }}</th>
+                <th>{{ 'TBL.cheque' | translate }}</th>
+                <th>{{ 'TBL.currency' | translate }}</th>
+                <th>{{ 'TBL.seriesNumber' | translate }}</th>
+                <th>{{ 'TBL.reconciliationStatus' | translate }}</th>
+                <th *ngIf="showCommentColumn">{{ 'TBL.comment' | translate }}</th>
+                <th class="actions-col" *ngIf="showActionsColumn">{{ 'TBL.actions' | translate }}</th>
+              </tr>
+            </thead>
+            <tbody>
+              <tr *ngFor="let r of filteredReleveRowsForImport | slice:(relevePage-1)*relevePageSize : (relevePage-1)*relevePageSize + relevePageSize; trackBy: trackById">
+                <td><code>{{ r.numeroCompte || '-' }}</code></td>
+                <td>{{ r.nomCompte || '-' }}</td>
+                <td>{{ r.banque || '-' }}</td>
+                <td>{{ r.dateComptable ? (r.dateComptable | date:'dd/MM/yyyy') : '-' }}</td>
+                <td>{{ r.dateValeur ? (r.dateValeur | date:'dd/MM/yyyy') : '-' }}</td>
+                <td class="libelle-cell" [title]="r.libelle">{{ r.libelle || '-' }}</td>
+                <td class="right"><span class="amount debit">{{ r.debit !== null && r.debit !== undefined ? (r.debit | number:'1.0-0') : '-' }}</span></td>
+                <td class="right"><span class="amount credit">{{ r.credit !== null && r.credit !== undefined ? (r.credit | number:'1.0-0') : '-' }}</span></td>
+                <td class="right"><span class="amount" [class.debit]="!!r.montant && r.montant < 0" [class.credit]="!!r.montant && r.montant > 0">{{ r.montant !== null && r.montant !== undefined ? (r.montant | number:'1.0-0') : '-' }}</span></td>
+                <td>{{ r.numeroCheque || '-' }}</td>
+              <td>{{ r.devise || '-' }}</td>
+              <td>{{ r.numeroSerie || '-' }}</td>
+              <td>
+                <span class="badge status-ok" *ngIf="getReleveReconStatus(r)==='OK'">{{ 'COMMON.actions.ok' | translate }}</span>
+                <span class="badge status-ko" *ngIf="getReleveReconStatus(r)==='KO'">KO</span>
+              </td>
+              <td *ngIf="showCommentColumn" class="comment-cell">
+                <div class="comment-display" [class.empty]="!r.commentaire">
+                  <span *ngIf="r.commentaire; else noComment">{{ r.commentaire }}</span>
+                  <ng-template #noComment>
+                    <span class="no-comment">{{ 'MSG.noComment' | translate }}</span>
+                  </ng-template>
+                </div>
+              </td>
+                <td class="actions-col" *ngIf="showActionsColumn">
+                  <button class="btn-icon" (click)="openReleveEdit(r)" [disabled]="!r.id" title="{{ 'BQ.Modifiercetteligne' | translate }}">
+                    <i class="fas fa-edit"></i>
+                  </button>
+                  <button class="btn-icon btn-danger" (click)="deleteReleveRow(r)" [disabled]="!r.id" title="{{ 'BQ.Supprimercetteligne' | translate }}">
+                    <i class="fas fa-trash"></i>
+                  </button>
+                </td>
+              </tr>
+            </tbody>
+          </table>
+        </div>
+        <div class="pagination small">
+          <div class="btn-group">
+            <button (click)="relevePage = relevePage - 1" [disabled]="relevePage===1"><i class="fas fa-chevron-left"></i></button>
+            <button (click)="relevePage = relevePage + 1" [disabled]="relevePage >= releveTotalPages"><i class="fas fa-chevron-right"></i></button>
+          </div>
+          <span class="muted">{{ 'BQ.Page' | translate }} {{ relevePage }} / {{ releveTotalPages }}</span>
+          <span class="muted" style="margin-left: 16px;">
+            <i class="fas fa-list"></i>
+            {{ filteredReleveRowsForImport.length }} {{ 'BQ.Lignesautotal' | translate }}
+          </span>
+          <select [(ngModel)]="relevePageSize" (change)="relevePage = 1">
+            <option [value]="5">5</option>
+            <option [value]="10">10</option>
+            <option [value]="20">20</option>
+            <option [value]="50">50</option>
+          </select>
+          <div class="filter-group" style="margin-left: 8px;">
+            <label>{{ 'TBL.reconciliationStatus' | translate }}</label>
+            <select [(ngModel)]="releveStatusFilter" (change)="relevePage = 1">
+              <option value="">{{ 'FILT.all' | translate }}</option>
+              <option value="OK">{{ 'COMMON.actions.ok' | translate }}</option>
+              <option value="KO">KO</option>
+            </select>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Section Réconciliation Banque -->
+    <div class="banque-section" *ngIf="activeSection === 'securite'">
+      <h2>{{ 'BQ.Réconciliationbanque_1' | translate }}</h2>
+      <div class="reconcile-toolbar">
+        <div class="filter-group">
+          <label>{{ 'TBL.country' | translate }}</label>
+          <select [(ngModel)]="reconPays" (change)="onReconPaysChange()">
+            <option value="">{{ 'BQ.Choisirunpays' | translate }}</option>
+            <option *ngFor="let pays of reconPaysOptions" [value]="pays">{{ pays }}</option>
+          </select>
+        </div>
+        <div class="filter-group">
+          <label>{{ 'TBL.date' | translate }}<span class="muted">{{ 'BQ.Optionnelle' | translate }}</span></label>
+          <input type="date" [(ngModel)]="reconDate">
+        </div>
+        <button class="btn-primary" (click)="reconcile()" [disabled]="reconciling || !reconPays">
+          <i class="fas fa-link" [class.spin]="reconciling"></i>
+          {{ 'BQ.Réconcilier' | translate }}
+        </button>
+        
+        <div class="filter-group" style="margin-left:auto;">
+          <label>{{ 'LBL.view' | translate }}</label>
+          <select [(ngModel)]="reconView" (change)="updatePagedReconciliationResults()">
+            <option value="operation">{{ 'BQ.Suspensbo' | translate }}</option>
+            <option value="releve">{{ 'BQ.Suspensbanque' | translate }}</option>
+            <option value="corr_operation">{{ 'BQ.Correspondancesbo' | translate }}</option>
+            <option value="corr_releve">{{ 'BQ.Correspondancesbanque' | translate }}</option>
+          </select>
+        </div>
+        <div class="filter-group" style="margin-left:12px;">
+          <label>{{ 'BQ.Inclureok' | translate }}</label>
+          <input type="checkbox" [(ngModel)]="showOkMarked" (change)="updatePagedReconciliationResults()" />
+        </div>
+      </div>
+
+      <!-- Barre d'actions pour la réconciliation -->
+      <div class="releve-header" style="margin-bottom: 12px;" *ngIf="reconPays">
+        <h3>{{ 'BQ.Actionsderéconciliation' | translate }}</h3>
+        <div class="actions">
+          <button class="btn-primary" (click)="toggleSelectAllCurrentPage()" [class.active]="selectAllOnPage" title="{{ 'BQ.Sélectionnerdésélectionnerlapage' | translate }}" *ngIf="reconView==='corr_operation' || reconView==='corr_releve'">
+            <i class="fas" [ngClass]="{ 'fa-square': !selectAllOnPage, 'fa-check-square': selectAllOnPage }"></i>
+            {{ selectAllOnPage ? 'Tout désélectionner' : 'Sélectionner la page' }}
+          </button>
+          <button class="btn-primary" (click)="toggleSelectionModeOps()" [class.active]="isSelectionModeOps" title="{{ 'BQ.Sélectionmultiple' | translate }}" *ngIf="reconView==='operation'">
+            <i class="fas fa-check-square"></i>
+            {{ isSelectionModeOps ? 'Quitter la sélection' : 'Sélection multiple' }}
+            <span *ngIf="isSelectionModeOps && hasSelectedOps" class="badge" style="margin-left:6px;">{{ selectedOpIds.size }}</span>
+          </button>
+        </div>
+      </div>
+
+      <div class="table-container" *ngIf="reconDiffRows.length || (matchedPairs && matchedPairs.length)">
+        <!-- Filtres Réconciliation -->
+        <div class="table-filters">
+          <div class="filter-group" *ngIf="reconView==='operation' || reconView==='corr_operation'">
+            <label>{{ 'TBL.operationType' | translate }}</label>
+            <select [(ngModel)]="reconFilters.typeOperation" (change)="applyReconFilters()">
+              <option value="">{{ 'FILT.all' | translate }}</option>
+              <option *ngFor="let type of typesOperation" [value]="type">{{ type }}</option>
+            </select>
+          </div>
+          <div class="filter-group" *ngIf="reconView==='operation' || reconView==='corr_operation'">
+            <label>{{ 'TBL.status' | translate }}</label>
+            <select [(ngModel)]="reconFilters.statut" (change)="applyReconFilters()">
+              <option value="">{{ 'FILT.all' | translate }}</option>
+              <option *ngFor="let s of statutsList" [value]="s">{{ s }}</option>
+            </select>
+          </div>
+          <button class="btn-outline" *ngIf="reconView==='corr_operation' || reconView==='corr_releve'" (click)="openOkList()" title="{{ 'BQ.Voirlesokdéfinitifs' | translate }}">
+            <i class="fas fa-list-check"></i> {{ 'BQ.OKdéfinitifs' | translate }}
+          </button>
+          <div class="filter-group">
+            <label>{{ 'TBL.bank' | translate }}</label>
+            <input type="text" [(ngModel)]="reconFilters.banque" (input)="applyReconFilters()" placeholder="{{ 'BQ.Exboasg' | translate }}">
+          </div>
+          <div class="filter-group">
+            <label>{{ 'BQ.Recherche' | translate }}</label>
+            <input type="text" [(ngModel)]="reconFilters.search" (input)="applyReconFilters()" placeholder="{{ 'BQ.Bénéficiaireréflibellécompte' | translate }}">
+          </div>
+          <div class="filter-group">
+            <label>{{ 'BQ.Montantmin' | translate }}</label>
+            <input type="number" [(ngModel)]="reconFilters.montantMin" (input)="applyReconFilters()">
+          </div>
+          <div class="filter-group">
+            <label>{{ 'BQ.Montantmax' | translate }}</label>
+            <input type="number" [(ngModel)]="reconFilters.montantMax" (input)="applyReconFilters()">
+          </div>
+          <button class="btn-clear-filters" (click)="clearReconFilters()">
+            <i class="fas fa-times"></i>
+            {{ 'CPT.Effacer' | translate }}
+          </button>
+        </div>
+
+        <!-- Message d'information si pas de données de réconciliation -->
+        <div class="recon-info-message" *ngIf="!reconPays">
+          <div class="info-card">
+            <i class="fas fa-info-circle"></i>
+            <div class="info-content">
+              <h4>{{ 'BQ.Aucuneréconciliationencours' | translate }}</h4>
+              <p>{{ 'BQ.Pourvoirlesfiltresokkovousdevezdabordlanceruneréconciliationensélectionnantunpaysetencliquantsurréconcilier' | translate }}</p>
+            </div>
+          </div>
+        </div>
+
+        <div class="recon-info-message" *ngIf="reconPays && !(leftOnlyOperations?.length || rightOnlyReleves?.length || matchedOperations?.length || matchedReleves?.length)">
+          <div class="info-card">
+            <i class="fas fa-exclamation-triangle"></i>
+            <div class="info-content">
+              <h4>{{ 'BQ.Aucunedonnéederéconciliationtrouvée' | translate }}</h4>
+              <p>{{ 'BQ.Laréconciliationpour' | translate }} <strong>{{ reconPays }}</strong> {{ 'BQ.Natrouvéaucunedonnéeàcomparervérifiezquevousavezdesopérationsbancairesetdesrelevésimportéspourcepays' | translate }}</p>
+            </div>
+          </div>
+        </div>
+
+        <div class="pagination-controls">
+          <div class="bulk-actions" *ngIf="reconView==='corr_operation' || reconView==='corr_releve'">
+            <button class="btn-bulk-action" (click)="bulkMarkOkDefinitif()" [disabled]="selectedReconKeys.size===0" title="{{ 'BQ.Marquerokdéfinitifplusieurs' | translate }}">
+              <i class="fas fa-check-double"></i> {{ 'BQ.OKdéfinitif' | translate }}{{ selectedReconKeys.size }})
+            </button>
+            <button class="btn-bulk-cancel" (click)="bulkUnmarkOk()" [disabled]="selectedReconKeys.size===0" title="{{ 'BQ.Annulerokdéfinitifplusieurs' | translate }}">
+              <i class="fas fa-undo"></i> {{ 'BQ.Annuler' | translate }}{{ selectedReconKeys.size }})
+            </button>
+          </div>
+          <!-- Actions sélection pour vue opérations -->
+          <div class="bulk-actions" *ngIf="reconView==='operation' && isSelectionModeOps">
+            <ng-container *ngIf="isSelectionModeOps">
+              <button class="btn-selection-toggle" (click)="selectAllOpsCurrentPage()" [disabled]="selectAllOpsOnPage">
+                <i class="fas fa-check-double"></i>
+                {{ 'BQ.Sélectionnerlapage' | translate }}
+              </button>
+              <button class="btn-bulk-cancel" (click)="deselectAllOps()" [disabled]="!hasSelectedOps">
+                <i class="fas fa-times"></i>
+                {{ 'BQ.Désélectionnertout' | translate }}
+              </button>
+              <select [(ngModel)]="selectedOpsTargetStatut" [disabled]="isBulkUpdatingOps" style="margin-left:8px;">
+                <option value="" disabled selected>{{ 'BQ.Choisirunstatut' | translate }}</option>
+                <option *ngFor="let s of statutsList" [value]="s">{{ s }}</option>
+              </select>
+              <button class="btn-bulk-action" (click)="bulkChangeSelectedOpsStatus()" [disabled]="isBulkUpdatingOps || !hasSelectedOps || !selectedOpsTargetStatut">
+                <i class="fas fa-exchange-alt"></i>
+                {{ isBulkUpdatingOps ? '⏳ Changement...' : 'Changer statut (' + selectedOpIds.size + ')' }}
+              </button>
+              <button class="btn-success" (click)="quickBulkOps('Validée')" [disabled]="isBulkUpdatingOps || !hasSelectedOps">
+                <i class="fas fa-check"></i> {{ 'BQ.Valider' | translate }}
+              </button>
+              <button class="btn-warning" (click)="quickBulkOps('Rejetée')" [disabled]="isBulkUpdatingOps || !hasSelectedOps">
+                <i class="fas fa-ban"></i> {{ 'BQ.Rejeter' | translate }}
+              </button>
+            </ng-container>
+          </div>
+        </div>
+        
+        <table class="operations-table" *ngIf="reconView==='operation'">
+          <thead>
+            <tr>
+              <th style="width:34px;" *ngIf="isSelectionModeOps">
+                <input type="checkbox"
+                       [checked]="selectAllOpsOnPage && (pagedLeftOps.length>0)"
+                       [indeterminate]="hasSelectedOps && !selectAllOpsOnPage"
+                       (change)="toggleSelectAllOpsHeader()"
+                       title="Sélectionner/Désélectionner la page">
+              </th>
+              <th>{{ 'TBL.country' | translate }}</th>
+              <th>{{ 'TBL.countryCode' | translate }}</th>
+              <th>{{ 'TBL.month' | translate }}</th>
+              <th>{{ 'TBL.operationDate' | translate }}</th>
+              <th>{{ 'TBL.agency' | translate }}</th>
+              <th>{{ 'TBL.operationType' | translate }}</th>
+              <th>{{ 'BQ.Nomdubénéficiaire' | translate }}</th>
+              <th>{{ 'TBL.account' | translate }}</th>
+              <th>{{ 'TBL.amount' | translate }}</th>
+              <th>{{ 'TBL.paymentMode' | translate }}</th>
+              <th>{{ 'TBL.reference' | translate }}</th>
+              <th>{{ 'TBL.ticketId' | translate }}</th>
+              <th>{{ 'TBL.bank' | translate }}</th>
+              <th>{{ 'TBL.status' | translate }}</th>
+            </tr>
+          </thead>
+          <tbody>
+            <tr *ngFor="let op of pagedLeftOps; trackBy: trackById" [class.selected]="isOpSelected(op)">
+              <td *ngIf="isSelectionModeOps">
+                <input type="checkbox" [checked]="isOpSelected(op)" (change)="toggleOpSelection(op)">
+              </td>
+              <td>{{ op.pays }}</td>
+              <td>{{ op.codePays }}</td>
+              <td>{{ op.mois }}</td>
+              <td>{{ op.dateOperation | date:'dd/MM/yyyy' }}</td>
+              <td>{{ op.agence }}</td>
+              <td>{{ op.typeOperation }}</td>
+              <td>{{ op.nomBeneficiaire }}</td>
+              <td>{{ op.compteADebiter }}</td>
+              <td>{{ op.montant | currency:'XAF':'symbol':'1.0-0' }}</td>
+              <td>{{ op.modePaiement }}</td>
+              <td>{{ op.reference }}</td>
+              <td>{{ op.idGlpi || '-' }}</td>
+              <td>{{ op.bo }}</td>
+              <td>{{ op.statut }}</td>
+              
+            </tr>
+          </tbody>
+        </table>
+        
+
+        <table class="operations-table" *ngIf="reconView==='releve'">
+          <thead>
+            <tr>
+              <th>{{ 'TBL.accountNumber' | translate }}</th>
+              <th>{{ 'TBL.accountName' | translate }}</th>
+              <th>{{ 'TBL.bank' | translate }}</th>
+              <th>{{ 'TBL.accountingDate' | translate }}</th>
+              <th>{{ 'TBL.valueDate' | translate }}</th>
+              <th>{{ 'TBL.labelNarration' | translate }}</th>
+              <th class="right">{{ 'TBL.debit' | translate }}</th>
+              <th class="right">{{ 'TBL.credit' | translate }}</th>
+              <th class="right">{{ 'TBL.amount' | translate }}</th>
+              <th>{{ 'TBL.cheque' | translate }}</th>
+              <th>{{ 'TBL.currency' | translate }}</th>
+              <th>{{ 'TBL.seriesNumber' | translate }}</th>
+            </tr>
+          </thead>
+          <tbody>
+            <tr *ngFor="let r of pagedRightReleves; trackBy: trackById">
+              <td><code>{{ r.numeroCompte || '-' }}</code></td>
+              <td>{{ r.nomCompte || '-' }}</td>
+              <td>{{ r.banque || '-' }}</td>
+              <td>{{ r.dateComptable ? (r.dateComptable | date:'dd/MM/yyyy') : '-' }}</td>
+              <td>{{ r.dateValeur ? (r.dateValeur | date:'dd/MM/yyyy') : '-' }}</td>
+              <td class="libelle-cell" [title]="r.libelle">{{ r.libelle || '-' }}</td>
+              <td class="right">{{ r.debit !== null && r.debit !== undefined ? (r.debit | number:'1.0-0') : '-' }}</td>
+              <td class="right">{{ r.credit !== null && r.credit !== undefined ? (r.credit | number:'1.0-0') : '-' }}</td>
+              <td class="right">{{ r.montant !== null && r.montant !== undefined ? (r.montant | number:'1.0-0') : '-' }}</td>
+              <td>{{ r.numeroCheque || '-' }}</td>
+              <td>{{ r.devise || '-' }}</td>
+              <td>{{ r.numeroSerie || '-' }}</td>
+            </tr>
+          </tbody>
+        </table>
+
+        <table class="operations-table" *ngIf="reconView==='corr_operation'">
+          <thead>
+            <tr>
+              <th style="width:34px;"></th>
+              <th>{{ 'TBL.country' | translate }}</th>
+              <th>{{ 'TBL.countryCode' | translate }}</th>
+              <th>{{ 'TBL.month' | translate }}</th>
+              <th>{{ 'TBL.operationDate' | translate }}</th>
+              <th>{{ 'TBL.agency' | translate }}</th>
+              <th>{{ 'TBL.operationType' | translate }}</th>
+              <th>{{ 'BQ.Nomdubénéficiaire' | translate }}</th>
+              <th>{{ 'TBL.account' | translate }}</th>
+              <th>{{ 'TBL.amount' | translate }}</th>
+              <th>{{ 'TBL.paymentMode' | translate }}</th>
+              <th>{{ 'TBL.reference' | translate }}</th>
+              <th>{{ 'TBL.ticketId' | translate }}</th>
+              <th>{{ 'TBL.bank' | translate }}</th>
+              <th>{{ 'TBL.status' | translate }}</th>
+              <th>{{ 'TBL.reconciliationStatus' | translate }}</th>
+            </tr>
+          </thead>
+          <tbody>
+            <tr *ngFor="let op of pagedMatchedOps; trackBy: trackById">
+              <td>
+                <input type="checkbox" [checked]="isKeySelected(op.key)" (change)="toggleSelectKey(op.key)">
+              </td>
+              <td>{{ op.pays }}</td>
+              <td>{{ op.codePays }}</td>
+              <td>{{ op.mois }}</td>
+              <td>{{ op.dateOperation | date:'dd/MM/yyyy' }}</td>
+              <td>{{ op.agence }}</td>
+              <td>{{ op.typeOperation }}</td>
+              <td>{{ op.nomBeneficiaire }}</td>
+              <td>{{ op.compteADebiter }}</td>
+              <td>{{ op.montant | currency:'XAF':'symbol':'1.0-0' }}</td>
+              <td>{{ op.modePaiement }}</td>
+              <td>{{ op.reference }}</td>
+              <td>{{ op.idGlpi || '-' }}</td>
+              <td>{{ op.bo }}</td>
+              <td>{{ op.statut }}</td>
+              <td class="right">
+                <span class="badge status-ok" *ngIf="getReconStatusByKey(op.key, 'OK')==='OK'">{{ 'COMMON.actions.ok' | translate }}</span>
+                <span class="badge status-ko" *ngIf="getReconStatusByKey(op.key, 'OK')==='KO'">KO</span>
+                <button class="btn-icon" (click)="toggleReconStatusByKey(op.key, 'OK')" title="{{ 'BQ.Basculerokko' | translate }}"><i class="fas fa-exchange-alt"></i></button>
+                <button class="btn-icon" (click)="markAsOkPermanentByKey(op.key)" title="{{ 'BQ.Marquerdéfinitivementokignorer' | translate }}"><i class="fas fa-check-double"></i></button>
+                <button class="btn-icon" (click)="unmarkOkByKey(op.key)" title="{{ 'BQ.Annulerokdéfinitif' | translate }}"><i class="fas fa-undo"></i></button>
+              </td>
+            </tr>
+          </tbody>
+        </table>
+
+        <table class="operations-table" *ngIf="reconView==='corr_releve'">
+          <thead>
+            <tr>
+              <th style="width:34px;"></th>
+              <th>{{ 'TBL.accountNumber' | translate }}</th>
+              <th>{{ 'TBL.accountName' | translate }}</th>
+              <th>{{ 'TBL.bank' | translate }}</th>
+              <th>{{ 'TBL.accountingDate' | translate }}</th>
+              <th>{{ 'TBL.valueDate' | translate }}</th>
+              <th>{{ 'TBL.labelNarration' | translate }}</th>
+              <th class="right">{{ 'TBL.debit' | translate }}</th>
+              <th class="right">{{ 'TBL.credit' | translate }}</th>
+              <th class="right">{{ 'TBL.amount' | translate }}</th>
+              <th>{{ 'TBL.cheque' | translate }}</th>
+              <th>{{ 'TBL.currency' | translate }}</th>
+              <th>{{ 'TBL.seriesNumber' | translate }}</th>
+              <th>{{ 'TBL.reconciliationStatus' | translate }}</th>
+            </tr>
+          </thead>
+          <tbody>
+            <tr *ngFor="let r of pagedMatchedReleves; trackBy: trackById">
+              <td>
+                <input type="checkbox" [checked]="isKeySelected(r.key)" (change)="toggleSelectKey(r.key)">
+              </td>
+              <td><code>{{ r.numeroCompte || '-' }}</code></td>
+              <td>{{ r.nomCompte || '-' }}</td>
+              <td>{{ r.banque || '-' }}</td>
+              <td>{{ r.dateComptable ? (r.dateComptable | date:'dd/MM/yyyy') : '-' }}</td>
+              <td>{{ r.dateValeur ? (r.dateValeur | date:'dd/MM/yyyy') : '-' }}</td>
+              <td class="libelle-cell" [title]="r.libelle">{{ r.libelle || '-' }}</td>
+              <td class="right">{{ r.debit !== null && r.debit !== undefined ? (r.debit | number:'1.0-0') : '-' }}</td>
+              <td class="right">{{ r.credit !== null && r.credit !== undefined ? (r.credit | number:'1.0-0') : '-' }}</td>
+              <td class="right">{{ r.montant !== null && r.montant !== undefined ? (r.montant | number:'1.0-0') : '-' }}</td>
+              <td>{{ r.numeroCheque || '-' }}</td>
+              <td>{{ r.devise || '-' }}</td>
+              <td>{{ r.numeroSerie || '-' }}</td>
+              <td class="right">
+                <span class="badge status-ok" *ngIf="getReconStatusByKey(r.key, 'OK')==='OK'">{{ 'COMMON.actions.ok' | translate }}</span>
+                <span class="badge status-ko" *ngIf="getReconStatusByKey(r.key, 'OK')==='KO'">KO</span>
+                <button class="btn-icon" (click)="toggleReconStatusByKey(r.key, 'OK')" title="{{ 'BQ.Basculerokko' | translate }}"><i class="fas fa-exchange-alt"></i></button>
+                <button class="btn-icon" (click)="markAsOkPermanentByKey(r.key)" title="{{ 'BQ.Marquerdéfinitivementokignorer' | translate }}"><i class="fas fa-check-double"></i></button>
+                <button class="btn-icon" (click)="unmarkOkByKey(r.key)" title="{{ 'BQ.Annulerokdéfinitif' | translate }}"><i class="fas fa-undo"></i></button>
+              </td>
+            </tr>
+          </tbody>
+        </table>
+
+        <!-- Pagination améliorée pour la réconciliation -->
+        <div class="pagination-enhanced" *ngIf="reconPays">
+          <!-- Informations de pagination -->
+          <div class="pagination-info">
+            <i class="fas fa-info-circle"></i>
+            <span>{{ getReconPaginationInfo() }}</span>
+          </div>
+          
+          <!-- Navigation de pagination -->
+          <div class="pagination-nav">
+            <div class="btn-group">
+              <!-- Première page -->
+              <button (click)="reconGoToFirstPage()" 
+                      [disabled]="(reconView==='operation' ? reconOpPage===1 : reconView==='releve' ? reconRevPage===1 : reconView==='corr_operation' ? reconCorrOpPage===1 : reconCorrRevPage===1)"
+                      title="{{ 'PAG.first' | translate }}">
+                <i class="fas fa-angle-double-left"></i>
+              </button>
+              
+              <!-- Page précédente -->
+              <button (click)="reconPrevPage()" 
+                      [disabled]="(reconView==='operation' ? reconOpPage===1 : reconView==='releve' ? reconRevPage===1 : reconView==='corr_operation' ? reconCorrOpPage===1 : reconCorrRevPage===1)"
+                      title="{{ 'PAG.previousPage' | translate }}">
+                <i class="fas fa-chevron-left"></i>
+              </button>
+            </div>
+            
+            <!-- Numéros de page -->
+            <div class="page-numbers">
+              <button *ngFor="let page of getReconPageNumbers()" 
+                      (click)="reconGoToPage(page)"
+                      [disabled]="(reconView==='operation' ? filteredLeftOps.length===0 : reconView==='releve' ? filteredRightReleves.length===0 : reconView==='corr_operation' ? filteredMatchedOps.length===0 : filteredMatchedReleves.length===0)"
+                      [class.active]="page === (reconView==='operation' ? reconOpPage : (reconView==='releve' ? reconRevPage : (reconView==='corr_operation' ? reconCorrOpPage : reconCorrRevPage)))"
+                      class="page-number">
+                {{ page }}
+              </button>
+            </div>
+            
+            <div class="btn-group">
+              <!-- Page suivante -->
+              <button (click)="reconNextPage()" 
+                      [disabled]="(reconView==='operation' ? reconOpPage===reconOpTotalPages : (reconView==='releve' ? reconRevPage===reconRevTotalPages : (reconView==='corr_operation' ? reconCorrOpPage===reconCorrOpTotalPages : reconCorrRevPage===reconCorrRevTotalPages)))"
+                      title="{{ 'PAG.nextPage' | translate }}">
+                <i class="fas fa-chevron-right"></i>
+              </button>
+              
+              <!-- Dernière page -->
+              <button (click)="reconGoToLastPage()" 
+                      [disabled]="(reconView==='operation' ? reconOpPage===reconOpTotalPages : (reconView==='releve' ? reconRevPage===reconRevTotalPages : (reconView==='corr_operation' ? reconCorrOpPage===reconCorrOpTotalPages : reconCorrRevPage===reconCorrRevTotalPages)))"
+                      title="{{ 'PAG.last' | translate }}">
+                <i class="fas fa-angle-double-right"></i>
+              </button>
+            </div>
+          </div>
+          
+          <!-- Informations de pagination -->
+          <div class="pagination-info">
+            <i class="fas fa-info-circle"></i>
+            <span *ngIf="reconView==='operation'">{{ filteredLeftOps.length }} {{ 'BQ.Lignesautotal' | translate }}</span>
+            <span *ngIf="reconView==='releve'">{{ filteredRightReleves.length }} {{ 'BQ.Lignesautotal' | translate }}</span>
+            <span *ngIf="reconView==='corr_operation'">{{ filteredMatchedOps.length }} {{ 'BQ.Correspondances' | translate }}</span>
+            <span *ngIf="reconView==='corr_releve'">{{ filteredMatchedReleves.length }} {{ 'BQ.Correspondances' | translate }}</span>
+          </div>
+          
+          <!-- Total correspondances (OK définitifs) -->
+          <div class="pagination-info" *ngIf="totalOkDefinitifs > 0">
+            <i class="fas fa-list-check"></i>
+            <span>{{ 'BQ.Totalcorrespondances' | translate }} {{ totalOkDefinitifs }}</span>
+          </div>
+          
+          <!-- Sélecteur de taille de page -->
+          <div class="page-size-selector">
+            <label>{{ 'ACT.show' | translate }}</label>
+            <select [(ngModel)]="reconPageSize" (change)="onReconPageSizeChange()">
+              <option [value]="5">{{ 'BQ.5lignes' | translate }}</option>
+              <option [value]="10">{{ 'BQ.10lignes' | translate }}</option>
+              <option [value]="20">{{ 'BQ.20lignes' | translate }}</option>
+              <option [value]="50">{{ 'BQ.50lignes' | translate }}</option>
+              <option [value]="100">{{ 'BQ.100lignes' | translate }}</option>
+            </select>
+          </div>
+        </div>
+      </div>
+      <div *ngIf="!reconDiffRows.length" class="empty-row">
+        {{ 'BQ.Aucunedonnéesélectionnezunpaysetunedatepuislancezlaréconciliation' | translate }}
+      </div>
+    </div>
+
+    
+
+    <div class="banque-section" *ngIf="!showOperations && activeSection === 'home'">
+      <div class="section-header">
+        <h2>{{ 'BQ.Comptesdebanque' | translate }}</h2>
+        <div class="header-actions">
+          <button class="btn-export" (click)="exportComptesBanque()" [disabled]="loadingComptesBanque || comptesBanqueDisplayed.length === 0" title="{{ 'BQ.Exporterlescomptesdebanqueexcel' | translate }}">
+            <i class="fas fa-file-excel"></i>
+            {{ 'COMMON.actions.export' | translate }}
+          </button>
+          <button class="btn-refresh" (click)="loadComptesBanque()" [disabled]="loadingComptesBanque">
+            <i class="fas fa-sync-alt" [class.spin]="loadingComptesBanque"></i>
+            {{ 'CPT.Actualiser' | translate }}
+          </button>
+        </div>
+      </div>
+
+      <div *ngIf="comptesBanqueError" class="error-box">
+        {{ comptesBanqueError }}
+      </div>
+
+      <div class="table-container small" *ngIf="!comptesBanqueError">
+        <div class="comptes-toolbar">
+          <div class="search-box">
+            <i class="fas fa-search"></i>
+            <input type="text" [(ngModel)]="comptesSearch" placeholder="{{ 'BQ.Recherchercomptecodepaystype' | translate }}">
+          </div>
+          <div class="legend">
+            <span class="badge badge-banque">{{ 'TBL.bank' | translate }}</span>
+            <span class="dot"></span>
+            <span class="muted">{{ comptesBanqueDisplayed.length }} {{ 'BQ.Comptes' | translate }}</span>
+          </div>
+        </div>
+
+        <table class="fancy-table comptes-table">
+          <thead>
+            <tr>
+              <th>{{ 'CPT.Numérodecompte_1' | translate }}</th>
+              <th>{{ 'TBL.ownerCode' | translate }}</th>
+              <th>{{ 'TBL.country' | translate }}</th>
+              <th>{{ 'CPT.Catégorie_1' | translate }}</th>
+              <th>{{ 'COMMON.actions.type' | translate }}</th>
+              <th class="center">{{ 'CPT.Solde_2' | translate }}</th>
+              <th>{{ 'BQ.Dernièremaj' | translate }}</th>
+              <th class="actions-col">{{ 'TBL.actions' | translate }}</th>
+            </tr>
+          </thead>
+          <tbody>
+            <tr *ngIf="loadingComptesBanque">
+              <td colspan="8" class="loading-row">
+                <i class="fas fa-spinner spin"></i> {{ 'BQ.Chargementdescomptesbanque' | translate }}
+              </td>
+            </tr>
+            <tr *ngIf="!loadingComptesBanque && comptesBanqueDisplayed.length === 0">
+              <td colspan="8" class="empty-row">
+                {{ 'BQ.Aucuncomptedecatégoriebanquetrouvé' | translate }}
+              </td>
+            </tr>
+            <tr *ngFor="let c of (comptesBanqueDisplayed | slice:(comptesListPage-1)*comptesListPageSize : (comptesListPage-1)*comptesListPageSize + comptesListPageSize); trackBy: trackById" [class.expanded]="selectedCompteNumero === c.numeroCompte">
+              <td (click)="toggleCompte(c)" class="clickable">
+                <div class="cell-main">
+                  <code>{{ c.numeroCompte }}</code>
+                  <button class="btn-copy" title="{{ 'BQ.Copier' | translate }}" (click)="$event.stopPropagation(); copyToClipboard(c.numeroCompte)">
+                    <i class="fas fa-copy"></i>
+                  </button>
+                </div>
+                <div class="cell-sub" *ngIf="selectedCompteNumero === c.numeroCompte">{{ c.categorie || '-' }} • {{ c.type || '-' }}</div>
+              </td>
+              <td>
+                <span class="chip chip-owner">{{ c.codeProprietaire || '-' }}</span>
+              </td>
+              <td>
+                <span class="chip chip-country">
+                  <i class="fas fa-globe-africa"></i> {{ c.pays }}
+                </span>
+              </td>
+              <td>
+                <span class="chip chip-category">{{ c.categorie || '-' }}</span>
+              </td>
+              <td>
+                <span class="chip chip-type">{{ c.type || '-' }}</span>
+              </td>
+              <td class="center">
+                <span class="amount" [class.negative]="c.solde < 0">{{ c.solde | number:'1.2-2' }}</span>
+              </td>
+              <td>
+                <span class="date-badge">{{ c.dateDerniereMaj | date:'dd/MM/yyyy HH:mm' }}</span>
+              </td>
+              <td class="actions-col">
+                <button class="btn-releve" (click)="openCompteRelevePopup(c)" title="{{ 'BQ.Voiropérationsducompte' | translate }}"><i class="fas fa-receipt"></i> {{ 'BQ.Relevé' | translate }}</button>
+              </td>
+            </tr>
+          </tbody>
+        </table>
+        <div class="pagination small" *ngIf="comptesBanqueDisplayed.length > 0">
+          <div class="btn-group">
+            <button (click)="comptesListFirstPage()" [disabled]="comptesListPage===1" title="{{ 'PAG.first' | translate }}"><i class="fas fa-angle-double-left"></i></button>
+            <button (click)="comptesListPrevPage()" [disabled]="comptesListPage===1" title="{{ 'PAG.previousPage' | translate }}"><i class="fas fa-chevron-left"></i></button>
+            <button (click)="comptesListNextPage()" [disabled]="comptesListPage>=comptesListTotalPages" title="{{ 'PAG.nextPage' | translate }}"><i class="fas fa-chevron-right"></i></button>
+            <button (click)="comptesListLastPage()" [disabled]="comptesListPage>=comptesListTotalPages" title="{{ 'PAG.last' | translate }}"><i class="fas fa-angle-double-right"></i></button>
+          </div>
+          <span class="muted">
+            {{ 'BQ.Page' | translate }} {{ comptesListPage }} / {{ comptesListTotalPages }} 
+            ({{ comptesListStartIndex }}-{{ comptesListEndIndex }} {{ 'CPT.Sur' | translate }} {{ comptesBanqueDisplayed.length }})
+          </span>
+          <select [(ngModel)]="comptesListPageSize" (change)="onComptesListPageSizeChange()">
+            <option [value]="5">5</option>
+            <option [value]="7">7</option>
+            <option [value]="10">10</option>
+            <option [value]="20">20</option>
+            <option [value]="50">50</option>
+            <option [value]="100">100</option>
+          </select>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Popup opérations par compte -->
+  <div class="modern-popup-overlay" *ngIf="showCompteOpsPopup" (click)="closeCompteRelevePopup()">
+    <div class="modern-popup detail-popup compte-releve-popup" (click)="$event.stopPropagation()">
+      <div class="popup-header">
+        <h2><i class="fas fa-receipt"></i> {{ 'BQ.Opérationsducompte' | translate }} <code>{{ compteOpsNumero }}</code></h2>
+        <button class="close-btn" (click)="closeCompteRelevePopup()">
+          <i class="fas fa-times"></i>
+        </button>
+      </div>
+      <div class="popup-content">
+        <div class="operations-table-container">
+          <div class="balances" style="margin: 8px 0; text-align: left;">
+            <div class="balance-item">
+              <strong>{{ 'BQ.Soldedouverture' | translate }}</strong>
+              <span class="balance-highlight" style="background:#E7F3FF; padding:4px 8px; border-radius:6px; font-weight:bold;">{{ compteReleveSoldeOuverture !== null ? (compteReleveSoldeOuverture | number:'1.0-0') : '-' }}</span>
+            </div>
+          </div>
+          <div class="table-filters">
+            <div class="filter-group">
+              <label>{{ 'BQ.Datedébut' | translate }}</label>
+              <input type="date" [(ngModel)]="compteOpsDateFrom" (change)="applyCompteOpsFilters()">
+            </div>
+            <div class="filter-group">
+              <label>{{ 'BQ.Datefin' | translate }}</label>
+              <input type="date" [(ngModel)]="compteOpsDateTo" (change)="applyCompteOpsFilters()">
+            </div>
+            <button class="btn-export" style="margin-left:auto;" (click)="exportCompteOps()" title="{{ 'BQ.Exportercsv' | translate }}">
+              <i class="fas fa-file-export"></i> {{ 'COMMON.actions.export' | translate }}
+            </button>
+            <div class="page-size-selector">
+              <label>{{ 'ACT.show' | translate }}</label>
+              <select [(ngModel)]="compteOpsPageSize" (change)="onCompteOpsPageSizeChange()">
+                <option [value]="5">{{ 'BQ.5lignes' | translate }}</option>
+                <option [value]="10">{{ 'BQ.10lignes' | translate }}</option>
+                <option [value]="20">{{ 'BQ.20lignes' | translate }}</option>
+              </select>
+            </div>
+          </div>
+          <div class="table-container">
+            <table class="operations-table">
+              <thead>
+                <tr>
+                  <th>{{ 'TBL.date' | translate }}</th>
+                  <th>{{ 'COMMON.actions.type' | translate }}</th>
+                  <th>{{ 'TBL.agency' | translate }}</th>
+                  <th>{{ 'BQ.Bénéficiaire' | translate }}</th>
+                  <th class="right">{{ 'TBL.debit' | translate }}</th>
+                  <th class="right">{{ 'TBL.credit' | translate }}</th>
+                  <th>{{ 'TBL.reference' | translate }}</th>
+                  <th>{{ 'TBL.status' | translate }}</th>
+                </tr>
+              </thead>
+              <tbody>
+                <tr *ngFor="let op of compteOpsPaged; trackBy: trackById">
+                  <td>{{ op.dateOperation | date:'dd/MM/yyyy' }}</td>
+                  <td>{{ op.typeOperation }}</td>
+                  <td>{{ op.agence }}</td>
+                  <td>{{ op.nomBeneficiaire || '-' }}</td>
+                  <td class="right">
+                    <span class="amount debit" *ngIf="getDebitForOperation(op) !== null">{{ getDebitForOperation(op) | number:'1.0-0' }}</span>
+                    <span *ngIf="getDebitForOperation(op) === null">-</span>
+                  </td>
+                  <td class="right">
+                    <span class="amount credit" *ngIf="getCreditForOperation(op) !== null">{{ getCreditForOperation(op) | number:'1.0-0' }}</span>
+                    <span *ngIf="getCreditForOperation(op) === null">-</span>
+                  </td>
+                  <td>{{ op.reference || '-' }}</td>
+                  <td>{{ op.statut || '-' }}</td>
+                </tr>
+                <tr *ngIf="!compteOpsPaged.length">
+                  <td colspan="8" class="empty-row">{{ 'BQ.Aucuneopérationpourcettepériode' | translate }}</td>
+                </tr>
+              </tbody>
+            </table>
+          </div>
+          <div *ngIf="compteReleveSoldeCloture !== null" style="margin: 8px 0; text-align: right;">
+            <strong>{{ 'BQ.Soldedeclôture' | translate }}</strong>
+            <span class="balance-highlight" style="background:#FFF3CD; padding:4px 8px; border-radius:6px; font-weight:bold;">{{ compteReleveSoldeCloture !== null ? (compteReleveSoldeCloture | number:'1.0-0') : '-' }}</span>
+          </div>
+          <div class="pagination" *ngIf="compteOpsTotalPages > 1">
+            <button (click)="compteOpsPrevPage()" [disabled]="compteOpsPage===1"><i class="fas fa-chevron-left"></i>{{ 'PAG.previous' | translate }}</button>
+            <div class="pagination-indicators">
+              <span *ngFor="let page of getCompteOpsVisiblePages()" class="page-indicator" [class.active]="compteOpsPage === page" (click)="compteOpsGoToPage(page)">{{ page }}</span>
+            </div>
+            <button (click)="compteOpsNextPage()" [disabled]="compteOpsPage===compteOpsTotalPages">{{ 'PAG.next' | translate }}<i class="fas fa-chevron-right"></i></button>
+          </div>
+        </div>
+      </div>
+      <div class="popup-footer">
+        <button class="btn-secondary btn-close" (click)="closeCompteRelevePopup()"><i class="fas fa-times"></i>{{ 'COMMON.actions.close' | translate }}</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Tableau des opérations bancaires -->
+  <div class="banque-section operations-section" *ngIf="showOperations && activeSection === 'operations'">
+    <div class="operations-header">
+      <h2>{{ 'BQ.Opérationsbancaires_2' | translate }}</h2>
+    </div>
+
+      <!-- Import / Modèle / Export -->
+      <div class="releve-header" style="margin-bottom: 12px;">
+        <h3>{{ 'BQ.Gestiondesopérationsimportexportexcelcsv' | translate }}</h3>
+        <div class="actions">
+          <label class="file-btn">
+            <input type="file" (change)="onOpbFileSelected($event)" accept=".xlsx,.xls,.csv" />
+            <i class="fas fa-file-upload"></i> {{ 'BQ.Choisirunfichier' | translate }}
+          </label>
+          <button class="btn-primary" [disabled]="opbUploading || !opbSelectedFile" (click)="uploadOpb()">
+            <i class="fas fa-upload" [class.spin]="opbUploading"></i> {{ 'COMMON.actions.import' | translate }}
+          </button>
+          <button class="btn-primary" (click)="downloadOpbTemplate()" title="{{ 'BQ.Téléchargerlemodèle' | translate }}">
+            <i class="fas fa-file-excel"></i> {{ 'BQ.Modèle' | translate }}
+          </button>
+          <button class="btn-success" (click)="exportOperations()" [disabled]="filteredOperations.length === 0" title="{{ 'BQ.Exporterexcel' | translate }}">
+            <i class="fas fa-file-excel"></i> {{ 'COMMON.actions.export' | translate }}
+          </button>
+          <button class="btn-primary" (click)="toggleActionsColumn()" [class.active]="showActionsColumn" title="{{ 'BQ.Affichermasquerlescolonnesactions' | translate }}">
+            <i class="fas" [class.fa-eye]="!showActionsColumn" [class.fa-eye-slash]="showActionsColumn"></i>
+            {{ showActionsColumn ? 'Masquer Actions' : 'Afficher Actions' }}
+          </button>
+          <button class="btn-primary" (click)="toggleSelectionModeMain()" [class.active]="isSelectionModeMain" title="{{ 'BQ.Sélectionmultiple' | translate }}">
+            <i class="fas fa-check-square"></i>
+            {{ isSelectionModeMain ? 'Quitter la sélection' : 'Sélection multiple' }}
+            <span *ngIf="isSelectionModeMain && hasSelectedMainOps" class="badge" style="margin-left:6px;">{{ selectedMainOpIds.size }}</span>
+          </button>
+        </div>
+      </div>
+
+      <div *ngIf="opbMessage" class="releve-alert" [ngClass]="opbMessageKind" style="margin-bottom: 12px;">
+        <i class="fas" [ngClass]="{
+          'fa-info-circle': opbMessageKind==='info',
+          'fa-check-circle': opbMessageKind==='success',
+          'fa-exclamation-triangle': opbMessageKind==='error'
+        }"></i>
+        <span>{{ opbMessage }}</span>
+      </div>
+
+    <div class="operations-table-container">
+      <!-- Filtres -->
+      <div class="table-filters">
+        <div class="filter-group">
+          <label>{{ 'TBL.country' | translate }}</label>
+          <select [(ngModel)]="filters.pays" (change)="applyFilters()">
+            <option value="">{{ 'FILT.allCountries' | translate }}</option>
+            <option *ngFor="let pays of paysList" [value]="pays">{{ pays }}</option>
+          </select>
+        </div>
+        <div class="filter-group">
+          <label>{{ 'TBL.operationType' | translate }}</label>
+          <select [(ngModel)]="filters.typeOperation" (change)="applyFilters()">
+            <option value="">{{ 'FILT.allTypes' | translate }}</option>
+            <option *ngFor="let type of typesOperation" [value]="type">{{ type }}</option>
+          </select>
+        </div>
+        <div class="filter-group">
+          <label>{{ 'TBL.status' | translate }}</label>
+          <select [(ngModel)]="filters.statut" (change)="applyFilters()">
+            <option value="">{{ 'FILT.allStatuses' | translate }}</option>
+            <option *ngFor="let statut of statutsList" [value]="statut">{{ statut }}</option>
+          </select>
+        </div>
+        <div class="filter-group">
+          <label>{{ 'TBL.processing' | translate }}</label>
+          <select [(ngModel)]="filters.traitement" (change)="applyFilters()">
+            <option value="">{{ 'BQ.Touslestraitements' | translate }}</option>
+            <option *ngFor="let traitement of traitementOptions" [value]="traitement">{{ traitement }}</option>
+          </select>
+        </div>
+        <div class="filter-group">
+          <label>{{ 'TBL.reconciliationStatus' | translate }}</label>
+          <select [(ngModel)]="operationsReconStatusFilter" (change)="applyFilters()">
+            <option value="">{{ 'FILT.all' | translate }}</option>
+            <option value="OK">{{ 'COMMON.actions.ok' | translate }}</option>
+            <option value="KO">KO</option>
+          </select>
+        </div>
+        <div class="filter-group">
+          <label>{{ 'BQ.Datedébut' | translate }}</label>
+          <input type="date" [(ngModel)]="filters.dateDebut" (change)="applyFilters()">
+        </div>
+        <div class="filter-group">
+          <label>{{ 'BQ.Datefin' | translate }}</label>
+          <input type="date" [(ngModel)]="filters.dateFin" (change)="applyFilters()">
+        </div>
+        <button class="btn-clear-filters" (click)="clearFilters()">
+          <i class="fas fa-times"></i>
+          {{ 'CPT.Effacer' | translate }}
+        </button>
+      </div>
+
+      <!-- Contrôles de pagination -->
+      <div class="pagination-controls">
+        <div style="margin-left:auto; display:flex; gap:8px; align-items:center;" *ngIf="isSelectionModeMain">
+          <select [(ngModel)]="selectedMainTargetStatut" [disabled]="isBulkUpdatingMain">
+            <option value="" disabled selected>{{ 'BQ.Choisirunstatut' | translate }}</option>
+            <option *ngFor="let s of statutsList" [value]="s">{{ s }}</option>
+          </select>
+          <button class="btn-bulk-action" (click)="bulkChangeSelectedMainStatus()" [disabled]="isBulkUpdatingMain || !hasSelectedMainOps || !selectedMainTargetStatut">
+            <i class="fas fa-exchange-alt"></i>
+            {{ isBulkUpdatingMain ? '⏳ Changement...' : 'Changer statut (' + selectedMainOpIds.size + ')' }}
+          </button>
+          <button class="btn-success" (click)="quickBulkMain('Validée')" [disabled]="isBulkUpdatingMain || !hasSelectedMainOps">
+            <i class="fas fa-check"></i> {{ 'BQ.Valider' | translate }}
+          </button>
+          <button class="btn-warning" (click)="quickBulkMain('Rejetée')" [disabled]="isBulkUpdatingMain || !hasSelectedMainOps">
+            <i class="fas fa-ban"></i> {{ 'BQ.Rejeter' | translate }}
+          </button>
+        </div>
+      </div>
+
+      <!-- Tableau -->
+      <div class="table-container">
+        <table class="operations-table">
+          <thead>
+            <tr>
+              <th style="width:34px;" *ngIf="isSelectionModeMain">
+                <input type="checkbox"
+                       [checked]="selectAllMainOnPage && (pagedOperations.length>0)"
+                       [indeterminate]="hasSelectedMainOps && !selectAllMainOnPage"
+                       (change)="toggleSelectAllMainHeader()"
+                       title="Sélectionner/Désélectionner la page">
+              </th>
+              <th>{{ 'TBL.country' | translate }}</th>
+              <th>{{ 'TBL.countryCode' | translate }}</th>
+              <th>{{ 'TBL.month' | translate }}</th>
+              <th>{{ 'TBL.operationDate' | translate }}</th>
+              <th>{{ 'TBL.agency' | translate }}</th>
+              <th>{{ 'TBL.operationType' | translate }}</th>
+              <th>{{ 'BQ.Nomdubénéficiaire' | translate }}</th>
+              <th>{{ 'TBL.account' | translate }}</th>
+              <th>{{ 'TBL.amount' | translate }}</th>
+              <th>{{ 'TBL.paymentMode' | translate }}</th>
+              <th>{{ 'TBL.reference' | translate }}</th>
+              <th>{{ 'TBL.ticketId' | translate }}</th>
+              <th>{{ 'TBL.bank' | translate }}</th>
+              <th>{{ 'TBL.status' | translate }}</th>
+              <th>{{ 'TBL.processing' | translate }}</th>
+              <th *ngIf="showActionsColumn">{{ 'TBL.actions' | translate }}</th>
+              <th>{{ 'TBL.reconciliationStatus' | translate }}</th>
+            </tr>
+          </thead>
+          <tbody>
+            <tr *ngFor="let operation of pagedOperations; trackBy: trackById" [class.selected]="isMainOpSelected(operation)">
+              <td *ngIf="isSelectionModeMain">
+                <input type="checkbox" [checked]="isMainOpSelected(operation)" (change)="toggleMainOpSelection(operation)">
+              </td>
+              <td>{{ getPaysDisplay(operation) }}</td>
+              <td>{{ operation.codePays }}</td>
+              <td>{{ operation.mois }}</td>
+              <td>{{ operation.dateOperation | date:'dd/MM/yyyy' }}</td>
+              <td>{{ operation.agence }}</td>
+              <td>
+                <span class="badge type-{{ operation.typeOperation.toLowerCase() }}">
+                  {{ operation.typeOperation }}
+                </span>
+              </td>
+              <td>{{ operation.nomBeneficiaire }}</td>
+              <td>{{ operation.compteADebiter }}</td>
+              <td>{{ operation.montant | currency:'XAF':'symbol':'1.0-0' }}</td>
+              <td>{{ operation.modePaiement }}</td>
+              <td>{{ operation.reference }}</td>
+              <td class="glpi-cell">
+                <button 
+                  *ngIf="isCreateTicketCase(operation.idGlpi)" 
+                  class="btn-glpi-create"
+                  (click)="showTicketCreateOptionsPopup(); $event.preventDefault()"
+                  title="{{ 'BQ.Choisirlaplateformepourcréerunticket' | translate }}">
+                  <i class="fas fa-plus-circle"></i> {{ 'APM.Create' | translate }}
+                </button>
+                <span 
+                  *ngIf="!isCreateTicketCase(operation.idGlpi)"
+                  class="glpi-link"
+                  (click)="showTicketOptionsPopup(operation.idGlpi)"
+                  title="{{ 'BQ.Choisiruneoptionpourouvrirleticket' | translate }}"
+                  style="cursor: pointer;">
+                  <i class="fas fa-ticket-alt"></i> {{ operation.idGlpi }}
+                </span>
+              </td>
+              <td>{{ operation.bo }}</td>
+              <td>
+                <span class="badge status-{{ operation.statut.toLowerCase() }}">
+                  {{ operation.statut }}
+                </span>
+              </td>
+              <td class="traitement-cell">
+                <ng-container *ngIf="editingOperation !== operation; else editTraitement">
+                  <span [class]="getTraitementClass(operation.traitement)" class="traitement-badge" (click)="startEditTraitement(operation)" style="cursor: pointer;">
+                    {{ operation.traitement || '-' }}
+                  </span>
+                </ng-container>
+                <ng-template #editTraitement>
+                  <select [(ngModel)]="operation.traitement" class="edit-select" (change)="onTraitementChange(operation)" (blur)="stopEditTraitement()">
+                    <option [ngValue]="undefined">-</option>
+                    <option *ngFor="let t of traitementOptions" [ngValue]="t">{{t}}</option>
+                  </select>
+                </ng-template>
+              </td>
+              <td class="actions" *ngIf="showActionsColumn">
+                <button class="btn-icon" (click)="viewOperation(operation)" title="{{ 'ACT.view' | translate }}">
+                  <i class="fas fa-eye"></i>
+                </button>
+                <button class="btn-icon" (click)="editOperation(operation)" title="{{ 'ACT.edit' | translate }}">
+                  <i class="fas fa-edit"></i>
+                </button>
+                <button class="btn-icon btn-success" (click)="validateOperation(operation)" title="{{ 'BQ.Valider' | translate }}" *ngIf="operation.statut !== 'Validée'">
+                  <i class="fas fa-check"></i>
+                </button>
+                <button class="btn-icon btn-danger" (click)="deleteOperation(operation.id)" title="{{ 'ACT.delete' | translate }}">
+                  <i class="fas fa-trash"></i>
+                </button>
+              </td>
+              <td>
+                <span class="badge status-{{ getOperationReconStatus(operation).toLowerCase() }}">
+                  {{ getOperationReconStatus(operation) }}
+                </span>
+              </td>
+            </tr>
+          </tbody>
+        </table>
+      </div>
+
+      <!-- Pagination -->
+      <div class="pagination small" *ngIf="filteredOperations.length > 0">
+        <div class="btn-group">
+          <button (click)="goToPage(1)" [disabled]="currentPage === 1" title="{{ 'PAG.first' | translate }}"><i class="fas fa-angle-double-left"></i></button>
+          <button (click)="prevPage()" [disabled]="currentPage === 1" title="{{ 'PAG.previousPage' | translate }}"><i class="fas fa-chevron-left"></i></button>
+          <button (click)="nextPage()" [disabled]="currentPage === totalPages" title="{{ 'PAG.nextPage' | translate }}"><i class="fas fa-chevron-right"></i></button>
+          <button (click)="goToPage(totalPages)" [disabled]="currentPage === totalPages" title="{{ 'PAG.last' | translate }}"><i class="fas fa-angle-double-right"></i></button>
+        </div>
+        
+        <span class="muted">{{ 'BQ.Page' | translate }} {{ currentPage }} / {{ totalPages }}</span>
+        <span class="muted" style="margin-left: 16px;">
+          <i class="fas fa-list"></i>
+          {{ filteredOperations.length }} {{ 'BQ.Opérationsautotal' | translate }}
+        </span>
+        
+        <select [(ngModel)]="pageSize" (change)="onPageSizeChange()">
+          <option [value]="5">5</option>
+          <option [value]="10">10</option>
+          <option [value]="20">20</option>
+          <option [value]="50">50</option>
+          <option [value]="100">100</option>
+        </select>
+        
+        <div class="filter-group" style="margin-left: 8px;">
+          <label>{{ 'TBL.reconciliationStatus' | translate }}</label>
+          <select [(ngModel)]="operationsReconStatusFilter" (change)="onOperationsReconStatusFilterChange()">
+            <option value="">{{ 'FILT.all' | translate }}</option>
+            <option value="OK">{{ 'COMMON.actions.ok' | translate }}</option>
+            <option value="KO">KO</option>
+          </select>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Popup Détails -->
+  <div class="modern-popup-overlay" *ngIf="showDetailPopup" (click)="closeDetailPopup()">
+    <div class="modern-popup detail-popup" (click)="$event.stopPropagation()">
+      <div class="popup-header">
+        <h2><i class="fas fa-info-circle"></i> {{ 'BQ.Détailsdelopérationbancaire' | translate }}</h2>
+        <button class="close-btn" (click)="closeDetailPopup()">
+          <i class="fas fa-times"></i>
+        </button>
+      </div>
+
+      <div class="popup-content" *ngIf="selectedOperation">
+        <div class="detail-grid">
+          <div class="detail-item">
+            <label><i class="fas fa-globe"></i>{{ 'TBL.country' | translate }}</label>
+            <span>{{ selectedOperation.pays || 'Non renseigné' }}</span>
+          </div>
+          <div class="detail-item">
+            <label><i class="fas fa-flag"></i>{{ 'TBL.countryCode' | translate }}</label>
+            <span>{{ selectedOperation.codePays || 'Non renseigné' }}</span>
+          </div>
+          <div class="detail-item">
+            <label><i class="fas fa-calendar"></i>{{ 'TBL.month' | translate }}</label>
+            <span>{{ selectedOperation.mois || 'Non renseigné' }}</span>
+          </div>
+          <div class="detail-item">
+            <label><i class="fas fa-clock"></i>{{ 'TBL.operationDate' | translate }}</label>
+            <span>{{ selectedOperation.dateOperation | date:'dd/MM/yyyy HH:mm' }}</span>
+          </div>
+          <div class="detail-item">
+            <label><i class="fas fa-building"></i>{{ 'TBL.agency' | translate }}</label>
+            <span>{{ selectedOperation.agence }}</span>
+          </div>
+          <div class="detail-item">
+            <label><i class="fas fa-tags"></i>{{ 'TBL.operationType' | translate }}</label>
+            <span class="badge">{{ selectedOperation.typeOperation }}</span>
+          </div>
+          <div class="detail-item">
+            <label><i class="fas fa-user"></i> {{ 'BQ.Nombénéficiaire' | translate }}</label>
+            <span>{{ selectedOperation.nomBeneficiaire || 'Non renseigné' }}</span>
+          </div>
+          <div class="detail-item">
+            <label><i class="fas fa-credit-card"></i>{{ 'TBL.account' | translate }}</label>
+            <span>{{ selectedOperation.compteADebiter || 'Non renseigné' }}</span>
+          </div>
+          <div class="detail-item">
+            <label><i class="fas fa-money-bill-wave"></i>{{ 'TBL.amount' | translate }}</label>
+            <span class="montant">{{ selectedOperation.montant | currency:'XAF':'symbol':'1.0-0' }}</span>
+          </div>
+          <div class="detail-item">
+            <label><i class="fas fa-wallet"></i>{{ 'TBL.paymentMode' | translate }}</label>
+            <span>{{ selectedOperation.modePaiement || 'Non renseigné' }}</span>
+          </div>
+          <div class="detail-item">
+            <label><i class="fas fa-hashtag"></i>{{ 'TBL.reference' | translate }}</label>
+            <span>{{ selectedOperation.reference || 'Non renseignée' }}</span>
+          </div>
+          <div class="detail-item">
+            <label><i class="fas fa-ticket-alt"></i>{{ 'TBL.ticketId' | translate }}</label>
+            <span>
+              <button *ngIf="isCreateTicketCase(selectedOperation.idGlpi)"
+                      class="btn-glpi-create btn-inline"
+                      (click)="showTicketCreateOptionsPopup()"
+                      title="{{ 'BQ.Choisirlaplateformepourcréerunticket' | translate }}">
+                <i class="fas fa-plus-circle"></i> {{ 'APM.Create' | translate }}
+              </button>
+              <span *ngIf="!isCreateTicketCase(selectedOperation.idGlpi)"
+                    class="glpi-link glpi-link-small"
+                    (click)="showTicketOptionsPopup(selectedOperation.idGlpi)"
+                    title="{{ 'BQ.Choisiruneoptionpourouvrirleticket' | translate }}"
+                    style="cursor: pointer;">
+                {{ selectedOperation.idGlpi }}
+              </span>
+            </span>
+          </div>
+          <div class="detail-item">
+            <label><i class="fas fa-university"></i>{{ 'TBL.bank' | translate }}</label>
+            <span>{{ selectedOperation.bo || 'Non renseigné' }}</span>
+          </div>
+          <div class="detail-item">
+            <label><i class="fas fa-info-circle"></i>{{ 'TBL.status' | translate }}</label>
+            <span class="badge status-{{ selectedOperation.statut?.toLowerCase() }}">
+              {{ selectedOperation.statut }}
+            </span>
+          </div>
+        </div>
+      </div>
+
+      <div class="popup-footer">
+        <button class="btn-secondary" (click)="closeDetailPopup()">
+          <i class="fas fa-times"></i>{{ 'COMMON.actions.close' | translate }}</button>
+        <button class="btn-primary" (click)="closeDetailPopup(); editOperation(selectedOperation!)">
+          <i class="fas fa-edit"></i>{{ 'ACT.edit' | translate }}</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Popup Liste OK définitifs -->
+  <div class="modern-popup-overlay" *ngIf="showOkListPopup" (click)="closeOkList()">
+    <div class="modern-popup detail-popup" (click)="$event.stopPropagation()">
+      <div class="popup-header">
+        <h2><i class="fas fa-list-check"></i> {{ 'BQ.Clésokdéfinitifs' | translate }}</h2>
+        <button class="close-btn" (click)="closeOkList()">
+          <i class="fas fa-times"></i>
+        </button>
+      </div>
+      <div class="popup-content">
+        <div *ngIf="okListLoading" class="empty-row"><i class="fas fa-spinner spin"></i>{{ 'MSG.loading' | translate }}</div>
+        <div *ngIf="!okListLoading && okKeysList.length===0" class="empty-row">{{ 'BQ.Aucunecléokdéfinitive' | translate }}</div>
+        <table class="operations-table" *ngIf="!okListLoading && okKeysList.length">
+          <thead>
+            <tr>
+              <th>{{ 'BQ.Clé' | translate }}</th>
+              <th class="actions-col">{{ 'TBL.actions' | translate }}</th>
+            </tr>
+          </thead>
+          <tbody>
+            <tr *ngFor="let k of okKeysList; trackBy: trackByValue">
+              <td><code>{{ k }}</code></td>
+              <td class="actions">
+                <button class="btn-icon" (click)="unmarkOkFromList(k)" title="{{ 'BQ.Annulerokdéfinitif' | translate }}"><i class="fas fa-undo"></i></button>
+              </td>
+            </tr>
+          </tbody>
+        </table>
+      </div>
+      <div class="popup-footer">
+        <button class="btn-secondary" (click)="closeOkList()"><i class="fas fa-times"></i>{{ 'COMMON.actions.close' | translate }}</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Popup Édition Relevé -->
+  <div class="modern-popup-overlay" *ngIf="showReleveEditPopup" (click)="closeReleveEdit()">
+    <div class="modern-popup edit-popup" (click)="$event.stopPropagation()">
+      <div class="popup-header">
+        <h2><i class="fas fa-edit"></i> {{ 'BQ.Modifierlalignederelevé' | translate }}</h2>
+        <button class="close-btn" (click)="closeReleveEdit()">
+          <i class="fas fa-times"></i>
+        </button>
+      </div>
+      <div class="popup-content">
+        <form class="edit-form">
+          <div class="form-row">
+            <div class="form-group">
+              <label>{{ 'TBL.accountNumber' | translate }}</label>
+              <input type="text" [(ngModel)]="releveEditForm.numeroCompte" name="rv_numeroCompte">
+            </div>
+            <div class="form-group">
+              <label>{{ 'TBL.accountName' | translate }}</label>
+              <input type="text" [(ngModel)]="releveEditForm.nomCompte" name="rv_nomCompte">
+            </div>
+          </div>
+          <div class="form-row">
+            <div class="form-group">
+              <label>{{ 'TBL.bank' | translate }}</label>
+              <input type="text" [(ngModel)]="releveEditForm.banque" name="rv_banque">
+            </div>
+            <div class="form-group">
+              <label>{{ 'TBL.cheque' | translate }}</label>
+              <input type="text" [(ngModel)]="releveEditForm.numeroCheque" name="rv_numeroCheque">
+            </div>
+          </div>
+          <div class="form-row">
+            <div class="form-group">
+              <label>{{ 'TBL.accountingDate' | translate }}</label>
+              <input type="date" [(ngModel)]="releveEditForm.dateComptable" name="rv_dateComptable">
+            </div>
+            <div class="form-group">
+              <label>{{ 'TBL.valueDate' | translate }}</label>
+              <input type="date" [(ngModel)]="releveEditForm.dateValeur" name="rv_dateValeur">
+            </div>
+          </div>
+          <div class="form-row">
+            <div class="form-group">
+              <label>{{ 'TBL.debit' | translate }}</label>
+              <input type="number" [(ngModel)]="releveEditForm.debit" name="rv_debit">
+            </div>
+            <div class="form-group">
+              <label>{{ 'TBL.credit' | translate }}</label>
+              <input type="number" [(ngModel)]="releveEditForm.credit" name="rv_credit">
+            </div>
+          </div>
+          <div class="form-row">
+            <div class="form-group">
+              <label>{{ 'TBL.amount' | translate }}</label>
+              <input type="number" [(ngModel)]="releveEditForm.montant" name="rv_montant">
+            </div>
+            <div class="form-group">
+              <label>{{ 'TBL.currency' | translate }}</label>
+              <input type="text" [(ngModel)]="releveEditForm.devise" name="rv_devise">
+            </div>
+            <div class="form-group">
+              <label>{{ 'TBL.seriesNumber' | translate }}</label>
+              <input type="text" [(ngModel)]="releveEditForm.numeroSerie" name="rv_numero_serie">
+            </div>
+          </div>
+          <div class="form-row">
+            <div class="form-group" style="grid-column: 1 / -1;">
+              <label>{{ 'TBL.labelNarration' | translate }}</label>
+              <input type="text" [(ngModel)]="releveEditForm.libelle" name="rv_libelle">
+            </div>
+          </div>
+          <div class="form-row">
+            <div class="form-group" style="grid-column: 1 / -1;">
+              <label>{{ 'TBL.comment' | translate }}</label>
+              <textarea 
+                [(ngModel)]="releveEditForm.commentaire" 
+                name="rv_commentaire"
+                placeholder="{{ 'BQ.Ajouteruncommentaire' | translate }}"
+                rows="3"
+                maxlength="500"
+                class="comment-textarea">
+              </textarea>
+            </div>
+          </div>
+        </form>
+      </div>
+      <div class="popup-footer">
+        <button class="btn-secondary" (click)="closeReleveEdit()"><i class="fas fa-times"></i>{{ 'COMMON.actions.cancel' | translate }}</button>
+        <button class="btn-primary" (click)="saveReleveEdit()"><i class="fas fa-save"></i>{{ 'COMMON.actions.save' | translate }}</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Popup Création Opération Bancaire -->
+  <div class="modern-popup-overlay" *ngIf="showCreateOperationPopup" (click)="closeCreateOperationPopup()">
+    <div class="modern-popup create-operation-popup" (click)="$event.stopPropagation()">
+      <div class="popup-header">
+        <h3><i class="fas fa-plus"></i> {{ 'BQ.Créeruneopérationbancaire' | translate }}</h3>
+        <button class="btn-close" (click)="closeCreateOperationPopup()">
+          <i class="fas fa-times"></i>
+        </button>
+      </div>
+      <div class="popup-body">
+        <form class="create-operation-form">
+          <div class="form-row">
+            <div class="form-group">
+              <label>{{ 'BQ.Numérodecompte' | translate }}</label>
+              <input type="text" [(ngModel)]="createOperationForm.numeroCompte" name="co_numeroCompte" required>
+            </div>
+            <div class="form-group">
+              <label>{{ 'BQ.Nomducompte' | translate }}</label>
+              <input type="text" [(ngModel)]="createOperationForm.nomCompte" name="co_nomCompte" required>
+            </div>
+          </div>
+          <div class="form-row">
+            <div class="form-group">
+              <label>{{ 'BQ.Banque' | translate }}</label>
+              <input type="text" [(ngModel)]="createOperationForm.banque" name="co_banque" required>
+            </div>
+            <div class="form-group">
+              <label>{{ 'TBL.currency' | translate }}</label>
+              <select [(ngModel)]="createOperationForm.devise" name="co_devise">
+                <option value="XAF">XAF</option>
+                <option value="USD">USD</option>
+                <option value="EUR">EUR</option>
+                <option value="CFA">CFA</option>
+              </select>
+            </div>
+          </div>
+          <div class="form-row">
+            <div class="form-group">
+              <label>{{ 'BQ.Datecomptable' | translate }}</label>
+              <input type="date" [(ngModel)]="createOperationForm.dateComptable" name="co_dateComptable" (change)="onDateComptableChange()" required>
+            </div>
+            <div class="form-group">
+              <label>{{ 'TBL.valueDate' | translate }}</label>
+              <input type="date" [(ngModel)]="createOperationForm.dateValeur" name="co_dateValeur">
+            </div>
+          </div>
+          <div class="form-row">
+            <div class="form-group">
+              <label>{{ 'BQ.Codepays' | translate }}</label>
+              <input type="text" [(ngModel)]="createOperationForm.codePays" name="co_codePays" (input)="onCodePaysChange()" placeholder="{{ 'BQ.CImlbf' | translate }}" required>
+            </div>
+            <div class="form-group">
+              <label>{{ 'TBL.country' | translate }}</label>
+              <input type="text" [(ngModel)]="createOperationForm.pays" name="co_pays" readonly>
+            </div>
+          </div>
+          <div class="form-row">
+            <div class="form-group">
+              <label>{{ 'BQ.Typedopération' | translate }}</label>
+              <select [(ngModel)]="createOperationForm.typeOperation" name="co_typeOperation" required>
+                <option value="">{{ 'BQ.Choisiruntype' | translate }}</option>
+                <option value="VIREMENT">{{ 'BQ.Virement' | translate }}</option>
+                <option value="RETRAIT">{{ 'BQ.Retrait' | translate }}</option>
+                <option value="DEPOT">{{ 'BQ.Dépôt' | translate }}</option>
+                <option value="FRAIS">{{ 'TBL.fees' | translate }}</option>
+                <option value="COMMISSION">{{ 'BQ.Commission' | translate }}</option>
+                <option value="AUTRE">{{ 'BQ.Autre' | translate }}</option>
+              </select>
+            </div>
+            <div class="form-group">
+              <label>{{ 'TBL.amountRequired' | translate }}</label>
+              <input type="number" [(ngModel)]="createOperationForm.montant" name="co_montant" step="0.01" required>
+            </div>
+          </div>
+          <div class="form-row">
+            <div class="form-group">
+              <label>{{ 'TBL.status' | translate }}</label>
+              <select [(ngModel)]="createOperationForm.statut" name="co_statut">
+                <option value="En attente">{{ 'MSG.pending' | translate }}</option>
+                <option value="Validée">{{ 'BQ.Validée' | translate }}</option>
+                <option value="Rejetée">{{ 'BQ.Rejetée' | translate }}</option>
+                <option value="En cours">{{ 'MSG.inProgress' | translate }}</option>
+              </select>
+            </div>
+            <div class="form-group">
+              <label>{{ 'TBL.month' | translate }}</label>
+              <input type="text" [(ngModel)]="createOperationForm.mois" name="co_mois" placeholder="{{ 'BQ.Octobre2024' | translate }}">
+            </div>
+          </div>
+          <div class="form-row">
+            <div class="form-group" style="grid-column: 1 / -1;">
+              <label>{{ 'BQ.Libellédescription' | translate }}</label>
+              <input type="text" [(ngModel)]="createOperationForm.libelle" name="co_libelle" required>
+            </div>
+          </div>
+          <div class="form-row">
+            <div class="form-group" style="grid-column: 1 / -1;">
+              <label>{{ 'TBL.comment' | translate }}</label>
+              <textarea 
+                [(ngModel)]="createOperationForm.commentaire" 
+                name="co_commentaire"
+                placeholder="{{ 'BQ.Ajouteruncommentaireoptionnel' | translate }}"
+                rows="3"
+                maxlength="500"
+                class="comment-textarea">
+              </textarea>
+            </div>
+          </div>
+        </form>
+      </div>
+      <div class="popup-footer">
+        <button class="btn-secondary" (click)="closeCreateOperationPopup()">
+          <i class="fas fa-times"></i>{{ 'COMMON.actions.cancel' | translate }}</button>
+        <button class="btn-primary" (click)="saveCreateOperation()" [disabled]="!isCreateOperationFormValid() || creatingOperation">
+          <i class="fas" [class.fa-save]="!creatingOperation" [class.fa-spinner]="creatingOperation" [class.fa-spin]="creatingOperation"></i>
+          {{ creatingOperation ? 'Création en cours...' : 'Créer l\'Opération' }}
+        </button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Popup Édition -->
+  <div class="modern-popup-overlay" *ngIf="showEditPopup" (click)="closeEditPopup()">
+    <div class="modern-popup edit-popup" (click)="$event.stopPropagation()">
+      <div class="popup-header">
+        <h2><i class="fas fa-edit"></i> {{ 'BQ.Modifierlopérationbancaire' | translate }}</h2>
+        <button class="close-btn" (click)="closeEditPopup()">
+          <i class="fas fa-times"></i>
+        </button>
+      </div>
+
+      <div class="popup-content">
+        <form class="edit-form">
+          <div class="form-row">
+            <div class="form-group">
+              <label><i class="fas fa-globe"></i>{{ 'TBL.countryRequired' | translate }}</label>
+              <select [(ngModel)]="editForm.pays" name="pays" required>
+                <option value="">{{ 'BQ.Sélectionnezunpays' | translate }}</option>
+                <option *ngFor="let pays of paysList" [value]="pays">{{ pays }}</option>
+              </select>
+            </div>
+            <div class="form-group">
+              <label><i class="fas fa-flag"></i>{{ 'TBL.countryCode' | translate }}</label>
+              <input type="text" [(ngModel)]="editForm.codePays" name="codePays" placeholder="{{ 'BQ.CImlbf' | translate }}">
+            </div>
+          </div>
+
+          <div class="form-row">
+            <div class="form-group">
+              <label><i class="fas fa-calendar"></i>{{ 'TBL.month' | translate }}</label>
+              <input type="text" [(ngModel)]="editForm.mois" name="mois" placeholder="{{ 'BQ.Octobre2024' | translate }}">
+            </div>
+            <div class="form-group">
+              <label><i class="fas fa-clock"></i> {{ 'BQ.Dateopération' | translate }}</label>
+              <input type="date" [(ngModel)]="editForm.dateOperation" name="dateOperation" required>
+            </div>
+          </div>
+
+          <div class="form-row">
+            <div class="form-group">
+              <label><i class="fas fa-building"></i>{{ 'TBL.agencyRequired' | translate }}</label>
+              <input type="text" [(ngModel)]="editForm.agence" name="agence" required placeholder="{{ 'BQ.Codeagence' | translate }}">
+            </div>
+            <div class="form-group">
+              <label><i class="fas fa-tags"></i> {{ 'BQ.Typeopération' | translate }}</label>
+              <select [(ngModel)]="editForm.typeOperation" name="typeOperation" required>
+                <option value="">{{ 'BQ.Sélectionnezuntype' | translate }}</option>
+                <option *ngFor="let type of typesOperation" [value]="type">{{ type }}</option>
+              </select>
+            </div>
+          </div>
+
+          <div class="form-row">
+            <div class="form-group">
+              <label><i class="fas fa-user"></i> {{ 'BQ.Nombénéficiaire' | translate }}</label>
+              <input type="text" [(ngModel)]="editForm.nomBeneficiaire" name="nomBeneficiaire" placeholder="{{ 'BQ.Nomdubénéficiaire_1' | translate }}">
+            </div>
+            <div class="form-group">
+              <label><i class="fas fa-credit-card"></i>{{ 'TBL.account' | translate }}</label>
+              <input type="text" [(ngModel)]="editForm.compteADebiter" name="compteADebiter" placeholder="{{ 'TBL.accountNumber' | translate }}">
+            </div>
+          </div>
+
+          <div class="form-row">
+            <div class="form-group">
+              <label><i class="fas fa-money-bill-wave"></i>{{ 'TBL.amountRequired' | translate }}</label>
+              <input type="number" [(ngModel)]="editForm.montant" name="montant" required placeholder="0">
+            </div>
+            <div class="form-group">
+              <label><i class="fas fa-wallet"></i>{{ 'TBL.paymentMode' | translate }}</label>
+              <select [(ngModel)]="editForm.modePaiement" name="modePaiement">
+                <option value="">{{ 'BQ.Sélectionnezunmode' | translate }}</option>
+                <option *ngFor="let mode of modesPaiement" [value]="mode">{{ mode }}</option>
+              </select>
+            </div>
+          </div>
+
+          <div class="form-row">
+            <div class="form-group">
+              <label><i class="fas fa-hashtag"></i>{{ 'TBL.reference' | translate }}</label>
+              <input type="text" [(ngModel)]="editForm.reference" name="reference" placeholder="{{ 'BQ.Référencedelopération' | translate }}">
+            </div>
+            <div class="form-group">
+              <label><i class="fas fa-ticket-alt"></i>{{ 'TBL.ticketId' | translate }}</label>
+              <input type="text" [(ngModel)]="editForm.idGlpi" name="idGlpi" placeholder="{{ 'TBL.ticketId' | translate }}">
+            </div>
+          </div>
+
+          <div class="form-row">
+            <div class="form-group">
+              <label><i class="fas fa-university"></i>{{ 'TBL.bank' | translate }}</label>
+              <input type="text" [(ngModel)]="editForm.bo" name="bo" placeholder="{{ 'BQ.Nomdelabanque' | translate }}">
+            </div>
+            <div class="form-group">
+              <label><i class="fas fa-info-circle"></i>{{ 'TBL.statusRequired' | translate }}</label>
+              <select [(ngModel)]="editForm.statut" name="statut" required>
+                <option *ngFor="let statut of statutsList" [value]="statut">{{ statut }}</option>
+              </select>
+            </div>
+          </div>
+        </form>
+      </div>
+
+      <div class="popup-footer">
+        <button class="btn-secondary" (click)="closeEditPopup()">
+          <i class="fas fa-times"></i>{{ 'COMMON.actions.cancel' | translate }}</button>
+        <button class="btn-primary" (click)="saveOperation()">
+          <i class="fas fa-save"></i>{{ 'COMMON.actions.save' | translate }}</button>
+      </div>
+    </div>
+  </div>
+  </div><!-- .banque-container -->
+  </div><!-- .main -->
+</div><!-- .banque-page -->

@@ -1,0 +1,281 @@
+<div class="matches-page">
+  <!-- TOP NAV (design redevance-loterie) -->
+  <nav class="topnav">
+    <div class="nav-brand">
+      <div class="nav-brand-dot"></div>
+      ReconciliApp
+    </div>
+    <div class="nav-sep"></div>
+    <div class="nav-path">
+      <strong>{{ 'TBL.matches' | translate }}</strong>
+    </div>
+    <div class="nav-spacer"></div>
+    <div class="nav-actions">
+      <button type="button" class="nav-btn secondary" (click)="goBack()">
+        <i class="fas fa-arrow-left"></i>{{ 'COMMON.actions.back' | translate }}</button>
+      <button 
+        type="button" 
+        class="nav-btn secondary" 
+        (click)="saveToEcartBoSummary()" 
+        [disabled]="!filteredMatches?.length">
+        <i class="fas fa-save"></i> {{ 'TBL.toEcartBoSummary' | translate }}
+      </button>
+      <button 
+        type="button" 
+        class="nav-btn primary" 
+        (click)="exportResults(true)" 
+        [disabled]="isExporting || filteredMatches.length === 0">
+        <i class="fas fa-file-export"></i> {{ 'COMMON.actions.export' | translate }}
+      </button>
+    </div>
+  </nav>
+
+  <!-- PAGE HEADER (titre + KPIs) -->
+  <div class="page-header-matches">
+    <div class="ph-matches-left">
+      <div class="ph-eyebrow"><span></span>{{ 'TBL.matches' | translate }}</div>
+      <h1 class="ph-title-matches">{{ 'LBL.viewOf' | translate }}<em>{{ 'LBL.correspondences' | translate }}</em></h1>
+    </div>
+    <div class="ph-matches-right">
+      <div class="hero-kpi-strip">
+        <div class="hk-strip-item">
+          <span class="hk-strip-label">{{ 'TBL.rows' | translate }}</span>
+          <span class="hk-strip-value">{{ filteredMatches.length | number:'1.0-0' }}</span>
+        </div>
+        <div class="hk-strip-sep"></div>
+        <div class="hk-strip-item">
+          <span class="hk-strip-label">{{ 'TBL.totalVolume' | translate }}</span>
+          <span class="hk-strip-value">{{ calculateTotalVolume() | number:'1.0-0' }}</span>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <div class="main">
+  <div class="matches-table-container">
+  <div class="header-section">
+    <div class="header-top">
+      <button (click)="goBack()" class="back-button">
+        {{ 'COMMON.actions.backToResults' | translate }}
+      </button>
+      <h2>{{ 'TBL.matchesTitle' | translate }}</h2>
+      <div class="header-info">
+        <span class="total-count">{{ 'TBL.matchCount' | translate:{ count: (filteredMatches.length || 0) } }}</span>
+        <button
+          type="button"
+          (click)="saveToEcartBoSummary()"
+          class="save-to-summary-btn"
+          [disabled]="!filteredMatches?.length"
+          [title]="'TBL.saveToEcartBoSummaryHint' | translate"
+        >
+          {{ 'TBL.saveToEcartBoSummaryBtn' | translate }}
+        </button>
+      </div>
+    </div>
+    
+    <div class="search-section">
+      <input 
+        type="text" 
+        [(ngModel)]="searchKey" 
+        (input)="onSearch()"
+        [placeholder]="'TBL.searchPlaceholder' | translate"
+        class="search-input"
+      >
+      <div class="export-menu-container">
+        <button 
+          (click)="toggleExportMenu($event)" 
+          class="export-menu-button"
+          [disabled]="isExporting || displayedMatches.length === 0"
+        >
+          {{ 'TBL.exportAndOptions' | translate }}
+          <span class="menu-arrow">{{showExportMenu ? '▲' : '▼'}}</span>
+        </button>
+        <div *ngIf="showExportMenu" class="export-menu-dropdown">
+          <div class="menu-section">
+            <label class="menu-label">{{ 'TBL.display' | translate }}</label>
+            <button 
+              (click)="setViewMode('BO')" 
+              class="menu-option-button"
+              [class.active]="viewMode === 'BO'"
+            >
+              {{viewMode === 'BO' ? '✓' : ''}} {{ 'TBL.boTable' | translate }}
+            </button>
+            <button 
+              (click)="setViewMode('PARTNER')" 
+              class="menu-option-button"
+              [class.active]="viewMode === 'PARTNER'"
+            >
+              {{viewMode === 'PARTNER' ? '✓' : ''}} {{ 'TBL.partnerTable' | translate }}
+            </button>
+          </div>
+          <div class="menu-divider"></div>
+          <div class="menu-section">
+            <button (click)="openColumnSelector()" class="menu-option-button">
+              {{ 'TBL.chooseColumnsToExport' | translate }}
+            </button>
+            <span class="menu-info">{{ 'TBL.columnsSelected' | translate:{ selected: selectedColumnsCount, total: availableColumnsForExport.length } }}</span>
+          </div>
+          <div class="menu-divider"></div>
+          <div class="menu-section">
+            <button 
+              (click)="exportResults(false)" 
+              class="menu-export-button"
+              [disabled]="isExporting || displayedMatches.length === 0"
+              [title]="'TBL.exportSearchHint' | translate"
+            >
+              {{ isExporting ? ('TBL.exporting' | translate) : ('TBL.exportSearchResults' | translate:{ count: (displayedMatches.length | number) }) }}
+            </button>
+            <button 
+              (click)="exportResults(true)" 
+              class="menu-export-button menu-export-all"
+              [disabled]="isExporting || filteredMatches.length === 0"
+              [title]="'TBL.exportAllHint' | translate"
+            >
+              {{ isExporting ? ('TBL.exporting' | translate) : ('TBL.exportAllList' | translate:{ count: (filteredMatches.length | number) }) }}
+            </button>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Indicateur de chargement progressif -->
+  <div *ngIf="isLoading" class="loading-progress">
+    <div class="progress-bar">
+      <div class="progress-fill" [style.width.%]="loadProgress"></div>
+    </div>
+    <div class="progress-text">{{ 'TBL.loadingMatches' | translate:{ percent: (loadProgress | number:'1.0-0') } }}</div>
+    <div class="progress-details" *ngIf="filteredMatches.length > 0">
+      {{ 'TBL.matchesLoaded' | translate:{ count: (filteredMatches.length | number) } }}
+    </div>
+  </div>
+
+  <div *ngIf="isExporting" class="export-progress">
+    <div class="progress-bar">
+      <div class="progress-fill" [style.width.%]="exportProgress.percentage"></div>
+    </div>
+    <div class="progress-text">{{ exportProgress.message }} - {{ exportProgress.percentage | number:'1.0-0' }}%</div>
+    <div class="progress-details" *ngIf="exportProgress.total > 0">
+      {{ exportProgress.current | number }} / {{ exportProgress.total | number }} {{ 'TBL.lines' | translate }}
+    </div>
+  </div>
+
+  <div class="summary-section">
+    <div class="summary-cards">
+      <div class="summary-card">
+        <div class="summary-label">{{ 'TBL.totalVolume' | translate }}</div>
+        <div class="summary-value">{{calculateTotalVolume() | number:'1.0-0'}}</div>
+      </div>
+      <div class="summary-card">
+        <div class="summary-label">{{ 'TBL.transactionCount' | translate }}</div>
+        <div class="summary-value">{{filteredMatches.length}}</div>
+      </div>
+    </div>
+  </div>
+
+  <div class="table-scroll-container">
+    <div class="table-scroll-nav">
+      <span class="scroll-nav-label">{{ 'TBL.scrollHorizontal' | translate }}</span>
+      <button class="scroll-nav-btn" (click)="scrollTableLeft()" [disabled]="tableScrollLeft === 0" [title]="'TBL.scrollLeft' | translate">◀</button>
+      <button class="scroll-nav-btn" (click)="scrollTableRight()" [disabled]="tableScrollLeft >= tableScrollMax" [title]="'TBL.scrollRight' | translate">▶</button>
+    </div>
+    <div class="table-wrapper" #tableWrapper (scroll)="onTableScroll($event)">
+      <table class="matches-table">
+        <thead>
+          <tr>
+            <th>{{ 'TBL.keyColumn' | translate }}</th>
+            <th>{{ 'TBL.status' | translate }}</th>
+            <th *ngFor="let col of displayedColumns; trackBy: trackByValue">{{getColumnLabel(col)}}</th>
+          </tr>
+        </thead>
+        <tbody>
+          <tr *ngFor="let match of getPagedMatches(); trackBy: trackByMatch" [class.has-differences]="hasDifferences(match)">
+            <td class="key-cell">{{match.key}}</td>
+            <td class="status-cell">
+              <span [class.has-differences]="hasDifferences(match)">
+                {{ (hasDifferences(match) ? 'TBL.differences' : 'TBL.okStatus') | translate }}
+              </span>
+            </td>
+            <td *ngFor="let col of displayedColumns; trackBy: trackByValue">{{getValue(match, col)}}</td>
+          </tr>
+          <tr *ngIf="getPagedMatches().length === 0">
+            <td [attr.colspan]="displayedColumns.length + 2" class="no-data">
+              {{ 'MSG.noMatchFound' | translate }}
+            </td>
+          </tr>
+        </tbody>
+      </table>
+    </div>
+  </div>
+
+  <div class="pagination-section">
+    <div class="pagination-info">
+      <span>
+        {{ 'PAG.pageInfo' | translate:{ current: currentPage, total: totalPages, count: displayedMatches.length } }}
+      </span>
+    </div>
+    <div class="pagination-controls">
+      <button (click)="prevPage()" [disabled]="currentPage === 1" class="page-btn">{{ 'PAG.previous' | translate }}</button>
+      <div class="page-numbers">
+        <button 
+          *ngFor="let page of getPageNumbers(); trackBy: trackByIndex" 
+          (click)="goToPage(page)"
+          [class.active]="page === currentPage"
+          class="page-number-btn"
+        >
+          {{page}}
+        </button>
+      </div>
+      <button (click)="nextPage()" [disabled]="currentPage === totalPages" class="page-btn">{{ 'PAG.next' | translate }}</button>
+    </div>
+  </div>
+
+  <!-- Bouton scroll to top -->
+  <button *ngIf="showScrollTopBtn" (click)="scrollToTop()" class="scroll-to-top-btn" [title]="'TBL.backToTop' | translate">↑</button>
+
+  <!-- Popup de sélection des colonnes -->
+  <div *ngIf="showColumnSelector" class="column-selector-overlay" (click)="closeColumnSelector()">
+    <div class="column-selector-popup" (click)="$event.stopPropagation()">
+      <div class="popup-header">
+        <h3>{{ 'TBL.columnSelectorTitle' | translate }}</h3>
+        <button (click)="closeColumnSelector()" class="close-btn">×</button>
+      </div>
+      
+      <div class="popup-content">
+        <div class="selection-controls">
+          <button (click)="toggleAllColumns(true)" class="select-all-btn">
+            {{ 'COMMON.actions.selectAll' | translate }}
+          </button>
+          <button (click)="toggleAllColumns(false)" class="deselect-all-btn">
+            {{ 'COMMON.actions.deselectAll' | translate }}
+          </button>
+          <span class="selection-info">
+            {{ 'TBL.columnsSelected' | translate:{ selected: selectedColumnsCount, total: availableColumnsForExport.length } }}
+          </span>
+        </div>
+        
+        <div class="columns-grid">
+          <div *ngFor="let column of availableColumnsForExport; trackBy: trackByValue" class="column-item">
+            <label class="column-checkbox">
+              <input 
+                type="checkbox" 
+                [(ngModel)]="selectedColumnsForExport[column]"
+                [checked]="selectedColumnsForExport[column]">
+              <span class="column-name">{{column}}</span>
+            </label>
+          </div>
+        </div>
+      </div>
+      
+      <div class="popup-actions">
+        <button (click)="closeColumnSelector()" class="cancel-btn">{{ 'COMMON.actions.close' | translate }}</button>
+        <button 
+          (click)="exportResults(); closeColumnSelector()" 
+          class="export-btn"
+          [disabled]="selectedColumnsCount === 0 || isExporting">
+          {{ isExporting ? ('TBL.exporting' | translate) : ('TBL.exportBtn' | translate) }}
+        </button>
+      </div>
+    </div>
+  </div>
+</div>

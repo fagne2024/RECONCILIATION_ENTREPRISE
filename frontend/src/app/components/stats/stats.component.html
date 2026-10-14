@@ -1,0 +1,509 @@
+<div class="stats-page">
+  <!-- TOP NAV (design redevance-loterie) -->
+  <nav class="topnav">
+    <div class="nav-brand">
+      <div class="nav-brand-dot"></div>
+      ReconciliApp
+    </div>
+    <div class="nav-sep"></div>
+    <div class="nav-path">
+      <strong>{{ 'STA.title' | translate }}</strong>
+    </div>
+    <div class="nav-spacer"></div>
+    <div class="nav-actions">
+      <button
+        type="button"
+        class="nav-btn secondary"
+        (click)="refreshStatsData()"
+        [disabled]="isLoading"
+        title="{{ 'ACT.refreshKeepFilters' | translate }}"
+      >
+        <i class="fas" [ngClass]="isLoading ? 'fa-spinner fa-spin' : 'fa-sync-alt'"></i> {{ 'STA.refresh' | translate }}
+      </button>
+      <button type="button" class="nav-btn secondary" (click)="goBack()">
+        <i class="fas fa-arrow-left"></i>{{ 'COMMON.actions.back' | translate }}</button>
+      <button type="button" class="nav-btn secondary" (click)="startNewReconciliation()" [disabled]="isLoading">
+        <i class="fas fa-sync"></i> {{ 'STA.newReconciliation' | translate }}
+      </button>
+      <button type="button" class="nav-btn secondary" (click)="goToServiceReferences()" [disabled]="isLoading">
+        <i class="fas fa-book"></i> {{ 'STA.serviceReferences' | translate }}
+      </button>
+      <button type="button" class="nav-btn secondary" (click)="openAgencyReportPage()" [disabled]="!getAggregatedStats().length || isLoading">
+        <i class="fas fa-chart-bar"></i> {{ 'STA.report' | translate }}
+      </button>
+      <button type="button" class="nav-btn secondary" (click)="toggleStatsHistoryScope()" [disabled]="isLoading">
+        <i class="fas fa-calendar-alt"></i> {{ (showAllStatsHistory ? 'STA.currentMonth' : 'STA.fullHistory') | translate }}
+      </button>
+      <button type="button" class="nav-btn secondary" (click)="exportStatsByWeek()" [disabled]="!getAggregatedStats().length || isLoading" title="{{ 'STA.exportByWeekTitle' | translate }}">
+        <i class="fas fa-file-excel"></i> {{ 'STA.exportByWeek' | translate }}
+      </button>
+      <button type="button" class="nav-btn secondary" (click)="exportStatsByMonth()" [disabled]="!getAggregatedStats().length || isLoading" title="{{ 'STA.exportByMonthTitle' | translate }}">
+        <i class="fas fa-file-excel"></i> {{ 'STA.exportByMonth' | translate }}
+      </button>
+      <button type="button" class="nav-btn primary" (click)="exportStatsComplete()" [disabled]="!getAggregatedStats().length || isLoading" title="{{ 'STA.exportCompleteTitle' | translate }}">
+        <i class="fas fa-file-excel"></i> {{ 'STA.exportComplete' | translate }}
+      </button>
+    </div>
+  </nav>
+
+  <!-- PAGE HEADER (titre + KPIs) -->
+  <div class="page-header-stats">
+    <div class="ph-stats-left">
+      <div class="ph-eyebrow"><span></span>{{ 'STA.title' | translate }}</div>
+      <h1 class="ph-title-stats">{{ 'LBL.viewOf' | translate }}<em>{{ 'STA.detailedStats' | translate }}</em></h1>
+    </div>
+    <div class="ph-stats-right">
+      <div class="hero-kpi-strip">
+        <div class="hk-strip-item">
+          <span class="hk-strip-label">{{ 'TBL.rows' | translate }}</span>
+          <span class="hk-strip-value">{{ getAggregatedStats().length | number:'1.0-0' }}</span>
+        </div>
+        <div class="hk-strip-sep"></div>
+        <div class="hk-strip-item">
+          <span class="hk-strip-label">{{ 'TBL.transactions' | translate }}</span>
+          <span class="hk-strip-value">{{ getTotalRecords() | number:'1.0-0' }}</span>
+        </div>
+        <div class="hk-strip-sep"></div>
+        <div class="hk-strip-item">
+          <span class="hk-strip-label">{{ 'TBL.totalVolume' | translate }}</span>
+          <span class="hk-strip-value">{{ getTotalVolume() | number:'1.0-0' }}</span>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <div class="main">
+<div class="stats-container">
+    <h2 class="stats-inner-title">📊 {{ 'STA.detailedStats' | translate }}</h2>
+
+    <div *ngIf="isLoading" class="loading-message">{{ 'MSG.loadingData' | translate }}</div>
+
+    <div *ngIf="!isLoading && agencySummaries.length > 0">
+        <!-- Filtres -->
+    <div class="filters-section">
+            <form [formGroup]="filterForm" class="filter-form">
+                <div class="filter-group">
+                    <mat-form-field appearance="fill" class="filter-select">
+                        <mat-label>{{ 'TBL.client' | translate }}</mat-label>
+                        <mat-select #agenceSelect formControlName="agency" multiple (selectionChange)="onFilterChange()">
+                            <mat-option>
+                                <ngx-mat-select-search [formControl]="agenceSearchCtrl" placeholderLabel="{{ 'STA.searchClient' | translate }}" noEntriesFoundLabel="{{ 'STA.noClientFound' | translate }}"></ngx-mat-select-search>
+                            </mat-option>
+                            <mat-option *ngFor="let agency of filteredAgencies; trackBy: trackByString" [value]="agency">
+                                {{ agency }}
+                            </mat-option>
+                        </mat-select>
+                    </mat-form-field>
+                </div>
+                <div class="filter-group">
+                    <mat-form-field appearance="fill" class="filter-select">
+                        <mat-label>{{ 'TBL.service' | translate }}</mat-label>
+                        <mat-select #serviceSelect formControlName="service" multiple (selectionChange)="onFilterChange()">
+                            <mat-option>
+                                <ngx-mat-select-search [formControl]="serviceSearchCtrl" placeholderLabel="{{ 'STA.searchService' | translate }}" noEntriesFoundLabel="{{ 'STA.noServiceFound' | translate }}"></ngx-mat-select-search>
+                            </mat-option>
+                            <mat-option *ngFor="let service of filteredServices; trackBy: trackByString" [value]="service">
+                                {{ service }}
+                            </mat-option>
+                        </mat-select>
+                    </mat-form-field>
+                </div>
+                <div class="filter-group">
+                    <mat-form-field appearance="fill" class="filter-select">
+                        <mat-label>{{ 'TBL.country' | translate }}</mat-label>
+                        <mat-select #paysSelect formControlName="country" multiple (selectionChange)="onFilterChange()">
+                            <mat-option>
+                                <ngx-mat-select-search [formControl]="paysSearchCtrl" placeholderLabel="{{ 'STA.searchCountry' | translate }}" noEntriesFoundLabel="{{ 'STA.noCountryFound' | translate }}"></ngx-mat-select-search>
+                            </mat-option>
+                            <mat-option *ngFor="let country of filteredCountries; trackBy: trackByString" [value]="country">
+                                {{ country }}
+                            </mat-option>
+                        </mat-select>
+                    </mat-form-field>
+                </div>
+                <div class="filter-group">
+                    <label>{{ 'LBL.startDate' | translate }}</label>
+                    <input type="date" formControlName="startDate">
+                </div>
+                <div class="filter-group">
+                    <label>{{ 'LBL.endDate' | translate }}</label>
+                    <input type="date" formControlName="endDate">
+                </div>
+                <div class="filter-group ref-date-group">
+                    <label>{{ 'STA.refDateLabel' | translate }}</label>
+                    <input type="date" formControlName="referenceDate" class="ref-date-input">
+                </div>
+                <div class="filter-group">
+                    <label>{{ 'TBL.variation' | translate }}</label>
+                    <select formControlName="variationFilter">
+                        <option value="all">{{ 'FILT.allF' | translate }}</option>
+<option value="up">{{ 'STA.varUp' | translate }}</option>
+            <option value="dn">{{ 'STA.varDown' | translate }}</option>
+            <option value="eq">{{ 'STA.varStable' | translate }}</option>
+            <option value="na">{{ 'STA.varNew' | translate }}</option>
+                    </select>
+                </div>
+                <button type="button" (click)="applyFilters()" class="apply-btn" [disabled]="isLoading">
+{{ (isLoading ? 'STA.processing' : 'STA.applyFilters') | translate }}
+        </button>
+            </form>
+        </div>
+
+        <!-- Résultats -->
+        <div class="results-section">
+            <div class="stats-cards">
+                <div class="stat-card">
+                    <div class="stat-title">{{ 'STA.totalTrx' | translate }}</div>
+                    <div class="stat-value">{{getTotalRecords()}}</div>
+                </div>
+                <div class="stat-card">
+                    <div class="stat-title">{{ 'TBL.totalVolume' | translate }}</div>
+                    <div class="stat-value">{{getTotalVolume() | number:'1.0-0'}}</div>
+                </div>
+            </div>
+
+            <!-- Boutons d'action déplacés ici -->
+            <div class="action-buttons" style="margin-bottom: 10px;">
+                <button class="new-reconciliation-btn" (click)="startNewReconciliation()" [disabled]="isLoading">
+                    🔄 {{ 'STA.newReconciliation' | translate }}
+                </button>
+                <button class="report-btn" (click)="openAgencyReportPage()" [disabled]="!getAggregatedStats().length || isLoading">
+                    📊 {{ 'STA.report' | translate }}
+                </button>
+                <button class="export-btn" (click)="exportStats()" [disabled]="!getAggregatedStats().length || isLoading">
+                    📥 {{ 'STA.exportByDay' | translate }}
+                </button>
+                <button class="export-btn secondary" (click)="exportStatsByWeek()" [disabled]="!getAggregatedStats().length || isLoading">
+                    📅 {{ 'STA.exportByWeek' | translate }}
+                </button>
+                <button class="export-btn secondary" (click)="exportStatsByMonth()" [disabled]="!getAggregatedStats().length || isLoading">
+                    📆 {{ 'STA.exportByMonth' | translate }}
+                </button>
+                <button class="export-btn" (click)="exportStatsComplete()" [disabled]="!getAggregatedStats().length || isLoading">
+                    📥 {{ 'STA.exportComplete' | translate }}
+                </button>
+                <button class="export-btn secondary" (click)="goToServiceReferences()" [disabled]="isLoading">
+                    📚 {{ 'STA.serviceReferences' | translate }}
+                </button>
+                <button class="bulk-delete-btn" (click)="deleteSelectedSummaries()" 
+                        [disabled]="!hasSelectedItems() || isLoading"
+                        *ngIf="hasSelectedItems()">
+                    🗑️ {{ 'STA.deleteSelected' | translate: { count: getSelectedCount() } }}
+                </button>
+                <button class="clear-selection-btn" (click)="clearSelection()" 
+                        [disabled]="!hasSelectedItems() || isLoading"
+                        *ngIf="hasSelectedItems()">
+                    ✖️ {{ 'STA.deselectAll' | translate }}
+                </button>
+                <div class="selection-info" *ngIf="hasSelectedItems()">
+                    <span class="selection-count">{{ 'STA.selectedCount' | translate: { count: getSelectedCount() } }}</span>
+                </div>
+
+                <div class="var-toggle" style="margin-left:auto">
+                    <label>
+                        <span class="toggle-sw">
+                            <input type="checkbox" [checked]="showVariation" (change)="toggleVariationColumn()">
+                            <span class="toggle-track"></span>
+                        </span>
+{{ 'STA.showVariation' | translate }}
+          </label>
+                </div>
+                <div class="var-width-ctl" *ngIf="showVariation">
+                    <label class="var-width-label" for="variationWidthRange">{{ 'STA.columnWidth' | translate }}</label>
+                    <input id="variationWidthRange" type="range" class="var-width-range" min="50" max="360" step="10"
+                           [value]="variationColumnWidthPx"
+                           (input)="variationColumnWidthPx = +(($any($event.target)).value)">
+                    <span class="var-width-val">{{ variationColumnWidthPx }} px</span>
+                </div>
+            </div>
+
+            <section *ngIf="showAgencyReport" class="agency-report-section" id="agency-report-section">
+                <div class="agency-report-head">
+                    <div>
+                        <div class="report-eyebrow"><span></span>{{ 'STA.reportByAgency' | translate }}</div>
+                        <h3 class="agency-report-title">{{ 'STA.reportByAgencySubtitle' | translate }}</h3>
+                        <p class="agency-report-subtitle">{{ formatReportPeriodLabel() }}</p>
+                    </div>
+                </div>
+
+                <div class="report-kpi-strip">
+                    <div class="report-kpi-card">
+                        <span class="report-kpi-label">{{ 'STA.totalVolume' | translate }}</span>
+                        <span class="report-kpi-value">{{ visibleReportSummary.totalVolume | number:'1.0-0' }}</span>
+                        <span class="report-kpi-sub">{{ 'STA.overDays' | translate: { count: reportDateKeys.length } }}</span>
+                    </div>
+                    <div class="report-kpi-card">
+                        <span class="report-kpi-label">{{ 'STA.totalTrxCount' | translate }}</span>
+                        <span class="report-kpi-value">{{ visibleReportSummary.totalCount | number:'1.0-0' }}</span>
+                        <span class="report-kpi-sub">{{ 'STA.transactions' | translate }}</span>
+                    </div>
+                    <div class="report-kpi-card">
+                        <span class="report-kpi-label">{{ 'STA.activeAgencies' | translate }}</span>
+                        <span class="report-kpi-value">{{ visibleReportSummary.activeAgencies | number:'1.0-0' }}</span>
+                        <span class="report-kpi-sub">{{ 'STA.overSelection' | translate }}</span>
+                    </div>
+                    <div class="report-kpi-card">
+                        <span class="report-kpi-label">{{ 'STA.avgVolumePerDay' | translate }}</span>
+                        <span class="report-kpi-value">{{ visibleReportSummary.avgVolumePerDay | number:'1.0-0' }}</span>
+                        <span class="report-kpi-sub">XOF</span>
+                    </div>
+                    <div class="report-kpi-card">
+                        <span class="report-kpi-label">{{ 'STA.dailyPeak' | translate }}</span>
+                        <span class="report-kpi-value">{{ visibleReportSummary.peakDayVolume | number:'1.0-0' }}</span>
+                        <span class="report-kpi-sub">
+                            {{ visibleReportSummary.peakDayKey ? formatReportDateLabel(visibleReportSummary.peakDayKey) : ('STA.noData' | translate) }}
+                        </span>
+                    </div>
+                </div>
+
+                <div class="report-toolbar">
+                    <div class="report-filter-group">
+                        <label>{{ 'TBL.agency' | translate }}</label>
+                        <select [value]="reportSelectedAgency" (change)="onReportAgencyChange($event)">
+                            <option value="all">{{ 'FILT.allF' | translate }}</option>
+                            <option *ngFor="let agency of reportAgencyOptions; trackBy: trackByString" [value]="agency">{{ agency }}</option>
+                        </select>
+                    </div>
+
+                    <div class="report-filter-group">
+                        <label>{{ 'ACT.show' | translate }}</label>
+                        <select [value]="reportMode" (change)="onReportModeChange($event)">
+<option value="both">{{ 'STA.modeBoth' | translate }}</option>
+            <option value="vol">{{ 'STA.modeVolume' | translate }}</option>
+            <option value="trx">{{ 'STA.modeTrx' | translate }}</option>
+                        </select>
+                    </div>
+
+                    <div class="report-filter-group report-search-group">
+                        <label>{{ 'STA.search' | translate }}</label>
+                        <input
+                            type="text"
+                            class="report-search-input"
+                            [value]="reportSearchTerm"
+                            (input)="onReportSearchChange($event)"
+                            placeholder="{{ 'STA.searchAgency' | translate }}"
+                        >
+                    </div>
+
+                    <div class="report-toolbar-spacer"></div>
+                    <div class="report-chip">{{ 'STA.agencyCount' | translate: { count: visibleReportRows.length } }}</div>
+                    <div class="report-export-actions">
+                        <button class="report-export-btn excel" (click)="exportAgencyReportExcel()" [disabled]="!visibleReportRows.length || isLoading">
+                            <i class="fas fa-file-excel"></i> Excel
+                        </button>
+                        <button class="report-export-btn pdf" (click)="exportAgencyReportPdf()" [disabled]="!visibleReportRows.length || isLoading">
+                            <i class="fas fa-file-pdf"></i> PDF
+                        </button>
+                    </div>
+                </div>
+
+                <div *ngIf="visibleReportRows.length > 0; else noReportRows" class="agency-report-table-card">
+                    <div class="agency-report-table-scroll">
+                        <table class="agency-report-table">
+                            <thead>
+                                <tr>
+                                    <th class="sticky report-col-index">#</th>
+                                    <th class="sticky report-col-agency">{{ 'TBL.agency' | translate }}</th>
+                                    <th class="sticky report-col-total report-col-volume">{{ 'STA.periodVolume' | translate }}</th>
+                                    <th class="sticky report-col-total report-col-count">{{ 'STA.periodCount' | translate }}</th>
+                                    <th *ngFor="let dayKey of reportDateKeys" [class.today-head]="isTodayReportDate(dayKey)">
+                                        {{ formatReportDateLabel(dayKey) }}
+                                    </th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                <tr *ngFor="let row of visibleReportRows; let i = index">
+                                    <td class="sticky report-col-index">{{ i + 1 }}</td>
+                                    <td class="sticky report-col-agency">
+                                        <span class="report-agency-name">{{ row.agency }}</span>
+                                        <span class="report-agency-meta">{{ 'STA.activeDays' | translate: { count: row.activeDays } }}</span>
+                                    </td>
+                                    <td class="sticky report-col-total report-col-volume">{{ row.totalVolume | number:'1.0-0' }}</td>
+                                    <td class="sticky report-col-total report-col-count">{{ row.totalCount | number:'1.0-0' }}</td>
+                                    <td *ngFor="let dayKey of reportDateKeys" class="report-day-cell" [class.today-col]="isTodayReportDate(dayKey)">
+                                        <ng-container [ngSwitch]="reportMode">
+                                            <span *ngSwitchCase="'vol'" class="report-vol" [class.has-data]="(row.daily[dayKey]?.volume || 0) > 0">
+                                                {{ (row.daily[dayKey]?.volume || 0) ? (row.daily[dayKey]?.volume | number:'1.0-0') : '—' }}
+                                            </span>
+                                            <span *ngSwitchCase="'trx'" class="report-trx" [class.has-data]="(row.daily[dayKey]?.count || 0) > 0">
+                                                {{ (row.daily[dayKey]?.count || 0) ? (row.daily[dayKey]?.count | number:'1.0-0') : '—' }}
+                                            </span>
+                                            <div *ngSwitchDefault class="report-both">
+                                                <span class="report-vol" [class.has-data]="(row.daily[dayKey]?.volume || 0) > 0">
+                                                    {{ (row.daily[dayKey]?.volume || 0) ? (row.daily[dayKey]?.volume | number:'1.0-0') : '—' }}
+                                                </span>
+                                                <span class="report-trx" [class.has-data]="(row.daily[dayKey]?.count || 0) > 0">
+                                                    {{ (row.daily[dayKey]?.count || 0) ? (row.daily[dayKey]?.count | number:'1.0-0') : '—' }}
+                                                </span>
+                                            </div>
+                                        </ng-container>
+                                    </td>
+                                </tr>
+                            </tbody>
+                            <tfoot>
+                                <tr>
+                                    <td class="sticky report-col-index"></td>
+                                    <td class="sticky report-col-agency report-footer-label">TOTAL</td>
+                                    <td class="sticky report-col-total report-col-volume">{{ visibleReportSummary.totalVolume | number:'1.0-0' }}</td>
+                                    <td class="sticky report-col-total report-col-count">{{ visibleReportSummary.totalCount | number:'1.0-0' }}</td>
+                                    <td *ngFor="let dayKey of reportDateKeys" class="report-day-cell report-footer-cell" [class.today-col]="isTodayReportDate(dayKey)">
+                                        <ng-container [ngSwitch]="reportMode">
+                                            <span *ngSwitchCase="'vol'" class="report-vol has-data">
+                                                {{ (visibleReportTotalsByDate[dayKey]?.volume || 0) ? (visibleReportTotalsByDate[dayKey]?.volume | number:'1.0-0') : '—' }}
+                                            </span>
+                                            <span *ngSwitchCase="'trx'" class="report-trx has-data">
+                                                {{ (visibleReportTotalsByDate[dayKey]?.count || 0) ? (visibleReportTotalsByDate[dayKey]?.count | number:'1.0-0') : '—' }}
+                                            </span>
+                                            <div *ngSwitchDefault class="report-both">
+                                                <span class="report-vol has-data">
+                                                    {{ (visibleReportTotalsByDate[dayKey]?.volume || 0) ? (visibleReportTotalsByDate[dayKey]?.volume | number:'1.0-0') : '—' }}
+                                                </span>
+                                                <span class="report-trx has-data">
+                                                    {{ (visibleReportTotalsByDate[dayKey]?.count || 0) ? (visibleReportTotalsByDate[dayKey]?.count | number:'1.0-0') : '—' }}
+                                                </span>
+                                            </div>
+                                        </ng-container>
+                                    </td>
+                                </tr>
+                            </tfoot>
+                        </table>
+                    </div>
+                </div>
+
+                <ng-template #noReportRows>
+                    <div class="no-report-data">
+                        {{ 'STA.noReportData' | translate }}
+                    </div>
+                </ng-template>
+            </section>
+
+            <div class="details-table" [class.details-table-stats-grid]="showVariation">
+                <table>
+                    <colgroup *ngIf="showVariation">
+                        <col class="tbl-col-check" />
+                        <col /><col /><col /><col /><col /><col />
+                        <col class="tbl-col-variation" [style.width.px]="variationColumnWidthPx" />
+                        <col class="tbl-col-actions" />
+                    </colgroup>
+                    <colgroup *ngIf="!showVariation">
+                        <col class="tbl-col-check" />
+                        <col /><col /><col /><col /><col /><col />
+                        <col class="tbl-col-actions" />
+                    </colgroup>
+                    <thead>
+                        <tr>
+                            <th>
+                                <input type="checkbox" [checked]="allSelected" (change)="toggleSelectAll($event)" 
+                                       title="{{ 'STA.selectAllStats' | translate }}">
+                            </th>
+                            <th>{{ 'TBL.agency' | translate }}</th>
+                            <th>{{ 'TBL.service' | translate }}</th>
+                            <th>{{ 'TBL.country' | translate }}</th>
+                            <th>{{ 'TBL.date' | translate }}</th>
+                            <th>{{ 'TBL.totalVolume' | translate }}</th>
+                            <th>{{ 'STA.trxCounts' | translate }}</th>
+                            <th *ngIf="showVariation" class="th-var"
+                                [style.width.px]="variationColumnWidthPx"
+                                [style.maxWidth.px]="variationColumnWidthPx">
+                                <div class="var-col-head">
+                                    <span class="var-col-title">{{ 'STA.variationTitle' | translate }}</span>
+                                    <button type="button" class="var-col-more" tabindex="-1" aria-hidden="true" title="">
+                                        <i class="fas fa-ellipsis-v" aria-hidden="true"></i>
+                                    </button>
+                                </div>
+                            </th>
+                            <th>{{ 'TBL.actions' | translate }}</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        <tr *ngFor="let summary of pagedStats; trackBy: trackByAggregatedStat" [class.selected-row]="isSelected(summary)">
+                            <td>
+                                <input type="checkbox" [checked]="isSelected(summary)" (change)="toggleSelection(summary, $event)"
+                                       title="{{ 'STA.selectStat' | translate }}">
+                            </td>
+                            <td>{{summary.agency}}</td>
+                            <td>{{summary.service}}</td>
+                            <td>{{summary.country}}</td>
+                            <td>{{ formatDateOnly(summary.date) }}</td>
+                            <td>{{summary.totalVolume | number:'1.0-0'}}</td>
+                            <td>{{summary.recordCount}}</td>
+                            <td *ngIf="showVariation" class="td-var"
+                                [class.td-var--compact]="variationColumnWidthPx < 260"
+                                [style.width.px]="variationColumnWidthPx"
+                                [style.maxWidth.px]="variationColumnWidthPx"
+                                [style.minWidth.px]="variationColumnWidthPx">
+                                <ng-container *ngIf="getVariationForRow(summary) as v">
+                                    <div class="var-dash-card"
+                                         [class.var-dash-card--stack]="variationColumnWidthPx < 300"
+                                         [attr.title]="v.hint">
+                                        <div class="var-badge" [ngClass]="v.cls">
+                                            <span class="var-pct">{{ v.label }}</span>
+                                        </div>
+                                        <div class="var-dash-body">
+                                            <div class="var-bar-track">
+                                                <div class="var-bar-fill" [ngClass]="v.cls" [style.width.%]="v.barWidth"></div>
+                                            </div>
+                                            <div class="var-caption">
+                                                <span class="cap-muted">{{ 'STA.volJ1' | translate }}&nbsp;</span>
+                                                <ng-container *ngIf="v.captionDash">
+                                                    <span class="cap-dash">—</span>
+                                                </ng-container>
+                                                <ng-container *ngIf="!v.captionDash">
+                                                    <span class="cap-base">{{ v.volJ1Fmt }}</span>
+                                                    <span *ngIf="v.deltaFmt != null" class="cap-delta" [ngClass]="v.cls">{{ v.deltaFmt }}</span>
+                                                </ng-container>
+                                            </div>
+                                        </div>
+                                    </div>
+                                </ng-container>
+                            </td>
+                            <td>
+                                <button class="delete-btn" (click)="deleteSummary(summary)" [disabled]="isLoading" title="{{ 'STA.deleteStat' | translate }}">
+                                    🗑️
+                                </button>
+                            </td>
+                        </tr>
+                    </tbody>
+                </table>
+                <div class="pagination-controls">
+                    <button
+                        type="button"
+                        class="stats-view-more-btn"
+                        *ngIf="showAllStatsTableRows || canToggleStatsTableExpand"
+                        (click)="toggleShowAllStatsTableRows()"
+                        [disabled]="isLoading">
+                        {{ (showAllStatsTableRows ? 'STA.seeLess' : 'STA.seeMore') | translate }}
+                    </button>
+                    <span class="pagination-rows-hint" *ngIf="getAggregatedStats().length && !showAllStatsTableRows">
+                        {{ 'STA.rows' | translate: { shown: pagedStats.length, total: getAggregatedStats().length } }}
+                    </span>
+                    <span class="pagination-rows-hint" *ngIf="showAllStatsTableRows">
+                        {{ 'STA.rowsDisplayed' | translate: { count: getAggregatedStats().length } }}
+                    </span>
+                    <button (click)="prevStatsPage()" [disabled]="statsPage === 1 || isLoading || showAllStatsTableRows">
+                        <i class="fas fa-chevron-left"></i>{{ 'PAG.previous' | translate }}</button>
+                    
+                    <div class="pagination-indicators">
+                        <span *ngFor="let page of getVisibleStatsPages(); trackBy: trackByNumber" 
+                              class="page-indicator"
+                              [class.active]="statsPage === page"
+                              (click)="goToStatsPage(page)">
+                            {{ page }}
+                        </span>
+                    </div>
+                    
+                    <button (click)="nextStatsPage()" [disabled]="statsPage === totalPages || isLoading || showAllStatsTableRows">{{ 'PAG.next' | translate }}<i class="fas fa-chevron-right"></i>
+                    </button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div *ngIf="!isLoading && agencySummaries.length === 0" class="no-data-message">
+        {{ 'STA.noData' | translate }}
+    </div>
+
+    <!-- Je retire les boutons d'action de la section globale en bas du fichier -->
+</div>
+  </div>
+</div> 

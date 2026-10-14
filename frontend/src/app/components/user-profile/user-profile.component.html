@@ -1,0 +1,174 @@
+<div class="user-profile-container">
+  <div class="header">
+    <h2><i class="fas fa-user-circle"></i> Mon Profil</h2>
+    <button class="btn-close" (click)="closeProfile()" title="{{ 'COMMON.actions.close' | translate }}">
+      <i class="fas fa-times"></i>
+    </button>
+  </div>
+
+  <!-- Message d'erreur -->
+  <div *ngIf="errorMessage" class="alert alert-danger">
+    <i class="fas fa-exclamation-circle"></i> {{ errorMessage }}
+  </div>
+
+  <!-- Chargement -->
+  <div *ngIf="isLoading" class="loading-container">
+    <i class="fas fa-spinner fa-spin"></i> Chargement des informations...
+  </div>
+
+  <!-- Informations utilisateur -->
+  <div *ngIf="!isLoading && user" class="profile-content">
+    <div class="profile-card">
+      <div class="profile-header">
+        <div class="profile-avatar" [class.has-photo]="photo">
+          <img *ngIf="photo" [src]="photo" alt="Photo de profil">
+          <i *ngIf="!photo" class="fas fa-user-circle"></i>
+
+          <div class="avatar-overlay">
+            <button
+              type="button"
+              class="avatar-btn"
+              (click)="photoInput.click()"
+              [disabled]="isUploadingPhoto"
+              title="Changer la photo">
+              <i class="fas" [class.fa-camera]="!isUploadingPhoto" [class.fa-spinner]="isUploadingPhoto" [class.fa-spin]="isUploadingPhoto"></i>
+            </button>
+            <button
+              *ngIf="photo"
+              type="button"
+              class="avatar-btn avatar-btn-danger"
+              (click)="removePhoto()"
+              [disabled]="isUploadingPhoto"
+              title="Supprimer la photo">
+              <i class="fas fa-trash"></i>
+            </button>
+          </div>
+        </div>
+        <input
+          #photoInput
+          type="file"
+          class="photo-input"
+          accept="image/png,image/jpeg,image/jpg,image/gif,image/webp"
+          (change)="onPhotoSelected($event)">
+        <div class="profile-info">
+          <h3>{{ user.username }}</h3>
+          <p class="profile-role">
+            <i class="fas fa-id-badge"></i>
+            <span>{{ getProfilName() }}</span>
+          </p>
+        </div>
+      </div>
+
+      <div class="profile-details">
+        <div class="detail-item">
+          <div class="detail-label">
+            <i class="fas fa-user"></i>
+            <span>Nom d'utilisateur</span>
+          </div>
+          <div class="detail-value">{{ user.username }}</div>
+        </div>
+
+        <div class="detail-item">
+          <div class="detail-label">
+            <i class="fas fa-id-badge"></i>
+            <span>Profil</span>
+          </div>
+          <div class="detail-value">{{ getProfilName() }}</div>
+        </div>
+
+        <div class="detail-item" *ngIf="user.enabled2FA !== undefined">
+          <div class="detail-label">
+            <i class="fas fa-shield-alt"></i>
+            <span>Authentification à deux facteurs</span>
+          </div>
+          <div class="detail-value">
+            <span [class]="user.enabled2FA ? 'badge-enabled' : 'badge-disabled'">
+              {{ user.enabled2FA ? 'Activé' : 'Désactivé' }}
+            </span>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Section changement de mot de passe -->
+    <div class="password-section">
+      <div class="section-header">
+        <h3><i class="fas fa-key"></i> Changer le mot de passe</h3>
+        <button 
+          class="btn btn-secondary" 
+          (click)="togglePasswordForm()"
+          [class.active]="showPasswordForm">
+          <i class="fas" [class.fa-chevron-down]="!showPasswordForm" [class.fa-chevron-up]="showPasswordForm"></i>
+          {{ showPasswordForm ? 'Masquer' : 'Afficher' }}
+        </button>
+      </div>
+
+      <div *ngIf="showPasswordForm" class="password-form">
+        <form (ngSubmit)="changePassword()" #passwordFormRef="ngForm">
+          <div class="form-group">
+            <label for="currentPassword">
+              <i class="fas fa-lock"></i> Mot de passe actuel *
+            </label>
+            <input 
+              type="password" 
+              id="currentPassword"
+              name="currentPassword"
+              [(ngModel)]="passwordForm.currentPassword"
+              required
+              class="form-control"
+              placeholder="Entrez votre mot de passe actuel"
+              [disabled]="isChangingPassword">
+          </div>
+
+          <div class="form-group">
+            <label for="newPassword">
+              <i class="fas fa-key"></i> Nouveau mot de passe *
+            </label>
+            <input 
+              type="password" 
+              id="newPassword"
+              name="newPassword"
+              [(ngModel)]="passwordForm.newPassword"
+              required
+              minlength="6"
+              class="form-control"
+              placeholder="Entrez votre nouveau mot de passe (min. 6 caractères)"
+              [disabled]="isChangingPassword">
+          </div>
+
+          <div class="form-group">
+            <label for="confirmPassword">
+              <i class="fas fa-check-circle"></i> Confirmer le nouveau mot de passe *
+            </label>
+            <input 
+              type="password" 
+              id="confirmPassword"
+              name="confirmPassword"
+              [(ngModel)]="passwordForm.confirmPassword"
+              required
+              minlength="6"
+              class="form-control"
+              placeholder="Confirmez votre nouveau mot de passe"
+              [disabled]="isChangingPassword">
+          </div>
+
+          <div class="form-actions">
+            <button 
+              type="submit" 
+              class="btn btn-primary"
+              [disabled]="isChangingPassword || !passwordFormRef.valid">
+              <i class="fas fa-save"></i>
+              {{ isChangingPassword ? 'Modification en cours...' : 'Modifier le mot de passe' }}
+            </button>
+            <button 
+              type="button" 
+              class="btn btn-secondary"
+              (click)="togglePasswordForm()"
+              [disabled]="isChangingPassword">{{ 'COMMON.actions.cancel' | translate }}</button>
+          </div>
+        </form>
+      </div>
+    </div>
+  </div>
+</div>
+

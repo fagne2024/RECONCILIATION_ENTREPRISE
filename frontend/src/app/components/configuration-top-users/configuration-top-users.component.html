@@ -1,0 +1,157 @@
+<div class="config-top-users-page">
+  <header class="top">
+    <div class="top-text">
+      <h1>{{ 'CFG.topUsers.title' | translate }}</h1>
+      <p>{{ 'CFG.topUsers.subtitle' | translate }}</p>
+    </div>
+    <div class="top-acts">
+      <button type="button" class="btn ghost" (click)="resetDefaults()" [disabled]="loading || saving">
+        <i class="fas fa-rotate-left"></i>
+        {{ 'CFG.topUsers.reset' | translate }}
+      </button>
+      <button type="button" class="btn p" (click)="save()" [disabled]="loading || saving || !dirty">
+        <i class="fas" [ngClass]="saving ? 'fa-spinner fa-spin' : 'fa-save'"></i>
+        {{ 'CFG.topUsers.save' | translate }}
+      </button>
+      <button type="button" class="icon-btn" (click)="close()" [title]="'CFG.topUsers.close' | translate">
+        <i class="fas fa-times"></i>
+      </button>
+    </div>
+  </header>
+
+  <div class="loading" *ngIf="loading">
+    <i class="fas fa-spinner fa-spin"></i> {{ 'CFG.topUsers.loading' | translate }}
+  </div>
+
+  <div class="panels" *ngIf="!loading">
+    <section class="card">
+      <div class="card-head">
+        <i class="fas fa-eye"></i>
+        <div>
+          <h2>{{ 'CFG.topUsers.displayTitle' | translate }}</h2>
+          <p>{{ 'CFG.topUsers.displayHint' | translate }}</p>
+        </div>
+      </div>
+
+      <label class="row toggle">
+        <span class="row-text">
+          <b>{{ 'CFG.topUsers.enabled' | translate }}</b>
+          <small>{{ 'CFG.topUsers.enabledHint' | translate }}</small>
+        </span>
+        <input type="checkbox" [(ngModel)]="config.enabled" [disabled]="saving">
+      </label>
+
+      <label class="row toggle">
+        <span class="row-text">
+          <b>{{ 'CFG.topUsers.showDelta' | translate }}</b>
+          <small>{{ 'CFG.topUsers.showDeltaHint' | translate }}</small>
+        </span>
+        <input type="checkbox" [(ngModel)]="config.showDelta" [disabled]="saving || !config.enabled">
+      </label>
+    </section>
+
+    <section class="card">
+      <div class="card-head">
+        <i class="fas fa-users"></i>
+        <div>
+          <h2>{{ 'CFG.topUsers.countTitle' | translate }}</h2>
+          <p>{{ 'CFG.topUsers.countHint' | translate }}</p>
+        </div>
+      </div>
+
+      <label class="row field">
+        <span class="row-text">
+          <b>{{ 'CFG.topUsers.topN' | translate }}</b>
+          <small>{{ 'CFG.topUsers.topNHint' | translate }}</small>
+        </span>
+        <select [(ngModel)]="config.topN" [disabled]="saving || !config.enabled">
+          <option *ngFor="let n of topNOptions" [ngValue]="n">{{ n }}</option>
+        </select>
+      </label>
+    </section>
+
+    <section class="card">
+      <div class="card-head">
+        <i class="fas fa-layer-group"></i>
+        <div>
+          <h2>{{ 'CFG.topUsers.categoriesTitle' | translate }}</h2>
+          <p>{{ 'CFG.topUsers.categoriesHint' | translate }}</p>
+        </div>
+      </div>
+
+      <p class="fields-hint">{{ 'CFG.topUsers.labelHint' | translate }}</p>
+
+      <div class="cat-block" *ngFor="let cat of config.categories; let i = index; trackBy: trackByCategoryId">
+        <div class="cat-head">
+          <label class="cat-enable">
+            <input type="checkbox" [(ngModel)]="cat.enabled" [disabled]="saving || !config.enabled">
+          </label>
+          <input type="text" class="cat-title" maxlength="120" [(ngModel)]="cat.title"
+                 [placeholder]="titlePlaceholder(cat)"
+                 [disabled]="saving || !config.enabled">
+          <span class="cat-tools">
+            <button type="button" class="icon-btn sm" (click)="moveCategory(i, -1)"
+                    [disabled]="saving || i === 0" [title]="'CFG.topUsers.moveUp' | translate">
+              <i class="fas fa-arrow-up"></i>
+            </button>
+            <button type="button" class="icon-btn sm" (click)="moveCategory(i, 1)"
+                    [disabled]="saving || i === config.categories.length - 1" [title]="'CFG.topUsers.moveDown' | translate">
+              <i class="fas fa-arrow-down"></i>
+            </button>
+            <button type="button" class="icon-btn sm danger" (click)="removeCategory(i)"
+                    [disabled]="saving" [title]="'CFG.topUsers.removeCategory' | translate">
+              <i class="fas fa-trash"></i>
+            </button>
+          </span>
+        </div>
+
+        <div class="cat-fields">
+          <label class="fld">
+            <span>{{ 'CFG.topUsers.actionLabelTitle' | translate }}</span>
+            <input type="text" maxlength="120" [(ngModel)]="cat.actionLabel"
+                   [placeholder]="actionPlaceholder(cat)"
+                   [disabled]="saving || !config.enabled">
+          </label>
+        </div>
+
+        <div class="cat-criteria">
+          <div class="crit">
+            <span class="crit-label">{{ 'CFG.topUsers.eventsTitle' | translate }}</span>
+            <div class="chips">
+              <label class="chip" *ngFor="let ev of knownEvents">
+                <input type="checkbox" [checked]="isEventSelected(cat, ev)" (change)="toggleEvent(cat, ev)"
+                       [disabled]="saving || !config.enabled">
+                <span>{{ eventLabelKey(ev) | translate }}</span>
+              </label>
+            </div>
+          </div>
+          <div class="crit">
+            <span class="crit-label">{{ 'CFG.topUsers.levelsTitle' | translate }}</span>
+            <div class="chips">
+              <label class="chip" *ngFor="let lv of knownLevels">
+                <input type="checkbox" [checked]="isLevelSelected(cat, lv)" (change)="toggleLevel(cat, lv)"
+                       [disabled]="saving || !config.enabled">
+                <span>{{ levelLabelKey(lv) | translate }}</span>
+              </label>
+            </div>
+          </div>
+        </div>
+
+        <p class="cat-warn" *ngIf="hasNoCriteria(cat)">
+          <i class="fas fa-circle-info"></i> {{ 'CFG.topUsers.noCriteria' | translate }}
+        </p>
+      </div>
+
+      <div class="cat-add" *ngIf="canAddCategory">
+        <button type="button" class="btn ghost" (click)="addCategory()" [disabled]="saving || !config.enabled">
+          <i class="fas fa-plus"></i> {{ 'CFG.topUsers.addCategory' | translate }}
+        </button>
+      </div>
+
+      <div class="warn" *ngIf="config.enabled && !anyCategoryEnabled">
+        <i class="fas fa-exclamation-triangle"></i>
+        {{ 'CFG.topUsers.noCategory' | translate }}
+      </div>
+    </section>
+  </div>
+</div>

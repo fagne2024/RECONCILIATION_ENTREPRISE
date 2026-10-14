@@ -1,0 +1,1649 @@
+<ng-container *ngIf="!embedTraitementSection">
+<div class="file-upload-container" [class.manual-upload-page]="manualOnly" [class.assisted-upload-page]="assistedOnly || certificationMode">
+    <div class="manual-page-header" *ngIf="manualOnly">
+        <button type="button" class="back-btn" (click)="goBackToManualLauncher()">
+            <i class="fas fa-arrow-left"></i>
+            {{ 'FU.Retouraulanceur' | translate }}
+        </button>
+        <h2>{{ 'FU.Modemanuel' | translate }}</h2>
+        <p>{{ 'FU.Chargezvosfichiersboetpartenaireséparémentpuissélectionnezlescolonnescléspourlancerlaréconciliation' | translate }}</p>
+    </div>
+    <div class="assisted-page-header" *ngIf="assistedOnly && !certificationMode">
+        <button type="button" class="back-btn" (click)="goBackToLauncher()">
+            <i class="fas fa-arrow-left"></i>
+            {{ 'FU.Retouraulanceur' | translate }}
+        </button>
+        <h2>{{ 'FU.Modeassisté' | translate }}</h2>
+        <p>{{ 'FU.Chargezvosfichiersboetpartenaireappliquezlesmodèlesdetraitementsibesoinpuislancezlaréconciliation' | translate }}</p>
+    </div>
+    <div class="assisted-page-header certification-upload-header" *ngIf="certificationMode">
+        <button type="button" class="back-btn" (click)="goBackFromAssistedUpload()">
+            <i class="fas fa-arrow-left"></i>
+            {{ 'FU.Retourcertification' | translate }}
+        </button>
+        <h2>{{ 'FU.Certificationdesolde' | translate }}</h2>
+        <p>{{ 'FU.Importezlesfichierstrxboetoppartpourréconcilieretcertifierlesoldeouvertureclôturevariationetagrégatsdécarts' | translate }}</p>
+        <button type="button" class="reco-direct-btn" (click)="goToCompenseReconciliation()">
+            <i class="fas fa-random"></i>
+            {{ 'FU.Allerdirectementàlaréconciliationdescompenses' | translate }}
+        </button>
+    </div>
+
+    <!-- Mode de réconciliation (masqué sur les pages dédiées /upload et /upload-assisted) -->
+    <div class="reconciliation-mode-selector" *ngIf="!isAssistedLike && !manualOnly">
+        <h3>{{ 'FU.Modederéconciliation' | translate }}</h3>
+        <div class="mode-options">
+            <label class="mode-option">
+                <input type="radio" name="reconciliationMode" value="manual" [(ngModel)]="reconciliationMode">
+                <span class="mode-label">
+                    <i class="fas fa-cogs"></i>
+                    <strong>{{ 'FU.Option1' | translate }}</strong>
+                    <span class="mode-description">{{ 'FU.Choisissezlesfichiersboetpartenaireséparémentpuislescolonnesclés' | translate }}</span>
+                </span>
+            </label>
+            <label class="mode-option">
+                <input type="radio" name="reconciliationMode" value="automatic" [(ngModel)]="reconciliationMode">
+                <span class="mode-label">
+                    <i class="fas fa-magic"></i>
+                    <strong>{{ 'FU.Option2' | translate }}</strong>
+                    <span class="mode-description">{{ 'FU.Uploadezunfichieretlesystèmeappliqueautomatiquementletraitementetlaréconciliation' | translate }}</span>
+                </span>
+            </label>
+            <!-- Mode Super Auto - COMMENTÉ
+            <button class="mode-option super-auto-mode-btn" (click)="goToReconciliationLauncher()">
+                <span class="mode-label">
+                    <i class="fas fa-rocket"></i>
+                    <strong>Mode Super Auto</strong>
+                    <small>Réconciliation ultra-rapide avec IA avancée et traitement parallèle</small>
+                </span>
+            </button>
+            -->
+        </div>
+    </div>
+
+    <div class="manual-option-banner" *ngIf="manualOnly">
+        <i class="fas fa-cogs"></i>
+        <div>
+            <strong>{{ 'FU.Option1' | translate }}</strong>
+            <span>{{ 'FU.Choisissezlesfichiersboetpartenaireséparémentpuissélectionnezlescolonnescléspourdéfinirlescritèresdecorrespondanceavantdelancerlaréconciliation' | translate }}</span>
+        </div>
+    </div>
+
+    <div class="assisted-option-banner" *ngIf="isAssistedLike">
+        <i class="fas fa-magic"></i>
+        <div>
+            <strong>{{ 'FU.Option2' | translate }}</strong>
+            <span>{{ 'FU.Lesfichierssonttraitésvialespatternsdesmodèlesconfigurésutiliseztraitementdefichierpournormaliseretformaterlesfichiersnonconformespuislancerlaréconciliationunefoisprêts' | translate }}</span>
+        </div>
+    </div>
+
+    <div class="assisted-post-treatment-progress" *ngIf="isAssistedLike && !showTraitementModal && traitementProcessing && traitementProgressMessage">
+        <i class="fas fa-spinner fa-spin"></i> {{ traitementProgressMessage }}
+    </div>
+
+    <!-- Section d'information sur le mode 1-1 -->
+    <div class="info-section" *ngIf="reconciliationMode === 'manual' && !manualOnly">
+        <div class="info-card">
+            <div class="info-header">
+                <i class="fas fa-info-circle"></i>
+                <h4>{{ 'FU.Modederéconciliation11' | translate }}</h4>
+            </div>
+            <div class="info-content">
+                <p>{{ 'FU.Lemode11estlemodederéconciliationpardéfautquicomparechaquetransactionboavecunetransactionpartenairecorrespondante' | translate }}</p>
+                <ul>
+                    <li><strong>{{ 'FU.Correspondanceexacte' | translate }}</strong> {{ 'FU.Chaquetransactionbodoitavoirunetransactionpartenairecorrespondante' | translate }}</li>
+                    <li><strong>{{ 'FU.Critèresdematching' | translate }}</strong> {{ 'FU.Montantdateréférenceetc' | translate }}</li>
+                    <li><strong>{{ 'FU.Résultat' | translate }}</strong> {{ 'FU.Transactionsmatchéesnonmatchéesetécartsidentifiés' | translate }}</li>
+                </ul>
+            </div>
+        </div>
+    </div>
+
+    <!-- Logique de rapprochement (mode manuel) -->
+    <div class="manual-logic-selector" *ngIf="showManualLogicSelector">
+        <div class="manual-logic-header">
+            <h3><i class="fas fa-sliders-h"></i> {{ 'FU.Logiquederapprochement' | translate }}</h3>
+            <p>{{ 'FU.Choisissezlalogiquederapprochementàutiliser' | translate }}</p>
+        </div>
+        <div class="manual-logic-options">
+            <label class="manual-logic-option" [class.selected]="manualLogicMode === 'standard'">
+                <input type="radio" name="manualLogicMode" value="standard" [checked]="manualLogicMode === 'standard'" (change)="onManualLogicModeChange('standard')">
+                <span class="manual-logic-body">
+                    <i class="fas fa-balance-scale"></i>
+                    <strong>{{ 'FU.Standard' | translate }}</strong>
+                    <span class="manual-logic-description">{{ 'FU.UneligneBOcorrespondàunelignepartenaire' | translate }}</span>
+                </span>
+            </label>
+
+            <label class="manual-logic-option" [class.selected]="manualLogicMode === 'ratio'">
+                <input type="radio" name="manualLogicMode" value="ratio" [checked]="manualLogicMode === 'ratio'" (change)="onManualLogicModeChange('ratio')">
+                <span class="manual-logic-body">
+                    <i class="fas fa-layer-group"></i>
+                    <strong>{{ 'FU.Ratio' | translate }}</strong>
+                    <span class="manual-logic-description">{{ 'FU.UneligneBOcorrespondàplusieurslignespartenaires' | translate }}</span>
+                </span>
+            </label>
+
+            <label class="manual-logic-option" [class.selected]="manualLogicMode === 'custom'">
+                <input type="radio" name="manualLogicMode" value="custom" [checked]="manualLogicMode === 'custom'" (change)="onManualLogicModeChange('custom')">
+                <span class="manual-logic-body">
+                    <i class="fas fa-sliders"></i>
+                    <strong>{{ 'FU.Personnalisée' | translate }}</strong>
+                    <span class="manual-logic-description">{{ 'FU.Vousdéfinissezlescritèresàlétapesuivante' | translate }}</span>
+                </span>
+            </label>
+        </div>
+
+        <div class="manual-ratio-picker" *ngIf="isRatioLogicMode">
+            <div class="manual-ratio-field">
+                <span class="manual-ratio-label">{{ 'FU.Ratioàappliquer' | translate }}</span>
+                <select #manualRatioSelect class="manual-ratio-select" [value]="reconciliationType" (change)="onReconciliationRatioChange(manualRatioSelect.value)">
+                    <option *ngFor="let ratio of reconciliationRatioOptions" [value]="ratio">
+                        {{ 'FU.1ligneBO' | translate }} → {{ ratio.substring(2) }} {{ 'FU.lignepartenaire' | translate }}
+                    </option>
+                </select>
+            </div>
+            <p class="manual-ratio-hint">{{ 'FU.Unratiomoins1techniquementconsidéréecommeunécart' | translate }}</p>
+        </div>
+
+        <div class="manual-custom-picker" *ngIf="manualLogicMode === 'custom'">
+            <div class="manual-custom-field">
+                <span class="manual-custom-label">{{ 'FU.Ratiopersonnalisé' | translate }}</span>
+                <input type="text" class="manual-custom-input" 
+                       placeholder="1-6, 1-10, 2-3..." 
+                       [value]="customRatio" 
+                       (input)="onCustomRatioChange($event)"
+                       title="{{ 'FU.RatiopersonnaliséHint' | translate }}">
+            </div>
+            <p class="manual-custom-hint">{{ 'FU.RatiopersonnaliséHint' | translate }}</p>
+
+            <div class="manual-custom-field">
+                <span class="manual-custom-label">{{ 'FU.Tolérance' | translate }}</span>
+                <input type="number" class="manual-custom-input" 
+                       step="0.01" 
+                       min="0" 
+                       max="1"
+                       [value]="customTolerance" 
+                       (input)="onCustomToleranceChange($event)"
+                       title="{{ 'FU.ToléranceHint' | translate }}">
+            </div>
+            <p class="manual-custom-hint">{{ 'FU.ToléranceHint' | translate }}</p>
+        </div>
+    </div>
+
+    <!-- Indicateur de progression pour gros fichiers -->
+    <div class="large-file-progress" *ngIf="isProcessingLargeFile">
+        <div class="progress-container">
+            <div class="progress-header">
+                <h4>{{ 'FU.Traitementencours' | translate }}</h4>
+                <div class="processing-info">
+                    <span class="processing-mode" *ngIf="processingMode">
+                        <i class="fas fa-microchip"></i>
+                        {{ processingMode }}
+                    </span>
+                    <button class="cancel-btn" (click)="cancelProcessing()" [disabled]="processingCancelled">
+                        <i class="fas fa-times"></i>{{ 'COMMON.actions.cancel' | translate }}</button>
+                </div>
+            </div>
+            <div class="progress-bar">
+                <div class="progress-fill" [style.width.%]="processingProgress"></div>
+            </div>
+            <div class="progress-text">{{ processingMessage }}</div>
+            <div class="progress-percentage">{{ processingProgress }}%</div>
+            <div class="progress-details" *ngIf="processingDetails">
+                <div class="detail-item">
+                    <span class="detail-label">{{ 'FU.Mode' | translate }}</span>
+                    <span class="detail-value">{{ processingDetails.mode }}</span>
+                </div>
+                <div class="detail-item" *ngIf="processingDetails.chunks">
+                    <span class="detail-label">{{ 'FU.Lots' | translate }}</span>
+                    <span class="detail-value">{{ processingDetails.chunks }}</span>
+                </div>
+                <div class="detail-item" *ngIf="processingDetails.workers">
+                    <span class="detail-label">{{ 'FU.Workers' | translate }}</span>
+                    <span class="detail-value">{{ processingDetails.workers }}</span>
+                </div>
+                <div class="detail-item" *ngIf="processingDetails.memory">
+                    <span class="detail-label">{{ 'FU.Mémoire' | translate }}</span>
+                    <span class="detail-value">{{ processingDetails.memory }}</span>
+                </div>
+            </div>
+            <div class="progress-status" *ngIf="processingCancelled">
+                <span class="cancelled-status">{{ 'FU.Traitementannulé' | translate }}</span>
+            </div>
+        </div>
+    </div>
+
+    <!-- Mode Manuel -->
+    <div class="file-upload-area" *ngIf="reconciliationMode === 'manual'">
+        <div class="file-input-container" (click)="boFileInput.click()" [class.has-file]="boFile">
+            <div class="file-icon">🏢</div>
+            <h4>{{ 'FU.BObackoffice' | translate }}</h4>
+            <p>{{ 'FU.Cliquezpoursélectionnerlefichierbocsvxlsxlsx' | translate }}</p>
+            <input #boFileInput type="file" (change)="onBoFileSelected($event)" accept=".csv, .xls, .xlsx, .xlsm, .xlsb" style="display: none">
+            <div class="file-info" [class.loaded]="boFile">
+                {{ (boFile ? boFile.name : ('FU.NoFileSelected' | translate)) }}
+                <button *ngIf="boFile" class="remove-file-btn" (click)="removeBoFile($event)">
+                    <i class="fas fa-times"></i>
+                </button>
+            </div>
+        </div>
+
+        <div class="file-input-container" (click)="partnerFileInput.click()" [class.has-file]="partnerFile">
+            <div class="file-icon">🤝</div>
+            <h4>{{ 'TBL.partner' | translate }}</h4>
+            <p>{{ 'FU.Cliquezpoursélectionnerlefichierpartenairecsvxlsxlsx' | translate }}</p>
+            <input #partnerFileInput type="file" (change)="onPartnerFileSelected($event)" accept=".csv, .xls, .xlsx, .xlsm, .xlsb" style="display: none">
+            <div class="file-info" [class.loaded]="partnerFile">
+                {{ (partnerFile ? partnerFile.name : ('FU.NoFileSelected' | translate)) }}
+                <button *ngIf="partnerFile" class="remove-file-btn" (click)="removePartnerFile($event)">
+                    <i class="fas fa-times"></i>
+                </button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Sélection des agences pour TRXBO (Étape 1) -->
+    <div class="manual-service-selection-overlay" *ngIf="showAgencySelection && reconciliationMode === 'manual'">
+        <div class="manual-service-selection-modal">
+            <!-- En-tête moderne -->
+            <div class="manual-service-selection-header">
+                <div class="header-badge">
+                    <span class="badge-text">
+                        {{ 'FU.Agences' | translate }} {{ availableAgencies.length }} {{ 'FU.Sélection' | translate }} {{ selectedAgencies.length }}
+                    </span>
+                    <span class="status-info">
+                        <i class="fas fa-info-circle"></i>
+                        {{ 'FU.Étape12sélectiondesagencesavantlesservices' | translate }}
+                    </span>
+                </div>
+            </div>
+            
+            <div class="manual-service-selection-content">
+                <!-- Recherche -->
+                <div class="agency-search-wrap">
+                    <i class="fas fa-search agency-search-icon"></i>
+                    <input type="text" class="agency-search-input" placeholder="{{ 'FU.Rechercherparcodeagenceexafrbt0021casbt0025' | translate }}"
+                           [(ngModel)]="agencySearchFilter"
+                           (ngModelChange)="onAgencySearchFilterChange($event)">
+                    <span class="agency-search-count" *ngIf="agencySearchFilter?.trim()">
+                        {{ filteredAvailableAgencies.length }} / {{ availableAgencies.length }}
+                    </span>
+                </div>
+                <!-- Boutons d'action principaux -->
+                <div class="manual-service-controls">
+                    <button class="modern-btn select-all-btn" (click)="selectAllAgencies()">
+                        <i class="fas fa-check-double"></i>{{ 'ACT.selectAll' | translate }}</button>
+                    <button class="modern-btn deselect-all-btn" (click)="deselectAllAgencies()">
+                        <i class="fas fa-check-double"></i>
+                        {{ 'FU.Toutdésélectionner' | translate }}
+                    </button>
+                </div>
+                
+                <!-- Grille d'agences en cartes -->
+                <div class="manual-service-grid">
+                    <div class="service-card" *ngFor="let agency of filteredAvailableAgencies; trackBy: trackByValue">
+                        <div class="service-card-content">
+                            <div class="service-checkbox-modern">
+                                <input type="checkbox" 
+                                       [id]="'manual-agency-' + agency"
+                                       [value]="agency" 
+                                       [checked]="selectedAgencies.includes(agency)"
+                                       (change)="onAgencySelectionChange($event, agency)">
+                                <label [for]="'manual-agency-' + agency" class="checkbox-label">
+                                    <span class="checkmark"></span>
+                                </label>
+                            </div>
+                            <div class="service-info">
+                                <h4 class="service-name-modern">{{ agency }}</h4>
+                                <p class="service-count-modern">{{ getAgencyCount(agency) }} {{ 'FU.Lignes' | translate }}</p>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+            
+            <!-- Boutons de confirmation modernes -->
+            <div class="manual-service-selection-actions">
+                <button class="modern-btn cancel-btn" (click)="cancelAgencySelection()">
+                    <i class="fas fa-times"></i>{{ 'COMMON.actions.cancel' | translate }}</button>
+                <button class="modern-btn" (click)="skipAgencySelection()">
+                    <i class="fas fa-forward"></i>
+                    {{ 'FU.Passer' | translate }}
+                </button>
+                <button class="modern-btn confirm-btn" 
+                        [disabled]="selectedAgencies.length === 0"
+                        (click)="confirmAgencySelection()">
+                    <i class="fas fa-check"></i>
+                    {{ 'FU.Confirmerlasélection' | translate }}
+                </button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Sélection des agences — fichier Partenaire (si colonne Agence), commun aux modes manuel et automatique -->
+    <div class="manual-service-selection-overlay" *ngIf="showPartnerAgencySelection">
+        <div class="manual-service-selection-modal">
+            <div class="manual-service-selection-header">
+                <div class="header-badge">
+                    <span class="badge-text">
+                        {{ 'FU.Partenaireagences' | translate }} {{ partnerAvailableAgencies.length }} {{ 'FU.Sélection' | translate }} {{ partnerSelectedAgencies.length }}
+                    </span>
+                    <span class="status-info">
+                        <i class="fas fa-info-circle"></i>
+                        {{ 'FU.Étape12filtrerparagenceavantlesservicestypes' | translate }}
+                    </span>
+                </div>
+            </div>
+
+            <div class="manual-service-selection-content">
+                <div class="agency-search-wrap">
+                    <i class="fas fa-search agency-search-icon"></i>
+                    <input type="text" class="agency-search-input" placeholder="{{ 'FU.Rechercheruneagenceplusieursséparéespar' | translate }}"
+                           [(ngModel)]="partnerAgencySearchFilter"
+                           (ngModelChange)="onPartnerAgencySearchFilterChange($event)">
+                    <span class="agency-search-count" *ngIf="partnerAgencySearchFilter?.trim()">
+                        {{ filteredPartnerAvailableAgencies.length }} / {{ partnerAvailableAgencies.length }}
+                    </span>
+                </div>
+                <div class="manual-service-controls">
+                    <button class="modern-btn select-all-btn" type="button" (click)="selectAllPartnerAgencies()">
+                        <i class="fas fa-check-double"></i>{{ 'ACT.selectAll' | translate }}</button>
+                    <button class="modern-btn deselect-all-btn" type="button" (click)="deselectAllPartnerAgencies()">
+                        <i class="fas fa-check-double"></i>
+                        {{ 'FU.Toutdésélectionner' | translate }}
+                    </button>
+                </div>
+
+                <div class="manual-service-grid">
+                    <div class="service-card" *ngFor="let agency of filteredPartnerAvailableAgencies; trackBy: trackByValue">
+                        <div class="service-card-content">
+                            <div class="service-checkbox-modern">
+                                <input type="checkbox"
+                                       [id]="'partner-agency-' + agency"
+                                       [value]="agency"
+                                       [checked]="partnerSelectedAgencies.includes(agency)"
+                                       (change)="onPartnerAgencySelectionChange($event, agency)">
+                                <label [for]="'partner-agency-' + agency" class="checkbox-label">
+                                    <span class="checkmark"></span>
+                                </label>
+                            </div>
+                            <div class="service-info">
+                                <h4 class="service-name-modern">{{ agency }}</h4>
+                                <p class="service-count-modern">{{ getPartnerAgencyCount(agency) }} {{ 'FU.Lignes' | translate }}</p>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <div class="manual-service-selection-actions">
+                <button class="modern-btn cancel-btn" type="button" (click)="cancelPartnerAgencySelection()">
+                    <i class="fas fa-times"></i>{{ 'COMMON.actions.cancel' | translate }}</button>
+                <button class="modern-btn" type="button" (click)="skipPartnerAgencySelection()">
+                    <i class="fas fa-forward"></i>
+                    {{ 'FU.Passer' | translate }}
+                </button>
+                <button class="modern-btn confirm-btn" type="button"
+                        [disabled]="partnerSelectedAgencies.length === 0"
+                        (click)="confirmPartnerAgencySelection()">
+                    <i class="fas fa-check"></i>
+                    {{ 'FU.Confirmerlasélection' | translate }}
+                </button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Sélection des services pour TRXBO en mode manuel (Étape 2) -->
+    <div class="manual-service-selection-overlay" *ngIf="showManualServiceSelection">
+        <div class="manual-service-selection-modal">
+            <!-- En-tête moderne -->
+            <div class="manual-service-selection-header">
+                <div class="header-badge">
+                    <span class="badge-text">
+                        {{ 'FU.Agences' | translate }} {{ selectedAgencies.length }} {{ 'FU.Services' | translate }} {{ manualAvailableServices.length }} {{ 'FU.Sélection' | translate }} {{ manualSelectedServices.length }}
+                    </span>
+                    <span class="status-info" *ngIf="availableAgencies.length > 0">
+                        <i class="fas fa-info-circle"></i>
+                        {{ 'FU.Étape23servicesaprèsfiltrageparagence' | translate }}
+                    </span>
+                    <span class="status-info" *ngIf="availableAgencies.length === 0">
+                        <i class="fas fa-info-circle"></i>
+                        {{ 'FU.Étape12servicesdisponibles' | translate }}
+                    </span>
+                </div>
+            </div>
+            
+            <div class="manual-service-selection-content">
+                <!-- Recherche -->
+                <div class="agency-search-wrap">
+                    <i class="fas fa-search agency-search-icon"></i>
+                    <input type="text" class="agency-search-input" placeholder="{{ 'FU.Rechercherunserviceplusieursséparéspar' | translate }}"
+                           [(ngModel)]="manualServiceSearchFilter"
+                           (ngModelChange)="onManualServiceSearchFilterChange($event)">
+                    <span class="agency-search-count" *ngIf="manualServiceSearchFilter?.trim()">
+                        {{ filteredManualAvailableServices.length }} / {{ manualAvailableServices.length }}
+                    </span>
+                </div>
+                <!-- Boutons d'action principaux -->
+                <div class="manual-service-controls">
+                    <button class="modern-btn select-all-btn" (click)="selectAllManualServices()">
+                        <i class="fas fa-check-double"></i>{{ 'ACT.selectAll' | translate }}</button>
+                    <button class="modern-btn deselect-all-btn" (click)="deselectAllManualServices()">
+                        <i class="fas fa-check-double"></i>
+                        {{ 'FU.Toutdésélectionner' | translate }}
+                    </button>
+                </div>
+                
+                <!-- Grille de services en cartes -->
+                <div class="manual-service-grid">
+                    <div class="manual-service-card" *ngFor="let service of filteredManualAvailableServices; trackBy: trackByValue">
+                        <div class="manual-service-card-content">
+                            <div class="manual-service-checkbox-modern">
+                                <input type="checkbox" 
+                                       [id]="'manual-service-' + service"
+                                       [value]="service" 
+                                       [checked]="manualSelectedServices.includes(service)"
+                                       (change)="onManualServiceSelectionChange($event, service)">
+                                <label [for]="'manual-service-' + service" class="checkbox-label">
+                                    <span class="checkmark"></span>
+                                </label>
+                            </div>
+                            <div class="manual-service-info">
+                                <h4 class="manual-service-name-modern">{{ service }}</h4>
+                                <p class="manual-service-count-modern">{{ getManualServiceCount(service) }} {{ 'FU.Lignes' | translate }}</p>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+            
+            <!-- Boutons de confirmation modernes -->
+            <div class="manual-service-selection-actions">
+                <button class="modern-btn cancel-btn" (click)="cancelManualServiceSelection()">
+                    <i class="fas fa-times"></i>{{ 'COMMON.actions.cancel' | translate }}</button>
+                <button class="modern-btn" (click)="skipManualServiceSelection()">
+                    <i class="fas fa-forward"></i>
+                    {{ 'FU.Passer' | translate }}
+                </button>
+                <button class="modern-btn confirm-btn" 
+                        [disabled]="manualSelectedServices.length === 0"
+                        (click)="confirmManualServiceSelection()">
+                    <i class="fas fa-check"></i>
+                    {{ 'FU.Confirmerlasélection' | translate }}
+                </button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Sélection des statuts pour TRXBO en mode manuel (Étape 3) -->
+    <div class="manual-service-selection-overlay" *ngIf="showManualStatusSelection">
+        <div class="manual-service-selection-modal">
+            <!-- En-tête moderne -->
+            <div class="manual-service-selection-header">
+                <div class="header-badge">
+                    <span class="badge-text">{{ 'FU.Statutsdisponiblestrxbomodemanuel' | translate }} {{ manualAvailableStatuses.length }}</span>
+                    <span class="status-info" *ngIf="availableAgencies.length > 0">
+                        <i class="fas fa-info-circle"></i>
+                        {{ 'FU.Étape33statutsaprèsfiltrageparagenceetservice' | translate }}
+                    </span>
+                    <span class="status-info" *ngIf="availableAgencies.length === 0">
+                        <i class="fas fa-info-circle"></i>
+                        {{ 'FU.Étape22statutsaprèsfiltrageparservice' | translate }}
+                    </span>
+                </div>
+            </div>
+            
+            <div class="manual-service-selection-content">
+                <!-- Recherche -->
+                <div class="agency-search-wrap">
+                    <i class="fas fa-search agency-search-icon"></i>
+                    <input type="text" class="agency-search-input" placeholder="{{ 'FU.Rechercherunstatutplusieursséparéspar' | translate }}"
+                           [(ngModel)]="manualStatusSearchFilter">
+                    <span class="agency-search-count" *ngIf="manualStatusSearchFilter?.trim()">
+                        {{ filteredManualAvailableStatuses.length }} / {{ manualAvailableStatuses.length }}
+                    </span>
+                </div>
+                <!-- Boutons d'action principaux -->
+                <div class="manual-service-controls">
+                    <button class="modern-btn select-all-btn" (click)="selectAllManualStatuses()">
+                        <i class="fas fa-check-double"></i>{{ 'ACT.selectAll' | translate }}</button>
+                    <button class="modern-btn deselect-all-btn" (click)="deselectAllManualStatuses()">
+                        <i class="fas fa-check-double"></i>
+                        {{ 'FU.Toutdésélectionner' | translate }}
+                    </button>
+                </div>
+                
+                <!-- Grille de statuts en cartes -->
+                <div class="manual-service-grid">
+                    <div class="manual-service-card" *ngFor="let status of filteredManualAvailableStatuses; trackBy: trackByValue">
+                        <div class="manual-service-card-content">
+                            <div class="manual-service-checkbox-modern">
+                                <input type="checkbox" 
+                                       [id]="'manual-status-' + status"
+                                       [value]="status" 
+                                       [checked]="manualSelectedStatuses.includes(status)"
+                                       (change)="onManualStatusSelectionChange($event, status)">
+                                <label [for]="'manual-status-' + status" class="checkbox-label">
+                                    <span class="checkmark"></span>
+                                </label>
+                            </div>
+                            <div class="manual-service-info">
+                                <h4 class="manual-service-name-modern">{{ status }}</h4>
+                                <p class="manual-service-count-modern">{{ getManualStatusCount(status) }} {{ 'FU.Lignes' | translate }}</p>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+            
+            <!-- Boutons de confirmation modernes -->
+            <div class="manual-service-selection-actions">
+                <button class="modern-btn cancel-btn" (click)="cancelManualStatusSelection()">
+                    <i class="fas fa-times"></i>{{ 'COMMON.actions.cancel' | translate }}</button>
+                <button class="modern-btn" (click)="skipManualStatusSelection()">
+                    <i class="fas fa-forward"></i>
+                    {{ 'FU.Passer' | translate }}
+                </button>
+                <button class="modern-btn confirm-btn" 
+                        [disabled]="manualSelectedStatuses.length === 0"
+                        (click)="confirmManualStatusSelection()">
+                    <i class="fas fa-check"></i>
+                    {{ 'FU.Confirmerlasélection' | translate }}
+                </button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Mode Automatique -->
+    <div class="auto-reconciliation-area" *ngIf="reconciliationMode === 'automatic'">
+        <div class="file-upload-area">
+            <div class="file-input-container" (click)="autoBoFileInput.click()" [class.has-file]="autoBoFile || autoBoData.length > 0">
+                <div class="file-icon">🏢</div>
+                <h4>{{ 'FU.BObackoffice' | translate }}</h4>
+                <p>{{ 'FU.Cliquezpoursélectionnerlefichierbocsvxlsxlsx' | translate }}</p>
+                <input #autoBoFileInput type="file" (change)="onAutoBoFileSelected($event)" accept=".csv, .xls, .xlsx, .xlsm, .xlsb" style="display: none">
+                <div class="file-info" [class.loaded]="autoBoFile || autoBoData.length > 0">
+                    {{ autoBoFileName || (autoBoFile ? autoBoFile.name : (autoBoData.length > 0 ? ('FU.FileLoaded' | translate: { n: autoBoData.length }) : 'Aucun fichier sélectionné')) }}
+                    <button *ngIf="autoBoFile || autoBoData.length > 0" class="remove-file-btn" (click)="removeAutoBoFile($event)">
+                        <i class="fas fa-times"></i>
+                    </button>
+                </div>
+            </div>
+
+            <div class="file-input-container" (click)="autoPartnerFileInput.click()" [class.has-file]="autoPartnerFile || autoPartnerData.length > 0">
+                <div class="file-icon">🤝</div>
+                <h4>{{ 'TBL.partner' | translate }}</h4>
+                <p>{{ 'FU.Cliquezpoursélectionnerlefichierpartenairecsvxlsxlsx' | translate }}</p>
+                <input #autoPartnerFileInput type="file" (change)="onAutoPartnerFileSelected($event)" accept=".csv, .xls, .xlsx, .xlsm, .xlsb" style="display: none">
+                <div class="file-info" [class.loaded]="autoPartnerFile || autoPartnerData.length > 0">
+                    {{ autoPartnerFileName || (autoPartnerFile ? autoPartnerFile.name : (autoPartnerData.length > 0 ? ('FU.FileLoaded' | translate: { n: autoPartnerData.length }) : 'Aucun fichier sélectionné')) }}
+                    <button *ngIf="autoPartnerFile || autoPartnerData.length > 0" class="remove-file-btn" (click)="removeAutoPartnerFile($event)">
+                        <i class="fas fa-times"></i>
+                    </button>
+                </div>
+            </div>
+        </div>
+
+        <!-- Status Panel pour le mode automatique -->
+        <div class="status-panel" *ngIf="reconciliationMode === 'automatic'">
+            <div class="status-item">
+                <span class="status-label">{{ 'FU.BOchargé' | translate }}</span>
+                <span class="status-value">{{ (autoBoFile || autoBoData.length > 0) ? ('FU.Yes' | translate) : ('FU.No' | translate) }}</span>
+            </div>
+            <div class="status-item" *ngIf="autoBoFile || autoBoData.length > 0">
+                <span class="status-label">{{ 'FU.Fichierbo' | translate }}</span>
+                <span class="status-value">{{ autoBoFileName || (autoBoFile ? autoBoFile.name : ('FU.FileLoadedShort' | translate)) }}</span>
+            </div>
+            <div class="status-item" *ngIf="autoBoFile || autoBoData.length > 0">
+                <span class="status-label">{{ 'FU.Nombredelignesbo' | translate }}</span>
+                <span class="status-value">{{ autoBoData.length }} {{ 'FU.Lignes' | translate }}</span>
+            </div>
+            <div class="status-item">
+                <span class="status-label">{{ 'FU.Partenairechargé' | translate }}</span>
+                <span class="status-value">{{ (autoPartnerFile || autoPartnerData.length > 0) ? ('FU.Yes' | translate) : ('FU.No' | translate) }}</span>
+            </div>
+            <div class="status-item" *ngIf="autoPartnerFile || autoPartnerData.length > 0">
+                <span class="status-label">{{ 'FU.Fichierpartenaire' | translate }}</span>
+                <span class="status-value">{{ autoPartnerFileName || (autoPartnerFile ? autoPartnerFile.name : ('FU.FileLoadedShort' | translate)) }}</span>
+            </div>
+            <div class="status-item" *ngIf="autoPartnerFile || autoPartnerData.length > 0">
+                <span class="status-label">{{ 'FU.Nombredelignespartenaire' | translate }}</span>
+                <span class="status-value">{{ autoPartnerData.length }} {{ 'FU.Lignes' | translate }}</span>
+            </div>
+        </div>
+
+        <!-- Messages d'état pour le mode automatique -->
+        <div class="messages-section" *ngIf="errorMessage || successMessage">
+            <div class="error-message" *ngIf="errorMessage">
+                <span class="error-icon">❌</span>
+                <div class="error-content">
+                    <div class="error-text">{{ errorMessage }}</div>
+                    <div class="error-actions" *ngIf="errorMessage.includes('Aucun modèle de réconciliation trouvé')">
+                        <button class="btn help-btn" *ngIf="canAccessModelConfiguration()" (click)="goToModelConfiguration()">
+                            <i class="fas fa-cog"></i>
+                            {{ 'FU.Configurerlesmodèles' | translate }}
+                        </button>
+                        <button class="btn help-btn" (click)="showModelHelp()">
+                            <i class="fas fa-question-circle"></i>{{ 'LBL.help' | translate }}</button>
+                    </div>
+                </div>
+                <button class="close-btn" (click)="clearMessages()">×</button>
+            </div>
+            
+            <div class="success-message" *ngIf="successMessage">
+                <span class="success-icon">✅</span>
+                {{ successMessage }}
+                <button class="close-btn" (click)="clearMessages()">×</button>
+            </div>
+        </div>
+
+        <!-- Indicateur de chargement -->
+        <div class="loading-section" *ngIf="loading && !showReconciliationProgress">
+            <div class="loading-spinner"></div>
+            <p>{{ 'FU.Traitementautomatiqueencours' | translate }}</p>
+            <p class="loading-details">
+                {{ 'FU.Applicationdesmodèlesdetraitementetréconciliationautomatique' | translate }}
+            </p>
+        </div>
+
+        <!-- Barre de progression de la réconciliation automatique -->
+        <div class="reconciliation-progress-overlay" *ngIf="showReconciliationProgress">
+            <div class="reconciliation-progress-card">
+                <div class="reconciliation-progress-header">
+                    <h2>{{ (reconciliationProgress.percentage === 100 ? 'FU.ReconciliationDone' : 'FU.ReconciliationInProgress') | translate }}</h2>
+                    <div class="reconciliation-progress-header-actions">
+                        <div class="reconciliation-progress-icon" *ngIf="reconciliationProgress.percentage < 100">
+                            <i class="fas fa-cog fa-spin"></i>
+                        </div>
+                        <div class="reconciliation-progress-icon" *ngIf="reconciliationProgress.percentage === 100">
+                            <i class="fas fa-check-circle" style="color: #4CAF50;"></i>
+                        </div>
+                        <!-- Bouton "Suivant" quand la réconciliation est terminée -->
+                        <button *ngIf="reconciliationProgress.percentage === 100" 
+                                class="reconciliation-next-btn" 
+                                (click)="closeReconciliationProgress()" 
+                                title="{{ 'PAG.next' | translate }}">
+                            <i class="fas fa-arrow-right"></i>
+                            <span>{{ 'PAG.next' | translate }}</span>
+                        </button>
+                        <!-- Bouton "Fermer" quand la réconciliation est en cours -->
+                        <button *ngIf="reconciliationProgress.percentage < 100" 
+                                class="reconciliation-close-btn" 
+                                (click)="closeReconciliationProgress()" 
+                                title="{{ 'COMMON.actions.close' | translate }}">
+                            <i class="fas fa-times"></i>
+                        </button>
+                    </div>
+                </div>
+                
+                <div class="reconciliation-progress-bar-container">
+                    <div class="reconciliation-progress-bar">
+                        <div class="reconciliation-progress-fill" [style.width.%]="reconciliationProgress.percentage"></div>
+                    </div>
+                    <div class="reconciliation-progress-text">
+                        {{ reconciliationProgress.percentage | number:'1.0-1' }}{{ 'FU.Terminé' | translate }}
+                    </div>
+                </div>
+                
+                <div class="reconciliation-progress-details">
+                    <div class="reconciliation-detail-item">
+                        <span class="reconciliation-label">{{ 'FU.Étape' | translate }}</span>
+                        <span class="reconciliation-value">{{ reconciliationProgress.step || ('FU.Initializing' | translate) }}</span>
+                    </div>
+                    <div class="reconciliation-detail-item" *ngIf="reconciliationProgress.totalBoChunks && reconciliationProgress.totalBoChunks > 0">
+                        <span class="reconciliation-label">{{ 'FU.Lot' | translate }}</span>
+                        <span class="reconciliation-value">
+                            {{ reconciliationProgress.currentBoChunk || 0 }}/{{ reconciliationProgress.totalBoChunks }}
+                        </span>
+                    </div>
+                    <div class="reconciliation-detail-item">
+                        <span class="reconciliation-label">{{ 'FU.Matchestrouvés' | translate }}</span>
+                        <span class="reconciliation-value">{{ (reconciliationProgress.matchesCount || 0) | number }}</span>
+                    </div>
+                    <div class="reconciliation-detail-item" *ngIf="reconciliationProgress.partnerRemaining !== undefined && reconciliationProgress.partnerRemaining >= 0">
+                        <span class="reconciliation-label">{{ 'FU.Lignespartnerrestantes' | translate }}</span>
+                        <span class="reconciliation-value">{{ reconciliationProgress.partnerRemaining | number }}</span>
+                    </div>
+                    <div class="reconciliation-detail-item">
+                        <span class="reconciliation-label">{{ 'FU.Écartsbo' | translate }}</span>
+                        <span class="reconciliation-value">{{ (reconciliationProgress.boOnlyCount || 0) | number }}</span>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Boutons pour le mode automatique -->
+        <div class="button-container" [class.assisted-actions]="isAssistedLike" *ngIf="reconciliationMode === 'automatic'">
+            <button class="btn proceed-btn" [class.reconciliation-launch-btn]="isAssistedLike" [class.processing]="isAssistedReconciliationActive()" [disabled]="!canProceedAuto()" (click)="onAutoProceed()">
+                {{ getAutoProceedButtonLabel() }}
+            </button>
+            <button
+                *ngIf="isAssistedLike"
+                type="button"
+                class="btn file-traitement-btn"
+                [disabled]="traitementProcessing"
+                (click)="onTraitementFichier()">
+                {{ 'FU.Traitementdefichier' | translate }}
+            </button>
+            <div class="action-buttons" *ngIf="!isAssistedLike">
+                <button class="btn dashboard-btn" (click)="goToDashboard()">
+                    {{ 'FU.Tableaudebord' | translate }}
+                </button>
+                <button class="btn stats-btn" (click)="goToStats()">
+                    {{ 'FU.Statistiques' | translate }}
+                </button>
+            </div>
+        </div>
+
+        <!-- Sélection des agences pour TRXBO (Étape 1) - Design Moderne -->
+        <div class="service-selection-overlay" *ngIf="showAgencySelection && reconciliationMode === 'automatic'">
+            <div class="service-selection-modal">
+                <!-- En-tête moderne -->
+                <div class="service-selection-header">
+                    <div class="header-badge">
+                        <span class="badge-text">
+                            {{ 'FU.Agences' | translate }} {{ availableAgencies.length }} {{ 'FU.Sélection' | translate }} {{ selectedAgencies.length }}
+                        </span>
+                        <span class="status-info">
+                            <i class="fas fa-info-circle"></i>
+                            {{ 'FU.Étape12sélectiondesagencesavantlesservices' | translate }}
+                        </span>
+                    </div>
+                </div>
+                
+                <div class="service-selection-content">
+                    <!-- Recherche -->
+                    <div class="agency-search-wrap">
+                        <i class="fas fa-search agency-search-icon"></i>
+                        <input type="text" class="agency-search-input" placeholder="{{ 'FU.Rechercherparcodeagenceexafrbt0021casbt0025' | translate }}"
+                               [(ngModel)]="agencySearchFilter"
+                               (ngModelChange)="onAgencySearchFilterChange($event)">
+                        <span class="agency-search-count" *ngIf="agencySearchFilter?.trim()">
+                            {{ filteredAvailableAgencies.length }} / {{ availableAgencies.length }}
+                        </span>
+                    </div>
+                    <!-- Boutons d'action principaux -->
+                    <div class="service-controls">
+                        <button class="modern-btn select-all-btn" (click)="selectAllAgencies()">
+                            <i class="fas fa-check-double"></i>{{ 'ACT.selectAll' | translate }}</button>
+                        <button class="modern-btn deselect-all-btn" (click)="deselectAllAgencies()">
+                            <i class="fas fa-check-double"></i>
+                            {{ 'FU.Toutdésélectionner' | translate }}
+                        </button>
+                    </div>
+                    
+                    <!-- Grille d'agences en cartes -->
+                    <div class="service-grid">
+                        <div class="service-card" *ngFor="let agency of filteredAvailableAgencies; trackBy: trackByValue">
+                            <div class="service-card-content">
+                                <div class="service-checkbox-modern">
+                                    <input type="checkbox" 
+                                           [id]="'agency-' + agency"
+                                           [value]="agency" 
+                                           [checked]="selectedAgencies.includes(agency)"
+                                           (change)="onAgencySelectionChange($event, agency)">
+                                    <label [for]="'agency-' + agency" class="checkbox-label">
+                                        <span class="checkmark"></span>
+                                    </label>
+                                </div>
+                                <div class="service-info">
+                                    <h4 class="service-name-modern">{{ agency }}</h4>
+                                    <p class="service-count-modern">{{ getAgencyCount(agency) }} {{ 'FU.Lignes' | translate }}</p>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                
+                <!-- Boutons de confirmation modernes -->
+                <div class="service-selection-actions">
+                    <button class="modern-btn cancel-btn" (click)="cancelAgencySelection()">
+                        <i class="fas fa-times"></i>{{ 'COMMON.actions.cancel' | translate }}</button>
+                    <button class="modern-btn" (click)="skipAgencySelection()">
+                        <i class="fas fa-forward"></i>
+                        {{ 'FU.Passer' | translate }}
+                    </button>
+                    <button class="modern-btn confirm-btn" 
+                            [disabled]="selectedAgencies.length === 0"
+                            (click)="confirmAgencySelection()">
+                        <i class="fas fa-check"></i>
+                        {{ 'FU.Confirmerlasélection' | translate }}
+                    </button>
+                </div>
+            </div>
+        </div>
+
+        <!-- Sélection des services pour TRXBO (Étape 2) - Design Moderne -->
+        <div class="service-selection-overlay" *ngIf="showServiceSelection">
+            <div class="service-selection-modal">
+                <!-- En-tête moderne -->
+                <div class="service-selection-header">
+                    <div class="header-badge">
+                        <span class="badge-text">
+                            {{ 'FU.Agences' | translate }} {{ selectedAgencies.length }} {{ 'FU.Services' | translate }} {{ availableServices.length }} {{ 'FU.Sélection' | translate }} {{ selectedServices.length }}
+                        </span>
+                        <span class="status-info" *ngIf="availableAgencies.length > 0">
+                            <i class="fas fa-info-circle"></i>
+                            {{ 'FU.Étape22servicesaprèsfiltrageparagence' | translate }}
+                        </span>
+                    </div>
+                </div>
+                
+                <div class="service-selection-content">
+                    <!-- Recherche -->
+                    <div class="agency-search-wrap">
+                        <i class="fas fa-search agency-search-icon"></i>
+                        <input type="text" class="agency-search-input" placeholder="{{ 'FU.Rechercherunserviceplusieursséparéspar' | translate }}"
+                               [(ngModel)]="serviceSearchFilter"
+                               (ngModelChange)="onServiceSearchFilterChange($event)">
+                        <span class="agency-search-count" *ngIf="serviceSearchFilter?.trim()">
+                            {{ filteredAvailableServices.length }} / {{ availableServices.length }}
+                        </span>
+                    </div>
+                    <!-- Boutons d'action principaux -->
+                    <div class="service-controls">
+                        <button class="modern-btn select-all-btn" (click)="selectAllServices()">
+                            <i class="fas fa-check-double"></i>{{ 'ACT.selectAll' | translate }}</button>
+                        <button class="modern-btn deselect-all-btn" (click)="deselectAllServices()">
+                            <i class="fas fa-check-double"></i>
+                            {{ 'FU.Toutdésélectionner' | translate }}
+                        </button>
+                    </div>
+                    
+                    <!-- Grille de services en cartes -->
+                    <div class="service-grid">
+                        <div class="service-card" *ngFor="let service of filteredAvailableServices; trackBy: trackByValue">
+                            <div class="service-card-content">
+                                <div class="service-checkbox-modern">
+                                    <input type="checkbox" 
+                                           [id]="'service-' + service"
+                                           [value]="service" 
+                                           [checked]="selectedServices.includes(service)"
+                                           (change)="onServiceSelectionChange($event, service)">
+                                    <label [for]="'service-' + service" class="checkbox-label">
+                                        <span class="checkmark"></span>
+                                    </label>
+                                </div>
+                                <div class="service-info">
+                                    <h4 class="service-name-modern">{{ service }}</h4>
+                                    <p class="service-count-modern">{{ getServiceCount(service) }} {{ 'FU.Lignes' | translate }}</p>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                
+                <!-- Boutons de confirmation modernes -->
+                <div class="service-selection-actions">
+                    <button class="modern-btn cancel-btn" (click)="cancelServiceSelection()">
+                        <i class="fas fa-times"></i>{{ 'COMMON.actions.cancel' | translate }}</button>
+                    <button class="modern-btn" (click)="skipServiceSelection()">
+                        <i class="fas fa-forward"></i>
+                        {{ 'FU.Passer' | translate }}
+                    </button>
+                    <button class="modern-btn confirm-btn" 
+                            [disabled]="selectedServices.length === 0"
+                            (click)="confirmServiceSelection()">
+                        <i class="fas fa-check"></i>
+                        {{ 'FU.Confirmerlasélection' | translate }}
+                    </button>
+                </div>
+            </div>
+        </div>
+
+    </div>
+
+    <!-- Sélection des statuts pour TRXBO en mode automatique (Étape 3) -->
+    <div class="service-selection-overlay" *ngIf="showAutoStatusSelection">
+        <div class="service-selection-modal">
+            <div class="service-selection-header">
+                <div class="header-badge">
+                    <span class="badge-text">{{ 'FU.Statutsdisponiblestrxbomodeauto' | translate }} {{ autoAvailableStatuses.length }}</span>
+                    <span class="status-info">
+                        <i class="fas fa-info-circle"></i>
+                        {{ 'FU.Étape33sélectiondesstatutsaprèsfiltrageparservice' | translate }}
+                    </span>
+                </div>
+            </div>
+
+            <div class="service-selection-content">
+                <div class="agency-search-wrap">
+                    <i class="fas fa-search agency-search-icon"></i>
+                    <input type="text" class="agency-search-input" placeholder="{{ 'FU.Rechercherunstatutplusieursséparéspar' | translate }}"
+                           [(ngModel)]="autoStatusSearchFilter">
+                    <span class="agency-search-count" *ngIf="autoStatusSearchFilter?.trim()">
+                        {{ filteredAutoAvailableStatuses.length }} / {{ autoAvailableStatuses.length }}
+                    </span>
+                </div>
+                <div class="service-controls">
+                    <button class="modern-btn select-all-btn" (click)="selectAllAutoStatuses()">
+                        <i class="fas fa-check-double"></i>{{ 'ACT.selectAll' | translate }}</button>
+                    <button class="modern-btn deselect-all-btn" (click)="deselectAllAutoStatuses()">
+                        <i class="fas fa-check-double"></i>
+                        {{ 'FU.Toutdésélectionner' | translate }}
+                    </button>
+                </div>
+
+                <div class="service-grid">
+                    <div class="service-card" *ngFor="let status of filteredAutoAvailableStatuses; trackBy: trackByValue">
+                        <div class="service-card-content">
+                            <div class="service-checkbox-modern">
+                                <input type="checkbox"
+                                       [id]="'auto-status-' + status"
+                                       [value]="status"
+                                       [checked]="autoSelectedStatuses.includes(status)"
+                                       (change)="onAutoStatusSelectionChange($event, status)">
+                                <label [for]="'auto-status-' + status" class="checkbox-label">
+                                    <span class="checkmark"></span>
+                                </label>
+                            </div>
+                            <div class="service-info">
+                                <h4 class="service-name-modern">{{ status }}</h4>
+                                <p class="service-count-modern">{{ getAutoStatusCount(status) }} {{ 'FU.Lignes' | translate }}</p>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <div class="service-selection-actions">
+                <button class="modern-btn cancel-btn" (click)="cancelAutoStatusSelection()">
+                    <i class="fas fa-times"></i>{{ 'COMMON.actions.cancel' | translate }}</button>
+                <button class="modern-btn" (click)="skipAutoStatusSelection()">
+                    <i class="fas fa-forward"></i>
+                    {{ 'FU.Passer' | translate }}
+                </button>
+                <button class="modern-btn confirm-btn"
+                        [disabled]="autoSelectedStatuses.length === 0"
+                        (click)="confirmAutoStatusSelection()">
+                    <i class="fas fa-check"></i>
+                    {{ 'FU.Confirmerlasélection' | translate }}
+                </button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Sélection des services/types/statut pour les fichiers partenaires - Design Moderne (Commun aux modes manuel et automatique) -->
+    <!-- DEBUG: showPartnerServiceSelection = {{ showPartnerServiceSelection }}, partnerAvailableServices.length = {{ partnerAvailableServices?.length }} -->
+    <div class="service-selection-overlay" *ngIf="showPartnerServiceSelection" style="z-index: 1001;">
+        <div class="service-selection-modal">
+            <!-- En-tête moderne -->
+            <div class="service-selection-header">
+                <div class="header-badge">
+                    <span class="badge-text">{{ 'FU.Servicestypesdisponiblespartenaire' | translate }} {{ partnerAvailableServices.length }}</span>
+                    <span class="status-info" *ngIf="partnerStatusColumn">
+                        <i class="fas fa-info-circle"></i>
+                        {{ 'FU.Étape13colonnestatutdétectée' | translate }} {{ partnerStatusColumn }} {{ 'FU.Sélectionàlétapesuivante' | translate }}
+                    </span>
+                </div>
+            </div>
+            
+            <div class="service-selection-content">
+                <!-- Recherche -->
+                <div class="agency-search-wrap">
+                    <i class="fas fa-search agency-search-icon"></i>
+                    <input type="text" class="agency-search-input" placeholder="{{ 'FU.Rechercherunservicetypeplusieursséparéspar' | translate }}"
+                           [(ngModel)]="partnerServiceSearchFilter"
+                           (ngModelChange)="onPartnerServiceSearchFilterChange($event)">
+                    <span class="agency-search-count" *ngIf="partnerServiceSearchFilter?.trim()">
+                        {{ filteredPartnerAvailableServices.length }} / {{ partnerAvailableServices.length }}
+                    </span>
+                </div>
+                <!-- Boutons d'action principaux -->
+                <div class="service-controls">
+                    <button class="modern-btn select-all-btn" [disabled]="partnerSelectionBusy" (click)="selectAllPartnerServices()">
+                        <i class="fas fa-check-double"></i>{{ 'ACT.selectAll' | translate }}</button>
+                    <button class="modern-btn deselect-all-btn" [disabled]="partnerSelectionBusy" (click)="deselectAllPartnerServices()">
+                        <i class="fas fa-check-double"></i>
+                        {{ 'FU.Toutdésélectionner' | translate }}
+                    </button>
+                </div>
+                <p class="partner-selection-progress" *ngIf="partnerSelectionBusy && processingMessage">{{ processingMessage }}</p>
+                
+                <!-- Grille de services en cartes -->
+                <div class="service-grid">
+                    <div class="service-card" *ngFor="let service of filteredPartnerAvailableServices; trackBy: trackByValue">
+                        <div class="service-card-content">
+                            <div class="service-checkbox-modern">
+                                <input type="checkbox" 
+                                       [id]="'partner-service-' + service"
+                                       [value]="service" 
+                                       [checked]="partnerSelectedServices.includes(service)"
+                                       (change)="onPartnerServiceSelectionChange($event, service)">
+                                <label [for]="'partner-service-' + service" class="checkbox-label">
+                                    <span class="checkmark"></span>
+                                </label>
+                            </div>
+                            <div class="service-info">
+                                <h4 class="service-name-modern">{{ service }}</h4>
+                                <p class="service-count-modern">{{ getPartnerServiceCount(service) }} {{ 'FU.Lignes' | translate }}</p>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+            
+            <!-- Boutons de confirmation modernes -->
+            <div class="service-selection-actions">
+                <button class="modern-btn cancel-btn" (click)="cancelPartnerServiceSelection()">
+                    <i class="fas fa-times"></i>{{ 'COMMON.actions.cancel' | translate }}</button>
+                <button class="modern-btn" (click)="skipPartnerServiceSelection()">
+                    <i class="fas fa-forward"></i>
+                    {{ 'FU.Passer' | translate }}
+                </button>
+                <button class="modern-btn confirm-btn" 
+                        [disabled]="partnerSelectedServices.length === 0 || partnerSelectionBusy"
+                        (click)="confirmPartnerServiceSelection()">
+                    <i class="fas fa-check"></i>
+                    {{ 'FU.Confirmerlasélection' | translate }}
+                </button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Sélection des statuts pour les fichiers partenaires (Étape 2) - Design Moderne (Commun aux modes manuel et automatique) -->
+    <div class="service-selection-overlay" *ngIf="showPartnerStatusSelection">
+        <div class="service-selection-modal">
+            <!-- En-tête moderne -->
+            <div class="service-selection-header">
+                <div class="header-badge">
+                    <span class="badge-text">{{ 'FU.Statutsdisponiblespartenaire' | translate }} {{ partnerAvailableStatuses.length }}</span>
+                    <span class="status-info">
+                        <i class="fas fa-info-circle"></i>
+                        {{ 'FU.Étape23sélectionaprèsfiltrageparservicetypecolonne' | translate }} {{ partnerStatusColumn }}
+                    </span>
+                </div>
+            </div>
+            
+            <div class="service-selection-content">
+                <!-- Recherche -->
+                <div class="agency-search-wrap">
+                    <i class="fas fa-search agency-search-icon"></i>
+                    <input type="text" class="agency-search-input" placeholder="{{ 'FU.Rechercherunstatutplusieursséparéspar' | translate }}"
+                           [(ngModel)]="partnerStatusSearchFilter">
+                    <span class="agency-search-count" *ngIf="partnerStatusSearchFilter?.trim()">
+                        {{ filteredPartnerAvailableStatuses.length }} / {{ partnerAvailableStatuses.length }}
+                    </span>
+                </div>
+                <!-- Boutons d'action principaux -->
+                <div class="service-controls">
+                    <button class="modern-btn select-all-btn" [disabled]="partnerSelectionBusy" (click)="selectAllPartnerStatuses()">
+                        <i class="fas fa-check-double"></i>{{ 'ACT.selectAll' | translate }}</button>
+                    <button class="modern-btn deselect-all-btn" [disabled]="partnerSelectionBusy" (click)="deselectAllPartnerStatuses()">
+                        <i class="fas fa-check-double"></i>
+                        {{ 'FU.Toutdésélectionner' | translate }}
+                    </button>
+                </div>
+                <p class="partner-selection-progress" *ngIf="partnerSelectionBusy && processingMessage">{{ processingMessage }}</p>
+                
+                <!-- Grille de statuts en cartes -->
+                <div class="service-grid">
+                    <div class="service-card" *ngFor="let status of filteredPartnerAvailableStatuses; trackBy: trackByValue">
+                        <div class="service-card-content">
+                            <div class="service-checkbox-modern">
+                                <input type="checkbox" 
+                                       [id]="'partner-status-' + status"
+                                       [value]="status" 
+                                       [checked]="partnerSelectedStatuses.includes(status)"
+                                       (change)="onPartnerStatusSelectionChange($event, status)">
+                                <label [for]="'partner-status-' + status" class="checkbox-label">
+                                    <span class="checkmark"></span>
+                                </label>
+                            </div>
+                            <div class="service-info">
+                                <h4 class="service-name-modern">{{ status }}</h4>
+                                <p class="service-count-modern">{{ getPartnerStatusCount(status) }} {{ 'FU.Lignes' | translate }}</p>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+            
+            <!-- Boutons de confirmation modernes -->
+            <div class="service-selection-actions">
+                <button class="modern-btn cancel-btn" (click)="cancelPartnerStatusSelection()">
+                    <i class="fas fa-arrow-left"></i>
+                    {{ 'FU.Retourauxservices' | translate }}
+                </button>
+                <button class="modern-btn" (click)="skipPartnerStatusSelection()">
+                    <i class="fas fa-forward"></i>
+                    {{ 'FU.Passer' | translate }}
+                </button>
+                <button class="modern-btn confirm-btn" 
+                        [disabled]="partnerSelectedStatuses.length === 0 || partnerSelectionBusy"
+                        (click)="confirmPartnerStatusSelection()">
+                    <i class="fas fa-check"></i>
+                    {{ 'FU.Confirmerlasélection' | translate }}
+                </button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Sélection des paiements pour les fichiers partenaires (Étape 3) - Design Moderne (Commun aux modes manuel et automatique) -->
+    <div class="service-selection-overlay" *ngIf="showPartnerPaymentSelection">
+        <div class="service-selection-modal">
+            <!-- En-tête moderne -->
+            <div class="service-selection-header">
+                <div class="header-badge">
+                    <span class="badge-text">{{ 'FU.Paiementsdisponiblespartenaire' | translate }} {{ partnerAvailablePayments.length }}</span>
+                    <span class="status-info">
+                        <i class="fas fa-info-circle"></i>
+                        {{ 'FU.Étape33sélectionaprèsfiltrageparservicetypeetstatutcolonne' | translate }} {{ partnerPaymentColumn }}
+                    </span>
+                </div>
+            </div>
+            
+            <div class="service-selection-content">
+                <!-- Recherche -->
+                <div class="agency-search-wrap">
+                    <i class="fas fa-search agency-search-icon"></i>
+                    <input type="text" class="agency-search-input" placeholder="{{ 'FU.Rechercherunpaiementplusieursséparéspar' | translate }}"
+                           [(ngModel)]="partnerPaymentSearchFilter">
+                    <span class="agency-search-count" *ngIf="partnerPaymentSearchFilter?.trim()">
+                        {{ filteredPartnerAvailablePayments.length }} / {{ partnerAvailablePayments.length }}
+                    </span>
+                </div>
+                <!-- Boutons d'action principaux -->
+                <div class="service-controls">
+                    <button class="modern-btn select-all-btn" (click)="selectAllPartnerPayments()">
+                        <i class="fas fa-check-double"></i>{{ 'ACT.selectAll' | translate }}</button>
+                    <button class="modern-btn deselect-all-btn" (click)="deselectAllPartnerPayments()">
+                        <i class="fas fa-check-double"></i>
+                        {{ 'FU.Toutdésélectionner' | translate }}
+                    </button>
+                </div>
+                
+                <!-- Grille de paiements en cartes -->
+                <div class="service-grid">
+                    <div class="service-card" *ngFor="let payment of filteredPartnerAvailablePayments; trackBy: trackByValue">
+                        <div class="service-card-content">
+                            <div class="service-checkbox-modern">
+                                <input type="checkbox" 
+                                       [id]="'partner-payment-' + payment"
+                                       [value]="payment" 
+                                       [checked]="partnerSelectedPayments.includes(payment)"
+                                       (change)="onPartnerPaymentSelectionChange($event, payment)">
+                                <label [for]="'partner-payment-' + payment" class="checkbox-label">
+                                    <span class="checkmark"></span>
+                                </label>
+                            </div>
+                            <div class="service-info">
+                                <h4 class="service-name-modern">{{ payment }}</h4>
+                                <p class="service-count-modern">{{ getPartnerPaymentCount(payment) }} {{ 'FU.Lignes' | translate }}</p>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+            
+            <!-- Boutons de confirmation modernes -->
+            <div class="service-selection-actions">
+                <button class="modern-btn cancel-btn" (click)="cancelPartnerPaymentSelection()">
+                    <i class="fas fa-arrow-left"></i>
+                    {{ 'FU.Retourauxstatuts' | translate }}
+                </button>
+                <button class="modern-btn" (click)="skipPartnerPaymentSelection()">
+                    <i class="fas fa-forward"></i>
+                    {{ 'FU.Passer' | translate }}
+                </button>
+                <button class="modern-btn confirm-btn" 
+                        [disabled]="partnerSelectedPayments.length === 0"
+                        (click)="confirmPartnerPaymentSelection()">
+                    <i class="fas fa-check"></i>
+                    {{ 'FU.Confirmerlasélection' | translate }}
+                </button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Mode Super Auto - COMMENTÉ
+    <div class="super-auto-reconciliation-area" *ngIf="reconciliationMode === 'super-auto'">
+        <div class="file-upload-area">
+            <div class="file-input-container" (click)="superAutoBoFileInput.click()" [class.has-file]="superAutoBoFile">
+                <div class="file-icon">🏢</div>
+                <h4>BO (Back Office)</h4>
+                <p>Cliquez pour sélectionner le fichier BO (CSV, XLS, XLSX)</p>
+                <input #superAutoBoFileInput type="file" (change)="onSuperAutoBoFileSelected($event)" accept=".csv, .xls, .xlsx, .xlsm, .xlsb" style="display: none">
+                <div class="file-info" [class.loaded]="superAutoBoFile">
+                    {{ superAutoBoFile ? superAutoBoFile.name : 'Aucun fichier sélectionné' }}
+                </div>
+            </div>
+
+            <div class="file-input-container" (click)="superAutoPartnerFileInput.click()" [class.has-file]="superAutoPartnerFile">
+                <div class="file-icon">🤝</div>
+                <h4>{{ 'TBL.partner' | translate }}</h4>
+                <p>Cliquez pour sélectionner le fichier Partenaire (CSV, XLS, XLSX)</p>
+                <input #superAutoPartnerFileInput type="file" (change)="onSuperAutoPartnerFileSelected($event)" accept=".csv, .xls, .xlsx, .xlsm, .xlsb" style="display: none">
+                <div class="file-info" [class.loaded]="superAutoPartnerFile">
+                    {{ superAutoPartnerFile ? superAutoPartnerFile.name : 'Aucun fichier sélectionné' }}
+                </div>
+            </div>
+        </div>
+
+        <div class="status-panel" *ngIf="reconciliationMode === 'super-auto'">
+            <div class="status-item">
+                <span class="status-label">BO chargé:</span>
+                <span class="status-value">{{ superAutoBoFile ? 'Oui' : 'Non' }}</span>
+            </div>
+            <div class="status-item" *ngIf="superAutoBoFile">
+                <span class="status-label">Nombre de lignes BO:</span>
+                <span class="status-value">{{ superAutoBoData.length }} lignes</span>
+            </div>
+            <div class="status-item">
+                <span class="status-label">Partenaire chargé:</span>
+                <span class="status-value">{{ superAutoPartnerFile ? 'Oui' : 'Non' }}</span>
+            </div>
+            <div class="status-item" *ngIf="superAutoPartnerFile">
+                <span class="status-label">Nombre de lignes Partenaire:</span>
+                <span class="status-value">{{ superAutoPartnerData.length }} lignes</span>
+            </div>
+            <div class="status-item" *ngIf="superAutoEstimatedTime">
+                <span class="status-label">Temps estimé (Super Auto):</span>
+                <span class="status-value">{{ superAutoEstimatedTime }}</span>
+            </div>
+        </div>
+
+        <div class="button-container" *ngIf="reconciliationMode === 'super-auto'">
+            <button class="btn proceed-btn super-auto-btn" [disabled]="!canProceedSuperAuto()" (click)="onSuperAutoProceed()" style="background: linear-gradient(135deg, var(--theme-primary, #667eea) 0%, var(--theme-accent, #764ba2) 100%); color: white; padding: 15px 30px; border: none; border-radius: 5px; cursor: pointer; font-size: 16px; margin: 10px; font-weight: bold;">
+                🚀 Lancer la Réconciliation Super Auto
+            </button>
+            <div class="action-buttons">
+                <button class="btn dashboard-btn" (click)="goToDashboard()">
+                    📈 Tableau de bord
+                </button>
+                <button class="btn stats-btn" (click)="goToStats()">
+                    📊 Statistiques
+                </button>
+            </div>
+        </div>
+    </div>
+    -->
+
+    <!-- Status Panel pour le mode manuel -->
+    <div class="status-panel" *ngIf="reconciliationMode === 'manual'">
+        <div class="status-item">
+            <span class="status-label">{{ 'FU.BOchargé' | translate }}</span>
+            <span class="status-value">{{ (boFile ? 'FU.Yes' : 'FU.No') | translate }}</span>
+        </div>
+        <div class="status-item" *ngIf="boFile">
+            <span class="status-label">{{ 'FU.Nombredelignesbo' | translate }}</span>
+            <span class="status-value">{{ boData.length }} {{ 'FU.Lignes' | translate }}</span>
+        </div>
+        <div class="status-item">
+            <span class="status-label">{{ 'FU.Partenairechargé' | translate }}</span>
+            <span class="status-value">{{ (partnerFile ? 'FU.Yes' : 'FU.No') | translate }}</span>
+        </div>
+        <div class="status-item" *ngIf="partnerFile">
+            <span class="status-label">{{ 'FU.Nombredelignespartenaire' | translate }}</span>
+            <span class="status-value">{{ partnerData.length }} {{ 'FU.Lignes' | translate }}</span>
+        </div>
+        <div class="status-item" *ngIf="estimatedTime">
+            <span class="status-label">{{ 'FU.Tempsestimé' | translate }}</span>
+            <span class="status-value">{{ estimatedTime }}</span>
+        </div>
+    </div>
+
+    <!-- Affichage des colonnes pour le mode manuel -->
+    <div class="columns-display" *ngIf="reconciliationMode === 'manual' && (boData.length > 0 || partnerData.length > 0)">
+        <div class="columns-section">
+            <h3>{{ 'FU.Colonnesdétectées' | translate }}</h3>
+            
+            <!-- Colonnes BO -->
+            <div class="file-columns" *ngIf="boData.length > 0">
+                <h4>{{ 'FU.Fichierbo_1' | translate }}{{ boData.length }} {{ 'FU.Lignes_1' | translate }}</h4>
+                <div class="columns-list">
+                    <span class="column-tag" *ngFor="let column of getColumnsFromData(boData); trackBy: trackByValue">{{ column }}</span>
+                </div>
+            </div>
+            
+            <!-- Colonnes Partenaire -->
+            <div class="file-columns" *ngIf="partnerData.length > 0">
+                <h4>{{ 'FU.Fichierpartenaire_1' | translate }}{{ partnerData.length }} {{ 'FU.Lignes_1' | translate }}</h4>
+                <div class="columns-list">
+                    <span class="column-tag" *ngFor="let column of getColumnsFromData(partnerData); trackBy: trackByValue">{{ column }}</span>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Boutons pour le mode manuel -->
+    <div class="button-container" [class.manual-actions]="manualOnly" *ngIf="reconciliationMode === 'manual'">
+        <div class="debug-info" *ngIf="!manualOnly" style="background: #f0f0f0; padding: 10px; margin: 10px 0; border-radius: 5px; font-size: 12px;">
+            <strong>{{ 'FU.Debug' | translate }}</strong> {{ 'FU.BO' | translate }} {{ boData.length }} {{ 'FU.Lignespartenaire' | translate }} {{ partnerData.length }} {{ 'FU.Lignesboutonactif' | translate }} {{ (canProceed() ? 'FU.Yes' : 'FU.No') | translate }}
+        </div>
+        
+        <!-- Message d'information si fichier partenaire manquant -->
+        <div *ngIf="boData.length > 0 && partnerData.length === 0" class="info-message" style="background: #e3f2fd; border: 1px solid #2196f3; padding: 15px; margin: 10px 0; border-radius: 5px; color: #1976d2;">
+            <i class="fas fa-info-circle"></i>
+            <strong>{{ 'FU.Information' | translate }}</strong> {{ 'FU.Lefichierboestchargé' | translate }}{{ boData.length }} {{ 'FU.Lignesveuillezmaintenantuploaderlefichierpartenairepourcontinuer' | translate }}
+        </div>
+        
+        <!-- Message d'information pour gros fichiers -->
+        <div *ngIf="isLargeFileDetected()" class="large-file-info" style="background: #fff3cd; border: 1px solid #ffeaa7; padding: 15px; margin: 10px 0; border-radius: 5px; color: #856404;">
+            <i class="fas fa-exclamation-triangle"></i>
+            <strong>{{ 'FU.Grosfichierdétecté' | translate }}</strong> {{ 'FU.Lesystèmeutiliserauntraitementparlotsoptimisépouréviterleserreursdemémoireletraitementpeutprendreplusdetempsmaisseraplusstable' | translate }}
+        </div>
+        
+        <button class="btn proceed-btn" [class.reconciliation-launch-btn]="manualOnly" [class.legacy-manual-proceed-btn]="!manualOnly" [disabled]="!canProceed()" (click)="onProceed()">
+            {{ (manualOnly ? 'FU.StartReconciliation' : 'FU.StartManualReconciliation') | translate }}
+        </button>
+        <div class="action-buttons" *ngIf="!manualOnly">
+            <button class="btn dashboard-btn" (click)="goToDashboard()">
+                {{ 'FU.Tableaudebord' | translate }}
+            </button>
+            <button class="btn stats-btn" (click)="goToStats()">
+                {{ 'FU.Statistiques' | translate }}
+            </button>
+        </div>
+    </div>
+</div>
+</ng-container>
+
+<div class="traitement-embed-panel" *ngIf="embedTraitementSection">
+    <ng-container *ngTemplateOutlet="traitementPanelTpl"></ng-container>
+</div>
+
+<!-- Modal traitement de fichier (mode assisté) -->
+<div class="traitement-modal-overlay" *ngIf="showTraitementModal && isAssistedLike && !embedTraitementSection" (click)="closeTraitementModal()">
+    <div class="traitement-modal" (click)="$event.stopPropagation()">
+        <div class="traitement-modal-header">
+            <h3><i class="fas fa-file-medical"></i> {{ 'FU.Traitementdefichier' | translate }}</h3>
+            <button type="button" class="close-modal-btn" [disabled]="traitementProcessing" (click)="closeTraitementModal()">
+                <i class="fas fa-times"></i>
+            </button>
+        </div>
+        <ng-container *ngTemplateOutlet="traitementPanelTpl"></ng-container>
+    </div>
+</div>
+
+<ng-template #traitementPanelTpl>
+        <p class="traitement-modal-intro">
+            {{ 'FU.Chargezunouplusieursfichiersnonnormalisésdétectionautomatiquedelalignedentêtesuppressiondeslignesinutilestraitementvialemodèlechoisipuistéléchargement' | translate }}
+            <ng-container *ngIf="traitementFiles.length > 1"> {{ 'FU.Fusiondeplusieursfichiersenunseulrésultat' | translate }}</ng-container>
+            <ng-container *ngIf="embedTraitementSection">
+                {{ 'FU.Recherchezpuiscochezlesmodèlesàappliquerseulslesmodèlescorrespondantàlarecherchesontsélectionnésautomatiquementleoulesfichierschargésseraonttraitésparchaquemodèlecochéunparunavecunfichiertéléchargéparmodèle' | translate }}
+            </ng-container>
+        </p>
+        <p class="traitement-upload-info" *ngIf="embedTraitementSection">
+            <small>{{ 'FU.Lectureultrarapidefusionuniquementsiplusieursfichiersouplusieursfeuillesexcel' | translate }}</small>
+        </p>
+
+        <div class="traitement-section">
+            <label class="traitement-section-title">{{ 'FU.1fichiersàtraiter' | translate }}</label>
+            <div class="traitement-upload-zone" (click)="traitementFileInput.click()">
+                <i class="fas fa-cloud-upload-alt"></i>
+                <span>{{ 'FU.Cliquezpourajouterunouplusieursfichiersilsserontfusionnéscsvxlsxlsx' | translate }}</span>
+                <input
+                    #traitementFileInput
+                    type="file"
+                    multiple
+                    accept=".csv,.xls,.xlsx,.xlsm,.xlsb"
+                    style="display: none"
+                    (change)="onTraitementFilesSelected($event)">
+            </div>
+            <ul class="traitement-file-list" *ngIf="traitementFiles.length > 0">
+                <li *ngFor="let f of traitementFiles; let i = index; trackBy: trackByIndex">
+                    <span><i class="fas fa-file-alt"></i> {{ f.name }} ({{ (f.size / 1024) | number:'1.0-0' }} {{ 'FU.Ko' | translate }}</span>
+                    <button type="button" class="remove-traitement-file-btn" [disabled]="traitementProcessing" (click)="removeTraitementFile(i, $event)">
+                        <i class="fas fa-trash"></i>
+                    </button>
+                </li>
+            </ul>
+        </div>
+
+        <div class="traitement-section">
+            <label class="traitement-section-title">
+                {{ 'FU.2modèle' | translate }}{{ embedTraitementSection ? 's' : '' }} {{ 'FU.Detraitement' | translate }}{{ (embedTraitementSection ? 'FU.MultiSelect' : 'FU.Pattern') | translate }}
+            </label>
+
+            <div class="traitement-embed-model-toggle" *ngIf="embedTraitementSection">
+                <button type="button" class="btn btn-sm btn-outline-secondary" (click)="showEmbedModelsList = !showEmbedModelsList" [disabled]="traitementProcessing">
+                    <i class="fas" [ngClass]="showEmbedModelsList ? 'fa-eye-slash' : 'fa-eye'"></i>
+                    {{ (showEmbedModelsList ? 'Masquer la liste des modèles' : 'Afficher la liste des modèles') }}
+                </button>
+            </div>
+
+            <div class="traitement-models-loading" *ngIf="traitementModelsLoading">
+                <i class="fas fa-spinner fa-spin"></i> {{ 'FU.Chargementdesmodèles' | translate }}
+            </div>
+            <div class="traitement-models-empty" *ngIf="!traitementModelsLoading && traitementModels.length === 0">
+                {{ 'FU.Aucunmodèledetraitementconfigurépourlaréconciliation' | translate }}
+            </div>
+            <ng-container *ngIf="!traitementModelsLoading && traitementModels.length > 0">
+                <ng-container *ngIf="!embedTraitementSection || showEmbedModelsList">
+                    <div class="traitement-search-box">
+                        <i class="fas fa-search"></i>
+                        <input
+                            type="text"
+                            [(ngModel)]="traitementModelSearch"
+                            (ngModelChange)="onTraitementModelSearchChange()"
+                            placeholder="{{ 'FU.Rechercherparnompatternoutypebopartenaire' | translate }}"
+                            [disabled]="traitementProcessing">
+                    </div>
+                    <div class="traitement-models-empty" *ngIf="filteredTraitementModels.length === 0">
+                        {{ 'FU.Aucunmodèlenecorrespondà' | translate }} {{ traitementModelSearch }} ».
+                    </div>
+                    <div class="traitement-models-list" *ngIf="filteredTraitementModels.length > 0">
+                        <label
+                            class="traitement-model-option"
+                            *ngFor="let model of filteredTraitementModels; trackBy: trackById"
+                            [class.selected]="isTraitementModelSelected(model)">
+                            <input
+                                *ngIf="embedTraitementSection"
+                                type="checkbox"
+                                [checked]="isTraitementModelSelected(model)"
+                                [disabled]="traitementProcessing"
+                                (change)="toggleTraitementModelSelection(model, $any($event.target).checked)">
+                            <input
+                                *ngIf="!embedTraitementSection"
+                                type="radio"
+                                name="traitementModel"
+                                [value]="model.id"
+                                [(ngModel)]="selectedTraitementModelId"
+                                (ngModelChange)="onTraitementModelSelectionChange()">
+                            <span class="model-info">
+                                <strong>{{ model.name }}</strong>
+                                <small>{{ 'FU.Pattern' | translate }} {{ model.filePattern }} — {{ (model.fileType === 'bo' ? 'BO' : model.fileType === 'partner' ? ('FU.Partner' | translate) : 'BO / ' + ('FU.Partner' | translate)) }}</small>
+                            </span>
+                        </label>
+                    </div>
+                </ng-container>
+                <div
+                    class="traitement-auto-model-hint"
+                    *ngIf="traitementAutoSelectedModelHint"
+                    [class.traitement-auto-model-hint-warning]="traitementAutoSelectedModelHint.startsWith('Aucun modèle')">
+                    <i class="fas" [ngClass]="traitementAutoSelectedModelHint.startsWith('Aucun modèle') ? 'fa-exclamation-triangle' : 'fa-magic'"></i>
+                    {{ traitementAutoSelectedModelHint }}
+                </div>
+            </ng-container>
+        </div>
+
+        <div class="traitement-section" *ngIf="showTraitementEnvSection">
+            <label class="traitement-section-title">{{ 'FU.3colonne' | translate }} {{ envColumnName }} <span class="traitement-optional-badge">{{ 'LBL.optional' | translate }}</span></label>
+            <label class="traitement-column-filter-toggle">
+                <input
+                    type="checkbox"
+                    [(ngModel)]="traitementEnvColumnEnabled"
+                    [disabled]="traitementProcessing">
+                <span>{{ 'FU.Ajouterlacolonne' | translate }} {{ envColumnName }} {{ 'FU.Aufichierfinal' | translate }}</span>
+            </label>
+            <div class="traitement-env-value-row" *ngIf="traitementEnvColumnEnabled">
+                <label for="traitementEnvColumnValue">{{ 'FU.Valeur' | translate }} {{ envColumnName }}</label>
+                <select
+                    id="traitementEnvColumnValue"
+                    class="traitement-env-select"
+                    [(ngModel)]="traitementEnvColumnValue"
+                    [disabled]="traitementProcessing">
+                    <option value="">{{ 'LBL.chooseDash' | translate }}</option>
+                    <option *ngFor="let option of envColumnOptions; trackBy: trackByValue" [value]="option">{{ option }}</option>
+                </select>
+            </div>
+            <p class="traitement-columns-intro" *ngIf="!traitementEnvColumnEnabled">
+                {{ 'FU.Cochezloptioncidessuspourajouterunecolonne' | translate }} <strong>{{ envColumnName }}</strong> {{ 'FU.BEThttotalgu3gu2hubaotop20surchaqueligneexportée' | translate }}
+            </p>
+        </div>
+
+        <div class="traitement-section" *ngIf="showTraitementColumnSection">
+            <label class="traitement-section-title">{{ 'FU.4colonnesàgarderousupprimer' | translate }} <span class="traitement-optional-badge">{{ 'LBL.optional' | translate }}</span></label>
+            <label class="traitement-column-filter-toggle">
+                <input
+                    type="checkbox"
+                    [checked]="traitementColumnFilterEnabled"
+                    [disabled]="traitementProcessing"
+                    (change)="onTraitementColumnFilterToggle($any($event.target).checked)">
+                <span>{{ 'FU.Filtrerlescolonnesàlexport' | translate }}</span>
+            </label>
+            <p class="traitement-columns-intro" *ngIf="!traitementColumnFilterEnabled">
+                {{ 'FU.Pardéfauttouteslescolonnestraitéessontexportéesactivezloptioncidessuspourchoisircellesàconserver' | translate }}
+            </p>
+            <ng-container *ngIf="traitementColumnFilterEnabled">
+                <p class="traitement-columns-intro">
+                    {{ 'FU.Touteslescolonnesdumodèlesontlistéescidessousdécochezcellesàexcluredelexport' | translate }}
+                </p>
+                <div class="traitement-columns-loading" *ngIf="traitementOutputColumnsLoading">
+                    <i class="fas fa-spinner fa-spin"></i> {{ 'FU.Chargementdescolonnesdumodèle' | translate }}
+                </div>
+                <div class="traitement-columns-empty" *ngIf="!traitementOutputColumnsLoading && traitementOutputColumns.length === 0">
+                    {{ 'FU.Aucunecolonnedétectéepourcemodèletouteslescolonnestraitéesserontexportées' | translate }}
+                </div>
+                <ng-container *ngIf="!traitementOutputColumnsLoading && traitementOutputColumns.length > 0">
+                    <div class="traitement-columns-toolbar">
+                        <span class="traitement-columns-count">
+                            {{ getTraitementColumnsKeptCount() }} / {{ traitementOutputColumns.length }} {{ 'FU.Colonnesconservées' | translate }}
+                        </span>
+                        <div class="traitement-columns-actions">
+                            <button type="button" class="traitement-columns-action-btn" [disabled]="traitementProcessing" (click)="setAllTraitementColumnsKept(true)">
+                                {{ 'FU.Toutgarder' | translate }}
+                            </button>
+                            <button type="button" class="traitement-columns-action-btn" [disabled]="traitementProcessing" (click)="setAllTraitementColumnsKept(false)">
+                                {{ 'FU.Toutsupprimer' | translate }}
+                            </button>
+                            <button type="button" class="traitement-columns-action-btn" [disabled]="traitementProcessing" (click)="resetTraitementColumnKeepDefaults()">{{ 'COMMON.actions.reset' | translate }}</button>
+                        </div>
+                    </div>
+                    <div class="traitement-columns-list">
+                        <label
+                            class="traitement-column-item"
+                            *ngFor="let col of traitementOutputColumns; trackBy: trackByValue"
+                            [class.traitement-column-item-excluded]="!isTraitementColumnKept(col)">
+                            <input
+                                type="checkbox"
+                                [checked]="isTraitementColumnKept(col)"
+                                [disabled]="traitementProcessing"
+                                (change)="toggleTraitementColumnKeep(col, $any($event.target).checked)">
+                            <span class="traitement-column-name">{{ col }}</span>
+                            <span class="traitement-column-badge" [class.badge-keep]="isTraitementColumnKept(col)" [class.badge-drop]="!isTraitementColumnKept(col)">
+                                {{ (isTraitementColumnKept(col) ? 'COMMON.actions.confirm' : 'ACT.delete') | translate }}
+                            </span>
+                        </label>
+                    </div>
+                </ng-container>
+            </ng-container>
+        </div>
+
+        <div class="traitement-section" *ngIf="showTraitementDedupSection">
+            <label class="traitement-section-title">
+                {{ 'FU.Suppressiondedoublons' | translate }} <span class="traitement-optional-badge">{{ 'LBL.optional' | translate }}</span>
+            </label>
+            <label class="traitement-column-filter-toggle">
+                <input
+                    type="checkbox"
+                    [checked]="traitementDedupEnabled"
+                    [disabled]="traitementProcessing"
+                    (change)="onTraitementDedupToggle($any($event.target).checked)">
+                <span>{{ 'FU.Supprimerlesdoublonssurlefichierfinal' | translate }}</span>
+            </label>
+            <p class="traitement-columns-intro" *ngIf="!traitementDedupEnabled">
+                {{ 'FU.Pardéfautlesdoublonssontretirésautomatiquementvialacléderéconciliationdumodèleactivezloptioncidessuspourchoisirvousmêmelaoulescolonnesclés' | translate }}
+            </p>
+            <ng-container *ngIf="traitementDedupEnabled">
+                <p class="traitement-columns-intro">
+                    {{ 'FU.Cochezuneouplusieurscolonnesdeuxlignesidentiquessurcescolonnesneserontgardéesquunefois' | translate }}
+                </p>
+                <div class="traitement-columns-loading" *ngIf="traitementOutputColumnsLoading">
+                    <i class="fas fa-spinner fa-spin"></i> {{ 'FU.Chargementdescolonnesdumodèle' | translate }}
+                </div>
+                <div class="traitement-columns-empty" *ngIf="!traitementOutputColumnsLoading && traitementOutputColumns.length === 0">
+                    {{ 'FU.Aucunecolonnedétectéesélectionnezunmodèleouchargezunfichier' | translate }}
+                </div>
+                <ng-container *ngIf="!traitementOutputColumnsLoading && traitementOutputColumns.length > 0">
+                    <div class="traitement-columns-toolbar">
+                        <span class="traitement-columns-count">
+                            {{ traitementDedupColumns.length }} {{ 'FU.Colonnessélectionnéespourladéduplication' | translate }}
+                        </span>
+                        <div class="traitement-columns-actions">
+                            <button type="button" class="traitement-columns-action-btn" [disabled]="traitementProcessing" (click)="resetTraitementDedupToModelKeys()">
+                                {{ 'FU.Clésdumodèle' | translate }}
+                            </button>
+                            <button type="button" class="traitement-columns-action-btn" [disabled]="traitementProcessing" (click)="traitementDedupColumns = []">
+                                {{ 'FU.Toutdécocher' | translate }}
+                            </button>
+                        </div>
+                    </div>
+                    <div class="traitement-columns-list traitement-dedup-columns-list">
+                        <label
+                            class="traitement-column-item"
+                            *ngFor="let col of traitementOutputColumns; trackBy: trackByValue"
+                            [class.traitement-column-item-excluded]="!isTraitementDedupColumnSelected(col)">
+                            <input
+                                type="checkbox"
+                                [checked]="isTraitementDedupColumnSelected(col)"
+                                [disabled]="traitementProcessing"
+                                (change)="toggleTraitementDedupColumn(col, $any($event.target).checked)">
+                            <span class="traitement-column-name">{{ col }}</span>
+                            <span class="traitement-column-badge" [class.badge-keep]="isTraitementDedupColumnSelected(col)" [class.badge-drop]="!isTraitementDedupColumnSelected(col)">
+                                {{ (isTraitementDedupColumnSelected(col) ? 'FU.DedupKey' : 'FU.Ignored' ) | translate }}
+                            </span>
+                        </label>
+                    </div>
+                </ng-container>
+            </ng-container>
+        </div>
+
+        <div class="traitement-section">
+            <label class="traitement-section-title" for="traitementOutputDate">{{ 'FU.Nomdufichierproduit' | translate }}</label>
+            <div class="traitement-date-row">
+                <input
+                    id="traitementOutputDate"
+                    type="date"
+                    class="traitement-date-input"
+                    [(ngModel)]="traitementOutputDate"
+                    [disabled]="traitementProcessing">
+                <input
+                    id="traitementOutputNameSuffix"
+                    type="text"
+                    class="traitement-name-suffix-input"
+                    [(ngModel)]="traitementOutputNameSuffix"
+                    placeholder="{{ 'FU.Texteoptionnelexbfexport' | translate }}"
+                    [disabled]="traitementProcessing"
+                    maxlength="80">
+                <span class="traitement-date-hint">
+                    {{ 'FU.Lefichierseranommé' | translate }}
+                    <strong>{{ getTraitementOutputPreview() || (traitementOutputNameSuffix?.trim() ? 'pattern_texte_YYYYMMDD.ext' : 'pattern_YYYYMMDD.ext') }}</strong>
+                </span>
+            </div>
+        </div>
+
+        <div class="traitement-progress" *ngIf="traitementProcessing && traitementProgressMessage">
+            <i class="fas fa-spinner fa-spin"></i> {{ traitementProgressMessage }}
+        </div>
+
+        <div class="traitement-modal-actions">
+            <button
+                type="button"
+                class="btn cancel-traitement-btn"
+                [disabled]="traitementProcessing"
+                (click)="embedTraitementSection ? resetTraitementPanel() : closeTraitementModal()">
+                {{ (embedTraitementSection ? 'COMMON.actions.reset' : 'COMMON.actions.cancel') | translate }}
+            </button>
+            <button
+                type="button"
+                class="btn apply-traitement-btn"
+                [disabled]="!canApplyTraitement()"
+                (click)="applyAssistedFileTreatment()">
+                <i class="fas fa-cogs"></i>
+                {{ getTraitementActionLabel() }}
+            </button>
+        </div>
+</ng-template>

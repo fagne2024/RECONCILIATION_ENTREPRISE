@@ -1,0 +1,29 @@
+datasource db {
+    provider = "sqlite"
+    url      = "file:./dev.db"
+}
+
+generator client {
+    provider = "prisma-client-js"
+}
+
+model AgencySummary {
+    id        Int      @id @default(autoincrement())
+    timestamp DateTime
+    details   Json
+    createdAt DateTime @default(now())
+    updatedAt DateTime @updatedAt
+}
+
+model AutoProcessingModel {
+    id                String   @id @default(uuid())
+    name              String
+    filePattern       String
+    fileType          String   // 'bo', 'partner', or 'both'
+    processingSteps   Json     // Array of ProcessingStep objects
+    autoApply         Boolean  @default(true)
+    templateFile      String?
+    reconciliationKeys Json?   // Object with partnerKeys and boKeys arrays
+    createdAt         DateTime @default(now())
+    updatedAt         DateTime @updatedAt
+} 

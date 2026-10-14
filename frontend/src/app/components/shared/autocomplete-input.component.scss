@@ -1,0 +1,52 @@
+.autocomplete-container {
+  position: relative;
+  width: 100%;
+}
+
+.autocomplete-label {
+  display: block;
+  margin-bottom: 8px;
+  font-weight: 500;
+  color: #333;
+  font-size: 14px;
+}
+
+.autocomplete-input {
+  width: 100%;
+  padding: 10px 12px;
+  border: 1px solid #ddd;
+  border-radius: 6px;
+  font-size: 14px;
+  transition: border-color 0.3s ease, box-shadow 0.3s ease;
+  background-color: white;
+  
+  &:focus {
+    outline: none;
+    border-color: #007bff;
+    box-shadow: 0 0 0 3px rgba(0, 123, 255, 0.1);
+  }
+  
+  &:disabled {
+    background-color: #f8f9fa;
+    color: #6c757d;
+    cursor: not-allowed;
+  }
+  
+  &::placeholder {
+    color: #999;
+  }
+}
+
+.no-options-message {
+  margin-top: 8px;
+  color: #666;
+  font-size: 12px;
+  font-style: italic;
+}
+
+// Responsive design
+@media (max-width: 768px) {
+  .autocomplete-select {
+    font-size: 16px; // Évite le zoom sur iOS
+  }
+} 

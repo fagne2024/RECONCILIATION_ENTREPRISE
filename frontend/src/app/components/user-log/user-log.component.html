@@ -1,0 +1,383 @@
+<div class="user-log-page">
+  <!-- VIEW: LOGS -->
+  <div class="view" [class.active]="activeView === 'logs'">
+    <nav class="topnav">
+      <div class="nav-brand" (click)="goto('logs')"><div class="nav-dot"></div>ReconciliApp</div>
+      <div class="nav-sep"></div>
+      <div class="nav-crumb">
+        {{ 'ULG.eyebrow' | translate }}
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M9 18l6-6-6-6"/></svg>
+        <strong>{{ 'ULG.pageTitle' | translate }}</strong>
+      </div>
+      <div class="nav-spacer"></div>
+      <span class="nav-pill">{{ 'ULG.filteredPill' | translate }} {{ formatCount(filteredLogs.length) }}</span>
+      <button type="button" class="nav-btn accent" (click)="goto('dashboard')">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="3" width="7" height="7" rx="1"/><rect x="14" y="3" width="7" height="7" rx="1"/><rect x="3" y="14" width="7" height="7" rx="1"/><rect x="14" y="14" width="7" height="7" rx="1"/></svg>
+        {{ 'ULG.navDashboard' | translate }}
+      </button>
+    </nav>
+
+    <div class="page">
+      <div class="ph-row">
+        <div>
+          <div class="ph-eyebrow"><span></span>{{ 'ULG.eyebrow' | translate }}</div>
+          <div class="ph-title">{{ 'ULG.titleBefore' | translate }}<em>{{ 'ULG.titleAccent' | translate }}</em></div>
+          <div class="ph-sub">{{ 'ULG.subtitle' | translate }}</div>
+        </div>
+        <button type="button" class="dash-btn" (click)="goto('dashboard')">
+          <span class="new-dot"></span>
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="3" width="7" height="7" rx="1"/><rect x="14" y="3" width="7" height="7" rx="1"/><rect x="3" y="14" width="7" height="7" rx="1"/><rect x="14" y="14" width="7" height="7" rx="1"/></svg>
+          {{ 'ULG.viewDashboard' | translate }}
+        </button>
+      </div>
+
+      <div class="logs-card">
+        <div class="card-head">
+          <div class="card-head-title">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M14 2H6a2 2 0 00-2 2v16a2 2 0 002 2h12a2 2 0 002-2V8z"/><polyline points="14 2 14 8 20 8"/><line x1="16" y1="13" x2="8" y2="13"/><line x1="16" y1="17" x2="8" y2="17"/></svg>
+            {{ 'ULG.cardTitle' | translate }}
+          </div>
+          <div class="card-head-actions">
+            <button type="button" class="dash-btn dash-btn--sm" (click)="goto('dashboard')">
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="3" width="7" height="7" rx="1"/><rect x="14" y="3" width="7" height="7" rx="1"/><rect x="3" y="14" width="7" height="7" rx="1"/><rect x="14" y="14" width="7" height="7" rx="1"/></svg>
+              {{ 'ULG.navDashboardShort' | translate }}
+            </button>
+            <button type="button" class="refresh-btn" (click)="loadLogs()" [disabled]="isLoading">
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="23 4 23 10 17 10"/><path d="M20.49 15a9 9 0 11-2.12-9.36L23 10"/></svg>
+              {{ 'ACT.refresh' | translate }}
+            </button>
+          </div>
+        </div>
+
+        <div class="filter-zone">
+          <div class="filter-title">{{ 'LBL.filters' | translate }}</div>
+          <form [formGroup]="filterForm" (ngSubmit)="applyFilters()">
+            <div class="filter-row">
+              <div class="fg">
+                <label>{{ 'TBL.user' | translate }}</label>
+                <input class="fi" type="text" formControlName="username" list="username-list"
+                       [placeholder]="'ULG.filterUserPlaceholder' | translate"
+                       [attr.aria-label]="'ULG.filterUserPlaceholder' | translate">
+                <datalist id="username-list">
+                  <option *ngFor="let username of usernames; trackBy: trackByValue" [value]="username">
+                </datalist>
+              </div>
+              <div class="fg">
+                <label>{{ 'TBL.module' | translate }}</label>
+                <input class="fi" type="text" formControlName="module" list="module-list"
+                       [placeholder]="'ULG.filterModulePlaceholder' | translate"
+                       [attr.aria-label]="'ULG.filterModulePlaceholder' | translate">
+                <datalist id="module-list">
+                  <option *ngFor="let module of modules; trackBy: trackByValue" [value]="module">
+                </datalist>
+              </div>
+              <div class="fg">
+                <label>{{ 'ULG.permission' | translate }}</label>
+                <input class="fi" type="text" formControlName="permission" list="permission-list"
+                       [placeholder]="'ULG.filterPermissionPlaceholder' | translate"
+                       [attr.aria-label]="'ULG.filterPermissionPlaceholder' | translate">
+                <datalist id="permission-list">
+                  <option *ngFor="let permission of permissions; trackBy: trackByValue" [value]="permission">
+                </datalist>
+              </div>
+              <div class="fg">
+                <label>{{ 'LBL.startDate' | translate }}</label>
+                <input type="datetime-local" class="fi" formControlName="dateDebut"
+                       [attr.aria-label]="'LBL.startDate' | translate">
+              </div>
+              <div class="fg">
+                <label>{{ 'LBL.endDate' | translate }}</label>
+                <input type="datetime-local" class="fi" formControlName="dateFin"
+                       [attr.aria-label]="'LBL.endDate' | translate">
+              </div>
+              <div class="filter-btns">
+                <button type="submit" class="apply-btn" [disabled]="isLoading">
+                  <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><polygon points="22 3 2 3 10 12.46 10 19 14 21 14 12.46 22 3"/></svg>
+                  {{ 'ULG.applyFilters' | translate }}
+                </button>
+                <button type="button" class="reset-btn" (click)="resetFilters()" [disabled]="isLoading">{{ 'ULG.reset' | translate }}</button>
+              </div>
+            </div>
+          </form>
+        </div>
+
+        <div class="total-bar">
+          <span class="total-label">{{ 'ULG.total' | translate }} <strong>{{ 'ULG.entries' | translate:{count: formatCount(filteredLogs.length)} }}</strong></span>
+          <button type="button" class="voir-plus" *ngIf="!showAllLogs" (click)="toggleShowAllLogs()" [disabled]="isLoading">{{ 'ACT.showMore' | translate }}</button>
+          <button type="button" class="voir-plus" *ngIf="showAllLogs" (click)="toggleShowAllLogs()" [disabled]="isLoading">{{ 'ULG.currentMonth' | translate }}</button>
+        </div>
+
+        <div class="tbl-wrap">
+          <table id="logs-table" *ngIf="!isLoading">
+            <thead>
+              <tr>
+                <th>{{ 'TBL.user' | translate }}</th>
+                <th>{{ 'TBL.module' | translate }}</th>
+                <th>{{ 'ULG.permission' | translate }}</th>
+                <th>{{ 'ULG.details' | translate }}</th>
+                <th>{{ 'ULG.dateTime' | translate }}</th>
+              </tr>
+            </thead>
+            <tbody>
+              <tr *ngFor="let log of pagedLogs; trackBy: trackByIndex">
+                <td>
+                  <span class="user-tag">
+                    <span class="user-av">{{ getUserInitials(log.username) }}</span>
+                    {{ log.username }}
+                  </span>
+                </td>
+                <td><span class="mod-pill" [ngClass]="modClass(log.module)">{{ moduleLabel(log.module) }}</span></td>
+                <td><span class="perm-code">{{ log.permission }}</span></td>
+                <td>
+                  <span class="detail-txt" [title]="log.details || ''">{{ log.details || '—' }}</span>
+                </td>
+                <td><span class="date-txt">{{ formatDate(log.dateHeure) }}</span></td>
+              </tr>
+              <tr *ngIf="pagedLogs.length === 0">
+                <td colspan="5" class="no-data-cell">{{ 'ULG.noEntries' | translate }}</td>
+              </tr>
+            </tbody>
+          </table>
+          <div class="loading-block" *ngIf="isLoading">{{ 'MSG.loading' | translate }}</div>
+        </div>
+
+        <div class="pagination-bar" *ngIf="totalPages > 1 && !isLoading">
+          <button type="button" class="page-nav" (click)="previousPage()" [disabled]="currentPage === 1">{{ 'PAG.previous' | translate }}</button>
+          <span class="page-meta">{{ 'ULG.pageOf' | translate:{current: currentPage, total: totalPages} }}</span>
+          <button type="button" class="page-nav" (click)="nextPage()" [disabled]="currentPage === totalPages">{{ 'PAG.next' | translate }}</button>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- VIEW: DASHBOARD -->
+  <div class="view" [class.active]="activeView === 'dashboard'">
+    <nav class="topnav">
+      <div class="nav-brand" (click)="goto('logs')"><div class="nav-dot"></div>ReconciliApp</div>
+      <div class="nav-sep"></div>
+      <div class="nav-crumb">
+        <span class="nav-crumb-link" (click)="goto('logs')">{{ 'ULG.pageTitle' | translate }}</span>
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M9 18l6-6-6-6"/></svg>
+        <strong>{{ 'ULG.dashboardTitle' | translate }}</strong>
+      </div>
+      <div class="nav-spacer"></div>
+      <button type="button" class="nav-btn ghost" (click)="goto('logs')">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M15 18l-6-6 6-6"/></svg>
+        {{ 'ULG.backToLogs' | translate }}
+      </button>
+    </nav>
+
+    <div class="page page-dashboard">
+      <div class="ph-row ph-row-dash">
+        <div>
+          <div class="ph-eyebrow"><span></span>{{ 'ULG.dashEyebrow' | translate }}</div>
+          <div class="ph-title ph-title-dash">{{ 'ULG.dashTitleBefore' | translate }}<em class="em-violet">{{ 'ULG.dashTitleAccent' | translate }}</em></div>
+          <div class="ph-sub">{{ 'ULG.dashSubtitle' | translate }} {{ periodLabel }}</div>
+        </div>
+        <div class="dash-period-box">
+          {{ 'ULG.periodAnalyzed' | translate }}<br>
+          <strong>{{ 'ULG.entriesCount' | translate:{count: formatCount(dashboardLogCount)} }}</strong>
+          <span class="dash-hint" *ngIf="dashboardLogCount !== filteredLogs.length">{{ 'ULG.ofLoaded' | translate:{count: formatCount(filteredLogs.length)} }}</span>
+        </div>
+      </div>
+
+      <div class="filter-zone dash-filter-zone">
+        <div class="filter-title">{{ 'ULG.dashFilters' | translate }}</div>
+        <p class="dash-filter-hint">{{ 'ULG.dashFiltersHint' | translate }}</p>
+        <form [formGroup]="dashboardFilterForm" (ngSubmit)="applyDashboardFilters()">
+          <div class="filter-row">
+            <div class="fg">
+              <label>{{ 'TBL.user' | translate }}</label>
+              <input class="fi" type="text" formControlName="searchUser" list="dash-username-list"
+                     [placeholder]="'ULG.contains' | translate"
+                     [attr.aria-label]="'ULG.contains' | translate">
+              <datalist id="dash-username-list">
+                <option *ngFor="let username of usernames; trackBy: trackByValue" [value]="username">
+              </datalist>
+            </div>
+            <div class="fg">
+              <label>{{ 'TBL.module' | translate }}</label>
+              <input class="fi" type="text" formControlName="dashModule" list="dash-module-list"
+                     [placeholder]="'ULG.contains' | translate"
+                     [attr.aria-label]="'ULG.contains' | translate">
+              <datalist id="dash-module-list">
+                <option *ngFor="let module of modules; trackBy: trackByValue" [value]="module">
+              </datalist>
+            </div>
+            <div class="fg">
+              <label>{{ 'ULG.permission' | translate }}</label>
+              <input class="fi" type="text" formControlName="dashPermission" list="dash-permission-list"
+                     [placeholder]="'ULG.contains' | translate"
+                     [attr.aria-label]="'ULG.contains' | translate">
+              <datalist id="dash-permission-list">
+                <option *ngFor="let permission of permissions; trackBy: trackByValue" [value]="permission">
+              </datalist>
+            </div>
+            <div class="fg fg-narrow">
+              <label>{{ 'ULG.minActionsPerUser' | translate }}</label>
+              <input class="fi" type="number" formControlName="minActions" min="0" step="1"
+                     [placeholder]="'ULG.minActionsPlaceholder' | translate"
+                     [attr.aria-label]="'ULG.minActionsPerUser' | translate">
+            </div>
+            <div class="filter-btns">
+              <button type="submit" class="apply-btn">{{ 'ACT.apply' | translate }}</button>
+              <button type="button" class="reset-btn" (click)="resetDashboardFilters()">{{ 'ULG.reset' | translate }}</button>
+            </div>
+          </div>
+        </form>
+      </div>
+
+      <div class="dash-kpi-grid">
+        <div class="dkpi b">
+          <div class="dkpi-l">{{ 'ULG.totalActions' | translate }}</div>
+          <div class="dkpi-v b">{{ formatCount(dashboardLogCount) }}</div>
+          <div class="dkpi-s">{{ 'ULG.afterDashFilters' | translate }}</div>
+        </div>
+        <div class="dkpi g">
+          <div class="dkpi-l">{{ 'ULG.activeUsers' | translate }}</div>
+          <div class="dkpi-v g">{{ dashboardUsers.length }}</div>
+          <div class="dkpi-s">{{ 'ULG.distinctAccounts' | translate }}</div>
+        </div>
+        <div class="dkpi a">
+          <div class="dkpi-l">{{ 'ULG.topModule' | translate }}</div>
+          <div class="dkpi-v a">{{ moduleLabel(topModuleName) }}</div>
+          <div class="dkpi-s">{{ 'ULG.actionsCount' | translate:{count: formatCount(topModuleTotal)} }}</div>
+        </div>
+        <div class="dkpi v">
+          <div class="dkpi-l">{{ 'ULG.lastActivity' | translate }}</div>
+          <div class="dkpi-v v dkpi-v--sm">{{ lastActivityShort }}</div>
+          <div class="dkpi-s">{{ lastActivityUser }}</div>
+        </div>
+      </div>
+
+      <div class="sec-head">
+        <span class="sec-label">{{ 'ULG.usageSection' | translate }}</span>
+        <div class="sec-line"></div>
+      </div>
+      <div class="heatmap-card">
+        <div class="heatmap-head">
+          <div class="heatmap-title">{{ 'ULG.heatmapTitle' | translate }}</div>
+          <div class="heatmap-legend">
+            <span class="leg-swatch leg-low"></span>{{ 'ULG.legendLow' | translate }}
+            <span class="leg-swatch leg-mid"></span>{{ 'ULG.legendMid' | translate }}
+            <span class="leg-swatch leg-high"></span>{{ 'ULG.legendHigh' | translate }}
+          </div>
+        </div>
+        <div class="hm-grid" *ngIf="heatmapModules.length && dashboardUsers.length">
+          <div class="hm-row hm-row-head">
+            <span class="hm-label hm-label-muted">{{ 'TBL.module' | translate }}</span>
+            <div class="hm-cells">
+              <span class="hm-user-h" *ngFor="let u of dashboardUsers; trackBy: trackByName" [title]="u.name">{{ userShortName(u.name) }}</span>
+            </div>
+            <span class="hm-user-label"></span>
+          </div>
+          <div class="hm-row" *ngFor="let mod of heatmapModules; let ri = index; trackBy: trackByValue">
+            <span class="hm-label">{{ moduleLabel(mod) }}</span>
+            <div class="hm-cells">
+              <div
+                class="hm-cell"
+                *ngFor="let u of dashboardUsers; trackBy: trackByName"
+                [style.background]="heatmapCellBackground(mod, u.modules[mod] || 0)"
+                [style.opacity]="heatmapCellOpacity(u.modules[mod] || 0)"
+                [title]="'ULG.cellTitle' | translate:{user: u.name, module: moduleLabel(mod), count: (u.modules[mod] || 0)}"
+              ></div>
+            </div>
+            <span class="hm-user-label hm-idx">{{ ri + 1 }}</span>
+          </div>
+        </div>
+        <p class="hm-empty" *ngIf="!heatmapModules.length || !dashboardUsers.length">{{ 'ULG.noData' | translate }}</p>
+      </div>
+
+      <div class="sec-head">
+        <span class="sec-label">{{ 'ULG.userProfilesSection' | translate }}</span>
+        <div class="sec-line"></div>
+      </div>
+      <div class="users-grid">
+        <div class="user-card" *ngFor="let u of pagedDashboardUsers; let i = index; trackBy: trackByName" [style.animation-delay.s]="0.07 + i * 0.06">
+          <div class="uc-head">
+            <div class="uc-av" [style.background]="u.color">{{ u.initials }}</div>
+            <div class="uc-info">
+              <div class="uc-name">{{ u.name }}</div>
+              <div class="uc-role">{{ u.role }}</div>
+            </div>
+            <div class="uc-status" [class.online]="u.online" [class.offline]="!u.online">
+              <span class="dot"></span>{{ u.online ? ('ULG.online' | translate) : ('ULG.offline' | translate) }}
+            </div>
+          </div>
+          <div class="uc-stats">
+            <div class="uc-stat">
+              <div class="uc-stat-l">{{ 'TBL.actions' | translate }}</div>
+              <div class="uc-stat-v" [style.color]="u.color">{{ formatCompact(u.total) }}</div>
+            </div>
+            <div class="uc-stat">
+              <div class="uc-stat-l">{{ 'ULG.sessions' | translate }}</div>
+              <div class="uc-stat-v">{{ u.sessions }}</div>
+            </div>
+            <div class="uc-stat">
+              <div class="uc-stat-l">{{ 'TBL.modules' | translate }}</div>
+              <div class="uc-stat-v">{{ moduleKeysCount(u.modules) }}</div>
+            </div>
+          </div>
+          <div class="uc-modules">
+            <div class="uc-mod-title">{{ 'ULG.topModules' | translate }}</div>
+            <ng-container *ngIf="topModulesForUser(u, 4) as tops">
+              <div class="mod-bar-row" *ngFor="let row of tops; trackBy: trackByName">
+                <span class="mbr-name" [title]="moduleLabel(row.name)">{{ moduleLabel(row.name) }}</span>
+                <div class="mbr-track">
+                  <div class="mbr-fill" [style.width.%]="barPct(row.count, topModuleMax(tops))" [style.background]="modColors[row.name] || '#4A82C4'"></div>
+                </div>
+                <span class="mbr-count">{{ formatCompact(row.count) }}</span>
+              </div>
+            </ng-container>
+          </div>
+          <div class="uc-footer">
+            <span class="uc-last">{{ 'ULG.lastActivity' | translate }}<br><strong>{{ u.lastSeen }}</strong></span>
+            <button type="button" class="uc-detail-btn" (click)="goto('logs')">{{ 'ULG.viewJournal' | translate }}</button>
+          </div>
+        </div>
+      </div>
+
+      <div class="dash-pagination" *ngIf="dashUsersTotalPages > 1">
+        <button type="button" class="page-nav" (click)="prevDashUsersPage()" [disabled]="dashUsersPage === 1">{{ 'PAG.previous' | translate }}</button>
+        <span class="page-meta">{{ 'ULG.usersPagination' | translate:{current: dashUsersPage, total: dashUsersTotalPages, count: formatCount(dashboardUsers.length)} }}</span>
+        <button type="button" class="page-nav" (click)="nextDashUsersPage()" [disabled]="dashUsersPage === dashUsersTotalPages">{{ 'PAG.next' | translate }}</button>
+      </div>
+
+      <div class="sec-head">
+        <span class="sec-label">{{ 'ULG.recentActivity' | translate }}</span>
+        <div class="sec-line"></div>
+      </div>
+      <div class="activity-card">
+        <div class="activity-head">
+          <div class="activity-title">{{ 'ULG.latestActions' | translate }}</div>
+          <button type="button" class="activity-link" (click)="goto('logs')">{{ 'ULG.viewAllEntries' | translate }}</button>
+        </div>
+        <div class="timeline">
+          <div class="tl-item" *ngFor="let l of pagedTimelineLogs; let last = last; trackBy: trackByIndex">
+            <div class="tl-dot-wrap">
+              <div class="tl-dot" [style.background]="userColor(l.username)"></div>
+              <div class="tl-line" *ngIf="!last"></div>
+            </div>
+            <div class="tl-body">
+              <div>
+                <span class="tl-user">{{ l.username }}</span>
+                <span class="tl-action">
+                  · <span class="mod-pill mod-pill--tl" [ngClass]="modClass(l.module)">{{ moduleLabel(l.module) }}</span>
+                  · <span class="tl-perm">{{ l.permission }}</span>
+                </span>
+              </div>
+              <div class="tl-detail" *ngIf="l.details">{{ l.details }}</div>
+              <div class="tl-time">{{ formatDate(l.dateHeure) }}</div>
+            </div>
+          </div>
+          <p class="tl-empty" *ngIf="!timelineLogsAll.length">{{ 'ULG.noRecentActivity' | translate }}</p>
+        </div>
+        <div class="dash-pagination dash-pagination--inset" *ngIf="dashTimelineTotalPages > 1">
+          <button type="button" class="page-nav" (click)="prevDashTimelinePage()" [disabled]="dashTimelinePage === 1">{{ 'PAG.previous' | translate }}</button>
+          <span class="page-meta">{{ 'ULG.pageEntries' | translate:{current: dashTimelinePage, total: dashTimelineTotalPages, count: formatCount(timelineLogsAll.length)} }}</span>
+          <button type="button" class="page-nav" (click)="nextDashTimelinePage()" [disabled]="dashTimelinePage === dashTimelineTotalPages">{{ 'PAG.next' | translate }}</button>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>

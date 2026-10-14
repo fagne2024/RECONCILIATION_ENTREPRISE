@@ -1,0 +1,553 @@
+<div class="trx-sf-page">
+  <!-- TOP NAV (design redevance-loterie) -->
+  <nav class="topnav">
+    <div class="nav-brand">
+      <div class="nav-brand-dot"></div>
+      ReconciliApp
+    </div>
+    <div class="nav-sep"></div>
+    <div class="nav-path">
+      <strong>{{ 'TSF.title' | translate }}</strong>
+    </div>
+    <div class="nav-spacer"></div>
+    <div class="nav-actions">
+      <button class="nav-btn secondary" (click)="toggleShowAllDataTrxSf()" [class.active]="showAllDataTrxSf" [disabled]="isLoading">
+        <i class="fas" [ngClass]="showAllDataTrxSf ? 'fa-eye-slash' : 'fa-eye'"></i>
+        {{ showAllDataTrxSf ? ('ACT.showLess' | translate) : ('ACT.showMore' | translate) }}
+      </button>
+      <button class="nav-btn secondary" (click)="refreshData()" [disabled]="isLoading">
+        <i class="fas fa-sync-alt"></i> {{ 'ACT.refresh' | translate }}
+      </button>
+      <button class="nav-btn primary" (click)="exportTrxSfData()" [disabled]="filteredTrxSfData.length === 0 || isLoading">
+        <i class="fas fa-file-excel"></i> {{ 'COMMON.actions.export' | translate }}
+      </button>
+    </div>
+  </nav>
+
+  <!-- PAGE HEADER (titre + KPIs) -->
+  <div class="page-header-trx-sf">
+    <div class="ph-trx-left">
+      <div class="ph-eyebrow"><span></span>TRX SF</div>
+      <h1 class="ph-title-trx">{{ 'LBL.managementOf' | translate }}<em>{{ 'TSF.title' | translate }}</em></h1>
+    </div>
+    <div class="ph-trx-right">
+      <div class="hero-kpi-strip">
+        <div class="hk-strip-item">
+          <span class="hk-strip-label">{{ 'TBL.rows' | translate }}</span>
+          <span class="hk-strip-value">{{ filteredTrxSfData.length | number:'1.0-0' }}</span>
+        </div>
+        <div class="hk-strip-sep"></div>
+        <div class="hk-strip-item">
+          <span class="hk-strip-label">{{ 'TBL.totalAmount' | translate }}</span>
+          <span class="hk-strip-value">{{ formatMontantTotal() }}</span>
+        </div>
+        <div class="hk-strip-sep"></div>
+        <div class="hk-strip-item">
+          <span class="hk-strip-label">{{ 'TBL.labelTotalFeesTitle' | translate }}</span>
+          <span class="hk-strip-value">{{ formatFraisTotal() }}</span>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <div class="main">
+  <div class="trx-sf-container">
+  <div class="header">
+    <h2>{{ 'TSF.headerTitle' | translate }}</h2>
+    <div class="header-actions">
+      <button class="btn btn-show-more" (click)="toggleShowAllDataTrxSf()" [class.active]="showAllDataTrxSf" [disabled]="isLoading">
+        <i class="fas" [ngClass]="showAllDataTrxSf ? 'fa-eye-slash' : 'fa-eye'"></i>
+        {{ showAllDataTrxSf ? ('ACT.showLess' | translate) : ('ACT.showMore' | translate) }}
+      </button>
+      <button class="btn btn-primary" (click)="refreshData()" [disabled]="isLoading">
+        <i class="fas fa-sync-alt"></i> {{ 'ACT.refresh' | translate }}
+      </button>
+      <button class="btn btn-success" (click)="exportTrxSfData()" [disabled]="filteredTrxSfData.length === 0 || isLoading">
+        <i class="fas fa-file-excel"></i> {{ 'COMMON.actions.export' | translate }}
+      </button>
+      <button class="btn btn-outline-success" (click)="exportNumeroTransGuOnly()" [disabled]="filteredTrxSfData.length === 0 || isLoading">
+        <i class="fas fa-file-excel"></i> {{ 'ACT.exportTransGu' | translate }}
+      </button>
+      <button class="btn btn-warning" (click)="verifierFrais()" [disabled]="filteredTrxSfData.length === 0 || isLoading || isVerifyingFrais">
+        <i class="fas fa-file-upload"></i> 
+        {{ isVerifyingFrais ? ('ACT.processing' | translate) : ('ACT.importStatuses' | translate) }}
+      </button>
+    </div>
+  </div>
+
+  <!-- Message informatif pour les utilisateurs non-admin -->
+  <div class="info-message" *ngIf="!isAdminUser">
+    <div class="alert alert-info">
+      <i class="fas fa-info-circle"></i>
+      {{ 'TSF.agencyNotice' | translate }} <strong>{{ userAgency }}</strong>
+    </div>
+  </div>
+
+  <!-- Section Statistiques -->
+  <div class="stats-section">
+    <div class="stats-grid">
+      <div class="stat-card stat-total">
+        <div class="stat-value">{{ filteredTrxSfData.length }}</div>
+        <div class="stat-label">{{ 'TBL.labelTotal' | translate }}</div>
+      </div>
+      <div class="stat-card stat-en-attente">
+        <div class="stat-value">{{ getStatutCount('EN_ATTENTE') }}</div>
+        <div class="stat-label">{{ 'TBL.labelPending' | translate }}</div>
+      </div>
+      <div class="stat-card stat-traite">
+        <div class="stat-value">{{ getStatutCount('TRAITE') }}</div>
+        <div class="stat-label">{{ 'TBL.labelProcessed' | translate }}</div>
+      </div>
+      <div class="stat-card stat-erreur">
+        <div class="stat-value">{{ getStatutCount('ERREUR') }}</div>
+        <div class="stat-label">{{ 'TBL.labelError' | translate }}</div>
+      </div>
+      <div class="stat-card stat-montant">
+        <div class="stat-value">{{ formatMontantTotal() }}</div>
+        <div class="stat-label">{{ 'TBL.labelTotalAmount' | translate }}</div>
+      </div>
+      <div class="stat-card stat-frais">
+        <div class="stat-value">{{ formatFraisTotal() }}</div>
+        <div class="stat-label">{{ 'TBL.labelTotalFees' | translate }}</div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Section Upload -->
+  <div class="upload-section">
+    <h3>{{ 'MSG.effective' | translate }}</h3>
+    <div class="file-types-help">
+      <div class="alert alert-info">
+        <h6><i class="fas fa-info-circle"></i> {{ 'TSF.supportedFileTypes' | translate }}</h6>
+        <ul>
+          <li><strong>{{ 'TSF.fileFull' | translate }}</strong> : {{ 'TSF.fileFullHint' | translate }}</li>
+          <li><strong>{{ 'TSF.fileStatutColumns' | translate }}</strong> : {{ 'TSF.fileStatutHint' | translate }}</li>
+        </ul>
+        <div class="template-buttons">
+          <button class="btn btn-outline-primary btn-sm" (click)="downloadTemplate('full')">
+            <i class="fas fa-download"></i> {{ 'ACT.downloadTemplateFull' | translate }}
+          </button>
+          <button class="btn btn-outline-info btn-sm ml-2" (click)="downloadTemplate('statut')">
+            <i class="fas fa-download"></i> {{ 'ACT.downloadTemplateStatut' | translate }}
+          </button>
+        </div>
+      </div>
+    </div>
+    <div class="upload-form">
+              <div class="file-input-group">
+          <input 
+            type="file" 
+            class="file-input" 
+            (change)="onFileSelected($event)"
+            accept=".csv,.xlsx,.xls"
+            #fileInput>
+          
+          <!-- Indicateur de type de fichier -->
+          <div class="file-type-indicator" *ngIf="fileType">
+            <span class="badge" [ngClass]="fileType === 'full' ? 'badge-primary' : 'badge-info'">
+              <i class="fas" [ngClass]="fileType === 'full' ? 'fa-file-csv' : 'fa-exchange-alt'"></i>
+              {{ fileType === 'full' ? ('TSF.fileFull' | translate) : ('TSF.fileStatut' | translate) }}
+            </span>
+            <button 
+              type="button" 
+              class="btn btn-sm btn-outline-secondary ml-2" 
+              (click)="toggleFileType()"
+              title="{{ 'ACT.changeFileType' | translate }}">
+              <i class="fas fa-edit"></i>{{ 'ACT.edit' | translate }}</button>
+          </div>
+          
+          <!-- Sélecteur de type de fichier (quand le type est indéterminé ou pour modification) -->
+          <div class="file-type-selector" *ngIf="selectedFile && (!fileType || showFileTypeSelector)">
+            <label class="form-label">{{ 'TSF.fileType' | translate }}</label>
+            <div class="btn-group" role="group">
+              <input type="radio" class="btn-check" name="fileType" id="typeFull" value="full" 
+                     [(ngModel)]="fileType" (change)="onFileTypeChange('full')">
+              <label class="btn btn-outline-primary" for="typeFull">
+                <i class="fas fa-file-csv"></i> {{ 'TSF.fileFull' | translate }}
+              </label>
+              
+              <input type="radio" class="btn-check" name="fileType" id="typeStatut" value="statut" 
+                     [(ngModel)]="fileType" (change)="onFileTypeChange('statut')">
+              <label class="btn btn-outline-info" for="typeStatut">
+                <i class="fas fa-exchange-alt"></i> {{ 'TSF.fileStatut' | translate }}
+              </label>
+            </div>
+          </div>
+          
+          <!-- Boutons pour fichier complet -->
+          <div class="button-group" *ngIf="fileType === 'full'">
+            <button 
+              type="button" 
+              class="btn btn-primary" 
+              (click)="validateFile()"
+              [disabled]="!selectedFile || isUploading">
+              <i class="fas fa-check"></i> {{ 'ACT.validate' | translate }}
+            </button>
+            <button 
+              type="button" 
+              class="btn btn-success" 
+              (click)="uploadFile()"
+              [disabled]="!selectedFile || !validationResult || isUploading">
+              <i class="fas fa-upload"></i> 
+              {{ isUploading ? ('ACT.uploading' | translate) : ('ACT.upload' | translate) }}
+            </button>
+          </div>
+          
+          <!-- Boutons pour fichier de statut -->
+          <div class="button-group" *ngIf="fileType === 'statut'">
+            <button 
+              type="button" 
+              class="btn btn-info" 
+              (click)="changeStatutFile()"
+              [disabled]="!selectedFile || isChangingStatut">
+              <i class="fas fa-exchange-alt"></i> 
+              {{ isChangingStatut ? ('ACT.processing' | translate) : ('ACT.changeStatus' | translate) }}
+            </button>
+          </div>
+          
+          <!-- Message si type indéterminé -->
+          <div class="alert alert-warning" *ngIf="selectedFile && !fileType">
+            <i class="fas fa-exclamation-triangle"></i>
+            {{ 'TSF.fileTypeUnknown' | translate }}
+          </div>
+        </div>
+      
+      <div class="upload-messages" *ngIf="uploadMessage">
+        <div class="alert" [ngClass]="uploadMessage.type === 'success' ? 'alert-success' : 'alert-danger'">
+          {{ uploadMessage.text }}
+        </div>
+      </div>
+      
+      <div class="validation-info" *ngIf="validationResult">
+        <div class="alert" [ngClass]="validationResult.hasErrors ? 'alert-warning' : 'alert-info'">
+          <h6>{{ 'MSG.validationResult' | translate }}</h6>
+          <ul>
+            <li>{{ 'MSG.validLines' | translate }} {{ validationResult.validLines }}</li>
+            <li>{{ 'MSG.errorLines' | translate }} {{ validationResult.errorLines }}</li>
+            <li>{{ 'MSG.duplicatesDetected' | translate }} {{ validationResult.duplicates }}</li>
+            <li>{{ 'MSG.newRecords' | translate }} {{ validationResult.newRecords }}</li>
+          </ul>
+        </div>
+      </div>
+
+      <div class="preview-info" *ngIf="previewHeaders.length > 0">
+        <div class="alert alert-secondary">
+          <h6>{{ 'TSF.previewTitle' | translate: { count: previewTotal } }}</h6>
+          <div class="table-responsive">
+            <table class="table table-sm table-bordered">
+              <thead>
+                <tr>
+                  <th *ngFor="let h of previewHeaders">{{ h }}</th>
+                </tr>
+              </thead>
+              <tbody>
+                <tr *ngFor="let r of previewRows">
+                  <td *ngFor="let h of previewHeaders">{{ r[h] }}</td>
+                </tr>
+              </tbody>
+            </table>
+          </div>
+          <small class="text-muted">{{ 'TSF.previewHint' | translate }}</small>
+        </div>
+      </div>
+      
+      <div class="upload-info">
+        <small class="text-muted">
+          {{ 'MSG.acceptedFormats' | translate }}
+        </small>
+      </div>
+    </div>
+  </div>
+
+  <!-- Section Gestion des Doublons -->
+  <div class="duplicates-section">
+    <h3>{{ 'TSF.duplicatesTitle' | translate }}</h3>
+    <div class="duplicates-controls">
+      <button class="btn btn-warning" (click)="loadDuplicates()" [disabled]="isLoadingDuplicates">
+        <i class="fas fa-search"></i> 
+        {{ isLoadingDuplicates ? ('ACT.searching' | translate) : ('ACT.findDuplicates' | translate) }}
+      </button>
+      <button class="btn btn-danger" (click)="removeDuplicates()" [disabled]="duplicates.length === 0 || isRemovingDuplicates">
+        <i class="fas fa-trash"></i> 
+        {{ isRemovingDuplicates ? ('ACT.deleting' | translate) : ('ACT.deleteDuplicates' | translate) }}
+      </button>
+    </div>
+    
+    <div class="duplicates-info" *ngIf="duplicates.length > 0">
+      <div class="alert alert-warning">
+        <strong>{{ 'TSF.duplicatesFound' | translate: { count: duplicates.length } }}</strong>
+        <p>{{ 'TSF.duplicatesBasis' | translate }}</p>
+      </div>
+    </div>
+    
+    <div class="duplicates-table" *ngIf="duplicates.length > 0">
+      <table class="data-table">
+        <thead>
+          <tr>
+            <th>{{ 'TBL.transactionId' | translate }}</th>
+            <th>{{ 'TBL.agency' | translate }}</th>
+            <th>{{ 'ACT.exportExcel' | translate }}</th>
+            <th>{{ 'TBL.service' | translate }}</th>
+            <th>{{ 'TBL.amount' | translate }}</th>
+            <th>{{ 'TBL.status' | translate }}</th>
+          </tr>
+        </thead>
+        <tbody>
+          <tr *ngFor="let duplicate of duplicates" class="duplicate-row">
+            <td>{{ duplicate.idTransaction }}</td>
+            <td>{{ duplicate.agence }}</td>
+            <td>{{ formatDate(duplicate.dateTransaction) }}</td>
+            <td>{{ duplicate.service }}</td>
+            <td class="amount">{{ formatMontant(duplicate.montant) }}</td>
+            <td>
+              <span class="status-badge" [ngClass]="getStatutClass(duplicate.statut || '')">
+                {{ getStatutLabel(duplicate.statut) }}
+              </span>
+            </td>
+          </tr>
+        </tbody>
+      </table>
+    </div>
+  </div>
+
+  <!-- Filtres -->
+  <div class="filters-section">
+    <h3>{{ 'LBL.filters' | translate }}</h3>
+    <form [formGroup]="filterForm" class="filter-form">
+      <div class="filter-row">
+        <div class="filter-group">
+          <label>{{ 'TBL.agency' | translate }}</label>
+          <select formControlName="agence" class="form-control">
+            <option value="">{{ 'FILT.allAgencies' | translate }}</option>
+            <option *ngFor="let agence of getUniqueAgences()" [value]="agence">{{ agence }}</option>
+          </select>
+        </div>
+        
+        <div class="filter-group">
+          <label>{{ 'LBL.serviceLabel' | translate }}</label>
+          <select formControlName="service" class="form-control">
+            <option value="">{{ 'FILT.allServices' | translate }}</option>
+            <option *ngFor="let service of getUniqueServices()" [value]="service">{{ service }}</option>
+          </select>
+        </div>
+        
+        <div class="filter-group">
+          <label>{{ 'LBL.countryLabel' | translate }}</label>
+          <select formControlName="pays" class="form-control">
+            <option value="">{{ 'FILT.allCountries' | translate }}</option>
+            <option *ngFor="let pays of getUniquePays()" [value]="pays">{{ pays }}</option>
+          </select>
+        </div>
+        
+        <div class="filter-group">
+          <label>{{ 'FILT.transGu' | translate }}</label>
+          <input type="text" formControlName="numeroTransGu" class="form-control" placeholder="{{ 'FILT.transGuPlaceholder' | translate }}">
+        </div>
+        
+        <div class="filter-group">
+          <label>{{ 'LBL.statusLabel' | translate }}</label>
+          <select formControlName="statut" class="form-control">
+            <option value="">{{ 'FILT.allStatuses' | translate }}</option>
+            <option *ngFor="let statut of statuts" [value]="statut">{{ getStatutLabel(statut) }}</option>
+          </select>
+        </div>
+      </div>
+      
+      <div class="filter-row">
+        <div class="filter-group">
+          <label>{{ 'FILT.dateStart' | translate }}</label>
+          <input type="date" formControlName="dateDebut" class="form-control" (change)="onDateChange('dateDebut')">
+        </div>
+        
+        <div class="filter-group">
+          <label>{{ 'FILT.dateEnd' | translate }}</label>
+          <input type="date" formControlName="dateFin" class="form-control" (change)="onDateChange('dateFin')">
+        </div>
+        
+        <div class="filter-actions">
+          <button type="button" class="btn btn-secondary" (click)="clearFilters()">
+            <i class="fas fa-times"></i> {{ 'ACT.clear' | translate }}
+          </button>
+        </div>
+      </div>
+    </form>
+  </div>
+
+  <!-- Tableau des données -->
+  <div class="table-section">
+    <div class="table-header">
+      <h3>{{ 'TSF.listTitle' | translate: { count: filteredTrxSfData.length } }}</h3>
+      <div class="table-info">
+        {{ 'TSF.listInfo' | translate }}
+      </div>
+      
+      <!-- Contrôles de sélection multiple -->
+      <div class="selection-controls" *ngIf="isSelectionMode">
+        <div class="selection-info">
+          <span class="selected-count">{{ getSelectedCount() }} {{ 'ESD.selectedCount' | translate }}</span>
+        </div>
+        <div class="selection-actions">
+          <select [(ngModel)]="selectedStatut" class="form-control status-select">
+            <option value="EN_ATTENTE">{{ 'TBL.statutEnAttente' | translate }}</option>
+            <option value="TRAITE">{{ 'TBL.statutTraite' | translate }}</option>
+            <option value="ERREUR">{{ 'TBL.statutErreur' | translate }}</option>
+          </select>
+          <button class="btn btn-primary" 
+                  (click)="updateMultipleStatuts()" 
+                  [disabled]="getSelectedCount() === 0 || isUpdatingMultipleStatuts">
+            <i class="fas fa-save"></i>
+            {{ isUpdatingMultipleStatuts ? ('ACT.updating' | translate) : ('ACT.update' | translate) }}
+          </button>
+        </div>
+      </div>
+      
+      <div class="table-actions">
+        <button class="btn btn-secondary" (click)="toggleSelectionMode()" [class.active]="isSelectionMode">
+          <i class="fas fa-check-square"></i>
+          {{ isSelectionMode ? ('ACT.selectionMode' | translate) : ('ACT.multipleSelection' | translate) }}
+        </button>
+      </div>
+    </div>
+
+    <div class="table-container" *ngIf="!isLoading">
+      <table class="data-table">
+        <thead>
+          <tr>
+            <th *ngIf="isSelectionMode" class="checkbox-header">
+              <input type="checkbox" 
+                     [checked]="isSelectAll" 
+                     (change)="toggleSelectAll()"
+                     class="select-all-checkbox">
+            </th>
+            <th>{{ 'TBL.transactionId' | translate }}</th>
+            <th>{{ 'TBL.customerPhone' | translate }}</th>
+            <th>{{ 'TBL.amount' | translate }}</th>
+            <th>{{ 'TBL.service' | translate }}</th>
+            <th>{{ 'TBL.agency' | translate }}</th>
+            <th>{{ 'ACT.exportExcel' | translate }}</th>
+            <th>{{ 'TBL.guTransactionNumber' | translate }}</th>
+            <th>{{ 'TBL.country' | translate }}</th>
+            <th>{{ 'TBL.status' | translate }}</th>
+            <th>{{ 'TBL.fees' | translate }}</th>
+            <th>{{ 'TBL.comment' | translate }}</th>
+            <th>{{ 'TBL.importDate' | translate }}</th>
+            <th>{{ 'TBL.actions' | translate }}</th>
+          </tr>
+        </thead>
+        <tbody>
+          <tr *ngFor="let item of getPaginatedData()" class="data-row" [class.selected]="isItemSelected(item)">
+            <td *ngIf="isSelectionMode" class="checkbox-cell">
+              <input type="checkbox" 
+                     [checked]="isItemSelected(item)" 
+                     (change)="toggleItemSelection(item)"
+                     class="item-checkbox">
+            </td>
+            <td>{{ item.idTransaction }}</td>
+            <td>{{ item.telephoneClient || '-' }}</td>
+            <td class="amount">{{ formatMontant(item.montant) }}</td>
+            <td>{{ item.service || '-' }}</td>
+            <td>{{ item.agence || '-' }}</td>
+            <td>{{ formatDate(item.dateTransaction) }}</td>
+            <td>{{ item.numeroTransGu || '-' }}</td>
+            <td>{{ item.pays || '-' }}</td>
+            <td>
+              <span class="status-badge" [ngClass]="getStatutClass(item.statut || '')">
+                {{ getStatutLabel(item.statut) }}
+              </span>
+            </td>
+            <td class="frais-cell">
+              <div class="frais-info">
+                <span class="frais-amount">{{ formatMontantFrais(item.frais) }}</span>
+              </div>
+            </td>
+            <td class="commentaire-cell">
+              <div *ngIf="item.commentaire" class="commentaire-content">
+                <span class="commentaire-text">{{ item.commentaire }}</span>
+              </div>
+              <div *ngIf="!item.commentaire" class="no-commentaire">
+                <span class="no-commentaire-text">{{ 'MSG.noComment' | translate }}</span>
+              </div>
+            </td>
+            <td>{{ formatDate(item.dateImport || '') }}</td>
+            <td class="actions">
+              <div class="action-buttons">
+                <div class="status-change-container">
+                  <label class="status-label">{{ 'LBL.statusLabel' | translate }}</label>
+                  <select (change)="onStatutChange(item, $event)" 
+                          [value]="item.statut || 'EN_ATTENTE'"
+                          class="status-select"
+                          [ngClass]="getStatutClass(item.statut || '')">
+                    <option value="EN_ATTENTE">{{ 'TBL.statutEnAttente' | translate }}</option>
+                    <option value="TRAITE">{{ 'TBL.statutTraite' | translate }}</option>
+                    <option value="ERREUR">{{ 'TBL.statutErreur' | translate }}</option>
+                  </select>
+                </div>
+                
+                <button class="btn btn-danger btn-sm" 
+                        (click)="deleteTrxSf(item.id!)"
+                        title="{{ 'ACT.delete' | translate }}">
+                  <i class="fas fa-trash"></i>
+                </button>
+              </div>
+            </td>
+          </tr>
+        </tbody>
+      </table>
+    </div>
+
+    <!-- Loading Spinner -->
+    <div class="loading-container" *ngIf="isLoading">
+      <div class="spinner"></div>
+      <p>{{ 'TSF.loading' | translate }}</p>
+    </div>
+
+    <!-- Message si aucune donnée -->
+    <div class="no-data" *ngIf="!isLoading && filteredTrxSfData.length === 0">
+      <i class="fas fa-info-circle"></i>
+      <p>{{ 'TSF.noData' | translate }}</p>
+    </div>
+  </div>
+
+  <!-- Pagination -->
+  <div class="pagination-section" *ngIf="filteredTrxSfData.length > 0 && !isLoading">
+    <div class="pagination-controls">
+      <div class="items-per-page">
+        <label>{{ 'PAG.rowsPerPage' | translate }}</label>
+        <select [(ngModel)]="itemsPerPage" (change)="onItemsPerPageChange()" class="form-control">
+          <option [value]="10">10</option>
+          <option [value]="20">20</option>
+          <option [value]="50">50</option>
+          <option [value]="100">100</option>
+        </select>
+      </div>
+      
+      <button 
+        class="btn pagination-btn" 
+        [disabled]="currentPage === 1"
+        (click)="onPageChange(currentPage - 1)">
+        <i class="fas fa-chevron-left"></i>{{ 'PAG.previous' | translate }}</button>
+      
+      <div class="page-numbers">
+        <button 
+          *ngFor="let page of getVisiblePages()"
+          class="btn page-btn"
+          [class.active]="currentPage === page"
+          (click)="onPageChange(page)">
+          {{ page }}
+        </button>
+      </div>
+      
+      <button 
+        class="btn pagination-btn" 
+        [disabled]="currentPage === totalPages"
+        (click)="onPageChange(currentPage + 1)">{{ 'PAG.next' | translate }}<i class="fas fa-chevron-right"></i>
+      </button>
+    </div>
+    
+    <div class="pagination-info">
+      {{ 'TSF.paginationInfo' | translate: { from: getStartIndex() + 1, to: getEndIndex(), total: filteredTrxSfData.length, page: currentPage, pages: totalPages } }}
+    </div>
+  </div>
+  </div><!-- .trx-sf-container -->
+  </div><!-- .main -->
+</div><!-- .trx-sf-page -->

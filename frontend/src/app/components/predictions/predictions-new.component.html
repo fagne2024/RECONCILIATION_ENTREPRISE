@@ -1,0 +1,962 @@
+<div class="supply-prediction-page">
+
+  <!-- TOP NAV (design redevance-loterie) -->
+  <nav class="topnav">
+    <div class="nav-brand">
+      <div class="nav-brand-dot"></div>
+      {{ 'PRN.ReconciliApp' | translate }}
+    </div>
+    <div class="nav-sep"></div>
+    <div class="nav-path">
+      <strong>{{ 'CPT.Prédictions' | translate }}</strong>
+    </div>
+    <div class="nav-spacer"></div>
+    <div class="nav-actions">
+      <button type="button" class="nav-btn secondary" (click)="goBack()">
+        <i class="fas fa-arrow-left"></i>{{ 'COMMON.actions.back' | translate }}</button>
+      <button 
+        type="button" 
+        class="nav-btn primary" 
+        (click)="loadMetrics()" 
+        [disabled]="!analysisForm.get('typeOperation')?.value">
+        <i class="fas fa-chart-bar"></i> {{ 'PRN.Métriques' | translate }}
+      </button>
+      <button 
+        type="button" 
+        class="nav-btn primary" 
+        (click)="loadRecommendations()" 
+        [disabled]="isLoading || !analysisForm.get('typeOperation')?.value">
+        <i class="fas fa-list-alt"></i> {{ 'PRN.Recommandations' | translate }}
+      </button>
+    </div>
+  </nav>
+
+  <!-- PAGE HEADER (titre + KPIs) -->
+  <div class="page-header-predictions">
+    <div class="ph-pred-left">
+      <div class="ph-eyebrow"><span></span>{{ 'CPT.Prédictions' | translate }}</div>
+      <h1 class="ph-title-pred">{{ 'PRN.Systèmede' | translate }} <em>{{ 'PRN.Prédiction' | translate }}</em> {{ (isCompensationType() ? 'PRD.ofCompensations' : 'PRD.ofSupply') | translate }}</h1>
+      <p class="ph-subtitle">
+        {{ (isCompensationType() ? 'PRD.subtitleCompensation' : 'PRD.subtitleSupply') | translate }}
+      </p>
+    </div>
+    <div class="ph-pred-right" *ngIf="metrics || compensationMetrics">
+      <div class="hero-kpi-strip">
+        <div class="hk-strip-item" *ngIf="metrics">
+          <span class="hk-strip-label">{{ 'PRN.Agences' | translate }}</span>
+          <span class="hk-strip-value">{{ metrics.totalAgencies | number:'1.0-0' }}</span>
+        </div>
+        <div class="hk-strip-item" *ngIf="compensationMetrics">
+          <span class="hk-strip-label">{{ 'PRN.Comptessuivis' | translate }}</span>
+          <span class="hk-strip-value">{{ compensationMetrics.totalAccounts | number:'1.0-0' }}</span>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <div class="main">
+  <div class="supply-prediction-container">
+
+  <!-- Toast notifications -->
+  <div *ngIf="toastMessage" class="toast" [ngClass]="'toast-' + toastType">
+    <span class="toast-icon" *ngIf="toastType === 'success'">✅</span>
+    <span class="toast-icon" *ngIf="toastType === 'error'">❌</span>
+    <span class="toast-icon" *ngIf="toastType === 'info'">ℹ️</span>
+    <span class="toast-message">{{ toastMessage }}</span>
+  </div>
+
+  <!-- Header -->
+  <div class="header">
+    <div class="header-top">
+      <button (click)="goBack()" class="btn-back">
+        <i class="fas fa-arrow-left"></i>{{ 'COMMON.actions.back' | translate }}</button>
+      <h1>{{ 'PRN.Systèmedeprédiction' | translate }} {{ (isCompensationType() ? 'PRD.ofCompensationsCap' : 'PRD.ofSupplyCap') | translate }}</h1>
+    </div>
+    <p class="subtitle">
+      {{ (isCompensationType() ? 'PRD.subtitleCompensationShort' : 'PRD.subtitleSupplyShort') | translate }}
+    </p>
+  </div>
+
+  <!-- Configuration Section (Enhanced) -->
+  <div class="config-section" *ngIf="showConfig">
+    <div class="config-header">
+      <h2>{{ 'PRN.Configuration' | translate }} {{ (isCompensationType() ? 'PRD.ofCompensationsCap' : 'PRD.ofSupplyCap') | translate }}</h2>
+      <button type="button" (click)="showConfig = false" class="btn-close-config" title="{{ 'PRN.Masquerlaconfiguration' | translate }}">
+        <i class="fas fa-times"></i>
+      </button>
+    </div>
+    <form [formGroup]="configForm">
+      <div class="config-grid">
+        <!-- Configuration commune -->
+        <div class="form-group" *ngIf="!isCompensationType()">
+          <label>{{ 'PRN.Délaidapprovisionnementjours' | translate }}</label>
+          <input type="number" formControlName="leadTimeDays" class="form-control" min="1" max="30">
+          <small>{{ 'PRN.Tempsnécessairepourrecevoirunapprovisionnement' | translate }}</small>
+        </div>
+        
+        <div class="form-group" *ngIf="!isCompensationType()">
+          <label>{{ 'PRN.Facteurdesécurité' | translate }}</label>
+          <input type="number" formControlName="safetyFactor" class="form-control" step="0.1" min="1.0" max="3.0">
+          <small>{{ 'PRN.Multiplielestockdesécurité1030' | translate }}</small>
+        </div>
+        
+        <!-- Configuration spécifique aux compensations -->
+        <div class="form-group" *ngIf="isCompensationType()">
+          <label>{{ 'PRN.Seuildecompensationxof' | translate }}</label>
+          <input type="number" formControlName="compensationThresholdAmount" class="form-control" min="0">
+          <small>{{ 'PRN.Soldemaximumlorsquelesoldeatteintoudépasseceseuilunecompensationestdéclenchée' | translate }}</small>
+        </div>
+        
+        <div class="form-group">
+          <label>{{ 'PRN.Seuilurgentjours' | translate }}</label>
+          <input type="number" formControlName="urgentThresholdDays" class="form-control" min="1">
+          <small>{{ (isCompensationType() ? 'PRD.urgentHintCompensation' : 'PRD.urgentHintSupply') | translate }}</small>
+        </div>
+        
+        <div class="form-group">
+          <label>{{ 'PRN.Seuilnormaljours' | translate }}</label>
+          <input type="number" formControlName="normalThresholdDays" class="form-control" min="1">
+          <small>{{ (isCompensationType() ? 'PRD.normalHintCompensation' : 'PRD.normalHintSupply') | translate }}</small>
+        </div>
+        <!-- Nouveaux paramètres pour la précision -->
+        <div class="form-group">
+          <label>{{ 'PRN.Analysesaisonnière' | translate }}</label>
+          <div class="checkbox-wrapper">
+            <input type="checkbox" formControlName="seasonalityEnabled" id="seasonality">
+            <label for="seasonality">{{ 'PRN.Activerladétectiondesaisonnalité' | translate }}</label>
+          </div>
+          <small>{{ 'PRN.Détectelespatternsrécurrentsdansletemps' | translate }}</small>
+        </div>
+        <div class="form-group">
+          <label>{{ 'PRN.Analysedetendance' | translate }}</label>
+          <div class="checkbox-wrapper">
+            <input type="checkbox" formControlName="trendAnalysisEnabled" id="trend">
+            <label for="trend">{{ 'PRN.Activerlanalysedestendances' | translate }}</label>
+          </div>
+          <small>{{ 'PRN.Identifielesévolutionsàlongterme' | translate }}</small>
+        </div>
+        <div class="form-group">
+          <label>{{ 'PRN.Poidsdevolatilité' | translate }}</label>
+          <input type="number" formControlName="volatilityWeight" class="form-control" step="0.1" min="0" max="1">
+          <small>{{ 'PRN.Impactdelavariabilitésurlesprédictions01' | translate }}</small>
+        </div>
+        <div class="form-group">
+          <label>{{ 'PRN.Seuildeconfiance' | translate }}</label>
+          <input type="number" formControlName="predictionConfidenceThreshold" class="form-control" step="0.05" min="0" max="1">
+          <small>{{ 'PRN.Niveaudeconfianceminimumrequis01' | translate }}</small>
+        </div>
+      </div>
+      <div class="action-buttons">
+        <button (click)="saveConfiguration()" class="btn btn-secondary">
+          {{ 'PRN.Sauvegarderconfiguration' | translate }}
+        </button>
+      </div>
+    </form>
+  </div>
+
+  <!-- Bouton pour afficher la configuration -->
+  <div class="config-toggle-section" *ngIf="!showConfig">
+    <button type="button" (click)="showConfig = true" class="btn btn-secondary btn-show-config">
+      <i class="fas fa-cog"></i> {{ 'PRN.Afficherlaconfiguration' | translate }}
+    </button>
+  </div>
+
+  <!-- Formulaire d'analyse -->
+  <div class="analysis-section">
+    <h2>{{ 'PRN.Paramètresdanalyse' | translate }}</h2>
+    <form [formGroup]="analysisForm">
+      <div class="form-grid">
+        <div class="form-group">
+          <label>{{ 'PRN.Typedopération' | translate }}</label>
+          <select formControlName="typeOperation" class="form-control">
+            <option value="">{{ 'PRN.Sélectionner' | translate }}</option>
+            <option *ngFor="let type of availableTypes" [value]="type.value">{{ type.label }}</option>
+          </select>
+        </div>
+        <div class="form-group">
+          <label>{{ 'PRN.Paysoptionnel' | translate }}</label>
+          <input type="text" formControlName="pays" class="form-control" placeholder="{{ 'PRN.Excisncm' | translate }}">
+        </div>
+        <div class="form-group">
+          <label>{{ 'PRN.Périodedanalysejours' | translate }}</label>
+          <input type="number" formControlName="periodeAnalyseJours" class="form-control" min="7" max="730">
+        </div>
+        <div class="form-group">
+          <label>{{ 'PRN.Calendrierjours' | translate }}</label>
+          <input type="number" formControlName="calendarDays" class="form-control" min="7" max="365">
+        </div>
+      </div>
+      <div class="action-buttons">
+        <button (click)="loadMetrics()" class="btn btn-secondary" [disabled]="!analysisForm.get('typeOperation')?.value">
+          {{ 'PRN.Métriquesglobales' | translate }}
+        </button>
+        <button (click)="loadRecommendations()" class="btn btn-primary" [disabled]="isLoading || !analysisForm.get('typeOperation')?.value">
+          {{ 'PRN.Recommandations_1' | translate }}
+        </button>
+        <button (click)="loadCalendar()" class="btn btn-primary" [disabled]="isLoading || !analysisForm.get('typeOperation')?.value">
+          {{ 'PRN.Calendrier' | translate }}
+        </button>
+      </div>
+    </form>
+  </div>
+
+  <!-- Message d'erreur -->
+  <div *ngIf="errorMessage" class="alert alert-error">
+    <strong>{{ 'PRN.Erreur' | translate }}</strong> {{ errorMessage }}
+  </div>
+
+  <!-- Loading -->
+  <div *ngIf="isLoading" class="loading-spinner">
+    <div class="spinner"></div>
+    <p>{{ 'CPT.Chargementencours' | translate }}</p>
+  </div>
+
+  <!-- Onglets de navigation -->
+  <div *ngIf="(metrics || compensationMetrics) || (recommendations.length > 0 || compensationRecommendations.length > 0) || (calendar || compensationCalendar)" class="tabs-navigation">
+    <button 
+      class="tab-button" 
+      [class.active]="selectedTab === 'overview'"
+      (click)="selectedTab = 'overview'"
+      [disabled]="!metrics && !compensationMetrics">
+      {{ 'PRN.Vuedensemble' | translate }}
+    </button>
+    <button 
+      class="tab-button" 
+      [class.active]="selectedTab === 'recommendations'"
+      (click)="selectedTab = 'recommendations'"
+      [disabled]="recommendations.length === 0 && compensationRecommendations.length === 0">
+      {{ 'PRN.Recommandations_1' | translate }}
+      <span *ngIf="recommendations.length > 0 || compensationRecommendations.length > 0" class="badge">
+        {{ isCompensationType() ? compensationRecommendations.length : recommendations.length }}
+      </span>
+    </button>
+    <button 
+      class="tab-button" 
+      [class.active]="selectedTab === 'calendar'"
+      (click)="selectedTab = 'calendar'"
+      [disabled]="!calendar && !compensationCalendar">
+      {{ 'PRN.Calendrier' | translate }}
+    </button>
+    <button 
+      class="tab-button" 
+      [class.active]="selectedTab === 'analytics'"
+      (click)="selectedTab = 'analytics'"
+      [disabled]="!selectedAgencyAnalytics && !selectedCompensationAnalytics">
+      {{ 'PRN.Analytiques' | translate }}
+    </button>
+  </div>
+
+  <!-- ============================================ -->
+  <!-- MÉTRIQUES APPROVISIONNEMENTS -->
+  <!-- ============================================ -->
+  <div *ngIf="metrics && selectedTab === 'overview' && !isCompensationType()" class="metrics-section">
+    <h2>{{ 'PRN.Vuedensembleapprovisionnements' | translate }}</h2>
+    <div class="metrics-grid">
+      <div class="metric-card">
+        <div class="metric-icon">🏢</div>
+        <div class="metric-content">
+          <div class="metric-label">{{ 'PRN.Totalagences' | translate }}</div>
+          <div class="metric-value">{{ metrics.totalAgencies }}</div>
+        </div>
+      </div>
+      <div class="metric-card critical">
+        <div class="metric-icon">🚨</div>
+        <div class="metric-content">
+          <div class="metric-label">{{ 'PRN.Agencescritiques' | translate }}</div>
+          <div class="metric-value">{{ metrics.criticalAgencies }}</div>
+        </div>
+      </div>
+      <div class="metric-card warning">
+        <div class="metric-icon">⚠️</div>
+        <div class="metric-content">
+          <div class="metric-label">{{ 'PRN.Surstock' | translate }}</div>
+          <div class="metric-value">{{ metrics.overstockedAgencies }}</div>
+        </div>
+      </div>
+      <div class="metric-card">
+        <div class="metric-icon">📊</div>
+        <div class="metric-content">
+          <div class="metric-label">{{ 'PRN.Confiancemoyenne' | translate }}</div>
+          <div class="metric-value">{{ formatPercent(metrics.averageConfidenceLevel) }}</div>
+        </div>
+      </div>
+      <div class="metric-card urgent">
+        <div class="metric-icon">🔴</div>
+        <div class="metric-content">
+          <div class="metric-label">{{ 'PRN.Commandesurgentes' | translate }}</div>
+          <div class="metric-value">{{ metrics.urgentOrders }}</div>
+        </div>
+      </div>
+      <div class="metric-card normal">
+        <div class="metric-icon">🟡</div>
+        <div class="metric-content">
+          <div class="metric-label">{{ 'PRN.Commandesnormales' | translate }}</div>
+          <div class="metric-value">{{ metrics.normalOrders }}</div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Alertes critiques -->
+    <div *ngIf="metrics.topCriticalAgencies && metrics.topCriticalAgencies.length > 0" class="critical-alerts-section">
+      <div class="alert-banner critical">
+        <div class="alert-icon">🚨</div>
+        <div class="alert-content">
+          <h3>{{ 'APM.Attention' | translate }} {{ metrics.topCriticalAgencies.length }} {{ 'PRN.Agencesensituationcritique' | translate }}</h3>
+          <div class="alert-list">
+            <div *ngFor="let agency of metrics.topCriticalAgencies.slice(0, 5)" class="alert-item">
+              <button 
+                class="alert-link" 
+                (click)="loadAgencyAnalytics(agency.codeProprietaire)">
+                <strong>{{ agency.codeProprietaire }}</strong>
+                <span class="alert-days">{{ agency.value | number:'1.0-0' }} {{ 'PRN.Joursrestants' | translate }}</span>
+              </button>
+            </div>
+            <p *ngIf="metrics.topCriticalAgencies.length > 5" class="alert-more">
+              {{ 'PRN.Et' | translate }} {{ metrics.topCriticalAgencies.length - 5 }} {{ 'PRN.Autresagences' | translate }}
+            </p>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- ============================================ -->
+  <!-- MÉTRIQUES COMPENSATIONS -->
+  <!-- ============================================ -->
+  <div *ngIf="compensationMetrics && selectedTab === 'overview' && isCompensationType()" class="metrics-section">
+    <h2>{{ 'PRN.Vuedensemblecompensations' | translate }}</h2>
+    <div class="metrics-grid">
+      <div class="metric-card">
+        <div class="metric-icon">🏢</div>
+        <div class="metric-content">
+          <div class="metric-label">{{ 'PRN.Totalagences' | translate }}</div>
+          <div class="metric-value">{{ compensationMetrics.totalAgencies }}</div>
+        </div>
+      </div>
+      <div class="metric-card critical">
+        <div class="metric-icon">💰</div>
+        <div class="metric-content">
+          <div class="metric-label">{{ 'PRN.Nécessitantcompensation' | translate }}</div>
+          <div class="metric-value">{{ compensationMetrics.agenciesNeedingCompensation }}</div>
+        </div>
+      </div>
+      <div class="metric-card urgent">
+        <div class="metric-icon">🚨</div>
+        <div class="metric-content">
+          <div class="metric-label">{{ 'PRN.Compensationsurgentes' | translate }}</div>
+          <div class="metric-value">{{ compensationMetrics.urgentCompensations }}</div>
+        </div>
+      </div>
+      <div class="metric-card">
+        <div class="metric-icon">📅</div>
+        <div class="metric-content">
+          <div class="metric-label">{{ 'PRN.Fréquencemoyennejours' | translate }}</div>
+          <div class="metric-value">{{ compensationMetrics.averageCompensationFrequency | number:'1.0-0' }}</div>
+        </div>
+      </div>
+      <div class="metric-card success">
+        <div class="metric-icon">💵</div>
+        <div class="metric-content">
+          <div class="metric-label">{{ 'PRN.Montanttotalprévu' | translate }}</div>
+          <div class="metric-value">{{ formatCurrency(compensationMetrics.totalCompensationAmount) }}</div>
+        </div>
+      </div>
+      <div class="metric-card">
+        <div class="metric-icon">📈</div>
+        <div class="metric-content">
+          <div class="metric-label">{{ 'PRN.Montantmoyen' | translate }}</div>
+          <div class="metric-value">{{ formatCurrency(compensationMetrics.averageCompensationAmount) }}</div>
+        </div>
+      </div>
+      <div class="metric-card warning">
+        <div class="metric-icon">⬆️</div>
+        <div class="metric-content">
+          <div class="metric-label">{{ 'PRN.Atteignantleseuil' | translate }}</div>
+          <div class="metric-value">{{ compensationMetrics.agenciesAboveThreshold }}</div>
+        </div>
+      </div>
+      <div class="metric-card info">
+        <div class="metric-icon">⬇️</div>
+        <div class="metric-content">
+          <div class="metric-label">{{ 'PRN.Endessousduseuil' | translate }}</div>
+          <div class="metric-value">{{ compensationMetrics.agenciesBelowThreshold }}</div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Info sur le seuil configuré -->
+    <div class="info-banner">
+      <div class="info-icon">ℹ️</div>
+      <div class="info-content">
+        <p><strong>{{ 'PRN.Seuildecompensationpardéfaut' | translate }}</strong> {{ formatCurrency(configForm.get('compensationThresholdAmount')?.value) }}</p>
+        <p>{{ 'PRN.Lorsquuneagenceatteintunsoldeégalousupérieuràceseuilmaximumunecompensationestdéclenchée' | translate }}</p>
+        <p *ngIf="isCompensationType() && agencyThresholds.length > 0" style="margin-top: 6px; color: #f39c12;">
+          {{ 'PRN.Lesseuilspersonnalisésdéfinispour' | translate }} {{ agencyThresholds.length }} {{ 'PRN.Agence' | translate }}{{ agencyThresholds.length > 1 ? 's' : '' }} {{ 'PRN.Primentautomatiquementsurceseuilglobal' | translate }}
+        </p>
+        <p style="margin-top: 10px;">
+          <button type="button" (click)="openThresholdModal()" class="btn btn-secondary btn-sm" *ngIf="isCompensationType()">
+            <i class="fas fa-cog"></i> {{ 'PRN.Gérerlesseuilspersonnalisésparagence' | translate }}
+          </button>
+        </p>
+      </div>
+    </div>
+  </div>
+
+  <!-- ============================================ -->
+  <!-- RECOMMANDATIONS APPROVISIONNEMENTS -->
+  <!-- ============================================ -->
+  <div *ngIf="selectedTab === 'recommendations' && recommendations.length > 0 && !isCompensationType()" class="recommendations-section">
+    <h2>{{ 'PRN.Recommandationsdapprovisionnement' | translate }}</h2>
+    <div class="recommendations-list">
+      <div *ngFor="let rec of getPaginatedRecommendations()" class="recommendation-card" [ngClass]="getAlertClass(rec.alertLevel)">
+        <div class="recommendation-header">
+          <div class="agency-info">
+            <span class="alert-icon">{{ getAlertIcon(rec.alertLevel) }}</span>
+            <div>
+              <div class="agency-code">{{ rec.codeProprietaire }}</div>
+              <div class="agency-name">{{ rec.agence || rec.codeProprietaire }}</div>
+            </div>
+          </div>
+          <span class="alert-badge" [ngClass]="getAlertClass(rec.alertLevel)">{{ rec.alertLevel.toUpperCase() }}</span>
+        </div>
+        <div class="recommendation-body">
+          <div class="recommendation-grid">
+            <div class="recommendation-item">
+              <div class="item-label">{{ 'PRN.Daterecommandée' | translate }}</div>
+              <div class="item-value">{{ rec.predictedDate | date:'dd/MM/yyyy' }}</div>
+            </div>
+            <div class="recommendation-item">
+              <div class="item-label">{{ 'PRN.Solderecommandé' | translate }}</div>
+              <div class="item-value amount">{{ formatCurrency(rec.recommendedBalance || rec.recommendedQuantity) }}</div>
+            </div>
+            <div class="recommendation-item">
+              <div class="item-label">{{ 'PRN.Soldeactuel' | translate }}</div>
+              <div class="item-value">{{ formatCurrency(rec.currentBalance || rec.currentStock) }}</div>
+            </div>
+            <div class="recommendation-item">
+              <div class="item-label">{{ 'PRN.Consommationmoyennejour' | translate }}</div>
+              <div class="item-value">{{ formatCurrency(rec.averageConsumptionDaily || rec.averageConsumption) }}</div>
+            </div>
+            <div class="recommendation-item">
+              <div class="item-label">{{ 'PRN.Joursavantrupture' | translate }}</div>
+              <div class="item-value" [ngClass]="{'urgent': rec.daysUntilStockout <= 2}">{{ rec.daysUntilStockout }}</div>
+            </div>
+            <div class="recommendation-item">
+              <div class="item-label">{{ 'PRN.Stockdesécurité' | translate }}</div>
+              <div class="item-value">{{ formatCurrency(rec.safetyStock) }}</div>
+            </div>
+            <div class="recommendation-item">
+              <div class="item-label">{{ 'PRN.Confiance' | translate }}</div>
+              <div class="item-value">{{ formatPercent(rec.confidenceLevel) }}</div>
+            </div>
+            <div class="recommendation-item" *ngIf="rec.volatilityScore">
+              <div class="item-label">{{ 'PRN.Volatilité' | translate }}</div>
+              <div class="item-value">{{ formatPercent(rec.volatilityScore) }}</div>
+            </div>
+          </div>
+          <button class="btn btn-small" (click)="loadAgencyAnalytics(rec.codeProprietaire)">
+            {{ 'PRN.Voirlesanalytiques' | translate }}
+          </button>
+        </div>
+      </div>
+    </div>
+    
+    <!-- Pagination des recommandations -->
+    <div *ngIf="getRecommendationsTotalPages() > 1" class="pagination">
+      <button 
+        class="btn-pagination" 
+        [disabled]="recommendationsPage === 1"
+        (click)="changeRecommendationsPage(recommendationsPage - 1)">
+        <i class="fas fa-chevron-left"></i>{{ 'PAG.previous' | translate }}</button>
+      <span class="pagination-info">
+        {{ 'PRN.Page' | translate }} {{ recommendationsPage }} / {{ getRecommendationsTotalPages() }}
+        ({{ recommendations.length }} {{ 'PRN.Recommandation' | translate }}{{ recommendations.length > 1 ? 's' : '' }})
+      </span>
+      <button 
+        class="btn-pagination" 
+        [disabled]="recommendationsPage === getRecommendationsTotalPages()"
+        (click)="changeRecommendationsPage(recommendationsPage + 1)">{{ 'PAG.next' | translate }}<i class="fas fa-chevron-right"></i>
+      </button>
+    </div>
+  </div>
+
+  <!-- ============================================ -->
+  <!-- RECOMMANDATIONS COMPENSATIONS -->
+  <!-- ============================================ -->
+  <div *ngIf="selectedTab === 'recommendations' && compensationRecommendations.length > 0 && isCompensationType()" class="recommendations-section">
+    <h2>{{ 'PRN.Recommandationsdecompensation' | translate }}</h2>
+    <div class="recommendations-summary">
+      <div class="summary-item critical">
+        <span class="summary-label">{{ 'PRN.Nécessitantcompensation' | translate }}</span>
+        <span class="summary-value">{{ compensationNeedingCount }}</span>
+      </div>
+      <div class="summary-item urgent">
+        <span class="summary-label">{{ 'PRN.Compensationsurgentes' | translate }}</span>
+        <span class="summary-value">{{ compensationUrgentCount }}</span>
+      </div>
+      <div class="summary-item normal">
+        <span class="summary-label">{{ 'PRN.Compensationsnormales' | translate }}</span>
+        <span class="summary-value">{{ compensationNormalCount }}</span>
+      </div>
+      <div class="summary-item low">
+        <span class="summary-label">{{ 'PRN.Faiblepriorité' | translate }}</span>
+        <span class="summary-value">{{ compensationLowCount }}</span>
+      </div>
+    </div>
+    <div class="recommendations-list">
+      <div *ngFor="let rec of getPaginatedRecommendations()" class="recommendation-card" [ngClass]="getAlertClass(rec.alertLevel)">
+        <div class="recommendation-header">
+          <div class="agency-info">
+            <span class="alert-icon">{{ getAlertIcon(rec.alertLevel) }}</span>
+            <div>
+              <div class="agency-code">{{ rec.codeProprietaire }}</div>
+              <div class="agency-name">{{ rec.agence }}</div>
+            </div>
+          </div>
+          <span class="alert-badge" [ngClass]="getAlertClass(rec.alertLevel)">{{ rec.alertLevel.toUpperCase() }}</span>
+        </div>
+        <div class="recommendation-body">
+          <div class="recommendation-grid">
+            <div class="recommendation-item">
+              <div class="item-label">{{ 'PRN.Dateprévue' | translate }}</div>
+              <div class="item-value">{{ rec.predictedDate | date:'dd/MM/yyyy' }}</div>
+            </div>
+            <div class="recommendation-item">
+              <div class="item-label">{{ 'PRN.Montantrecommandé' | translate }}</div>
+              <div class="item-value amount">{{ formatCurrency(rec.recommendedAmount) }}</div>
+            </div>
+            <div class="recommendation-item">
+              <div class="item-label">{{ 'PRN.Soldeactuel' | translate }}</div>
+              <div class="item-value">{{ formatCurrency(rec.currentBalance) }}</div>
+            </div>
+            <div class="recommendation-item">
+              <div class="item-label">
+                {{ 'PRN.Seuilmaximumxof' | translate }}
+                <span class="custom-threshold-badge" *ngIf="hasCustomThreshold(rec.codeProprietaire)" title="{{ 'PRN.Seuilpersonnalisé' | translate }}">
+                  <i class="fas fa-star"></i>{{ 'LBL.custom' | translate }}</span>
+              </div>
+              <div class="item-value">{{ formatCurrency(rec.thresholdAmount) }}</div>
+            </div>
+            <div class="recommendation-item">
+              <div class="item-label">{{ 'PRN.Montantmoyencompensation' | translate }}</div>
+              <div class="item-value">{{ formatCurrency(rec.averageCompensationAmount) }}</div>
+            </div>
+            <div class="recommendation-item">
+              <div class="item-label">{{ 'PRN.Fréquencejours' | translate }}</div>
+              <div class="item-value">{{ rec.compensationFrequencyDays | number:'1.0-0' }}</div>
+            </div>
+            <div class="recommendation-item">
+              <div class="item-label">{{ 'PRN.Dernièrecompensation' | translate }}</div>
+              <div class="item-value">{{ rec.lastCompensationDate ? (rec.lastCompensationDate | date:'dd/MM/yyyy') : ('PRD.noneF' | translate) }}</div>
+            </div>
+            <div class="recommendation-item">
+              <div class="item-label">{{ 'PRN.Joursdepuisdernière' | translate }}</div>
+              <div class="item-value">{{ rec.daysSinceLastCompensation | number:'1.0-0' }}</div>
+            </div>
+            <div class="recommendation-item">
+              <div class="item-label">{{ 'PRN.Pattern' | translate }}</div>
+              <div class="item-value">{{ getCompensationPatternLabel(rec.compensationPattern) }}</div>
+            </div>
+            <div class="recommendation-item">
+              <div class="item-label">{{ 'PRN.Confiance' | translate }}</div>
+              <div class="item-value">{{ formatPercent(rec.confidenceLevel) }}</div>
+            </div>
+          </div>
+          <button class="btn btn-small" (click)="loadAgencyAnalytics(rec.codeProprietaire)">
+            {{ 'PRN.Voirlesanalytiques' | translate }}
+          </button>
+        </div>
+      </div>
+    </div>
+    
+    <!-- Pagination des recommandations -->
+    <div *ngIf="getRecommendationsTotalPages() > 1" class="pagination">
+      <button 
+        class="btn-pagination" 
+        [disabled]="recommendationsPage === 1"
+        (click)="changeRecommendationsPage(recommendationsPage - 1)">
+        <i class="fas fa-chevron-left"></i>{{ 'PAG.previous' | translate }}</button>
+      <span class="pagination-info">
+        {{ 'PRN.Page' | translate }} {{ recommendationsPage }} / {{ getRecommendationsTotalPages() }}
+        ({{ 'PRD.recommendationCount' | translate: { count: compensationRecommendations.length } }})
+      </span>
+      <button 
+        class="btn-pagination" 
+        [disabled]="recommendationsPage === getRecommendationsTotalPages()"
+        (click)="changeRecommendationsPage(recommendationsPage + 1)">{{ 'PAG.next' | translate }}<i class="fas fa-chevron-right"></i>
+      </button>
+    </div>
+  </div>
+
+  <!-- ============================================ -->
+  <!-- CALENDRIER (Commun mais adapté) -->
+  <!-- ============================================ -->
+  <div *ngIf="selectedTab === 'calendar' && (calendar || compensationCalendar)" class="calendar-section">
+    <h2>{{ 'PRN.Calendrierprédictif' | translate }} {{ (isCompensationType() ? 'PRD.calendarOfCompensation' : 'PRD.calendarOfSupply') | translate }}</h2>
+    
+    <div class="calendar-summary">
+      <div class="summary-item" [ngClass]="{'critical': isCompensationType()}">
+        <span class="summary-label">{{ (isCompensationType() ? 'PRN.Nécessitantcompensation' : 'PRD.totalOrders') | translate }}:</span>
+        <span class="summary-value">{{ isCompensationType() ? compensationNeedingCount : (calendar?.totalOrders || 0) }}</span>
+      </div>
+      <div class="summary-item urgent">
+        <span class="summary-label">{{ (isCompensationType() ? 'PRN.Compensationsurgentes' : 'PRD.urgentOnly') | translate }}:</span>
+        <span class="summary-value">{{ isCompensationType() ? compensationUrgentCount : (calendar?.urgentOrders || 0) }}</span>
+      </div>
+      <div class="summary-item normal">
+        <span class="summary-label">{{ (isCompensationType() ? 'PRN.Compensationsnormales' : 'PRD.normalOnly') | translate }}:</span>
+        <span class="summary-value">{{ isCompensationType() ? compensationNormalCount : (calendar?.normalOrders || 0) }}</span>
+      </div>
+      <div class="summary-item low">
+        <span class="summary-label">{{ 'PRN.Faiblepriorité_1' | translate }}</span>
+        <span class="summary-value">{{ isCompensationType() ? compensationLowCount : (calendar?.lowPriorityOrders || 0) }}</span>
+      </div>
+    </div>
+    
+    <div *ngIf="getCalendarWeeks().length === 0" class="empty-calendar">
+      <p>{{ 'PRD.noneF' | translate }} {{ (isCompensationType() ? 'PRD.plannedCompensation' : 'PRD.plannedSupply') | translate }} {{ 'PRN.Dansles' | translate }} {{ analysisForm.get('calendarDays')?.value || 30 }} {{ 'PRN.Prochainsjours' | translate }}</p>
+    </div>
+    
+    <!-- Calendrier groupé par semaine -->
+    <div *ngIf="getCalendarWeeks().length > 0" class="calendar-weeks">
+      <div *ngFor="let weekEntry of getPaginatedCalendarWeeks()" class="calendar-week">
+        <div class="week-header">
+          <h3>{{ 'LBL.weekOf' | translate }} {{ weekEntry.week }}</h3>
+          <span class="week-count">{{ weekEntry.events.length }} {{ 'PRN.Événements' | translate }}</span>
+        </div>
+        <div class="week-events">
+          <div *ngFor="let event of weekEntry.events" class="calendar-event" [ngClass]="getAlertClass(event.alertLevel)">
+            <div class="event-date">{{ formatDate(event.date) }}</div>
+            <div class="event-agency">{{ event.agence || event.codeProprietaire }}</div>
+            <div class="event-quantity">{{ formatCurrency(getEventRecommendedBalance(event)) }}</div>
+            <span class="event-badge" [ngClass]="getAlertClass(event.alertLevel)">{{ event.alertLevel }}</span>
+          </div>
+        </div>
+      </div>
+    </div>
+    
+    <!-- Pagination du calendrier -->
+    <div *ngIf="getCalendarTotalPages() > 1" class="pagination">
+      <button 
+        class="btn-pagination" 
+        [disabled]="calendarPage === 1"
+        (click)="changeCalendarPage(calendarPage - 1)">
+        <i class="fas fa-chevron-left"></i>{{ 'PAG.previous' | translate }}</button>
+      <span class="pagination-info">
+        {{ 'PRN.Page' | translate }} {{ calendarPage }} / {{ getCalendarTotalPages() }}
+        ({{ 'PRD.weekCount' | translate: { count: getCalendarWeeks().length } }})
+      </span>
+      <button 
+        class="btn-pagination" 
+        [disabled]="calendarPage === getCalendarTotalPages()"
+        (click)="changeCalendarPage(calendarPage + 1)">{{ 'PAG.next' | translate }}<i class="fas fa-chevron-right"></i>
+      </button>
+    </div>
+  </div>
+
+  <!-- ============================================ -->
+  <!-- ANALYTIQUES APPROVISIONNEMENTS -->
+  <!-- ============================================ -->
+  <div *ngIf="selectedTab === 'analytics' && selectedAgencyAnalytics && !isCompensationType()" class="analytics-section">
+    <h2>{{ 'PRN.Analytiquesdétaillées' | translate }} {{ selectedAgencyAnalytics.agence || selectedAgencyAnalytics.codeProprietaire }}</h2>
+    <div class="analytics-grid">
+      <div class="analytics-card">
+        <h3>{{ 'PRN.Consommation' | translate }}</h3>
+        <div class="analytics-item">
+          <span>{{ 'PRN.Journalière' | translate }}</span>
+          <strong>{{ formatCurrency(selectedAgencyAnalytics.averageConsumptionDaily) }}</strong>
+        </div>
+        <div class="analytics-item">
+          <span>{{ 'PRN.Hebdomadaire' | translate }}</span>
+          <strong>{{ formatCurrency(selectedAgencyAnalytics.averageConsumptionWeekly) }}</strong>
+        </div>
+        <div class="analytics-item">
+          <span>{{ 'PRN.Mensuelle' | translate }}</span>
+          <strong>{{ formatCurrency(selectedAgencyAnalytics.averageConsumptionMonthly) }}</strong>
+        </div>
+        <div class="analytics-item">
+          <span>{{ 'PRN.Tendance' | translate }}</span>
+          <strong [ngClass]="{
+            'trend-increasing': selectedAgencyAnalytics.consumptionTrend === 'increasing',
+            'trend-decreasing': selectedAgencyAnalytics.consumptionTrend === 'decreasing',
+            'trend-stable': selectedAgencyAnalytics.consumptionTrend === 'stable'
+          }">
+            {{ (selectedAgencyAnalytics.consumptionTrend === 'increasing' ? 'PRD.trendIncreasing' : 
+               selectedAgencyAnalytics.consumptionTrend === 'decreasing' ? 'PRD.trendDecreasing' : 
+               'PRD.trendStable') | translate }}
+          </strong>
+        </div>
+      </div>
+      <div class="analytics-card">
+        <h3>{{ 'PRN.Stock' | translate }}</h3>
+        <div class="analytics-item">
+          <span>{{ 'PRN.Actuel' | translate }}</span>
+          <strong>{{ formatCurrency(selectedAgencyAnalytics.currentStock) }}</strong>
+        </div>
+        <div class="analytics-item">
+          <span>{{ 'PRN.Joursdestock' | translate }}</span>
+          <strong>{{ selectedAgencyAnalytics.stockDays }}</strong>
+        </div>
+        <div class="analytics-item">
+          <span>{{ 'PRN.Stockmoyen' | translate }}</span>
+          <strong>{{ formatCurrency(selectedAgencyAnalytics.averageStock || 0) }}</strong>
+        </div>
+      </div>
+      <div class="analytics-card">
+        <h3>{{ 'PRN.Performance' | translate }}</h3>
+        <div class="analytics-item">
+          <span>{{ 'PRN.Tauxderotation' | translate }}</span>
+          <strong>{{ selectedAgencyAnalytics.turnoverRate | number:'1.2-2' }}</strong>
+        </div>
+        <div class="analytics-item">
+          <span>{{ 'PRN.Risquederupture' | translate }}</span>
+          <strong [ngClass]="{'risk-high': computeStockoutRiskPercent(selectedAgencyAnalytics) >= 50}">
+            {{ computeStockoutRiskPercent(selectedAgencyAnalytics) }}%
+          </strong>
+        </div>
+        <div class="analytics-item">
+          <span>{{ 'LBL.statusLabel' | translate }}</span>
+          <strong>
+            <span [ngClass]="getStatusClass(getStatusFromRiskPercent(selectedAgencyAnalytics))">
+              {{ getStatusLabel(getStatusFromRiskPercent(selectedAgencyAnalytics)) }}
+            </span>
+          </strong>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- ============================================ -->
+  <!-- ANALYTIQUES COMPENSATIONS -->
+  <!-- ============================================ -->
+  <div *ngIf="selectedTab === 'analytics' && selectedCompensationAnalytics && isCompensationType()" class="analytics-section">
+    <h2>{{ 'PRN.Analytiquescompensation' | translate }} {{ selectedCompensationAnalytics.agence || selectedCompensationAnalytics.codeProprietaire }}</h2>
+    <div class="analytics-grid">
+      <div class="analytics-card" *ngIf="selectedCompensationAnalytics as analytics">
+        <ng-container *ngIf="getEffectiveThreshold(analytics.codeProprietaire) as effectiveThreshold">
+          <h3>{{ 'PRN.Soldeseuil' | translate }}</h3>
+          <div class="analytics-item">
+            <span>{{ 'PRN.Soldeactuel_1' | translate }}</span>
+            <strong>{{ formatCurrency(analytics.currentBalance) }}</strong>
+          </div>
+          <div class="analytics-item">
+            <span>{{ 'PRN.Seuilmaximumxof_1' | translate }}</span>
+            <div>
+              <strong>{{ formatCurrency(effectiveThreshold) }}</strong>
+              <small
+                *ngIf="hasCustomThreshold(analytics.codeProprietaire)"
+                style="display: block; margin-top: 4px; color: #f39c12; font-size: 0.85rem;"
+              >
+                {{ 'PRN.Seuilpersonnaliséappliqué' | translate }}
+              </small>
+            </div>
+          </div>
+          <div class="analytics-item">
+            <span>{{ 'PRN.Différence' | translate }}</span>
+            <strong [ngClass]="{
+              'amount-positive': analytics.currentBalance >= effectiveThreshold,
+              'amount-negative': analytics.currentBalance < effectiveThreshold
+            }">
+              {{ formatCurrency(analytics.currentBalance - effectiveThreshold) }}
+            </strong>
+            <small
+              style="display: block; margin-top: 4px; color: #7f8c8d; font-size: 0.85rem;"
+              *ngIf="analytics.currentBalance >= effectiveThreshold"
+            >
+              {{ 'PRN.Seuilatteintcompensationnécessaire' | translate }}
+            </small>
+          </div>
+        </ng-container>
+      </div>
+      
+      <div class="analytics-card">
+        <h3>{{ 'PRN.Historiquecompensations' | translate }}</h3>
+        <div class="analytics-item">
+          <span>{{ 'PRN.Totalcompensations' | translate }}</span>
+          <strong>{{ selectedCompensationAnalytics.totalCompensations }}</strong>
+        </div>
+        <div class="analytics-item">
+          <span>{{ 'PRN.Montantmoyen_1' | translate }}</span>
+          <strong>{{ formatCurrency(selectedCompensationAnalytics.averageCompensationAmount) }}</strong>
+        </div>
+        <div class="analytics-item">
+          <span>{{ 'PRN.Fréquencejours_1' | translate }}</span>
+          <strong>{{ selectedCompensationAnalytics.compensationFrequencyDays | number:'1.0-0' }}</strong>
+        </div>
+        <div class="analytics-item">
+          <span>{{ 'PRN.Dernièrecompensation_1' | translate }}</span>
+          <strong>{{ selectedCompensationAnalytics.lastCompensationDate ? (selectedCompensationAnalytics.lastCompensationDate | date:'dd/MM/yyyy') : ('PRD.noneF' | translate) }}</strong>
+        </div>
+        <div class="analytics-item">
+          <span>{{ 'PRN.Joursdepuis' | translate }}</span>
+          <strong>{{ selectedCompensationAnalytics.daysSinceLastCompensation | number:'1.0-0' }}</strong>
+        </div>
+      </div>
+      
+      <div class="analytics-card">
+        <h3>{{ 'PRN.Prédictionstendances' | translate }}</h3>
+        <div class="analytics-item">
+          <span>{{ 'PRN.Prochainecompensation' | translate }}</span>
+          <strong>{{ selectedCompensationAnalytics.predictedNextCompensation | date:'dd/MM/yyyy' }}</strong>
+        </div>
+        <div class="analytics-item">
+          <span>{{ 'PRN.Tendance' | translate }}</span>
+          <strong [ngClass]="{
+            'trend-increasing': selectedCompensationAnalytics.compensationTrend === 'increasing',
+            'trend-decreasing': selectedCompensationAnalytics.compensationTrend === 'decreasing',
+            'trend-stable': selectedCompensationAnalytics.compensationTrend === 'stable'
+          }">
+            {{ (selectedCompensationAnalytics.compensationTrend === 'increasing' ? 'PRD.trendIncreasing' : 
+               selectedCompensationAnalytics.compensationTrend === 'decreasing' ? 'PRD.trendDecreasing' : 
+               'PRD.trendStable') | translate }}
+          </strong>
+        </div>
+        <div class="analytics-item">
+          <span>{{ 'PRN.Volatilité_1' | translate }}</span>
+          <strong>{{ formatPercent(selectedCompensationAnalytics.volatility) }}</strong>
+        </div>
+        <div class="analytics-item">
+          <span>{{ 'PRN.Facteursaisonnier' | translate }}</span>
+          <strong>{{ selectedCompensationAnalytics.seasonalityFactor | number:'1.2-2' }}</strong>
+        </div>
+        <div class="analytics-item">
+          <span>{{ 'PRN.Niveauderisque' | translate }}</span>
+          <strong [ngClass]="getRiskLevelClass(selectedCompensationAnalytics.riskLevel)">
+            {{ getRiskLevelLabel(selectedCompensationAnalytics.riskLevel) }}
+          </strong>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- ============================================ -->
+  <!-- MODAL POUR LA GESTION DES SEUILS PERSONNALISÉS -->
+  <!-- ============================================ -->
+  <div class="modal-overlay" *ngIf="showThresholdsModal" (click)="closeThresholdModal()">
+    <div class="modal-content" (click)="$event.stopPropagation()" *ngIf="isCompensationType()">
+      <div class="modal-header">
+        <h2>
+          <i class="fas fa-sliders-h"></i> 
+          {{ (editingThreshold ? 'PRD.editThresholdTitle' : 'PRD.createThresholdTitle') | translate }}
+        </h2>
+        <button type="button" (click)="closeThresholdModal()" class="btn-close-modal">
+          <i class="fas fa-times"></i>
+        </button>
+      </div>
+      
+      <div class="modal-body">
+        <!-- Formulaire de création/modification -->
+        <form [formGroup]="thresholdForm" (ngSubmit)="saveThreshold()">
+          <div class="form-group">
+            <label>{{ 'PRN.Codepropriétaire' | translate }}</label>
+            <input 
+              type="text" 
+              formControlName="codeProprietaire" 
+              class="form-control"
+              [readonly]="!!editingThreshold"
+              placeholder="{{ 'PRN.Exagencedakar' | translate }}">
+            <small>{{ 'PRN.Codeuniquedelagence' | translate }}</small>
+          </div>
+          
+          <div class="form-group">
+            <label>{{ 'PRN.Seuilmaximumxof_2' | translate }}</label>
+            <input 
+              type="number" 
+              formControlName="thresholdAmount" 
+              class="form-control"
+              min="1"
+              placeholder="{{ 'PRN.Montantenxof' | translate }}">
+            <small>{{ 'PRN.Soldemaximumdéclenchantunecompensationpourcetteagence' | translate }}</small>
+          </div>
+          
+          <div class="form-group">
+            <label>{{ 'PRN.Seuilglobal' | translate }}</label>
+            <input 
+              type="text" 
+              [value]="formatCurrency(configForm.get('compensationThresholdAmount')?.value)" 
+              class="form-control"
+              readonly>
+            <small>{{ 'PRN.Seuilutilisépardéfautpourtouteslesagences' | translate }}</small>
+          </div>
+          
+          <div class="modal-actions">
+            <button type="button" (click)="closeThresholdModal()" class="btn btn-secondary">{{ 'COMMON.actions.cancel' | translate }}</button>
+            <button type="submit" class="btn btn-primary" [disabled]="thresholdForm.invalid || isLoading">
+              <i class="fas fa-save"></i> {{ (editingThreshold ? 'ACT.edit' : 'PRD.createAction') | translate }}
+            </button>
+          </div>
+        </form>
+        
+        <!-- Liste des seuils personnalisés existants -->
+        <div class="thresholds-list" *ngIf="agencyThresholds.length > 0">
+          <h3>{{ 'PRN.Seuilspersonnalisésconfigurés' | translate }}{{ agencyThresholds.length }})</h3>
+          <div class="thresholds-table">
+            <table>
+              <thead>
+                <tr>
+                  <th>{{ 'TBL.agency' | translate }}</th>
+                  <th>{{ 'TBL.ownerCode' | translate }}</th>
+                  <th>{{ 'PRN.Seuilxof' | translate }}</th>
+                  <th>{{ 'TBL.actions' | translate }}</th>
+                </tr>
+              </thead>
+              <tbody>
+                <tr *ngFor="let threshold of agencyThresholds">
+                  <td>{{ threshold.agence || threshold.codeProprietaire }}</td>
+                  <td>{{ threshold.codeProprietaire }}</td>
+                  <td><strong>{{ formatCurrency(threshold.thresholdAmount) }}</strong></td>
+                  <td>
+                    <button 
+                      type="button" 
+                      (click)="openThresholdModal(threshold)" 
+                      class="btn-icon" 
+                      title="{{ 'ACT.edit' | translate }}">
+                      <i class="fas fa-edit"></i>
+                    </button>
+                    <button 
+                      type="button" 
+                      (click)="deleteThreshold(threshold)" 
+                      class="btn-icon btn-danger" 
+                      title="{{ 'ACT.delete' | translate }}">
+                      <i class="fas fa-trash"></i>
+                    </button>
+                  </td>
+                </tr>
+              </tbody>
+            </table>
+          </div>
+        </div>
+        
+        <div class="empty-state" *ngIf="agencyThresholds.length === 0">
+          <p>{{ 'PRN.Aucunseuilpersonnaliséconfiguréutilisezleformulairecidessuspourencréerun' | translate }}</p>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- ============================================ -->
+  <!-- MODAL DE CONFIRMATION GÉNÉRIQUE -->
+  <!-- ============================================ -->
+  <div class="modal-overlay" *ngIf="showConfirmModal" (click)="onConfirmModal(false)">
+    <div class="modal-content" (click)="$event.stopPropagation()">
+      <div class="modal-header">
+        <h2>
+          <i class="fas fa-exclamation-triangle"></i>
+          {{ confirmTitle }}
+        </h2>
+        <button type="button" (click)="onConfirmModal(false)" class="btn-close-modal">
+          <i class="fas fa-times"></i>
+        </button>
+      </div>
+      <div class="modal-body">
+        <p>{{ confirmMessage }}</p>
+        <div class="modal-actions">
+          <button type="button" (click)="onConfirmModal(false)" class="btn btn-secondary">{{ 'COMMON.actions.cancel' | translate }}</button>
+          <button type="button" (click)="onConfirmModal(true)" class="btn btn-primary">{{ 'COMMON.actions.confirm' | translate }}</button>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+  </div><!-- .main -->
+</div><!-- .supply-prediction-page -->

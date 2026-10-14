@@ -1,0 +1,219 @@
+<div class="reconciliation-launcher-page">
+
+  <!-- Barre supérieure -->
+  <nav class="topnav">
+    <div class="nav-brand">
+      <span class="nav-brand-dot"></span>
+      <span>ReconciliApp</span>
+    </div>
+    <span class="nav-sep"></span>
+    <div class="nav-path">{{ 'LNC.pageTitleSection' | translate }}</div>
+  </nav>
+
+  <main class="wrap">
+    <h1>{{ 'LNC.sectionTitle' | translate }}</h1>
+    <p class="lead">{{ 'LNC.launcherLead' | translate }}</p>
+
+    <fieldset class="modes">
+      <legend class="sr-only">{{ 'LNC.selectModeTitle' | translate }}</legend>
+
+      <!-- Manuel -->
+      <label class="mode mode--manual">
+        <input type="radio" name="mode" value="manual"
+               [checked]="selectedMode === 'manual'"
+               (change)="selectMode('manual')">
+        <div class="card">
+          <div class="head">
+            <div class="ico">
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M4 6h10M18 6h2M4 12h4M12 12h8M4 18h12M20 18h0"/><circle cx="16" cy="6" r="2"/><circle cx="10" cy="12" r="2"/><circle cx="18" cy="18" r="2"/></svg>
+            </div>
+            <h2>{{ 'LNC.modeManualShort' | translate }}</h2>
+            <span class="tick">
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3.2" stroke-linecap="round" stroke-linejoin="round"><path d="M5 12.5l4.5 4.5L19 7.5"/></svg>
+            </span>
+          </div>
+          <p class="desc">{{ 'LNC.manualModeDescription' | translate }}</p>
+          <div class="gauge">
+            <div class="bars"><b class="on"></b><b></b><b></b></div>
+            <small>
+              {{ 'LNC.automationLabel' | translate }} : <strong>{{ 'LNC.automationLow' | translate }}</strong>, {{ 'LNC.automationLowHint' | translate }}
+            </small>
+          </div>
+          <ul class="feat">
+            <li><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><path d="M5 12.5l4.5 4.5L19 7.5"/></svg>{{ 'LNC.manualModeBullet1' | translate }}</li>
+            <li><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><path d="M5 12.5l4.5 4.5L19 7.5"/></svg>{{ 'LNC.manualModeBullet2' | translate }}</li>
+            <li><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><path d="M5 12.5l4.5 4.5L19 7.5"/></svg>{{ 'LNC.manualModeBullet3' | translate }}</li>
+          </ul>
+          <div class="when"><strong>{{ 'LNC.audienceLabel' | translate }}</strong> {{ 'LNC.audienceManual' | translate }}</div>
+        </div>
+      </label>
+
+      <!-- Assisté -->
+      <label class="mode mode--assist">
+        <input type="radio" name="mode" value="assisted"
+               [checked]="selectedMode === 'assisted'"
+               (change)="selectMode('assisted')">
+        <div class="card">
+          <div class="head">
+            <div class="ico">
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M12 3v4M12 17v4M3 12h4M17 12h4"/><path d="M12 8l1.6 2.4L16 12l-2.4 1.6L12 16l-1.6-2.4L8 12l2.4-1.6z"/></svg>
+            </div>
+            <h2>{{ 'LNC.modeAssistedShort' | translate }}</h2>
+            <span class="tick">
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3.2" stroke-linecap="round" stroke-linejoin="round"><path d="M5 12.5l4.5 4.5L19 7.5"/></svg>
+            </span>
+          </div>
+          <p class="desc">{{ 'LNC.assistedModeDescription' | translate }}</p>
+          <div class="gauge">
+            <div class="bars"><b class="on"></b><b class="on"></b><b></b></div>
+            <small>
+              {{ 'LNC.automationLabel' | translate }} : <strong>{{ 'LNC.automationMedium' | translate }}</strong>, {{ 'LNC.automationMediumHint' | translate }}
+            </small>
+          </div>
+          <ul class="feat">
+            <li><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><path d="M5 12.5l4.5 4.5L19 7.5"/></svg>{{ 'LNC.assistedModeBullet1' | translate }}</li>
+            <li><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><path d="M5 12.5l4.5 4.5L19 7.5"/></svg>{{ 'LNC.assistedModeBullet2' | translate }}</li>
+            <li><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><path d="M5 12.5l4.5 4.5L19 7.5"/></svg>{{ 'LNC.assistedModeBullet3' | translate }}</li>
+          </ul>
+          <div class="when"><strong>{{ 'LNC.audienceLabel' | translate }}</strong> {{ 'LNC.audienceAssisted' | translate }}</div>
+        </div>
+      </label>
+
+      <!-- Magique -->
+      <label class="mode mode--magic">
+        <input type="radio" name="mode" value="magic"
+               [checked]="selectedMode === 'magic'"
+               (change)="selectMode('magic')">
+        <div class="card">
+          <div class="head">
+            <div class="ico">
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M4 20L15 9"/><path d="M14 4l.8 2.2L17 7l-2.2.8L14 10l-.8-2.2L11 7l2.2-.8z"/><path d="M19 12l.5 1.5L21 14l-1.5.5L19 16l-.5-1.5L17 14l1.5-.5z"/></svg>
+            </div>
+            <h2>{{ 'LNC.modeMagicShort' | translate }}</h2>
+            <span class="tick">
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3.2" stroke-linecap="round" stroke-linejoin="round"><path d="M5 12.5l4.5 4.5L19 7.5"/></svg>
+            </span>
+          </div>
+          <p class="desc">{{ 'LNC.magicModeDescription' | translate }}</p>
+          <div class="gauge">
+            <div class="bars"><b class="on"></b><b class="on"></b><b class="on"></b></div>
+            <small>
+              {{ 'LNC.automationLabel' | translate }} : <strong>{{ 'LNC.automationHigh' | translate }}</strong>, {{ 'LNC.automationHighHint' | translate }}
+            </small>
+          </div>
+          <ul class="feat">
+            <li><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><path d="M5 12.5l4.5 4.5L19 7.5"/></svg>{{ 'LNC.magicModeBullet1' | translate }}</li>
+            <li><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><path d="M5 12.5l4.5 4.5L19 7.5"/></svg>{{ 'LNC.magicModeBullet2' | translate }}</li>
+            <li><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><path d="M5 12.5l4.5 4.5L19 7.5"/></svg>{{ 'LNC.magicModeBullet3' | translate }}</li>
+          </ul>
+          <div class="when"><strong>{{ 'LNC.audienceLabel' | translate }}</strong> {{ 'LNC.audienceMagic' | translate }}</div>
+        </div>
+      </label>
+    </fieldset>
+  </main>
+
+  <footer class="bar">
+    <div class="in">
+      <div class="sel">
+        {{ 'LNC.selectedModeLabel' | translate }}
+        <strong>{{ selectedMode ? getModeDisplayName(selectedMode) : ('LNC.chooseModeToProceed' | translate) }}</strong>
+      </div>
+      <button class="btn ghost" type="button" [disabled]="!hasDataToReset" (click)="resetData()">
+        {{ 'LNC.resetData' | translate }}
+      </button>
+      <button class="btn primary" type="button" [disabled]="!selectedMode" (click)="proceedWithSelectedMode()">
+        <span>{{ selectedMode ? ('LNC.proceedWithMode' | translate: { mode: getModeDisplayName(selectedMode) }) : ('LNC.chooseModeToProceed' | translate) }}</span>
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><path d="M5 12h14M13 6l6 6-6 6"/></svg>
+      </button>
+    </div>
+  </footer>
+
+  <!-- Popup Reconciliation magique -->
+  <div class="magic-overlay" [class.open]="showMagicModal" (mousedown)="onMagicOverlayMouseDown($event)">
+    <div class="magic-modal" role="dialog" aria-modal="true" aria-labelledby="magicModalTitle">
+      <div class="m-head">
+        <div class="m-ico">🪄</div>
+        <div class="m-head-txt">
+          <h5 id="magicModalTitle">{{ 'LNC.magicModalTitle' | translate }}</h5>
+          <p>{{ 'LNC.magicSubtitle' | translate }}</p>
+        </div>
+        <button type="button" class="m-x" [attr.aria-label]="'LNC.cancel' | translate" (click)="closeMagicModal()">×</button>
+      </div>
+
+      <!-- Fichier BO -->
+      <div class="m-sec">
+        <span class="lab">{{ 'LNC.boFile' | translate }}</span>
+        <div class="drop"
+             [class.over]="boDragOver"
+             [class.filled]="magicBoFiles.length > 0"
+             (dragenter)="onBoDragOver($event)"
+             (dragover)="onBoDragOver($event)"
+             (dragleave)="boDragOver = false"
+             (drop)="onBoDrop($event)">
+          <span class="txt">
+            {{ magicBoFiles.length ? magicBoFiles[0].name : ('LNC.magicDropBoHint' | translate) }}
+          </span>
+          <button type="button" class="sm" (click)="magicBoPicker.click()">
+            {{ (magicBoFiles.length ? 'LNC.magicChangeFile' : 'LNC.selectFile') | translate }}
+          </button>
+          <input #magicBoPicker type="file" class="hidden-input" accept=".csv,.xlsx,.xls"
+                 (change)="onMagicBoFilesSelected($event)" />
+        </div>
+      </div>
+
+      <!-- Fichiers partenaire -->
+      <div class="m-sec">
+        <span class="lab">
+          {{ 'LNC.partnerFiles' | translate }}
+          <span class="badge">{{ magicPartnerFiles.length }}</span>
+        </span>
+        <p class="hint">{{ 'LNC.partnerFilesHint' | translate }}</p>
+        <div class="drop"
+             [class.over]="partnerDragOver"
+             [class.filled]="magicPartnerFiles.length > 0"
+             (dragenter)="onPartnerDragOver($event)"
+             (dragover)="onPartnerDragOver($event)"
+             (dragleave)="partnerDragOver = false"
+             (drop)="onPartnerDrop($event)">
+          <span class="txt">{{ 'LNC.magicDropPartnersHint' | translate }}</span>
+          <button type="button" class="sm" (click)="magicPartnerPicker.click()">
+            {{ 'LNC.add' | translate }}
+          </button>
+          <input #magicPartnerPicker type="file" class="hidden-input" multiple accept=".csv,.xlsx,.xls"
+                 (change)="onMagicPartnerFilesSelected($event)" />
+        </div>
+
+        <ul class="files" *ngIf="magicPartnerFiles.length">
+          <li *ngFor="let file of magicPartnerFiles; let i = index">
+            <span class="n">{{ file.name }}</span>
+            <span class="z">{{ formatFileSize(file.size) }}</span>
+            <button type="button" (click)="removeMagicPartnerFile(i)">{{ 'LNC.remove' | translate }}</button>
+          </li>
+        </ul>
+      </div>
+
+      <div class="m-foot">
+        <span class="state">
+          <ng-container *ngIf="!magicBoFiles.length">{{ 'LNC.magicStateBoMissing' | translate }}</ng-container>
+          <ng-container *ngIf="magicBoFiles.length && !magicPartnerFiles.length">{{ 'LNC.magicStatePartnerMissing' | translate }}</ng-container>
+          <ng-container *ngIf="canLaunchMagic">{{ 'LNC.magicStateReady' | translate: { count: magicPartnerFiles.length } }}</ng-container>
+        </span>
+        <button type="button" class="btn-m-cancel" (click)="closeMagicModal()">{{ 'LNC.cancel' | translate }}</button>
+        <button type="button" class="btn-m-launch" [disabled]="!canLaunchMagic" (click)="confirmMagicLaunch()">
+          {{ 'LNC.launchMagic' | translate }}
+        </button>
+      </div>
+    </div>
+  </div>
+
+  <app-progress-popup *ngIf="magicRunning"
+    [title]="'LNC.magicProgressRunning' | translate"
+    [progress]="magicProgress"
+    [step]="magicProgressStep"
+    [currentFile]="magicCurrentFile"
+    [totalFiles]="magicTotalFiles"
+    [message]="'LNC.magicProgressRunningHint' | translate">
+  </app-progress-popup>
+
+  <div class="toast" [class.show]="showToast">{{ toastMessage }}</div>
+</div>

@@ -1,0 +1,183 @@
+<div class="user-2fa-dialog">
+  <div class="dialog-header">
+    <h2>
+      <i class="fas fa-shield-alt"></i>
+      Configuration 2FA pour {{ username }}
+    </h2>
+    <button class="close-btn" (click)="close()" title="{{ 'COMMON.actions.close' | translate }}">
+      <i class="fas fa-times"></i>
+    </button>
+  </div>
+
+  <div class="dialog-content">
+    <!-- Messages de succès/erreur -->
+    <div *ngIf="success" class="message success">
+      <i class="fas fa-check-circle"></i>
+      <span>{{ success }}</span>
+    </div>
+
+    <div *ngIf="error" class="message error">
+      <i class="fas fa-exclamation-circle"></i>
+      <span>{{ error }}</span>
+    </div>
+
+    <!-- Statut actuel du 2FA -->
+    <div class="status-card" *ngIf="!showQRCode">
+      <div class="status-header">
+        <i class="fas fa-shield-alt" [class.enabled]="is2FAEnabled" [class.disabled]="!is2FAEnabled"></i>
+        <div class="status-info">
+          <h3>Statut : {{ is2FAEnabled ? 'Activé' : 'Désactivé' }}</h3>
+          <p *ngIf="is2FAEnabled" class="status-description">
+            L'authentification à deux facteurs est activée pour cet utilisateur.
+          </p>
+          <p *ngIf="!is2FAEnabled" class="status-description">
+            L'authentification à deux facteurs n'est pas activée.
+          </p>
+        </div>
+      </div>
+
+      <!-- Actions -->
+      <div class="actions">
+        <button 
+          *ngIf="!is2FAEnabled" 
+          class="btn btn-primary" 
+          (click)="setup2FA()" 
+          [disabled]="loading">
+          <i class="fas fa-shield-alt"></i>
+          Activer le 2FA
+        </button>
+
+        <button 
+          *ngIf="is2FAEnabled" 
+          class="btn btn-danger" 
+          (click)="disable2FA()" 
+          [disabled]="loading">
+          <i class="fas fa-lock-open"></i>
+          Désactiver le 2FA
+        </button>
+
+        <button 
+          *ngIf="is2FAEnabled && hasSecret" 
+          class="btn btn-secondary" 
+          (click)="setup2FA()" 
+          [disabled]="loading">
+          <i class="fas fa-sync-alt"></i>
+          Régénérer la clé
+        </button>
+      </div>
+    </div>
+
+    <!-- Étape 1 : Affichage du QR Code et de la clé secrète -->
+    <div class="setup-card" *ngIf="showQRCode">
+      <h3>
+        <i class="fas fa-qrcode"></i>
+        Configuration du 2FA
+      </h3>
+
+      <div class="instructions">
+        <ol>
+          <li>Téléchargez et installez <strong>Google Authenticator</strong> sur votre téléphone</li>
+          <li>Ouvrez Google Authenticator et cliquez sur <strong>"+"</strong> > <strong>"Scanner un code QR"</strong></li>
+          <li>Scannez le QR code ci-dessous avec votre téléphone</li>
+          <li>Entrez le code à 6 chiffres affiché dans Google Authenticator pour activer le 2FA</li>
+        </ol>
+      </div>
+
+      <!-- QR Code -->
+      <div class="qr-code-container" *ngIf="qrCodeBase64">
+        <img [src]="qrCodeBase64" alt="QR Code 2FA" class="qr-code-image">
+        <p class="qr-code-hint">Scannez ce code avec Google Authenticator</p>
+      </div>
+
+      <!-- Clé secrète et URL OTP (pour saisie manuelle) -->
+      <div class="secret-info" *ngIf="secret && otpAuthUrl">
+        <details>
+          <summary>
+            <i class="fas fa-info-circle"></i>
+            Saisie manuelle (si le scan ne fonctionne pas)
+          </summary>
+          
+          <div class="secret-details">
+            <div class="secret-item">
+              <label>Clé secrète :</label>
+              <div class="secret-value">
+                <code>{{ secret }}</code>
+                <button class="btn-icon" (click)="copySecret()" title="Copier la clé">
+                  <i class="fas fa-copy"></i>
+                </button>
+              </div>
+            </div>
+
+            <div class="secret-item">
+              <label>URL OTP Auth :</label>
+              <div class="secret-value">
+                <code class="url-code">{{ otpAuthUrl }}</code>
+                <button class="btn-icon" (click)="copyOtpAuthUrl()" title="Copier l'URL">
+                  <i class="fas fa-copy"></i>
+                </button>
+              </div>
+              <p class="hint">
+                Dans Google Authenticator : "+" > "Saisir une clé" > 
+                Nom: "Reconciliation App - {{ username }}" > 
+                Clé: copiez la clé secrète ci-dessus
+              </p>
+            </div>
+          </div>
+        </details>
+      </div>
+    </div>
+
+    <!-- Étape 2 : Validation avec code -->
+    <div class="validation-card" *ngIf="showValidationForm">
+      <h3>
+        <i class="fas fa-key"></i>
+        Valider l'activation
+      </h3>
+
+      <p class="validation-instructions">
+        Ouvrez Google Authenticator et entrez le code à 6 chiffres actuellement affiché.
+      </p>
+
+      <form [formGroup]="validationForm" (ngSubmit)="enable2FA()">
+        <div class="form-group">
+          <label>Code d'authentification</label>
+          <input 
+            type="text" 
+            formControlName="code" 
+            placeholder="000000"
+            maxlength="6"
+            pattern="[0-9]{6}"
+            autocomplete="off"
+            class="form-control code-input"
+            required>
+          <small class="form-text">Entrez le code à 6 chiffres depuis Google Authenticator</small>
+          <div *ngIf="validationForm.get('code')?.hasError('required') && validationForm.get('code')?.touched" class="error-text">
+            Le code est requis
+          </div>
+          <div *ngIf="validationForm.get('code')?.hasError('pattern') && validationForm.get('code')?.touched" class="error-text">
+            Le code doit contenir exactement 6 chiffres
+          </div>
+        </div>
+
+        <div class="validation-actions">
+          <button 
+            type="submit" 
+            class="btn btn-success" 
+            [disabled]="validationForm.invalid || loading">
+            <i class="fas fa-check" *ngIf="!loading"></i>
+            <i class="fas fa-spinner fa-spin" *ngIf="loading"></i>
+            {{ loading ? 'Activation...' : 'Activer le 2FA' }}
+          </button>
+
+          <button 
+            type="button" 
+            class="btn btn-secondary" 
+            (click)="cancelSetup()" 
+            [disabled]="loading">
+            <i class="fas fa-times"></i>{{ 'COMMON.actions.cancel' | translate }}</button>
+        </div>
+      </form>
+    </div>
+  </div>
+</div>
+

@@ -1,0 +1,65 @@
+<div
+  *ngIf="job"
+  class="trt-job-banner"
+  [class.is-running]="job.status === 'running'"
+  [class.is-done]="job.status === 'done'"
+  [class.is-error]="job.status === 'error'"
+  [class.is-downloading]="isDownloading">
+
+  <div class="trt-job-icon">
+    <i *ngIf="job.status === 'running' && !isDownloading" class="fas fa-cogs fa-spin"></i>
+    <i *ngIf="isDownloading" class="fas fa-download fa-spin"></i>
+    <i *ngIf="job.status === 'done' && !isDownloading" class="fas fa-check-circle"></i>
+    <i *ngIf="job.status === 'error'" class="fas fa-exclamation-triangle"></i>
+  </div>
+
+  <div class="trt-job-body">
+    <div class="trt-job-title">
+      <ng-container *ngIf="job.status === 'running' && !isDownloading">
+        Traitement en cours — {{ job.modelName }}
+      </ng-container>
+      <ng-container *ngIf="isDownloading">
+        Téléchargement en cours — {{ job.modelName }}
+      </ng-container>
+      <ng-container *ngIf="job.status === 'done' && !isDownloading">
+        Traitement terminé — {{ job.modelName }}
+      </ng-container>
+      <ng-container *ngIf="job.status === 'error'">
+        Échec du traitement — {{ job.modelName }}
+      </ng-container>
+    </div>
+
+    <div class="trt-job-msg" *ngIf="job.progressMessage">
+      {{ job.progressMessage }}
+    </div>
+
+    <div class="trt-job-msg" *ngIf="job.status === 'done' && !isDownloading && job.results.length && !job.progressMessage">
+      <span *ngFor="let r of job.results; let last = last">
+        {{ r.outputName }} ({{ r.lineCount.toLocaleString('fr-FR') }} ligne(s))<span *ngIf="!last"> · </span>
+      </span>
+    </div>
+
+    <div class="trt-job-msg is-error" *ngIf="job.status === 'error' && job.error">
+      {{ job.error }}
+    </div>
+  </div>
+
+  <div class="trt-job-actions">
+    <button
+      *ngIf="job.status === 'done' && !isDownloading"
+      type="button"
+      class="trt-job-btn is-primary"
+      (click)="download()"
+      title="Télécharger le(s) fichier(s) produit(s)">
+      <i class="fas fa-download"></i>
+      Télécharger
+    </button>
+    <button
+      type="button"
+      class="trt-job-btn is-ghost"
+      (click)="clear()"
+      title="Masquer">
+      <i class="fas fa-times"></i>
+    </button>
+  </div>
+</div>

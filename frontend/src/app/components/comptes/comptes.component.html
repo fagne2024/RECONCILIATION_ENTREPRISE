@@ -1,0 +1,2078 @@
+<div class="comptes-container">
+    <div class="header">
+        <h1>{{ 'CPT.Gestiondescomptes' | translate }}</h1>
+        <div class="actions">
+            <button (click)="showAddForm = !showAddForm" class="btn add-btn">
+                <i class="fas fa-plus"></i> {{ 'CPT.Nouveaucompte' | translate }}
+            </button>
+            <button (click)="goToServiceBalance()" class="btn service-balance-btn">
+                <i class="fas fa-layer-group"></i> {{ 'CPT.Fusionservice' | translate }}
+            </button>
+            <button (click)="goToRedevance()" class="btn redevance-btn">
+                <i class="fas fa-percentage"></i> {{ 'CPT.Redevance' | translate }}
+            </button>
+            <button (click)="goToPredictions()" class="btn predictions-btn">
+                <i class="fas fa-crystal-ball"></i> {{ 'CPT.Prédictions' | translate }}
+            </button>
+            <button (click)="refreshComptes()" class="btn refresh-btn" [disabled]="isLoading" title="{{ 'CPT.Actualiserlalisteenconservantlesfiltres' | translate }}">
+                <i class="fas" [ngClass]="isLoading ? 'fa-spinner fa-spin' : 'fa-sync-alt'"></i> {{ 'CPT.Actualiser' | translate }}
+            </button>
+            <button (click)="exportComptes()" class="btn export-btn" [disabled]="isExporting">
+                <i class="fas fa-file-excel"></i> {{ (isExporting ? 'CPT.Exporting' : 'CPT.ExportExcel') | translate }}
+            </button>
+        </div>
+    </div>
+
+    <!-- Modal d'ajout de compte -->
+    <div *ngIf="showAddForm" class="modal-overlay" (click)="closeAddModal($event)">
+        <div class="modal-container compte-form-modal" (click)="$event.stopPropagation()">
+            <div class="modal-header">
+                <h3><i class="fas fa-plus-circle"></i> {{ 'CPT.Ajouterunnouveaucompte' | translate }}</h3>
+                <button type="button" class="modal-close" (click)="cancelAdd()">
+                    <i class="fas fa-times"></i>
+                </button>
+            </div>
+            <div class="modal-body">
+                <form [formGroup]="addForm" (ngSubmit)="addCompte()" class="add-form">
+                    <div class="form-section">
+                        <div class="form-row">
+                            <div class="form-group">
+                                <label>{{ 'CPT.Numérodecompte' | translate }}</label>
+                                <input type="text" formControlName="numeroCompte" placeholder="{{ 'CPT.Ex123456789' | translate }}" class="text-input">
+                                <div *ngIf="addForm.get('numeroCompte')?.invalid && addForm.get('numeroCompte')?.touched" class="error-message">
+                                    {{ 'CPT.Lenumérodecompteestrequis' | translate }}
+                                </div>
+                            </div>
+                            <div class="form-group">
+                                <label>{{ 'CPT.Soldeinitial' | translate }}</label>
+                                <input type="number" formControlName="solde" placeholder="0.00" class="text-input">
+                                <div *ngIf="addForm.get('solde')?.invalid && addForm.get('solde')?.touched" class="error-message">
+                                    {{ 'CPT.Lesoldeestrequis' | translate }}
+                                </div>
+                            </div>
+                        </div>
+                        <div class="form-row form-row-pays">
+                            <div class="form-group full-width compte-pays-form-group">
+                                <mat-form-field appearance="outline" class="compte-pays-mat-field">
+                                    <mat-label>{{ 'TBL.countryRequired' | translate }}</mat-label>
+                                    <input matInput
+                                           formControlName="pays"
+                                           [matAutocomplete]="autoPaysAdd"
+                                           placeholder="{{ 'CPT.Choisirousaisirunpays' | translate }}"
+                                           autocomplete="off"
+                                           (focus)="onPaysAutocompleteFocus('add')">
+                                    <mat-autocomplete #autoPaysAdd="matAutocomplete">
+                                        <mat-option *ngFor="let p of filteredPaysAdd" [value]="p">{{ p }}</mat-option>
+                                    </mat-autocomplete>
+                                    <mat-hint>{{ 'CPT.Saisielibrepossibleouchoisirdanslalistecidessouslautocomplétion' | translate }}</mat-hint>
+                                </mat-form-field>
+                                <div *ngIf="paysList.length > 0" class="pays-existing-list">
+                                    <span class="pays-existing-title">{{ 'CPT.Paysdéjàenregistréscliquerpourremplirlechamp' | translate }}</span>
+                                    <div class="pays-existing-chips">
+                                        <button type="button" class="pays-chip"
+                                                *ngFor="let p of paysListSorted"
+                                                (click)="selectPaysFromList('add', p)">{{ p }}</button>
+                                    </div>
+                                </div>
+                                <div *ngIf="addForm.get('pays')?.invalid && addForm.get('pays')?.touched" class="error-message">
+                                    {{ 'CPT.Lepaysestrequis' | translate }}
+                                </div>
+                            </div>
+                        </div>
+                        <div class="form-row">
+                            <div class="form-group">
+                                <label>{{ 'CPT.Typedecompte' | translate }}</label>
+                                <select formControlName="type" class="modern-select">
+                                    <option value="" disabled>{{ 'CPT.Sélectionneruntype' | translate }}</option>
+                                    <option *ngFor="let t of compteTypes" [value]="t">{{ t }}</option>
+                                </select>
+                                <div *ngIf="addForm.get('type')?.invalid && addForm.get('type')?.touched" class="error-message">
+                                    {{ 'CPT.Letypedecompteestrequis' | translate }}
+                                </div>
+                            </div>
+                            <div class="form-group">
+                                <label>{{ 'CPT.Catégorie' | translate }}</label>
+                                <select formControlName="categorie" class="modern-select">
+                                    <option value="" disabled>{{ 'CPT.Sélectionnerunecatégorie' | translate }}</option>
+                                    <option *ngFor="let c of compteCategories" [value]="c">{{ c }}</option>
+                                </select>
+                                <div *ngIf="addForm.get('categorie')?.invalid && addForm.get('categorie')?.touched" class="error-message">
+                                    {{ 'CPT.Lacatégorieestrequise' | translate }}
+                                </div>
+                            </div>
+                        </div>
+                        <div class="form-row">
+                            <div class="form-group full-width">
+                                <label>{{ 'TBL.ownerCode' | translate }}</label>
+                                <input type="text" formControlName="codeProprietaire" placeholder="{{ 'CPT.Exprop001' | translate }}" class="text-input">
+                            </div>
+                        </div>
+                    </div>
+                </form>
+            </div>
+            <div class="modal-footer">
+                <div class="modal-actions">
+                    <button type="button" class="btn-secondary" (click)="cancelAdd()">
+                        <i class="fas fa-times"></i>{{ 'COMMON.actions.cancel' | translate }}</button>
+                    <button type="submit" class="btn-primary" [disabled]="!addForm.valid || isAdding" (click)="addCompte()">
+                        <i class="fas fa-plus"></i>
+                        {{ (isAdding ? 'CPT.Adding' : 'COMMON.actions.add') | translate }}
+                    </button>
+                </div>
+            </div>
+        </div>
+    </div>
+    <!-- Fin modal d'ajout de compte -->
+
+    <!-- Modal de modification de compte -->
+    <div *ngIf="showEditForm" class="modal-overlay" (click)="closeEditModal($event)">
+        <div class="modal-container compte-form-modal" (click)="$event.stopPropagation()">
+            <div class="modal-header">
+                <h3><i class="fas fa-edit"></i> {{ 'CPT.Modifierlecompte' | translate }}</h3>
+                <button type="button" class="modal-close" (click)="cancelEdit()">
+                    <i class="fas fa-times"></i>
+                </button>
+            </div>
+            <div class="modal-body">
+                <form [formGroup]="editForm" (ngSubmit)="updateCompte()" class="edit-form">
+                    <div class="form-section">
+                        <div class="form-row">
+                            <div class="form-group">
+                                <label>{{ 'CPT.Numérodecompte' | translate }}</label>
+                                <input type="text" formControlName="numeroCompte" placeholder="{{ 'CPT.Ex123456789' | translate }}" class="text-input">
+                                <div *ngIf="editForm.get('numeroCompte')?.invalid && editForm.get('numeroCompte')?.touched" class="error-message">
+                                    {{ 'CPT.Lenumérodecompteestrequis' | translate }}
+                                </div>
+                            </div>
+                            <div class="form-group">
+                                <label>{{ 'CPT.Solde' | translate }}</label>
+                                <input type="number" formControlName="solde" placeholder="0.00" class="text-input">
+                                <div *ngIf="editForm.get('solde')?.invalid && editForm.get('solde')?.touched" class="error-message">
+                                    {{ 'CPT.Lesoldeestrequis' | translate }}
+                                </div>
+                            </div>
+                        </div>
+                        <div class="form-row form-row-pays">
+                            <div class="form-group full-width compte-pays-form-group">
+                                <mat-form-field appearance="outline" class="compte-pays-mat-field">
+                                    <mat-label>{{ 'TBL.countryRequired' | translate }}</mat-label>
+                                    <input matInput
+                                           formControlName="pays"
+                                           [matAutocomplete]="autoPaysEdit"
+                                           placeholder="{{ 'CPT.Choisirousaisirunpays' | translate }}"
+                                           autocomplete="off"
+                                           (focus)="onPaysAutocompleteFocus('edit')">
+                                    <mat-autocomplete #autoPaysEdit="matAutocomplete">
+                                        <mat-option *ngFor="let p of filteredPaysEdit" [value]="p">{{ p }}</mat-option>
+                                    </mat-autocomplete>
+                                    <mat-hint>{{ 'CPT.Saisielibrepossibleouchoisirdanslalistecidessouslautocomplétion' | translate }}</mat-hint>
+                                </mat-form-field>
+                                <div *ngIf="paysList.length > 0" class="pays-existing-list">
+                                    <span class="pays-existing-title">{{ 'CPT.Paysdéjàenregistréscliquerpourremplirlechamp' | translate }}</span>
+                                    <div class="pays-existing-chips">
+                                        <button type="button" class="pays-chip"
+                                                *ngFor="let p of paysListSorted"
+                                                (click)="selectPaysFromList('edit', p)">{{ p }}</button>
+                                    </div>
+                                </div>
+                                <div *ngIf="editForm.get('pays')?.invalid && editForm.get('pays')?.touched" class="error-message">
+                                    {{ 'CPT.Lepaysestrequis' | translate }}
+                                </div>
+                            </div>
+                        </div>
+                        <div class="form-row">
+                            <div class="form-group">
+                                <label>{{ 'CPT.Typedecompte' | translate }}</label>
+                                <select formControlName="type" class="modern-select">
+                                    <option value="" disabled>{{ 'CPT.Sélectionneruntype' | translate }}</option>
+                                    <option *ngFor="let t of compteTypes" [value]="t">{{ t }}</option>
+                                </select>
+                                <div *ngIf="editForm.get('type')?.invalid && editForm.get('type')?.touched" class="error-message">
+                                    {{ 'CPT.Letypedecompteestrequis' | translate }}
+                                </div>
+                            </div>
+                            <div class="form-group">
+                                <label>{{ 'CPT.Catégorie' | translate }}</label>
+                                <select formControlName="categorie" class="modern-select">
+                                    <option value="" disabled>{{ 'CPT.Sélectionnerunecatégorie' | translate }}</option>
+                                    <option *ngFor="let c of compteCategories" [value]="c">{{ c }}</option>
+                                </select>
+                                <div *ngIf="editForm.get('categorie')?.invalid && editForm.get('categorie')?.touched" class="error-message">
+                                    {{ 'CPT.Lacatégorieestrequise' | translate }}
+                                </div>
+                            </div>
+                        </div>
+                        <div class="form-row">
+                            <div class="form-group full-width">
+                                <label>{{ 'TBL.ownerCode' | translate }}</label>
+                                <input type="text" formControlName="codeProprietaire" placeholder="{{ 'CPT.Exprop001' | translate }}" class="text-input">
+                            </div>
+                        </div>
+                    </div>
+                </form>
+            </div>
+            <div class="modal-footer">
+                <div class="modal-actions">
+                    <button type="button" class="btn-secondary" (click)="cancelEdit()">
+                        <i class="fas fa-times"></i>{{ 'COMMON.actions.cancel' | translate }}</button>
+                    <button type="submit" class="btn-primary" [disabled]="!editForm.valid || isEditing" (click)="updateCompte()">
+                        <i class="fas fa-save"></i>
+                        {{ (isEditing ? 'CPT.Saving' : 'CPT.Update') | translate }}
+                    </button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+
+    <!-- Filtres et Statistiques -->
+    <div class="filters-stats-container">
+        <div class="card filters">
+            <div class="filters-card-header">
+                <h2>{{ 'LBL.filters' | translate }}</h2>
+            </div>
+            <form [formGroup]="filterForm" (ngSubmit)="applyFilters()" class="filters-form">
+                <div class="filters-section">
+                    <div class="filters-section-title">{{ 'CPT.Critèrescompte' | translate }}</div>
+                    <div class="filters-grid filters-grid--criteria">
+                        <div class="form-field">
+                            <mat-form-field appearance="fill" class="filter-select filter-select--full">
+                                <mat-label>{{ 'TBL.country' | translate }}</mat-label>
+                                <mat-select #paysSelect formControlName="pays" multiple (selectionChange)="onPaysChange($event)">
+                                    <mat-option>
+                                        <ngx-mat-select-search [formControl]="paysSearchCtrl" placeholderLabel="Rechercher un pays..." noEntriesFoundLabel="Aucun pays trouvé"></ngx-mat-select-search>
+                                    </mat-option>
+                                    <mat-option *ngFor="let pays of filteredPaysList" [value]="pays">
+                                        {{ pays }}
+                                    </mat-option>
+                                </mat-select>
+                            </mat-form-field>
+                        </div>
+                        <div class="form-field">
+                            <mat-form-field appearance="fill" class="filter-select filter-select--full">
+                                <mat-label>{{ 'TBL.ownerCode' | translate }}</mat-label>
+                                <mat-select #codeProprietaireSelect formControlName="codeProprietaire" multiple (selectionChange)="onCodeProprietaireChange($event)">
+                                    <mat-option>
+                                        <ngx-mat-select-search [formControl]="codeProprietaireSearchCtrl" placeholderLabel="Rechercher un code..." noEntriesFoundLabel="Aucun code trouvé"></ngx-mat-select-search>
+                                    </mat-option>
+                                    <mat-option *ngFor="let code of filteredCodeProprietaireList" [value]="code">
+                                        {{ code }}
+                                    </mat-option>
+                                </mat-select>
+                            </mat-form-field>
+                        </div>
+                        <div class="form-field">
+                            <mat-form-field appearance="fill" class="filter-select filter-select--full">
+                                <mat-label>{{ 'CPT.Catégorie_1' | translate }}</mat-label>
+                                <mat-select #categorieSelect formControlName="categorie" multiple (selectionChange)="onCategorieChange($event)">
+                                    <mat-option>
+                                        <ngx-mat-select-search [formControl]="categorieSearchCtrl" placeholderLabel="Rechercher une catégorie..." noEntriesFoundLabel="Aucune catégorie trouvée"></ngx-mat-select-search>
+                                    </mat-option>
+                                    <mat-option *ngFor="let categorie of filteredCategorieList" [value]="categorie">
+                                        <span class="categorie-badge" [ngClass]="getCategorieClass(categorie)">
+                                            {{ categorie }}
+                                        </span>
+                                    </mat-option>
+                                </mat-select>
+                            </mat-form-field>
+                        </div>
+                        <div class="form-field">
+                            <mat-form-field appearance="fill" class="filter-select filter-select--full">
+                                <mat-label>{{ 'COMMON.actions.type' | translate }}</mat-label>
+                                <mat-select #typeSelect formControlName="type" multiple (selectionChange)="onTypeChange($event)">
+                                    <mat-option>
+                                        <ngx-mat-select-search [formControl]="typeSearchCtrl" placeholderLabel="Rechercher un type..." noEntriesFoundLabel="Aucun type trouvé"></ngx-mat-select-search>
+                                    </mat-option>
+                                    <mat-option *ngFor="let type of filteredTypeList" [value]="type">
+                                        {{ type }}
+                                    </mat-option>
+                                </mat-select>
+                            </mat-form-field>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="filters-section filters-section--period">
+                    <div class="filters-section-title">{{ 'LBL.period' | translate }}</div>
+                    <div class="filters-grid filters-grid--period">
+                        <div class="form-field">
+                            <mat-form-field appearance="fill" class="filter-select filter-select--full">
+                                <mat-label>{{ 'LBL.startDate' | translate }}</mat-label>
+                                <input matInput type="date" formControlName="dateDebut">
+                            </mat-form-field>
+                        </div>
+                        <div class="form-field filters-period-separator" aria-hidden="true">
+                            <span>→</span>
+                        </div>
+                        <div class="form-field">
+                            <mat-form-field appearance="fill" class="filter-select filter-select--full">
+                                <mat-label>{{ 'LBL.endDate' | translate }}</mat-label>
+                                <input matInput type="date" formControlName="dateFin">
+                            </mat-form-field>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="filters-actions">
+                    <div class="filters-actions-main">
+                        <button type="submit" class="btn primary">
+                            <i class="fas fa-filter"></i> {{ 'CPT.Filtrer' | translate }}
+                        </button>
+                        <button type="button" (click)="clearFilters()" class="btn">
+                            <i class="fas fa-undo"></i>{{ 'COMMON.actions.reset' | translate }}</button>
+                    </div>
+                    <div class="filters-actions-tools">
+                        <button type="button" class="btn" (click)="downloadSoldeBoTemplate()" title="{{ 'CPT.CSVdatenumérodecomptemontant' | translate }}">
+                            <i class="fas fa-file-download"></i> {{ 'CPT.Modèlesoldebo' | translate }}
+                        </button>
+                        <input #soldeBoBulkFileInput type="file" accept=".csv,.txt,.xlsx,.xls,text/csv,application/vnd.ms-excel,application/vnd.openxmlformats-officedocument.spreadsheetml.sheet" style="display:none"
+                               (change)="onSoldeBoBulkFileSelected($event); soldeBoBulkFileInput.value = ''">
+                        <button type="button" class="btn" (click)="soldeBoBulkFileInput.click()" [disabled]="isImportingSoldeBoBulk"
+                                title="{{ 'CPT.Enregistrerlessoldesboligneparlignemêmeformatquelemodèle' | translate }}">
+                            <i class="fas fa-file-upload"></i> {{ (isImportingSoldeBoBulk ? 'CPT.Importing' : 'CPT.ImportBoBalances') | translate }}
+                        </button>
+                    </div>
+                </div>
+            </form>
+        </div>
+        <div class="card stats">
+            <div class="stats-header">
+            <h2>{{ 'CPT.Soldescritiques' | translate }}</h2>
+                <button (click)="exportSoldesCritiques()" class="btn export-btn" [disabled]="isExporting || comptesCritiques.length === 0">
+                    <i class="fas fa-file-excel"></i> {{ (isExporting ? 'CPT.Exporting' : 'CPT.ExportCritical') | translate }}
+                </button>
+            </div>
+            <div class="config-periode">
+                <label for="periodeJours">{{ 'CPT.Période' | translate }}</label>
+                <select id="periodeJours" [(ngModel)]="periodeJours" (ngModelChange)="onPeriodeJoursChange()" style="width:130px; margin-left:8px;">
+                    <option *ngFor="let opt of periodeOptions" [value]="opt.value">{{ opt.label }}</option>
+                </select>
+            </div>
+            <div *ngIf="comptesCritiques.length === 0" class="no-critical">
+                {{ 'CPT.Aucunsoldecritiquedétecté' | translate }}
+            </div>
+            <div *ngIf="comptesCritiques.length > 0" class="critical-cards-container">
+                <button class="arrow-btn left" (click)="prevCriticalPage()" [disabled]="criticalPage === 1">&#8592;</button>
+                <div class="critical-cards-list">
+                    <div class="critical-card" *ngFor="let item of pagedComptesCritiques">
+                        <div class="card-header">{{ item.compte.codeProprietaire || item.compte.numeroCompte }}</div>
+                        <div class="card-solde">
+                            <span>{{ 'CPT.Solde_1' | translate }}</span>
+                            <span class="solde-value">{{ item.compte.solde | number:'1.2-2' }}</span>
+                        </div>
+                        <div class="card-moyenne">
+                            <span>{{ 'CPT.Moyenne' | translate }} {{periodeJours}}{{ 'CPT.J' | translate }}</span>
+                            <span class="moyenne-value">{{ item.moyenneVolume | number:'1.2-2' }}</span>
+                        </div>
+                        <div class="card-ratio">
+                            <span>{{ 'CPT.Ratio' | translate }}</span>
+                            <span class="ratio-value" [class.critical]="(item.compte.solde / item.moyenneVolume) < 0.5" [class.warning]="(item.compte.solde / item.moyenneVolume) >= 0.5 && (item.compte.solde / item.moyenneVolume) < 0.8">
+                                {{ (item.compte.solde / item.moyenneVolume) | number:'1.2-2' }}
+                            </span>
+                        </div>
+                        <div class="card-label">{{ 'CPT.Soldemoyennevolume' | translate }}</div>
+                    </div>
+                </div>
+                <button class="arrow-btn right" (click)="nextCriticalPage()" [disabled]="criticalPage === totalCriticalPages">&#8594;</button>
+            </div>
+            <div *ngIf="comptesCritiques.length > criticalPageSize" class="critical-pagination-indicator">
+                {{ 'CPT.Page' | translate }} {{criticalPage}} / {{totalCriticalPages}}
+            </div>
+        </div>
+    </div>
+
+    <!-- Tableau des comptes -->
+    <div class="card table-container">
+        <div *ngIf="isLoading" class="loading-overlay">
+            <div class="spinner"></div> <span>{{ 'MSG.loadingData' | translate }}</span>
+        </div>
+        <table *ngIf="!isLoading && comptes.length > 0">
+            <thead>
+                <tr>
+                    <th>{{ 'CPT.Numérodecompte_1' | translate }}</th>
+                    <th>{{ 'CPT.Solde_2' | translate }}</th>
+                    <th>{{ 'CPT.Datedernièremaj' | translate }}</th>
+                    <th>{{ 'TBL.country' | translate }}</th>
+                    <th>{{ 'TBL.ownerCode' | translate }}</th>
+                    <th>{{ 'COMMON.actions.type' | translate }}</th>
+                    <th>{{ 'CPT.Catégorie_1' | translate }}</th>
+                    <th>{{ 'TBL.actions' | translate }}</th>
+                </tr>
+            </thead>
+            <tbody>
+                <tr *ngFor="let compte of pagedComptes">
+                    <td>{{ compte.numeroCompte }}</td>
+                    <td class="solde solde-with-tooltip" 
+                        (mouseenter)="showTooltip($event, compte)"
+                        (mouseleave)="hideTooltip()"
+                        (mousemove)="updateTooltipPosition($event)">
+                        {{ compte.solde | number:'1.2-2' }}
+                    </td>
+                    <td>{{ formatDate(compte.dateDerniereMaj) }}</td>
+                    <td>{{ compte.pays }}</td>
+                    <td>{{ compte.codeProprietaire || '-' }}</td>
+                    <td>{{ compte.type || '-' }}</td>
+                    <td>
+                        <span class="categorie-badge" [ngClass]="getCategorieClass(compte.categorie)">
+                            {{ compte.categorie || '-' }}
+                        </span>
+                    </td>
+                    <td class="actions-cell">
+                        <button (click)="viewReleve(compte)" class="btn icon-btn" title="{{ 'CPT.Voirlerelevé' | translate }}">
+                            <i class="fas fa-file-alt" style="color: blue;"></i>
+                        </button>
+                        <button (click)="editCompte(compte)" class="btn icon-btn" title="{{ 'ACT.edit' | translate }}">
+                            <i class="fas fa-edit" style="color: green;"></i>
+                        </button>
+                        <button (click)="deleteCompte(compte.id!)" class="btn icon-btn delete" *ngIf="compte.id" title="{{ 'ACT.delete' | translate }}">
+                            <i class="fas fa-trash"></i>
+                        </button>
+                        <button (click)="openSoldeBoModal(compte)" class="btn icon-btn" title="{{ 'CPT.Soldebo' | translate }}">
+                            <i class="fas fa-balance-scale" style="color: orange;"></i>
+                        </button>
+                    </td>
+                </tr>
+            </tbody>
+        </table>
+        <div *ngIf="!isLoading && comptes.length === 0" class="no-data">
+            {{ 'CPT.Aucuncomptetrouvé' | translate }}
+        </div>
+
+        <!-- Pagination -->
+        <div class="pagination" *ngIf="totalPages > 1">
+            <div class="pagination-info">
+                {{ 'CPT.Affichage' | translate }} {{ (currentPage - 1) * pageSize + 1 }} - {{ Math.min(currentPage * pageSize, comptes.length) }} {{ 'CPT.Sur' | translate }} {{ comptes.length }}
+            </div>
+            
+            <div class="pagination-controls">
+                <button (click)="prevPage()" [disabled]="currentPage === 1">
+                    <i class="fas fa-chevron-left"></i>{{ 'PAG.previous' | translate }}</button>
+                
+                <div class="pagination-indicators">
+                    <span *ngFor="let page of getVisiblePages()" 
+                          class="page-indicator"
+                          [class.active]="currentPage === page"
+                          (click)="goToPage(page)">
+                        {{ page }}
+                    </span>
+                </div>
+                
+                <button (click)="nextPage()" [disabled]="currentPage === totalPages">{{ 'PAG.next' | translate }}<i class="fas fa-chevron-right"></i>
+                </button>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Modal de relevé de compte -->
+<div *ngIf="showReleveModal" class="modal-overlay">
+    <div class="modal-content releve-modal" (click)="$event.stopPropagation()">
+        <div class="modal-header">
+            <h2>{{ 'CPT.Relevédecompte' | translate }} {{ selectedCompte?.numeroCompte }}</h2>
+            <button class="modal-close" (click)="closeReleveModal()">
+                <i class="fas fa-times"></i>
+            </button>
+        </div>
+        
+        <div class="modal-body">
+            <!-- Informations du compte -->
+            <div class="compte-info">
+                <div class="info-row">
+                    <span class="info-label">{{ 'CPT.Numérodecompte_2' | translate }}</span>
+                    <span class="info-value">{{ selectedCompte?.numeroCompte }}</span>
+                </div>
+                <div class="info-row">
+                    <span class="info-label">{{ 'CPT.Soldeactuel' | translate }}</span>
+                    <span class="info-value solde-actuel">{{ selectedCompte?.solde | number:'1.2-2' }}</span>
+                </div>
+                <div class="info-row">
+                    <span class="info-label">{{ 'LBL.countryLabel' | translate }}</span>
+                    <span class="info-value">{{ selectedCompte?.pays }}</span>
+                </div>
+                <div class="info-row">
+                    <span class="info-label">{{ 'CPT.Codepropriétaire' | translate }}</span>
+                    <span class="info-value">{{ selectedCompte?.codeProprietaire || '-' }}</span>
+                </div>
+                <div class="info-row">
+                    <span class="info-label">{{ 'CPT.Dernièremiseàjour' | translate }}</span>
+                    <span class="info-value">{{ formatDate(selectedCompte?.dateDerniereMaj || '') }}</span>
+                </div>
+            </div>
+
+            <!-- Onglets -->
+            <div class="tabs-container">
+                <div class="tabs-header">
+                    <button class="tab-button" 
+                            [class.active]="activeTab === 'operations'"
+                            (click)="switchTab('operations')">
+                        <i class="fas fa-list"></i>{{ 'TBL.operations' | translate }}</button>
+                    <button class="tab-button" 
+                            [class.active]="activeTab === 'ecart-solde'"
+                            (click)="switchTab('ecart-solde')"
+                            *ngIf="showEcartSoldeTab">
+                        <i class="fas fa-exclamation-triangle"></i>
+                        {{ 'CPT.Écartsdesolde' | translate }}
+                    </button>
+                    <button class="tab-button" 
+                            [class.active]="activeTab === 'impact-op'"
+                            (click)="switchTab('impact-op')"
+                            *ngIf="showImpactOPTab">
+                        <i class="fas fa-chart-line"></i>
+                        {{ 'CPT.Ecartrégularisé' | translate }}
+                    </button>
+                    <button class="tab-button" 
+                            [class.active]="activeTab === 'revenu-journalier'"
+                            (click)="switchTab('revenu-journalier')"
+                            *ngIf="showRevenuJournalierTab">
+                        <i class="fas fa-money-bill-wave"></i>
+                        {{ 'CPT.Revenujournalier' | translate }}
+                    </button>
+                    <button class="tab-button" 
+                            [class.active]="activeTab === 'control-revenu'"
+                            (click)="switchTab('control-revenu')"
+                            *ngIf="showControlRevenuTab">
+                        <i class="fas fa-chart-bar"></i>
+                        {{ 'CPT.Controlrevenu' | translate }}
+                    </button>
+                    <button class="tab-button" 
+                            [class.active]="activeTab === 'ecart-frais'"
+                            (click)="switchTab('ecart-frais')"
+                            *ngIf="showEcartFraisTab">
+                        <i class="fas fa-receipt"></i>
+                        {{ 'CPT.Écartfrais' | translate }}
+                    </button>
+                </div>
+
+                <!-- Contenu de l'onglet Opérations -->
+                <div class="tab-content" *ngIf="activeTab === 'operations'">
+                    <!-- Filtres pour l'historique -->
+                    <div class="releve-filters">
+                        <div class="filter-group">
+                            <label>{{ 'CPT.Période_1' | translate }}</label>
+                            <select [(ngModel)]="releveDateDebut" (change)="onRelevePeriodChange()" [disabled]="showAllDataReleve">
+                                <option value="">{{ 'CPT.Moispardéfautprécédentjusquau1erpuisencours' | translate }}</option>
+                                <option value="7">{{ 'LBL.last7Days' | translate }}</option>
+                                <option value="30">{{ 'LBL.last30Days' | translate }}</option>
+                                <option value="90">{{ 'CPT.3derniersmois' | translate }}</option>
+                                <option value="custom">{{ 'CPT.Périodepersonnalisée' | translate }}</option>
+                            </select>
+                        </div>
+                        <div class="filter-group">
+                            <button type="button" (click)="toggleShowAllDataReleve()" class="btn-show-more" [class.active]="showAllDataReleve">
+                                <i class="fas" [ngClass]="showAllDataReleve ? 'fa-eye-slash' : 'fa-eye'"></i>
+                                {{ (showAllDataReleve ? 'CPT.ShowLess' : 'CPT.ShowMore') | translate }}
+                            </button>
+                        </div>
+
+                        <!-- Intervalle de dates (affichage et export) -->
+                        <div class="filter-group custom-date-filters export-interval-filters">
+                            <div class="date-input-group">
+                                <label>{{ 'CPT.Du' | translate }}</label>
+                                <input type="date" [(ngModel)]="releveDateDebutCustom" (change)="onReleveCustomDateChange()" [disabled]="showAllDataReleve">
+                            </div>
+                            <div class="date-input-group">
+                                <label>{{ 'CPT.Au' | translate }}</label>
+                                <input type="date" [(ngModel)]="releveDateFinCustom" (change)="onReleveCustomDateChange()" [disabled]="showAllDataReleve">
+                            </div>
+                            <button type="button" class="btn btn-sm" (click)="applyReleveDateInterval()" [disabled]="showAllDataReleve" title="{{ 'CPT.Rechargerlhistoriquesurcetintervalle' | translate }}">
+                                <i class="fas fa-filter"></i>{{ 'ACT.apply' | translate }}</button>
+                        </div>
+                        
+                        <div class="filter-group">
+                            <label>{{ 'CPT.Typedopération' | translate }}</label>
+                            <select [(ngModel)]="releveTypeOperation" (change)="loadReleveOperations()">
+                                <option value="">{{ 'CPT.Sélectionneruntype_1' | translate }}</option>
+                                <option *ngFor="let type of operationTypes" [value]="type">{{ type }}</option>
+                            </select>
+                        </div>
+                         <button class="btn view-toggle-btn" (click)="toggleReleveView()">
+                            <i class="fas" [ngClass]="showSoldesSeulement ? 'fa-list-alt' : 'fa-coins'"></i> 
+                            {{ (showSoldesSeulement ? 'CPT.ShowOperations' : 'CPT.ShowBalancesOnly') | translate }}
+                        </button>
+                        <button class="btn export-btn" (click)="exportReleve()" [disabled]="isExporting"
+                                [title]="getReleveExportIntervalLabel() ? 'Exporter sur l\'intervalle : ' + getReleveExportIntervalLabel() : 'Exporter le relevé (toutes les données chargées)'">
+                            <i class="fas fa-file-excel"></i> {{ 'CPT.Exporterlerelevé' | translate }}
+                            <span class="export-interval-hint" *ngIf="getReleveExportIntervalLabel()">({{ getReleveExportIntervalLabel() }})</span>
+                        </button>
+                        <button class="btn" (click)="toggleReleveSummary()">
+                            <i class="fas" [ngClass]="showReleveSummary ? 'fa-eye-slash' : 'fa-eye'"></i>
+                            {{ (showReleveSummary ? 'CPT.HideCalculations' : 'CPT.ShowCalculations') | translate }}
+                        </button>
+                    </div>
+
+                    <!-- Historique des opérations -->
+                    <div class="releve-operations">
+                        <h3>{{ showSoldesSeulement ? (('CPT.Balances' | translate) + ' ' + (('CPT.' + (releveSoldeViewMode === 'day' ? 'DailyPlural' : (releveSoldeViewMode === 'week' ? 'WeeklyPlural' : 'MonthlyPlural'))) | translate)) : (('CPT.OperationsHistory' | translate) + (releveOperationsViewMode === 'week' ? ('CPT.WeeklyShort' | translate) : (releveOperationsViewMode === 'month' ? ('CPT.MonthlyShort' | translate) : ''))) }}</h3>
+                        <!-- Panneau Approvisionnements: comparaison et recommandations -->
+                        <div class="appro-panel" *ngIf="showReleveSummary && releveSoldesJournaliers && releveSoldesJournaliers.length > 0" style="margin:10px 0; background:#fff; border:1px solid #eee; border-radius:8px; padding:12px;">
+                            <div style="display:flex; flex-wrap:wrap; gap:12px; align-items:flex-end;">
+                                <div style="margin-right:auto;">
+                                    <label style="font-size:12px; color:#777; display:block;">{{ 'CPT.Basedecalcul' | translate }}</label>
+                                    <div style="display:flex; align-items:center; gap:8px; font-size:13px; flex-wrap:wrap;">
+                                        <label style="display:flex; align-items:center; gap:8px;">
+                                            <input type="checkbox" [(ngModel)]="useMonthlyAverage"> {{ 'CPT.Moyennemensuelleex' | translate }} {{ referenceMonthLabel }})
+                                        </label>
+                                        <select [(ngModel)]="selectedMonthIndex" [disabled]="!useMonthlyAverage" style="padding:6px 8px; border:1px solid #ddd; border-radius:6px;">
+                                            <option [ngValue]="null">{{ 'CPT.Moisréf' | translate }}</option>
+                                            <option *ngFor="let m of [0,1,2,3,4,5,6,7,8,9,10,11]" [ngValue]="m">{{ getMonthLabel(m) }}</option>
+                                        </select>
+                                        <input type="number" [(ngModel)]="selectedYear" [disabled]="!useMonthlyAverage" placeholder="{{ 'TBL.year' | translate }}" style="width:90px; padding:6px 8px; border:1px solid #ddd; border-radius:6px;">
+                                    </div>
+                                </div>
+                                <div>
+                                    <div style="font-size:12px; color:#777;">{{ 'CPT.Consommationmoyennejour' | translate }}</div>
+                                    <div style="font-weight:600;">{{ averageConsumptionPerDay | number:'1.2-2' }}</div>
+                                </div>
+                                <div>
+                                    <div style="font-size:12px; color:#777;">{{ 'CPT.Stockactuel' | translate }}</div>
+                                    <div style="font-weight:600;">{{ currentStockAmount | number:'1.2-2' }}</div>
+                                </div>
+                                <div>
+                                    <div style="font-size:12px; color:#777;">{{ 'CPT.Joursdestock' | translate }}</div>
+                                    <div style="font-weight:600;">{{ stockDays | number:'1.1-1' }}</div>
+                                </div>
+                                <div>
+                                    <label style="font-size:12px; color:#777; display:block;">{{ 'CPT.Délaijours' | translate }}</label>
+                                    <input type="number" [(ngModel)]="leadTimeDays" min="0" style="width:90px; padding:6px 8px; border:1px solid #ddd; border-radius:6px;">
+                                </div>
+                                <div>
+                                    <label style="font-size:12px; color:#777; display:block;">{{ 'CPT.Stocksécuritéjours' | translate }}</label>
+                                    <input type="number" [(ngModel)]="safetyStockDaysOverride" placeholder="{{ 'CPT.Auto' | translate }}" min="0" step="0.1" style="width:120px; padding:6px 8px; border:1px solid #ddd; border-radius:6px;">
+                                </div>
+                                <div>
+                                    <div style="font-size:12px; color:#777;">{{ 'CPT.Pointderéapprojours' | translate }}</div>
+                                    <div style="font-weight:600;">{{ reorderPointDays | number:'1.1-1' }}</div>
+                                </div>
+                                <div>
+                                    <div style="font-size:12px; color:#777;">{{ 'CPT.Qtérecommandéejours' | translate }}</div>
+                                    <div style="font-weight:600;">{{ recommendedDays | number:'1.1-1' }}</div>
+                                </div>
+                                <div>
+                                    <div style="font-size:12px; color:#777;">{{ 'CPT.Qtérecommandée' | translate }}</div>
+                                    <div style="font-weight:600;">{{ recommendedQuantityAmount | number:'1.2-2' }}</div>
+                                </div>
+                            </div>
+                        </div>
+                        
+                        <!-- Indicateur pour l'affichage automatique des frais -->
+                        <div *ngIf="showFraisAutomaticallyReleve && !showSoldesSeulement" class="frais-auto-indicator">
+                            <div class="indicator-content">
+                                <i class="fas fa-info-circle"></i>
+                                <span>{{ 'CPT.Lesfraisdetransactionsontautomatiquementaffichéspourletypedopérationsélectionné' | translate }}</span>
+                            </div>
+                        </div>
+                        <div *ngIf="isLoadingReleve" class="loading-releve">
+                            <i class="fas fa-spinner fa-spin"></i> {{ 'CPT.Chargementdelhistorique' | translate }}
+                        </div>
+                        
+                        <div *ngIf="!isLoadingReleve && releveOperations.length === 0" class="no-operations">
+                            {{ 'CPT.Aucuneopérationtrouvéepourcecompte' | translate }}
+                        </div>
+
+                        <!-- Synthèse variation Crédits / Débits (vue Historique des opérations) -->
+                        <div *ngIf="!isLoadingReleve && releveOperations.length > 0 && !showSoldesSeulement" class="releve-variation-summary">
+                            <div class="variation-summary-title"><i class="fas fa-balance-scale"></i> {{ 'CPT.Variationcréditsdébits' | translate }}</div>
+                            <div class="variation-summary-grid">
+                                <div class="variation-item">
+                                    <span class="variation-label">{{ 'CPT.Totaldébits' | translate }}</span>
+                                    <span class="variation-value debit">{{ releveTotalDebits | number:'1.2-2' }}</span>
+                                    <span class="variation-pct">({{ relevePercentDebits | number:'1.1-1' }} %)</span>
+                                </div>
+                                <div class="variation-item">
+                                    <span class="variation-label">{{ 'CPT.Totalcrédits' | translate }}</span>
+                                    <span class="variation-value credit">{{ releveTotalCredits | number:'1.2-2' }}</span>
+                                    <span class="variation-pct">({{ relevePercentCredits | number:'1.1-1' }} %)</span>
+                                </div>
+                                <div class="variation-item variation-highlight">
+                                    <span class="variation-label">{{ 'CPT.Variationcréditsdébits_1' | translate }}</span>
+                                    <span class="variation-value" [ngClass]="releveVariation >= 0 ? 'credit' : 'debit'">{{ releveVariation | number:'1.2-2' }}</span>
+                                    <span class="variation-pct">({{ relevePercentVariation | number:'1.1-1' }} {{ 'CPT.Dutotal' | translate }}</span>
+                                </div>
+                            </div>
+                        </div>
+                        
+                        <!-- Boutons de vue jour / semaine / mois (Historique des opérations) -->
+                        <div *ngIf="!isLoadingReleve && releveOperations.length > 0 && !showSoldesSeulement" class="releve-solde-view-mode" style="margin-bottom: 10px;">
+                            <span style="margin-right: 8px;">{{ 'CPT.Vue' | translate }}</span>
+                            <button type="button" class="btn btn-sm" [class.active]="releveOperationsViewMode === 'day'" (click)="onReleveOperationsViewModeChange('day')">
+                                <i class="fas fa-calendar-day"></i> {{ 'CPT.Journalier' | translate }}
+                            </button>
+                            <button type="button" class="btn btn-sm" [class.active]="releveOperationsViewMode === 'week'" (click)="onReleveOperationsViewModeChange('week')">
+                                <i class="fas fa-calendar-week"></i> {{ 'CPT.Semaine' | translate }}
+                            </button>
+                            <button type="button" class="btn btn-sm" [class.active]="releveOperationsViewMode === 'month'" (click)="onReleveOperationsViewModeChange('month')">
+                                <i class="fas fa-calendar-alt"></i>{{ 'TBL.month' | translate }}</button>
+                        </div>
+
+                        <!-- Vue détaillée des opérations (Journalier) -->
+                        <div *ngIf="!isLoadingReleve && releveOperations.length > 0 && !showSoldesSeulement && releveOperationsViewMode === 'day'" class="operations-table">
+                            <div class="operations-summary">
+                                <span>{{ 'CPT.Total' | translate }} {{ releveOperations.length }} {{ 'CPT.Opérations' | translate }}</span>
+                                <span *ngIf="releveOperations.length > relevePageSize">
+                                    {{ 'CPT.Affichage_1' | translate }} {{ (releveCurrentPage - 1) * relevePageSize + 1 }} - {{ Math.min(releveCurrentPage * relevePageSize, releveOperations.length) }} {{ 'CPT.Sur' | translate }} {{ releveOperations.length }}
+                                </span>
+                            </div>
+                            <table class="table table-bordered table-hover table-sm">
+                                <thead>
+                                    <tr>
+                                        <th>{{ 'TBL.date' | translate }}</th>
+                                        <th>{{ 'COMMON.actions.type' | translate }}</th>
+                                        <th>{{ 'TBL.debit' | translate }}</th>
+                                        <th>{{ 'TBL.credit' | translate }}</th>
+                                        <th>{{ 'CPT.Soldeavant' | translate }}</th>
+                                        <th>{{ 'CPT.Soldeaprès' | translate }}</th>
+                                        <th>{{ 'TBL.service' | translate }}</th>
+                                        <th>{{ 'TBL.bank' | translate }}</th>
+                                        <th>{{ 'CPT.Bordereau' | translate }}</th>
+                                    </tr>
+                                </thead>
+                                <tbody>
+                                    <tr>
+                                        <td colspan="8" style="text-align: left; font-weight: bold; color: #1976d2;">
+                                            {{ 'CPT.Soldedouvertureglobal' | translate }}{{ getGlobalOpeningBalanceDate() }}): {{ getGlobalOpeningBalance() | number:'1.2-2' }}
+                                        </td>
+                                    </tr>
+                                    <ng-container *ngFor="let operation of pagedReleveOperations; let i = index; trackBy: trackByReleveOperation">
+                                        <tr *ngIf="shouldShowOpeningBalance(operation, i)" class="solde-ouverture">
+                                            <td colspan="3"><b style="color: #1976d2;">{{ 'CPT.Soldedouverture' | translate }}{{ getOpDate(operation) }})</b></td>
+                                            <td></td>
+                                            <td><b style="color: #1976d2;">{{ getDailyBalances(releveOperations)[getOpDate(operation)].opening | number:'1.2-2' }}</b></td>
+                                            <td colspan="4"></td>
+                                        </tr>
+                                        <tr [class.frais-row]="operation.typeOperation === 'FRAIS_TRANSACTION'"
+                                            [class.has-frais]="operation.typeOperation !== 'FRAIS_TRANSACTION' && hasAssociatedFraisReleve(operation)">
+                                            <td>{{ formatDate(operation.dateOperation) }}</td>
+                                            <td>
+                                                <span class="operation-type" [class]="getOperationTypeClass(operation.typeOperation)">
+                                                    {{ getOperationTypeLabel(operation.typeOperation) }}
+                                                </span>
+                                            </td>
+                                            <td>
+                                              <ng-container *ngIf="operation.typeOperation.startsWith('annulation_'); else nonAnnulationDebit">
+                                                {{ isAnnulationDebit(operation) ? (operation.montant | number:'1.2-2') : '' }}
+                                              </ng-container>
+                                              <ng-template #nonAnnulationDebit>
+                                                <ng-container *ngIf="operation.typeOperation === 'FRAIS_TRANSACTION'; else autreDebit">
+                                                  {{ isFraisTransactionDebit(operation) ? (operation.montant | number:'1.2-2') : '' }}
+                                                </ng-container>
+                                                <ng-template #autreDebit>
+                                                  {{ isDebitOperation(operation.typeOperation, operation.service, operation.montant) ? (operation.montant | number:'1.2-2') : '' }}
+                                                </ng-template>
+                                              </ng-template>
+                                            </td>
+                                            <td>
+                                              <ng-container *ngIf="operation.typeOperation.startsWith('annulation_'); else nonAnnulationCredit">
+                                                {{ isAnnulationCredit(operation) ? (operation.montant | number:'1.2-2') : '' }}
+                                              </ng-container>
+                                              <ng-template #nonAnnulationCredit>
+                                                <ng-container *ngIf="operation.typeOperation === 'FRAIS_TRANSACTION'; else autreCredit">
+                                                  {{ isFraisTransactionCredit(operation) ? (operation.montant | number:'1.2-2') : '' }}
+                                                </ng-container>
+                                                <ng-template #autreCredit>
+                                                  {{ isCreditOperation(operation.typeOperation, operation.service, operation.montant) ? (operation.montant | number:'1.2-2') : '' }}
+                                                </ng-template>
+                                              </ng-template>
+                                            </td>
+                                            <td>{{ operation.soldeAvant | number:'1.2-2' }}</td>
+                                            <td>{{ operation.soldeApres | number:'1.2-2' }}</td>
+                                            <td>{{ operation.service || '-' }}</td>
+                                            <td>{{ operation.banque || '-' }}</td>
+                                            <td>{{ operation.nomBordereau || '-' }}</td>
+                                        </tr>
+                                        <tr *ngIf="shouldShowClosingBalance(operation, i)" class="solde-cloture">
+                                            <td colspan="8" style="text-align: right;"><b style="color: #388e3c;">{{ 'CPT.Soldedeclôture' | translate }}{{ getOpDate(operation) }}) : {{ formatClosingBalance(getDailyBalances(releveOperations)[getOpDate(operation)].closing) }}</b></td>
+                                        </tr>
+                                    </ng-container>
+                                </tbody>
+                            </table>
+                         </div>
+
+                        <!-- Vue groupée des opérations (Semaine / Mois) -->
+                        <div *ngIf="!isLoadingReleve && releveOperations.length > 0 && !showSoldesSeulement && releveOperationsViewMode !== 'day'" class="operations-table">
+                            <div class="operations-summary">
+                                <span>{{ 'CPT.Total' | translate }} {{ releveOperationsGroupedSummary.length }} {{ ('CPT.' + (releveOperationsViewMode === 'week' ? 'Weeks' : 'Months')) | translate }}</span>
+                                <span *ngIf="releveOperationsGroupedSummary.length > relevePageSize">
+                                    {{ 'CPT.Affichage_1' | translate }} {{ (releveCurrentPage - 1) * relevePageSize + 1 }} - {{ Math.min(releveCurrentPage * relevePageSize, releveOperationsGroupedSummary.length) }} {{ 'CPT.Sur' | translate }} {{ releveOperationsGroupedSummary.length }}
+                                </span>
+                            </div>
+                            <table class="table table-bordered table-hover table-sm">
+                                <thead>
+                                    <tr>
+                                        <th>{{ 'LBL.period' | translate }}</th>
+                                        <th>{{ 'CPT.Nbopérations' | translate }}</th>
+                                        <th>{{ 'CPT.Totaldébits' | translate }}</th>
+                                        <th>{{ 'CPT.Totalcrédits' | translate }}</th>
+                                        <th>{{ 'TBL.variation' | translate }}</th>
+                                        <th>{{ 'CPT.Soldedouverture_1' | translate }}</th>
+                                        <th>{{ 'CPT.Soldedeclôture_1' | translate }}</th>
+                                    </tr>
+                                </thead>
+                                <tbody>
+                                    <tr *ngFor="let group of pagedReleveOperationsGrouped; trackBy: trackByReleveGroup">
+                                        <td style="font-weight: 600;">{{ group.periodLabel }}</td>
+                                        <td>{{ group.operations.length }}</td>
+                                        <td style="color: #e53935;">{{ group.totalDebit | number:'1.2-2' }}</td>
+                                        <td style="color: #388e3c;">{{ group.totalCredit | number:'1.2-2' }}</td>
+                                        <td [style.color]="group.variation >= 0 ? '#388e3c' : '#e53935'" style="font-weight: 600;">
+                                            {{ group.variation | number:'1.2-2' }}
+                                        </td>
+                                        <td style="color: #1976d2;">{{ group.opening | number:'1.2-2' }}</td>
+                                        <td style="color: #1976d2; font-weight: 600;">{{ formatClosingBalance(group.closing) }}</td>
+                                    </tr>
+                                    <tr *ngIf="pagedReleveOperationsGrouped.length === 0">
+                                        <td colspan="7" style="text-align: center; color: #999;">{{ 'CPT.Aucunedonnée' | translate }}</td>
+                                    </tr>
+                                </tbody>
+                            </table>
+                         </div>
+
+                        <!-- Vue des soldes (journaliers, hebdomadaires ou mensuels) -->
+                        <div *ngIf="showSoldesSeulement && releveSoldesJournaliers.length > 0" class="releve-solde-view-mode" style="margin-bottom: 10px;">
+                            <span style="margin-right: 8px;">{{ 'CPT.Vue' | translate }}</span>
+                            <button type="button" class="btn btn-sm" [class.active]="releveSoldeViewMode === 'day'" (click)="releveSoldeViewMode = 'day'; calculateRelevePagination()">
+                                <i class="fas fa-calendar-day"></i> {{ 'CPT.Journalier' | translate }}
+                            </button>
+                            <button type="button" class="btn btn-sm" [class.active]="releveSoldeViewMode === 'week'" (click)="releveSoldeViewMode = 'week'; calculateRelevePagination()">
+                                <i class="fas fa-calendar-week"></i> {{ 'CPT.Semaine' | translate }}
+                            </button>
+                            <button type="button" class="btn btn-sm" [class.active]="releveSoldeViewMode === 'month'" (click)="releveSoldeViewMode = 'month'; calculateRelevePagination()">
+                                <i class="fas fa-calendar-alt"></i>{{ 'TBL.month' | translate }}</button>
+                        </div>
+                        <div *ngIf="!isLoadingReleve && releveSoldesJournaliers.length > 0 && showSoldesSeulement" class="operations-table">
+                            <div class="operations-summary">
+                                <span>{{ 'CPT.Total' | translate }} {{ releveSoldesDisplayRows.length }} {{ ('CPT.' + (releveSoldeViewMode === 'day' ? 'Days' : (releveSoldeViewMode === 'week' ? 'Weeks' : 'Months'))) | translate }}</span>
+                                <span *ngIf="releveSoldesDisplayRows.length > relevePageSize">
+                                    {{ 'CPT.Affichage_1' | translate }} {{ (releveCurrentPage - 1) * relevePageSize + 1 }} - {{ Math.min(releveCurrentPage * relevePageSize, releveSoldesDisplayRows.length) }} {{ 'CPT.Sur' | translate }} {{ releveSoldesDisplayRows.length }}
+                                </span>
+                            </div>
+                            <table class="table table-bordered table-hover table-sm">
+                                <thead>
+                                    <tr>
+                                        <th>{{ ('CPT.' + (releveSoldeViewMode === 'day' ? 'Date' : 'Period')) | translate }}</th>
+                                        <th>{{ 'CPT.Soldedouverture_2' | translate }}</th>
+                                        <th>{{ 'CPT.Soldedeclôture_2' | translate }}</th>
+                                        <th>{{ 'CPT.Variation' | translate }} {{ (releveSoldeViewMode === 'day' ? ('CPT.DailySuffix' | translate) : '') }}</th>
+                                        <th>{{ 'CPT.Soldedeclôturebo' | translate }}</th>
+                                        <th>{{ 'CPT.Ecartdesolde' | translate }}</th>
+                                        <th>{{ 'CPT.Ecartrégularisé' | translate }}</th>
+                                    </tr>
+                                </thead>
+                                <tbody>
+                                    <tr *ngFor="let row of pagedReleveSoldesDisplay; let i = index; trackBy: trackByReleveSolde">
+                                        <td>{{ row.periodLabel }}</td>
+                                        <td class="solde-ouverture-val">{{ row.opening | number:'1.2-2' }}</td>
+                                        <td class="solde-cloture-val"
+                                            [ngClass]="row.closingBo !== undefined && (round2(row.closingBo) === round2(getEffectiveClosingFromRow(row))) ? 'solde-green' : ''">
+                                            <div class="closing-cell">
+                                                <div class="closing-value">
+                                                    <span [ngClass]="hasManualClosingOverrideRow(row) ? 'manual-closing-value' : ''">
+                                                        {{ formatClosingBalance(getEffectiveClosingFromRow(row)) }}
+                                                    </span>
+                                                    <span *ngIf="hasManualClosingOverrideRow(row)" class="manual-badge">{{ 'CPT.Manuel' | translate }}</span>
+                                                </div>
+                                                <button *ngIf="releveSoldeViewMode === 'day'" type="button"
+                                                        class="btn btn-link btn-xs closing-edit-btn"
+                                                        (click)="openClosingOverrideModal(row.ecartRef)"
+                                                        title="{{ 'CPT.Corrigerlesoldedeclôture' | translate }}">
+                                                    <i class="fas fa-edit"></i>
+                                                </button>
+                                            </div>
+                                        </td>
+                                        <td [ngClass]="(getEffectiveClosingFromRow(row) - row.opening) >= 0 ? 'variation-positive' : 'variation-negative'">
+                                            {{ (getEffectiveClosingFromRow(row) - row.opening) | number:'1.2-2' }}
+                                        </td>
+                                        <td>
+                                            <span [ngClass]="
+                                                row.closingBo !== undefined && (round2(row.closingBo) === round2(getEffectiveClosingFromRow(row)))
+                                                    ? 'solde-green'
+                                                    : (row.closingBo !== undefined && (round2(row.closingBo) !== round2(getEffectiveClosingFromRow(row))) ? 'solde-red' : '')
+                                              ">
+                                                {{ row.closingBo !== undefined ? formatClosingBalance(row.closingBo) : '-' }}
+                                            </span>
+                                        </td>
+                                        <td [ngClass]="getEcartClass(row.ecartRef)" 
+                                            (click)="navigateToEcartSolde(row.ecartRef)"
+                                            style="cursor: pointer; text-decoration: underline; font-weight: bold;"
+                                            title="{{ 'CPT.Cliquerpourvoirlesécartsdesoldecorrespondants' | translate }}">
+                                            {{ getEcartValue(row.ecartRef) | number:'1.2-2' }}
+                                        </td>
+                                        <td [ngClass]="getImpactOPClass(row.ecartRef)" 
+                                            (click)="navigateToImpactOP(row.ecartRef)"
+                                            style="cursor: pointer; text-decoration: underline; font-weight: bold;"
+                                            title="{{ 'CPT.Cliquerpourvoirlesécartsrégulariséscorrespondants' | translate }}">
+                                            {{ getImpactOPValue(row.ecartRef) | number:'1.2-2' }}
+                                        </td>
+                                    </tr>
+                                </tbody>
+                            </table>
+                        </div>
+                            
+                        <!-- Pagination pour les opérations -->
+                        <div class="releve-pagination" *ngIf="releveTotalPages > 1">
+                            <button (click)="prevRelevePage()" [disabled]="releveCurrentPage === 1" class="btn pagination-btn">
+                                <i class="fas fa-chevron-left"></i>{{ 'PAG.previous' | translate }}</button>
+                            
+                            <div class="pagination-indicators">
+                                <span *ngFor="let page of getVisibleRelevePages(); trackBy: trackByNumber"
+                                        class="page-indicator"
+                                        [class.active]="releveCurrentPage === page"
+                                        (click)="goToRelevePage(page)">
+                                    {{ page }}
+                                </span>
+                            </div>
+                            
+                            <button (click)="nextRelevePage()" [disabled]="releveCurrentPage === releveTotalPages" class="btn pagination-btn">{{ 'PAG.next' | translate }}<i class="fas fa-chevron-right"></i>
+                            </button>
+                        </div>
+                    </div>
+                    <div style="text-align: right; font-weight: bold; color: #388e3c; margin-top: 8px;">
+                        {{ 'CPT.Soldedeclôtureglobal' | translate }}{{ getGlobalClosingBalanceDate() }}): {{ formatClosingBalance(getGlobalClosingBalance()) }}
+                    </div>
+                </div>
+
+                <!-- Contenu de l'onglet Écarts de Solde -->
+                <div class="tab-content" *ngIf="activeTab === 'ecart-solde'">
+                    <app-ecart-solde-tab 
+                        [agence]="ecartSoldeAgence"
+                        [dateTransaction]="ecartSoldeDateTransaction"
+                        [revenuJournalierData]="revenuJournalierData">
+                    </app-ecart-solde-tab>
+                </div>
+
+                <!-- Contenu de l'onglet Ecart régularisé -->
+                <div class="tab-content" *ngIf="activeTab === 'impact-op'">
+                    <app-impact-op-tab 
+                        [agence]="impactOPAgence"
+                        [dateTransaction]="impactOPDateTransaction">
+                    </app-impact-op-tab>
+                </div>
+
+                <!-- Contenu de l'onglet Revenu Journalier -->
+                <div class="tab-content" *ngIf="activeTab === 'revenu-journalier'">
+                    <div class="revenu-journalier-container">
+                        <h3>{{ 'CPT.Revenujournalier_1' | translate }} {{ selectedCompte?.numeroCompte }}</h3>
+                        
+                        <!-- Filtres pour le revenu journalier -->
+                        <div class="revenu-filters" *ngIf="!isLoadingRevenuJournalier && revenuJournalierData.length > 0">
+                            <div class="filter-row">
+                                <div class="filter-group">
+                                    <label for="revenuDateDebut">{{ 'CPT.Datedébut' | translate }}</label>
+                                    <input 
+                                        type="date" 
+                                        id="revenuDateDebut"
+                                        [(ngModel)]="revenuJournalierDateDebut" 
+                                        (change)="onRevenuJournalierFiltersChange()"
+                                        class="filter-input">
+                                </div>
+                                <div class="filter-group">
+                                    <label for="revenuDateFin">{{ 'CPT.Datefin' | translate }}</label>
+                                    <input 
+                                        type="date" 
+                                        id="revenuDateFin"
+                                        [(ngModel)]="revenuJournalierDateFin" 
+                                        (change)="onRevenuJournalierFiltersChange()"
+                                        class="filter-input">
+                                </div>
+                                <div class="filter-group">
+                                    <label for="revenuTypeRevenu">{{ 'CPT.Typederevenu' | translate }}</label>
+                                    <select 
+                                        id="revenuTypeRevenu"
+                                        [(ngModel)]="revenuJournalierTypeRevenu" 
+                                        (change)="onRevenuJournalierFiltersChange()"
+                                        class="filter-select">
+                                        <option value="">{{ 'CPT.Touslesrevenus' | translate }}</option>
+                                        <option value="cashin">{{ 'CPT.Fraiscashin' | translate }}</option>
+                                        <option value="paiement">{{ 'CPT.Fraispaiement' | translate }}</option>
+                                        <option value="total">{{ 'CPT.Revenutotal' | translate }}</option>
+                                    </select>
+                                </div>
+                            </div>
+                            <div class="filter-row">
+                                <div class="filter-group">
+                                    <label for="revenuMontantMin">{{ 'CPT.Montantmin' | translate }}</label>
+                                    <input 
+                                        type="number" 
+                                        id="revenuMontantMin"
+                                        [(ngModel)]="revenuJournalierMontantMin" 
+                                        (input)="onRevenuJournalierFiltersChange()"
+                                        placeholder="0.00"
+                                        step="0.01"
+                                        min="0"
+                                        class="filter-input">
+                                </div>
+                                <div class="filter-group">
+                                    <label for="revenuMontantMax">{{ 'CPT.Montantmax' | translate }}</label>
+                                    <input 
+                                        type="number" 
+                                        id="revenuMontantMax"
+                                        [(ngModel)]="revenuJournalierMontantMax" 
+                                        (input)="onRevenuJournalierFiltersChange()"
+                                        placeholder="0.00"
+                                        step="0.01"
+                                        min="0"
+                                        class="filter-input">
+                                </div>
+                                <div class="filter-group filter-actions">
+                                    <button 
+                                        class="btn filter-clear-btn" 
+                                        (click)="clearRevenuJournalierFilters()"
+                                        title="{{ 'CPT.Réinitialiserlesfiltres' | translate }}">
+                                        <i class="fas fa-times"></i>{{ 'COMMON.actions.reset' | translate }}</button>
+                                </div>
+                            </div>
+                        </div>
+                        
+                        <div *ngIf="isLoadingRevenuJournalier" class="loading-releve">
+                            <i class="fas fa-spinner fa-spin"></i> {{ 'CPT.Chargementdesrevenusjournaliers' | translate }}
+                        </div>
+                        
+                        <div *ngIf="!isLoadingRevenuJournalier && revenuJournalierData.length === 0" class="no-operations">
+                            {{ 'CPT.Aucunedonnéederevenutrouvéepourcecompte' | translate }}
+                        </div>
+                        
+                        <div *ngIf="!isLoadingRevenuJournalier && revenuJournalierData.length > 0 && revenuJournalierDataFiltered.length === 0" class="no-operations">
+                            {{ 'CPT.Aucunedonnéenecorrespondauxfiltressélectionnés' | translate }}
+                        </div>
+                        
+                        <div *ngIf="!isLoadingRevenuJournalier && revenuJournalierData.length > 0 && revenuJournalierDataFiltered.length > 0" class="revenu-journalier-content">
+                            <!-- Résumé des totaux -->
+                            <div class="revenu-summary">
+                                <div class="summary-card">
+                                    <div class="summary-title">{{ 'CPT.Totalcashin' | translate }}</div>
+                                    <div class="summary-value">{{ getTotalCashinJournalier() | number:'1.2-2' }}</div>
+                                </div>
+                                <div class="summary-card">
+                                    <div class="summary-title">{{ 'CPT.Totalpaiement' | translate }}</div>
+                                    <div class="summary-value">{{ getTotalPaiementJournalier() | number:'1.2-2' }}</div>
+                                </div>
+                                <div class="summary-card">
+                                    <div class="summary-title">{{ 'CPT.Fraiscashin' | translate }}</div>
+                                    <div class="summary-value">{{ getTotalFraisCashinJournalier() | number:'1.2-2' }}</div>
+                                </div>
+                                <div class="summary-card">
+                                    <div class="summary-title">{{ 'CPT.Fraispaiement' | translate }}</div>
+                                    <div class="summary-value">{{ getTotalFraisPaiementJournalier() | number:'1.2-2' }}</div>
+                                </div>
+                                <div class="summary-card total-revenu">
+                                    <div class="summary-title">{{ 'CPT.Revenuattendu' | translate }}</div>
+                                    <div class="summary-value">{{ getTotalRevenuJournalier() | number:'1.2-2' }}</div>
+                                </div>
+                                <div class="summary-card ecart-frais">
+                                    <div class="summary-title">{{ 'CPT.Ecartfrais' | translate }}</div>
+                                    <div class="summary-value">{{ getTotalEcartFraisJournalier() | number:'1.2-2' }}</div>
+                                </div>
+                            </div>
+
+                            <!-- Informations de débogage -->
+                            <div class="debug-info" *ngIf="revenuJournalierDebugInfo" style="background: #f0f8ff; padding: 10px; margin: 10px 0; border-radius: 5px; font-size: 12px; color: #666;">
+                                <strong>{{ 'CPT.Informationsdedébogage' | translate }}</strong> {{ revenuJournalierDebugInfo }}
+                            </div>
+
+                            <!-- Tableau des revenus journaliers -->
+                            <div class="revenu-table-container">
+                                <div class="operations-summary">
+                                    <span><strong>{{ 'CPT.Total' | translate }}</strong> {{ revenuJournalierDataFiltered.length }} {{ 'CPT.Jours' | translate }}</span>
+                                    <span *ngIf="revenuJournalierDataFiltered.length > revenuJournalierPageSize">
+                                        <strong>{{ 'CPT.Affichage_1' | translate }}</strong> {{ (revenuJournalierCurrentPage - 1) * revenuJournalierPageSize + 1 }} - {{ Math.min(revenuJournalierCurrentPage * revenuJournalierPageSize, revenuJournalierDataFiltered.length) }} {{ 'CPT.Sur' | translate }} {{ revenuJournalierDataFiltered.length }}
+                                    </span>
+                                </div>
+                                <table class="table table-bordered table-hover table-sm">
+                                    <thead>
+                                        <tr>
+                                            <th>{{ 'TBL.date' | translate }}</th>
+                                            <th>{{ 'CPT.Totalcashin' | translate }}</th>
+                                            <th>{{ 'CPT.Totalpaiement' | translate }}</th>
+                                            <th>{{ 'CPT.Fraiscashin' | translate }}</th>
+                                            <th>{{ 'CPT.Fraispaiement' | translate }}</th>
+                                            <th>{{ 'CPT.Revenuattendu' | translate }}</th>
+                                            <th>{{ 'CPT.Ecartfrais' | translate }}</th>
+                                        </tr>
+                                    </thead>
+                                    <tbody>
+                                        <tr *ngFor="let revenu of pagedRevenuJournalierData; trackBy: trackByRevenuJournalier">
+                                            <td>{{ formatDate(revenu.date) }}</td>
+                                            <td class="cashin-amount">{{ revenu.totalCashin | number:'1.2-2' }}</td>
+                                            <td class="paiement-amount">{{ revenu.totalPaiement | number:'1.2-2' }}</td>
+                                            <td class="frais-cashin">{{ revenu.fraisCashin | number:'1.2-2' }}</td>
+                                            <td class="frais-paiement">{{ revenu.fraisPaiement | number:'1.2-2' }}</td>
+                                            <td class="revenu-total">{{ revenu.revenuTotal | number:'1.2-2' }}</td>
+                                            <td class="ecart-frais" [ngClass]="{'negative': revenu.ecartFrais < 0, 'positive': revenu.ecartFrais > 0}">
+                                                <a href="#" (click)="$event.preventDefault(); navigateToEcartFrais(revenu.date)" title="{{ 'CPT.Voirécartfraisonglet' | translate }}">
+                                                    {{ revenu.ecartFrais | number:'1.2-2' }}
+                                                </a>
+                                            </td>
+                                        </tr>
+                                    </tbody>
+                                </table>
+                            </div>
+
+                            <!-- Pagination pour le revenu journalier -->
+                            <div class="releve-pagination" *ngIf="revenuJournalierTotalPages > 1">
+                                <button (click)="prevRevenuJournalierPage()" [disabled]="revenuJournalierCurrentPage === 1" class="btn pagination-btn">
+                                    <i class="fas fa-chevron-left"></i>{{ 'PAG.previous' | translate }}</button>
+                                
+                                <div class="pagination-indicators">
+                                    <span *ngFor="let page of getVisibleRevenuJournalierPages(); trackBy: trackByNumber"
+                                            class="page-indicator"
+                                            [class.active]="revenuJournalierCurrentPage === page"
+                                            (click)="goToRevenuJournalierPage(page)">
+                                        {{ page }}
+                                    </span>
+                                </div>
+                                
+                                <button (click)="nextRevenuJournalierPage()" [disabled]="revenuJournalierCurrentPage === revenuJournalierTotalPages" class="btn pagination-btn">{{ 'PAG.next' | translate }}<i class="fas fa-chevron-right"></i>
+                                </button>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Onglet Écart Frais (TRX SF par date/agence) - STYLE IMPACT OP -->
+                <div class="tab-content" *ngIf="activeTab === 'ecart-frais'">
+                  <div class="ecart-frais-container-impact">
+                    <!-- En-tête -->
+                    <div class="header">
+                      <h2>{{ 'CPT.Détaildesfraisdetransaction' | translate }} {{ ecartFraisAgence }} - {{ formatDate(ecartFraisDate).split(' ')[0] }}</h2>
+                      <div style="font-size: 12px; color: #666; margin-top: 4px;">
+                        {{ 'CPT.Filtreactifagence' | translate }} <strong>{{ ecartFraisAgence }}</strong> {{ 'CPT.Date' | translate }} <strong>{{ ecartFraisDate }}</strong> {{ 'CPT.00002359statut' | translate }} <strong>{{ 'CPT.ENattente' | translate }}</strong>
+                      </div>
+                      <div class="header-actions">
+                        <button class="btn btn-success" (click)="exportEcartFrais()" [disabled]="ecartFraisItems.length === 0">
+                          <i class="fas fa-download"></i> {{ 'CPT.Exporter' | translate }}
+                        </button>
+                      </div>
+                    </div>
+
+                    <!-- Statistiques -->
+                    <div class="stats-section" *ngIf="!isLoadingEcartFrais && ecartFraisItems.length > 0">
+                      <div class="stats-grid">
+                        <div class="stat-card">
+                          <div class="stat-value">{{ ecartFraisItems.length }}</div>
+                          <div class="stat-label">{{ 'CPT.Totaltransactions' | translate }}</div>
+                        </div>
+                        <div class="stat-card stat-montant">
+                          <div class="stat-value">{{ getTotalMontantEcartTrxSf() | number:'1.2-2' }}</div>
+                          <div class="stat-label">{{ 'TBL.totalAmount' | translate }}</div>
+                        </div>
+                        <div class="stat-card stat-frais">
+                          <div class="stat-value">{{ getTotalFraisEcartTrxSf() | number:'1.2-2' }}</div>
+                          <div class="stat-label">{{ 'CPT.Totalfrais' | translate }}</div>
+                        </div>
+                        <div class="stat-card stat-services">
+                          <div class="stat-value">{{ getUniqueServicesCount() }}</div>
+                          <div class="stat-label">{{ 'CPT.Servicesuniques' | translate }}</div>
+                        </div>
+                      </div>
+                    </div>
+
+                    <!-- Tableau des frais -->
+                    <div class="table-section">
+                      <div class="table-header">
+                        <h3>{{ 'CPT.Listedestransactions' | translate }}</h3>
+                        <div class="table-info">
+                          {{ 'CPT.Affichage' | translate }} {{ (ecartFraisCurrentPage - 1) * ecartFraisPageSize + 1 }} - {{ Math.min(ecartFraisCurrentPage * ecartFraisPageSize, ecartFraisItems.length) }} 
+                          {{ 'CPT.Sur' | translate }} {{ ecartFraisItems.length }} {{ 'CPT.Transactions' | translate }}
+                        </div>
+                        <div class="page-size-controls">
+                          <label>{{ 'CPT.Affichage_1' | translate }}</label>
+                          <select [(ngModel)]="ecartFraisPageSize" (change)="onChangeEcartFraisPageSize(ecartFraisPageSize)" class="form-control page-size-select">
+                            <option [ngValue]="10">10</option>
+                            <option [ngValue]="20">20</option>
+                            <option [ngValue]="50">50</option>
+                            <option [ngValue]="100">100</option>
+                          </select>
+                        </div>
+                      </div>
+
+                      <!-- Filtres et recherche -->
+                      <div class="filters-section" *ngIf="!isLoadingEcartFrais && ecartFraisItems.length > 0">
+                        <div class="filters-row">
+                          <div class="search-box">
+                            <i class="fas fa-search"></i>
+                            <input type="text" 
+                                   [(ngModel)]="ecartFraisSearchTerm" 
+                                   (input)="onEcartFraisSearch()"
+                                   placeholder="{{ 'CPT.Rechercherparidserviceagence' | translate }}"
+                                   class="search-input">
+                          </div>
+                          <div class="filter-controls">
+                            <select [(ngModel)]="ecartFraisStatusFilter" (change)="onEcartFraisFilterChange()" class="filter-select">
+                              <option value="">{{ 'FILT.allStatuses' | translate }}</option>
+                              <option value="EN_ATTENTE">{{ 'MSG.pending' | translate }}</option>
+                              <option value="TRAITE">{{ 'CPT.Traité' | translate }}</option>
+                              <option value="ERREUR">{{ 'CPT.Erreur' | translate }}</option>
+                            </select>
+                            <select [(ngModel)]="ecartFraisServiceFilter" (change)="onEcartFraisFilterChange()" class="filter-select">
+                              <option value="">{{ 'FILT.allServices' | translate }}</option>
+                              <option *ngFor="let service of getUniqueServicesEcartFrais()" [value]="service">{{ service }}</option>
+                            </select>
+                            <button (click)="clearEcartFraisFilters()" class="btn btn-outline-secondary btn-sm">
+                              <i class="fas fa-times"></i> {{ 'CPT.Effacer' | translate }}
+                            </button>
+                          </div>
+                        </div>
+                      </div>
+
+                      <div class="table-container" *ngIf="!isLoadingEcartFrais">
+                        <table class="ecart-frais-table">
+                          <thead>
+                            <tr>
+                              <th class="sortable" (click)="sortEcartFrais('idTransaction')">
+                                <i class="fas fa-hashtag"></i>{{ 'TBL.transactionId' | translate }}<i class="fas fa-sort" [ngClass]="getSortIcon('idTransaction')"></i>
+                              </th>
+                              <th class="sortable" (click)="sortEcartFrais('service')">
+                                <i class="fas fa-cog"></i>{{ 'TBL.service' | translate }}<i class="fas fa-sort" [ngClass]="getSortIcon('service')"></i>
+                              </th>
+                              <th class="sortable" (click)="sortEcartFrais('dateTransaction')">
+                                <i class="fas fa-calendar"></i> {{ 'CPT.Dateheure' | translate }}
+                                <i class="fas fa-sort" [ngClass]="getSortIcon('dateTransaction')"></i>
+                              </th>
+                              <th class="sortable" (click)="sortEcartFrais('numeroTransGu')">
+                                <i class="fas fa-barcode"></i> {{ 'CPT.Transgu' | translate }}
+                                <i class="fas fa-sort" [ngClass]="getSortIcon('numeroTransGu')"></i>
+                              </th>
+                              <th class="sortable" (click)="sortEcartFrais('pays')">
+                                <i class="fas fa-globe"></i>{{ 'TBL.country' | translate }}<i class="fas fa-sort" [ngClass]="getSortIcon('pays')"></i>
+                              </th>
+                              <th class="sortable" (click)="sortEcartFrais('montant')">
+                                <i class="fas fa-coins"></i>{{ 'TBL.amount' | translate }}<i class="fas fa-sort" [ngClass]="getSortIcon('montant')"></i>
+                              </th>
+                              <th class="sortable" (click)="sortEcartFrais('frais')">
+                                <i class="fas fa-receipt"></i>{{ 'TBL.fees' | translate }}<i class="fas fa-sort" [ngClass]="getSortIcon('frais')"></i>
+                              </th>
+                              <th class="sortable" (click)="sortEcartFrais('statut')">
+                                <i class="fas fa-info-circle"></i>{{ 'TBL.status' | translate }}<i class="fas fa-sort" [ngClass]="getSortIcon('statut')"></i>
+                              </th>
+                              <th><i class="fas fa-comment"></i>{{ 'TBL.comment' | translate }}</th>
+                            </tr>
+                          </thead>
+                          <tbody>
+                            <tr *ngFor="let it of pagedEcartFraisItems; trackBy: trackByEcartFrais"
+                                [ngClass]="{
+                                  'statut-en-attente': it.statut==='EN_ATTENTE',
+                                  'statut-traite': it.statut==='TRAITE',
+                                  'statut-erreur': it.statut==='ERREUR'
+                                }">
+                              <td class="id-transaction-cell">
+                                <div class="id-transaction-content">
+                                  <span class="id-prefix">{{ getTransactionIdPrefix(it.idTransaction) }}</span>
+                                  <span class="id-suffix">{{ getTransactionIdSuffix(it.idTransaction) }}</span>
+                                  <button class="copy-btn" (click)="copyToClipboard(it.idTransaction)" title="{{ 'CPT.Copierlid' | translate }}">
+                                    <i class="fas fa-copy"></i>
+                                  </button>
+                                </div>
+                              </td>
+                              <td class="service-cell">
+                                <span class="service-badge">{{ it.service }}</span>
+                              </td>
+                              <td class="datetime-cell">
+                                <div class="datetime-content">
+                                  <div class="date">{{ formatDate(it.dateTransaction).split(' ')[0] }}</div>
+                                  <div class="time">{{ formatDate(it.dateTransaction).split(' ')[1] }}</div>
+                                </div>
+                              </td>
+                              <td class="trans-gu-cell">
+                                <span class="trans-gu-badge">{{ it.numeroTransGu }}</span>
+                              </td>
+                              <td class="pays-cell">
+                                <span class="pays-flag">{{ it.pays }}</span>
+                              </td>
+                              <td class="montant-cell">
+                                <div class="montant-content">
+                                  <span class="montant-value montant-positif">{{ it.montant | number:'1.2-2' }}</span>
+                                  <span class="montant-currency">{{ 'CPT.FCFA' | translate }}</span>
+                                </div>
+                              </td>
+                              <td class="frais-cell">
+                                <div class="frais-content">
+                                  <span class="frais-value">{{ it.frais | number:'1.2-2' }}</span>
+                                  <span class="frais-currency">{{ 'CPT.FCFA' | translate }}</span>
+                                </div>
+                              </td>
+                              <td class="statut-cell">
+                                <span class="status-badge" 
+                                      [ngClass]="{
+                                        'status-en-attente': it.statut === 'EN_ATTENTE',
+                                        'status-traite': it.statut === 'TRAITE',
+                                        'status-erreur': it.statut === 'ERREUR'
+                                      }">
+                                  <i class="fas" 
+                                     [ngClass]="{
+                                       'fa-clock': it.statut === 'EN_ATTENTE',
+                                       'fa-check-circle': it.statut === 'TRAITE',
+                                       'fa-times-circle': it.statut === 'ERREUR'
+                                     }"></i>
+                                  {{ getStatusLabel(it.statut) }}
+                                </span>
+                              </td>
+                              <td class="comment-cell">
+                                <span class="comment-content" [title]="it.commentaire || 'Aucun commentaire'">
+                                  {{ it.commentaire || '-' }}
+                                </span>
+                              </td>
+                            </tr>
+                          </tbody>
+                          <tfoot>
+                            <tr>
+                              <td colspan="6" style="text-align: right; font-weight: bold;">
+                                <i class="fas fa-calculator"></i> {{ 'CPT.TOTAL' | translate }}
+                              </td>
+                              <td class="montant-positif" style="font-weight: bold;">
+                                <i class="fas fa-coins"></i> {{ getTotalMontantEcartTrxSf() | number:'1.2-2' }}
+                              </td>
+                              <td class="frais-value" style="font-weight: bold;">
+                                <i class="fas fa-receipt"></i> {{ getTotalFraisEcartTrxSf() | number:'1.2-2' }}
+                              </td>
+                              <td colspan="2"></td>
+                            </tr>
+                          </tfoot>
+                        </table>
+                      </div>
+
+                      <!-- Loading -->
+                      <div class="loading-container" *ngIf="isLoadingEcartFrais">
+                        <div class="loading-spinner">
+                          <i class="fas fa-spinner fa-spin"></i>
+                          <span>{{ 'CPT.Chargementencours' | translate }}</span>
+                        </div>
+                      </div>
+
+                      <!-- Pagination améliorée -->
+                      <div class="pagination-enhanced" *ngIf="ecartFraisTotalPages > 1">
+                        <div class="pagination-info">
+                          <span class="pagination-text">
+                            {{ 'CPT.Page' | translate }} {{ ecartFraisCurrentPage }} {{ 'CPT.Sur' | translate }} {{ ecartFraisTotalPages }}
+                            ({{ ecartFraisItems.length }} {{ 'CPT.Transactionsautotal' | translate }}
+                          </span>
+                        </div>
+                        
+                        <div class="pagination-controls">
+                          <button (click)="goToEcartFraisPage(1)" 
+                                  [disabled]="ecartFraisCurrentPage === 1" 
+                                  class="btn pagination-btn pagination-btn-first"
+                                  title="{{ 'PAG.first' | translate }}">
+                            <i class="fas fa-angle-double-left"></i>
+                          </button>
+                          
+                          <button (click)="prevEcartFraisPage()" 
+                                  [disabled]="ecartFraisCurrentPage === 1" 
+                                  class="btn pagination-btn">
+                          <i class="fas fa-chevron-left"></i>{{ 'PAG.previous' | translate }}</button>
+                        
+                        <div class="pagination-indicators">
+                          <span *ngFor="let page of getVisibleEcartFraisPages(); trackBy: trackByNumber"
+                                class="page-indicator"
+                                [class.active]="ecartFraisCurrentPage === page"
+                                (click)="goToEcartFraisPage(page)">
+                            {{ page }}
+                          </span>
+                        </div>
+                        
+                          <button (click)="nextEcartFraisPage()" 
+                                  [disabled]="ecartFraisCurrentPage === ecartFraisTotalPages" 
+                                  class="btn pagination-btn">{{ 'PAG.next' | translate }}<i class="fas fa-chevron-right"></i>
+                        </button>
+                          
+                          <button (click)="goToEcartFraisPage(ecartFraisTotalPages)" 
+                                  [disabled]="ecartFraisCurrentPage === ecartFraisTotalPages" 
+                                  class="btn pagination-btn pagination-btn-last"
+                                  title="{{ 'PAG.last' | translate }}">
+                            <i class="fas fa-angle-double-right"></i>
+                          </button>
+                        </div>
+                        
+                        <div class="pagination-jump">
+                          <label>{{ 'CPT.Alleràlapage' | translate }}</label>
+                          <input type="number" 
+                                 [(ngModel)]="ecartFraisJumpToPage" 
+                                 (keyup.enter)="jumpToEcartFraisPage()"
+                                 [min]="1" 
+                                 [max]="ecartFraisTotalPages"
+                                 class="page-jump-input">
+                          <button (click)="jumpToEcartFraisPage()" class="btn btn-sm btn-outline-primary">
+                            <i class="fas fa-arrow-right"></i>
+                          </button>
+                        </div>
+                      </div>
+                    </div>
+
+                    <!-- Bouton d'export en bas -->
+                    <div class="export-footer" *ngIf="!isLoadingEcartFrais && ecartFraisItems.length > 0">
+                      <button class="btn btn-success" (click)="exportEcartFrais()" [disabled]="ecartFraisItems.length === 0">
+                        <i class="fas fa-download"></i> {{ 'CPT.Exporterlesdonnées' | translate }}
+                      </button>
+                    </div>
+                  </div>
+                </div>
+
+                <!-- Contenu de l'onglet Control Revenu -->
+                <div class="tab-content" *ngIf="activeTab === 'control-revenu'">
+                    <div class="control-revenu-container">
+                        <h3>{{ 'CPT.Controlrevenu' | translate }}{{ selectedCompte ? ' - ' + selectedCompte.numeroCompte : '' }}</h3>
+                        
+                        <!-- Filtres pour le control revenu -->
+                        <div class="control-revenu-filters" *ngIf="!isLoadingControlRevenu && controlRevenuData.length > 0">
+                            <div class="filter-row">
+                                <div class="filter-group">
+                                    <label for="controlRevenuDateDebut">{{ 'CPT.Datedébut' | translate }}</label>
+                                    <input 
+                                        type="date" 
+                                        id="controlRevenuDateDebut"
+                                        [(ngModel)]="controlRevenuDateDebut" 
+                                        (change)="onControlRevenuFiltersChange()"
+                                        class="filter-input">
+                                </div>
+                                <div class="filter-group">
+                                    <label for="controlRevenuDateFin">{{ 'CPT.Datefin' | translate }}</label>
+                                    <input 
+                                        type="date" 
+                                        id="controlRevenuDateFin"
+                                        [(ngModel)]="controlRevenuDateFin" 
+                                        (change)="onControlRevenuFiltersChange()"
+                                        class="filter-input">
+                                </div>
+                                <div class="filter-group">
+                                    <label for="controlRevenuService">{{ 'CPT.Service' | translate }}</label>
+                                    <select 
+                                        id="controlRevenuService"
+                                        [(ngModel)]="controlRevenuService" 
+                                        (change)="onControlRevenuFiltersChange()"
+                                        class="filter-select">
+                                        <option value="">{{ 'FILT.allServices' | translate }}</option>
+                                        <option *ngFor="let service of getUniqueServicesControlRevenu()" [value]="service">
+                                            {{ service }}
+                                        </option>
+                                    </select>
+                                </div>
+                                <div class="filter-group">
+                                    <label for="controlRevenuType">{{ 'CPT.Typedecontrôle' | translate }}</label>
+                                    <select 
+                                        id="controlRevenuType"
+                                        [(ngModel)]="controlRevenuType" 
+                                        (change)="onControlRevenuFiltersChange()"
+                                        class="filter-select">
+                                        <option value="">{{ 'CPT.Touslescontrôles' | translate }}</option>
+                                        <option value="anomalie">{{ 'CPT.Anomaliesdétectées' | translate }}</option>
+                                        <option value="normal">{{ 'CPT.Contrôlesnormaux' | translate }}</option>
+                                        <option value="critique">{{ 'CPT.Contrôlescritiques' | translate }}</option>
+                                    </select>
+                                </div>
+                            </div>
+                            <div class="filter-row">
+                                <div class="filter-group">
+                                    <label for="controlRevenuSeuil">{{ 'CPT.Seuildalerte' | translate }}</label>
+                                    <input 
+                                        type="number" 
+                                        id="controlRevenuSeuil"
+                                        [(ngModel)]="controlRevenuSeuil" 
+                                        (input)="onControlRevenuFiltersChange()"
+                                        placeholder="0.00"
+                                        step="0.01"
+                                        min="0"
+                                        class="filter-input">
+                                </div>
+                                <div class="filter-group filter-actions">
+                                    <button 
+                                        class="btn filter-clear-btn" 
+                                        (click)="clearControlRevenuFilters()"
+                                        title="{{ 'CPT.Réinitialiserlesfiltres' | translate }}">
+                                        <i class="fas fa-times"></i>{{ 'COMMON.actions.reset' | translate }}</button>
+                                </div>
+                            </div>
+                        </div>
+                        
+                        <div *ngIf="isLoadingControlRevenu" class="loading-releve">
+                            <i class="fas fa-spinner fa-spin"></i> {{ 'CPT.Chargementducontrôlerevenu' | translate }}
+                        </div>
+                        
+                        <div *ngIf="!isLoadingControlRevenu && controlRevenuData.length === 0" class="no-operations">
+                            {{ 'CPT.Aucunedonnéedecontrôlerevenutrouvéepourcecompte' | translate }}
+                        </div>
+                        
+                        <div *ngIf="!isLoadingControlRevenu && controlRevenuData.length > 0 && controlRevenuDataFiltered.length === 0" class="no-operations">
+                            {{ 'CPT.Aucunedonnéenecorrespondauxfiltressélectionnés' | translate }}
+                        </div>
+                        
+                        <div *ngIf="!isLoadingControlRevenu && controlRevenuData.length > 0 && controlRevenuDataFiltered.length > 0" class="control-revenu-content">
+                            <!-- Résumé des contrôles -->
+                            <div class="control-revenu-summary">
+                                <div class="summary-card">
+                                    <div class="summary-title">{{ 'CPT.Totalcontrôles' | translate }}</div>
+                                    <div class="summary-value">{{ getTotalControlRevenu() }}</div>
+                                </div>
+                                <div class="summary-card">
+                                    <div class="summary-title">{{ 'TBL.totalVolume' | translate }}</div>
+                                    <div class="summary-value volume">{{ getTotalVolumeControlRevenu() | number:'1.2-2' }}</div>
+                                </div>
+                                <div class="summary-card">
+                                    <div class="summary-title">{{ 'CPT.Totaltransactions_1' | translate }}</div>
+                                    <div class="summary-value nombre-trx">{{ getTotalNombreTrxControlRevenu() | number:'1.0-0' }}</div>
+                                </div>
+                                <div class="summary-card">
+                                    <div class="summary-title">{{ 'CPT.Anomalies' | translate }}</div>
+                                    <div class="summary-value anomaly">{{ getTotalAnomaliesControlRevenu() }}</div>
+                                </div>
+                                <div class="summary-card">
+                                    <div class="summary-title">{{ 'CPT.Contrôlesnormaux_1' | translate }}</div>
+                                    <div class="summary-value normal">{{ getTotalNormauxControlRevenu() }}</div>
+                                </div>
+                                <div class="summary-card">
+                                    <div class="summary-title">{{ 'CPT.Contrôlescritiques_1' | translate }}</div>
+                                    <div class="summary-value critical">{{ getTotalCritiquesControlRevenu() }}</div>
+                                </div>
+                                <div class="summary-card">
+                                    <div class="summary-title">{{ 'CPT.Tauxdeconformité' | translate }}</div>
+                                    <div class="summary-value compliance">{{ getTauxConformiteControlRevenu() | number:'1.1-1' }}%</div>
+                                </div>
+                                <div class="summary-card">
+                                    <div class="summary-title">{{ 'CPT.MàGmoyen' | translate }}</div>
+                                    <div class="summary-value mag">{{ getMoyenneMagPercentageControlRevenu() | number:'1.2-2' }}%</div>
+                                </div>
+                                <div class="summary-card">
+                                    <div class="summary-title">{{ 'CPT.Totalrevenuattendu' | translate }}</div>
+                                    <div class="summary-value revenu-attendu">{{ getTotalRevenuAttenduControlRevenu() | number:'1.2-2' }}</div>
+                                </div>
+                                <div class="summary-card">
+                                    <div class="summary-title">{{ 'CPT.Totalrevenuréel' | translate }}</div>
+                                    <div class="summary-value revenu-reel">{{ getTotalRevenuReelControlRevenu() | number:'1.2-2' }}</div>
+                                </div>
+                            </div>
+
+                            <!-- Tableau des contrôles revenu -->
+                            <div class="control-revenu-table-container">
+                                <div class="operations-summary">
+                                    <span><strong>{{ 'CPT.Total' | translate }}</strong> {{ controlRevenuDataFiltered.length }} {{ 'CPT.Lignes' | translate }}</span>
+                                    <span *ngIf="controlRevenuDataFiltered.length > controlRevenuPageSize">
+                                        <strong>{{ 'CPT.Affichage_1' | translate }}</strong> {{ (controlRevenuCurrentPage - 1) * controlRevenuPageSize + 1 }} - {{ Math.min(controlRevenuCurrentPage * controlRevenuPageSize, controlRevenuDataFiltered.length) }} {{ 'CPT.Sur' | translate }} {{ controlRevenuDataFiltered.length }}
+                                    </span>
+                                </div>
+                                <table class="table table-bordered table-hover table-sm">
+                                    <thead>
+                                        <tr>
+                                            <th>{{ 'TBL.date' | translate }}</th>
+                                            <th>{{ 'TBL.service' | translate }}</th>
+                                            <th>{{ 'CPT.Typedecontrôle_1' | translate }}</th>
+                                            <th>{{ 'TBL.volume' | translate }}</th>
+                                            <th>{{ 'CPT.Nombredetrx' | translate }}</th>
+                                            <th>{{ 'CPT.Revenuattendu_1' | translate }}</th>
+                                            <th>{{ 'CPT.Fraistrxsf' | translate }}</th>
+                                            <th>{{ 'CPT.Revenuréel' | translate }}</th>
+                                            <th>{{ 'CPT.MàG' | translate }}</th>
+                                            <th>{{ 'TBL.status' | translate }}</th>
+                                            <th>{{ 'TBL.actions' | translate }}</th>
+                                        </tr>
+                                    </thead>
+                                    <tbody>
+                                        <tr *ngFor="let controle of pagedControlRevenuData; trackBy: trackByControlRevenu"
+                                            [ngClass]="getControlRevenuRowClass(controle)">
+                                            <td>{{ formatDate(controle.date) }}</td>
+                                            <td class="service">{{ controle.service }}</td>
+                                            <td>{{ controle.typeControle }}</td>
+                                            <td class="volume">{{ controle.volume | number:'1.2-2' }}</td>
+                                            <td class="nombre-trx">{{ controle.nombreTrx | number:'1.0-0' }}</td>
+                                            <td class="revenu-attendu">{{ controle.revenuAttendu | number:'1.2-2' }}</td>
+                                            <td class="frais-trx-sf">{{ controle.totalFraisTrxSf | number:'1.2-2' }}</td>
+                                            <td class="revenu-reel">{{ controle.revenuReel | number:'1.2-2' }}</td>
+                                            <td class="mag" [ngClass]="{'negative': controle.ecart < 0, 'positive': controle.ecart > 0}">
+                                                {{ getMagPercentage(controle) | number:'1.2-2' }}%
+                                            </td>
+                                            <td>
+                                                <span class="status-badge" [ngClass]="getControlRevenuStatusClass(controle)">
+                                                    {{ getControlRevenuStatusLabel(controle) }}
+                                                </span>
+                                            </td>
+                                            <td>
+                                                <button class="btn btn-sm btn-info" (click)="viewControlRevenuDetails(controle)" title="{{ 'CPT.Voirlesdétails' | translate }}">
+                                                    <i class="fas fa-eye"></i>
+                                                </button>
+                                                <button class="btn btn-sm btn-warning" (click)="exportControlRevenu(controle)" title="{{ 'CPT.Exporter' | translate }}">
+                                                    <i class="fas fa-file-excel"></i>
+                                                </button>
+                                            </td>
+                                        </tr>
+                                    </tbody>
+                                </table>
+                            </div>
+
+                            <!-- Actions pour le control revenu -->
+                            <div class="control-revenu-actions">
+                                <button class="btn btn-success" (click)="exportControlRevenuData()" [disabled]="controlRevenuDataFiltered.length === 0">
+                                    <i class="fas fa-file-excel"></i> {{ 'CPT.Exportercontrolrevenu' | translate }}
+                                </button>
+                            </div>
+
+                            <!-- Pagination pour le control revenu -->
+                            <div class="releve-pagination" *ngIf="controlRevenuTotalPages > 1">
+                                <button (click)="prevControlRevenuPage()" [disabled]="controlRevenuCurrentPage === 1" class="btn pagination-btn">
+                                    <i class="fas fa-chevron-left"></i>{{ 'PAG.previous' | translate }}</button>
+                                
+                                <div class="pagination-indicators">
+                                    <span *ngFor="let page of getVisibleControlRevenuPages(); trackBy: trackByNumber"
+                                            class="page-indicator"
+                                            [class.active]="controlRevenuCurrentPage === page"
+                                            (click)="goToControlRevenuPage(page)">
+                                        {{ page }}
+                                    </span>
+                                </div>
+                                
+                                <button (click)="nextControlRevenuPage()" [disabled]="controlRevenuCurrentPage === controlRevenuTotalPages" class="btn pagination-btn">{{ 'PAG.next' | translate }}<i class="fas fa-chevron-right"></i>
+                                </button>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Modale Solde BO -->
+<div class="modal-overlay" *ngIf="showSoldeBoModal">
+  <div class="modal-content">
+    <h2>{{ 'CPT.Soldebopour' | translate }} {{ selectedCompteForBo?.numeroCompte }}</h2>
+    <label>{{ 'CPT.Datedusolde' | translate }}</label>
+    <input type="date" [(ngModel)]="dateSoldeBo" (change)="onDateSoldeBoChange()" style="margin-bottom: 0.7rem;" />
+    <div *ngIf="dernierSoldeBo !== null">
+      <p>{{ 'CPT.Soldeboenregistrépourcettedate' | translate }} <b>{{ dernierSoldeBo | number:'1.2-2' }}</b></p>
+    </div>
+    <div *ngIf="dernierSoldeBo === null">
+      <p>{{ 'CPT.Aucunsoldeboenregistrépourcettedate' | translate }}</p>
+    </div>
+    <label>{{ 'CPT.Nouveausoldebo' | translate }}</label>
+    <input type="number" [(ngModel)]="dernierSoldeBo" />
+    <button (click)="saveSoldeBo()">{{ 'COMMON.actions.save' | translate }}</button>
+    <button (click)="closeSoldeBoModal()">{{ 'COMMON.actions.close' | translate }}</button>
+  </div>
+</div>
+
+<!-- Modale correction solde de clôture -->
+<div class="modal-overlay" *ngIf="showClosingOverrideModal">
+  <div class="modal-content">
+    <h2>{{ 'CPT.Correctiondusoldedeclôture' | translate }}</h2>
+    <p>{{ 'CPT.Datesélectionnée' | translate }} <b>{{ closingOverrideDate || 'N/A' }}</b></p>
+    <label>{{ 'CPT.Nouveausoldedeclôture' | translate }}</label>
+    <input type="number" [(ngModel)]="closingOverrideValue" />
+    <div class="modal-actions">
+      <button type="button" class="btn btn-success" (click)="saveClosingOverride()" [disabled]="closingOverrideLoading">
+        <i class="fas fa-save"></i>{{ 'COMMON.actions.save' | translate }}</button>
+      <button type="button" class="btn btn-danger" *ngIf="hasManualOverrideFor(closingOverrideDate)" (click)="removeClosingOverride()" [disabled]="closingOverrideLoading">
+        <i class="fas fa-trash"></i> {{ 'CPT.Supprimerlacorrection' | translate }}
+      </button>
+      <button type="button" class="btn" (click)="closeClosingOverrideModal()" [disabled]="closingOverrideLoading">{{ 'COMMON.actions.close' | translate }}</button>
+    </div>
+  </div>
+</div>
+
+<style>
+  .comptes-resume {
+    margin-top: 32px;
+    background: #f8fafc;
+    border-radius: 10px;
+    box-shadow: 0 2px 8px #0001;
+    padding: 24px 16px 8px 16px;
+    max-width: 700px;
+    margin-left: auto;
+    margin-right: auto;
+  }
+  .resume-table-comptes {
+    width: 100%;
+    border-collapse: separate;
+    border-spacing: 0;
+    font-size: 1.08em;
+  }
+  .resume-table-comptes th, .resume-table-comptes td {
+    padding: 10px 8px;
+    text-align: right;
+  }
+  .resume-table-comptes th {
+    background: #e3f2fd;
+    color: #1976d2;
+    font-weight: 600;
+    border-bottom: 2px solid #bbdefb;
+    text-align: right;
+  }
+  .resume-table-comptes th:first-child, .resume-table-comptes td:first-child {
+    text-align: left;
+  }
+  .resume-table-comptes tr.global-row {
+    background: #e3f2fd;
+    font-weight: bold;
+    color: #1976d2;
+  }
+
+  .closing-cell {
+    position: relative;
+    min-height: 38px;
+    padding-right: 18px;
+  }
+
+  .closing-value {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    flex-wrap: wrap;
+  }
+
+  .closing-cell .closing-edit-btn {
+    opacity: 0;
+    pointer-events: none;
+    transition: opacity 0.2s ease, transform 0.2s ease;
+  }
+
+  .closing-cell:hover .closing-edit-btn,
+  .closing-cell:focus-within .closing-edit-btn {
+    opacity: 1;
+    pointer-events: auto;
+    transform: translateY(-2px);
+  }
+
+  .closing-edit-btn {
+    position: absolute;
+    right: 0;
+    bottom: 0;
+    width: 22px;
+    height: 22px;
+    padding: 0;
+    border-radius: 50%;
+    border: 1px solid #c5cae9;
+    background: #ffffff;
+    color: #3949ab;
+    font-size: 0.65rem;
+    line-height: 20px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    box-shadow: 0 1px 3px rgba(57, 73, 171, 0.15);
+    transition: background 0.2s ease, color 0.2s ease;
+  }
+
+  .closing-edit-btn:hover {
+    background: #e8eaf6;
+    color: #1a237e;
+  }
+
+  .manual-badge {
+    background: #ede7f6;
+    color: #512da8;
+    font-size: 0.7rem;
+    padding: 2px 6px;
+    border-radius: 4px;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+  }
+
+  .manual-closing-value {
+    font-weight: 600;
+    color: #512da8;
+  }
+
+  .modal-actions {
+    display: flex;
+    gap: 8px;
+    margin-top: 12px;
+    flex-wrap: wrap;
+  }
+
+  /* Styles pour les filtres du revenu journalier */
+  .revenu-filters {
+    background: #f8fafc;
+    border-radius: 8px;
+    padding: 16px;
+    margin-bottom: 20px;
+    border: 1px solid #e2e8f0;
+  }
+
+  .filter-row {
+    display: flex;
+    gap: 16px;
+    margin-bottom: 12px;
+    align-items: end;
+    flex-wrap: wrap;
+  }
+
+  .filter-row:last-child {
+    margin-bottom: 0;
+  }
+
+  .filter-group {
+    display: flex;
+    flex-direction: column;
+    min-width: 150px;
+  }
+
+  .filter-group label {
+    font-size: 12px;
+    font-weight: 600;
+    color: #64748b;
+    margin-bottom: 4px;
+  }
+
+  .filter-input, .filter-select {
+    padding: 8px 12px;
+    border: 1px solid #cbd5e1;
+    border-radius: 4px;
+    font-size: 14px;
+    background: white;
+    transition: border-color 0.2s;
+  }
+
+  .filter-input:focus, .filter-select:focus {
+    outline: none;
+    border-color: #3b82f6;
+    box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.1);
+  }
+
+  .filter-actions {
+    justify-content: center;
+  }
+
+  .filter-clear-btn {
+    background: #ef4444;
+    color: white;
+    border: none;
+    padding: 8px 16px;
+    border-radius: 4px;
+    font-size: 14px;
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    transition: background-color 0.2s;
+  }
+
+  .filter-clear-btn:hover {
+    background: #dc2626;
+  }
+
+  .filter-clear-btn i {
+    font-size: 12px;
+  }
+</style>
+<div class="comptes-resume">
+  <table class="resume-table-comptes">
+    <thead>
+      <tr>
+        <th>{{ 'CPT.Résumé' | translate }}</th>
+        <th>{{ 'CPT.Nombredecomptes' | translate }}</th>
+        <th>{{ 'CPT.Soldeglobal' | translate }}</th>
+      </tr>
+    </thead>
+    <tbody>
+      <tr class="global-row">
+        <td>{{ 'CPT.Global' | translate }}</td>
+        <td>{{ resumeGlobal.count }}</td>
+        <td>{{ resumeGlobal.totalSolde | number:'1.2-2' }}</td>
+      </tr>
+    </tbody>
+  </table>
+</div>
+
+<!-- Modal pour les détails du contrôle revenu -->
+<div *ngIf="showControlRevenuModal" class="modal-overlay">
+  <div class="modal-content control-revenu-modal">
+    <div class="modal-header">
+      <h4>{{ 'CPT.Détailsducontrôlerevenu' | translate }}</h4>
+      <button type="button" class="close-btn" (click)="closeControlRevenuModal()">
+        <i class="fas fa-times"></i>
+      </button>
+    </div>
+    
+    <div class="modal-body" *ngIf="selectedControlRevenu">
+      <div class="detail-section">
+        <h5>{{ 'CPT.Informationsgénérales' | translate }}</h5>
+        <div class="detail-grid">
+          <div class="detail-item">
+            <label>{{ 'CPT.Date_1' | translate }}</label>
+            <span>{{ formatDate(selectedControlRevenu.date) }}</span>
+          </div>
+          <div class="detail-item">
+            <label>{{ 'CPT.Service' | translate }}</label>
+            <span>{{ selectedControlRevenu.service }}</span>
+          </div>
+          <div class="detail-item">
+            <label>{{ 'CPT.Typedecontrôle_2' | translate }}</label>
+            <span>{{ selectedControlRevenu.typeControle }}</span>
+          </div>
+          <div class="detail-item">
+            <label>{{ 'TBL.environment' | translate }}</label>
+            <span class="status-badge" [ngClass]="getControlRevenuStatusClass(selectedControlRevenu)">
+              {{ getControlRevenuStatusLabel(selectedControlRevenu) }}
+            </span>
+          </div>
+        </div>
+      </div>
+
+      <div class="detail-section">
+        <h5>{{ 'CPT.Donnéesfinancières' | translate }}</h5>
+        <div class="detail-grid">
+          <div class="detail-item">
+            <label>{{ 'CPT.Volume' | translate }}</label>
+            <span class="amount">{{ selectedControlRevenu.volume | number:'1.2-2' }}</span>
+          </div>
+          <div class="detail-item">
+            <label>{{ 'CPT.Nombredetransactions' | translate }}</label>
+            <span>{{ selectedControlRevenu.nombreTrx | number:'1.0-0' }}</span>
+          </div>
+          <div class="detail-item">
+            <label>{{ 'CPT.Revenuattendu_2' | translate }}</label>
+            <span class="amount revenu-attendu">{{ selectedControlRevenu.revenuAttendu | number:'1.2-2' }}</span>
+          </div>
+          <div class="detail-item">
+            <label>{{ 'CPT.Fraistrxsf_1' | translate }}</label>
+            <span class="amount frais-trx-sf">{{ (selectedControlRevenu.totalFraisTrxSf || 0) | number:'1.2-2' }}</span>
+          </div>
+          <div class="detail-item">
+            <label>{{ 'CPT.Revenuréel_1' | translate }}</label>
+            <span class="amount revenu-reel">{{ selectedControlRevenu.revenuReel | number:'1.2-2' }}</span>
+          </div>
+          <div class="detail-item">
+            <label>{{ 'CPT.MàG_1' | translate }}</label>
+            <span class="amount mag" [ngClass]="{'negative': selectedControlRevenu.ecart < 0, 'positive': selectedControlRevenu.ecart > 0}">
+              {{ getMagPercentage(selectedControlRevenu) | number:'1.2-2' }}%
+            </span>
+          </div>
+        </div>
+      </div>
+
+      <div class="detail-section" *ngIf="selectedControlRevenu.ecart !== 0">
+        <h5>{{ 'CPT.Analysedelécart' | translate }}</h5>
+        <div class="ecart-analysis">
+          <div class="ecart-info" [ngClass]="{'negative': selectedControlRevenu.ecart < 0, 'positive': selectedControlRevenu.ecart > 0}">
+            <i class="fas" [ngClass]="selectedControlRevenu.ecart < 0 ? 'fa-arrow-down' : 'fa-arrow-up'"></i>
+            <span>
+              {{ (selectedControlRevenu.ecart < 0 ? 'CPT.NegativeGapOf' : 'CPT.PositiveGapOf') | translate }} 
+              {{ getAbsValue(selectedControlRevenu.ecart) | number:'1.2-2' }}
+              ({{ getEcartPercentage(selectedControlRevenu.ecart, selectedControlRevenu.revenuAttendu) | number:'1.1-1' }}% {{ 'CPT.OfExpectedRevenue' | translate }})
+            </span>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <div class="modal-footer">
+      <button type="button" class="btn btn-secondary" (click)="closeControlRevenuModal()">
+        <i class="fas fa-times"></i>{{ 'COMMON.actions.close' | translate }}</button>
+      <button type="button" class="btn btn-primary" (click)="openDateViewModal(selectedControlRevenu.date)" *ngIf="selectedControlRevenu">
+        <i class="fas fa-calendar-alt"></i> {{ 'CPT.Voirpardate' | translate }}
+      </button>
+      <button type="button" class="btn btn-info" (click)="exportControlRevenu(selectedControlRevenu)" *ngIf="selectedControlRevenu">
+        <i class="fas fa-file-excel"></i> {{ 'CPT.Exporter' | translate }}
+      </button>
+    </div>
+  </div>
+</div>
+
+<!-- Modal pour la visualisation par date -->
+<div *ngIf="showDateViewModal" class="modal-overlay">
+  <div class="modal-content date-view-modal">
+    <div class="modal-header">
+      <h4>{{ 'CPT.Visualisationpardate' | translate }} {{ formatDate(selectedDate) }}</h4>
+      <button type="button" class="close-btn" (click)="closeDateViewModal()">
+        <i class="fas fa-times"></i>
+      </button>
+    </div>
+    
+    <div class="modal-body">
+      <!-- Résumé de la date -->
+      <div class="date-summary" *ngIf="!isLoadingDateView && dateViewData.length > 0">
+        <div class="summary-grid">
+          <div class="summary-item">
+            <label>{{ 'CPT.Services' | translate }}</label>
+            <span>{{ dateViewData.length }}</span>
+          </div>
+          <div class="summary-item">
+            <label>{{ 'TBL.totalVolume' | translate }}</label>
+            <span>{{ getDateViewTotalVolume() | number:'1.2-2' }}</span>
+          </div>
+          <div class="summary-item">
+            <label>{{ 'CPT.Revenuattendu_1' | translate }}</label>
+            <span class="revenu-attendu">{{ getDateViewTotalRevenuAttendu() | number:'1.2-2' }}</span>
+          </div>
+          <div class="summary-item">
+            <label>{{ 'CPT.Revenuréel' | translate }}</label>
+            <span class="revenu-reel">{{ getDateViewTotalRevenuReel() | number:'1.2-2' }}</span>
+          </div>
+          <div class="summary-item">
+            <label>{{ 'CPT.Fraistrxsf' | translate }}</label>
+            <span class="frais-trx-sf">{{ getDateViewTotalFraisTrxSf() | number:'1.2-2' }}</span>
+          </div>
+          <div class="summary-item">
+            <label>{{ 'CPT.MàGmoyen' | translate }}</label>
+            <span class="mag" [ngClass]="{'negative': getDateViewTotalEcart() < 0, 'positive': getDateViewTotalEcart() > 0}">
+              {{ getDateViewMagPercentage() | number:'1.2-2' }}%
+            </span>
+          </div>
+        </div>
+      </div>
+
+      <!-- Loading -->
+      <div *ngIf="isLoadingDateView" class="loading-container">
+        <i class="fas fa-spinner fa-spin"></i>
+        <span>{{ 'MSG.loadingData' | translate }}</span>
+      </div>
+
+      <!-- Aucune donnée -->
+      <div *ngIf="!isLoadingDateView && dateViewData.length === 0" class="no-data">
+        <i class="fas fa-info-circle"></i>
+        <span>{{ 'CPT.Aucunedonnéetrouvéepourcettedate' | translate }}</span>
+      </div>
+
+      <!-- Tableau des services -->
+      <div *ngIf="!isLoadingDateView && dateViewData.length > 0" class="services-table-container">
+        <h5>{{ 'CPT.Détailparservice' | translate }}</h5>
+        <div class="table-responsive">
+          <table class="table table-bordered table-hover">
+            <thead>
+              <tr>
+                <th>{{ 'TBL.service' | translate }}</th>
+                <th>{{ 'TBL.volume' | translate }}</th>
+                <th>{{ 'CPT.Nombretrx' | translate }}</th>
+                <th>{{ 'CPT.Revenuattendu_1' | translate }}</th>
+                <th>{{ 'CPT.Fraistrxsf' | translate }}</th>
+                <th>{{ 'CPT.Revenuréel' | translate }}</th>
+                <th>{{ 'CPT.MàG' | translate }}</th>
+                <th>{{ 'TBL.status' | translate }}</th>
+                <th>{{ 'CPT.Contrôles' | translate }}</th>
+              </tr>
+            </thead>
+            <tbody>
+              <tr *ngFor="let service of dateViewData" [ngClass]="getServiceRowClass(service)">
+                <td class="service-name">{{ service.service }}</td>
+                <td class="volume">{{ service.volume | number:'1.2-2' }}</td>
+                <td class="nombre-trx">{{ service.nombreTrx | number:'1.0-0' }}</td>
+                <td class="revenu-attendu">{{ service.revenuAttendu | number:'1.2-2' }}</td>
+                <td class="frais-trx-sf">{{ service.fraisTrxSf | number:'1.2-2' }}</td>
+                <td class="revenu-reel">{{ service.revenuReel | number:'1.2-2' }}</td>
+                <td class="mag" [ngClass]="{'negative': service.ecart < 0, 'positive': service.ecart > 0}">
+                  {{ getMagPercentageFromService(service) | number:'1.2-2' }}%
+                </td>
+                <td>
+                  <span class="status-badge" [ngClass]="getControlRevenuStatusClass(service)">
+                    {{ getControlRevenuStatusLabel(service) }}
+                  </span>
+                </td>
+                <td class="nombre-controles">{{ service.nombreControles }}</td>
+              </tr>
+            </tbody>
+          </table>
+        </div>
+      </div>
+    </div>
+
+    <div class="modal-footer">
+      <button type="button" class="btn btn-secondary" (click)="closeDateViewModal()">
+        <i class="fas fa-times"></i>{{ 'COMMON.actions.close' | translate }}</button>
+      <button type="button" class="btn btn-success" (click)="exportDateViewData()" *ngIf="dateViewData.length > 0">
+        <i class="fas fa-file-excel"></i> {{ 'CPT.Exporter' | translate }}
+      </button>
+    </div>
+  </div>
+</div>
+
+<!-- Tooltip global pour les soldes -->
+<div class="solde-tooltip" 
+     *ngIf="tooltipVisible" 
+     [style.left.px]="tooltipX" 
+     [style.top.px]="tooltipY"
+     [innerHTML]="tooltipContent">
+</div>

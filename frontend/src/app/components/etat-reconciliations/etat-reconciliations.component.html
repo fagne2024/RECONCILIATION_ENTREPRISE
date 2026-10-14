@@ -1,0 +1,465 @@
+<div class="etat-reconciliations-page">
+    <div class="wrap">
+        <div class="topbar">
+            <div class="title-block">
+                <h1>{{ 'ETA.title' | translate }}</h1>
+                <div class="sub">{{ summaryPeriodSubtitle }}</div>
+            </div>
+            <div class="top-actions">
+                <div class="refresh-note">
+                    <span class="dot-live" *ngIf="!reconciliationSummaryLoading"></span>
+                    {{ refreshLabel }}
+                </div>
+                <button type="button" class="btn" (click)="exportTableCsv()" [disabled]="!reconciliationSummaryRows.length">
+                    ⭳ {{ 'COMMON.actions.export' | translate }}
+                </button>
+                <select
+                    class="period"
+                    [(ngModel)]="summaryPeriod"
+                    (change)="onSummaryPeriodChange()"
+                >
+                    <option value="jour">{{ 'ETA.periodOptions.jour' | translate }}</option>
+                    <option value="7_jours">{{ 'LBL.last7Days' | translate }}</option>
+                    <option value="30_jours">{{ 'LBL.last30Days' | translate }}</option>
+                    <option value="semaine">{{ 'ETA.periodOptions.semaine' | translate }}</option>
+                    <option value="semaine_passee">{{ 'ETA.periodOptions.semaine_passee' | translate }}</option>
+                    <option value="mois">{{ 'TBL.month' | translate }}</option>
+                    <option value="trimestre">{{ 'ETA.periodOptions.trimestre' | translate }}</option>
+                    <option value="semestre">{{ 'ETA.periodOptions.semestre' | translate }}</option>
+                    <option value="annee">{{ 'TBL.year' | translate }}</option>
+                </select>
+            </div>
+        </div>
+
+        <section class="top-users" *ngIf="topUsersConfig.enabled" [attr.aria-label]="'ETA.topUsers.title' | translate:{ count: topUsersConfig.topN }">
+            <div class="tu-head">
+                <div class="tu-title">
+                    <b>{{ 'ETA.topUsers.title' | translate:{ count: topUsersConfig.topN } }}</b>
+                    <span class="tu-period">· {{ summaryPeriodSubtitle }}</span>
+                </div>
+                <span class="tu-sub">{{ 'ETA.topUsers.subtitle' | translate }}</span>
+            </div>
+
+            <div class="tu-state" *ngIf="topUsersLoading">
+                {{ 'ETA.topUsers.loading' | translate }}
+            </div>
+
+            <div class="tu-cols" *ngIf="!topUsersLoading" [style.--cols]="topUsersColumns">
+                <div
+                    class="tu-col"
+                    *ngFor="let cat of topUsersCategories; trackBy: trackByCategoryKey"
+                    [style.--a]="cat.accent"
+                >
+                    <div class="tu-col-head">
+                        <h2><i></i>{{ cat.customTitle || (cat.titleKey | translate) }}</h2>
+                        <small>{{ cat.total }} {{ 'ETA.topUsers.actions' | translate }}</small>
+                    </div>
+
+                    <div class="tu-empty" *ngIf="!cat.users.length">
+                        {{ 'ETA.topUsers.empty' | translate }}
+                    </div>
+
+                    <div
+                        class="tu-user"
+                        *ngFor="let user of cat.users; let i = index; trackBy: trackByUsername"
+                        [title]="user.displayName + ' : ' + user.count"
+                    >
+                        <span class="ph" [class.p1]="i === 0">
+                            <img
+                                *ngIf="user.photo"
+                                [src]="user.photo"
+                                [alt]="'ETA.topUsers.photoAlt' | translate:{ name: user.displayName }"
+                                width="40"
+                                height="40"
+                                (error)="onTopUserPhotoError(user)"
+                            >
+                            <span class="av" *ngIf="!user.photo">{{ user.initials }}</span>
+                            <span class="rk" [ngClass]="'r' + (i + 1)" [attr.aria-label]="'#' + (i + 1)">{{ i + 1 }}</span>
+                        </span>
+
+                        <div class="tu-id">
+                            <div class="nm">{{ user.displayName }}</div>
+                            <div class="pl">{{ cat.customActionLabel || (cat.actionLabelKey | translate) }}</div>
+                        </div>
+
+                        <div class="nb">
+                            <b>{{ user.count }}</b>
+                            <span class="d eq" *ngIf="topUsersConfig.showDelta && user.delta === 0">{{ 'ETA.topUsers.stable' | translate }}</span>
+                            <span class="d up" *ngIf="topUsersConfig.showDelta && user.delta > 0">▲ {{ user.delta }}</span>
+                            <span class="d dn" *ngIf="topUsersConfig.showDelta && user.delta < 0">▼ {{ -user.delta }}</span>
+                        </div>
+
+                        <div class="bar"><i [style.width.%]="user.barPct"></i></div>
+                    </div>
+                </div>
+            </div>
+        </section>
+
+        <div class="alert" *ngIf="weekendAlert && !reconciliationSummaryError">
+            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true">
+                <path d="M10.29 3.86 1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z"/>
+                <line x1="12" y1="9" x2="12" y2="13"/><line x1="12" y1="17" x2="12.01" y2="17"/>
+            </svg>
+            <div class="txt">
+                <b>{{ weekendAlert.title }}</b> — {{ weekendAlert.detail }}
+                <a *ngIf="!weekendFocusActive" (click)="focusWeekendIssues()">{{ 'ETA.weekendFilter' | translate }}</a>
+                <a *ngIf="weekendFocusActive" (click)="clearWeekendFocus()">{{ 'ETA.showAllServices' | translate }}</a>
+            </div>
+        </div>
+
+        <div class="alert alert-j1" *ngIf="missingJ1BlockingCommentsCount > 0 && !reconciliationSummaryError">
+            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true">
+                <path d="M10.29 3.86 1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z"/>
+                <line x1="12" y1="9" x2="12" y2="13"/><line x1="12" y1="17" x2="12.01" y2="17"/>
+            </svg>
+            <div class="txt">
+                <b>{{ 'ETA.j2CommentsRequired' | translate:{ count: missingJ1BlockingCommentsCount } }}</b> —
+                {{ 'ETA.j2CommentsDetail' | translate }}
+            </div>
+        </div>
+
+        <div class="filters">
+            <div class="field">
+                <label>{{ 'LBL.countryLabel' | translate }}</label>
+                <select [(ngModel)]="reconciliationSummaryCountry" (change)="loadReconciliationSummary()">
+                    <option value="">{{ 'FILT.all' | translate }}</option>
+                    <option *ngFor="let country of reconciliationSummaryCountries; trackBy: trackByValue" [ngValue]="country">{{ country }}</option>
+                </select>
+            </div>
+            <div class="field">
+                <label>{{ 'TBL.service' | translate }}</label>
+                <select [(ngModel)]="reconciliationSummaryService" (change)="loadReconciliationSummary()">
+                    <option value="">{{ 'FILT.all' | translate }}</option>
+                    <option *ngFor="let service of reconciliationSummaryServices; trackBy: trackByValue" [ngValue]="service">{{ service }}</option>
+                </select>
+            </div>
+            <div class="field">
+                <label>{{ 'ETA.environment' | translate }}</label>
+                <select [(ngModel)]="reconciliationSummaryEnv" (change)="loadReconciliationSummary()">
+                    <option *ngFor="let env of reconciliationEnvOptions; trackBy: trackByValue" [ngValue]="env">
+                        {{ env === 'ALL' ? ('ETA.allEnvs' | translate) : (env === 'TOTAL' ? 'T-E' : env) }}
+                    </option>
+                </select>
+            </div>
+            <div class="field">
+                <label>{{ 'ETA.searchService' | translate }}</label>
+                <input
+                    type="text"
+                    [(ngModel)]="serviceSearchQuery"
+                    (ngModelChange)="onServiceSearchChange()"
+                    [placeholder]="'ETA.searchPlaceholder' | translate"
+                >
+            </div>
+            <div class="legend">
+                <div
+                    class="legend-item clickable"
+                    [class.active]="reconciliationStatusFilter === 'RECONCILIE'"
+                    (click)="setReconciliationStatusFilter('RECONCILIE')"
+                >
+                    <span class="sw sw-ok"></span>{{ 'ETA.status.reconciled' | translate }}
+                </div>
+                <div
+                    class="legend-item clickable"
+                    [class.active]="reconciliationStatusFilter === 'EN_COURS_VALIDATION'"
+                    (click)="setReconciliationStatusFilter('EN_COURS_VALIDATION')"
+                >
+                    <span class="sw sw-progress"></span>{{ 'ETA.status.validating' | translate }}
+                </div>
+                <div
+                    class="legend-item clickable"
+                    [class.active]="reconciliationStatusFilter === 'EN_COURS_CLOTURE'"
+                    (click)="setReconciliationStatusFilter('EN_COURS_CLOTURE')"
+                >
+                    <span class="sw sw-closing"></span>{{ 'ETA.status.closing' | translate }}
+                </div>
+                <div
+                    class="legend-item clickable"
+                    [class.active]="reconciliationStatusFilter === 'NON_RECONCILIE'"
+                    (click)="setReconciliationStatusFilter('NON_RECONCILIE')"
+                >
+                    <span class="sw sw-ko"></span>{{ 'ETA.status.notReconciled' | translate }}
+                </div>
+            </div>
+        </div>
+
+        <div *ngIf="reconciliationSummaryLoading && !reconciliationSummaryRows.length" class="state-msg loading">
+            {{ 'ETA.loading' | translate }}
+        </div>
+        <div *ngIf="reconciliationSummaryLoadingMore" class="state-msg loading-more">
+            {{ 'ETA.loadingMore' | translate }}
+        </div>
+        <div *ngIf="!reconciliationSummaryLoading && reconciliationSummaryError" class="state-msg error">
+            {{ reconciliationSummaryError }}
+        </div>
+
+        <div
+            class="kpis"
+            *ngIf="(!reconciliationSummaryLoading || reconciliationSummaryRows.length) && !reconciliationSummaryError && reconciliationSummaryRows.length"
+        >
+            <div class="kpi total">
+                <div class="label">{{ 'ETA.kpi.totalPeriod' | translate }}</div>
+                <div class="value">{{ recoStats.total }}</div>
+                <div class="delta" [ngClass]="formatKpiDelta(recoStats.total, previousRecoStats.total).cls">
+                    {{ formatKpiDelta(recoStats.total, previousRecoStats.total).text }}
+                </div>
+                <div class="spark">
+                    <i *ngFor="let h of sparkTotal; trackBy: trackByIndex" [style.height.px]="h"></i>
+                </div>
+            </div>
+            <div class="kpi ok">
+                <div class="label">{{ recoValidatedStatusLabelPlural }}</div>
+                <div class="value">{{ recoCoverageCount }}</div>
+                <div class="delta" [ngClass]="formatKpiDelta(recoCoverageCount, previousRecoStats.reconcilie + previousRecoStats.enCours).cls">
+                    {{ formatKpiDelta(recoCoverageCount, previousRecoStats.reconcilie + previousRecoStats.enCours).text }}
+                </div>
+                <div class="spark">
+                    <i *ngFor="let h of sparkOk; trackBy: trackByIndex" [style.height.px]="h"></i>
+                </div>
+            </div>
+            <div class="kpi progress">
+                <div class="label">{{ 'ETA.kpi.validating' | translate }}</div>
+                <div class="value">{{ recoStats.enCoursCdo }}</div>
+                <div class="delta" [ngClass]="formatKpiDelta(recoStats.enCoursCdo, previousRecoStats.enCoursCdo, false).cls">
+                    {{ formatKpiDelta(recoStats.enCoursCdo, previousRecoStats.enCoursCdo, false).text }}
+                </div>
+                <div class="spark">
+                    <i *ngFor="let h of sparkProgress; trackBy: trackByIndex" [style.height.px]="h"></i>
+                </div>
+            </div>
+            <div class="kpi">
+                <div class="label">{{ 'ETA.kpi.closing' | translate }}</div>
+                <div class="value">{{ recoStats.enCoursGroup }}</div>
+                <div class="delta" [ngClass]="formatKpiDelta(recoStats.enCoursGroup, previousRecoStats.enCoursGroup, false).cls">
+                    {{ formatKpiDelta(recoStats.enCoursGroup, previousRecoStats.enCoursGroup, false).text }}
+                </div>
+                <div class="spark">
+                    <i *ngFor="let h of sparkClosing; trackBy: trackByIndex" [style.height.px]="h"></i>
+                </div>
+            </div>
+            <div class="kpi ko">
+                <div class="label">{{ 'ETA.kpi.notReconciled' | translate }}</div>
+                <div class="value">{{ recoStats.nonReco }}</div>
+                <div class="delta" [ngClass]="formatKpiDelta(recoStats.nonReco, previousRecoStats.nonReco, false).cls">
+                    {{ formatKpiDelta(recoStats.nonReco, previousRecoStats.nonReco, false).text }}
+                </div>
+                <div class="spark">
+                    <i *ngFor="let h of sparkKo; trackBy: trackByIndex" [style.height.px]="h"></i>
+                </div>
+            </div>
+        </div>
+
+        <div
+            class="panel"
+            #detailTablePanel
+            *ngIf="(!reconciliationSummaryLoading || reconciliationSummaryRows.length) && !reconciliationSummaryError"
+        >
+            <div class="panel-head">
+                <h2>{{ 'ETA.detailByService' | translate }}</h2>
+                <div class="toolbar" *ngIf="reconciliationSummaryRows.length">
+                    <div class="tabs">
+                        <button
+                            type="button"
+                            *ngFor="let tab of getCountryTabOptions(); trackBy: trackById"
+                            [class.active]="countryTabFilter === tab.id"
+                            (click)="setCountryTab(tab.id)"
+                        >{{ tab.label }} ({{ tab.count }})</button>
+                    </div>
+                    <div
+                        class="chip warn"
+                        [class.active]="anomaliesOnlyFilter"
+                        (click)="toggleAnomaliesOnly()"
+                    >
+                        <input type="checkbox" [checked]="anomaliesOnlyFilter" tabindex="-1" aria-hidden="true">
+                        {{ 'ETA.anomaliesOnly' | translate:{ count: anomalyRowsCount } }}
+                    </div>
+                    <div class="switch-lbl">
+                        {{ 'ETA.inlineComments' | translate }}
+                        <div
+                            class="switch"
+                            [class.on]="inlineCommentsMode"
+                            role="switch"
+                            [attr.aria-checked]="inlineCommentsMode"
+                            tabindex="0"
+                            (click)="toggleInlineComments()"
+                            (keydown.enter)="toggleInlineComments()"
+                            (keydown.space)="$event.preventDefault(); toggleInlineComments()"
+                        ><i></i></div>
+                    </div>
+                </div>
+            </div>
+            <div class="meta" *ngIf="reconciliationSummaryRows.length">
+                {{ 'ETA.meta' | translate:{ count: filteredServiceCount, period: periodRangeLabel } }}
+            </div>
+            <div class="table-scroll" *ngIf="reconciliationSummaryRows.length">
+                <table>
+                    <thead>
+                        <tr>
+                            <th (click)="toggleServiceSort()">{{ 'TBL.service' | translate }}<span class="arrow">{{ sortServiceAsc ? '▾' : '▴' }}</span>
+                            </th>
+                            <th
+                                *ngFor="let d of visibleWeekDays; let i = index; trackBy: trackByDate"
+                                [class.weekend]="isWeekendColumn(d)"
+                            >
+                                <button
+                                    *ngIf="i === 0"
+                                    type="button"
+                                    class="day-nav"
+                                    (click)="prevDaysWindow(); $event.stopPropagation()"
+                                    [disabled]="!canGoPrevDays()"
+                                >‹</button>
+                                {{ d.label }}
+                                <button
+                                    *ngIf="i === visibleWeekDays.length - 1"
+                                    type="button"
+                                    class="day-nav"
+                                    (click)="nextDaysWindow(); $event.stopPropagation()"
+                                    [disabled]="!canGoNextDays()"
+                                >›</button>
+                            </th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        <tr
+                            *ngFor="let row of getPagedReconciliationRows(); trackBy: trackByIndex"
+                            [class.anomaly]="countRowAnomalyDays(row) > 0"
+                        >
+                            <td>
+                                <ng-container *ngIf="parseServiceRowLabel(row.label || row.service) as svc">
+                                    <span class="svc-name">{{ svc.name }}</span>
+                                    <span class="svc-code" *ngIf="svc.code">({{ svc.code }})</span>
+                                </ng-container>
+                                <span class="svc-flag" *ngIf="countRowAnomalyDays(row) > 0">
+                                    {{ 'ETA.daysToProcess' | translate:{ count: countRowAnomalyDays(row) } }}
+                                </span>
+                            </td>
+                            <td
+                                *ngFor="let day of getVisibleDays(row); trackBy: trackByDate"
+                                [class.weekend]="isWeekendColumn(day)"
+                            >
+                                <div
+                                    class="cell-wrap"
+                                    [class.has-tip]="!inlineCommentsMode && (hasCellNoteIndicator(day, row) || hasCellTicketIndicator(day))"
+                                >
+                                    <span
+                                        [class]="getModernPillClass(day)"
+                                        (click)="onDayPillClick(day, row)"
+                                    >
+                                        <span class="sw"></span>
+                                        {{ getStatusPillLabel(day) }}
+                                    </span>
+                                    <ng-container *ngIf="!inlineCommentsMode">
+                                        <button
+                                            *ngIf="hasCellNoteIndicator(day, row)"
+                                            type="button"
+                                            class="info-dot hasnote"
+                                            (click)="onInfoDotClick(day, row, $event)"
+                                            [attr.aria-label]="'ETA.aria.viewComment' | translate"
+                                        >!</button>
+                                        <button
+                                            *ngIf="!hasCellNoteIndicator(day, row) && hasCellTicketIndicator(day)"
+                                            type="button"
+                                            class="info-dot"
+                                            (click)="onInfoDotClick(day, row, $event)"
+                                            [attr.aria-label]="'ETA.aria.viewTicketId' | translate"
+                                        >i</button>
+                                        <div class="tip" *ngIf="hasCellNoteIndicator(day, row)">
+                                            <b>{{ 'ETA.noteLabel' | translate }}</b> {{ getCellNoteText(day, row) }}
+                                        </div>
+                                        <div class="tip" *ngIf="!hasCellNoteIndicator(day, row) && hasCellTicketIndicator(day)">
+                                            {{ 'ETA.ticketIdLabel' | translate }} <b>{{ day.ticketId }}</b>
+                                        </div>
+                                    </ng-container>
+                                </div>
+                                <button
+                                    *ngIf="inlineCommentsMode && hasCellNoteIndicator(day, row)"
+                                    type="button"
+                                    class="inline-note"
+                                    [class.missing]="isCellNoteMissing(day, row)"
+                                    (click)="openBlockingCommentModal(day, row)"
+                                >{{ getCellNoteText(day, row) }}</button>
+                            </td>
+                        </tr>
+                    </tbody>
+                </table>
+            </div>
+            <div class="empty-table" *ngIf="!reconciliationSummaryRows.length && !reconciliationSummaryLoading">
+                {{ 'ETA.noData' | translate }}
+            </div>
+
+            <div class="footer-nav" *ngIf="reconciliationSummaryRows.length">
+                <div class="pagination-left">
+                    <label>
+                        {{ 'PAG.rowsPerPage' | translate }}
+                        <select [(ngModel)]="reconciliationPageSize" (ngModelChange)="onPageSizeChange()">
+                            <option *ngFor="let n of reconciliationPageSizeOptions; trackBy: trackByValue" [ngValue]="n">{{ n }}</option>
+                        </select>
+                    </label>
+                    <span class="pagination-range">{{ paginationLabel }}</span>
+                </div>
+                <div class="pagination-controls pagination-controls-centered" *ngIf="getReconciliationTotalPages() > 1">
+                    <button type="button" (click)="prevReconciliationPage()" [disabled]="reconciliationPageIndex === 0">‹</button>
+                    {{ 'ETA.pageOf' | translate:{ current: (reconciliationPageIndex + 1), total: getReconciliationTotalPages() } }}
+                    <button type="button" (click)="nextReconciliationPage()" [disabled]="reconciliationPageIndex >= getReconciliationTotalPages() - 1">›</button>
+                </div>
+            </div>
+        </div>
+
+        <div
+            class="panel chart-panel"
+            *ngIf="reconciliationSummaryRows.length && recoStats.total > 0 && (!reconciliationSummaryLoading || reconciliationSummaryRows.length) && !reconciliationSummaryError"
+        >
+            <div class="panel-head chart-panel-head">
+                <h2>{{ 'ETA.evolutionByDay' | translate }}</h2>
+            </div>
+            <div class="bars">
+                <div
+                    class="bar-col"
+                    *ngFor="let d of evolutionBarDays; let i = index; trackBy: trackByIndex"
+                    [class.weekend]="d.weekend"
+                    (mouseenter)="chartHoverIndex = i"
+                    (mouseleave)="chartHoverIndex = null"
+                >
+                    <div class="tooltip" [class.show]="chartHoverIndex === i">
+                        <div class="row"><span class="sw sw-ok"></span>{{ 'ETA.tooltip.reconciled' | translate:{ count: d.ok } }}</div>
+                        <div class="row"><span class="sw sw-progress"></span>{{ 'ETA.tooltip.validating' | translate:{ count: d.progress } }}</div>
+                        <div class="row" *ngIf="d.closing"><span class="sw sw-closing"></span>{{ 'ETA.tooltip.closing' | translate:{ count: d.closing } }}</div>
+                        <div class="row"><span class="sw sw-ko"></span>{{ 'ETA.tooltip.notReconciled' | translate:{ count: d.ko } }}</div>
+                    </div>
+                    <div class="stack" [style.height.px]="evolutionChartStackHeightPx">
+                        <div class="seg ok" *ngIf="d.ok" [style.height.px]="barSegmentHeight(d.ok)"></div>
+                        <div class="seg progress" *ngIf="d.chartProgress" [style.height.px]="barSegmentHeight(d.chartProgress)"></div>
+                        <div class="seg ko" *ngIf="d.ko" [style.height.px]="barSegmentHeight(d.ko)"></div>
+                    </div>
+                    <div class="day-label">{{ d.label }}</div>
+                    <div class="day-sub">{{ d.sub }}</div>
+                    <div class="day-total">{{ d.total }}/{{ chartServiceTotal }}</div>
+                </div>
+            </div>
+            <div class="chart-spacer"></div>
+        </div>
+    </div>
+
+    <div class="j1-modal-overlay" *ngIf="blockingCommentModalOpen" (click)="closeBlockingCommentModal()">
+        <div class="j1-modal" (click)="$event.stopPropagation()">
+            <h3>{{ 'ETA.modal.title' | translate }}</h3>
+            <p class="j1-modal-sub" *ngIf="blockingCommentTarget">{{ 'TBL.service' | translate }} <strong>{{ blockingCommentRowMeta?.service }}</strong> —
+                {{ 'ETA.modal.date' | translate }} <strong>{{ blockingCommentTarget.date }}</strong>
+            </p>
+            <p class="j1-modal-hint">
+                {{ 'ETA.modal.hint' | translate }}
+            </p>
+            <textarea
+                rows="4"
+                [(ngModel)]="blockingCommentDraft"
+                [placeholder]="'ETA.modal.placeholder' | translate"
+            ></textarea>
+            <div class="j1-modal-error" *ngIf="blockingCommentError">{{ blockingCommentError }}</div>
+            <div class="j1-modal-actions">
+                <button type="button" class="btn" (click)="closeBlockingCommentModal()" [disabled]="blockingCommentSaving">{{ 'COMMON.actions.cancel' | translate }}</button>
+                <button type="button" class="btn btn-primary" (click)="saveBlockingComment()" [disabled]="blockingCommentSaving">
+                    {{ blockingCommentSaving ? ('ETA.modal.saving' | translate) : ('ETA.modal.save' | translate) }}
+                </button>
+            </div>
+        </div>
+    </div>
+</div>

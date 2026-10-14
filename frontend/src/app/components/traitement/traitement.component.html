@@ -1,0 +1,1983 @@
+<div class="traitement-page">
+  <!-- TOP NAV (aligné sur redevance/operations) -->
+  <nav class="topnav">
+    <div class="nav-brand">
+      <div class="nav-brand-dot"></div>
+      ReconciliApp
+    </div>
+    <div class="nav-sep"></div>
+    <div class="nav-path">
+      <strong>{{ 'TBL.processing' | translate }}</strong>
+    </div>
+    <div class="nav-spacer"></div>
+    <div class="nav-actions">
+      <button type="button" class="nav-btn secondary" (click)="toggleAllSections()">
+        <i class="fas" [ngClass]="allSectionsVisible ? 'fa-eye-slash' : 'fa-eye'"></i>
+        {{ (allSectionsVisible ? 'TRT.HideAll' : 'TRT.ShowAll') | translate }}
+      </button>
+      <button type="button" class="nav-btn primary" (click)="newTraitement()">
+        <i class="fas fa-plus"></i>{{ 'TRT.NouveauTraitement' | translate }}</button>
+    </div>
+  </nav>
+
+  <!-- EN-TÊTE PAGE (KPI rapides) -->
+  <div class="page-header-traitement">
+    <div class="ph-ops-left">
+      <div class="ph-eyebrow"><span></span>{{ 'TRT.Outils' | translate }}</div>
+      <h1 class="ph-title-traitement">{{ 'TRT.TraitementDe' | translate }}<em>{{ 'TRT.Fichiers' | translate }}</em>
+      </h1>
+    </div>
+    <div class="ph-ops-right">
+      <div class="hero-kpi-strip">
+        <div class="hk-strip-item">
+          <span class="hk-strip-label">{{ 'TRT.Fichiers1' | translate }}</span>
+          <span class="hk-strip-value">{{ selectedFiles.length }}</span>
+        </div>
+        <div class="hk-strip-sep"></div>
+        <div class="hk-strip-item">
+          <span class="hk-strip-label">{{ 'TBL.rows' | translate }}</span>
+          <span class="hk-strip-value">{{ combinedRows.length || 0 }}</span>
+        </div>
+        <div class="hk-strip-sep"></div>
+        <div class="hk-strip-item">
+          <span class="hk-strip-label">{{ 'TRT.Colonnes' | translate }}</span>
+          <span class="hk-strip-value">{{ columns.length || 0 }}</span>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- CONTENU PRINCIPAL -->
+  <div class="main">
+    <div class="traitement-container">
+      <div class="header-section">
+        <h2>{{ 'TRT.TraitementDeFichiersCSVTSV' | translate }}</h2>
+        <div class="header-actions">
+          <button type="button" class="btn btn-outline-secondary" (click)="toggleAllSections()">
+            <i class="fas fa-eye" *ngIf="!allSectionsVisible"></i>
+            <i class="fas fa-eye-slash" *ngIf="allSectionsVisible"></i>
+            {{ (allSectionsVisible ? 'TRT.HideAll' : 'TRT.ShowAll') | translate }}
+          </button>
+          <button type="button" class="new-treatment-btn" (click)="newTraitement()">{{ 'TRT.NouveauTraitement1' | translate }}</button>
+        </div>
+      </div>
+  
+  <!-- Barre de progression pour les fichiers volumineux -->
+  <div *ngIf="dataProcessingService.isProcessing$ | async" class="processing-overlay">
+    <div class="processing-container">
+      <div class="processing-header">
+        <div class="processing-icon">🔄</div>
+        <h3>{{ 'TRT.TraitementEnCours' | translate }}</h3>
+        <p>{{ dataProcessingService.processingMessage$ | async }}</p>
+      </div>
+      <div class="progress-bar-container">
+        <div class="progress-bar">
+          <div class="progress-fill" [style.width.%]="(dataProcessingService.processingProgress$ | async)?.percentage || 0"></div>
+        </div>
+        <div class="progress-text">{{ (dataProcessingService.processingProgress$ | async)?.percentage?.toFixed(1) || 0 }}%</div>
+      </div>
+      <div class="processing-info">
+        <p>{{ (dataProcessingService.processingProgress$ | async)?.message || ('TRT.ProcessingInProgress' | translate) }}</p>
+        <p class="processing-tip">{{ 'TRT.VeuillezPatienterLeTraitementPeut' | translate }}</p>
+      </div>
+    </div>
+  </div>
+  
+  <div class="upload-area" (drop)="onDrop($event)" (dragover)="onDragOver($event)">
+    <p>{{ 'TRT.Glissez-deposezVosFichiersCSVTSV' | translate }}</p>
+    <input type="file" multiple accept=".csv,.txt,.tsv,.xls,.xlsx,text/csv,text/plain,text/tab-separated-values,application/vnd.ms-excel,application/vnd.openxmlformats-officedocument.spreadsheetml.sheet" (change)="onFileSelected($event)" id="fileInput" hidden />
+    <button type="button" (click)="triggerFileInput()" [disabled]="isProcessing">{{ 'TRT.SelectionnerDesFichiersCSVTSV' | translate }}</button>
+    <div class="upload-info">
+      <p><small>{{ 'TRT.💡OptimisePourFichiersJusqu' | translate }}</small></p>
+      <p><small>{{ 'TRT.⚡TraitementParLotsPour' | translate }}</small></p>
+    </div>
+    <div *ngIf="errorMsg.upload" class="error-msg">{{ errorMsg.upload }}</div>
+  </div>
+  <div *ngIf="successMsg.upload" class="success-msg" [innerHTML]="successMsg.upload"></div>
+
+<div class="auto-treatment-section">
+  <div class="section-header">
+    <h4>
+      <i class="fas fa-magic"></i>{{ 'TRT.TraitementAutomatique' | translate }}<button type="button" class="btn btn-sm btn-outline-info" (click)="toggleSection('autoTreatment')">
+        <i class="fas fa-eye" *ngIf="!showSections.autoTreatment"></i>
+        <i class="fas fa-eye-slash" *ngIf="showSections.autoTreatment"></i>
+        {{ (showSections.autoTreatment ? 'TRT.Hide' : 'TRT.Show') | translate }}
+      </button>
+    </h4>
+  </div>
+
+  <div *ngIf="showSections.autoTreatment" class="section-content auto-treatment-content">
+    <p class="auto-treatment-intro">
+      {{ 'TRT.NormalizeIntro' | translate }}
+      {{ 'TRT.NormalizeSteps' | translate }}
+    </p>
+    <app-file-upload
+      [embedTraitementSection]="true"
+      (embedTraitementProgress)="onAutoTreatmentProgress($event)">
+    </app-file-upload>
+  </div>
+</div>
+
+<div class="total-energie-section">
+  <div class="section-header">
+    <h4>
+      <i class="fas fa-bolt"></i>{{ 'TRT.TotalEnergie' | translate }}<button type="button" class="btn btn-sm btn-outline-info" (click)="toggleSection('totalEnergie')">
+        <i class="fas fa-eye" *ngIf="!showSections.totalEnergie"></i>
+        <i class="fas fa-eye-slash" *ngIf="showSections.totalEnergie"></i>
+        {{ (showSections.totalEnergie ? 'TRT.Hide' : 'TRT.Show') | translate }}
+      </button>
+    </h4>
+  </div>
+
+  <div *ngIf="showSections.totalEnergie" class="section-content">
+    <div class="total-energie-grid">
+      <div class="total-energie-actions">
+        <div class="file-upload-group">
+          <label class="form-label">
+            <i class="fas fa-file-upload"></i>{{ 'TRT.FichierCodePDAStationNumero' | translate }}</label>
+          <div class="file-picker">
+            <input type="file"
+                   id="totalEnergieFile1Input"
+                   accept=".csv,.xls,.xlsx"
+                   (change)="onTotalEnergieFile1Selected($event)"
+                   [disabled]="totalEnergieIsProcessing">
+            <button type="button"
+                    class="reset-btn"
+                    (click)="resetTotalEnergieSelection()"
+                    [disabled]="!totalEnergieFile1 || totalEnergieIsProcessing">{{ 'COMMON.actions.reset' | translate }}</button>
+          </div>
+          <div class="file-meta" *ngIf="totalEnergieFile1">
+            <strong>{{ totalEnergieFile1.name }}</strong>
+            <small>{{ (totalEnergieFile1.size / (1024 * 1024)) | number:'1.0-2' }} MB</small>
+            <div *ngIf="totalEnergieData1.length > 0" class="file-info">
+              <span class="info-badge">{{ totalEnergieData1.length }} {{ 'TRT.Rows' | translate }}</span>
+              <span class="info-badge">{{ totalEnergieColumns1.length }} {{ 'TRT.Columns' | translate }}</span>
+            </div>
+          </div>
+        </div>
+
+        <div class="file-upload-group">
+          <label class="form-label">
+            <i class="fas fa-file-upload"></i>{{ 'TRT.FichierAvecColonneN°De' | translate }}</label>
+          <div class="file-picker">
+            <input type="file"
+                   id="totalEnergieFile2Input"
+                   accept=".csv,.xls,.xlsx"
+                   (change)="onTotalEnergieFile2Selected($event)"
+                   [disabled]="totalEnergieIsProcessing">
+          </div>
+          <div class="file-meta" *ngIf="totalEnergieFile2">
+            <strong>{{ totalEnergieFile2.name }}</strong>
+            <small>{{ (totalEnergieFile2.size / (1024 * 1024)) | number:'1.0-2' }} MB</small>
+            <div *ngIf="totalEnergieData2.length > 0" class="file-info">
+              <span class="info-badge">{{ totalEnergieData2.length }} {{ 'TRT.Rows' | translate }}</span>
+              <span class="info-badge">{{ totalEnergieColumns2.length }} {{ 'TRT.Columns' | translate }}</span>
+            </div>
+          </div>
+        </div>
+
+        <div class="action-buttons">
+          <button type="button"
+                  class="main-action"
+                  (click)="processTotalEnergieFiles()"
+                  [disabled]="!totalEnergieFile1 || !totalEnergieFile2 || totalEnergieIsProcessing">
+            {{ (totalEnergieIsProcessing ? 'TRT.ProcessingInProgress' : 'TRT.ProcessAndMerge') | translate }}
+          </button>
+
+          <button type="button"
+                  class="export-action"
+                  (click)="exportTotalEnergieResult()"
+                  [disabled]="totalEnergieMergedData.length === 0 || totalEnergieIsProcessing">
+            <i class="fas fa-download"></i>{{ 'TRT.ExporterLeResultat' | translate }}</button>
+        </div>
+
+        <!-- Comparaison BO: Agence / PARTNER: Station -->
+        <div class="total-energie-compare-block">
+          <h5 class="compare-subtitle"><i class="fas fa-balance-scale"></i>{{ 'TRT.ComparaisonBOAgencePARTNERStation' | translate }}</h5>
+          <p class="compare-description">{{ 'TRT.CompareDescription' | translate: { col: ('TBL.comment' | translate) } }}</p>
+
+          <div class="file-upload-group">
+            <label class="form-label">
+              <i class="fas fa-file-upload"></i>{{ 'TRT.FichierCSVXLSXLSX' | translate }}</label>
+            <div class="file-picker">
+              <input type="file"
+                     id="totalEnergieCompareFileInput"
+                     accept=".csv,.xls,.xlsx"
+                     (change)="onTotalEnergieCompareFileSelected($event)"
+                     [disabled]="totalEnergieCompareIsProcessing">
+              <button type="button"
+                      class="reset-btn"
+                      (click)="resetTotalEnergieCompareSelection()"
+                      [disabled]="!totalEnergieCompareFile || totalEnergieCompareIsProcessing">{{ 'COMMON.actions.reset' | translate }}</button>
+            </div>
+            <div class="file-meta" *ngIf="totalEnergieCompareFile">
+              <strong>{{ totalEnergieCompareFile.name }}</strong>
+              <small>{{ (totalEnergieCompareFile.size / 1024) | number:'1.0-0' }} Ko</small>
+              <div *ngIf="totalEnergieCompareData.length > 0" class="file-info">
+                <span class="info-badge">{{ totalEnergieCompareData.length }} {{ 'TRT.Rows' | translate }}</span>
+                <span class="info-badge">{{ totalEnergieCompareColumns.length }} {{ 'TRT.Columns' | translate }}</span>
+              </div>
+            </div>
+          </div>
+          <div class="action-buttons compare-actions">
+            <button type="button"
+                    class="main-action"
+                    (click)="processTotalEnergieCompare()"
+                    [disabled]="totalEnergieCompareData.length === 0 || totalEnergieCompareIsProcessing">
+              {{ (totalEnergieCompareIsProcessing ? 'TRT.ComparisonInProgress' : 'TRT.CompareAndAddComment') | translate }}
+            </button>
+            <button type="button"
+                    class="export-action"
+                    (click)="exportTotalEnergieCompareResult()"
+                    [disabled]="totalEnergieCompareResult.length === 0 || totalEnergieCompareIsProcessing">
+              <i class="fas fa-download"></i>{{ 'TRT.ExporterLeResultatComparaison' | translate }}</button>
+          </div>
+          <div *ngIf="totalEnergieCompareProgress && !totalEnergieCompareIsProcessing" class="status-message">
+            {{ totalEnergieCompareProgress }}
+          </div>
+          <div *ngIf="successMsg.totalEnergieCompare" class="success-msg">{{ successMsg.totalEnergieCompare }}</div>
+          <div *ngIf="errorMsg.totalEnergieCompare" class="error-msg">{{ errorMsg.totalEnergieCompare }}</div>
+        </div>
+
+        <div *ngIf="totalEnergieIsProcessing" class="processing-status">
+          <div class="spinner"></div>
+          <p>{{ totalEnergieProgress }}</p>
+        </div>
+
+        <div *ngIf="totalEnergieProgress && !totalEnergieIsProcessing" class="status-message">
+          {{ totalEnergieProgress }}
+        </div>
+
+        <div *ngIf="successMsg.totalEnergie" class="success-msg">{{ successMsg.totalEnergie }}</div>
+        <div *ngIf="errorMsg.totalEnergie" class="error-msg">{{ errorMsg.totalEnergie }}</div>
+      </div>
+
+      <div class="total-energie-summary">
+        <h5>{{ 'TRT.Fonctionnement' | translate }}</h5>
+        <ul>
+          <li>{{ 'TRT.LeFichierDoitContenirLes' | translate }}<strong>{{ 'TRT.CodePDA' | translate }}</strong>, <strong>{{ 'TRT.Station' | translate }}</strong>{{ 'TRT.Et' | translate }}<strong>{{ 'TRT.NumeroSIM' | translate }}</strong></li>
+          <li>{{ 'TRT.LeFichierDoitContenirUne' | translate }}<strong>{{ 'TRT.N°DeCompte' | translate }}</strong></li>
+          <li>{{ 'TRT.LaCorrespondanceSeFaitEntre' | translate }}</li>
+          <li>{{ 'TRT.AllFile2RowsKept' | translate }}</li>
+          <li>{{ 'TRT.SiUneCorrespondanceEstTrouvee' | translate }}</li>
+          <li>{{ 'TRT.DuplicatesAllowed' | translate }}</li>
+          <li>{{ 'TRT.SiAucuneCorrespondanceLaLigne' | translate }}</li>
+          <li>{{ 'TRT.LeResultatPeutEtreExporte' | translate }}</li>
+          <li>{{ 'TRT.CompareToolIntro' | translate: { col: ('TBL.comment' | translate) } }}</li>
+        </ul>
+
+        <div *ngIf="totalEnergieMergedData.length > 0" class="merge-results">
+          <h5>{{ 'TRT.ResultatsDeLaFusion' | translate }}</h5>
+          <div class="results-stats">
+            <div class="stat-item">
+              <span class="stat-label">{{ 'TRT.LignesFusionnees' | translate }}</span>
+              <span class="stat-value">{{ totalEnergieMergedData.length }}</span>
+            </div>
+            <div class="stat-item">
+              <span class="stat-label">{{ 'TRT.ColonnesTotales' | translate }}</span>
+              <span class="stat-value">{{ totalEnergieMergedColumns.length }}</span>
+            </div>
+          </div>
+          
+          <div class="preview-table" *ngIf="totalEnergieMergedData.length > 0 && totalEnergieMergedData.length <= 100">
+            <h6>{{ 'TRT.MergedDataPreview' | translate }} {{  totalEnergieMergedData.length }} {{ 'TRT.Rows' | translate }})</h6>
+            <div class="table-responsive">
+              <table>
+                <thead>
+                  <tr>
+                    <th *ngFor="let col of totalEnergieMergedColumns.slice(0, 10)">{{ col }}</th>
+                    <th *ngIf="totalEnergieMergedColumns.length > 10">...</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  <tr *ngFor="let row of totalEnergieMergedData.slice(0, 10)">
+                    <td *ngFor="let col of totalEnergieMergedColumns.slice(0, 10)">{{ row[col] || '' }}</td>
+                    <td *ngIf="totalEnergieMergedColumns.length > 10">...</td>
+                  </tr>
+                </tbody>
+              </table>
+            </div>
+            <small *ngIf="totalEnergieMergedData.length > 10">{{ 'TRT.ApercuLimiteALignesUtilisez' | translate }}</small>
+          </div>
+        </div>
+
+        <div *ngIf="totalEnergieCompareResult.length > 0" class="merge-results compare-results">
+          <h5>{{ 'TRT.ResultatsDeLaComparaisonBO' | translate }}</h5>
+          <div class="results-stats">
+            <div class="stat-item">
+              <span class="stat-label">{{ 'TRT.Lignes2' | translate }}</span>
+              <span class="stat-value">{{ totalEnergieCompareResult.length }}</span>
+            </div>
+            <div class="stat-item">
+              <span class="stat-label">{{ 'TRT.Colonnes2' | translate }}</span>
+              <span class="stat-value">{{ totalEnergieCompareResultColumns.length }}</span>
+            </div>
+          </div>
+          
+          <!-- Récapitulatif groupé par station (commentaires non OK) -->
+          <div *ngIf="totalEnergieCompareSummary.length > 0" class="compare-summary-section">
+            <div class="summary-header">
+              <h6><i class="fas fa-chart-bar"></i>{{ 'TRT.RecapitulatifParStationCommentairesNon' | translate }}</h6>
+              <button type="button"
+                      class="export-summary-btn"
+                      (click)="exportTotalEnergieCompareSummary()"
+                      [disabled]="totalEnergieCompareIsProcessing"
+                      title="{{ 'TRT.ExporterLeRecapitulatif' | translate }}">
+                <i class="fas fa-download"></i>{{ 'TRT.ExporterLeRecapitulatif' | translate }}</button>
+            </div>
+            <div class="summary-table-container">
+              <table class="summary-table">
+                <thead>
+                  <tr>
+                    <th>{{ 'TRT.StationPARTNER' | translate }}</th>
+                    <th>{{ 'TRT.AgenceBO' | translate }}</th>
+                    <th>{{ 'TRT.NombreDeCommentairesNonOK' | translate }}</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  <tr *ngFor="let item of totalEnergieCompareSummary" [class]="getSummarySeverityClass(item.count)">
+                    <td class="station-name">
+                      <div class="station-content">
+                        <i class="fas fa-building"></i>
+                        <span>{{ item.station }}</span>
+                      </div>
+                    </td>
+                    <td class="agence-bo-cell">
+                      <div class="agence-content">
+                        <i class="fas fa-store"></i>
+                        <span>{{ item.agenceBo }}</span>
+                      </div>
+                    </td>
+                    <td class="count-cell">
+                      <div class="count-wrapper">
+                        <span class="count-badge" [class]="getSummarySeverityClass(item.count)">
+                          {{ item.count }}
+                        </span>
+                        <div class="progress-bar-container">
+                          <div class="progress-bar" 
+                               [class]="getSummarySeverityClass(item.count)"
+                               [style.width.%]="getSummarySeverityPercentage(item.count)">
+                          </div>
+                        </div>
+                        <span class="percentage-label">{{ getSummarySeverityPercentage(item.count) }}%</span>
+                      </div>
+                    </td>
+                  </tr>
+                </tbody>
+                <tfoot>
+                  <tr>
+                    <td class="total-label" colspan="2"><strong>{{ 'COMMON.actions.total' | translate }}</strong></td>
+                    <td class="total-count">
+                      <strong>{{ getTotalEnergieCompareSummaryTotal() }}</strong>
+                    </td>
+                  </tr>
+                </tfoot>
+              </table>
+            </div>
+          </div>
+          
+          <div class="preview-table" *ngIf="totalEnergieCompareResult.length > 0 && totalEnergieCompareResult.length <= 500">
+            <h6>{{ 'TRT.PreviewWithComment' | translate }} {{  totalEnergieCompareResult.length }} {{ 'TRT.Rows' | translate }})</h6>
+            <div class="table-responsive">
+              <table>
+                <thead>
+                  <tr>
+                    <th *ngFor="let col of totalEnergieCompareResultColumns.slice(0, 8)">{{ col }}</th>
+                    <th *ngIf="totalEnergieCompareResultColumns.length > 8">...</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  <tr *ngFor="let row of totalEnergieCompareResult.slice(0, 15)">
+                    <td *ngFor="let col of totalEnergieCompareResultColumns.slice(0, 8)">{{ row[col] || '' }}</td>
+                    <td *ngIf="totalEnergieCompareResultColumns.length > 8">...</td>
+                  </tr>
+                </tbody>
+              </table>
+            </div>
+            <small *ngIf="totalEnergieCompareResult.length > 15">{{ 'TRT.ApercuLimiteALignesUtilisez1' | translate }}</small>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+<div class="total-energie-section">
+  <div class="section-header">
+    <h4>
+      <i class="fas fa-columns"></i>{{ 'TRT.CompilationEn-tetesDifferents' | translate }}<button type="button" class="btn btn-sm btn-outline-info" (click)="toggleSection('compileHeaders')">
+        <i class="fas fa-eye" *ngIf="!showSections.compileHeaders"></i>
+        <i class="fas fa-eye-slash" *ngIf="showSections.compileHeaders"></i>
+        {{ (showSections.compileHeaders ? 'TRT.Hide' : 'TRT.Show') | translate }}
+      </button>
+    </h4>
+  </div>
+
+  <div *ngIf="showSections.compileHeaders" class="section-content">
+    <div class="total-energie-grid">
+      <div class="total-energie-actions">
+        <div class="file-upload-group">
+          <label class="form-label">
+            <i class="fas fa-file-upload"></i>{{ 'TRT.FichierEn-tetesAConserver' | translate }}</label>
+          <div class="file-picker">
+            <input type="file"
+                   id="compileHeadersFile1Input"
+                   accept=".csv,.xls,.xlsx"
+                   (change)="onCompileHeadersFile1Selected($event)"
+                   [disabled]="compileHeadersIsProcessing">
+            <button type="button"
+                    class="reset-btn"
+                    (click)="resetCompileHeadersSelection()"
+                    [disabled]="!compileHeadersFile1 || compileHeadersIsProcessing">{{ 'COMMON.actions.reset' | translate }}</button>
+          </div>
+          <div class="file-meta" *ngIf="compileHeadersFile1">
+            <strong>{{ compileHeadersFile1.name }}</strong>
+            <small>{{ (compileHeadersFile1.size / (1024 * 1024)) | number:'1.0-2' }} MB</small>
+            <div *ngIf="compileHeadersData1.length > 0" class="file-info">
+              <span class="info-badge">{{ compileHeadersData1.length }} {{ 'TRT.Rows' | translate }}</span>
+              <span class="info-badge">{{ compileHeadersCols1.length }} {{ 'TRT.Columns' | translate }}</span>
+            </div>
+          </div>
+          <div *ngIf="compileHeadersCols1.length > 0" class="compile-headers-retained">
+            <div class="compile-headers-retained-header">
+              <span>{{ 'TRT.HeadersToKeep' | translate }} {{ compileHeadersRetained.length }}/{{ compileHeadersCols1.length }})</span>
+              <button type="button" class="btn btn-xs btn-outline-primary" (click)="onCompileHeadersCheckAll()">{{ 'TRT.Tout' | translate }}</button>
+              <button type="button" class="btn btn-xs btn-outline-secondary" (click)="onCompileHeadersUncheckAll()">{{ 'TRT.Aucun' | translate }}</button>
+            </div>
+            <label *ngFor="let col of compileHeadersCols1" class="compile-headers-check">
+              <input type="checkbox"
+                     [checked]="compileHeadersRetained.includes(col)"
+                     (change)="onCompileHeadersToggleRetained(col, $any($event.target).checked)">
+              {{ col }}
+            </label>
+          </div>
+        </div>
+
+        <div class="file-upload-group">
+          <label class="form-label">
+            <i class="fas fa-file-upload"></i>{{ 'TRT.FichierColonnesAReporter' | translate }}</label>
+          <div class="file-picker">
+            <input type="file"
+                   id="compileHeadersFile2Input"
+                   accept=".csv,.xls,.xlsx"
+                   (change)="onCompileHeadersFile2Selected($event)"
+                   [disabled]="compileHeadersIsProcessing">
+          </div>
+          <div class="file-meta" *ngIf="compileHeadersFile2">
+            <strong>{{ compileHeadersFile2.name }}</strong>
+            <small>{{ (compileHeadersFile2.size / (1024 * 1024)) | number:'1.0-2' }} MB</small>
+            <div *ngIf="compileHeadersData2.length > 0" class="file-info">
+              <span class="info-badge">{{ compileHeadersData2.length }} {{ 'TRT.Rows' | translate }}</span>
+              <span class="info-badge">{{ compileHeadersCols2.length }} {{ 'TRT.Columns' | translate }}</span>
+            </div>
+          </div>
+          <div *ngIf="compileHeadersCols2.length > 0 && compileHeadersRetained.length > 0" class="compile-headers-mapping">
+            <table class="compile-headers-mapping-table">
+              <thead>
+                <tr>
+                  <th>{{ 'TRT.ColonneDuFichier' | translate }}</th>
+                  <th>{{ 'TRT.En-teteRetenuFichier' | translate }}</th>
+                </tr>
+              </thead>
+              <tbody>
+                <tr *ngFor="let col of compileHeadersCols2">
+                  <td>{{ col }}</td>
+                  <td>
+                    <select [value]="compileHeadersMapping[col] || ''"
+                            (change)="onCompileHeadersMappingChange(col, $event)">
+                      <option value="">{{ 'TRT.—Ignorer—' | translate }}</option>
+                      <option *ngFor="let r of compileHeadersRetained" [value]="r">{{ r }}</option>
+                    </select>
+                  </td>
+                </tr>
+              </tbody>
+            </table>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <div class="action-buttons compare-actions">
+      <button type="button"
+              class="main-action"
+              (click)="processCompileHeaders()"
+              [disabled]="compileHeadersData2.length === 0 || compileHeadersRetained.length === 0 || compileHeadersIsProcessing">
+        {{ (compileHeadersIsProcessing ? 'TRT.CompilationInProgress' : 'TRT.Compile') | translate }}
+      </button>
+      <button type="button"
+              class="export-action"
+              (click)="exportCompileHeadersResult()"
+              [disabled]="compileHeadersResult.length === 0 || compileHeadersIsProcessing">
+        <i class="fas fa-download"></i>{{ 'TRT.ExporterLeResultat' | translate }}</button>
+    </div>
+
+    <div *ngIf="compileHeadersIsProcessing" class="processing-status">
+      <div class="spinner"></div>
+      <p>{{ compileHeadersProgress }}</p>
+    </div>
+    <div *ngIf="compileHeadersProgress && !compileHeadersIsProcessing" class="status-message">
+      {{ compileHeadersProgress }}
+    </div>
+    <div *ngIf="successMsg.compileHeaders" class="success-msg">{{ successMsg.compileHeaders }}</div>
+    <div *ngIf="errorMsg.compileHeaders" class="error-msg">{{ errorMsg.compileHeaders }}</div>
+
+    <div class="total-energie-summary">
+      <h5>{{ 'TRT.Fonctionnement' | translate }}</h5>
+      <ul>
+        <li>{{ 'TRT.LeFichierFournitLes' | translate }}<strong>{{ 'TRT.En-tetesAConserver1' | translate }}</strong>{{ 'TRT.DansLeResultatFinalCochez' | translate }}</li>
+        <li>{{ 'TRT.LeFichierFournitLesDonnees' | translate }}<strong>{{ 'TRT.Reportee' | translate }}</strong>{{ 'TRT.SurLUnDesEn-tetes' | translate }}</li>
+        <li>{{ 'TRT.SiPlusieursColonnesDuFichier' | translate }}<strong>{{ 'TRT.Combinees' | translate }}</strong>{{ 'TRT.AvecUnSeparateur' | translate }}</li>
+        <li>{{ 'TRT.LeResultatContientToutesLes' | translate }}</li>
+        <li>{{ 'TRT.LeResultatPeutEtreExporte1' | translate }}</li>
+      </ul>
+
+      <div *ngIf="compileHeadersResult.length > 0" class="merge-results">
+        <h5>{{ 'TRT.ResultatDeLaCompilation' | translate }}</h5>
+        <div class="results-stats">
+          <div class="stat-item">
+            <span class="stat-label">{{ 'TRT.Lignes2' | translate }}</span>
+            <span class="stat-value">{{ compileHeadersResult.length }}</span>
+          </div>
+          <div class="stat-item">
+            <span class="stat-label">{{ 'TRT.ColonnesRetenues' | translate }}</span>
+            <span class="stat-value">{{ compileHeadersResultColumns.length }}</span>
+          </div>
+        </div>
+
+        <div class="preview-table" *ngIf="compileHeadersResult.length > 0 && compileHeadersResult.length <= 200">
+          <h6>{{ 'TRT.ResultPreview' | translate }} {{  compileHeadersResult.length }} {{ 'TRT.Rows' | translate }})</h6>
+          <div class="table-responsive">
+            <table>
+              <thead>
+                <tr>
+                  <th *ngFor="let col of compileHeadersResultColumns.slice(0, 10)">{{ col }}</th>
+                  <th *ngIf="compileHeadersResultColumns.length > 10">...</th>
+                </tr>
+              </thead>
+              <tbody>
+                <tr *ngFor="let row of compileHeadersResult.slice(0, 15)">
+                  <td *ngFor="let col of compileHeadersResultColumns.slice(0, 10)">{{ row[col] || '' }}</td>
+                  <td *ngIf="compileHeadersResultColumns.length > 10">...</td>
+                </tr>
+              </tbody>
+            </table>
+          </div>
+          <small *ngIf="compileHeadersResult.length > 15">{{ 'TRT.ApercuLimiteALignesUtilisez2' | translate }}</small>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<div class="sheet-split-section">
+  <div class="section-header">
+    <h4>
+      <i class="fas fa-clone"></i>{{ 'TRT.SeparationDesFeuillesExcel' | translate }}<button type="button" class="btn btn-sm btn-outline-info" (click)="toggleSection('sheetSplit')">
+        <i class="fas fa-eye" *ngIf="!showSections.sheetSplit"></i>
+        <i class="fas fa-eye-slash" *ngIf="showSections.sheetSplit"></i>
+        {{ (showSections.sheetSplit ? 'TRT.Hide' : 'TRT.Show') | translate }}
+      </button>
+    </h4>
+  </div>
+
+  <div *ngIf="showSections.sheetSplit" class="section-content">
+    <div class="sheet-split-grid">
+      <div class="sheet-split-actions">
+        <label class="form-label">{{ 'TRT.FichierExcelSource' | translate }}</label>
+        <div class="sheet-split-file-picker">
+          <input type="file"
+                 id="sheetSplitInput"
+                 accept=".xls,.xlsx"
+                 (change)="onSheetSplitFileSelected($event)"
+                 [disabled]="sheetSplitIsProcessing">
+          <button type="button"
+                  class="reset-btn"
+                  (click)="resetSheetSplitSelection()"
+                  [disabled]="!sheetSplitFile || sheetSplitIsProcessing">{{ 'COMMON.actions.reset' | translate }}</button>
+        </div>
+        <div class="sheet-split-file-meta" *ngIf="sheetSplitFile">
+          <strong>{{ sheetSplitFile.name }}</strong>
+          <small>{{ (sheetSplitFile.size / (1024 * 1024)) | number:'1.0-2' }} MB</small>
+        </div>
+
+        <label class="form-label">{{ 'TRT.En-tetePersonnaliseSeparateur' | translate }}</label>
+        <textarea rows="3"
+                  [(ngModel)]="sheetSplitHeaderText"
+                  [disabled]="sheetSplitIsProcessing"></textarea>
+        <small class="helper-text">
+          {{ 'TRT.DetectedColumns' | translate }} {{ sheetSplitHeaderColumns.length }} / 17
+        </small>
+
+        <label class="option-toggle">
+          <input type="checkbox"
+                 [(ngModel)]="sheetSplitApplyHeaderFromSecondSheet"
+                 [disabled]="sheetSplitIsProcessing">
+          <span>{{ 'TRT.AppliquerLEn-tetePersonnaliseA' | translate }}</span>
+        </label>
+
+        <button type="button"
+                class="main-action"
+                (click)="splitExcelSheets()"
+                [disabled]="!sheetSplitFile || sheetSplitIsProcessing">
+          {{ (sheetSplitIsProcessing ? 'TRT.SplitInProgress' : 'TRT.SplitAndDownload') | translate }}
+        </button>
+
+        <div *ngIf="sheetSplitIsProcessing" class="sheet-split-progress">
+          <div class="spinner"></div>
+          <p>{{ sheetSplitProgress }}</p>
+        </div>
+        <div *ngIf="sheetSplitConversionInProgress" class="sheet-split-progress conversion">
+          <div class="conversion-progress-container">
+            <div class="conversion-progress-header">
+              <i class="fas fa-sync-alt fa-spin"></i>
+              <span>{{ sheetSplitConversionMessage }}</span>
+            </div>
+            <div class="conversion-progress-bar-container">
+              <div class="conversion-progress-bar">
+                <div class="conversion-progress-fill" [style.width.%]="sheetSplitConversionProgress"></div>
+              </div>
+              <div class="conversion-progress-text">{{ sheetSplitConversionProgress }}%</div>
+            </div>
+            <div class="conversion-progress-info">
+              <small>
+                <i class="fas fa-info-circle"></i>{{ 'TRT.CetteOperationPeutPrendrePlusieurs' | translate }}</small>
+            </div>
+          </div>
+        </div>
+        <div *ngIf="sheetSplitProgress && !sheetSplitIsProcessing" class="sheet-split-status">
+          {{ sheetSplitProgress }}
+        </div>
+
+        <div *ngIf="successMsg.sheetSplit" class="success-msg">{{ successMsg.sheetSplit }}</div>
+        <div *ngIf="errorMsg.sheetSplit" class="error-msg">{{ errorMsg.sheetSplit }}</div>
+
+        <div *ngIf="showSheetSplitExcelFallbackHelp" class="sheet-split-excel-fallback mt-3">
+          <h6 class="mb-2">{{ 'TRT.SolutionDeSecoursAvecExcel' | translate }}</h6>
+          <p class="small text-muted mb-2">{{ 'TRT.OuvrezLeFichierXlsDans' | translate }}<kbd>Alt</kbd>+<kbd>F11</kbd>{{ 'TRT.PourOuvrirLEditeurVBA' | translate }}<strong>{{ 'TRT.Insertion' | translate }}</strong> → <strong>{{ 'TBL.module' | translate }}</strong>{{ 'TRT.→CollezLeCodeCi-dessous' | translate }}<code>SeparerFeuillesEnteteComplet</code>{{ 'TRT.FOuExecuter' | translate }}</p>
+          <pre class="sheet-split-vba-code p-3 bg-light border rounded small">{{ SHEET_SPLIT_VBA_MACRO }}</pre>
+        </div>
+      </div>
+
+      <div class="sheet-split-summary">
+        <h5>{{ 'TRT.Fonctionnement' | translate }}</h5>
+        <ul>
+          <li>{{ 'TRT.SepareChaqueFeuilleDansUn' | translate }}</li>
+          <li>{{ 'TRT.ReproduitLEn-tetePersonnaliseColonnes' | translate }}</li>
+          <li>{{ 'TRT.AppliqueAutomatiquementLesLargeursEt' | translate }}</li>
+          <li>{{ 'TRT.GenereUnFichierZIPPret' | translate }}</li>
+        </ul>
+
+        <div *ngIf="sheetSplitResults.length > 0" class="sheet-split-results">
+          <h5>{{ 'TRT.GeneratedFiles' | translate }} {{ sheetSplitResults.length }})</h5>
+          <table>
+            <thead>
+              <tr>
+                <th>{{ 'TRT.Feuille' | translate }}</th>
+                <th>{{ 'TBL.rows' | translate }}</th>
+                <th>{{ 'TRT.Fichier' | translate }}</th>
+              </tr>
+            </thead>
+            <tbody>
+              <tr *ngFor="let result of sheetSplitResults">
+                <td>{{ result.sheetName }}</td>
+                <td>{{ result.rows }}</td>
+                <td>{{ result.fileName }}</td>
+              </tr>
+            </tbody>
+          </table>
+          <div class="zip-name" *ngIf="sheetSplitZipName">
+            {{ 'TRT.ZipDownloaded' | translate }} {{ sheetSplitZipName }}
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+  
+  <!-- Affichage des erreurs du service -->
+  <div *ngIf="dataProcessingService.error$ | async as error" class="error-msg">
+    <strong>{{ 'TRT.ErreurDeTraitement' | translate }}</strong> {{ error?.message }}
+    <span *ngIf="error?.file"> ({{ error?.file }})</span>
+  </div>
+  
+  <!-- Prévisualisation CSV -->
+  <div *ngIf="showCsvPreview && csvPreviewData.length > 0" class="csv-preview-section">
+    <h4>{{ 'TRT.📋PrevisualisationDuFichierCSV' | translate }}</h4>
+    <div class="preview-info">
+      <p><strong>{{ 'TRT.SeparateurDetecte' | translate }}</strong> <code>{{ detectedDelimiter }}</code></p>
+      <p><strong>{{ 'TRT.Colonnes2' | translate }}</strong> {{ csvPreviewColumns.length }}</p>
+      <p><strong>{{ 'TRT.Apercu' | translate }}</strong> {{ csvPreviewData.length }} {{ 'TRT.Rows' | translate }}</p>
+    </div>
+    
+    <div class="csv-preview-table">
+      <table>
+        <thead>
+          <tr>
+            <th *ngFor="let col of csvPreviewColumns">{{ col }}</th>
+          </tr>
+        </thead>
+        <tbody>
+          <tr *ngFor="let row of csvPreviewData">
+            <td *ngFor="let col of csvPreviewColumns">{{ row[col] || '' }}</td>
+          </tr>
+        </tbody>
+      </table>
+    </div>
+    
+    <div class="preview-actions">
+      <button type="button" (click)="confirmCsvImport()" class="confirm-btn">{{ 'TRT.✅ConfirmerLImport' | translate }}</button>
+      <button type="button" (click)="cancelCsvPreview()" class="cancel-btn">{{ 'TRT.❌Annuler' | translate }}</button>
+    </div>
+  </div>
+  
+  <div *ngIf="selectedFiles.length > 0" class="file-list">
+    <h4>{{ 'TRT.FichiersSelectionnes' | translate }}</h4>
+    <ul>
+      <li *ngFor="let file of selectedFiles">{{ file.name }}</li>
+    </ul>
+  </div>
+  
+     <!-- Indication Orange Money -->
+   <div *ngIf="isOrangeMoneyFile" class="orange-money-indicator">
+     <div class="orange-money-badge">
+       <i class="fas fa-mobile-alt"></i>
+       <span>{{ 'TRT.FichierOrangeMoneyDetecte' | translate }}</span>
+       <small>{{ 'TRT.LesLignesAu-dessusDeLa' | translate }}</small>
+     </div>
+           <div class="orange-money-features">
+        <div class="feature-item">
+          <i class="fas fa-filter"></i>
+          <span>{{ 'TRT.FiltreAutomatiqueSuccesApplique' | translate }}</span>
+        </div>
+        <div class="feature-item">
+          <i class="fas fa-exchange-alt"></i>
+          <span>{{ 'TRT.FiltreAutomatiqueCashInEt' | translate }}</span>
+        </div>
+        <div class="feature-item">
+          <i class="fas fa-columns"></i>
+          <span>{{ 'TRT.AffichageAutomatiqueDesColonnesReference' | translate }}</span>
+        </div>
+        <div class="feature-item">
+          <i class="fas fa-calendar-alt"></i>
+          <span>{{ 'TRT.ConcatenationAutomatiqueDateHeure→' | translate }}</span>
+        </div>
+      </div>
+   </div>
+
+   <!-- Indication Fichier GDJ (LA GABONAISE DES JEUX) -->
+   <div *ngIf="isGdjFile" class="orange-money-indicator">
+     <div class="orange-money-badge">
+       <i class="fas fa-file-invoice"></i>
+       <span>{{ 'TRT.FichierGDJLAGABONAISEDES' | translate }}</span>
+       <small>{{ 'TRT.LePreambulePremieresLignesA' | translate }}</small>
+     </div>
+   </div>
+  
+  <!-- Aperçu des données combinées en première position -->
+  <div *ngIf="combinedRows.length > 0" class="preview-table" style="margin-top: 32px;">
+    <div class="section-header">
+      <h4>
+        <i class="fas fa-table"></i>{{ 'TRT.ApercuDesDonneesCombinees' | translate }}<button type="button" class="btn btn-sm btn-outline-info" (click)="toggleSection('preview')">
+          <i class="fas fa-eye" *ngIf="!showSections.preview"></i>
+          <i class="fas fa-eye-slash" *ngIf="showSections.preview"></i>
+          {{ (showSections.preview ? 'TRT.Hide' : 'TRT.Show') | translate }}
+        </button>
+      </h4>
+    </div>
+    
+    <div *ngIf="showSections.preview" class="section-content">
+   
+   <!-- Contrôles de réorganisation des colonnes -->
+   <div class="column-reorder-controls" style="margin-bottom: 16px;">
+     <div class="reorder-controls">
+       <button type="button" 
+               (click)="toggleColumnReorderMode()" 
+               [class.active]="isColumnReorderMode"
+               class="reorder-btn">
+         {{ (isColumnReorderMode ? 'TRT.ReorderModeActive' : 'TRT.ReorderColumns') | translate }}
+       </button>
+       <button type="button" 
+               (click)="resetColumnOrder()" 
+               class="reorder-btn" title="{{ 'TRT.ReinitialiserLOrdreDesColonnes' | translate }}">{{ 'TRT.♻️ReinitialiserLOrdre' | translate }}</button>
+       
+       <div *ngIf="isColumnReorderMode" class="reorder-actions">
+         <button type="button" (click)="applyColumnReorder()" class="apply-btn">{{ 'TRT.✅Appliquer' | translate }}</button>
+         <button type="button" (click)="cancelColumnReorder()" class="cancel-btn">{{ 'TRT.❌Annuler' | translate }}</button>
+       </div>
+     </div>
+     
+     <div *ngIf="isColumnReorderMode" class="reorder-instructions">
+       <span class="instruction-text">{{ 'TRT.💡Glissez-deposezLesColonnesPour' | translate }}</span>
+     </div>
+   </div>
+   
+   <!-- Informations sur le fichier -->
+   <div class="file-info-panel" *ngIf="combinedRows.length > 1000">
+     <div class="file-stats">
+       <div class="stat-item">
+         <span class="stat-label">{{ 'TRT.📊TotalLignes' | translate }}</span>
+         <span class="stat-value">{{ combinedRows.length.toLocaleString() }}</span>
+       </div>
+       <div class="stat-item">
+         <span class="stat-label">{{ 'TRT.📋Colonnes' | translate }}</span>
+         <span class="stat-value">{{ columns.length }}</span>
+       </div>
+       <div class="stat-item">
+         <span class="stat-label">{{ 'TRT.💾TailleEstimee' | translate }}</span>
+         <span class="stat-value">{{ getFileStats().fileSize }}</span>
+       </div>
+     </div>
+     <div class="performance-tips" *ngIf="getFileStats().isLargeFile">
+       <div class="tip-icon">💡</div>
+       <div class="tip-content">
+         <strong>{{ 'TRT.ConseilsPourLesGrosFichiers' | translate }}</strong>
+         <ul>
+           <li>{{ 'TRT.UtilisezLesFiltresPourReduire' | translate }}</li>
+           <li>{{ 'TRT.SelectionnezUniquementLesColonnesNecessaires' | translate }}</li>
+           <li>{{ 'TRT.UtilisezLaPaginationPourNaviguer' | translate }}</li>
+           <li>{{ 'TRT.EvitezDAfficherToutesLes' | translate }}</li>
+         </ul>
+       </div>
+     </div>
+   </div>
+   <!-- Contrôles d'affichage -->
+   <div class="display-controls" *ngIf="combinedRows.length > 20">
+     <div class="control-group">
+       <label>{{ 'PAG.rowsPerPage' | translate }}</label>
+       <select [(ngModel)]="rowsPerPage" (change)="onRowsPerPageChange()" [disabled]="showAllRows">
+         <option value="50">50</option>
+         <option value="100">100</option>
+         <option value="200">200</option>
+         <option value="500">500</option>
+         <option value="1000">1000</option>
+       </select>
+     </div>
+     <div class="control-group">
+       <label>
+         <input type="checkbox" [(ngModel)]="showAllRows" (change)="toggleShowAllRows()">
+         {{ 'TRT.DisplayAllRows' | translate }} {{ combinedRows.length }})
+       </label>
+     </div>
+     <div class="control-group" *ngIf="!showAllRows">
+       <span class="info-text">
+          {{ 'TRT.DisplayingRows' | translate }} {{ startRow }} {{ 'TRT.To' | translate }} {{ endRow }} {{ 'TRT.Of' | translate }} {{ combinedRows.length }} {{ 'TRT.Total' | translate }}</span>
+     </div>
+   </div>
+   <div class="table-responsive">
+     <div class="export-csv-bar" style="margin-bottom: 8px; display: flex; align-items: center; gap: 16px;">
+       <div class="export-controls" style="display: flex; align-items: center; gap: 8px;">
+         <label for="exportFileName" style="font-weight: 500; color: #333;">{{ 'TRT.NomDuFichier' | translate }}</label>
+         <input 
+           type="text" 
+           id="exportFileName"
+           [(ngModel)]="exportFileName" 
+           placeholder="resultat"
+           [disabled]="isExporting"
+           style="padding: 4px 8px; border: 1px solid #ccc; border-radius: 4px; font-size: 14px; min-width: 150px;"
+           title="{{ 'TRT.fileNameTitleHint' | translate }}">
+       </div>
+       <button type="button" 
+               (click)="exportCSV()" 
+               [disabled]="isExporting"
+               style="background: #007bff; color: white; border: none; padding: 8px 16px; border-radius: 4px; cursor: pointer; opacity: isExporting ? 0.6 : 1;">
+         {{ (isExporting ? 'TRT.ExportInProgress' : 'TRT.ExportAsCsv') | translate }}
+       </button>
+       <button type="button" 
+               (click)="exportXLS()" 
+               [disabled]="isExporting"
+               style="background: #28a745; color: white; border: none; padding: 8px 16px; border-radius: 4px; cursor: pointer; opacity: isExporting ? 0.6 : 1; margin-right: 8px;">
+         {{ (isExporting ? 'TRT.ExportInProgress' : 'TRT.ExportAsXls') | translate }}
+       </button>
+       <button type="button" 
+               (click)="exportXLSX()" 
+               [disabled]="isExporting"
+               style="background: #007bff; color: white; border: none; padding: 8px 16px; border-radius: 4px; cursor: pointer; opacity: isExporting ? 0.6 : 1;">
+         {{ (isExporting ? 'TRT.ExportInProgress' : 'TRT.ExportAsXlsx') | translate }}
+       </button>
+       
+       <!-- Barre de progression pour l'export -->
+       <div *ngIf="isExporting" class="export-progress" style="flex: 1; margin-left: 16px;">
+         <div style="display: flex; align-items: center; gap: 8px;">
+           <div style="flex: 1; background: #f0f0f0; border-radius: 4px; height: 8px; overflow: hidden;">
+             <div [style.width.%]="exportProgress.percentage" 
+                  style="background: linear-gradient(90deg, #007bff, #28a745); height: 100%; transition: width 0.3s ease;"></div>
+           </div>
+           <span style="font-size: 12px; color: #666; min-width: 60px;">{{ exportProgress.percentage | number:'1.0-0' }}%</span>
+         </div>
+         <div style="font-size: 12px; color: #666; margin-top: 4px;">{{ exportProgress.message }}</div>
+       </div>
+       
+       <div *ngIf="successMsg.export" class="success-msg">{{ successMsg.export }}</div>
+       <div *ngIf="errorMsg.export" class="error-msg">{{ errorMsg.export }}</div>
+       <div *ngIf="successMsg.reorder" class="success-msg">{{ successMsg.reorder }}</div>
+     </div>
+     <table>
+       <thead>
+         <tr>
+           <th *ngFor="let col of getDisplayColumns(); let i = index"
+               [draggable]="isColumnReorderMode"
+               (dragstart)="onColumnDragStart($event, col)"
+               (dragover)="onColumnDragOver($event, col)"
+               (drop)="onColumnDrop($event, col)"
+               (dragend)="onColumnDragEnd()"
+               [class.dragging]="isColumnDragging(col)"
+               [class.drag-over]="isColumnDragOver(col)"
+               [class.reorder-mode]="isColumnReorderMode"
+               class="column-header">
+             
+             <div class="column-content">
+               <span class="column-title">{{ col }}</span>
+               
+               <div *ngIf="isColumnReorderMode" class="column-controls">
+                 <button type="button" 
+                         (click)="moveColumnUp(col)" 
+                         [disabled]="i === 0"
+                         class="move-btn move-up"
+                         title="{{ 'TRT.DeplacerVersLeHaut' | translate }}">
+                   ↑
+                 </button>
+                 <button type="button" 
+                         (click)="moveColumnDown(col)" 
+                         [disabled]="i === getDisplayColumns().length - 1"
+                         class="move-btn move-down"
+                         title="{{ 'TRT.DeplacerVersLeBas' | translate }}">
+                   ↓
+                 </button>
+               </div>
+             </div>
+           </th>
+         </tr>
+       </thead>
+       <tbody>
+         <tr *ngFor="let row of displayedRows">
+           <td *ngFor="let col of getDisplayColumns()">{{ row[col] }}</td>
+         </tr>
+       </tbody>
+     </table>
+     <!-- Pagination -->
+     <div class="pagination" *ngIf="!showAllRows && totalPages > 1">
+       <div class="pagination-info">
+         {{ 'TRT.Page' | translate }} {{  currentPage }} {{ 'TRT.Of' | translate }} {{ totalPages }}
+       </div>
+       <div class="pagination-controls">
+         <button 
+           type="button" 
+           (click)="onPageChange(1)" 
+           [disabled]="currentPage === 1"
+           class="pagination-btn">{{ 'TRT.Premiere' | translate }}</button>
+         <button 
+           type="button" 
+           (click)="onPageChange(currentPage - 1)" 
+           [disabled]="currentPage === 1"
+           class="pagination-btn">{{ 'TRT.‹Precedente' | translate }}</button>
+         <span class="page-numbers">
+           <ng-container *ngFor="let page of getPageNumbers()">
+             <span *ngIf="page === -1" class="page-ellipsis">...</span>
+             <button 
+               *ngIf="page !== -1"
+               type="button" 
+               (click)="onPageChange(page)" 
+               [class.active]="page === currentPage"
+               class="pagination-btn page-number">
+               {{ page }}
+             </button>
+           </ng-container>
+         </span>
+         <button 
+           type="button" 
+           (click)="onPageChange(currentPage + 1)" 
+           [disabled]="currentPage === totalPages"
+           class="pagination-btn">{{ 'TRT.Suivante›' | translate }}</button>
+         <button 
+           type="button" 
+           (click)="onPageChange(totalPages)" 
+           [disabled]="currentPage === totalPages"
+           class="pagination-btn">{{ 'TRT.Derniere' | translate }}</button>
+       </div>
+     </div>
+     <!-- Message d'information pour les gros fichiers -->
+     <div *ngIf="combinedRows.length > 10000" class="large-file-info">
+       <div class="info-box">
+          <strong>{{ 'TRT.FichierVolumineuxDetecte' | translate }}</strong> {{ combinedRows.length.toLocaleString() }} {{ 'TRT.Rows' | translate }}
+         <br>
+         <small>{{ 'TRT.💡ConseilUtilisezLesFiltres' | translate }}</small>
+       </div>
+     </div>
+   </div>
+   </div>
+  
+  <div *ngIf="allColumns.length > 0" class="select-cols-section">
+    <div class="section-header">
+      <h4>
+        <i class="fas fa-columns"></i>{{ 'TRT.SelectionDesColonnesAConserver' | translate }}<button type="button" class="btn btn-sm btn-outline-info" (click)="toggleSection('selectCols')">
+          <i class="fas fa-eye" *ngIf="!showSections.selectCols"></i>
+          <i class="fas fa-eye-slash" *ngIf="showSections.selectCols"></i>
+          {{ (showSections.selectCols ? 'TRT.Hide' : 'TRT.Show') | translate }}
+        </button>
+      </h4>
+    </div>
+    
+    <div *ngIf="showSections.selectCols" class="section-content">
+    <div class="select-cols">
+      <label>
+        <input type="checkbox"
+               [checked]="selectedCols.length === allColumns.length && allColumns.length > 0"
+               (change)="toggleSelectAllCols($event)">{{ 'FILT.all' | translate }}</label>
+      <!-- Colonnes individuelles -->
+      <label *ngFor="let col of allColumns">
+        <input type="checkbox" [value]="col" [checked]="selectedCols.includes(col)" (change)="onSelectColChange($event)">
+        {{ col }}
+      </label>
+    </div>
+    <div class="select-cols-actions">
+      <button type="button" class="select-cols-btn apply-btn" (click)="applyColumnSelection()" [disabled]="selectedCols.length === 0">{{ 'TRT.AppliquerLaSelection' | translate }}</button>
+      <button type="button" class="select-cols-btn reset-btn" (click)="resetColumnSelection()">{{ 'TRT.ReinitialiserLaSelection' | translate }}</button>
+    </div>
+         <div *ngIf="successMsg.select" class="success-msg">{{ successMsg.select }}</div>
+     <div *ngIf="errorMsg.select" class="error-msg">{{ errorMsg.select }}</div>
+   </div>
+   </div>
+     <div *ngIf="columns.length > 0" class="extract-section">
+     <div class="section-header">
+       <h4>
+         <i class="fas fa-search"></i>{{ 'TRT.ExtractionDeDonnees' | translate }}<button type="button" class="btn btn-sm btn-outline-info" (click)="toggleSection('extract')">
+           <i class="fas fa-eye" *ngIf="!showSections.extract"></i>
+           <i class="fas fa-eye-slash" *ngIf="showSections.extract"></i>
+           {{ (showSections.extract ? 'TRT.Hide' : 'TRT.Show') | translate }}
+         </button>
+       </h4>
+       <p class="section-description">{{ 'TRT.ExtrayezDesInformationsSpecifiquesD' | translate }}</p>
+     </div>
+     
+     <div *ngIf="showSections.extract" class="section-content">
+    
+          <div class="extract-controls">
+        <!-- Ligne principale avec les 3 champs principaux -->
+        <div class="extract-main-row">
+          <!-- Sélection de la colonne source -->
+          <div class="extract-group">
+            <label class="extract-label">
+              <i class="fas fa-columns"></i>{{ 'TRT.ColonneSource' | translate }}</label>
+            <mat-form-field appearance="outline" class="extract-select">
+              <mat-label>{{ 'TRT.SelectionnerUneColonne' | translate }}</mat-label>
+              <mat-select [(ngModel)]="extractCol" (selectionChange)="closeMatSelectPanelAfterSelection($event)">
+                <mat-option *ngFor="let col of columns" [value]="col">
+                  {{ col }}
+                </mat-option>
+              </mat-select>
+            </mat-form-field>
+          </div>
+
+          <!-- Type d'extraction -->
+          <div class="extract-group">
+            <label class="extract-label">
+              <i class="fas fa-cut"></i>{{ 'TRT.TypeDExtraction' | translate }}</label>
+            <mat-form-field appearance="outline" class="extract-select">
+              <mat-label>{{ 'TRT.ChoisirLeTypeDExtraction' | translate }}</mat-label>
+              <mat-select [(ngModel)]="extractType" (selectionChange)="closeMatSelectPanelAfterSelection($event)">
+                <mat-option value="emailDomain">
+                  <span class="option-content">
+                    <i class="fas fa-envelope"></i>
+                    <span>{{ 'TRT.DomaineEmail' | translate }}</span>
+                    <small>{{ 'TRT.ExtraitLeDomaineDUne' | translate }}</small>
+                  </span>
+                </mat-option>
+                <mat-option value="firstChars">
+                  <span class="option-content">
+                    <i class="fas fa-align-left"></i>
+                    <span>{{ 'TRT.GaucheNCaracteres' | translate }}</span>
+                    <small>{{ 'TRT.ExtraitLesNPremiersCaracteres' | translate }}</small>
+                  </span>
+                </mat-option>
+                <mat-option value="lastChars">
+                  <span class="option-content">
+                    <i class="fas fa-align-right"></i>
+                    <span>{{ 'TRT.DroiteNCaracteres' | translate }}</span>
+                    <small>{{ 'TRT.ExtraitLesNDerniersCaracteres' | translate }}</small>
+                  </span>
+                </mat-option>
+              </mat-select>
+            </mat-form-field>
+          </div>
+
+          <!-- Nom de la nouvelle colonne -->
+          <div class="extract-group">
+            <label class="extract-label">
+              <i class="fas fa-tag"></i>{{ 'TRT.NomDeLaNouvelleColonne' | translate }}</label>
+            <mat-form-field appearance="outline" class="extract-input">
+              <mat-label>{{ 'TRT.ExDomaineCodeEtc' | translate }}</mat-label>
+              <input matInput [(ngModel)]="extractKey" placeholder="{{ 'TRT.NomDeLaColonne' | translate }}">
+              <mat-hint>{{ 'TRT.NomDeLaColonneQui' | translate }}</mat-hint>
+            </mat-form-field>
+          </div>
+        </div>
+
+              <!-- Paramètres spécifiques pour les caractères -->
+        <div *ngIf="extractType === 'firstChars' || extractType === 'lastChars'" class="extract-params">
+          <div class="extract-params-row">
+            <div class="extract-group">
+              <label class="extract-label">
+                <i class="fas fa-map-marker-alt"></i>{{ 'TRT.PositionDeDepart' | translate }}</label>
+              <mat-form-field appearance="outline" class="extract-number">
+                <mat-label>{{ 'TBL.position' | translate }}</mat-label>
+                <input matInput type="number" [(ngModel)]="extractStart" min="1" placeholder="1">
+                <mat-hint>{{ 'TRT.PositionDeDepartDebut' | translate }}</mat-hint>
+              </mat-form-field>
+            </div>
+
+            <div class="extract-group">
+              <label class="extract-label">
+                <i class="fas fa-hashtag"></i>{{ 'TRT.NombreDeCaracteres' | translate }}</label>
+              <mat-form-field appearance="outline" class="extract-number">
+                <mat-label>{{ 'COMMON.actions.count' | translate }}</mat-label>
+                <input matInput type="number" [(ngModel)]="extractCount" min="1" placeholder="5">
+                <mat-hint>{{ 'TRT.NombreDeCaracteresAExtraire' | translate }}</mat-hint>
+              </mat-form-field>
+            </div>
+          </div>
+        </div>
+
+      <!-- Aperçu de l'extraction -->
+      <div *ngIf="extractCol && extractType && extractKey" class="extract-preview">
+        <div class="preview-header">
+          <i class="fas fa-eye"></i>
+          <span>{{ 'TRT.ApercuDeLExtraction' | translate }}</span>
+        </div>
+        <div class="preview-content">
+          <p><strong>{{ 'TRT.Source' | translate }}</strong> {{ extractCol }}</p>
+          <p><strong>{{ 'TRT.Type' | translate }}</strong> 
+            <span *ngIf="extractType === 'emailDomain'">{{ 'TRT.DomaineEmail' | translate }}</span>
+            <span *ngIf="extractType === 'firstChars'">{{ 'TRT.Left' | translate }} {{  extractCount }} {{ 'TRT.Characters' | translate }})</span>
+            <span *ngIf="extractType === 'lastChars'">{{ 'TRT.Right' | translate }} {{  extractCount }} {{ 'TRT.Characters' | translate }})</span>
+          </p>
+          <p><strong>{{ 'TRT.NouvelleColonne' | translate }}</strong> {{ extractKey }}</p>
+          <p *ngIf="extractType === 'firstChars' || extractType === 'lastChars'">
+            <strong>{{ 'TRT.Parameters' | translate }}</strong> {{ 'TRT.Position' | translate }} {{ extractStart }}, {{ extractCount }} {{ 'TRT.Characters' | translate }}
+          </p>
+        </div>
+      </div>
+
+      <!-- Bouton d'extraction -->
+      <div class="extract-actions">
+        <button mat-raised-button 
+                color="primary" 
+                (click)="applyExtraction()" 
+                [disabled]="!extractCol || !extractType || !extractKey || (extractType !== 'emailDomain' && !extractCount)"
+                class="extract-btn">
+          <i class="fas fa-magic"></i>{{ 'TRT.ExtraireLesDonnees' | translate }}</button>
+        
+        <button mat-stroked-button 
+                (click)="resetExtraction()" 
+                class="reset-btn">
+          <i class="fas fa-undo"></i>{{ 'COMMON.actions.reset' | translate }}</button>
+      </div>
+    </div>
+
+    <!-- Messages de succès et d'erreur -->
+         <div *ngIf="successMsg.extract" class="success-msg extract-success">
+       <i class="fas fa-check-circle"></i>
+       {{ successMsg.extract }}
+     </div>
+     <div *ngIf="errorMsg.extract" class="error-msg extract-error">
+       <i class="fas fa-exclamation-triangle"></i>
+       {{ errorMsg.extract }}
+     </div>
+   </div>
+   </div>
+     <div *ngIf="columns.length > 0 && combinedRows.length > 0" class="filtre-section" style="margin-bottom: 24px;">
+     <div class="section-header">
+       <h4>
+         <i class="fas fa-filter"></i>{{ 'TRT.FiltrerLesLignes' | translate }}<button type="button" class="btn btn-sm btn-outline-info" (click)="toggleSection('filter')">
+           <i class="fas fa-eye" *ngIf="!showSections.filter"></i>
+           <i class="fas fa-eye-slash" *ngIf="showSections.filter"></i>
+           {{ (showSections.filter ? 'TRT.Hide' : 'TRT.Show') | translate }}
+         </button>
+       </h4>
+     </div>
+     
+     <div *ngIf="showSections.filter" class="section-content">
+    <!-- Filtres multiples -->
+    <div class="multiple-filters-container">
+      <div class="filters-header">
+        <h5>{{ 'TRT.FiltresMultiples' | translate }}</h5>
+        <button type="button" class="btn btn-sm btn-success" (click)="addNewFilter()">
+          <i class="fas fa-plus"></i>{{ 'TRT.AjouterUnFiltre' | translate }}</button>
+      </div>
+
+      <!-- Liste des filtres existants -->
+      <div class="filter-list" *ngIf="multipleFilters.length > 0">
+        <div class="filter-item" *ngFor="let filter of multipleFilters; trackBy: trackByFilterId">
+          <div class="filter-header">
+            <div class="filter-title">
+              <i class="fas fa-filter"></i>
+              {{ 'TRT.Filter' | translate }} {{ filter.id.replace('filter_', '') }}
+            </div>
+            <div class="filter-controls">
+              <label class="filter-toggle">
+                <input type="checkbox" [(ngModel)]="filter.enabled">{{ 'TBL.confidence' | translate }}</label>
+              <button type="button" class="btn btn-sm btn-danger" (click)="removeFilter(filter.id)">
+                <i class="fas fa-trash"></i>
+              </button>
+            </div>
+          </div>
+
+          <div class="filter-content" *ngIf="filter.enabled">
+            <div class="filter-group">
+              <label>{{ 'TRT.Colonne' | translate }}</label>
+              <select [(ngModel)]="filter.column" (change)="onMultipleFilterColumnChange(filter)">
+                <option value="">{{ 'TRT.--ChoisirUneColonne--' | translate }}</option>
+                <option *ngFor="let col of allColumns" [value]="col">{{ col }}</option>
+              </select>
+            </div>
+
+            <div class="filter-group" *ngIf="filter.column">
+              <label>{{ 'TRT.ValeursAGarder' | translate }}</label>
+              <mat-form-field appearance="fill" class="filter-select">
+                <mat-label>{{ 'TRT.SelectionnerDesValeurs' | translate }}</mat-label>
+                <mat-select [(ngModel)]="filter.selectedValues" multiple (selectionChange)="closeMatSelectPanelAfterSelection($event)">
+                  <mat-option value="__TOUS__" (click)="selectAllMultipleFilterValues(filter)">
+                    <strong>{{ 'TRT.📋Tous' | translate }}</strong>
+                  </mat-option>
+                  <mat-option *ngFor="let val of filter.filteredFilterValues" [value]="val">
+                    {{ val || ('TRT.Empty' | translate) }}
+                  </mat-option>
+                </mat-select>
+              </mat-form-field>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Actions globales -->
+      <div class="filter-actions" *ngIf="multipleFilters.length > 0">
+        <button (click)="applyMultipleFilters()" class="apply-btn">
+          <i class="fas fa-check"></i>{{ 'TRT.AppliquerTousLesFiltres' | translate }}</button>
+        <button (click)="resetAllFilters()" class="reset-btn">
+          <i class="fas fa-undo"></i>{{ 'TRT.ReinitialiserTousLesFiltres' | translate }}</button>
+      </div>
+
+      <!-- Message d'information -->
+      <div class="filter-info" *ngIf="multipleFilters.length === 0">
+        <div class="info-box">
+          <i class="fas fa-info-circle"></i>
+          <p>{{ 'TRT.AucunFiltreConfigureCliquezSur' | translate }}</p>
+        </div>
+      </div>
+    </div>
+
+    <!-- Ancien système de filtre unique (maintenu pour compatibilité) -->
+    <div class="legacy-filter" style="margin-top: 20px; padding-top: 20px; border-top: 1px solid #ddd;">
+      <h6>{{ 'TRT.FiltreUniqueAncienSysteme' | translate }}</h6>
+    <div class="filter-controls">
+      <div class="filter-group">
+        <label>{{ 'TRT.Colonne' | translate }}</label>
+        <select [(ngModel)]="selectedFilterColumn" (change)="onFilterColumnChange()">
+          <option value="">{{ 'TRT.--ChoisirUneColonne--' | translate }}</option>
+          <option *ngFor="let col of allColumns" [value]="col">{{ col }}</option>
+        </select>
+      </div>
+      <div class="filter-group" *ngIf="selectedFilterColumn">
+        <label>{{ 'TRT.ValeurAGarder' | translate }}</label>
+        <mat-form-field appearance="fill" class="filter-select">
+          <mat-label>{{ 'TRT.SelectionnerDesValeurs' | translate }}</mat-label>
+          <mat-select #filterValueSelect [(ngModel)]="selectedFilterValues" multiple (selectionChange)="closeMatSelectPanelAfterSelection($event)">
+            <mat-option>
+              <ngx-mat-select-search [formControl]="filterValueSearchCtrl" placeholderLabel="Rechercher une valeur..." noEntriesFoundLabel="Aucune valeur trouvée"></ngx-mat-select-search>
+            </mat-option>
+            <mat-option value="__TOUS__" (click)="selectAllFilterValues()">
+              <strong>{{ 'TRT.📋Tous' | translate }}</strong>
+            </mat-option>
+            <mat-option *ngFor="let val of filteredFilterValues" [value]="val">
+              {{ val || ('TRT.Empty' | translate) }}
+            </mat-option>
+          </mat-select>
+        </mat-form-field>
+      </div>
+      <div class="filter-actions">
+        <button (click)="applyFilter()" [disabled]="!selectedFilterColumn || !selectedFilterValues.length" class="apply-btn">{{ 'TRT.AppliquerLeFiltre' | translate }}</button>
+        <button (click)="resetFilter()" [disabled]="!selectedFilterColumn && !selectedFilterValues.length" class="reset-btn">{{ 'COMMON.actions.reset' | translate }}</button>
+      </div>
+    </div>
+    </div>
+
+         <div *ngIf="successMsg.filter" class="success-msg">{{ successMsg.filter }}</div>
+     <div *ngIf="errorMsg.filter" class="error-msg">{{ errorMsg.filter }}</div>
+   </div>
+   </div>
+
+     <div *ngIf="columns.length > 0" class="column-rename-section" style="margin-bottom: 24px;">
+     <div class="section-header">
+       <h4>
+         <i class="fas fa-i-cursor"></i>{{ 'TRT.RenommerUnEn-tete' | translate }}<button type="button" class="btn btn-sm btn-outline-info" (click)="toggleSection('columnRename')">
+           <i class="fas fa-eye" *ngIf="!showSections.columnRename"></i>
+           <i class="fas fa-eye-slash" *ngIf="showSections.columnRename"></i>
+           {{ (showSections.columnRename ? 'TRT.Hide' : 'TRT.Show') | translate }}
+         </button>
+       </h4>
+     </div>
+
+     <div *ngIf="showSections.columnRename" class="section-content">
+       <div class="filter-controls">
+         <div class="filter-group">
+           <label>{{ 'TRT.ColonneARenommer' | translate }}</label>
+           <mat-form-field appearance="fill" class="filter-select">
+             <mat-label>{{ 'TRT.SelectionnerUneColonne' | translate }}</mat-label>
+             <mat-select [(ngModel)]="renameSourceCol" (selectionChange)="closeMatSelectPanelAfterSelection($event)">
+               <mat-option *ngFor="let col of columns" [value]="col">{{ col }}</mat-option>
+             </mat-select>
+           </mat-form-field>
+         </div>
+         <div class="filter-group">
+           <label>{{ 'TRT.NouveauNomDEn-tete' | translate }}</label>
+           <input type="text" [(ngModel)]="renameNewName" placeholder="{{ 'TRT.ExMONTANT' | translate }}" class="filter-input">
+         </div>
+         <div class="filter-actions">
+           <button (click)="applyColumnRename()" [disabled]="!renameSourceCol || !renameNewName?.trim()" class="apply-btn">{{ 'TRT.Renommer' | translate }}</button>
+         </div>
+       </div>
+       <div *ngIf="successMsg.columnRename" class="success-msg">{{ successMsg.columnRename }}</div>
+       <div *ngIf="errorMsg.columnRename" class="error-msg">{{ errorMsg.columnRename }}</div>
+     </div>
+     </div>
+
+     <div *ngIf="columns.length > 1" class="concat-section" style="margin-bottom: 24px;">
+     <div class="section-header">
+       <h4>
+         <i class="fas fa-link"></i>{{ 'TRT.ConcatenerPlusieursColonnes' | translate }}<button type="button" class="btn btn-sm btn-outline-info" (click)="toggleSection('concat')">
+           <i class="fas fa-eye" *ngIf="!showSections.concat"></i>
+           <i class="fas fa-eye-slash" *ngIf="showSections.concat"></i>
+           {{ (showSections.concat ? 'TRT.Hide' : 'TRT.Show') | translate }}
+         </button>
+       </h4>
+     </div>
+     
+     <div *ngIf="showSections.concat" class="section-content">
+    <div class="filter-controls">
+      <div class="filter-group">
+        <label>{{ 'TRT.ColonnesAConcatener' | translate }}</label>
+                 <div class="concat-controls">
+           <button type="button" (click)="toggleConcatOrderMode()" class="order-mode-btn" [class.active]="concatOrderMode">
+             ↕ {{ (concatOrderMode ? 'TRT.OrderModeActive' : 'TRT.EnableOrderMode') | translate }}
+           </button>
+         </div>
+        
+        <!-- Mode sélection simple -->
+        <div *ngIf="!concatOrderMode">
+          <mat-form-field appearance="fill" class="filter-select">
+            <mat-label>{{ 'TRT.SelectionnerDesColonnes' | translate }}</mat-label>
+            <mat-select [(ngModel)]="concatCols" multiple (selectionChange)="closeMatSelectPanelAfterSelection($event)">
+              <mat-option *ngFor="let col of columns" [value]="col">
+                {{ col }}
+              </mat-option>
+            </mat-select>
+          </mat-form-field>
+        </div>
+
+        <!-- Mode ordre personnalisé -->
+        <div *ngIf="concatOrderMode" class="concat-order-mode">
+          <div class="available-columns">
+            <label>{{ 'TRT.ColonnesDisponibles' | translate }}</label>
+                         <div class="column-list">
+               <div *ngFor="let col of getAvailableColumnsForConcat()" class="column-item" (click)="addConcatColumn(col)">
+                 + {{ col }}
+               </div>
+             </div>
+          </div>
+          
+                     <div class="selected-columns">
+             <label>{{ 'TRT.OrdreDeConcatenation' | translate }}</label>
+             <div class="column-list">
+               <div *ngFor="let col of concatCols; let i = index" class="column-item selected">
+                 <div class="column-controls">
+                   <button type="button" (click)="moveConcatColumnUp(i)" [disabled]="i === 0" class="move-btn up" title="{{ 'TRT.DeplacerVersLeHaut' | translate }}">
+                     ↑
+                   </button>
+                   <button type="button" (click)="moveConcatColumnDown(i)" [disabled]="i === concatCols.length - 1" class="move-btn down" title="{{ 'TRT.DeplacerVersLeBas' | translate }}">
+                     ↓
+                   </button>
+                   <button type="button" (click)="removeConcatColumn(i)" class="remove-btn" title="{{ 'ACT.delete' | translate }}">
+                     ✕
+                   </button>
+                 </div>
+                 <span class="column-name">{{ col }}</span>
+                 <div class="column-order-dropdown">
+                   <select [value]="i + 1" (change)="onConcatColumnOrderChange($event, i)" class="order-select">
+                     <option *ngFor="let pos of getConcatColumnOrderOptions()" [value]="pos">
+                       {{ 'TRT.Position' | translate }} {{ pos }}
+                     </option>
+                   </select>
+                 </div>
+               </div>
+             </div>
+           </div>
+        </div>
+      </div>
+      <div class="filter-group">
+        <label>{{ 'TRT.NomDeLaNouvelleColonne' | translate }}</label>
+        <input type="text" [(ngModel)]="concatNewCol" placeholder="{{ 'TRT.NomDeLaColonne' | translate }}" class="filter-input">
+      </div>
+      <div class="filter-group">
+        <label>{{ 'TRT.Separateur' | translate }}</label>
+        <input type="text" [(ngModel)]="concatSeparator" placeholder="{{ 'TRT.ExEspace-' | translate }}" class="filter-input">
+      </div>
+      <div class="filter-actions">
+        <button (click)="applyConcat()" [disabled]="!concatCols.length || !concatNewCol" class="apply-btn">{{ 'TRT.Concatener' | translate }}</button>
+      </div>
+    </div>
+         <div *ngIf="successMsg.concat" class="success-msg">{{ successMsg.concat }}</div>
+     <div *ngIf="errorMsg.concat" class="error-msg">{{ errorMsg.concat }}</div>
+   </div>
+   </div>
+  <!-- Messages de performance -->
+  <div *ngIf="successMsg.performance" class="success-msg performance-msg">
+    <span class="performance-icon">⚡</span>
+    {{ successMsg.performance }}
+  </div>
+  
+     <div *ngIf="columns.length > 0 && combinedRows.length > 0" class="export-by-type-section">
+     <div class="section-header">
+       <h4>
+         <i class="fas fa-file-export"></i>{{ 'TRT.ExportParType' | translate }}<button type="button" class="btn btn-sm btn-outline-info" (click)="toggleSection('exportByType')">
+           <i class="fas fa-eye" *ngIf="!showSections.exportByType"></i>
+           <i class="fas fa-eye-slash" *ngIf="showSections.exportByType"></i>
+           {{ (showSections.exportByType ? 'TRT.Hide' : 'TRT.Show') | translate }}
+         </button>
+       </h4>
+     </div>
+     
+     <div *ngIf="showSections.exportByType" class="section-content">
+    <div class="filter-controls">
+      <div class="filter-group">
+        <label>{{ 'TRT.ColonneDeTri' | translate }}</label>
+        <mat-form-field appearance="fill" class="filter-select">
+          <mat-label>{{ 'TRT.SelectionnerUneColonne' | translate }}</mat-label>
+          <mat-select [(ngModel)]="exportTypeCol" (selectionChange)="onExportTypeColChange(); closeMatSelectPanelAfterSelection($event)">
+            <mat-option *ngFor="let col of columns" [value]="col">
+              {{ col }}
+            </mat-option>
+          </mat-select>
+        </mat-form-field>
+      </div>
+      <div class="filter-group" *ngIf="exportTypeCol && exportTypeValues.length > 0">
+        <label>{{ 'TRT.ValeursAExporter' | translate }}</label>
+        <div class="export-type-values">
+          <div class="export-type-controls">
+            <button type="button" (click)="selectAllExportTypes()" class="select-all-btn">{{ 'ACT.selectAll' | translate }}</button>
+            <button type="button" (click)="deselectAllExportTypes()" class="deselect-all-btn">{{ 'TRT.ToutDeselectionner' | translate }}</button>
+          </div>
+          <div class="checkbox-group">
+            <label *ngFor="let val of exportTypeValues" class="checkbox-item">
+              <input type="checkbox" [value]="val" [checked]="exportTypeSelected.includes(val)" (change)="onExportTypeValueChange($event)">
+              {{ val || ('TRT.Empty' | translate) }}
+            </label>
+          </div>
+        </div>
+      </div>
+      <div class="filter-group">
+        <label>{{ 'TRT.PrefixeDuFichier' | translate }}</label>
+        <input type="text" [(ngModel)]="exportTypePrefix" placeholder="{{ 'TRT.PrefixOptional' | translate }}" class="filter-input">
+      </div>
+      <div class="filter-group">
+        <label>{{ 'TRT.SuffixeDuFichier' | translate }}</label>
+        <select [(ngModel)]="exportTypeSuffix" class="filter-input" (change)="onExportTypeSuffixChange()">
+          <option value="">{{ 'TRT.Aucun1' | translate }}</option>
+          <option value="BO">BO</option>
+          <option value="PART">PART</option>
+          <option value="CUSTOM">{{ 'LBL.custom' | translate }}</option>
+        </select>
+        <input *ngIf="exportTypeSuffix === 'CUSTOM'" 
+               type="text" 
+               [(ngModel)]="exportTypeCustomSuffix" 
+               placeholder="{{ 'TRT.EnterCustomSuffix' | translate }}" 
+               class="filter-input" 
+               style="margin-top: 8px;">
+      </div>
+      <div class="filter-group">
+        <label>{{ 'TRT.Description' | translate }}</label>
+        <input type="text" [(ngModel)]="exportTypeDescription" placeholder="{{ 'TBL.description' | translate }}" class="filter-input">
+      </div>
+      <div class="filter-group">
+        <label>{{ 'TRT.FormatDeFichier' | translate }}</label>
+        <div class="format-options">
+          <label class="format-option">
+            <input type="radio" [(ngModel)]="exportTypeFormat" value="csv" name="exportTypeFormat">
+            <span>CSV</span>
+          </label>
+          <label class="format-option">
+            <input type="radio" [(ngModel)]="exportTypeFormat" value="xls" name="exportTypeFormat">
+            <span>XLS</span>
+          </label>
+          <label class="format-option">
+            <input type="radio" [(ngModel)]="exportTypeFormat" value="xlsx" name="exportTypeFormat">
+            <span>XLSX</span>
+          </label>
+        </div>
+      </div>
+      <div class="filter-actions">
+        <button type="button" (click)="exportByType()" [disabled]="!exportTypeCol || exportTypeSelected.length === 0" class="apply-btn">{{ 'TRT.ExporterParType' | translate }}</button>
+      </div>
+    </div>
+         <div *ngIf="successMsg.exportType" class="success-msg">{{ successMsg.exportType }}</div>
+     <div *ngIf="errorMsg.exportType" class="error-msg">{{ errorMsg.exportType }}</div>
+   </div>
+   </div>
+     <div *ngIf="columns.length > 0" class="dedup-section">
+     <div class="section-header">
+       <h4>
+         <i class="fas fa-copy"></i>{{ 'TRT.SuppressionDeDoublons' | translate }}<button type="button" class="btn btn-sm btn-outline-info" (click)="toggleSection('dedup')">
+           <i class="fas fa-eye" *ngIf="!showSections.dedup"></i>
+           <i class="fas fa-eye-slash" *ngIf="showSections.dedup"></i>
+           {{ (showSections.dedup ? 'TRT.Hide' : 'TRT.Show') | translate }}
+         </button>
+       </h4>
+     </div>
+     
+     <div *ngIf="showSections.dedup" class="section-content">
+    <label>{{ 'TRT.SelectionnezLesColonnesAUtiliser' | translate }}</label>
+    <div class="dedup-cols">
+      <label *ngFor="let col of columns">
+        <input type="checkbox" [value]="col" (change)="onDedupColChange($event)">
+        {{ col }}
+      </label>
+    </div>
+         <button type="button" (click)="deduplicate()" [disabled]="dedupCols.length === 0">{{ 'TRT.SupprimerLesDoublons' | translate }}</button>
+     <div *ngIf="successMsg.dedup" class="success-msg">{{ successMsg.dedup }}</div>
+     <div *ngIf="errorMsg.dedup" class="error-msg">{{ errorMsg.dedup }}</div>
+   </div>
+   </div>
+     <div *ngIf="columns.length > 0 && combinedRows.length > 0" class="export-by-date-section">
+     <div class="section-header">
+       <h4>
+         <i class="fas fa-calendar-alt"></i>{{ 'TRT.ExportParDate' | translate }}<button type="button" class="btn btn-sm btn-outline-info" (click)="toggleSection('exportByDate')">
+           <i class="fas fa-eye" *ngIf="!showSections.exportByDate"></i>
+           <i class="fas fa-eye-slash" *ngIf="showSections.exportByDate"></i>
+           {{ (showSections.exportByDate ? 'TRT.Hide' : 'TRT.Show') | translate }}
+         </button>
+       </h4>
+     </div>
+     
+     <div *ngIf="showSections.exportByDate" class="section-content">
+    <div class="export-date-controls">
+      <div class="filter-group">
+        <label>{{ 'TRT.ColonneDeDate' | translate }}</label>
+        <mat-form-field appearance="fill" class="filter-select">
+          <mat-label>{{ 'TRT.SelectionnerUneColonneDeDate' | translate }}</mat-label>
+          <mat-select [(ngModel)]="exportDateCol" (selectionChange)="onExportDateColChange(); closeMatSelectPanelAfterSelection($event)">
+            <mat-option *ngFor="let col of columns" [value]="col">
+              {{ col }}
+            </mat-option>
+          </mat-select>
+        </mat-form-field>
+      </div>
+      
+      <div class="filter-group" *ngIf="exportDateCol">
+        <label>{{ 'TRT.PeriodeDExport' | translate }}</label>
+        <div class="date-period-options">
+          <div class="period-option">
+            <label class="period-label">
+              <input type="radio" [(ngModel)]="exportDatePeriod" (change)="onExportPeriodChange()" value="day" name="exportDatePeriod">
+              <span class="period-text">
+                <i class="fas fa-calendar-day"></i>
+                <strong>{{ 'TRT.ParJour' | translate }}</strong>
+                <small>{{ 'TRT.ExportSeparePourChaqueJour' | translate }}</small>
+              </span>
+            </label>
+          </div>
+          <div class="period-option">
+            <label class="period-label">
+              <input type="radio" [(ngModel)]="exportDatePeriod" (change)="onExportPeriodChange()" value="week" name="exportDatePeriod">
+              <span class="period-text">
+                <i class="fas fa-calendar-week"></i>
+                <strong>{{ 'TRT.ParSemaine' | translate }}</strong>
+                <small>{{ 'TRT.ExportSeparePourChaqueSemaine' | translate }}</small>
+              </span>
+            </label>
+          </div>
+          <div class="period-option">
+            <label class="period-label">
+              <input type="radio" [(ngModel)]="exportDatePeriod" (change)="onExportPeriodChange()" value="month" name="exportDatePeriod">
+              <span class="period-text">
+                <i class="fas fa-calendar"></i>
+                <strong>{{ 'TRT.ParMois' | translate }}</strong>
+                <small>{{ 'TRT.ExportSeparePourChaqueMois' | translate }}</small>
+              </span>
+            </label>
+          </div>
+          <div class="period-option">
+            <label class="period-label">
+              <input type="radio" [(ngModel)]="exportDatePeriod" (change)="onExportPeriodChange()" value="hour" name="exportDatePeriod">
+              <span class="period-text">
+                <i class="fas fa-clock"></i>
+                <strong>{{ 'TRT.ParHeure' | translate }}</strong>
+                <small>{{ 'TRT.ExportSeparePourChaqueHeure' | translate }}</small>
+              </span>
+            </label>
+          </div>
+          <div class="period-option">
+            <label class="period-label">
+              <input type="radio" [(ngModel)]="exportDatePeriod" (change)="onExportPeriodChange()" value="timerange" name="exportDatePeriod">
+              <span class="period-text">
+                <i class="fas fa-hourglass-half"></i>
+                <strong>{{ 'TRT.ParPlageHoraire' | translate }}</strong>
+                <small>{{ 'TRT.ExportParTranchesDeN' | translate }}</small>
+              </span>
+            </label>
+          </div>
+        </div>
+      </div>
+      
+      <!-- Paramètre de plage horaire -->
+      <div class="filter-group" *ngIf="exportDateCol && exportDatePeriod === 'timerange'">
+        <label>{{ 'TRT.DureeDeLaPlageMinutes' | translate }}</label>
+        <input type="number" min="1" step="1" [(ngModel)]="exportTimeRangeMinutes" (ngModelChange)="onExportTimeRangeMinutesChange()" class="filter-input" placeholder="60">
+        <small class="help-text">{{ 'TRT.RecordsGrouped' | translate }} {{  exportTimeRangeMinutes }} {{ 'TRT.Minutes' | translate }}.</small>
+      </div>
+
+      <div class="filter-group" *ngIf="exportDateCol && exportDatePeriod">
+        <label>{{ 'TRT.FormatDeFichier' | translate }}</label>
+        <div class="format-options">
+          <label class="format-option">
+            <input type="radio" [(ngModel)]="exportDateFormat" value="csv" name="exportDateFormat">
+            <span>CSV</span>
+          </label>
+          <label class="format-option">
+            <input type="radio" [(ngModel)]="exportDateFormat" value="xls" name="exportDateFormat">
+            <span>XLS</span>
+          </label>
+          <label class="format-option">
+            <input type="radio" [(ngModel)]="exportDateFormat" value="xlsx" name="exportDateFormat">
+            <span>XLSX</span>
+          </label>
+        </div>
+      </div>
+      
+      <div class="filter-group" *ngIf="exportDateCol && exportDatePeriod">
+        <label>{{ 'TRT.PrefixeDesFichiers' | translate }}</label>
+        <input type="text" [(ngModel)]="exportDatePrefix" placeholder="export" class="filter-input">
+        <small class="help-text">{{ 'TRT.LeNomDesFichiersSera' | translate }}</small>
+      </div>
+      
+      <!-- Message d'information sur l'export de la page courante -->
+      <div *ngIf="exportDateCol && exportDatePeriod && detectedPeriods.length > 0" class="export-complete-info">
+        <div class="info-box">
+          <i class="fas fa-info-circle"></i>
+          <div class="info-content">
+            <strong>{{ 'TRT.CurrentPageExport' | translate }}</strong> {{ 'TRT.OnlyThe' | translate }} {{  getPagedDetectedPeriods().length }} {{ 'TRT.FilesOfPage' | translate }} {{  detectedPeriodsPage }} {{ 'TRT.WillBeExported' | translate }}.
+            <br><small>{{ 'TRT.ToExportAll' | translate }} {{  detectedPeriods.length }} {{ 'TRT.PeriodsHint' | translate }}.</small>
+            <br><small><strong>{{ 'TRT.Debug' | translate }}</strong>{{ 'TRT.OuvrezLaConsoleDuNavigateur' | translate }}</small>
+          </div>
+        </div>
+      </div>
+      
+      <div class="filter-actions">
+        <button type="button" (click)="exportByDate()" 
+                [disabled]="!exportDateCol || !exportDatePeriod || !exportDateFormat" 
+                class="apply-btn">
+          <i class="fas fa-download"></i> {{ 'TRT.ExportCurrentPage' | translate }} {{  getPagedDetectedPeriods().length }} {{ 'TRT.Files' | translate }})
+        </button>
+        <button type="button" (click)="exportAllPages()" 
+                [disabled]="!exportDateCol || !exportDatePeriod || !exportDateFormat" 
+                class="btn btn-outline-primary">
+          <i class="fas fa-download"></i> {{ 'TRT.ExportAllPages' | translate }} {{  detectedPeriods.length }} {{ 'TRT.Files' | translate }})
+        </button>
+        <button type="button" (click)="forceRedetectPeriods()" 
+                [disabled]="!exportDateCol || !exportDatePeriod" 
+                class="btn btn-outline-info">
+          <i class="fas fa-search"></i>{{ 'TRT.Re-detecterLesPeriodes' | translate }}</button>
+        <button type="button" (click)="resetExportDate()" class="reset-btn">
+          <i class="fas fa-undo"></i>{{ 'COMMON.actions.reset' | translate }}</button>
+      </div>
+    </div>
+    
+    <!-- Aperçu des périodes détectées avec pagination -->
+    <div *ngIf="exportDateCol && exportDatePeriod && detectedPeriods.length > 0" class="detected-periods">
+      <div class="periods-header">
+        <h5><i class="fas fa-list"></i> {{ 'TRT.DetectedPeriods' | translate }} {{ detectedPeriods.length }})</h5>
+        <div class="periods-per-page" *ngIf="detectedPeriods.length > 5">
+          <label>{{ 'TRT.AfficherPar' | translate }}</label>
+          <select [(ngModel)]="detectedPeriodsPageSize" (ngModelChange)="onPeriodsPageSizeChange()" class="form-control form-control-sm">
+            <option value="5">5</option>
+            <option value="10">10</option>
+            <option value="20">20</option>
+            <option value="50">50</option>
+          </select>
+        </div>
+      </div>
+      <div class="periods-list">
+        <div *ngFor="let period of getPagedDetectedPeriods()" class="period-item">
+          <span class="period-label">{{ period.label }}</span>
+          <span class="period-count">{{ period.count }} {{ 'TRT.Rows' | translate }}</span>
+        </div>
+      </div>
+      
+      <!-- Contrôles de pagination -->
+      <div *ngIf="detectedPeriodsTotalPages > 1" class="periods-pagination">
+        <div class="pagination-info">
+          {{ 'TRT.Page' | translate }} {{  detectedPeriodsPage }} {{ 'TRT.Of' | translate }} {{ detectedPeriodsTotalPages }}
+          ({{  detectedPeriods.length }} {{ 'TRT.PeriodsInTotal' | translate }})
+        </div>
+        <div class="export-note">
+          <i class="fas fa-download"></i>
+          <strong>{{ 'TRT.CurrentPageExport' | translate }}</strong> {{ 'TRT.ExportWillCreate' | translate }} {{ getPagedDetectedPeriods().length }} {{ 'TRT.Files' | translate }} {{ 'TRT.ForThePage' | translate }} {{  detectedPeriodsPage }} {{ 'TRT.Only' | translate }}.
+        </div>
+        <div class="pagination-controls">
+          <button type="button" 
+                  (click)="previousDetectedPeriodsPage()" 
+                  [disabled]="detectedPeriodsPage === 1"
+                  class="btn btn-sm btn-outline-secondary">
+            <i class="fas fa-chevron-left"></i>{{ 'PAG.previous' | translate }}</button>
+          
+          <div class="page-numbers">
+            <button *ngFor="let page of [].constructor(detectedPeriodsTotalPages); let i = index" 
+                    type="button"
+                    (click)="goToDetectedPeriodsPage(i + 1)"
+                    [class.active]="detectedPeriodsPage === (i + 1)"
+                    class="btn btn-sm btn-outline-secondary page-number">
+              {{ i + 1 }}
+            </button>
+          </div>
+          
+          <button type="button" 
+                  (click)="nextDetectedPeriodsPage()" 
+                  [disabled]="detectedPeriodsPage === detectedPeriodsTotalPages"
+                  class="btn btn-sm btn-outline-secondary">{{ 'PAG.next' | translate }}<i class="fas fa-chevron-right"></i>
+          </button>
+        </div>
+      </div>
+    </div>
+    
+    <div *ngIf="successMsg.exportDate" class="success-msg">{{ successMsg.exportDate }}</div>
+    <div *ngIf="errorMsg.exportDate" class="error-msg">{{ errorMsg.exportDate }}</div>
+   </div>
+   </div>
+
+     <div *ngIf="columns.length > 0" class="format-section">
+     <div class="section-header">
+       <h4>
+         <i class="fas fa-magic"></i>{{ 'TRT.FormatageAutomatique' | translate }}<button type="button" class="btn btn-sm btn-outline-info" (click)="toggleSection('format')">
+           <i class="fas fa-eye" *ngIf="!showSections.format"></i>
+           <i class="fas fa-eye-slash" *ngIf="showSections.format"></i>
+           {{ (showSections.format ? 'TRT.Hide' : 'TRT.Show') | translate }}
+         </button>
+       </h4>
+     </div>
+     
+     <div *ngIf="showSections.format" class="section-content">
+    <div class="format-options">
+      <!-- Option : Gérer les caractères -->
+      <label>
+        <input type="checkbox" [(ngModel)]="formatOptions['removeCharacters']">{{ 'TRT.GererLesCaracteres' | translate }}</label>
+      <div *ngIf="formatOptions['removeCharacters']" class="format-columns">
+        <label>{{ 'LBL.columnsToProcess' | translate }}</label>
+        <select multiple [(ngModel)]="formatSelections['removeCharacters']">
+          <option *ngFor="let col of columns" [value]="col">{{ col }}</option>
+        </select>
+        <div class="remove-char-options">
+          <div class="option-group">
+            <label>{{ 'TRT.Action' | translate }}</label>
+            <select [(ngModel)]="removeCharMode" (ngModelChange)="onRemoveCharModeChange()">
+              <option value="remove">{{ 'ACT.delete' | translate }}</option>
+              <option value="keep">{{ 'TRT.Garder' | translate }}</option>
+            </select>
+          </div>
+          <div class="option-group">
+            <label>{{ 'TRT.Position1' | translate }}</label>
+            <select [(ngModel)]="removeCharPosition">
+              <option value="start">{{ (removeCharMode === 'keep' ? 'TRT.FromTheLeft' : 'TRT.FromTheBeginning') | translate }}</option>
+              <option value="end">{{ (removeCharMode === 'keep' ? 'TRT.FromTheRight' : 'TRT.FromTheEnd') | translate }}</option>
+              <option value="specific">{{ 'TRT.PositionSpecifique' | translate }}</option>
+            </select>
+          </div>
+          <div class="option-group" *ngIf="removeCharPosition === 'specific'">
+            <label>{{ 'TRT.Position-based' | translate }}</label>
+            <input type="number" [(ngModel)]="removeCharSpecificPosition" min="1" style="width: 80px;">
+          </div>
+          <div class="option-group">
+            <label>{{ (removeCharMode === 'keep' ? 'TRT.CharsToKeep' : 'TRT.CharsCount') | translate }}</label>
+            <input type="number" [(ngModel)]="removeCharCount" min="1" style="width: 80px;">
+          </div>
+          <div class="option-group">
+            <label>{{ 'TRT.ZeroInitialNombresTelephones' | translate }}</label>
+            <select [(ngModel)]="removeCharLeadingZeroMode">
+              <option value="none">{{ 'TRT.AucunTraitement' | translate }}</option>
+              <option value="keep">{{ 'TRT.ConserverCompleterLeInitial' | translate }}</option>
+              <option value="strip">{{ 'TRT.NePasConserverLeInitial' | translate }}</option>
+            </select>
+          </div>
+        </div>
+        <button type="button" (click)="applyRemoveCharactersFormatting()" [disabled]="!formatSelections['removeCharacters'].length">{{ 'ACT.apply' | translate }}</button>
+      </div>
+
+      <!-- Option : Supprimer caractères spéciaux -->
+      <label>
+        <input type="checkbox" [(ngModel)]="formatOptions['removeSpecialStrings']">{{ 'TRT.SupprimerCaracteresSpeciaux' | translate }}</label>
+      <div *ngIf="formatOptions['removeSpecialStrings']" class="format-columns">
+        <label>{{ 'LBL.columnsToProcess' | translate }}</label>
+        <select multiple [(ngModel)]="formatSelections['removeSpecialStrings']">
+          <option *ngFor="let col of columns" [value]="col">{{ col }}</option>
+        </select>
+        <div class="remove-special-strings-options">
+          <div class="option-group">
+            <label>{{ 'TRT.ChaineASupprimer' | translate }}</label>
+            <input type="text" [(ngModel)]="specialStringToRemove" placeholder="{{ 'TRT.Ex_CM' | translate }}" style="width: 150px;">
+          </div>
+          <div class="option-group">
+            <label>{{ 'TRT.ModeDeSuppression' | translate }}</label>
+            <select [(ngModel)]="specialStringRemovalMode">
+              <option value="all">{{ 'TRT.ToutesLesOccurrences' | translate }}</option>
+              <option value="start">{{ 'TRT.SeulementAuDebut' | translate }}</option>
+              <option value="end">{{ 'TRT.SeulementALaFin' | translate }}</option>
+            </select>
+          </div>
+        </div>
+        <div class="remove-special-strings-help">
+          <small class="help-text">{{ 'TRT.💡CetteOptionVaSupprimer' | translate }}<br><strong>{{ 'TRT.ToutesLesOccurrences1' | translate }}</strong>{{ 'TRT.ABC_CM_DEF_CM→ABC_DEF' | translate }}<br><strong>{{ 'TRT.AuDebut' | translate }}</strong>{{ 'TRT._CM_ABC→ABC' | translate }}<br><strong>{{ 'TRT.ALaFin' | translate }}</strong>{{ 'TRT.ABC_CM→ABC' | translate }}</small>
+        </div>
+        <button type="button" (click)="applyRemoveSpecialStringsFormatting()" [disabled]="!formatSelections['removeSpecialStrings'].length || !specialStringToRemove">{{ 'ACT.apply' | translate }}</button>
+      </div>
+      
+      <!-- Option : Supprimer des nombres -->
+      <label>
+        <input type="checkbox" [(ngModel)]="formatOptions['removeNumbers']">{{ 'TRT.SupprimerDesNombres' | translate }}</label>
+      <div *ngIf="formatOptions['removeNumbers']" class="format-columns">
+        <label>{{ 'LBL.columnsToProcess' | translate }}</label>
+        <select multiple [(ngModel)]="formatSelections['removeNumbers']">
+          <option *ngFor="let col of columns" [value]="col">{{ col }}</option>
+        </select>
+        <div class="remove-numbers-help">
+               <small class="help-text">{{ 'TRT.💡CetteOptionVaSupprimer1' | translate }}<br>{{ 'TRT.ExempleABCDEF→ABCDEF' | translate }}<br>{{ 'TRT.ExempleTelephone→Telephone' | translate }}</small>
+             </div>
+        <button type="button" (click)="applyRemoveNumbersFormatting()" [disabled]="!formatSelections['removeNumbers'].length">{{ 'ACT.apply' | translate }}</button>
+      </div>
+      
+      <!-- Option : Supprimer indicatif -->
+      <label>
+        <input type="checkbox" [(ngModel)]="formatOptions['removeIndicatif']">{{ 'TRT.SupprimerIndicatif' | translate }}</label>
+      <div *ngIf="formatOptions['removeIndicatif']" class="format-columns">
+        <label>{{ 'LBL.columnsToProcess' | translate }}</label>
+        <select multiple [(ngModel)]="formatSelections['removeIndicatif']">
+          <option *ngFor="let col of columns" [value]="col">{{ col }}</option>
+        </select>
+        <div class="remove-indicatif-options">
+          <div class="option-group">
+            <label>{{ 'TRT.TypeDIndicatif' | translate }}</label>
+            <select [(ngModel)]="indicatifType">
+              <option value="international">{{ 'TRT.InternationalXX' | translate }}</option>
+              <option value="national">{{ 'TRT.NationalFrancaisX' | translate }}</option>
+              <option value="custom">{{ 'LBL.custom' | translate }}</option>
+            </select>
+          </div>
+          <div class="option-group" *ngIf="indicatifType === 'custom'">
+            <label>{{ 'TRT.IndicatifPersonnalise' | translate }}</label>
+            <input type="text" [(ngModel)]="customIndicatif" placeholder="+33" style="width: 100px;">
+          </div>
+          </div>
+        <div class="remove-indicatif-help">
+          <small class="help-text">{{ 'TRT.💡CetteOptionVaSupprimer2' | translate }}<br><strong>{{ 'TRT.International' | translate }}</strong> "+33 1 23 45 67 89" → "1 23 45 67 89"
+            <br><strong>{{ 'TRT.NationalFrancais' | translate }}</strong> "01 23 45 67 89" → "1 23 45 67 89"
+            <br><strong>{{ 'TRT.Personnalise' | translate }}</strong>{{ 'TRT.SupprimeLIndicatifSpecifie' | translate }}</small>
+        </div>
+                <button type="button" (click)="applyRemoveIndicatifFormatting()" [disabled]="!formatSelections['removeIndicatif'].length">{{ 'ACT.apply' | translate }}</button>
+      </div>
+
+      <!-- Option : Supprimer décimales -->
+      <label>
+        <input type="checkbox" [(ngModel)]="formatOptions['removeDecimals']">{{ 'TRT.SupprimerDecimales' | translate }}</label>
+      <div *ngIf="formatOptions['removeDecimals']" class="format-columns">
+        <label>{{ 'LBL.columnsToProcess' | translate }}</label>
+        <select multiple [(ngModel)]="formatSelections['removeDecimals']">
+          <option *ngFor="let col of columns" [value]="col">{{ col }}</option>
+        </select>
+        <div class="remove-decimals-options">
+          <div class="option-group">
+            <label>{{ 'TRT.SeparateurDecimal' | translate }}</label>
+            <select [(ngModel)]="decimalSeparator">
+              <option value=",">{{ 'TRT.Virgule' | translate }}</option>
+              <option value=".">{{ 'TRT.Point' | translate }}</option>
+            </select>
+          </div>
+          <div class="option-group">
+            <label>
+              <input type="checkbox" [(ngModel)]="keepTrailingZeros">{{ 'TRT.GarderLesValeursNonNulles' | translate }}</label>
+            <small class="help-text">{{ 'TRT.SiActiveNeSupprimeQue' | translate }}</small>
+          </div>
+        </div>
+        <div class="remove-decimals-help">
+          <small class="help-text">{{ 'TRT.💡CetteOptionVaSupprimer3' | translate }}<br><strong>{{ 'TRT.AvecVirgule' | translate }}</strong>{{ 'TRT.→→SiGarderValeurs' | translate }}<br><strong>{{ 'TRT.AvecPoint' | translate }}</strong>{{ 'TRT.→→SiGarderValeurs1' | translate }}<br><strong>{{ 'TRT.OptionGarderValeursNonNulles' | translate }}</strong>{{ 'TRT.Reste→' | translate }}</small>
+        </div>
+        <button type="button" (click)="applyRemoveDecimalsFormatting()" [disabled]="!formatSelections['removeDecimals'].length">{{ 'ACT.apply' | translate }}</button>
+      </div>
+
+      <!-- Option : Garder N derniers digits -->
+      <label>
+        <input type="checkbox" [(ngModel)]="formatOptions['keepLastDigits']">{{ 'TRT.GarderNDerniersDigits' | translate }}</label>
+      <div *ngIf="formatOptions['keepLastDigits']" class="format-columns">
+        <label>{{ 'LBL.columnsToProcess' | translate }}</label>
+        <select multiple [(ngModel)]="formatSelections['keepLastDigits']">
+          <option *ngFor="let col of columns" [value]="col">{{ col }}</option>
+        </select>
+        <div class="keep-digits-options">
+          <div class="option-group">
+            <label>{{ 'TRT.NombreDeDigitsAGarder' | translate }}</label>
+            <input type="number" [(ngModel)]="keepLastDigitsCount" min="1" max="20" placeholder="3">
+          </div>
+          <small class="help-text">
+            <strong>{{ 'TRT.Exemple' | translate }}</strong>{{ 'TRT.AvecDigits→' | translate }}<br><strong>{{ 'TRT.AutresExemples' | translate }}</strong>{{ 'TRT.AvecDigits→1' | translate }}<br><strong>{{ 'TRT.Note' | translate }}</strong>{{ 'TRT.SeulsLesChiffresSontExtraits' | translate }}</small>
+        </div>
+        <button type="button" (click)="applyKeepLastDigitsFormatting()" [disabled]="!formatSelections['keepLastDigits'].length || keepLastDigitsCount <= 0">{{ 'ACT.apply' | translate }}</button>
+      </div>
+
+      <!-- Option : Supprimer .0 sur les dates -->
+      <label>
+        <input type="checkbox" [(ngModel)]="formatOptions['removeZeroDecimals']">{{ 'TRT.SupprimerSurLesDates' | translate }}</label>
+      <div *ngIf="formatOptions['removeZeroDecimals']" class="format-columns">
+        <label>{{ 'LBL.columnsToProcess' | translate }}</label>
+        <select multiple [(ngModel)]="formatSelections['removeZeroDecimals']">
+          <option *ngFor="let col of columns" [value]="col">{{ col }}</option>
+        </select>
+        <div class="remove-zero-decimals-help">
+          <small class="help-text">{{ 'TRT.💡CetteOptionVaSupprimer4' | translate }}<br><strong>{{ 'TRT.Exemple' | translate }}</strong> "2024-01-15.0" → "2024-01-15"
+            <br><strong>{{ 'TRT.AutresExemples' | translate }}</strong> "2023-12-25.0" → "2023-12-25"
+            <br><strong>{{ 'TRT.Note' | translate }}</strong>{{ 'TRT.SeulesLesDecimalesSontSupprimees' | translate }}</small>
+        </div>
+        <button type="button" (click)="applyRemoveZeroDecimalsFormatting()" [disabled]="!formatSelections['removeZeroDecimals'].length">{{ 'ACT.apply' | translate }}</button>
+      </div>
+
+      <!-- Option : Supprimer les espaces -->
+      <label>
+        <input type="checkbox" [(ngModel)]="formatOptions['removeSpaces']">{{ 'TRT.SupprimerLesEspaces' | translate }}</label>
+      <div *ngIf="formatOptions['removeSpaces']" class="format-columns">
+        <label>{{ 'LBL.columnsToProcess' | translate }}</label>
+        <select multiple [(ngModel)]="formatSelections['removeSpaces']">
+          <option *ngFor="let col of columns" [value]="col">{{ col }}</option>
+        </select>
+        <div class="remove-spaces-options">
+          <div class="option-group">
+            <label>{{ 'TRT.TypeDeSuppression' | translate }}</label>
+            <select [(ngModel)]="removeSpacesType">
+              <option value="all">{{ 'TRT.TousLesEspaces' | translate }}</option>
+              <option value="leading">{{ 'TRT.EspacesEnDebut' | translate }}</option>
+              <option value="trailing">{{ 'TRT.EspacesEnFin' | translate }}</option>
+              <option value="multiple">{{ 'TRT.EspacesMultiples' | translate }}</option>
+            </select>
+          </div>
+        </div>
+        <div class="remove-spaces-help">
+          <small class="help-text">
+            {{ 'TRT.ThisOptionRemovesSpaces' | translate }}
+            <br><strong>{{ 'TRT.AllSpaces' | translate }}</strong> "A B C" &rarr; "ABC"
+            <br><strong>{{ 'TRT.SpacesAtStart' | translate }}</strong> "  ABC" &rarr; "ABC"
+            <br><strong>{{ 'TRT.SpacesAtEnd' | translate }}</strong> "ABC  " &rarr; "ABC"
+            <br><strong>{{ 'TRT.MultipleSpaces' | translate }}</strong> "A  B   C" &rarr; "A B C"
+          </small>
+        </div>
+        <button type="button" (click)="applyRemoveSpacesFormatting()" [disabled]="!formatSelections['removeSpaces'].length">{{ 'ACT.apply' | translate }}</button>
+      </div>
+    </div>
+    <div *ngIf="successMsg.format" class="success-msg">{{ successMsg.format }}</div>
+    <div *ngIf="errorMsg.format" class="error-msg">{{ errorMsg.format }}</div>
+   </div>
+   </div>
+
+</div> <!-- .traitement-container -->
+</div> <!-- .main -->
+</div> <!-- .traitement-page -->

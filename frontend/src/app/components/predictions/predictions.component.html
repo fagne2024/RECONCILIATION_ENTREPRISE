@@ -1,0 +1,234 @@
+<div class="predictions-container">
+  <div class="header">
+    <div class="header-top">
+      <button (click)="goBack()" class="btn-back">
+        <i class="fas fa-arrow-left"></i>{{ 'COMMON.actions.back' | translate }}</button>
+      <h1>🔮 Prédictions des Opérations Bancaires</h1>
+    </div>
+    <p class="subtitle">Prédisez les approvisionnements, compensations et niveillements futurs basés sur les données historiques</p>
+  </div>
+
+  <!-- Formulaire de prédiction -->
+  <div class="prediction-form-card">
+    <h2>Paramètres de Prédiction</h2>
+    <form [formGroup]="predictionForm" (ngSubmit)="generatePrediction()">
+      <div class="form-grid">
+        <div class="form-group">
+          <label for="typeOperation">Type d'Opération *</label>
+          <select id="typeOperation" formControlName="typeOperation" class="form-control">
+            <option value="">-- Sélectionner un type --</option>
+            <option *ngFor="let type of availableTypes" [value]="type.value">{{ type.label }}</option>
+          </select>
+          <div *ngIf="predictionForm.get('typeOperation')?.invalid && predictionForm.get('typeOperation')?.touched" class="error-message">
+            Le type d'opération est requis
+          </div>
+        </div>
+
+        <div class="form-group">
+          <label for="horizonJours">Horizon de Prédiction (jours) *</label>
+          <input type="number" id="horizonJours" formControlName="horizonJours" class="form-control" min="1" max="365">
+          <small class="form-text">Nombre de jours à prédire (1-365)</small>
+          <div *ngIf="predictionForm.get('horizonJours')?.invalid && predictionForm.get('horizonJours')?.touched" class="error-message">
+            L'horizon doit être entre 1 et 365 jours
+          </div>
+        </div>
+
+        <div class="form-group">
+          <label for="periodeAnalyseJours">Période d'Analyse (jours) *</label>
+          <input type="number" id="periodeAnalyseJours" formControlName="periodeAnalyseJours" class="form-control" min="7" max="730">
+          <small class="form-text">Nombre de jours d'historique à analyser (7-730)</small>
+          <div *ngIf="predictionForm.get('periodeAnalyseJours')?.invalid && predictionForm.get('periodeAnalyseJours')?.touched" class="error-message">
+            La période d'analyse doit être entre 7 et 730 jours
+          </div>
+        </div>
+
+        <div class="form-group">
+          <label for="methodePrediction">Méthode de Prédiction *</label>
+          <select id="methodePrediction" formControlName="methodePrediction" class="form-control">
+            <option *ngFor="let methode of methodesPrediction" [value]="methode.value">{{ methode.label }}</option>
+          </select>
+        </div>
+
+        <div class="form-group">
+          <label for="codeProprietaire">Agence (optionnel)</label>
+          <input type="text" id="codeProprietaire" formControlName="codeProprietaire" class="form-control" placeholder="Filtrer par agence">
+        </div>
+
+        <div class="form-group">
+          <label for="service">Service (optionnel)</label>
+          <input type="text" id="service" formControlName="service" class="form-control" placeholder="Filtrer par service">
+        </div>
+
+        <div class="form-group">
+          <label for="pays">Pays (optionnel)</label>
+          <input type="text" id="pays" formControlName="pays" class="form-control" placeholder="Filtrer par pays">
+        </div>
+      </div>
+
+      <div class="form-actions">
+        <button type="submit" class="btn btn-primary" [disabled]="isLoading || predictionForm.invalid">
+          <span *ngIf="!isLoading">🔮 Générer la Prédiction</span>
+          <span *ngIf="isLoading">⏳ Génération en cours...</span>
+        </button>
+      </div>
+    </form>
+  </div>
+
+  <!-- Message d'erreur -->
+  <div *ngIf="errorMessage" class="alert alert-error">
+    <strong>Erreur:</strong> {{ errorMessage }}
+  </div>
+
+  <!-- Résultats de la prédiction -->
+  <div *ngIf="predictionResponse" class="prediction-results">
+    <div class="results-header">
+      <h2>📊 Résultats de la Prédiction</h2>
+      <button class="btn btn-secondary" (click)="exportToCSV()">📥 Exporter en CSV</button>
+    </div>
+
+    <!-- Statistiques globales -->
+    <div class="stats-grid">
+      <div class="stat-card">
+        <div class="stat-icon">💰</div>
+        <div class="stat-content">
+          <div class="stat-label">Montant Total Prédit</div>
+          <div class="stat-value">{{ formatCurrency(predictionResponse.montantTotalPrediction) }}</div>
+        </div>
+      </div>
+
+      <div class="stat-card">
+        <div class="stat-icon">📈</div>
+        <div class="stat-content">
+          <div class="stat-label">Montant Moyen/Jour</div>
+          <div class="stat-value">{{ formatCurrency(predictionResponse.montantMoyenParJour) }}</div>
+        </div>
+      </div>
+
+      <div class="stat-card">
+        <div class="stat-icon">📊</div>
+        <div class="stat-content">
+          <div class="stat-label">Nombre d'Opérations</div>
+          <div class="stat-value">{{ predictionResponse.nombreOperationsPredites }}</div>
+        </div>
+      </div>
+
+      <div class="stat-card">
+        <div class="stat-icon">🎯</div>
+        <div class="stat-content">
+          <div class="stat-label">Confiance</div>
+          <div class="stat-value">{{ formatPercent(predictionResponse.confiance) }}</div>
+        </div>
+      </div>
+
+      <div class="stat-card">
+        <div class="stat-icon">📉</div>
+        <div class="stat-content">
+          <div class="stat-label">Montant Minimum</div>
+          <div class="stat-value">{{ formatCurrency(predictionResponse.montantMin) }}</div>
+        </div>
+      </div>
+
+      <div class="stat-card">
+        <div class="stat-icon">📈</div>
+        <div class="stat-content">
+          <div class="stat-label">Montant Maximum</div>
+          <div class="stat-value">{{ formatCurrency(predictionResponse.montantMax) }}</div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Message d'information -->
+    <div *ngIf="predictionResponse.message" class="alert alert-info">
+      {{ predictionResponse.message }}
+    </div>
+
+    <!-- Analyse des seuils de déclenchement -->
+    <div *ngIf="predictionResponse.statistiquesHistoriques?.seuilDeclenchementMoyen !== undefined" class="seuils-section">
+      <h3>🔍 Analyse des Seuils de Déclenchement</h3>
+      <p class="section-description">
+        Cette analyse identifie les niveaux de solde qui déclenchent historiquement les opérations.
+        Les prédictions utilisent ces seuils en arrière-plan pour déterminer quand les opérations se produiront.
+      </p>
+      <div class="seuils-grid">
+        <div class="seuil-card">
+          <div class="seuil-label">Seuil Moyen de Déclenchement</div>
+          <div class="seuil-value">{{ formatCurrency(predictionResponse.statistiquesHistoriques.seuilDeclenchementMoyen) }}</div>
+          <div class="seuil-description">
+            Solde moyen avant chaque opération historique
+          </div>
+        </div>
+        
+        <div class="seuil-card">
+          <div class="seuil-label">Seuil Minimum</div>
+          <div class="seuil-value">{{ formatCurrency(predictionResponse.statistiquesHistoriques.seuilDeclenchementMin) }}</div>
+          <div class="seuil-description">
+            Solde minimum observé avant une opération
+          </div>
+        </div>
+        
+        <div class="seuil-card">
+          <div class="seuil-label">Seuil Maximum</div>
+          <div class="seuil-value">{{ formatCurrency(predictionResponse.statistiquesHistoriques.seuilDeclenchementMax) }}</div>
+          <div class="seuil-description">
+            Solde maximum observé avant une opération
+          </div>
+        </div>
+        
+        <div class="seuil-card">
+          <div class="seuil-label">Écart-Type</div>
+          <div class="seuil-value">{{ formatCurrency(predictionResponse.statistiquesHistoriques.seuilDeclenchementEcartType) }}</div>
+          <div class="seuil-description">
+            Mesure de la régularité des seuils (plus bas = plus régulier)
+          </div>
+        </div>
+        
+        <div class="seuil-card" *ngIf="predictionResponse.statistiquesHistoriques?.nombreOccurrencesSeuil">
+          <div class="seuil-label">Nombre d'Occurrences Analysées</div>
+          <div class="seuil-value">{{ predictionResponse.statistiquesHistoriques.nombreOccurrencesSeuil }}</div>
+          <div class="seuil-description">
+            Nombre d'opérations utilisées pour calculer les seuils
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Graphique -->
+    <div class="chart-container">
+      <canvas id="predictionChart"></canvas>
+    </div>
+
+    <!-- Tableau des prédictions -->
+    <div class="table-container">
+      <h3>Prédictions Détaillées par Jour</h3>
+      <table class="predictions-table">
+        <thead>
+          <tr>
+            <th>{{ 'TBL.date' | translate }}</th>
+            <th>Jour de la Semaine</th>
+            <th>Montant Prédit</th>
+            <th>Nombre d'Opérations</th>
+            <th>Confiance</th>
+          </tr>
+        </thead>
+        <tbody>
+          <tr *ngFor="let prediction of predictionResponse.predictionsParJour">
+            <td>{{ prediction.date | date:'dd/MM/yyyy' }}</td>
+            <td>{{ prediction.jourSemaine }}</td>
+            <td class="amount">{{ formatCurrency(prediction.montantPrediction) }}</td>
+            <td>{{ prediction.nombreOperationsPredites }}</td>
+            <td>
+              <span class="confidence-badge" [ngClass]="{
+                'high': prediction.confiance >= 0.7,
+                'medium': prediction.confiance >= 0.4 && prediction.confiance < 0.7,
+                'low': prediction.confiance < 0.4
+              }">
+                {{ formatPercent(prediction.confiance) }}
+              </span>
+            </td>
+          </tr>
+        </tbody>
+      </table>
+    </div>
+  </div>
+</div>
+

@@ -1,0 +1,338 @@
+<div class="platform-page">
+  <!-- PAGE HEADER -->
+  <div class="pf-header">
+    <div class="pf-header-left">
+      <div class="pf-eyebrow"><span></span>{{ 'PLT.eyebrow' | translate }}</div>
+      <h1 class="pf-title">{{ 'PLT.ent.titleTop' | translate }}<em>{{ 'PLT.ent.titleAccent' | translate }}</em></h1>
+      <p class="pf-subtitle">{{ 'PLT.ent.subtitle' | translate }}</p>
+    </div>
+    <div class="pf-header-right">
+      <div class="kpi-strip">
+        <div class="kpi">
+          <span class="kpi-label">{{ 'PLT.ent.kpiTotal' | translate }}</span>
+          <span class="kpi-value">{{ entreprises.length }}</span>
+        </div>
+        <div class="kpi">
+          <span class="kpi-label">{{ 'PLT.ent.kpiActive' | translate }}</span>
+          <span class="kpi-value">{{ countStatut('ACTIVE') }}</span>
+        </div>
+        <div class="kpi">
+          <span class="kpi-label">{{ 'PLT.ent.kpiSuspended' | translate }}</span>
+          <span class="kpi-value">{{ countStatut('SUSPENDUE') }}</span>
+        </div>
+        <div class="kpi">
+          <span class="kpi-label">{{ 'PLT.ent.kpiArchived' | translate }}</span>
+          <span class="kpi-value">{{ countStatut('ARCHIVEE') }}</span>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <div class="pf-body">
+    <div *ngIf="error" class="pf-alert pf-alert-danger">
+      <i class="fas fa-exclamation-circle"></i>
+      <span>{{ error }}</span>
+    </div>
+
+    <div class="pf-card">
+      <div class="pf-card-head">
+        <h2><i class="fas fa-building"></i> {{ 'PLT.ent.sectionTitle' | translate }}</h2>
+        <div class="pf-card-actions">
+          <label class="pf-toggle">
+            <input type="checkbox" [(ngModel)]="includeArchived">
+            <span>{{ 'PLT.ent.showArchived' | translate }}</span>
+          </label>
+          <button class="btn-rd btn-rd-ghost" (click)="loadEntreprises()" [disabled]="loading">
+            <i class="fas fa-sync-alt"></i> {{ 'PLT.ent.refresh' | translate }}
+          </button>
+          <button class="btn-rd btn-rd-primary" (click)="openCreateModal()" [disabled]="loading">
+            <i class="fas fa-plus"></i> {{ 'PLT.ent.create' | translate }}
+          </button>
+        </div>
+      </div>
+
+      <div *ngIf="loading" class="pf-state">
+        <span class="pf-spinner"></span>
+        <span>{{ 'PLT.loading' | translate }}</span>
+      </div>
+
+      <div *ngIf="!loading" class="pf-table-wrap">
+        <table class="pf-table">
+          <thead>
+            <tr>
+              <th>{{ 'PLT.ent.colId' | translate }}</th>
+              <th>{{ 'PLT.ent.colCode' | translate }}</th>
+              <th>{{ 'PLT.ent.colNom' | translate }}</th>
+              <th>{{ 'PLT.ent.colStatut' | translate }}</th>
+              <th>{{ 'PLT.ent.colCreatedAt' | translate }}</th>
+              <th>{{ 'PLT.ent.colModules' | translate }}</th>
+              <th>{{ 'PLT.ent.colActions' | translate }}</th>
+            </tr>
+          </thead>
+          <tbody>
+            <tr *ngFor="let e of filteredEntreprises">
+              <td><span class="pf-id">#{{ e.id }}</span></td>
+              <td><strong>{{ e.code }}</strong></td>
+              <td>{{ e.nom }}</td>
+              <td>
+                <span class="pf-badge" [ngClass]="getStatutClass(e.statut)">
+                  {{ getStatutLabel(e.statut) | translate }}
+                </span>
+              </td>
+              <td>{{ e.createdAt | date:'dd/MM/yyyy HH:mm' }}</td>
+              <td><span class="pf-count">{{ e.modulesActives }}</span></td>
+              <td>
+                <div class="pf-row-actions">
+                  <button class="btn-rd btn-rd-ghost btn-rd-sm" (click)="openEditModal(e)" [title]="'PLT.ent.actionEdit' | translate">
+                    <i class="fas fa-pen"></i> <span class="btn-label">{{ 'PLT.ent.actionEdit' | translate }}</span>
+                  </button>
+                  <button *ngIf="e.statut !== 'ARCHIVEE'" class="btn-rd btn-rd-ghost btn-rd-sm" (click)="viewEntreprise(e)" [title]="'PLT.ent.actionManageModules' | translate">
+                    <i class="fas fa-cubes"></i> <span class="btn-label">{{ 'PLT.ent.actionManageModules' | translate }}</span>
+                  </button>
+                  <button *ngIf="e.statut === 'ACTIVE'" class="btn-rd btn-rd-warn btn-rd-sm" (click)="openSuspendModal(e)" [title]="'PLT.ent.actionSuspend' | translate">
+                    <i class="fas fa-pause"></i> <span class="btn-label">{{ 'PLT.ent.actionSuspend' | translate }}</span>
+                  </button>
+                  <button *ngIf="e.statut === 'SUSPENDUE'" class="btn-rd btn-rd-success btn-rd-sm" (click)="openReactivateModal(e)" [title]="'PLT.ent.actionReactivate' | translate">
+                    <i class="fas fa-play"></i> <span class="btn-label">{{ 'PLT.ent.actionReactivate' | translate }}</span>
+                  </button>
+                  <button *ngIf="e.statut === 'ARCHIVEE'" class="btn-rd btn-rd-success btn-rd-sm" (click)="openRestoreModal(e)" [title]="'PLT.ent.actionRestore' | translate">
+                    <i class="fas fa-rotate-left"></i> <span class="btn-label">{{ 'PLT.ent.actionRestore' | translate }}</span>
+                  </button>
+                  <button *ngIf="e.statut !== 'ARCHIVEE'" class="btn-rd btn-rd-info btn-rd-sm" (click)="openResendModal(e)" [title]="'PLT.ent.actionResend' | translate">
+                    <i class="fas fa-paper-plane"></i> <span class="btn-label">{{ 'PLT.ent.actionResend' | translate }}</span>
+                  </button>
+                  <button *ngIf="e.statut !== 'ARCHIVEE'" class="btn-rd btn-rd-danger btn-rd-sm" (click)="openArchiveModal(e)" [title]="'PLT.ent.actionArchive' | translate">
+                    <i class="fas fa-trash"></i> <span class="btn-label">{{ 'PLT.ent.actionArchive' | translate }}</span>
+                  </button>
+                </div>
+              </td>
+            </tr>
+            <tr *ngIf="filteredEntreprises.length === 0">
+              <td colspan="7">
+                <div class="pf-state">
+                  <i class="fas fa-building"></i>
+                  <span>{{ 'PLT.ent.empty' | translate }}</span>
+                </div>
+              </td>
+            </tr>
+          </tbody>
+        </table>
+      </div>
+    </div>
+  </div>
+
+  <!-- Modal Création -->
+  <div *ngIf="showCreateModal">
+    <div class="pf-modal-backdrop" (click)="closeCreateModal()"></div>
+    <div class="pf-modal pf-modal-lg" role="dialog" aria-modal="true">
+      <div class="pf-modal-head">
+        <h3><i class="fas fa-plus"></i> {{ 'PLT.ent.createTitle' | translate }}</h3>
+        <button type="button" class="pf-modal-close" (click)="closeCreateModal()" [attr.aria-label]="'COMMON.actions.close' | translate">&times;</button>
+      </div>
+      <form id="createEntrepriseForm" (ngSubmit)="createEntreprise()">
+        <div class="pf-modal-body">
+          <div class="pf-grid">
+            <div class="pf-field">
+              <label for="pe-code">{{ 'PLT.ent.createCode' | translate }} *</label>
+              <input id="pe-code" type="text" class="pf-input" [(ngModel)]="createForm.code" name="code" required maxlength="64" pattern="^[a-zA-Z0-9_-]+$" [placeholder]="'PLT.ent.createCodePlaceholder' | translate">
+              <span class="pf-hint">{{ 'PLT.ent.createCodeHint' | translate }}</span>
+            </div>
+            <div class="pf-field">
+              <label for="pe-nom">{{ 'PLT.ent.createNom' | translate }} *</label>
+              <input id="pe-nom" type="text" class="pf-input" [(ngModel)]="createForm.nom" name="nom" required maxlength="255" [placeholder]="'PLT.ent.createNomPlaceholder' | translate">
+            </div>
+            <div class="pf-field">
+              <label for="pe-user">{{ 'PLT.ent.createAdminUsername' | translate }} *</label>
+              <input id="pe-user" type="text" class="pf-input" [(ngModel)]="createForm.adminUsername" name="adminUsername" required maxlength="100" [placeholder]="'PLT.ent.createAdminUsernamePlaceholder' | translate">
+            </div>
+            <div class="pf-field">
+              <label for="pe-mail">{{ 'PLT.ent.createAdminEmail' | translate }} *</label>
+              <input id="pe-mail" type="email" class="pf-input" [(ngModel)]="createForm.adminEmail" name="adminEmail" required maxlength="255" [placeholder]="'PLT.ent.createAdminEmailPlaceholder' | translate">
+            </div>
+          </div>
+          <div class="pf-alert pf-alert-info">
+            <i class="fas fa-info-circle"></i>
+            <span>{{ 'PLT.ent.createNote' | translate }}</span>
+          </div>
+        </div>
+        <div class="pf-modal-foot">
+          <button type="button" class="btn-rd btn-rd-ghost" (click)="closeCreateModal()" [disabled]="loading">
+            {{ 'COMMON.actions.cancel' | translate }}
+          </button>
+          <button type="submit" class="btn-rd btn-rd-primary" [disabled]="loading">
+            <i class="fas fa-check"></i> {{ 'ACT.create' | translate }}
+          </button>
+        </div>
+      </form>
+    </div>
+  </div>
+
+  <!-- Modal Modification -->
+  <div *ngIf="showEditModal">
+    <div class="pf-modal-backdrop" (click)="closeEditModal()"></div>
+    <div class="pf-modal" role="dialog" aria-modal="true">
+      <div class="pf-modal-head">
+        <h3><i class="fas fa-pen"></i> {{ 'PLT.ent.editTitle' | translate }}</h3>
+        <button type="button" class="pf-modal-close" (click)="closeEditModal()" [attr.aria-label]="'COMMON.actions.close' | translate">&times;</button>
+      </div>
+      <form id="editEntrepriseForm" (ngSubmit)="confirmEdit()">
+        <div class="pf-modal-body">
+          <div class="pf-field">
+            <label for="pe-edit-nom">{{ 'PLT.ent.editNom' | translate }} *</label>
+            <input id="pe-edit-nom" type="text" class="pf-input" [(ngModel)]="editForm.nom" name="editNom" required maxlength="255" [placeholder]="'PLT.ent.createNomPlaceholder' | translate">
+          </div>
+          <div class="pf-admin-box">
+            <div class="pf-admin-head">
+              <i class="fas fa-user-shield"></i> {{ 'PLT.ent.editAdminSection' | translate }}
+            </div>
+            <div class="pf-grid">
+              <div class="pf-field">
+                <label>{{ 'PLT.ent.editAdminUsername' | translate }}</label>
+                <input type="text" class="pf-input" [value]="adminInfo?.username || ''" readonly>
+              </div>
+              <div class="pf-field">
+                <label>{{ 'PLT.ent.editAdminEmail' | translate }}</label>
+                <input type="text" class="pf-input" [value]="adminInfo?.email || ''" readonly>
+              </div>
+            </div>
+            <span *ngIf="adminLoading" class="pf-hint">{{ 'PLT.loading' | translate }}</span>
+            <span *ngIf="!adminLoading && !adminInfo" class="pf-hint">{{ 'PLT.ent.editAdminNotFound' | translate }}</span>
+          </div>
+          <div class="pf-field">
+            <label for="pe-edit-code">{{ 'PLT.ent.editCode' | translate }}</label>
+            <input id="pe-edit-code" type="text" class="pf-input" [(ngModel)]="editForm.code" name="editCode" maxlength="64" pattern="^[a-zA-Z0-9_-]+$" [placeholder]="'PLT.ent.createCodePlaceholder' | translate">
+            <span class="pf-hint">{{ 'PLT.ent.editCodeHint' | translate }}</span>
+          </div>
+          <div class="pf-alert pf-alert-warn">
+            <i class="fas fa-exclamation-triangle"></i>
+            <span>{{ 'PLT.ent.editCodeWarning' | translate }}</span>
+          </div>
+        </div>
+        <div class="pf-modal-foot">
+          <button type="button" class="btn-rd btn-rd-ghost" (click)="closeEditModal()" [disabled]="loading">
+            {{ 'COMMON.actions.cancel' | translate }}
+          </button>
+          <button type="submit" class="btn-rd btn-rd-primary" [disabled]="loading">
+            <i class="fas fa-check"></i> {{ 'COMMON.actions.save' | translate }}
+          </button>
+        </div>
+      </form>
+    </div>
+  </div>
+
+  <!-- Modal Suspension -->
+  <div *ngIf="showSuspendModal">
+    <div class="pf-modal-backdrop" (click)="closeSuspendModal()"></div>
+    <div class="pf-modal" role="dialog" aria-modal="true">
+      <div class="pf-modal-head">
+        <h3><i class="fas fa-pause"></i> {{ 'PLT.ent.suspendTitle' | translate }}</h3>
+        <button type="button" class="pf-modal-close" (click)="closeSuspendModal()" [attr.aria-label]="'COMMON.actions.close' | translate">&times;</button>
+      </div>
+      <div class="pf-modal-body">
+        <p class="pf-modal-text">{{ 'PLT.ent.suspendBody' | translate: { code: selectedEntreprise?.code, nom: selectedEntreprise?.nom } }}</p>
+        <div class="pf-alert pf-alert-warn">
+          <i class="fas fa-exclamation-triangle"></i>
+          <span>{{ 'PLT.ent.suspendWarning' | translate }}</span>
+        </div>
+      </div>
+      <div class="pf-modal-foot">
+        <button type="button" class="btn-rd btn-rd-ghost" (click)="closeSuspendModal()">{{ 'COMMON.actions.cancel' | translate }}</button>
+        <button type="button" class="btn-rd btn-rd-warn" (click)="confirmSuspend()" [disabled]="loading">
+          <i class="fas fa-pause"></i> {{ 'PLT.ent.actionSuspend' | translate }}
+        </button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Modal Réactivation -->
+  <div *ngIf="showReactivateModal">
+    <div class="pf-modal-backdrop" (click)="closeReactivateModal()"></div>
+    <div class="pf-modal" role="dialog" aria-modal="true">
+      <div class="pf-modal-head">
+        <h3><i class="fas fa-play"></i> {{ 'PLT.ent.reactivateTitle' | translate }}</h3>
+        <button type="button" class="pf-modal-close" (click)="closeReactivateModal()" [attr.aria-label]="'COMMON.actions.close' | translate">&times;</button>
+      </div>
+      <div class="pf-modal-body">
+        <p class="pf-modal-text">{{ 'PLT.ent.reactivateBody' | translate: { code: selectedEntreprise?.code, nom: selectedEntreprise?.nom } }}</p>
+      </div>
+      <div class="pf-modal-foot">
+        <button type="button" class="btn-rd btn-rd-ghost" (click)="closeReactivateModal()">{{ 'COMMON.actions.cancel' | translate }}</button>
+        <button type="button" class="btn-rd btn-rd-success" (click)="confirmReactivate()" [disabled]="loading">
+          <i class="fas fa-play"></i> {{ 'PLT.ent.actionReactivate' | translate }}
+        </button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Modal Renvoi activation -->
+  <div *ngIf="showResendModal">
+    <div class="pf-modal-backdrop" (click)="closeResendModal()"></div>
+    <div class="pf-modal" role="dialog" aria-modal="true">
+      <div class="pf-modal-head">
+        <h3><i class="fas fa-paper-plane"></i> {{ 'PLT.ent.resendTitle' | translate }}</h3>
+        <button type="button" class="pf-modal-close" (click)="closeResendModal()" [attr.aria-label]="'COMMON.actions.close' | translate">&times;</button>
+      </div>
+      <div class="pf-modal-body">
+        <p class="pf-modal-text">{{ 'PLT.ent.resendBody' | translate: { code: selectedEntreprise?.code } }}</p>
+        <div class="pf-alert pf-alert-info">
+          <i class="fas fa-info-circle"></i>
+          <span>{{ 'PLT.ent.resendNote' | translate }}</span>
+        </div>
+      </div>
+      <div class="pf-modal-foot">
+        <button type="button" class="btn-rd btn-rd-ghost" (click)="closeResendModal()">{{ 'COMMON.actions.cancel' | translate }}</button>
+        <button type="button" class="btn-rd btn-rd-info" (click)="confirmResend()" [disabled]="loading">
+          <i class="fas fa-paper-plane"></i> {{ 'PLT.ent.actionResend' | translate }}
+        </button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Modal Suppression (archivage logique) -->
+  <div *ngIf="showArchiveModal">
+    <div class="pf-modal-backdrop" (click)="closeArchiveModal()"></div>
+    <div class="pf-modal" role="dialog" aria-modal="true">
+      <div class="pf-modal-head">
+        <h3><i class="fas fa-trash"></i> {{ 'PLT.ent.archiveTitle' | translate }}</h3>
+        <button type="button" class="pf-modal-close" (click)="closeArchiveModal()" [attr.aria-label]="'COMMON.actions.close' | translate">&times;</button>
+      </div>
+      <div class="pf-modal-body">
+        <p class="pf-modal-text">{{ 'PLT.ent.archiveBody' | translate: { code: selectedEntreprise?.code, nom: selectedEntreprise?.nom } }}</p>
+        <div class="pf-alert pf-alert-warn">
+          <i class="fas fa-exclamation-triangle"></i>
+          <span>{{ 'PLT.ent.archiveWarning' | translate }}</span>
+        </div>
+      </div>
+      <div class="pf-modal-foot">
+        <button type="button" class="btn-rd btn-rd-ghost" (click)="closeArchiveModal()">{{ 'COMMON.actions.cancel' | translate }}</button>
+        <button type="button" class="btn-rd btn-rd-danger" (click)="confirmArchive()" [disabled]="loading">
+          <i class="fas fa-trash"></i> {{ 'PLT.ent.actionArchive' | translate }}
+        </button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Modal Restauration -->
+  <div *ngIf="showRestoreModal">
+    <div class="pf-modal-backdrop" (click)="closeRestoreModal()"></div>
+    <div class="pf-modal" role="dialog" aria-modal="true">
+      <div class="pf-modal-head">
+        <h3><i class="fas fa-rotate-left"></i> {{ 'PLT.ent.restoreTitle' | translate }}</h3>
+        <button type="button" class="pf-modal-close" (click)="closeRestoreModal()" [attr.aria-label]="'COMMON.actions.close' | translate">&times;</button>
+      </div>
+      <div class="pf-modal-body">
+        <p class="pf-modal-text">{{ 'PLT.ent.restoreBody' | translate: { code: selectedEntreprise?.code, nom: selectedEntreprise?.nom } }}</p>
+        <div class="pf-alert pf-alert-info">
+          <i class="fas fa-info-circle"></i>
+          <span>{{ 'PLT.ent.restoreNote' | translate }}</span>
+        </div>
+      </div>
+      <div class="pf-modal-foot">
+        <button type="button" class="btn-rd btn-rd-ghost" (click)="closeRestoreModal()">{{ 'COMMON.actions.cancel' | translate }}</button>
+        <button type="button" class="btn-rd btn-rd-success" (click)="confirmRestore()" [disabled]="loading">
+          <i class="fas fa-check"></i> {{ 'PLT.ent.actionRestore' | translate }}
+        </button>
+      </div>
+    </div>
+  </div>
+</div>

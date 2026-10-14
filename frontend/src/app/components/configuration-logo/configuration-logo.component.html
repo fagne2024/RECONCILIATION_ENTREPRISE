@@ -1,0 +1,226 @@
+<div class="configuration-page">
+  <div class="config-header">
+    <h1><i class="fas fa-image"></i> {{ 'CFG.logo.section' | translate }}</h1>
+    <p class="config-subtitle">{{ 'CFG.logo.description' | translate }}</p>
+  </div>
+
+  <div class="config-card logo-card">
+    <div class="logo-card-body">
+      <div class="logo-preview-box" [class.is-empty]="!displayLogo" [ngStyle]="displayLogo ? paddingStyle : null">
+        <img *ngIf="displayLogo" [src]="displayLogo" alt="Logo" [ngStyle]="previewStyle">
+        <div *ngIf="!displayLogo" class="logo-preview-empty">
+          <i class="fas fa-image"></i>
+          <span>{{ 'CFG.logo.none' | translate }}</span>
+        </div>
+      </div>
+
+      <div class="logo-controls">
+        <input
+          type="file"
+          #logoInput
+          hidden
+          accept="image/*,.bmp,.tif,.tiff,.ico,.heic,.heif,.svg"
+          (change)="onLogoSelected($event)">
+
+        <button type="button" class="logo-btn logo-btn-choose" (click)="logoInput.click()">
+          <i class="fas fa-folder-open"></i>
+          {{ 'CFG.logo.choose' | translate }}
+        </button>
+
+        <button
+          type="button"
+          class="logo-btn logo-btn-remove"
+          [disabled]="!logoUrl && !pendingLogo"
+          (click)="removeLogo()">
+          <i class="fas fa-trash"></i>
+          {{ 'CFG.logo.remove' | translate }}
+        </button>
+
+        <span class="logo-hint">{{ 'CFG.logo.hint' | translate }}</span>
+
+        <span class="logo-pending" *ngIf="pendingLogo">
+          <i class="fas fa-circle-notch fa-spin"></i>
+          {{ 'CFG.logo.pending' | translate }}
+        </span>
+      </div>
+    </div>
+
+    <!-- Réglages du logo -->
+    <div class="logo-settings">
+      <h3><i class="fas fa-sliders-h"></i> {{ 'CFG.logo.settings' | translate }}</h3>
+
+      <div class="settings-grid">
+        <div class="setting-field">
+          <label>
+            {{ 'CFG.logo.size' | translate }}
+            <strong>{{ settings.size }} px</strong>
+          </label>
+          <input
+            type="range"
+            min="30"
+            max="160"
+            step="2"
+            name="logoSize"
+            [(ngModel)]="settings.size">
+        </div>
+
+        <div class="setting-field">
+          <label>{{ 'CFG.logo.position' | translate }}</label>
+          <div class="align-toggle">
+            <button
+              type="button"
+              [class.active]="settings.align === 'left'"
+              (click)="settings.align = 'left'">
+              <i class="fas fa-align-left"></i>
+              {{ 'CFG.logo.alignLeft' | translate }}
+            </button>
+            <button
+              type="button"
+              [class.active]="settings.align === 'center'"
+              (click)="settings.align = 'center'">
+              <i class="fas fa-align-center"></i>
+              {{ 'CFG.logo.alignCenter' | translate }}
+            </button>
+            <button
+              type="button"
+              [class.active]="settings.align === 'right'"
+              (click)="settings.align = 'right'">
+              <i class="fas fa-align-right"></i>
+              {{ 'CFG.logo.alignRight' | translate }}
+            </button>
+          </div>
+        </div>
+
+        <div class="setting-field">
+          <label>
+            {{ 'CFG.logo.offsetY' | translate }}
+            <strong>{{ settings.offsetY >= 0 ? '+' : '' }}{{ settings.offsetY }} px</strong>
+          </label>
+          <input
+            type="range"
+            min="-20"
+            max="60"
+            step="2"
+            name="logoOffsetY"
+            [(ngModel)]="settings.offsetY">
+        </div>
+
+        <div class="setting-field setting-field--full">
+          <label>{{ 'CFG.logo.padding' | translate }}</label>
+          <div class="padding-grid">
+            <div class="padding-item">
+              <span>
+                {{ 'CFG.logo.paddingTop' | translate }}
+                <strong>{{ settings.paddingTop }} px</strong>
+              </span>
+              <input
+                type="range"
+                min="0"
+                max="60"
+                step="2"
+                name="logoPadTop"
+                [(ngModel)]="settings.paddingTop">
+            </div>
+            <div class="padding-item">
+              <span>
+                {{ 'CFG.logo.paddingRight' | translate }}
+                <strong>{{ settings.paddingRight }} px</strong>
+              </span>
+              <input
+                type="range"
+                min="0"
+                max="60"
+                step="2"
+                name="logoPadRight"
+                [(ngModel)]="settings.paddingRight">
+            </div>
+            <div class="padding-item">
+              <span>
+                {{ 'CFG.logo.paddingBottom' | translate }}
+                <strong>{{ settings.paddingBottom }} px</strong>
+              </span>
+              <input
+                type="range"
+                min="0"
+                max="60"
+                step="2"
+                name="logoPadBottom"
+                [(ngModel)]="settings.paddingBottom">
+            </div>
+            <div class="padding-item">
+              <span>
+                {{ 'CFG.logo.paddingLeft' | translate }}
+                <strong>{{ settings.paddingLeft }} px</strong>
+              </span>
+              <input
+                type="range"
+                min="0"
+                max="60"
+                step="2"
+                name="logoPadLeft"
+                [(ngModel)]="settings.paddingLeft">
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <div class="settings-actions">
+        <button
+          type="button"
+          class="logo-btn logo-btn-save"
+          [disabled]="!hasPendingChanges"
+          (click)="saveLogo()">
+          <i class="fas fa-check"></i>
+          {{ 'CFG.logo.save' | translate }}
+        </button>
+
+        <button type="button" class="logo-btn logo-btn-design" (click)="applyDesign()">
+          <i class="fas fa-palette"></i>
+          {{ 'CFG.logo.applyDesign' | translate }}
+        </button>
+
+        <button
+          type="button"
+          class="logo-btn logo-btn-reset"
+          *ngIf="themeActive"
+          (click)="resetDesign()">
+          <i class="fas fa-undo"></i>
+          {{ 'CFG.logo.resetDesign' | translate }}
+        </button>
+
+        <span class="logo-hint" *ngIf="settingsDirty && !pendingLogo">
+          {{ 'CFG.logo.pending' | translate }}
+        </span>
+      </div>
+    </div>
+
+    <!-- Couleurs du logo -->
+    <div class="logo-palette">
+      <h3><i class="fas fa-palette"></i> {{ 'CFG.logo.palette' | translate }}</h3>
+
+      <div class="palette-swatches" *ngIf="palette.length; else noPalette">
+        <button
+          type="button"
+          class="swatch"
+          *ngFor="let color of palette"
+          [style.background-color]="color"
+          [style.color]="swatchTextColor(color)"
+          (click)="copyColor(color)"
+          [title]="color">
+          {{ color }}
+        </button>
+      </div>
+
+      <ng-template #noPalette>
+        <p class="palette-empty">
+          {{ (paletteError ? 'CFG.logo.paletteError' : 'CFG.logo.paletteEmpty') | translate }}
+        </p>
+      </ng-template>
+
+      <span class="palette-copied" *ngIf="copiedHex">
+        <i class="fas fa-copy"></i>
+        {{ 'CFG.logo.colorCopied' | translate }} : {{ copiedHex }}
+      </span>
+    </div>
+  </div>
+</div>

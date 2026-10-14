@@ -1,0 +1,1073 @@
+<div class="certification-page">
+  <nav class="topnav">
+    <div class="nav-brand">
+      <div class="nav-brand-dot"></div>
+      {{ 'CS.ReconciliApp' | translate }}
+    </div>
+    <div class="nav-sep"></div>
+    <div class="nav-path">
+      <strong>{{ 'FU.Certificationdesolde' | translate }}</strong>
+      <span class="nav-badge">TRXBO ↔ OPPART</span>
+    </div>
+    <div class="nav-spacer"></div>
+    <div class="nav-actions">
+      <button type="button" class="nav-btn secondary" (click)="exportToExcel()" [disabled]="!canExport || isExportingExcel || isExportingPdf">
+        <i class="fas fa-file-excel"></i> {{ isExportingExcel ? 'Export…' : 'Exporter Excel' }}
+      </button>
+      <button type="button" class="nav-btn secondary" (click)="exportToPdf()" [disabled]="!canExport || isExportingExcel || isExportingPdf">
+        <i class="fas fa-file-pdf"></i> {{ isExportingPdf ? 'Export…' : 'Exporter PDF' }}
+      </button>
+      <button type="button" class="nav-btn secondary" (click)="startNewCertification()">
+        <i class="fas fa-file-upload"></i> {{ 'CS.Nouvellecertification' | translate }}
+      </button>
+      <button type="button" class="nav-btn primary" (click)="saveCertification()" [disabled]="isSaving || !hasResults">
+        <i class="fas fa-save"></i> {{ isSaving ? 'Enregistrement...' : 'Enregistrer' }}
+      </button>
+    </div>
+  </nav>
+
+  <div class="empty-state" *ngIf="!hasResults && !directCompenseMode">
+    <div class="empty-card">
+      <i class="fas fa-balance-scale empty-icon"></i>
+      <h2>{{ 'CS.Aucuneréconciliationtrxbooppart' | translate }}</h2>
+      <p>
+        {{ 'CS.Importezlesfichierstrxboetoppartpourlanceruneréconciliationpuiscertifiezlesoldeaveclessoldesdouvertureetdeclôture' | translate }}
+      </p>
+      <button type="button" class="cta-btn" (click)="startNewCertification()">
+        <i class="fas fa-play-circle"></i> {{ 'CS.Lancerunecertification' | translate }}
+      </button>
+    </div>
+  </div>
+
+  <ng-container *ngIf="directCompenseMode && !hasResults">
+    <div class="page-header direct-page-header">
+      <div class="ph-left">
+        <div class="ph-eyebrow"><span></span></div>
+        <h1>{{ 'CS.Réconciliationdes' | translate }} <em>{{ 'CS.Compenses' | translate }}</em></h1>
+      </div>
+      <div class="ph-right">
+        <div class="direct-compense-actions">
+          <button type="button" class="link-card" (click)="startNewCertification()">
+            <i class="fas fa-file-upload"></i> {{ 'CS.Nouvellecertification' | translate }}
+          </button>
+        </div>
+      </div>
+    </div>
+
+    <div class="content-grid content-grid-full">
+      <section class="panel compense-panel" id="compense-reconciliation-panel">
+        <div class="panel-header">
+          <h3><i class="fas fa-random"></i> {{ 'DASH.partnerDiscrepancyRate' | translate }}</h3>
+          <span class="regularisation-total" *ngIf="compenseLines.length">
+            {{ 'CS.Total' | translate }} <strong>{{ formatNumber(compenseListeAbsTotal) }}</strong>
+          </span>
+        </div>
+
+        <div class="compense-kpis">
+          <div class="compense-kpi">
+            <span class="kpi-label">{{ 'CS.Ligneschargées' | translate }}</span>
+            <strong class="kpi-value">{{ compenseLinesCount | number:'1.0-0' }}</strong>
+            <span class="kpi-sub">{{ formatNumber(compenseListeAbsTotal) }}</span>
+          </div>
+          <div class="compense-kpi" [class.is-ok]="compenseRecon.loaded && compenseKoCount === 0">
+            <span class="kpi-label">{{ 'CS.Rapprochées' | translate }}</span>
+            <strong class="kpi-value">{{ compenseOkCount | number:'1.0-0' }}</strong>
+            <span class="kpi-sub">{{ compenseMatchRate === null ? '—' : (compenseMatchRate | number:'1.0-0') + ' %' }}</span>
+          </div>
+          <div class="compense-kpi" [class.is-ko]="compenseRecon.loaded && compenseKoCount > 0">
+            <span class="kpi-label">{{ 'CS.Écarts' | translate }}</span>
+            <strong class="kpi-value">{{ compenseKoCount | number:'1.0-0' }}</strong>
+            <span class="kpi-sub">{{ compenseRecon.fileName || '—' }}</span>
+          </div>
+          <div class="compense-kpi" [class.is-zero]="compenseRecon.loaded && compenseEcartTotal === 0">
+            <span class="kpi-label">{{ 'CS.Écarttotal' | translate }}</span>
+            <strong class="kpi-value">{{ compenseRecon.loaded ? formatNumber(compenseEcartTotal) : '—' }}</strong>
+            <span class="kpi-sub">{{ compenseRecon.loaded ? compenseEcartLabel : '—' }}</span>
+          </div>
+        </div>
+
+        <p class="aggregates-hint direct-hint">
+          {{ 'CS.Chargezlalistedescompensesfichierexcelcsvpuislefichierdemontantsàcomparerlematchingestautomatiquechaquemontantcorrespondàunelignedelalisteplusieursmontantspeuventsadditionnerpouruneligne' | translate }}
+        </p>
+
+        <div class="compense-steps">
+          <div class="compense-step" [class.is-done]="compenseLinesCount > 0">
+            <div class="step-head">
+              <span class="step-num">1</span>
+              <h4><i class="fas fa-table"></i> {{ 'CS.Listedescompenses' | translate }}</h4>
+              <span class="step-state">{{ compenseListeSource === 'file' ? compenseListeFileName : (compenseListeSource === 'oppart' ? 'OPPART' : '—') }}</span>
+            </div>
+            <p class="aggregates-hint">
+              {{ 'CS.Chargezlalistedescompensesviaunfichierexcelcsvoudirectementdepuisoppartaubesoin' | translate }}
+            </p>
+            <label class="compense-file-input">
+              <input type="file" accept=".csv,.txt,.tsv,.xls,.xlsx" (change)="onCompenseListeFileSelected($event)">
+              <i class="fas fa-table"></i>
+              <span>{{ compenseListeFileName && compenseListeSource === 'file' ? compenseListeFileName : 'Charger la liste des compenses' }}</span>
+            </label>
+            <button
+              type="button"
+              class="oppart-load-btn"
+              (click)="openOppartLoadDialog()"
+              [disabled]="isLoadingOppartCompenses || isLoadingOppartCompenseFile"
+              title="{{ 'CS.Chargerlalistedescompensesetoulesmontantsderéconciliationdepuislatableoppart' | translate }}">
+              <i class="fas" [ngClass]="(isLoadingOppartCompenses || isLoadingOppartCompenseFile) ? 'fa-spinner fa-spin' : 'fa-database'"></i>
+              {{ (isLoadingOppartCompenses || isLoadingOppartCompenseFile) ? 'Chargement depuis OPPART…' : 'Charger depuis OPPART' }}
+            </button>
+            <button
+              type="button"
+              class="oppart-load-btn"
+              (click)="verifierLignesCompenses()"
+              [disabled]="isVerifyingCompenses"
+              title="{{ 'CS.Vérifierdansoppartleslignesconcernéesdelalistedescompensesparntransguetneconserverquecellesdonttoutelacorrespondanceestaustatutok' | translate }}">
+              <i class="fas" [ngClass]="isVerifyingCompenses ? 'fa-spinner fa-spin' : 'fa-magnifying-glass'"></i>
+              {{ isVerifyingCompenses ? 'Vérification…' : 'Vérifier et charger les lignes OK' }}
+            </button>
+            <div class="reco-list-meta" *ngIf="compenseListeLoaded || (compenseRecon.loaded && compenseFileSource === 'oppart')">
+              <span class="statut-badge" [class.ok]="true">{{ 'CS.OPPART' | translate }} {{ compenseLines.length | number:'1.0-0' }} {{ 'CS.Lignes' | translate }} {{ compenseRecon.amounts.length | number:'1.0-0' }} {{ 'CS.Montants' | translate }}</span>
+              <button type="button" class="link-btn" (click)="resetCompenseListe(); resetCompenseFile()">{{ 'COMMON.actions.reset' | translate }}</button>
+            </div>
+          </div>
+
+          <div class="compense-step" [class.is-done]="compenseRecon.loaded">
+            <div class="step-head">
+              <span class="step-num">2</span>
+              <h4><i class="fas fa-file-import"></i> {{ 'CS.Fichierdemontants' | translate }}</h4>
+              <span class="step-state">{{ compenseFileSource === 'file' ? compenseRecon.fileName : (compenseFileSource === 'oppart' ? 'OPPART' : '—') }}</span>
+            </div>
+            <p class="aggregates-hint">
+              {{ 'CS.Chargezunfichierexcelcsvouchargezdirectementlesmontantsdescompensesdepuisoppartaubesoinlacolonnemontantamounttransactionmontanttransactionamountestdétectéeautomatiquement' | translate }}
+            </p>
+            <label class="compense-file-input">
+              <input type="file" accept=".csv,.txt,.tsv,.xls,.xlsx" (change)="onCompenseFileSelected($event)">
+              <i class="fas fa-upload"></i>
+              <span>{{ compenseRecon.fileName && compenseFileSource === 'file' ? compenseRecon.fileName : 'Charger un fichier' }}</span>
+            </label>
+          </div>
+
+          <div class="compense-step" [class.is-done]="compenseFullyMatched">
+            <div class="step-head">
+              <span class="step-num">3</span>
+              <h4><i class="fas fa-balance-scale"></i> {{ 'CS.Résultat' | translate }}</h4>
+              <span class="step-state">{{ compenseFullyMatched ? 'OK' : (compenseRecon.loaded ? (compenseKoCount | number:'1.0-0') + ' KO' : '—') }}</span>
+            </div>
+            <div class="reco-summary">
+              <div class="reco-row"><span>{{ 'CS.Colonnedétectée' | translate }}</span><strong>{{ compenseRecon.column || '—' }}</strong></div>
+              <div class="reco-row"><span>{{ 'CS.Montantsfichier' | translate }}</span><strong>{{ compenseRecon.loaded ? (compenseRecon.amounts.length | number:'1.0-0') : '—' }}</strong></div>
+              <div class="reco-row"><span>{{ 'CS.Totalliste' | translate }}</span><strong>{{ formatNumber(compenseListeAbsTotal) }}</strong></div>
+              <div class="reco-row"><span>{{ 'CS.Totalfichier' | translate }}</span><strong>{{ compenseRecon.loaded ? formatNumber(compenseRecon.fileTotal) : '—' }}</strong></div>
+              <div class="reco-row reco-ecart">
+                <span>{{ compenseRecon.loaded ? compenseEcartLabel : '—' }}</span>
+                <strong [class.zero]="compenseRecon.loaded && compenseFileEcart === 0">{{ compenseRecon.loaded ? formatNumber(compenseFileEcart) : '—' }}</strong>
+              </div>
+              <div class="reco-counts" *ngIf="compenseRecon.loaded">
+                <span class="statut-badge ok">OK {{ compenseOkCount | number:'1.0-0' }}</span>
+                <span class="statut-badge ko">KO {{ compenseKoCount | number:'1.0-0' }}</span>
+              </div>
+
+              <div class="reco-amounts" *ngIf="compenseRecon.amounts.length">
+                <div class="reco-amounts-header">
+                  <label>
+                    <input type="checkbox" [checked]="allCompenseAmountsSelected" (change)="toggleAllCompenseAmounts($event)">
+                    <span>{{ 'ACT.selectAll' | translate }}</span>
+                  </label>
+                  <span class="reco-amounts-count">
+                    {{ selectedCompenseAmountCount | number:'1.0-0' }} / {{ compenseRecon.amounts.length | number:'1.0-0' }}
+                  </span>
+                </div>
+                <ul class="reco-amounts-list">
+                  <li *ngFor="let amount of compenseRecon.amounts; let i = index">
+                    <label>
+                      <input type="checkbox" [checked]="compenseRecon.selected[i]" (change)="onCompenseAmountToggle(i, $event)">
+                      <span class="reco-amount-value">{{ formatNumber(amount) }}</span>
+                      <span class="reco-amount-extra" *ngFor="let col of compenseRecon.extraColumns; let c = index">
+                        <em>{{ col }} :</em> {{ compenseRecon.extraValues[i][c] || '—' }}
+                      </span>
+                    </label>
+                  </li>
+                </ul>
+              </div>
+
+              <button type="button" class="link-btn" *ngIf="compenseRecon.loaded" (click)="resetCompenseFile()">{{ 'COMMON.actions.reset' | translate }}</button>
+            </div>
+          </div>
+        </div>
+
+        <div class="compense-tables" #directCompenseTables>
+          <div class="compense-table-col">
+            <h4><i class="fas fa-table"></i> {{ 'CS.Listedescompenses' | translate }}</h4>
+            <table class="aggregates-table compense-table" *ngIf="compenseLines.length; else noCompenseDirect">
+              <thead>
+                <tr>
+                  <th>{{ 'TBL.guTransactionNumber' | translate }}</th>
+                  <th>{{ 'TBL.date' | translate }}</th>
+                  <th>{{ 'TBL.agency' | translate }}</th>
+                  <th>{{ 'CS.Montantoppart' | translate }}</th>
+                  <th *ngIf="compenseRecon.loaded">{{ 'TBL.status' | translate }}</th>
+                </tr>
+              </thead>
+              <tbody>
+                <tr *ngFor="let line of compenseLines; let i = index">
+                  <td class="gu-cell">{{ line.numeroTransGu || '—' }}</td>
+                  <td class="date-cell">{{ line.date || '—' }}</td>
+                  <td>{{ line.agence || '—' }}</td>
+                  <td class="volume">{{ line.montant | number:'1.0-0' }}</td>
+                  <td *ngIf="compenseRecon.loaded">
+                    <span class="statut-badge"
+                          [class.ok]="isCompenseMontantMatchedAt(i)"
+                          [class.ko]="!isCompenseMontantMatchedAt(i)">
+                      {{ isCompenseMontantMatchedAt(i) ? 'OK' : 'KO' }}
+                    </span>
+                  </td>
+                </tr>
+              </tbody>
+              <tfoot>
+                <tr>
+                  <td colspan="3"><strong>{{ 'CS.Totalcompense' | translate }}</strong></td>
+                  <td class="volume"><strong>{{ formatNumber(compenseListeAbsTotal) }}</strong></td>
+                  <td *ngIf="compenseRecon.loaded"></td>
+                </tr>
+              </tfoot>
+            </table>
+            <ng-template #noCompenseDirect>
+              <p class="aggregates-hint empty-compense">{{ 'CS.Aucunelignedecompensechargéeimportezlalistedescompensescidessus' | translate }}</p>
+            </ng-template>
+          </div>
+
+          <div class="compense-table-col">
+            <div class="fichier-block-header">
+              <h4><i class="fas fa-file-import"></i> {{ 'CS.Tableaudufichier' | translate }} <span class="reco-file-name">{{ compenseRecon.fileName }}</span></h4>
+              <div class="fichier-block-actions" *ngIf="compenseRecon.loaded && compenseRecon.amounts.length">
+                <button type="button" class="cta-btn sm" (click)="exportCompenseRecoPdf()" [disabled]="isExportingPdf">
+                  <i class="fas fa-file-pdf"></i>
+                  {{ isExportingPdf ? 'Export en cours…' : 'Exporter PDF' }}
+                </button>
+                <button type="button" class="cta-btn sm" (click)="exportCompenseRecoExcel()" [disabled]="isExportingExcel">
+                  <i class="fas fa-file-excel"></i>
+                  {{ isExportingExcel ? 'Export en cours…' : 'Exporter Excel' }}
+                </button>
+              </div>
+            </div>
+
+            <ng-container *ngIf="compenseRecon.loaded && compenseRecon.amounts.length; else noCompenseFileDirect">
+              <div class="verif-compenses" *ngIf="verifCompenses.length">
+              <div class="verif-compenses-bilan">
+                <span class="verif-badge ok">{{ verifCompensesOk }} {{ 'CS.Austatutok' | translate }}</span>
+                <span class="verif-badge warn" *ngIf="verifCompensesEnCours">{{ verifCompensesEnCours }} {{ 'CS.Encours' | translate }}</span>
+                <span class="verif-badge ko" *ngIf="verifCompensesIntrouvables">{{ verifCompensesIntrouvables }} {{ 'CS.Introuvables' | translate }}</span>
+              </div>
+              <table class="verif-compenses-table" *ngIf="verifCompensesProblemes.length">
+                <thead>
+                  <tr>
+                    <th>{{ 'TBL.guTransactionNumber' | translate }}</th>
+                    <th>{{ 'TBL.amount' | translate }}</th>
+                    <th>{{ 'TBL.date' | translate }}</th>
+                    <th>{{ 'TBL.client' | translate }}</th>
+                    <th>{{ 'CS.Constat' | translate }}</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  <tr *ngFor="let r of verifCompensesProblemes">
+                    <td>{{ r.numeroTransGu || '—' }}</td>
+                    <td>{{ r.montant != null ? (r.montant | number:'1.0-2') : '—' }}</td>
+                    <td>{{ r.dateOperation ? formatDateCell(r.dateOperation) : '—' }}</td>
+                    <td>{{ r.client || '—' }}</td>
+                    <td [class.text-danger]="!r.trouve">
+                      {{ r.trouve ? ('Statut ' + r.statut + ' sur la correspondance' + (r.token ? ' ' + r.token : '')) : r.motif }}
+                    </td>
+                  </tr>
+                </tbody>
+              </table>
+            </div>
+
+              <table class="aggregates-table compense-table fichier-table">
+                <thead>
+                  <tr>
+                    <th>{{ 'CS.N' | translate }}</th>
+                    <th>{{ 'TBL.amount' | translate }}</th>
+                    <th *ngFor="let col of compenseRecon.extraColumns">{{ col }}</th>
+                    <th>{{ 'TBL.status' | translate }}</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  <tr *ngFor="let amount of compenseRecon.amounts; let i = index">
+                    <td>{{ i + 1 }}</td>
+                    <td class="volume">{{ formatNumber(amount) }}</td>
+                    <td *ngFor="let col of compenseRecon.extraColumns; let c = index">{{ compenseRecon.extraValues[i][c] || '—' }}</td>
+                    <td>
+                      <span class="statut-badge"
+                            [class.ok]="isCompenseFileAmountMatchedAt(i)"
+                            [class.ko]="!isCompenseFileAmountMatchedAt(i)">
+                        {{ isCompenseFileAmountMatchedAt(i) ? 'OK' : 'KO' }}
+                      </span>
+                    </td>
+                  </tr>
+                </tbody>
+                <tfoot>
+                  <tr>
+                    <td colspan="{{ 1 + compenseRecon.extraColumns.length }}"><strong>{{ 'CS.Totalfichiersélectionné' | translate }}</strong></td>
+                    <td class="volume"><strong>{{ formatNumber(compenseRecon.fileTotal) }}</strong></td>
+                    <td></td>
+                  </tr>
+                </tfoot>
+              </table>
+            </ng-container>
+
+            <ng-template #noCompenseFileDirect>
+              <p class="aggregates-hint empty-compense">{{ 'CS.Aucunfichiermontantschargé' | translate }}</p>
+            </ng-template>
+          </div>
+        </div>
+      </section>
+    </div>
+  </ng-container>
+
+  <ng-container *ngIf="hasResults && computed">
+    <div class="page-header">
+      <div class="ph-left">
+        <div class="ph-eyebrow">
+          <span></span>
+          <input
+            class="title-input"
+            type="text"
+            [(ngModel)]="reconciliationTitle"
+            maxlength="80"
+            placeholder="{{ 'CS.Titredelaréconciliation' | translate }}"
+            title="Titre utilisé dans les exports Excel et PDF"
+          />
+        </div>
+        <h1>{{ 'CS.Certificationde' | translate }} <em>{{ 'CS.Solde' | translate }}</em></h1>
+      </div>
+      <div class="ph-right">
+        <div class="kpi-strip">
+          <div class="kpi-item">
+            <span class="kpi-label">{{ 'TBL.matches' | translate }}</span>
+            <span class="kpi-value">{{ computed.totals.matches | number:'1.0-0' }}</span>
+          </div>
+          <div class="kpi-sep"></div>
+          <div class="kpi-item">
+            <span class="kpi-label">{{ 'NAV.ecartBo' | translate }}</span>
+            <span class="kpi-value warn">{{ computed.totals.boOnly | number:'1.0-0' }}</span>
+          </div>
+          <div class="kpi-sep"></div>
+          <div class="kpi-item">
+            <span class="kpi-label">{{ 'NAV.ecartPartner' | translate }}</span>
+            <span class="kpi-value warn">{{ computed.totals.partnerOnly | number:'1.0-0' }}</span>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <div class="content-grid">
+      <section class="panel solde-panel">
+        <div class="panel-header">
+          <h3><i class="fas fa-wallet"></i> {{ 'CS.Soldesdecertification' | translate }}</h3>
+          <button type="button" class="link-btn" (click)="applyOppartSuggestedSoldes()"
+                  *ngIf="computed.soldeOuvertureOppart != null || computed.soldeClotureOppart != null">
+            {{ 'CS.Reprendredepuisoppart' | translate }}
+          </button>
+        </div>
+
+        <div class="form-row">
+          <div class="field">
+            <label for="numeroCompte">{{ 'TBL.accountNumber' | translate }}</label>
+            <input id="numeroCompte" type="text" [(ngModel)]="numeroCompte" placeholder="{{ 'CS.Ex77123456789' | translate }}">
+          </div>
+        </div>
+
+        <div class="form-row two-cols">
+          <div class="field">
+            <label for="dateCertificationDe">{{ 'CS.Périodedu' | translate }}</label>
+            <div class="boundary">
+              <input id="dateCertificationDe" type="date" [(ngModel)]="dateCertificationDe" (change)="onBoundaryChange()">
+              <input id="heureOuverture" type="time" step="1" [(ngModel)]="heureOuverture" (change)="onBoundaryChange()"
+                     [attr.aria-label]="'CS.HeureOuverture' | translate">
+            </div>
+            <small class="hint">{{ 'CS.Soldedouvertureà000000' | translate }}</small>
+          </div>
+          <div class="field">
+            <label for="dateCertificationAu">{{ 'CS.Périodeau' | translate }}</label>
+            <div class="boundary">
+              <input id="dateCertificationAu" type="date" [(ngModel)]="dateCertificationAu" (change)="onBoundaryChange()">
+              <input id="heureCloture" type="time" step="1" [(ngModel)]="heureCloture" (change)="onBoundaryChange()"
+                     [attr.aria-label]="'CS.HeureCloture' | translate">
+            </div>
+            <small class="hint">{{ 'CS.Soldedeclôtureà235959' | translate }}</small>
+          </div>
+        </div>
+
+        <div class="form-row two-cols">
+          <div class="field">
+            <label for="soldeOuverture">{{ 'CPT.Soldedouverture' | translate }}{{ formatDateTimeDe() || '—' }})</label>
+            <input id="soldeOuverture" type="number" [(ngModel)]="soldeOuverture" (ngModelChange)="onSoldeOuvertureChange()" placeholder="0">
+            <small *ngIf="computed.soldeOuvertureOppart != null" class="hint">
+              {{ 'CS.Suggestionoppart' | translate }} {{ formatNumber(computed.soldeOuvertureOppart) }}
+            </small>
+          </div>
+          <div class="field">
+            <label for="soldeCloture" class="label-cloture">{{ 'CPT.Soldedeclôture' | translate }}{{ formatDateTimeAu() || '—' }})</label>
+            <input id="soldeCloture" type="number" [(ngModel)]="soldeCloture" (ngModelChange)="onSoldeClotureChange()" placeholder="0" class="input-cloture">
+            <small *ngIf="computed.soldeClotureOppart != null" class="hint">
+              {{ 'CS.Suggestionoppart' | translate }} {{ formatNumber(computed.soldeClotureOppart) }}
+            </small>
+          </div>
+        </div>
+
+        <p *ngIf="computed.soldesHorsPeriode" class="soldes-hors-periode">
+          <i class="fas fa-triangle-exclamation"></i>
+          {{ 'CS.Aucuneligneoppartdanslapériodelessoldesproposésproviennentdelapremièreetdeladernièrelignedufichierhorspériode' | translate }}
+        </p>
+
+        <div class="derived-cards">
+          <div class="derived-card">
+            <span class="derived-label">{{ 'TBL.variation' | translate }}</span>
+            <span class="derived-value" [class.negative]="variation != null && variation < 0">
+              {{ formatNumber(variation) }}
+            </span>
+            <span class="derived-formula">{{ 'CS.Clôtureouverture' | translate }}</span>
+          </div>
+          <div class="derived-card">
+            <span class="derived-label">{{ 'CS.Mouvementnetoppart' | translate }}</span>
+            <span class="derived-value">{{ formatNumber(computed.mouvementNetOppart) }}</span>
+            <span class="derived-formula">{{ 'CS.Montantsfichieroppartfichiercomplet' | translate }}</span>
+          </div>
+          <div class="derived-card" *ngIf="computed.fraisAttendu != null">
+            <span class="derived-label">{{ 'CS.Fraisattendu' | translate }}</span>
+            <span class="derived-value">{{ formatNumber(computed.fraisAttendu) }}</span>
+            <span class="derived-formula">{{ 'CS.Volumeservice×configuré' | translate }}</span>
+          </div>
+          <div class="derived-card highlight" [class.alert]="ecartCertification != null && ecartCertification !== 0">
+            <span class="derived-label">{{ 'CS.Écartmouvement' | translate }}</span>
+            <span class="derived-value">{{ formatNumber(ecartCertification) }}</span>
+            <span class="derived-formula">{{ 'CS.Variationmouvement' | translate }}</span>
+          </div>
+          <div class="derived-card highlight" *ngIf="soldeClotureTheorique != null" [class.alert]="soldeClotureTheorique !== soldeCloture">
+            <span class="derived-label">{{ 'CS.Soldedeclôturethéorique' | translate }}</span>
+            <span class="derived-value">{{ formatNumber(soldeClotureTheorique) }}</span>
+            <span class="derived-formula">{{ 'CS.Clôtureécartdecertification' | translate }}</span>
+          </div>
+        </div>
+
+        <div class="panel-actions">
+          <button type="button" class="secondary-btn" (click)="recalculerPeriode()" [disabled]="!hasResults">
+            <i class="fas fa-calculator"></i> {{ 'CS.Recalculer' | translate }}
+          </button>
+          <button type="button" class="secondary-btn" (click)="loadSavedSoldes()" [disabled]="isLoadingSoldes">
+            <i class="fas fa-database"></i> {{ 'CS.Chargersoldesenregistrés' | translate }}
+          </button>
+        </div>
+      </section>
+
+      <section class="panel aggregates-panel" #aggregatesPanel>
+        <div class="panel-header">
+          <h3><i class="fas fa-chart-pie"></i> {{ 'CS.Agrégatsdesécarts' | translate }}</h3>
+          <span class="aggregates-loading" *ngIf="isLoadingDetail"><i class="fas fa-spinner fa-spin"></i> {{ 'CS.Chargementdudétail' | translate }}</span>
+          <span class="regularisation-total" *ngIf="computed.regularisationDetails.length">
+            {{ 'CS.Totalàrégulariser' | translate }} <strong>{{ computed.totalRegularisation | number:'1.0-0' }}</strong>
+          </span>
+          <span class="aggregates-actions">
+            <button type="button" class="btn-export-aggregates" (click)="exportEcartAggregates()"
+                    [disabled]="isExportingAggregates || isLoadingDetail">
+              <i class="fas fa-file-excel"></i> {{ isExportingAggregates ? 'Export…' : 'Excel' }}
+            </button>
+            <button type="button" class="btn-export-aggregates pdf" (click)="exportEcartAggregatesPdf()"
+                    [disabled]="isExportingAggregatesPdf || isLoadingDetail">
+              <i class="fas fa-file-pdf"></i> {{ isExportingAggregatesPdf ? 'Export…' : 'PDF' }}
+            </button>
+          </span>
+        </div>
+
+        <p class="aggregates-hint">
+          {{ 'CS.TSOPmontantfraisécartboécartmontantoppartécartpartenairetrxsffraisuniquementécartpartenaire' | translate }}
+        </p>
+
+        <table class="aggregates-table">
+          <thead>
+            <tr>
+              <th>{{ 'COMMON.actions.type' | translate }}</th>
+              <th>{{ 'COMMON.actions.count' | translate }}</th>
+              <th>{{ 'TBL.variation' | translate }}</th>
+              <th>{{ 'TBL.fees' | translate }}</th>
+              <th>{{ 'CS.Àrégulariser' | translate }}</th>
+            </tr>
+          </thead>
+          <tbody>
+            <ng-container *ngFor="let row of computed.aggregates">
+              <tr>
+                <td>
+                  <span class="type-badge" [attr.data-code]="row.code" [attr.data-category]="row.category">{{ row.label }}</span>
+                </td>
+                <td>{{ row.count | number:'1.0-0' }}</td>
+                <td class="volume">{{ row.volume | number:'1.0-0' }}</td>
+                <td class="volume">{{ row.frais ? (row.frais | number:'1.0-0') : '—' }}</td>
+                <td class="volume regularisation">
+                  {{ row.montantARegulariser ? (row.montantARegulariser | number:'1.0-0') : '—' }}
+                </td>
+              </tr>
+              <tr *ngIf="hasRegularisationDetails(row)" class="aggregate-details-row">
+                <td colspan="5">
+                  <div class="detail-part-head">
+                    <span class="detail-part-title">
+                      {{ 'CS.Détail' | translate }} {{ row.label }}
+                      <em>{{ getAggregateRangeLabel(row) }}</em>
+                    </span>
+                    <span class="detail-part-actions">
+                      <button type="button" class="btn-export-part"
+                              (click)="exportAggregatePart(row)"
+                              [disabled]="exportingAggregateCode === row.code || isLoadingDetail"
+                              [title]="'Exporter les ' + row.details.length + ' ligne(s) de ' + row.label + ' au format Excel'">
+                        <i class="fas" [ngClass]="exportingAggregateCode === row.code ? 'fa-spinner fa-spin' : 'fa-file-excel'"></i>
+                        {{ 'COMMON.actions.export' | translate }}
+                      </button>
+                      <button type="button" class="btn-page"
+                              (click)="setAggregatePage(row, getAggregatePage(row) - 1)"
+                              [disabled]="getAggregatePage(row) <= 1"
+                              title="{{ 'PAG.previousPage' | translate }}">
+                        <i class="fas fa-chevron-left"></i>
+                      </button>
+                      <span class="btn-page-label">{{ getAggregatePage(row) }} / {{ getAggregatePageCount(row) }}</span>
+                      <button type="button" class="btn-page"
+                              (click)="setAggregatePage(row, getAggregatePage(row) + 1)"
+                              [disabled]="getAggregatePage(row) >= getAggregatePageCount(row)"
+                              title="{{ 'PAG.nextPage' | translate }}">
+                        <i class="fas fa-chevron-right"></i>
+                      </button>
+                    </span>
+                  </div>
+                  <table class="details-table">
+                    <thead>
+                      <tr>
+                        <th>{{ 'TBL.guTransactionNumber' | translate }}</th>
+                        <th>{{ 'TBL.service' | translate }}</th>
+                        <th>{{ 'TBL.agency' | translate }}</th>
+                        <th>{{ 'CS.Montantoppart' | translate }}</th>
+                        <th>{{ 'CS.Montanttrxbo' | translate }}</th>
+                        <th>{{ 'TBL.fees' | translate }}</th>
+                        <th>{{ 'TBL.commission' | translate }}</th>
+                        <th>{{ 'CS.Àrégulariser' | translate }}</th>
+                        <th>{{ 'TBL.comment' | translate }}</th>
+                      </tr>
+                    </thead>
+                    <tbody>
+                      <tr *ngFor="let line of getAggregateVisibleDetails(row)">
+                        <td class="gu-cell">{{ line.numeroTransGu || '—' }}</td>
+                        <td>{{ line.service || '—' }}</td>
+                        <td>{{ line.agence || '—' }}</td>
+                        <td class="volume">{{ line.montant | number:'1.0-0' }}</td>
+                        <td class="volume">{{ line.montantBo != null ? (line.montantBo | number:'1.0-0') : '—' }}</td>
+                        <td class="volume">{{ line.frais ? (line.frais | number:'1.0-0') : '—' }}</td>
+                        <td class="volume">{{ line.commission ? (line.commission | number:'1.0-0') : '—' }}</td>
+                        <td class="volume regularisation"><strong>{{ line.montantARegulariser | number:'1.0-0' }}</strong></td>
+                        <td>{{ line.commentaire || '—' }}</td>
+                      </tr>
+                    </tbody>
+                  </table>
+                </td>
+              </tr>
+            </ng-container>
+          </tbody>
+          <tfoot>
+            <tr>
+              <td><strong>{{ 'CS.Variationcorrespondances' | translate }}</strong></td>
+              <td>{{ computed.totals.matches | number:'1.0-0' }}</td>
+              <td class="volume"><strong>{{ computed.volumeMatches | number:'1.0-0' }}</strong></td>
+              <td colspan="2"></td>
+            </tr>
+          </tfoot>
+        </table>
+
+        <div class="regularisation-control" *ngIf="computed.regularisationDetails.length">
+          <span class="rc-label">{{ 'CS.Contrôletotalàrégulariserécartpartenairehorscompensergfraistsoptrxsf' | translate }}</span>
+          <span class="rc-breakdown">
+            <span>{{ formatNumber(totalEcartPartenaire) }}</span>
+            <span class="rc-op">+</span>
+            <span>{{ formatNumber(totalRgFrais) }}</span>
+            <span class="rc-op">+</span>
+            <span>{{ formatNumber(totalTsop) }}</span>
+            <span class="rc-op">+</span>
+            <span>{{ formatNumber(totalTrxSf) }}</span>
+            <span class="rc-op">=</span>
+            <strong class="rc-result">{{ formatNumber(computed.totalRegularisation) }}</strong>
+          </span>
+        </div>
+
+        <div class="quick-links">
+          <button type="button" class="link-card" (click)="goToMatches()">
+            <i class="fas fa-check-double"></i>{{ 'TBL.matches' | translate }}</button>
+          <button type="button" class="link-card" (click)="goToEcartBo()">
+            <i class="fas fa-exclamation-circle"></i> {{ 'NAV.ecartBo' | translate }}
+          </button>
+          <button type="button" class="link-card" (click)="goToEcartPartner()">
+            <i class="fas fa-exclamation-triangle"></i> {{ 'NAV.ecartPartner' | translate }}
+          </button>
+        </div>
+      </section>
+    </div>
+
+    <section class="panel compense-panel" id="compense-reconciliation-panel">
+      <div class="panel-header">
+        <h3><i class="fas fa-random"></i> {{ 'DASH.partnerDiscrepancyRate' | translate }}</h3>
+        <span class="regularisation-total" *ngIf="compenseLines.length">
+          {{ 'CS.Total' | translate }} <strong>{{ formatNumber(compenseListeAbsTotal) }}</strong>
+        </span>
+        <span class="panel-header-actions">
+          <button type="button" class="link-btn" (click)="toggleCompenseSection()">
+            <i class="fas" [ngClass]="compenseSectionVisible ? 'fa-eye-slash' : 'fa-eye'"></i>
+            {{ compenseSectionVisible ? 'Masquer' : 'Afficher' }} {{ 'CS.Compense' | translate }}
+          </button>
+        </span>
+      </div>
+
+      <div class="compense-layout" *ngIf="compenseSectionVisible">
+        <div class="compense-list">
+          <p class="aggregates-hint">{{ 'CS.Lignesdécartpartenaireidentifiéescommeopérationsdecompensationcompenseclientcompensefournisseur' | translate }}</p>
+          <table class="aggregates-table compense-table" *ngIf="compenseLines.length; else noCompense">
+            <thead>
+              <tr>
+                <th>{{ 'TBL.guTransactionNumber' | translate }}</th>
+                <th>{{ 'TBL.date' | translate }}</th>
+                <th>{{ 'TBL.service' | translate }}</th>
+                <th>{{ 'TBL.agency' | translate }}</th>
+                <th>{{ 'CS.Montantoppart' | translate }}</th>
+                <th *ngIf="compenseRecon.loaded">{{ 'TBL.status' | translate }}</th>
+              </tr>
+            </thead>
+            <tbody>
+              <tr *ngFor="let line of compenseLines; let i = index">
+                <td class="gu-cell">{{ line.numeroTransGu || '—' }}</td>
+                <td class="date-cell">{{ line.date || '—' }}</td>
+                <td>{{ line.service || '—' }}</td>
+                <td>{{ line.agence || '—' }}</td>
+                <td class="volume">{{ line.montant | number:'1.0-0' }}</td>
+                <td *ngIf="compenseRecon.loaded">
+                  <span class="statut-badge"
+                        [class.ok]="isCompenseMontantMatchedAt(i)"
+                        [class.ko]="!isCompenseMontantMatchedAt(i)">
+                    {{ isCompenseMontantMatchedAt(i) ? 'OK' : 'KO' }}
+                  </span>
+                </td>
+              </tr>
+            </tbody>
+            <tfoot>
+              <tr>
+                <td colspan="4"><strong>{{ 'CS.Totalcompense' | translate }}</strong></td>
+                <td class="volume"><strong>{{ formatNumber(compenseListeAbsTotal) }}</strong></td>
+                <td *ngIf="compenseRecon.loaded"></td>
+              </tr>
+            </tfoot>
+          </table>
+          <ng-template #noCompense>
+            <p class="aggregates-hint empty-compense">{{ 'CS.Aucunelignedecompensedétectée' | translate }}</p>
+          </ng-template>
+        </div>
+
+        <div class="compense-reco">
+          <h4><i class="fas fa-table"></i> {{ 'CS.Listedescompenses' | translate }}</h4>
+          <p class="aggregates-hint">
+            {{ 'CS.Chargezlalistedescompensesviaunfichierexcelcsvoudirectementdepuisoppartaubesoinsanschargementlalistecalculéeestutilisée' | translate }}
+          </p>
+          <label class="compense-file-input">
+            <input type="file" accept=".csv,.txt,.tsv,.xls,.xlsx" (change)="onCompenseListeFileSelected($event)">
+            <i class="fas fa-table"></i>
+            <span>{{ compenseListeFileName && compenseListeSource === 'file' ? compenseListeFileName : 'Charger la liste des compenses' }}</span>
+          </label>
+          <button
+            type="button"
+            class="oppart-load-btn"
+            (click)="openOppartLoadDialog()"
+            [disabled]="isLoadingOppartCompenses || isLoadingOppartCompenseFile"
+            title="{{ 'CS.Chargerlalistedescompensesetoulesmontantsderéconciliationdepuislatableoppart' | translate }}">
+            <i class="fas" [ngClass]="(isLoadingOppartCompenses || isLoadingOppartCompenseFile) ? 'fa-spinner fa-spin' : 'fa-database'"></i>
+            {{ (isLoadingOppartCompenses || isLoadingOppartCompenseFile) ? 'Chargement depuis OPPART…' : 'Charger depuis OPPART' }}
+          </button>
+          <button
+            type="button"
+            class="oppart-load-btn"
+            (click)="verifierLignesCompenses()"
+            [disabled]="isVerifyingCompenses"
+            title="{{ 'CS.Vérifierdansoppartleslignesconcernéesdelalistedescompensesparntransguetneconserverquecellesdonttoutelacorrespondanceestaustatutok' | translate }}">
+            <i class="fas" [ngClass]="isVerifyingCompenses ? 'fa-spinner fa-spin' : 'fa-magnifying-glass'"></i>
+            {{ isVerifyingCompenses ? 'Vérification…' : 'Vérifier et charger les lignes OK' }}
+          </button>
+          <div class="reco-list-meta" *ngIf="compenseListeLoaded || (compenseRecon.loaded && compenseFileSource === 'oppart')">
+            <span class="statut-badge ok">{{ 'CS.OPPART' | translate }} {{ compenseLines.length | number:'1.0-0' }} {{ 'CS.Lignes' | translate }} {{ compenseRecon.amounts.length | number:'1.0-0' }} {{ 'CS.Montants' | translate }}</span>
+            <button type="button" class="link-btn" (click)="resetCompenseListe(); resetCompenseFile()">{{ 'CS.Utiliserlalistecalculée' | translate }}</button>
+          </div>
+
+          <hr class="reco-sep">
+
+          <h4><i class="fas fa-file-import"></i> {{ 'CS.Réconciliationfichier' | translate }}</h4>
+          <p class="aggregates-hint">
+            {{ 'CS.Chargezunfichierexcelcsvouchargezdirectementlesmontantsdescompensesdepuisoppartaubesoinlacolonnemontantamounttransactionmontanttransactionamountestdétectéeautomatiquement' | translate }}
+          </p>
+          <label class="compense-file-input">
+            <input type="file" accept=".csv,.txt,.tsv,.xls,.xlsx" (change)="onCompenseFileSelected($event)">
+            <i class="fas fa-upload"></i>
+            <span>{{ compenseRecon.fileName && compenseFileSource === 'file' ? compenseRecon.fileName : 'Charger un fichier' }}</span>
+          </label>
+          <div class="reco-list-meta" *ngIf="compenseRecon.loaded && compenseFileSource === 'oppart'">
+            <span class="statut-badge ok">{{ 'CS.Montantschargésdepuisoppart' | translate }} {{ compenseRecon.amounts.length | number:'1.0-0' }}</span>
+          </div>
+
+          <div class="reco-summary" *ngIf="compenseRecon.loaded">
+            <div class="reco-row"><span>{{ 'CS.Colonnedétectée' | translate }}</span><strong>{{ compenseRecon.column }}</strong></div>
+            <div class="reco-row"><span>{{ 'CS.Montantsfichier' | translate }}</span><strong>{{ compenseRecon.amounts.length | number:'1.0-0' }}</strong></div>
+            <div class="reco-row"><span>{{ 'CS.Totalliste' | translate }}</span><strong>{{ formatNumber(compenseListeAbsTotal) }}</strong></div>
+            <div class="reco-row"><span>{{ 'CS.Totalfichier' | translate }}</span><strong>{{ formatNumber(compenseRecon.fileTotal) }}</strong></div>
+            <div class="reco-row reco-ecart">
+              <span>{{ compenseEcartLabel }}</span>
+              <strong [class.zero]="compenseFileEcart === 0">{{ formatNumber(compenseFileEcart) }}</strong>
+            </div>
+            <div class="reco-counts">
+              <span class="statut-badge ok">OK {{ compenseOkCount | number:'1.0-0' }}</span>
+              <span class="statut-badge ko">KO {{ compenseKoCount | number:'1.0-0' }}</span>
+            </div>
+
+            <div class="reco-amounts" *ngIf="compenseRecon.amounts.length">
+              <div class="reco-amounts-header">
+                <label>
+                  <input type="checkbox" [checked]="allCompenseAmountsSelected" (change)="toggleAllCompenseAmounts($event)">
+                  <span>{{ 'ACT.selectAll' | translate }}</span>
+                </label>
+                <span class="reco-amounts-count">
+                  {{ selectedCompenseAmountCount | number:'1.0-0' }} / {{ compenseRecon.amounts.length | number:'1.0-0' }}
+                </span>
+              </div>
+              <ul class="reco-amounts-list">
+                <li *ngFor="let amount of compenseRecon.amounts; let i = index">
+                  <label>
+                    <input type="checkbox" [checked]="compenseRecon.selected[i]" (change)="onCompenseAmountToggle(i, $event)">
+                    <span class="reco-amount-value">{{ formatNumber(amount) }}</span>
+                    <span class="reco-amount-extra" *ngFor="let col of compenseRecon.extraColumns; let c = index">
+                      <em>{{ col }} :</em> {{ compenseRecon.extraValues[i][c] || '—' }}
+                    </span>
+                  </label>
+                </li>
+              </ul>
+            </div>
+
+            <button type="button" class="link-btn" (click)="resetCompenseFile()">{{ 'COMMON.actions.reset' | translate }}</button>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <section class="panel summary-panel">
+      <div class="panel-header">
+        <h3><i class="fas fa-info-circle"></i> {{ 'CS.Synthèseréconciliation' | translate }}</h3>
+      </div>
+      <div class="summary-grid">
+        <div class="summary-item">
+          <span>{{ 'CS.Lignesbotrxbo' | translate }}</span>
+          <strong>{{ computed.totals.totalBoRecords | number:'1.0-0' }}</strong>
+        </div>
+        <div class="summary-item">
+          <span>{{ 'CS.Lignespartenaireoppart' | translate }}</span>
+          <strong>{{ computed.totals.totalPartnerRecords | number:'1.0-0' }}</strong>
+        </div>
+        <div class="summary-item">
+          <span>{{ 'CS.Montantécartsbo' | translate }}</span>
+          <strong>{{ computed.volumeEcartBo | number:'1.0-0' }}</strong>
+        </div>
+        <div class="summary-item">
+          <span>{{ 'CS.Montantécartspartenaire' | translate }}</span>
+          <strong>{{ computed.volumeEcartPartner | number:'1.0-0' }}</strong>
+        </div>
+        <div class="summary-item">
+          <span>{{ 'CS.Écartdecertification' | translate }}</span>
+          <strong class="text-danger">{{ formatNumber(ecartCertificationSynthese) }}</strong>
+        </div>
+      </div>
+      <div class="summary-subpanel" *ngIf="computed.oppartOperationBreakdown.hasData">
+        <div class="summary-subheader">
+          <h4><i class="fas fa-tags"></i> {{ 'CS.Typesdopérations' | translate }}</h4>
+        </div>
+        <div class="summary-grid">
+          <div class="summary-item">
+            <span>{{ 'CS.Variationimpactcomptegeneral' | translate }}</span>
+            <strong>{{ computed.oppartOperationBreakdown.volume | number:'1.0-0' }}</strong>
+          </div>
+          <div class="summary-item">
+            <span>{{ 'CS.Fraisfraistransaction' | translate }}</span>
+            <strong>{{ computed.oppartOperationBreakdown.frais | number:'1.0-0' }}</strong>
+          </div>
+          <div class="summary-item" *ngIf="computed.fraisAttendu != null">
+            <span class="text-danger">{{ 'CS.Écartfraisattendufacturé' | translate }}</span>
+            <strong class="text-danger">{{ formatNumber(Math.abs(computed.fraisAttendu) - Math.abs(computed.oppartOperationBreakdown.frais)) }}</strong>
+          </div>
+          <div class="summary-item" *ngFor="let t of computed.oppartOperationBreakdown.otherTypes">
+            <span>{{ t.type }}</span>
+            <strong>{{ t.volume | number:'1.0-0' }}</strong>
+          </div>
+        </div>
+      </div>
+      <div class="summary-subpanel" *ngIf="computed.trxboServiceBreakdown.hasData">
+        <div class="summary-subheader">
+        <h4><i class="fas fa-server"></i> {{ 'CS.TRXBOparserviceetclient' | translate }}</h4>
+      </div>
+      <table class="summary-service-table">
+        <thead>
+        <tr><th>{{ 'TBL.service' | translate }}</th><th>{{ 'TBL.client' | translate }}</th><th>{{ 'COMMON.actions.count' | translate }}</th><th>{{ 'TBL.volume' | translate }}</th><th>{{ 'TBL.fees' | translate }}</th><th>{{ 'CS.Montantfrais' | translate }}</th></tr>
+        </thead>
+        <tbody>
+        <tr *ngFor="let s of computed.trxboServiceBreakdown.rows">
+          <td>{{ s.service }}</td>
+          <td>{{ s.agence }}</td>
+          <td>{{ s.count | number:'1.0-0' }}</td>
+          <td>{{ s.volume | number:'1.0-0' }}</td>
+          <td [title]="s.fraisConfigExact ? 'Configuration /frais du couple service + client' : 'Aucune configuration /frais pour ce couple service + client'">
+            {{ s.frais ? (s.frais | number:'1.0-2') : '-' }}
+            <i class="fas fa-exclamation-triangle text-warning" *ngIf="!s.fraisConfigExact"></i>
+          </td>
+          <td>{{ s.montantFrais ? (s.montantFrais | number:'1.0-0') : '-' }}</td>
+        </tr>
+        <tr class="summary-service-total" *ngIf="computed.trxboServiceBreakdown.rows.length > 1">
+          <td><strong>{{ 'COMMON.actions.total' | translate }}</strong></td>
+          <td></td>
+          <td><strong>{{ computed.trxboServiceBreakdown.totalCount | number:'1.0-0' }}</strong></td>
+              <td><strong>{{ computed.trxboServiceBreakdown.totalVolume | number:'1.0-0' }}</strong></td>
+              <td></td>
+              <td><strong>{{ computed.trxboServiceBreakdown.totalMontantFrais | number:'1.0-0' }}</strong></td>
+            </tr>
+          </tbody>
+        </table>
+      </div>
+    </section>
+
+    <!-- Zone hors écran pour export PDF (html2canvas — accents et nombres FR corrects) -->
+    <div class="pdf-export-root" #pdfExportContent>
+      <div class="pdf-export-header">
+        <div class="pdf-export-title">
+          <h1>{{ 'FU.Certificationdesolde' | translate }}</h1>
+          <p>{{ reconciliationTitle }}</p>
+          <p class="pdf-export-meta">{{ 'CS.Exportgénéréle' | translate }} {{ formatExportTimestamp() }}</p>
+        </div>
+        <img [src]="pdfLogoDataUrl || 'assets/point-touch-logo.png'" alt="Point Touch" class="pdf-export-logo">
+      </div>
+
+      <div class="pdf-solde-banner">{{ formatPdfSoldeBanner() }}</div>
+
+      <section class="pdf-export-section">
+        <h2>{{ 'CS.Informations' | translate }}</h2>
+        <table class="pdf-kv-table">
+          <tr><td>{{ 'CS.Plage' | translate }}</td><td>{{ formatDateRangeLabel() }}</td></tr>
+          <tr><td>{{ 'CS.Numérocompte' | translate }}</td><td>{{ numeroCompte || '—' }}</td></tr>
+        </table>
+      </section>
+
+      <section class="pdf-export-section">
+        <h2>{{ 'CPT.Balances' | translate }}</h2>
+        <table class="pdf-kv-table">
+          <tr><td>{{ 'CPT.Soldedouverture_1' | translate }}</td><td>{{ formatNumber(soldeOuverture) }}</td></tr>
+          <tr class="pdf-debit"><td>{{ 'OPS.Totaldébit' | translate }}</td><td>{{ formatNumber(computed.totalDebit) }}</td></tr>
+          <tr class="pdf-credit"><td>{{ 'OPS.Totalcrédit' | translate }}</td><td>{{ formatNumber(computed.totalCredit) }}</td></tr>
+          <tr class="pdf-cloture"><td>{{ 'CPT.Soldedeclôture_1' | translate }}</td><td>{{ formatNumber(soldeCloture) }}</td></tr>
+          <tr><td>{{ 'TBL.variation' | translate }}</td><td>{{ formatNumber(variation) }}</td></tr>
+          <tr><td>{{ 'CS.Mouvementnetoppart' | translate }}</td><td>{{ formatNumber(computed.mouvementNetOppart) }}</td></tr>
+          <tr class="pdf-frais-attendu" *ngIf="computed.fraisAttendu != null"><td>{{ 'CS.Fraisattendu' | translate }}</td><td>{{ formatNumber(computed.fraisAttendu) }}</td></tr>
+          <tr class="pdf-highlight"><td>{{ 'CS.Écartmouvement' | translate }}</td><td>{{ formatNumber(ecartCertification) }}</td></tr>
+          <tr class="pdf-highlight" *ngIf="soldeClotureTheorique != null"><td>{{ 'CS.Soldedeclôturethéorique' | translate }}</td><td>{{ formatNumber(soldeClotureTheorique) }}</td></tr>
+        </table>
+      </section>
+
+      <section class="pdf-export-section" *ngIf="regularisationAggregates.length">
+        <h2>{{ 'CS.Détailrégularisationtsoptrxsfécartspartenaire' | translate }}</h2>
+        <table class="pdf-data-table pdf-detail-table">
+          <thead>
+            <tr>
+              <th>{{ 'COMMON.actions.type' | translate }}</th><th>{{ 'COMMON.actions.count' | translate }}</th><th>{{ 'TBL.amount' | translate }}</th><th>{{ 'TBL.fees' | translate }}</th><th>{{ 'CS.Àrégulariser' | translate }}</th>
+            </tr>
+          </thead>
+          <tbody>
+            <tr *ngFor="let row of regularisationAggregates">
+              <td>{{ row.label }}</td>
+              <td>{{ row.count | number:'1.0-0' }}</td>
+              <td>{{ row.volume | number:'1.0-0' }}</td>
+              <td>{{ row.frais ? (row.frais | number:'1.0-0') : '—' }}</td>
+              <td><strong>{{ row.montantARegulariser ? (row.montantARegulariser | number:'1.0-0') : '—' }}</strong></td>
+            </tr>
+          </tbody>
+        </table>
+      </section>
+
+      <section class="pdf-export-section" *ngIf="compenseLines.length">
+        <h2>{{ 'CS.Compenseclient' | translate }}</h2>
+        <table class="pdf-data-table">
+          <thead>
+            <tr><th>{{ 'TBL.agency' | translate }}</th><th>{{ 'CS.Totalmontant' | translate }}</th></tr>
+          </thead>
+          <tbody>
+            <tr *ngFor="let row of compenseParAgence">
+              <td>{{ row.agence }}</td>
+              <td>{{ row.montant | number:'1.0-0' }}</td>
+            </tr>
+          </tbody>
+          <tfoot>
+            <tr *ngIf="compenseRecon.loaded">
+              <td><strong>{{ 'TBL.partner' | translate }}</strong></td>
+              <td><strong>{{ formatNumber(compenseRecon.fileTotal) }}</strong></td>
+            </tr>
+            <tr *ngIf="compenseRecon.loaded" class="pdf-ecart-compense">
+              <td><strong>{{ compenseEcartLabel }}</strong></td>
+              <td><strong>{{ formatNumber(compenseFileEcart) }}</strong></td>
+            </tr>
+          </tfoot>
+        </table>
+      </section>
+
+      <section class="pdf-export-section" *ngIf="ecartPartenaireLines.length">
+        <h2>{{ 'CS.Lignesdécartpartenairehorscompense' | translate }}</h2>
+        <table class="pdf-data-table">
+          <thead>
+            <tr><th>{{ 'TBL.agency' | translate }}</th><th>{{ 'CS.Totalmontant' | translate }}</th></tr>
+          </thead>
+          <tbody>
+            <tr *ngFor="let row of ecartParAgence">
+              <td>{{ row.agence }}</td>
+              <td>{{ row.montant | number:'1.0-0' }}</td>
+            </tr>
+          </tbody>
+          <tfoot>
+            <tr>
+              <td><strong>{{ 'CS.Totalliste' | translate }}</strong></td>
+              <td><strong>{{ formatNumber(ecartListeTotal) }}</strong></td>
+            </tr>
+            <tr *ngIf="ecartRecon.loaded">
+              <td><strong>{{ 'CS.Totalfichiersélectionné' | translate }}</strong></td>
+              <td><strong>{{ formatNumber(ecartFileTotal) }}</strong></td>
+            </tr>
+            <tr *ngIf="ecartRecon.loaded" class="pdf-ecart-compense">
+              <td><strong>{{ ecartEcartLabel }}</strong></td>
+              <td><strong>{{ formatNumber(ecartFileEcart) }}</strong></td>
+            </tr>
+          </tfoot>
+        </table>
+        <table class="pdf-data-table pdf-detail-table" *ngIf="ecartRecon.loaded">
+          <thead>
+            <tr>
+              <th>{{ 'TBL.guTransactionNumber' | translate }}</th><th>{{ 'TBL.service' | translate }}</th><th>{{ 'TBL.agency' | translate }}</th><th>{{ 'TBL.amount' | translate }}</th><th>{{ 'TBL.status' | translate }}</th>
+            </tr>
+          </thead>
+          <tbody>
+            <tr *ngFor="let line of ecartPartenaireLines; let i = index">
+              <td>{{ line.numeroTransGu || '—' }}</td>
+              <td>{{ line.service || '—' }}</td>
+              <td>{{ line.agence || '—' }}</td>
+              <td>{{ line.montant | number:'1.0-0' }}</td>
+              <td>{{ isEcartMontantMatchedAt(i) ? 'OK' : 'KO' }}</td>
+            </tr>
+          </tbody>
+          <tfoot>
+            <tr>
+              <td colspan="3"><strong>{{ 'COMMON.actions.ok' | translate }}</strong></td>
+              <td>{{ ecartOkCount | number:'1.0-0' }}</td>
+              <td></td>
+            </tr>
+            <tr>
+              <td colspan="3"><strong>KO</strong></td>
+              <td>{{ ecartKoCount | number:'1.0-0' }}</td>
+              <td></td>
+            </tr>
+          </tfoot>
+        </table>
+      </section>
+
+      <section class="pdf-export-section">
+        <h2>{{ 'CS.Synthèseréconciliation' | translate }}</h2>
+        <table class="pdf-kv-table">
+          <tr><td>{{ 'CS.Lignesbotrxbo' | translate }}</td><td>{{ computed.totals.totalBoRecords | number:'1.0-0' }}</td></tr>
+          <tr><td>{{ 'CS.Lignespartenaireoppart' | translate }}</td><td>{{ computed.totals.totalPartnerRecords | number:'1.0-0' }}</td></tr>
+          <tr><td>{{ 'TBL.matches' | translate }}</td><td>{{ computed.totals.matches | number:'1.0-0' }}</td></tr>
+          <tr *ngIf="computed.volumeEcartBo != null"><td>{{ 'CS.Montantécartsbo' | translate }}</td><td>{{ computed.volumeEcartBo | number:'1.0-0' }}</td></tr>
+          <tr *ngIf="computed.volumeEcartPartner != null"><td>{{ 'CS.Montantécartspartenaire' | translate }}</td><td>{{ computed.volumeEcartPartner | number:'1.0-0' }}</td></tr>
+          <tr class="pdf-ecart-certification"><td>{{ 'CS.Écartdecertification' | translate }}</td><td>{{ formatNumber(ecartCertificationSynthese) }}</td></tr>
+          <tr class="pdf-kv-subheader" *ngIf="computed.oppartOperationBreakdown.hasData">
+            <td colspan="2">{{ 'CS.Typesdopérations' | translate }}</td>
+          </tr>
+          <tr *ngIf="computed.oppartOperationBreakdown.hasData">
+            <td>{{ 'CS.Fraisfraistransaction' | translate }}</td>
+            <td>{{ computed.oppartOperationBreakdown.frais | number:'1.0-0' }}</td>
+          </tr>
+          <tr class="pdf-ecart-frais" *ngIf="computed.fraisAttendu != null && computed.oppartOperationBreakdown.hasData">
+            <td>
+              {{ 'CS.Écartfrais' | translate }}
+              <br><small class="derived-formula">Frais attendus − Frais facturés (OPPART)</small>
+            </td>
+            <td>{{ formatNumber(Math.abs(computed.fraisAttendu) - Math.abs(computed.oppartOperationBreakdown.frais)) }}</td>
+          </tr>
+          <tr *ngFor="let t of computed.oppartOperationBreakdown.otherTypes">
+            <td>{{ t.type }}</td>
+            <td>{{ t.volume | number:'1.0-0' }}</td>
+          </tr>
+        </table>
+
+        <table class="pdf-data-table pdf-detail-table" *ngIf="computed.trxboServiceBreakdown.hasData">
+          <thead>
+            <tr class="pdf-subheader-row">
+        <th colspan="6">{{ 'CS.TRXBOparserviceetclient' | translate }}</th>
+        </tr>
+        <tr>
+        <th>{{ 'TBL.service' | translate }}</th><th>{{ 'TBL.client' | translate }}</th><th>{{ 'COMMON.actions.count' | translate }}</th><th>{{ 'TBL.volume' | translate }}</th><th>{{ 'TBL.fees' | translate }}</th><th>{{ 'CS.Montantfrais' | translate }}</th>
+        </tr>
+        </thead>
+        <tbody>
+        <tr *ngFor="let s of computed.trxboServiceBreakdown.rows">
+          <td>{{ s.service }}</td>
+          <td>{{ s.agence }}</td>
+          <td>{{ s.count | number:'1.0-0' }}</td>
+          <td>{{ s.volume | number:'1.0-0' }}</td>
+          <td>{{ s.frais ? (s.frais | number:'1.0-2') : '-' }}</td>
+          <td>{{ s.montantFrais ? (s.montantFrais | number:'1.0-0') : '-' }}</td>
+        </tr>
+        </tbody>
+        <tfoot *ngIf="computed.trxboServiceBreakdown.rows.length > 1">
+        <tr class="pdf-service-total">
+          <td><strong>{{ 'COMMON.actions.total' | translate }}</strong></td>
+          <td></td>
+          <td><strong>{{ computed.trxboServiceBreakdown.totalCount | number:'1.0-0' }}</strong></td>
+              <td><strong>{{ computed.trxboServiceBreakdown.totalVolume | number:'1.0-0' }}</strong></td>
+              <td></td>
+              <td><strong>{{ computed.trxboServiceBreakdown.totalMontantFrais | number:'1.0-0' }}</strong></td>
+            </tr>
+          </tfoot>
+        </table>
+      </section>
+    </div>
+  </ng-container>
+
+  <!-- Aperçu PDF avant téléchargement -->
+  <div class="pdf-preview-overlay" *ngIf="showPdfPreview" (click)="closePdfPreview()">
+    <div class="pdf-preview-modal" (click)="$event.stopPropagation()">
+      <div class="pdf-preview-header">
+        <div class="pdf-preview-title">
+          <i class="fas fa-file-pdf"></i>
+          <div>
+            <h3>{{ 'CS.Aperçududocument' | translate }}</h3>
+            <span class="pdf-preview-filename">{{ pdfPreviewFileName }}</span>
+          </div>
+        </div>
+        <button type="button" class="pdf-preview-close" (click)="closePdfPreview()" aria-label="{{ 'CS.Fermerlaperçu' | translate }}perçu' | translate }}">
+          <i class="fas fa-times"></i>
+        </button>
+      </div>
+      <div class="pdf-preview-body">
+        <iframe
+          *ngIf="pdfPreviewSafeUrl"
+          [src]="pdfPreviewSafeUrl"
+          title="{{ 'CS.Aperçudupdfdecertification' | translate }}"
+          class="pdf-preview-frame"
+        ></iframe>
+        <div class="pdf-preview-loading" *ngIf="!pdfPreviewUrl">
+          <i class="fas fa-spinner fa-spin"></i> {{ 'CS.Générationdelaperçu' | translate }}
+        </div>
+      </div>
+      <div class="pdf-preview-footer">
+        <button type="button" class="pdf-preview-btn secondary" (click)="closePdfPreview()">
+          <i class="fas fa-times"></i>{{ 'COMMON.actions.close' | translate }}</button>
+        <button type="button" class="pdf-preview-btn primary" (click)="downloadPdfPreview()">
+          <i class="fas fa-download"></i> {{ 'CS.Télécharger' | translate }}
+        </button>
+      </div>
+    </div>
+  </div>
+</div>

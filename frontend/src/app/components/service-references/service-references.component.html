@@ -1,0 +1,335 @@
+<div class="service-ref-page">
+  <!-- TOP NAV (design redevance-loterie) -->
+  <nav class="topnav">
+    <div class="nav-brand">
+      <div class="nav-brand-dot"></div>
+      ReconciliApp
+    </div>
+    <div class="nav-sep"></div>
+    <div class="nav-path">
+      <strong>Service References</strong>
+    </div>
+    <div class="nav-spacer"></div>
+    <div class="nav-actions">
+      <button type="button" class="nav-btn secondary" (click)="goBackToStats()">
+        <i class="fas fa-arrow-left"></i> Back to Stats
+      </button>
+      <button type="button" class="nav-btn secondary" (click)="toggleDashboard()">
+                {{ isDashboardVisible ? '📋 Repository View' : '📊 Dashboard' }}
+      </button>
+      <button type="button" class="nav-btn secondary" (click)="downloadTemplate()" [disabled]="isImporting || isExporting || isLoading">
+        <i class="fas fa-file-download"></i> Template
+      </button>
+      <button type="button" class="nav-btn secondary" (click)="exportReferences()" [disabled]="isImporting || isExporting || isLoading || !referencesToExport.length">
+        <i class="fas fa-file-excel"></i> {{ isExporting ? 'Export…' : 'Export' }}
+      </button>
+      <button type="button" class="nav-btn secondary" (click)="triggerFileUpload()" [disabled]="isImporting || isExporting || isLoading">
+        <i class="fas fa-file-upload"></i> Import
+      </button>
+      <button type="button" class="nav-btn secondary" *ngIf="showForm" (click)="cancelEdit()">
+        <i class="fas fa-times"></i> Close the form
+      </button>
+      <button type="button" class="nav-btn primary" *ngIf="!showForm" (click)="openCreateForm()">
+        <i class="fas fa-plus"></i> New reference
+      </button>
+    </div>
+  </nav>
+
+  <!-- PAGE HEADER (titre + KPIs) -->
+  <div class="page-header-service-ref">
+    <div class="ph-service-left">
+      <div class="ph-eyebrow"><span></span>Repository</div>
+      <h1 class="ph-title-service">Repository <em>RECO Services</em></h1>
+      <p class="ph-subtitle">Manage the Country / Service / RECO Code mappings used in processing.</p>
+    </div>
+    <div class="ph-service-right">
+      <div class="hero-kpi-strip">
+        <div class="hk-strip-item">
+          <span class="hk-strip-label">{{ 'TBL.rows' | translate }}</span>
+          <span class="hk-strip-value">{{ filteredReferences.length | number:'1.0-0' }}</span>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <div class="main">
+  <div class="service-ref-container">
+    <div class="header">
+        <div>
+            <h2 class="service-ref-inner-title">
+                <button class="back-arrow-btn" (click)="goBackToStats()" title="Back to statistics">⬅️</button>
+                RECO Services Repository
+            </h2>
+            <p>Manage the Country / Service / RECO Code mappings used in processing.</p>
+        </div>
+        <div class="header-actions">
+            <button class="btn outline" (click)="toggleDashboard()">
+        {{ isDashboardVisible ? '📋 Repository View' : '📊 Dashboard' }}
+            </button>
+            <button class="btn primary" *ngIf="!showForm" (click)="openCreateForm()">➕ New reference</button>
+            <button class="btn secondary" *ngIf="showForm" (click)="cancelEdit()">➖ Hide the form</button>
+            <button class="btn outline" (click)="downloadTemplate()" [disabled]="isImporting || isExporting || isLoading">
+                📄 Download the template
+            </button>
+            <button class="btn outline" (click)="exportReferences()" [disabled]="isImporting || isExporting || isLoading || !referencesToExport.length">
+                {{ isExporting ? '⏳ Export…' : '📥 Export' }}
+            </button>
+            <button class="btn outline" (click)="triggerFileUpload()" [disabled]="isImporting || isExporting || isLoading">
+                ⬆️ Import a file
+            </button>
+            <input #fileInput type="file" [attr.accept]="importFileAccept" (change)="handleFileInput($event)" hidden>
+        </div>
+    </div>
+
+    <div class="messages">
+        <div class="alert alert-error" *ngIf="errorMessage">
+            {{ errorMessage }}
+        </div>
+        <div class="alert alert-success" *ngIf="successMessage">
+            {{ successMessage }}
+        </div>
+        <ul class="error-details" *ngIf="errorDetails.length">
+            <li *ngFor="let detail of errorDetails">{{ detail }}</li>
+        </ul>
+    </div>
+
+    <ng-container *ngIf="!isDashboardVisible; else dashboardView">
+        <div class="content-grid">
+        <div class="table-card">
+            <div class="table-header">
+                <div>
+                    <h3>Existing references</h3>
+                    <span *ngIf="isLoading">{{ 'MSG.loading' | translate }}</span>
+                    <span *ngIf="!isLoading">{{ filteredReferences.length }} row(s)</span>
+                </div>
+                <input type="text" placeholder="{{ 'ACT.search' | translate }}" [(ngModel)]="searchTerm" (ngModelChange)="applyFilters()" />
+            </div>
+
+            <form class="filters-bar" [formGroup]="filterForm">
+                <div class="filter-field">
+                    <label>{{ 'TBL.country' | translate }}</label>
+                    <input type="text" formControlName="pays" placeholder="Enter or choose a country" list="paysOptionsList" autocomplete="off">
+                    <datalist id="paysOptionsList">
+                        <option *ngFor="let pays of paysOptions" [value]="pays"></option>
+                    </datalist>
+                </div>
+                <div class="filter-field">
+                    <label>{{ 'TBL.operator' | translate }}</label>
+                    <input type="text" formControlName="operateur" placeholder="Enter or choose an operator" list="operateurOptionsList" autocomplete="off">
+                    <datalist id="operateurOptionsList">
+                        <option *ngFor="let op of operateurOptions" [value]="op"></option>
+                    </datalist>
+                </div>
+                <div class="filter-field">
+                    <label>Service type</label>
+                    <input type="text" formControlName="serviceType" placeholder="Enter or choose a type" list="serviceTypeOptionsList" autocomplete="off">
+                    <datalist id="serviceTypeOptionsList">
+                        <option *ngFor="let type of serviceTypeOptions" [value]="type"></option>
+                    </datalist>
+                </div>
+                <div class="filter-field">
+                    <label>Service Code</label>
+                    <input type="text" formControlName="codeService" placeholder="Filter by service code" list="codeServiceOptionsList" autocomplete="off">
+                    <datalist id="codeServiceOptionsList">
+                        <option *ngFor="let cs of codeServiceOptions" [value]="cs"></option>
+                    </datalist>
+                </div>
+                <div class="filter-field">
+                    <label>Network</label>
+                    <input type="text" formControlName="reseau" placeholder="Filter by network" list="reseauOptionsList" autocomplete="off">
+                    <datalist id="reseauOptionsList">
+                        <option *ngFor="let rs of reseauOptions" [value]="rs"></option>
+                    </datalist>
+                </div>
+                <div class="filter-field">
+                    <label>Reconcilable</label>
+                    <select formControlName="reconciliable">
+                        <option value="all">{{ 'FILT.all' | translate }}</option>
+                        <option value="true">Yes</option>
+                        <option value="false">No</option>
+                    </select>
+                </div>
+                <div class="filter-field">
+                    <label>{{ 'TBL.status' | translate }}</label>
+                    <select formControlName="status">
+                        <option value="">{{ 'FILT.all' | translate }}</option>
+                        <option value="ACTIF">{{ 'TBL.confidence' | translate }}</option>
+                        <option value="INACTIF">Inactive</option>
+                    </select>
+                </div>
+                <button type="button" class="btn outline reset-btn" (click)="resetFilters()">{{ 'COMMON.actions.reset' | translate }}</button>
+            </form>
+
+            <div class="selection-toolbar" *ngIf="hasSelection">
+                <span>{{ selectedCount }} selected</span>
+                <button type="button" class="btn outline" (click)="clearSelection()">✖️ Clear selection</button>
+                <button type="button" class="btn danger" (click)="deleteSelectedReferences()" [disabled]="isLoading">🗑️ Delete selection</button>
+            </div>
+
+            <div class="table-wrapper">
+                <table>
+                    <thead>
+                        <tr>
+                            <th class="checkbox-col">
+                                <input type="checkbox" [checked]="allSelected" (change)="toggleSelectAll($event)">
+                            </th>
+                            <th>{{ 'TBL.country' | translate }}</th>
+                            <th>Service Code</th>
+                            <th>{{ 'TBL.service' | translate }}</th>
+                            <th>RECO Code</th>
+                            <th>{{ 'COMMON.actions.type' | translate }}</th>
+                            <th>{{ 'TBL.operator' | translate }}</th>
+                            <th>Network</th>
+                            <th>{{ 'TBL.status' | translate }}</th>
+                            <th>Reconcilable</th>
+                            <th>Reason</th>
+                            <th>Operator Withheld</th>
+                            <th>{{ 'TBL.actions' | translate }}</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        <tr *ngFor="let ref of pagedReferences">
+                            <td class="checkbox-col">
+                                <input type="checkbox" [checked]="isSelected(ref)" (change)="toggleSelection(ref, $event)" [disabled]="!ref.id">
+                            </td>
+                            <td>
+                                <span class="country-cell">
+                                    <span class="country-flag">{{ getCountryFlag(ref.pays) }}</span>
+                                    {{ ref.pays }}
+                                </span>
+                            </td>
+                            <td>{{ ref.codeService }}</td>
+                            <td>{{ ref.serviceLabel }}</td>
+                            <td>{{ ref.codeReco }}</td>
+                            <td>{{ ref.serviceType || '-' }}</td>
+                            <td>{{ ref.operateur || '-' }}</td>
+                            <td>{{ ref.reseau || '-' }}</td>
+                            <td>
+                                <span class="chip" [class.chip-success]="ref.status !== 'INACTIF'" [class.chip-danger]="ref.status === 'INACTIF'">
+                                    {{ ref.status === 'INACTIF' ? 'Inactive' : 'Active' }}
+                                </span>
+                            </td>
+                            <td>
+                                <span class="chip" [class.chip-success]="ref.reconciliable" [class.chip-danger]="!ref.reconciliable">
+                                    {{ ref.reconciliable ? 'YES' : 'NO' }}
+                                </span>
+                            </td>
+                            <td>{{ ref.motif || '-' }}</td>
+                            <td>{{ ref.retenuOperateur || '-' }}</td>
+                            <td class="actions-cell">
+                                <button class="icon-btn" (click)="editReference(ref)" title="{{ 'ACT.edit' | translate }}">
+                                    ✏️
+                                </button>
+                                <button class="icon-btn danger" (click)="deleteReference(ref)" [disabled]="isLoading" title="{{ 'ACT.delete' | translate }}">
+                                    🗑️
+                                </button>
+                            </td>
+                        </tr>
+                        <tr *ngIf="!filteredReferences.length && !isLoading">
+                            <td colspan="13" class="empty-state">No data found</td>                        </tr>
+                    </tbody>
+                </table>
+            </div>
+
+            <div class="pagination-controls" *ngIf="filteredReferences.length">
+                <div class="range-label">{{ getRangeLabel() }}</div>
+                <div class="page-size">
+                    <label>{{ 'ACT.show' | translate }}</label>
+                    <select [value]="pageSize" (change)="changePageSize($event.target.value)">
+                        <option *ngFor="let size of pageSizeOptions" [value]="size">{{ size }} / page</option>
+                    </select>
+                </div>
+                <div class="pagination-buttons">
+                    <button class="btn secondary" (click)="goToPage(pageIndex - 1)" [disabled]="pageIndex === 1">{{ 'PAG.previous' | translate }}</button>
+                    <span>Page {{ pageIndex }} / {{ totalPages }}</span>
+                    <button class="btn secondary" (click)="goToPage(pageIndex + 1)" [disabled]="pageIndex === totalPages">{{ 'PAG.next' | translate }}</button>
+                </div>
+            </div>
+        </div>
+        </div>
+    </ng-container>
+</div>
+  </div><!-- .main -->
+
+  <div
+    class="sr-form-overlay"
+    *ngIf="showForm"
+    role="dialog"
+    aria-modal="true"
+    [attr.aria-label]="editingReference ? 'Edit a reference' : 'New reference'"
+    (click)="cancelEdit()">
+    <div class="form-card sr-form-dialog" #formPanel (click)="$event.stopPropagation()">
+      <div class="form-header">
+        <h3>{{ editingReference ? 'Edit a reference' : 'New reference' }}</h3>
+        <button type="button" class="link-btn" (click)="cancelEdit()">{{ 'COMMON.actions.close' | translate }}</button>
+      </div>
+      <form [formGroup]="referenceForm" (ngSubmit)="saveReference()">
+        <div class="form-row">
+          <label>{{ 'TBL.countryRequired' | translate }}</label>
+          <input type="text" formControlName="pays" placeholder="BF">
+        </div>
+        <div class="form-row">
+          <label>Service Code *</label>
+          <input type="text" formControlName="codeService" placeholder="DEBIT">
+        </div>
+        <div class="form-row">
+          <label>{{ 'TBL.serviceRequired' | translate }}</label>
+          <input type="text" formControlName="serviceLabel" placeholder="CI_TUV_CASHIN_ORANGE_HT">
+        </div>
+        <div class="form-row">
+          <label>RECO Code *</label>
+          <input type="text" formControlName="codeReco" placeholder="BF_TUV_CASHIN_ORANGE_HT">
+        </div>
+        <div class="form-row">
+          <label>Service Type</label>
+          <input type="text" formControlName="serviceType" placeholder="MOMO CASHIN">
+        </div>
+        <div class="form-row">
+          <label>{{ 'TBL.operator' | translate }}</label>
+          <input type="text" formControlName="operateur" placeholder="ORANGE">
+        </div>
+        <div class="form-row">
+          <label>Network</label>
+          <input type="text" formControlName="reseau" placeholder="HT">
+        </div>
+        <div class="form-row toggle">
+          <label>Reconcilable</label>
+          <label class="switch">
+            <input type="checkbox" formControlName="reconciliable">
+            <span class="slider"></span>
+          </label>
+        </div>
+        <div class="form-row">
+          <label>Reason</label>
+          <textarea formControlName="motif" rows="2"></textarea>
+        </div>
+        <div class="form-row">
+          <label>Operator Withheld</label>
+          <textarea formControlName="retenuOperateur" rows="2"></textarea>
+        </div>
+        <div class="form-row">
+          <label>Status (automatically calculated)</label>
+          <select formControlName="status" disabled>
+            <option value="ACTIF">{{ 'TBL.confidence' | translate }}</option>
+            <option value="INACTIF">Inactive</option>
+          </select>
+                    <small>Active if the Country + Service Code pair is present in the statistics (Agency Summary).</small>
+        </div>
+
+        <button type="submit" class="btn primary" [disabled]="isSaving || referenceForm.invalid">
+          {{ editingReference ? '💾 Update' : '➕ Add' }}
+        </button>
+      </form>
+    </div>
+  </div>
+</div><!-- .service-ref-page -->
+
+<ng-template #dashboardView>
+    <app-service-references-dashboard-panel
+        #dashboardPanel
+        [references]="references"
+        [isLoading]="isLoading"
+        [showImportHint]="true"
+        (periodMonthsChange)="onDashboardPeriodChange($event)">
+    </app-service-references-dashboard-panel>
+</ng-template>

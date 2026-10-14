@@ -1,0 +1,88 @@
+# Configuration HTTPS pour Spring Boot
+# Ce fichier est un exemple. Copiez-le vers application-ssl.properties et configurez-le.
+# Pour activer HTTPS, ajoutez --spring.profiles.active=ssl au démarrage
+
+# Activer HTTPS
+server.ssl.enabled=true
+
+# Chemin vers le keystore PKCS12
+# Le fichier .p12 doit être dans src/main/resources/
+server.ssl.key-store=classpath:reconciliation-app.p12
+
+# Mot de passe du keystore (CHANGEZ-LE EN PRODUCTION!)
+server.ssl.key-store-password=changeit
+
+# Type de keystore
+server.ssl.key-store-type=PKCS12
+
+# Alias du certificat dans le keystore
+server.ssl.key-alias=reconciliation-app
+
+# Port HTTPS
+server.port=8443
+
+# Port HTTP (optionnel, pour redirection)
+# server.http.port=8080
+
+# Configuration de la base de données (copiez depuis application.properties)
+spring.datasource.url=jdbc:mysql://localhost:3306/top20?createDatabaseIfNotExist=true&allowPublicKeyRetrieval=true&useSSL=false&serverTimezone=UTC&allowMultiQueries=true&useUnicode=true&characterEncoding=UTF-8
+spring.datasource.username=${DB_USERNAME:root}
+spring.datasource.password=${DB_PASSWORD:}
+
+# Configuration JPA/Hibernate
+spring.jpa.hibernate.ddl-auto=update
+spring.jpa.show-sql=true
+spring.jpa.properties.hibernate.format_sql=true
+spring.jpa.properties.hibernate.dialect=org.hibernate.dialect.MySQL8Dialect
+
+# Configuration de l'encodage UTF-8
+spring.http.encoding.charset=UTF-8
+spring.http.encoding.enabled=true
+spring.http.encoding.force=true
+server.servlet.encoding.charset=UTF-8
+server.servlet.encoding.enabled=true
+server.servlet.encoding.force=true
+
+# Configuration des logs
+logging.level.org.springframework=INFO
+logging.level.com.reconciliation=INFO
+logging.level.org.hibernate.SQL=WARN
+logging.level.org.hibernate.type.descriptor.sql.BasicBinder=WARN
+logging.level.org.apache.poi=WARN
+
+# Configuration optimisée pour fichiers volumineux
+spring.servlet.multipart.max-file-size=3GB
+spring.servlet.multipart.max-request-size=3GB
+spring.servlet.multipart.file-size-threshold=20MB
+spring.servlet.multipart.location=/tmp
+
+# Configuration des timeouts
+server.tomcat.connection-timeout=900000
+server.tomcat.max-http-form-post-size=3GB
+server.tomcat.max-connections=300
+server.tomcat.accept-count=150
+server.tomcat.threads.max=300
+server.tomcat.threads.min-spare=30
+
+# Optimisations Hibernate
+spring.jpa.properties.hibernate.jdbc.batch_size=2000
+spring.jpa.properties.hibernate.order_inserts=true
+spring.jpa.properties.hibernate.order_updates=true
+spring.jpa.properties.hibernate.jdbc.batch_versioned_data=true
+
+# Configuration JWT
+jwt.secret=${JWT_SECRET:your-256-bit-secret-key-change-this-in-production-minimum-32-characters-required-for-hmac-sha256}
+jwt.expiration=86400000
+
+# Configuration Email
+spring.mail.host=${MAIL_HOST:smtp.gmail.com}
+spring.mail.port=${MAIL_PORT:587}
+spring.mail.username=${MAIL_USERNAME:}
+spring.mail.password=${MAIL_PASSWORD:}
+spring.mail.properties.mail.smtp.auth=true
+spring.mail.properties.mail.smtp.starttls.enable=true
+spring.mail.properties.mail.smtp.starttls.required=true
+spring.mail.properties.mail.smtp.connectiontimeout=5000
+spring.mail.properties.mail.smtp.timeout=5000
+spring.mail.properties.mail.smtp.writetimeout=5000
+

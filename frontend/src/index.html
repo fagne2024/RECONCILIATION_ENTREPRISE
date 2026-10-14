@@ -1,0 +1,65 @@
+<!doctype html>
+<html lang="fr">
+<head>
+    <meta charset="utf-8">
+    <title>Réconciliation</title>
+    <base href="/">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <link rel="icon" type="image/x-icon" href="favicon.ico">
+    <link href="https://fonts.googleapis.com/icon?family=Material+Icons" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0-beta3/css/all.min.css">
+    <script>
+        // Forcer le rechargement quand la page revient du Back-Forward Cache
+        window.addEventListener('pageshow', function(event) {
+            if (event.persisted) {
+                window.location.reload();
+            }
+        });
+    </script>
+    <script>
+        // Script simple pour assurer le scroll sur Chrome
+        document.addEventListener('DOMContentLoaded', function() {
+            // Détecter Chrome
+            const isChrome = /Chrome/.test(navigator.userAgent) && /Google Inc/.test(navigator.vendor);
+            
+            if (isChrome) {
+                // Forcer le scroll sur Chrome
+                document.documentElement.style.overflowY = 'auto';
+                document.body.style.overflowY = 'auto';
+                
+                // S'assurer que tous les éléments scrollables fonctionnent
+                const scrollableElements = document.querySelectorAll('.main-content, .app-container, [class*="-container"], .table-responsive, .table-container');
+                scrollableElements.forEach(function(element) {
+                    if (element) {
+                        element.style.overflowY = 'auto';
+                    }
+                });
+                
+                // Correction après le chargement d'Angular
+                setTimeout(function() {
+                    document.documentElement.style.overflowY = 'auto';
+                    document.body.style.overflowY = 'auto';
+                    
+                    // Réappliquer aux éléments qui pourraient avoir été modifiés
+                    const allElements = document.querySelectorAll('*');
+                    allElements.forEach(function(element) {
+                        if (element.style.overflowY === 'hidden') {
+                            element.style.overflowY = 'auto';
+                        }
+                    });
+                }, 2000);
+            }
+        });
+    </script>
+    <meta http-equiv="Cache-Control" content="no-cache, no-store, must-revalidate">
+    <meta http-equiv="Pragma" content="no-cache">
+    <meta http-equiv="Expires" content="0">
+    <link rel="preconnect" href="https://fonts.gstatic.com">
+    <link href="https://fonts.googleapis.com/css2?family=Roboto:wght@300;400;500&display=swap" rel="stylesheet">
+    <link href="https://fonts.googleapis.com/css2?family=Sora:wght@300;400;500;600&family=Instrument+Serif:ital@0;1&display=swap" rel="stylesheet">
+    <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+</head>
+<body class="mat-typography">
+    <app-root></app-root>
+</body>
+</html> 

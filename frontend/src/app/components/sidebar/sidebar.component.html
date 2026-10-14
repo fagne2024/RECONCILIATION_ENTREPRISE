@@ -1,0 +1,100 @@
+<div class="sidebar">
+    <div class="logo-container" [ngStyle]="logoAlign">
+        <div class="logo-media" [ngStyle]="logoPadding">
+            <img *ngIf="logoUrl" [src]="logoUrl" alt="Logo" class="logo-img" [ngStyle]="logoStyle">
+            <i *ngIf="!logoUrl" class="fas fa-sync-alt logo-icon"></i>
+        </div>
+        <h2 class="title">{{ 'NAV.brand' | translate }}</h2>
+    </div>
+    <ul class="nav-list">
+        <!-- Groupes sans sous-menu (niveau racine) -->
+        <ng-container *ngFor="let group of visibleGroups">
+            <ng-container *ngIf="!group.children">
+                <li *ngIf="isMenuAllowed(group)">
+                    <a [routerLink]="group.route" routerLinkActive="active" [routerLinkActiveOptions]="{ exact: true }">
+                        <i class="fas fa-tachometer-alt menu-icon dashboard" *ngIf="group.key === 'dashboard'"></i>
+                        <i class="fas fa-tools menu-icon traitement" *ngIf="group.key === 'traitement'"></i>
+                        <i class="fas fa-trophy menu-icon classements" *ngIf="group.key === 'ranking'"></i>
+                        <i class="fas fa-exchange-alt menu-icon operations" *ngIf="group.key === 'operations'"></i>
+                        <i class="fas fa-book menu-icon" *ngIf="group.key === 'comptabilite'"></i>
+                        <span>{{ (group.labelKey || group.label) | translate }}</span>
+                    </a>
+                </li>
+            </ng-container>
+
+            <!-- Groupes avec sous-menus -->
+            <ng-container *ngIf="group.children">
+                <li>
+                    <a href="#" class="has-submenu" [class.active]="isGroupOnSection(group)" 
+                       (click)="toggleGroupSubmenu(group.key); $event.preventDefault()">
+                        <i class="fas fa-file-upload menu-icon reconciliation" *ngIf="group.key === 'reconciliation'"></i>
+                        <i class="fas fa-poll menu-icon resultats" *ngIf="group.key === 'resultats'"></i>
+                        <i class="fas fa-chart-bar menu-icon stats" *ngIf="group.key === 'statistiques'"></i>
+                        <i class="fas fa-wallet menu-icon comptes" *ngIf="group.key === 'comptes'"></i>
+                        <i class="fas fa-money-bill-wave menu-icon frais" *ngIf="group.key === 'frais-commissions'"></i>
+                        <i class="fas fa-chart-line menu-icon suivi-ecarts" *ngIf="group.key === 'suivi-ecarts'"></i>
+                        <i class="fas fa-university menu-icon banque" *ngIf="group.key === 'banque'"></i>
+                        <i class="fas fa-question-circle menu-icon aide" *ngIf="group.key === 'aide'"></i>
+                        <i class="fas fa-sliders-h menu-icon configuration" *ngIf="group.key === 'configuration'"></i>
+                        <i class="fas fa-cog menu-icon parametre" *ngIf="group.key === 'parametre'"></i>
+                        <i class="fas fa-server menu-icon administration-plateforme" *ngIf="group.key === 'administration-plateforme'"></i>
+                        <span>{{ (group.labelKey || group.label) | translate }}</span>
+                        <span class="submenu-arrow" [class.open]="isGroupSubmenuOpen(group.key)">{{ '▼' }}</span>
+                    </a>
+                    <ul class="submenu" *ngIf="isGroupSubmenuOpen(group.key)">
+                        <li *ngFor="let submenu of visibleSubmenus.get(group.key) || []">
+                            <div class="submenu-row" [class.has-children]="submenu.children?.length">
+                                <a [routerLink]="submenu.route"
+                                   routerLinkActive="active"
+                                   [routerLinkActiveOptions]="{ exact: true }"
+                                   [class.parent-active]="submenu.children?.length && isSubmenuOnSection(submenu)">
+                                    <i [class]="menuIconClass(submenu.icon)"></i>
+                                    <span>{{ (submenu.labelKey || submenu.label) | translate }}</span>
+                                </a>
+                                <button type="button" class="submenu-toggle" *ngIf="submenu.children?.length"
+                                        (click)="toggleNestedSubmenu(submenu.key)"
+                                        [attr.aria-expanded]="isNestedSubmenuOpen(submenu.key)">
+                                    {{ isNestedSubmenuOpen(submenu.key) ? '▲' : '▼' }}
+                                </button>
+                            </div>
+                            <ul class="submenu submenu-nested" *ngIf="submenu.children?.length && isNestedSubmenuOpen(submenu.key)">
+                                <li *ngFor="let nested of submenu.children">
+                                    <a [routerLink]="nested.route" routerLinkActive="active" [routerLinkActiveOptions]="{ exact: true }">
+                                        <i [class]="menuIconClass(nested.icon)"></i>
+                                        <span>{{ (nested.labelKey || nested.label) | translate }}</span>
+                                    </a>
+                                </li>
+                            </ul>
+                        </li>
+                    </ul>
+                </li>
+            </ng-container>
+        </ng-container>
+    </ul>
+    <div class="sidebar-footer">
+        <div class="sidebar-lang-switch">
+            <app-language-switcher></app-language-switcher>
+        </div>
+        <div class="sidebar-user-info" *ngIf="getUsername()" (click)="goToProfile()" style="cursor: pointer;">
+            <div class="user-info-content">
+                <div class="user-avatar">
+                    <img *ngIf="userPhoto" [src]="userPhoto" alt="Photo de profil" class="user-avatar-img">
+                    <i *ngIf="!userPhoto" class="fas fa-user-circle"></i>
+                </div>
+                <div class="user-details">
+                    <div class="user-name">{{ getUsername() }}</div>
+                    <div class="user-profil" *ngIf="getUserProfil()">
+                        <i class="fas fa-id-badge"></i>
+                        <span>{{ getUserProfil() }}</span>
+                    </div>
+                </div>
+            </div>
+        </div>
+        <div class="sidebar-logout">
+            <a href="#" class="logout-link" (click)="logout(); $event.preventDefault()">
+                <i class="fas fa-sign-out-alt"></i>
+                <span>{{ 'NAV.logout' | translate }}</span>
+            </a>
+        </div>
+    </div>
+</div>
