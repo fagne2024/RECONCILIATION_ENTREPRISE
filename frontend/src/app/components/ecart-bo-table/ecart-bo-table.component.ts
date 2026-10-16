@@ -21,11 +21,12 @@ import { extractRecordAmount } from '../../utils/record-amount.util';
 import { partitionEcartRecords, resolveMagicPartitionContext } from '../../utils/magic-partition.util';
 import { SharedModule } from '../../shared/shared.module';
 import { TranslateModule, TranslateService } from '@ngx-translate/core';
+import { DsPaginationComponent } from '../../shared/ui';
 
 @Component({
   selector: 'app-ecart-bo-table',
   standalone: true,
-  imports: [TranslateModule, SharedModule],
+  imports: [TranslateModule, SharedModule, DsPaginationComponent],
   templateUrl: './ecart-bo-table.component.html',
   styleUrls: ['./ecart-bo-table.component.scss'],
   changeDetection: ChangeDetectionStrategy.OnPush
