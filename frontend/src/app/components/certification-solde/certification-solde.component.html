@@ -33,7 +33,7 @@
       <p>
         {{ 'CS.Importezlesfichierstrxboetoppartpourlanceruneréconciliationpuiscertifiezlesoldeaveclessoldesdouvertureetdeclôture' | translate }}
       </p>
-      <button type="button" class="cta-btn" (click)="startNewCertification()">
+      <button type="button" class="cta-btn ds-btn ds-btn--primary" (click)="startNewCertification()">
         <i class="fas fa-play-circle"></i> {{ 'CS.Lancerunecertification' | translate }}
       </button>
     </div>
@@ -66,22 +66,22 @@
         <div class="compense-kpis">
           <div class="compense-kpi">
             <span class="kpi-label">{{ 'CS.Ligneschargées' | translate }}</span>
-            <strong class="kpi-value">{{ compenseLinesCount | number:'1.0-0' }}</strong>
+            <strong class="kpi-value ds-num">{{ compenseLinesCount | number:'1.0-0' }}</strong>
             <span class="kpi-sub">{{ formatNumber(compenseListeAbsTotal) }}</span>
           </div>
           <div class="compense-kpi" [class.is-ok]="compenseRecon.loaded && compenseKoCount === 0">
             <span class="kpi-label">{{ 'CS.Rapprochées' | translate }}</span>
-            <strong class="kpi-value">{{ compenseOkCount | number:'1.0-0' }}</strong>
+            <strong class="kpi-value ds-num">{{ compenseOkCount | number:'1.0-0' }}</strong>
             <span class="kpi-sub">{{ compenseMatchRate === null ? '—' : (compenseMatchRate | number:'1.0-0') + ' %' }}</span>
           </div>
           <div class="compense-kpi" [class.is-ko]="compenseRecon.loaded && compenseKoCount > 0">
             <span class="kpi-label">{{ 'CS.Écarts' | translate }}</span>
-            <strong class="kpi-value">{{ compenseKoCount | number:'1.0-0' }}</strong>
+            <strong class="kpi-value ds-num">{{ compenseKoCount | number:'1.0-0' }}</strong>
             <span class="kpi-sub">{{ compenseRecon.fileName || '—' }}</span>
           </div>
           <div class="compense-kpi" [class.is-zero]="compenseRecon.loaded && compenseEcartTotal === 0">
             <span class="kpi-label">{{ 'CS.Écarttotal' | translate }}</span>
-            <strong class="kpi-value">{{ compenseRecon.loaded ? formatNumber(compenseEcartTotal) : '—' }}</strong>
+            <strong class="kpi-value ds-num">{{ compenseRecon.loaded ? formatNumber(compenseEcartTotal) : '—' }}</strong>
             <span class="kpi-sub">{{ compenseRecon.loaded ? compenseEcartLabel : '—' }}</span>
           </div>
         </div>
@@ -125,7 +125,7 @@
             </button>
             <div class="reco-list-meta" *ngIf="compenseListeLoaded || (compenseRecon.loaded && compenseFileSource === 'oppart')">
               <span class="statut-badge" [class.ok]="true">{{ 'CS.OPPART' | translate }} {{ compenseLines.length | number:'1.0-0' }} {{ 'CS.Lignes' | translate }} {{ compenseRecon.amounts.length | number:'1.0-0' }} {{ 'CS.Montants' | translate }}</span>
-              <button type="button" class="link-btn" (click)="resetCompenseListe(); resetCompenseFile()">{{ 'COMMON.actions.reset' | translate }}</button>
+              <button type="button" class="link-btn ds-btn ds-btn--ghost ds-btn--sm" (click)="resetCompenseListe(); resetCompenseFile()">{{ 'COMMON.actions.reset' | translate }}</button>
             </div>
           </div>
 
@@ -188,7 +188,7 @@
                 </ul>
               </div>
 
-              <button type="button" class="link-btn" *ngIf="compenseRecon.loaded" (click)="resetCompenseFile()">{{ 'COMMON.actions.reset' | translate }}</button>
+              <button type="button" class="link-btn ds-btn ds-btn--ghost ds-btn--sm" *ngIf="compenseRecon.loaded" (click)="resetCompenseFile()">{{ 'COMMON.actions.reset' | translate }}</button>
             </div>
           </div>
         </div>
@@ -196,7 +196,7 @@
         <div class="compense-tables" #directCompenseTables>
           <div class="compense-table-col">
             <h4><i class="fas fa-table"></i> {{ 'CS.Listedescompenses' | translate }}</h4>
-            <table class="aggregates-table compense-table" *ngIf="compenseLines.length; else noCompenseDirect">
+            <table class="aggregates-table compense-table ds-table" *ngIf="compenseLines.length; else noCompenseDirect">
               <thead>
                 <tr>
                   <th>{{ 'TBL.guTransactionNumber' | translate }}</th>
@@ -238,11 +238,11 @@
             <div class="fichier-block-header">
               <h4><i class="fas fa-file-import"></i> {{ 'CS.Tableaudufichier' | translate }} <span class="reco-file-name">{{ compenseRecon.fileName }}</span></h4>
               <div class="fichier-block-actions" *ngIf="compenseRecon.loaded && compenseRecon.amounts.length">
-                <button type="button" class="cta-btn sm" (click)="exportCompenseRecoPdf()" [disabled]="isExportingPdf">
+                <button type="button" class="cta-btn sm ds-btn ds-btn--secondary ds-btn--sm" (click)="exportCompenseRecoPdf()" [disabled]="isExportingPdf">
                   <i class="fas fa-file-pdf"></i>
                   {{ isExportingPdf ? 'Export en cours…' : 'Exporter PDF' }}
                 </button>
-                <button type="button" class="cta-btn sm" (click)="exportCompenseRecoExcel()" [disabled]="isExportingExcel">
+                <button type="button" class="cta-btn sm ds-btn ds-btn--secondary ds-btn--sm" (click)="exportCompenseRecoExcel()" [disabled]="isExportingExcel">
                   <i class="fas fa-file-excel"></i>
                   {{ isExportingExcel ? 'Export en cours…' : 'Exporter Excel' }}
                 </button>
@@ -256,7 +256,7 @@
                 <span class="verif-badge warn" *ngIf="verifCompensesEnCours">{{ verifCompensesEnCours }} {{ 'CS.Encours' | translate }}</span>
                 <span class="verif-badge ko" *ngIf="verifCompensesIntrouvables">{{ verifCompensesIntrouvables }} {{ 'CS.Introuvables' | translate }}</span>
               </div>
-              <table class="verif-compenses-table" *ngIf="verifCompensesProblemes.length">
+              <table class="verif-compenses-table ds-table" *ngIf="verifCompensesProblemes.length">
                 <thead>
                   <tr>
                     <th>{{ 'TBL.guTransactionNumber' | translate }}</th>
@@ -280,7 +280,7 @@
               </table>
             </div>
 
-              <table class="aggregates-table compense-table fichier-table">
+              <table class="aggregates-table compense-table fichier-table ds-table">
                 <thead>
                   <tr>
                     <th>{{ 'CS.N' | translate }}</th>
@@ -342,17 +342,17 @@
         <div class="kpi-strip">
           <div class="kpi-item">
             <span class="kpi-label">{{ 'TBL.matches' | translate }}</span>
-            <span class="kpi-value">{{ computed.totals.matches | number:'1.0-0' }}</span>
+            <span class="kpi-value ds-num">{{ computed.totals.matches | number:'1.0-0' }}</span>
           </div>
           <div class="kpi-sep"></div>
           <div class="kpi-item">
             <span class="kpi-label">{{ 'NAV.ecartBo' | translate }}</span>
-            <span class="kpi-value warn">{{ computed.totals.boOnly | number:'1.0-0' }}</span>
+            <span class="kpi-value warn ds-num">{{ computed.totals.boOnly | number:'1.0-0' }}</span>
           </div>
           <div class="kpi-sep"></div>
           <div class="kpi-item">
             <span class="kpi-label">{{ 'NAV.ecartPartner' | translate }}</span>
-            <span class="kpi-value warn">{{ computed.totals.partnerOnly | number:'1.0-0' }}</span>
+            <span class="kpi-value warn ds-num">{{ computed.totals.partnerOnly | number:'1.0-0' }}</span>
           </div>
         </div>
       </div>
@@ -362,7 +362,7 @@
       <section class="panel solde-panel">
         <div class="panel-header">
           <h3><i class="fas fa-wallet"></i> {{ 'CS.Soldesdecertification' | translate }}</h3>
-          <button type="button" class="link-btn" (click)="applyOppartSuggestedSoldes()"
+          <button type="button" class="link-btn ds-btn ds-btn--ghost ds-btn--sm" (click)="applyOppartSuggestedSoldes()"
                   *ngIf="computed.soldeOuvertureOppart != null || computed.soldeClotureOppart != null">
             {{ 'CS.Reprendredepuisoppart' | translate }}
           </button>
@@ -449,10 +449,10 @@
         </div>
 
         <div class="panel-actions">
-          <button type="button" class="secondary-btn" (click)="recalculerPeriode()" [disabled]="!hasResults">
+          <button type="button" class="secondary-btn ds-btn ds-btn--secondary" (click)="recalculerPeriode()" [disabled]="!hasResults">
             <i class="fas fa-calculator"></i> {{ 'CS.Recalculer' | translate }}
           </button>
-          <button type="button" class="secondary-btn" (click)="loadSavedSoldes()" [disabled]="isLoadingSoldes">
+          <button type="button" class="secondary-btn ds-btn ds-btn--secondary" (click)="loadSavedSoldes()" [disabled]="isLoadingSoldes">
             <i class="fas fa-database"></i> {{ 'CS.Chargersoldesenregistrés' | translate }}
           </button>
         </div>
@@ -466,11 +466,11 @@
             {{ 'CS.Totalàrégulariser' | translate }} <strong>{{ computed.totalRegularisation | number:'1.0-0' }}</strong>
           </span>
           <span class="aggregates-actions">
-            <button type="button" class="btn-export-aggregates" (click)="exportEcartAggregates()"
+            <button type="button" class="btn-export-aggregates ds-btn ds-btn--secondary ds-btn--sm" (click)="exportEcartAggregates()"
                     [disabled]="isExportingAggregates || isLoadingDetail">
               <i class="fas fa-file-excel"></i> {{ isExportingAggregates ? 'Export…' : 'Excel' }}
             </button>
-            <button type="button" class="btn-export-aggregates pdf" (click)="exportEcartAggregatesPdf()"
+            <button type="button" class="btn-export-aggregates pdf ds-btn ds-btn--secondary ds-btn--sm" (click)="exportEcartAggregatesPdf()"
                     [disabled]="isExportingAggregatesPdf || isLoadingDetail">
               <i class="fas fa-file-pdf"></i> {{ isExportingAggregatesPdf ? 'Export…' : 'PDF' }}
             </button>
@@ -481,7 +481,7 @@
           {{ 'CS.TSOPmontantfraisécartboécartmontantoppartécartpartenairetrxsffraisuniquementécartpartenaire' | translate }}
         </p>
 
-        <table class="aggregates-table">
+        <table class="aggregates-table ds-table">
           <thead>
             <tr>
               <th>{{ 'COMMON.actions.type' | translate }}</th>
@@ -534,7 +534,7 @@
                       </button>
                     </span>
                   </div>
-                  <table class="details-table">
+                  <table class="details-table ds-table">
                     <thead>
                       <tr>
                         <th>{{ 'TBL.guTransactionNumber' | translate }}</th>
@@ -611,7 +611,7 @@
           {{ 'CS.Total' | translate }} <strong>{{ formatNumber(compenseListeAbsTotal) }}</strong>
         </span>
         <span class="panel-header-actions">
-          <button type="button" class="link-btn" (click)="toggleCompenseSection()">
+          <button type="button" class="link-btn ds-btn ds-btn--ghost ds-btn--sm" (click)="toggleCompenseSection()">
             <i class="fas" [ngClass]="compenseSectionVisible ? 'fa-eye-slash' : 'fa-eye'"></i>
             {{ compenseSectionVisible ? 'Masquer' : 'Afficher' }} {{ 'CS.Compense' | translate }}
           </button>
@@ -621,7 +621,7 @@
       <div class="compense-layout" *ngIf="compenseSectionVisible">
         <div class="compense-list">
           <p class="aggregates-hint">{{ 'CS.Lignesdécartpartenaireidentifiéescommeopérationsdecompensationcompenseclientcompensefournisseur' | translate }}</p>
-          <table class="aggregates-table compense-table" *ngIf="compenseLines.length; else noCompense">
+          <table class="aggregates-table compense-table ds-table" *ngIf="compenseLines.length; else noCompense">
             <thead>
               <tr>
                 <th>{{ 'TBL.guTransactionNumber' | translate }}</th>
@@ -691,7 +691,7 @@
           </button>
           <div class="reco-list-meta" *ngIf="compenseListeLoaded || (compenseRecon.loaded && compenseFileSource === 'oppart')">
             <span class="statut-badge ok">{{ 'CS.OPPART' | translate }} {{ compenseLines.length | number:'1.0-0' }} {{ 'CS.Lignes' | translate }} {{ compenseRecon.amounts.length | number:'1.0-0' }} {{ 'CS.Montants' | translate }}</span>
-            <button type="button" class="link-btn" (click)="resetCompenseListe(); resetCompenseFile()">{{ 'CS.Utiliserlalistecalculée' | translate }}</button>
+            <button type="button" class="link-btn ds-btn ds-btn--ghost ds-btn--sm" (click)="resetCompenseListe(); resetCompenseFile()">{{ 'CS.Utiliserlalistecalculée' | translate }}</button>
           </div>
 
           <hr class="reco-sep">
@@ -746,7 +746,7 @@
               </ul>
             </div>
 
-            <button type="button" class="link-btn" (click)="resetCompenseFile()">{{ 'COMMON.actions.reset' | translate }}</button>
+            <button type="button" class="link-btn ds-btn ds-btn--ghost ds-btn--sm" (click)="resetCompenseFile()">{{ 'COMMON.actions.reset' | translate }}</button>
           </div>
         </div>
       </div>
@@ -805,7 +805,7 @@
         <div class="summary-subheader">
         <h4><i class="fas fa-server"></i> {{ 'CS.TRXBOparserviceetclient' | translate }}</h4>
       </div>
-      <table class="summary-service-table">
+      <table class="summary-service-table ds-table">
         <thead>
         <tr><th>{{ 'TBL.service' | translate }}</th><th>{{ 'TBL.client' | translate }}</th><th>{{ 'COMMON.actions.count' | translate }}</th><th>{{ 'TBL.volume' | translate }}</th><th>{{ 'TBL.fees' | translate }}</th><th>{{ 'CS.Montantfrais' | translate }}</th></tr>
         </thead>
@@ -849,7 +849,7 @@
 
       <section class="pdf-export-section">
         <h2>{{ 'CS.Informations' | translate }}</h2>
-        <table class="pdf-kv-table">
+        <table class="pdf-kv-table ds-table">
           <tr><td>{{ 'CS.Plage' | translate }}</td><td>{{ formatDateRangeLabel() }}</td></tr>
           <tr><td>{{ 'CS.Numérocompte' | translate }}</td><td>{{ numeroCompte || '—' }}</td></tr>
         </table>
@@ -857,7 +857,7 @@
 
       <section class="pdf-export-section">
         <h2>{{ 'CPT.Balances' | translate }}</h2>
-        <table class="pdf-kv-table">
+        <table class="pdf-kv-table ds-table">
           <tr><td>{{ 'CPT.Soldedouverture_1' | translate }}</td><td>{{ formatNumber(soldeOuverture) }}</td></tr>
           <tr class="pdf-debit"><td>{{ 'OPS.Totaldébit' | translate }}</td><td>{{ formatNumber(computed.totalDebit) }}</td></tr>
           <tr class="pdf-credit"><td>{{ 'OPS.Totalcrédit' | translate }}</td><td>{{ formatNumber(computed.totalCredit) }}</td></tr>
@@ -974,7 +974,7 @@
 
       <section class="pdf-export-section">
         <h2>{{ 'CS.Synthèseréconciliation' | translate }}</h2>
-        <table class="pdf-kv-table">
+        <table class="pdf-kv-table ds-table">
           <tr><td>{{ 'CS.Lignesbotrxbo' | translate }}</td><td>{{ computed.totals.totalBoRecords | number:'1.0-0' }}</td></tr>
           <tr><td>{{ 'CS.Lignespartenaireoppart' | translate }}</td><td>{{ computed.totals.totalPartnerRecords | number:'1.0-0' }}</td></tr>
           <tr><td>{{ 'TBL.matches' | translate }}</td><td>{{ computed.totals.matches | number:'1.0-0' }}</td></tr>
