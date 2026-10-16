@@ -5,6 +5,7 @@ import com.reconciliation.filter.RateLimitingFilter;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
+import org.springframework.core.env.Environment;
 import org.springframework.http.HttpMethod;
 import org.springframework.http.HttpStatus;
 import org.springframework.security.authentication.AuthenticationManager;
@@ -35,6 +36,9 @@ public class SecurityConfig {
 
     @Autowired
     private RateLimitingFilter rateLimitingFilter;
+
+    @Autowired
+    private Environment environment;
 
     /**
      * Configuration du PasswordEncoder avec BCrypt
@@ -79,6 +83,9 @@ public class SecurityConfig {
                 .requestMatchers("/", "/health", "/error").permitAll()
                 // Authentification (pré-connexion)
                 .requestMatchers(HttpMethod.POST, "/api/auth/login", "/api/auth/verify-2fa").permitAll()
+                // Entreprise d'un identifiant, AVANT connexion (page de connexion) :
+                // ne renvoie que le code d'entreprise (nom inconnu => null).
+                .requestMatchers(HttpMethod.GET, "/api/auth/entreprise").permitAll()
                 .requestMatchers(HttpMethod.POST, "/api/users/forgot-password", "/api/users/reset-password").permitAll()
                 .requestMatchers(HttpMethod.POST, "/api/users/activate").permitAll()
                 .requestMatchers(HttpMethod.GET, "/api/users/check-admin").permitAll()
@@ -123,17 +130,7 @@ public class SecurityConfig {
                 
                 // Content Security Policy - Protection contre les attaques XSS et injection
                 .contentSecurityPolicy(csp -> csp
-                    .policyDirectives("default-src 'self'; " +
-                        "script-src 'self' 'unsafe-inline' 'unsafe-eval'; " +
-                        "style-src 'self' 'unsafe-inline' https://fonts.googleapis.com https://cdnjs.cloudflare.com; " +
-                        "img-src 'self' data: https:; " +
-                        "font-src 'self' data: https://fonts.gstatic.com https://cdnjs.cloudflare.com; " +
-                        "connect-src 'self' https:; " +
-                        "frame-ancestors 'none'; " +
-                        "base-uri 'self'; " +
-                        "form-action 'self'; " +
-                        "object-src 'none'; " +
-                        "upgrade-insecure-requests")
+                    .policyDirectives(contentSecurityPolicy())
                 )
                 
                 // Permissions Policy - Contrôle des fonctionnalités du navigateur
@@ -157,6 +154,27 @@ public class SecurityConfig {
             .addFilterBefore(jwtAuthenticationFilter, UsernamePasswordAuthenticationFilter.class);
 
         return http.build();
+    }
+
+    /**
+     * Angular 14 en JIT (dev) a encore besoin de {@code unsafe-eval}.
+     * En prod (AOT) on le retire.
+     */
+    private String contentSecurityPolicy() {
+        boolean prod = environment != null && environment.matchesProfiles("prod");
+        String scriptSrc = prod
+            ? "script-src 'self' 'unsafe-inline'; "
+            : "script-src 'self' 'unsafe-inline' 'unsafe-eval'; ";
+        return "default-src 'self'; " +
+            scriptSrc +
+            "style-src 'self' 'unsafe-inline' https://fonts.googleapis.com https://cdnjs.cloudflare.com; " +
+            "img-src 'self' data: https:; " +
+            "font-src 'self' data: https://fonts.gstatic.com https://cdnjs.cloudflare.com; " +
+            "connect-src 'self'; " +
+            "frame-ancestors 'none'; " +
+            "base-uri 'self'; " +
+            "form-action 'self'; " +
+            "object-src 'none'";
     }
 }
 
