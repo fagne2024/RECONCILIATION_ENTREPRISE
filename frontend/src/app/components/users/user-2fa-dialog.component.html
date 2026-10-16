@@ -4,7 +4,7 @@
       <i class="fas fa-shield-alt"></i>
       Configuration 2FA pour {{ username }}
     </h2>
-    <button class="close-btn" (click)="close()" title="{{ 'COMMON.actions.close' | translate }}">
+    <button type="button" class="ds-btn ds-btn--secondary close-btn" (click)="close()" title="{{ 'COMMON.actions.close' | translate }}">
       <i class="fas fa-times"></i>
     </button>
   </div>
@@ -38,27 +38,27 @@
 
       <!-- Actions -->
       <div class="actions">
-        <button 
+        <button type="button" 
           *ngIf="!is2FAEnabled" 
-          class="btn btn-primary" 
+          class="ds-btn ds-btn--primary btn btn-primary" 
           (click)="setup2FA()" 
           [disabled]="loading">
           <i class="fas fa-shield-alt"></i>
           Activer le 2FA
         </button>
 
-        <button 
+        <button type="button" 
           *ngIf="is2FAEnabled" 
-          class="btn btn-danger" 
+          class="ds-btn ds-btn--danger btn btn-danger" 
           (click)="disable2FA()" 
           [disabled]="loading">
           <i class="fas fa-lock-open"></i>
           Désactiver le 2FA
         </button>
 
-        <button 
+        <button type="button" 
           *ngIf="is2FAEnabled && hasSecret" 
-          class="btn btn-secondary" 
+          class="ds-btn ds-btn--secondary btn btn-secondary" 
           (click)="setup2FA()" 
           [disabled]="loading">
           <i class="fas fa-sync-alt"></i>
@@ -102,7 +102,7 @@
               <label>Clé secrète :</label>
               <div class="secret-value">
                 <code>{{ secret }}</code>
-                <button class="btn-icon" (click)="copySecret()" title="Copier la clé">
+                <button type="button" class="ds-btn ds-btn--secondary btn-icon" (click)="copySecret()" title="Copier la clé">
                   <i class="fas fa-copy"></i>
                 </button>
               </div>
@@ -112,7 +112,7 @@
               <label>URL OTP Auth :</label>
               <div class="secret-value">
                 <code class="url-code">{{ otpAuthUrl }}</code>
-                <button class="btn-icon" (click)="copyOtpAuthUrl()" title="Copier l'URL">
+                <button type="button" class="ds-btn ds-btn--secondary btn-icon" (click)="copyOtpAuthUrl()" title="Copier l'URL">
                   <i class="fas fa-copy"></i>
                 </button>
               </div>
@@ -148,7 +148,7 @@
             maxlength="6"
             pattern="[0-9]{6}"
             autocomplete="off"
-            class="form-control code-input"
+            class="ds-input form-control code-input"
             required>
           <small class="form-text">Entrez le code à 6 chiffres depuis Google Authenticator</small>
           <div *ngIf="validationForm.get('code')?.hasError('required') && validationForm.get('code')?.touched" class="error-text">
@@ -162,7 +162,7 @@
         <div class="validation-actions">
           <button 
             type="submit" 
-            class="btn btn-success" 
+            class="ds-btn ds-btn--primary btn btn-success" 
             [disabled]="validationForm.invalid || loading">
             <i class="fas fa-check" *ngIf="!loading"></i>
             <i class="fas fa-spinner fa-spin" *ngIf="loading"></i>
@@ -171,7 +171,7 @@
 
           <button 
             type="button" 
-            class="btn btn-secondary" 
+            class="ds-btn ds-btn--secondary btn btn-secondary" 
             (click)="cancelSetup()" 
             [disabled]="loading">
             <i class="fas fa-times"></i>{{ 'COMMON.actions.cancel' | translate }}</button>
