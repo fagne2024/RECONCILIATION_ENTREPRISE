@@ -99,10 +99,9 @@ export class LoginComponent implements OnInit {
             return;
           }
           
-          // Vérifier si un token JWT est présent dans la réponse
-          const token = response.token || null;
+          const token = response.token || (response.authenticated ? 'cookie' : null);
           if (!token) {
-            this.error = 'Token d\'authentification manquant dans la réponse du serveur.';
+            this.error = 'Session d\'authentification manquante dans la réponse du serveur.';
             return;
           }
           
@@ -126,7 +125,7 @@ export class LoginComponent implements OnInit {
           this.applyEntrepriseBranding();
 
           // Récupérer les modules actifs pour l'entreprise courante
-          this.loadActiveModules(response.username, token).then(() => {
+          this.loadActiveModules().then(() => {
             this.userLogService.logActivity('connexion', 'Authentification', response.username, 'Connexion réussie');
 
             // Rediriger vers l'URL demandée si elle est accessible, sinon vers
@@ -316,10 +315,9 @@ export class LoginComponent implements OnInit {
       next: async (response: any) => {
         this.loading = false;
         
-        // Vérifier si un token JWT est présent dans la réponse
-        const token = response.token || null;
+        const token = response.token || (response.authenticated ? 'cookie' : null);
         if (!token) {
-          this.error = 'Token d\'authentification manquant dans la réponse du serveur.';
+          this.error = 'Session d\'authentification manquante dans la réponse du serveur.';
           return;
         }
         
@@ -341,7 +339,7 @@ export class LoginComponent implements OnInit {
         this.applyEntrepriseBranding();
 
         // Charger les modules actifs après 2FA
-        await this.loadActiveModules(response.username, token);
+        await this.loadActiveModules();
         
         this.userLogService.logActivity('connexion', 'Authentification', response.username, 'Connexion réussie (2FA)');
         
@@ -414,7 +412,7 @@ export class LoginComponent implements OnInit {
    * Charge les modules actifs pour l'entreprise courante via /api/modules/active
    * et les stocke dans AppStateService.
    */
-  private async loadActiveModules(username: string, token: string): Promise<void> {
+  private async loadActiveModules(): Promise<void> {
     // Un SUPER_ADMIN plateforme n'appartient à aucune entreprise : il n'a donc
     // aucun module actif. On évite l'appel métier /api/modules/active (403).
     if (this.appState.isSuperAdmin()) {
@@ -422,9 +420,7 @@ export class LoginComponent implements OnInit {
       return;
     }
     try {
-      const response = await this.http.get<any>('/api/modules/active', {
-        headers: { Authorization: `Bearer ${token}` }
-      }).toPromise();
+      const response = await this.http.get<any>('/api/modules/active').toPromise();
       
       const activeModules: string[] = response?.modules ?? [];
       this.appState.setActiveModules(activeModules);

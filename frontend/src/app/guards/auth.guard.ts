@@ -20,9 +20,8 @@ export class AuthGuard implements CanActivate {
     const isAuthenticated = this.appState.isAuthenticated();
     const userRights = this.appState.getUserRights();
     const username = this.appState.getUsername();
-    const token = this.appState.getToken();
 
-    if (isAuthenticated && userRights && username && token) {
+    if (isAuthenticated && userRights && username) {
       // L'utilisateur est connecté avec un token JWT, autoriser l'accès
       return true;
     }

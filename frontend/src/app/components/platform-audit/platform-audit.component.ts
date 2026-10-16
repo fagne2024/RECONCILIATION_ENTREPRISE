@@ -94,9 +94,8 @@ export class PlatformAuditComponent implements OnInit, OnDestroy {
       });
   }
 
-  private getAuthHeaders(): { headers: any } {
-    const token = this.appState.getToken();
-    return { headers: { Authorization: `Bearer ${token}` } };
+  private getAuthHeaders(): { withCredentials: true } {
+    return { withCredentials: true };
   }
 
   onSearchChange(): void {

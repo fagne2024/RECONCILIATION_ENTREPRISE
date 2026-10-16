@@ -41,6 +41,9 @@ public class JwtAuthenticationFilter extends OncePerRequestFilter {
     @Autowired
     private EntrepriseRepository entrepriseRepository;
 
+    @Autowired
+    private com.reconciliation.service.AuthCookieService authCookieService;
+
     @Override
     protected void doFilterInternal(
             @NonNull HttpServletRequest request,
@@ -69,17 +72,14 @@ public class JwtAuthenticationFilter extends OncePerRequestFilter {
             return;
         }
 
-        final String authHeader = request.getHeader("Authorization");
+        final String jwt = extractJwt(request);
 
-        // Si pas d'Authorization header ou ne commence pas par "Bearer ", continuer sans authentification
-        if (authHeader == null || !authHeader.startsWith("Bearer ")) {
+        if (jwt == null) {
             filterChain.doFilter(request, response);
             return;
         }
 
         try {
-            // Extraire le token (enlever "Bearer ")
-            final String jwt = authHeader.substring(7);
 
             // Extraire le username du token
             final String username = jwtService.extractUsername(jwt);
@@ -145,6 +145,17 @@ public class JwtAuthenticationFilter extends OncePerRequestFilter {
         }
 
         filterChain.doFilter(request, response);
+    }
+
+    private String extractJwt(HttpServletRequest request) {
+        final String authHeader = request.getHeader("Authorization");
+        if (authHeader != null && authHeader.startsWith("Bearer ")) {
+            String bearer = authHeader.substring(7).trim();
+            if (!bearer.isEmpty()) {
+                return bearer;
+            }
+        }
+        return authCookieService == null ? null : authCookieService.read(request);
     }
 
     /**

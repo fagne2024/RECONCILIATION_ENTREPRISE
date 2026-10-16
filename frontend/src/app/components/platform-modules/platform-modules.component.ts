@@ -131,9 +131,8 @@ export class PlatformModulesComponent implements OnInit, OnDestroy {
       });
   }
 
-  private getAuthHeaders(): { headers: HttpHeaders } {
-    const token = this.appState.getToken();
-    return { headers: new HttpHeaders().set('Authorization', `Bearer ${token}`) };
+  private getAuthHeaders(): { withCredentials: true } {
+    return { withCredentials: true };
   }
 
   private apiMessage(err: any, fallbackKey: string): string {

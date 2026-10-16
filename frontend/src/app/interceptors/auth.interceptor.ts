@@ -26,8 +26,9 @@ export class AuthInterceptor implements HttpInterceptor {
     // Construire les headers à ajouter
     const headers: { [key: string]: string } = {};
 
-    // Si un token JWT existe, ajouter le header Authorization
-    if (token) {
+    // Cookie HttpOnly AUTH_TOKEN (withCredentials). Le Bearer n'est envoyé
+    // que s'il reste un JWT en mémoire (clients / sessions héritées).
+    if (token && token !== 'cookie') {
       headers['Authorization'] = `Bearer ${token}`;
     }
 
@@ -45,7 +46,8 @@ export class AuthInterceptor implements HttpInterceptor {
 
     // Cloner la requête et ajouter les headers
     const clonedRequest = req.clone({
-      setHeaders: headers
+      setHeaders: headers,
+      withCredentials: true
     });
 
     // Gérer les erreurs HTTP (notamment 401 Unauthorized)

@@ -18,6 +18,9 @@ import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.web.bind.annotation.*;
+import jakarta.servlet.http.HttpServletRequest;
+import jakarta.servlet.http.HttpServletResponse;
+import com.reconciliation.service.AuthCookieService;
 import java.util.Map;
 import java.util.List;
 import java.util.Optional;
@@ -54,8 +57,13 @@ public class AuthController {
     @Autowired
     private EntrepriseRepository entrepriseRepository;
 
+    @Autowired
+    private AuthCookieService authCookieService;
+
     @PostMapping("/login")
-    public ResponseEntity<?> login(@RequestBody Map<String, String> payload) {
+    public ResponseEntity<?> login(@RequestBody Map<String, String> payload,
+                                   HttpServletRequest request,
+                                   HttpServletResponse response) {
         String username = payload.get("username");
         String password = payload.get("password");
         if (username == null || password == null) {
@@ -77,13 +85,14 @@ public class AuthController {
             com.reconciliation.tenant.TenantContext.set(loginTenant);
         }
         try {
-            return finishLogin(user, password);
+            return finishLogin(user, password, request, response);
         } finally {
             com.reconciliation.tenant.TenantContext.clear();
         }
     }
 
-    private ResponseEntity<?> finishLogin(UserEntity user, String password) {
+    private ResponseEntity<?> finishLogin(UserEntity user, String password,
+                                          HttpServletRequest request, HttpServletResponse httpResponse) {
         Optional<ResponseEntity<?>> lockedResponse = loginLockService.buildLockedResponse(user);
         if (lockedResponse.isPresent()) {
             return lockedResponse.get();
@@ -120,25 +129,25 @@ public class AuthController {
 
         loginLockService.resetFailedAttempts(user);
 
-        Map<String, Object> response = new java.util.HashMap<>();
-        response.put("username", user.getUsername());
+        Map<String, Object> body = new java.util.HashMap<>();
+        body.put("username", user.getUsername());
 
         if (user.getEnabled2FA() && user.getSecret2FA() != null) {
-            response.put("requires2FA", true);
-            response.put("message", "Code d'authentification à deux facteurs requis");
+            body.put("requires2FA", true);
+            body.put("message", "Code d'authentification à deux facteurs requis");
             // Ticket pré-auth : nécessaire pour valider le code TOTP, usage unique, 5 min.
             // La clé secrète et son URL otpauth ne sont PAS renvoyées ici.
-            response.put("preAuthTicket", authTicketService.issueTicket(user.getUsername()));
+            body.put("preAuthTicket", authTicketService.issueTicket(user.getUsername()));
 
             if (!user.getQrCodeScanned()) {
                 String qrCodeBase64 = twoFactorAuthService.generateQRCodeBase64(user.getUsername(), user.getSecret2FA());
-                response.put("qrCode", qrCodeBase64);
-                response.put("showQRCode", true);
+                body.put("qrCode", qrCodeBase64);
+                body.put("showQRCode", true);
             } else {
-                response.put("showQRCode", false);
+                body.put("showQRCode", false);
             }
 
-            return ResponseEntity.ok().body(response);
+            return ResponseEntity.ok().body(body);
         }
 
         // Authentification complète (mot de passe, sans 2FA) : horodater la connexion.
@@ -146,11 +155,11 @@ public class AuthController {
 
         Map<String, Object> extraClaims = buildRoleClaims(user);
         String token = jwtService.generateToken(user.getUsername(), extraClaims);
+        authCookieService.addTokenCookie(request, httpResponse, token);
 
-        response.put("token", token);
-        response.put("type", "Bearer");
-        response.put("requires2FA", false);
-        putScopeFields(response, user);
+        body.put("authenticated", true);
+        body.put("requires2FA", false);
+        putScopeFields(body, user);
 
         ProfilEntity profil = user.getProfil();
         String profilNom = profil != null ? profil.getNom() : null;
@@ -164,20 +173,20 @@ public class AuthController {
                     droits.add(Map.of("module", m.getNom(), "permission", p.getNom()));
                 }
             }
-            response.put("profil", profilNom != null ? profilNom : "ADMIN");
-            response.put("droits", droits);
+            body.put("profil", profilNom != null ? profilNom : "ADMIN");
+            body.put("droits", droits);
         } else {
             List<ProfilPermissionEntity> droits = profil != null ? profilPermissionRepository.findAll().stream()
                 .filter(pp -> pp.getProfil().getId().equals(profil.getId()))
                 .toList() : List.of();
-            response.put("profil", profilNom);
-            response.put("droits", droits.stream().map(pp -> Map.of(
+            body.put("profil", profilNom);
+            body.put("droits", droits.stream().map(pp -> Map.of(
                 "module", pp.getModule().getNom(),
                 "permission", pp.getPermission().getNom()
             )).toList());
         }
-        putPaysScope(response, user);
-        return ResponseEntity.ok().body(response);
+        putPaysScope(body, user);
+        return ResponseEntity.ok().body(body);
     }
 
     private void putPaysScope(Map<String, Object> response, UserEntity user) {
@@ -238,7 +247,9 @@ public class AuthController {
      * Valide le code 2FA (après obtention d'un ticket pré-auth au login) et retourne le token JWT
      */
     @PostMapping("/verify-2fa")
-    public ResponseEntity<?> verify2FA(@RequestBody Map<String, String> payload) {
+    public ResponseEntity<?> verify2FA(@RequestBody Map<String, String> payload,
+                                       HttpServletRequest request,
+                                       HttpServletResponse httpResponse) {
         String username = payload.get("username");
         String code = payload.get("code");
         String preAuthTicket = payload.get("preAuthTicket");
@@ -299,11 +310,11 @@ public class AuthController {
 
             Map<String, Object> extraClaims = buildRoleClaims(user);
             String token = jwtService.generateToken(user.getUsername(), extraClaims);
+            authCookieService.addTokenCookie(request, httpResponse, token);
 
             Map<String, Object> response = new java.util.HashMap<>();
             response.put("username", user.getUsername());
-            response.put("token", token);
-            response.put("type", "Bearer");
+            response.put("authenticated", true);
             putScopeFields(response, user);
 
             if (AdminRoleUtil.isAdminUser(user)) {
@@ -391,7 +402,8 @@ public class AuthController {
     }
 
     @PostMapping("/logout")
-    public ResponseEntity<?> logout() {
-        return ResponseEntity.ok().body("Déconnecté");
+    public ResponseEntity<?> logout(HttpServletRequest request, HttpServletResponse httpResponse) {
+        authCookieService.clear(request, httpResponse);
+        return ResponseEntity.ok().body(Map.of("message", "Déconnecté"));
     }
 } 

@@ -454,11 +454,14 @@ private reconciliationProgressSubject = new BehaviorSubject<boolean>(false);
         };
         this.rebuildNormalizedModuleSet(deduplicatedModules);
         if (username) this.username = username;
-        if (token) this.token = token;
-        // Sauvegarder dans le localStorage
+        if (token && token !== 'cookie') {
+            this.token = token;
+        } else {
+            this.token = 'cookie';
+        }
         localStorage.setItem('userRights', JSON.stringify(this.userRights));
         if (username) localStorage.setItem('username', username);
-        if (token) localStorage.setItem('auth_token', token);
+        localStorage.removeItem('auth_token');
     }
 
     setUserPaysScope(scope: UserPaysScope): void {
@@ -544,8 +547,8 @@ private reconciliationProgressSubject = new BehaviorSubject<boolean>(false);
     }
 
     setToken(token: string) {
-        this.token = token;
-        localStorage.setItem('auth_token', token);
+        this.token = token === 'cookie' ? 'cookie' : token;
+        localStorage.removeItem('auth_token');
     }
 
     getToken(): string | null {
@@ -553,17 +556,16 @@ private reconciliationProgressSubject = new BehaviorSubject<boolean>(false);
     }
 
     private loadUserFromStorage() {
+        localStorage.removeItem('auth_token');
         const rightsStr = localStorage.getItem('userRights');
         const username = localStorage.getItem('username');
-        const token = localStorage.getItem('auth_token');
         if (rightsStr && username) {
             try {
                 this.userRights = JSON.parse(rightsStr);
                 this.username = username;
-                if (token) this.token = token;
+                this.token = 'cookie';
                 this.rebuildNormalizedModuleSet();
             } catch (e) {
-                // Nettoyer si erreur de parsing
                 localStorage.removeItem('userRights');
                 localStorage.removeItem('username');
                 localStorage.removeItem('auth_token');
@@ -572,6 +574,9 @@ private reconciliationProgressSubject = new BehaviorSubject<boolean>(false);
     }
 
     logout() {
+        this.http.post('/api/auth/logout', {}, { withCredentials: true }).subscribe({
+            error: () => { /* cookie déjà expirée ou backend indisponible */ }
+        });
         this.userRights = null;
         this.username = null;
         this.token = null;
@@ -587,7 +592,7 @@ private reconciliationProgressSubject = new BehaviorSubject<boolean>(false);
     }
 
     isAuthenticated(): boolean {
-        return !!(this.token && this.username);
+        return !!(this.username && this.userRights);
     }
 
     getUserRights(): UserRights | null {

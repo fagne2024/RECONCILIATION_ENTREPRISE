@@ -69,13 +69,20 @@ class SecurityPolicyTest {
         }
 
         @Bean
+        com.reconciliation.service.AuthCookieService authCookieService() {
+            return new com.reconciliation.service.AuthCookieService();
+        }
+
+        @Bean
         JwtAuthenticationFilter jwtAuthenticationFilter(JwtService jwtService,
                                                         UserDetailsService userDetailsService,
-                                                        com.reconciliation.repository.EntrepriseRepository entrepriseRepository) {
+                                                        com.reconciliation.repository.EntrepriseRepository entrepriseRepository,
+                                                        com.reconciliation.service.AuthCookieService authCookieService) {
             JwtAuthenticationFilter filter = new JwtAuthenticationFilter();
             ReflectionTestUtils.setField(filter, "jwtService", jwtService);
             ReflectionTestUtils.setField(filter, "userDetailsService", userDetailsService);
             ReflectionTestUtils.setField(filter, "entrepriseRepository", entrepriseRepository);
+            ReflectionTestUtils.setField(filter, "authCookieService", authCookieService);
             return filter;
         }
 

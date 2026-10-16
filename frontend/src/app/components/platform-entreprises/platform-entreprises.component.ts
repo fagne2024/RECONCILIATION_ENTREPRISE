@@ -108,9 +108,8 @@ export class PlatformEntreprisesComponent implements OnInit, OnDestroy {
       : this.entreprises.filter(e => e.statut !== 'ARCHIVEE');
   }
 
-  private getAuthHeaders(): { headers: HttpHeaders } {
-    const token = this.appState.getToken();
-    return { headers: new HttpHeaders().set('Authorization', `Bearer ${token}`) };
+  private getAuthHeaders(): { withCredentials: true } {
+    return { withCredentials: true };
   }
 
   /**
