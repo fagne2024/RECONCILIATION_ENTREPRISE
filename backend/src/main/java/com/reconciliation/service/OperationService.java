@@ -27,6 +27,7 @@ import com.reconciliation.repository.AgencySummaryRepository;
 import com.reconciliation.entity.AgencySummaryEntity;
 import com.reconciliation.dto.OperationBancaireCreateRequest;
 import com.reconciliation.repository.OperationBancaireRepository;
+import com.reconciliation.util.RequestContextUtil;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -102,6 +103,7 @@ public class OperationService {
     
     public Optional<Operation> getOperationById(Long id) {
         return operationRepository.findById(id)
+                .filter(this::canAccessOperation)
                 .map(this::convertToModel);
     }
     
@@ -173,6 +175,9 @@ public class OperationService {
     }
     
     public List<Operation> getOperationsByPays(String pays) {
+        if (!canAccessPays(pays)) {
+            return new ArrayList<>();
+        }
         return operationRepository.findByPaysOrderByDateOperationDesc(pays).stream()
                 .map(this::convertToModel)
                 .collect(Collectors.toList());
@@ -559,6 +564,7 @@ public class OperationService {
     @Transactional
     public Operation updateOperation(Long id, OperationUpdateRequest request) {
         OperationEntity operationToUpdate = operationRepository.findById(id)
+                .filter(this::canAccessOperation)
                 .orElseThrow(() -> new IllegalArgumentException("Opération non trouvée avec ID: " + id));
 
         CompteEntity compte = operationToUpdate.getCompte();
@@ -702,7 +708,8 @@ public class OperationService {
 
     @Transactional
     public boolean deleteOperation(Long id) {
-        Optional<OperationEntity> optionalOperation = operationRepository.findById(id);
+        Optional<OperationEntity> optionalOperation = operationRepository.findById(id)
+                .filter(this::canAccessOperation);
         if (optionalOperation.isPresent()) {
             OperationEntity operation = optionalOperation.get();
             
@@ -723,7 +730,8 @@ public class OperationService {
     
     @Transactional
     public boolean updateOperationStatut(Long id, String nouveauStatut) {
-        Optional<OperationEntity> optionalOperation = operationRepository.findById(id);
+        Optional<OperationEntity> optionalOperation = operationRepository.findById(id)
+                .filter(this::canAccessOperation);
         if (optionalOperation.isPresent()) {
             OperationEntity operation = optionalOperation.get();
             if ("Validée".equals(nouveauStatut)) {
@@ -1538,8 +1546,21 @@ public class OperationService {
      */
     public Optional<Operation> getOperationByIdWithFrais(Long id) {
         return operationRepository.findById(id)
+                .filter(this::canAccessOperation)
                 .map(this::convertToModel)
                 .map(this::enrichOperationWithFrais);
+    }
+
+    private boolean canAccessOperation(OperationEntity operation) {
+        return operation != null && canAccessPays(operation.getPays());
+    }
+
+    private boolean canAccessPays(String pays) {
+        String username = RequestContextUtil.getUsernameFromRequest();
+        if (username == null || username.isBlank()) {
+            return false;
+        }
+        return paysFilterService.canAccessPays(username, pays);
     }
     
     /**

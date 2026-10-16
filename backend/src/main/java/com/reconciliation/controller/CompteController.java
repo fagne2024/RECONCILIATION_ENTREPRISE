@@ -100,7 +100,8 @@ public class CompteController {
     
     @PutMapping("/{id}")
     public ResponseEntity<Compte> updateCompte(@PathVariable Long id, @RequestBody Compte compteUpdate) {
-        Optional<Compte> existingCompte = compteService.getCompteById(id);
+        String username = RequestContextUtil.getUsernameFromRequest();
+        Optional<Compte> existingCompte = compteService.getCompteById(id, username);
         if (existingCompte.isPresent()) {
             Compte existing = existingCompte.get();
             
@@ -138,6 +139,10 @@ public class CompteController {
     
     @PutMapping("/{id}/solde")
     public ResponseEntity<Boolean> updateSolde(@PathVariable Long id, @RequestBody Double nouveauSolde) {
+        String username = RequestContextUtil.getUsernameFromRequest();
+        if (compteService.getCompteById(id, username).isEmpty()) {
+            return ResponseEntity.notFound().build();
+        }
         boolean updated = compteService.updateSolde(id, nouveauSolde);
         return updated ? ResponseEntity.ok(true) : ResponseEntity.notFound().build();
     }
@@ -145,6 +150,10 @@ public class CompteController {
     @DeleteMapping("/{id}")
     public ResponseEntity<?> deleteCompte(@PathVariable Long id) {
         try {
+            String username = RequestContextUtil.getUsernameFromRequest();
+            if (compteService.getCompteById(id, username).isEmpty()) {
+                return ResponseEntity.notFound().build();
+            }
             boolean deleted = compteService.deleteCompte(id);
             if (deleted) {
                 return ResponseEntity.ok(Map.of("success", true, "message", "Compte supprimé avec succès"));
