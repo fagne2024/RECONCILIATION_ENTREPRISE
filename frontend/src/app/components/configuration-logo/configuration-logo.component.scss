@@ -9,24 +9,24 @@
     margin: 0 0 6px;
     font-size: 22px;
     font-weight: 600;
-    color: #2d3748;
+    color: var(--color-text-primary);
 
     i {
       margin-right: 8px;
-      color: var(--theme-primary, #667eea);
+      color: var(--color-accent);
     }
   }
 }
 
 .config-subtitle {
   margin: 0;
-  color: #718096;
+  color: var(--color-text-muted);
   font-size: 14px;
 }
 
 .config-card {
-  background: #fff;
-  border: 1px solid #e2e8f0;
+  background: var(--color-surface-raised);
+  border: 1px solid var(--color-border);
   border-radius: 10px;
   padding: 24px;
   margin-bottom: 24px;
@@ -43,9 +43,9 @@
   .logo-preview-box {
     width: 300px;
     min-height: 140px;
-    border: 1px solid #e2e8f0;
+    border: 1px solid var(--color-border);
     border-radius: 10px;
-    background: #f7fafc;
+    background: var(--color-surface-sunken);
     display: flex;
     align-items: center;
     justify-content: center;
@@ -60,7 +60,7 @@
 
     &.is-empty {
       border-style: dashed;
-      background: #fbfdff;
+      background: var(--color-surface);
     }
 
     .logo-preview-empty {
@@ -68,7 +68,7 @@
       flex-direction: column;
       align-items: center;
       gap: 8px;
-      color: #a0aec0;
+      color: var(--color-text-muted);
       font-size: 13px;
 
       i {
@@ -109,35 +109,35 @@
   }
 
   .logo-btn-choose {
-    background: var(--theme-primary, #667eea);
-    color: #fff;
+    background: var(--color-accent);
+    color: var(--color-accent-contrast);
 
     &:hover:not(:disabled) {
-      background: var(--theme-primary-dark, #5a6fd6);
+      background: var(--color-accent-hover);
     }
   }
 
   .logo-btn-save {
-    background: #27ae60;
-    color: #fff;
+    background: var(--color-success);
+    color: var(--color-accent-contrast);
 
     &:hover:not(:disabled) {
-      background: #219653;
+      filter: brightness(0.92);
     }
   }
 
   .logo-btn-remove {
-    background: #fff;
-    color: #e53e3e;
-    border-color: #feb2b2;
+    background: var(--color-surface-raised);
+    color: var(--color-error);
+    border-color: var(--color-error-border);
 
     &:hover:not(:disabled) {
-      background: #fff5f5;
+      background: var(--color-error-bg);
     }
   }
 
   .logo-hint {
-    color: #a0aec0;
+    color: var(--color-text-muted);
     font-size: 12.5px;
     margin-top: 2px;
   }
@@ -146,7 +146,7 @@
     display: inline-flex;
     align-items: center;
     gap: 6px;
-    color: #dd6b20;
+    color: var(--color-warning);
     font-size: 13px;
     font-weight: 500;
   }
@@ -156,17 +156,17 @@
 .logo-palette {
   margin-top: 24px;
   padding-top: 20px;
-  border-top: 1px solid #edf2f7;
+  border-top: 1px solid var(--color-border);
 
   h3 {
     margin: 0 0 16px;
     font-size: 15px;
     font-weight: 600;
-    color: #2d3748;
+    color: var(--color-text-primary);
 
     i {
       margin-right: 8px;
-      color: var(--theme-primary, #667eea);
+      color: var(--color-accent);
     }
   }
 }
@@ -188,17 +188,17 @@
     align-items: center;
     justify-content: space-between;
     font-size: 13.5px;
-    color: #4a5568;
+    color: var(--color-text-muted);
 
     strong {
-      color: #2d3748;
+      color: var(--color-text-primary);
       font-variant-numeric: tabular-nums;
     }
   }
 
   input[type='range'] {
     width: 100%;
-    accent-color: var(--theme-primary, #667eea);
+    accent-color: var(--color-accent);
     cursor: pointer;
   }
 }
@@ -223,17 +223,17 @@
     align-items: center;
     justify-content: space-between;
     font-size: 12.5px;
-    color: #4a5568;
+    color: var(--color-text-muted);
 
     strong {
-      color: #2d3748;
+      color: var(--color-text-primary);
       font-variant-numeric: tabular-nums;
     }
   }
 
   input[type='range'] {
     width: 100%;
-    accent-color: var(--theme-primary, #667eea);
+    accent-color: var(--color-accent);
     cursor: pointer;
   }
 }
@@ -249,10 +249,10 @@
     justify-content: center;
     gap: 6px;
     padding: 9px 10px;
-    border: 1px solid #cbd5e0;
+    border: 1px solid var(--color-border-strong);
     border-radius: 8px;
-    background: #fff;
-    color: #4a5568;
+    background: var(--color-surface-raised);
+    color: var(--color-text-muted);
     font-size: 13px;
     cursor: pointer;
     transition: background-color 0.2s, border-color 0.2s, color 0.2s;
@@ -262,13 +262,13 @@
     }
 
     &:hover {
-      border-color: #a3b1c6;
+      border-color: var(--color-border-strong);
     }
 
     &.active {
-      background: #ebf0ff;
-      border-color: var(--theme-primary, #667eea);
-      color: var(--theme-primary-dark, #4c63d2);
+      background: var(--color-accent-soft);
+      border-color: var(--color-accent);
+      color: var(--color-accent-hover);
       font-weight: 600;
     }
   }
@@ -282,8 +282,8 @@
 }
 
 .logo-btn-design {
-  background: linear-gradient(135deg, #6376e8, #7b4fb1);
-  color: #fff;
+  background: linear-gradient(135deg, var(--color-accent), var(--color-accent-hover));
+  color: var(--color-accent-contrast);
 
   &:hover {
     filter: brightness(1.06);
@@ -291,13 +291,13 @@
 }
 
 .logo-btn-reset {
-  background: #fff;
-  color: #4a5568;
-  border-color: #cbd5e0;
+  background: var(--color-surface-raised);
+  color: var(--color-text-muted);
+  border-color: var(--color-border-strong);
 
   &:hover:not(:disabled) {
-    background: #f7fafc;
-    border-color: #a3b1c6;
+    background: var(--color-surface-sunken);
+    border-color: var(--color-border-strong);
   }
 }
 
@@ -310,24 +310,24 @@
 .swatch {
   min-width: 92px;
   padding: 12px 14px;
-  border: 1px solid rgba(0, 0, 0, 0.08);
+  border: 1px solid var(--color-border);
   border-radius: 8px;
   font-size: 12.5px;
   font-weight: 700;
   letter-spacing: 0.4px;
-  font-family: 'SFMono-Regular', Consolas, 'Liberation Mono', monospace;
+  font-family: var(--font-mono);
   cursor: pointer;
   transition: transform 0.15s, box-shadow 0.15s;
 
   &:hover {
     transform: translateY(-2px);
-    box-shadow: 0 4px 10px rgba(0, 0, 0, 0.12);
+    box-shadow: var(--shadow-sm);
   }
 }
 
 .palette-empty {
   margin: 0;
-  color: #a0aec0;
+  color: var(--color-text-muted);
   font-size: 13.5px;
 }
 
@@ -336,7 +336,7 @@
   align-items: center;
   gap: 6px;
   margin-top: 12px;
-  color: #27ae60;
+  color: var(--color-success);
   font-size: 13px;
   font-weight: 600;
 }

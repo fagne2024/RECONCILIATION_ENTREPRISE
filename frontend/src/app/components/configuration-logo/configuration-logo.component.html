@@ -22,14 +22,14 @@
           accept="image/*,.bmp,.tif,.tiff,.ico,.heic,.heif,.svg"
           (change)="onLogoSelected($event)">
 
-        <button type="button" class="logo-btn logo-btn-choose" (click)="logoInput.click()">
+        <button type="button" class="ds-btn ds-btn--primary logo-btn logo-btn-choose" (click)="logoInput.click()">
           <i class="fas fa-folder-open"></i>
           {{ 'CFG.logo.choose' | translate }}
         </button>
 
         <button
           type="button"
-          class="logo-btn logo-btn-remove"
+          class="ds-btn ds-btn--ghost logo-btn logo-btn-remove"
           [disabled]="!logoUrl && !pendingLogo"
           (click)="removeLogo()">
           <i class="fas fa-trash"></i>
@@ -53,7 +53,7 @@
         <div class="setting-field">
           <label>
             {{ 'CFG.logo.size' | translate }}
-            <strong>{{ settings.size }} px</strong>
+            <strong class="ds-num">{{ settings.size }} px</strong>
           </label>
           <input
             type="range"
@@ -69,6 +69,7 @@
           <div class="align-toggle">
             <button
               type="button"
+              class="ds-btn ds-btn--secondary ds-btn--sm"
               [class.active]="settings.align === 'left'"
               (click)="settings.align = 'left'">
               <i class="fas fa-align-left"></i>
@@ -76,6 +77,7 @@
             </button>
             <button
               type="button"
+              class="ds-btn ds-btn--secondary ds-btn--sm"
               [class.active]="settings.align === 'center'"
               (click)="settings.align = 'center'">
               <i class="fas fa-align-center"></i>
@@ -83,6 +85,7 @@
             </button>
             <button
               type="button"
+              class="ds-btn ds-btn--secondary ds-btn--sm"
               [class.active]="settings.align === 'right'"
               (click)="settings.align = 'right'">
               <i class="fas fa-align-right"></i>
@@ -94,7 +97,7 @@
         <div class="setting-field">
           <label>
             {{ 'CFG.logo.offsetY' | translate }}
-            <strong>{{ settings.offsetY >= 0 ? '+' : '' }}{{ settings.offsetY }} px</strong>
+            <strong class="ds-num">{{ settings.offsetY >= 0 ? '+' : '' }}{{ settings.offsetY }} px</strong>
           </label>
           <input
             type="range"
@@ -111,7 +114,7 @@
             <div class="padding-item">
               <span>
                 {{ 'CFG.logo.paddingTop' | translate }}
-                <strong>{{ settings.paddingTop }} px</strong>
+                <strong class="ds-num">{{ settings.paddingTop }} px</strong>
               </span>
               <input
                 type="range"
@@ -124,7 +127,7 @@
             <div class="padding-item">
               <span>
                 {{ 'CFG.logo.paddingRight' | translate }}
-                <strong>{{ settings.paddingRight }} px</strong>
+                <strong class="ds-num">{{ settings.paddingRight }} px</strong>
               </span>
               <input
                 type="range"
@@ -137,7 +140,7 @@
             <div class="padding-item">
               <span>
                 {{ 'CFG.logo.paddingBottom' | translate }}
-                <strong>{{ settings.paddingBottom }} px</strong>
+                <strong class="ds-num">{{ settings.paddingBottom }} px</strong>
               </span>
               <input
                 type="range"
@@ -150,7 +153,7 @@
             <div class="padding-item">
               <span>
                 {{ 'CFG.logo.paddingLeft' | translate }}
-                <strong>{{ settings.paddingLeft }} px</strong>
+                <strong class="ds-num">{{ settings.paddingLeft }} px</strong>
               </span>
               <input
                 type="range"
@@ -167,21 +170,21 @@
       <div class="settings-actions">
         <button
           type="button"
-          class="logo-btn logo-btn-save"
+          class="ds-btn logo-btn logo-btn-save"
           [disabled]="!hasPendingChanges"
           (click)="saveLogo()">
           <i class="fas fa-check"></i>
           {{ 'CFG.logo.save' | translate }}
         </button>
 
-        <button type="button" class="logo-btn logo-btn-design" (click)="applyDesign()">
+        <button type="button" class="ds-btn ds-btn--secondary logo-btn logo-btn-design" (click)="applyDesign()">
           <i class="fas fa-palette"></i>
           {{ 'CFG.logo.applyDesign' | translate }}
         </button>
 
         <button
           type="button"
-          class="logo-btn logo-btn-reset"
+          class="ds-btn ds-btn--ghost logo-btn logo-btn-reset"
           *ngIf="themeActive"
           (click)="resetDesign()">
           <i class="fas fa-undo"></i>
