@@ -10,7 +10,7 @@ body {
     margin-left: 350px; /* Doit correspondre à la largeur de la sidebar */
     padding: 0;
     width: calc(100% - 350px);
-    background-color: var(--theme-content-bg, #f4f7fa);
+    background-color: var(--color-bg);
     min-height: 100vh;
     height: 100vh;
     display: flex;

@@ -3,37 +3,35 @@
 @use './styles/material-theme';
 @use './styles/base';
 
-@import url('https://fonts.googleapis.com/css2?family=Roboto:wght@300;400;500;700&display=swap');
 @import './app/styles/dashboard-filters';
 
 :root {
-    --primary-color: #2196F3;
-    --secondary-color: #FFC107;
-    --success-color: #4CAF50;
-    --danger-color: #F44336;
-    --warning-color: #FF9800;
-    --info-color: #00BCD4;
-    --light-color: #F5F5F5;
-    --dark-color: #212121;
-    --gray-color: #9E9E9E;
-    --white-color: #FFFFFF;
-    --shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
-    --transition: all 0.3s ease;
+    --primary-color: var(--color-accent);
+    --secondary-color: var(--color-warning);
+    --success-color: var(--color-success);
+    --danger-color: var(--color-error);
+    --warning-color: var(--color-warning);
+    --info-color: var(--color-info);
+    --light-color: var(--color-bg);
+    --dark-color: var(--color-text-primary);
+    --gray-color: var(--color-text-muted);
+    --white-color: var(--color-surface);
+    --shadow: var(--shadow-card);
+    --transition: background-color var(--duration-base) var(--ease-standard),
+      color var(--duration-base) var(--ease-standard),
+      border-color var(--duration-base) var(--ease-standard);
 
-    /* Design issu des couleurs du logo (ThemeService) — valeurs par défaut = palette applicative d'origine */
-    --theme-primary: #667eea;
-    --theme-primary-dark: #5a6fd6;
-    --theme-primary-rgb: 102, 126, 234;
-    --theme-accent: #764ba2;
-    --theme-accent-rgb: 118, 75, 162;
-    --theme-info: #3498db;
-    --theme-info-dark: #2980b9;
-    --theme-info-rgb: 52, 152, 219;
-    --theme-info-dark-rgb: 41, 128, 185;
-    --theme-sidebar-bg: #2c3e50;
-    --theme-sidebar-hover: #34495e;
-    --theme-sidebar-active: #3498db;
-    --theme-content-bg: #f4f7fa;
+    /* Marque entreprise : ThemeService n'écrit plus que la sidebar.
+       Par défaut, la navigation suit les tokens du design system. */
+    --theme-primary: var(--color-accent);
+    --theme-primary-dark: var(--color-accent-hover);
+    --theme-accent: var(--color-accent);
+    --theme-info: var(--color-info);
+    --theme-info-dark: var(--color-info);
+    --theme-sidebar-bg: var(--color-nav-bg);
+    --theme-sidebar-hover: var(--color-nav-bg-hover);
+    --theme-sidebar-active: var(--color-accent);
+    --theme-content-bg: var(--color-bg);
 }
 
 * {
@@ -214,20 +212,21 @@ form, .form-group, .form-section {
     transition: var(--transition);
     
     &-primary {
-        background-color: var(--primary-color);
-        color: var(--white-color);
+        background-color: var(--color-accent);
+        color: var(--color-accent-contrast);
         
         &:hover {
-            background-color: darken(#2196F3, 10%);
+            background-color: var(--color-accent-hover);
         }
     }
     
     &-secondary {
-        background-color: var(--secondary-color);
-        color: var(--dark-color);
+        background-color: var(--color-surface);
+        color: var(--color-text-primary);
+        border: var(--border-width) solid var(--color-border-strong);
         
         &:hover {
-            background-color: darken(#FFC107, 10%);
+            background-color: var(--color-hover);
         }
     }
     
@@ -242,7 +241,7 @@ body { margin: 0; font-family: var(--font-ui); }
 /* Angular CDK (mat-select, menus, dialogs overlay) : défaut ~1000, sinon les panneaux passent derrière
    les modales du dashboard (2000) et le modal graphique (10000). */
 .cdk-overlay-container {
-  z-index: 11000 !important;
+  z-index: var(--z-overlay) !important;
 }
 
 /* Sélecteur de langue FR / EN.
@@ -284,7 +283,7 @@ body { margin: 0; font-family: var(--font-ui); }
 
     &.is-active {
       background: #fff;
-      color: var(--primary-color, #2196f3);
+      color: var(--color-accent);
     }
   }
 
@@ -297,12 +296,12 @@ body { margin: 0; font-family: var(--font-ui); }
       color: rgba(0, 0, 0, 0.55);
 
       &:hover {
-        color: var(--primary-color, #2196f3);
+        color: var(--color-accent);
       }
 
       &.is-active {
-        background: var(--primary-color, #2196f3);
-        color: #fff;
+        background: var(--color-accent);
+        color: var(--color-accent-contrast);
       }
     }
   }

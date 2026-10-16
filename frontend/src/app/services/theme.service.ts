@@ -27,11 +27,7 @@ const THEME_VAR_NAMES = [
   '--theme-info-dark-rgb',
   '--theme-sidebar-bg',
   '--theme-sidebar-hover',
-  '--theme-sidebar-active',
-  '--theme-content-bg',
-  '--primary-color',
-  '--secondary-color',
-  '--light-color'
+  '--theme-sidebar-active'
 ];
 
 export type ThemeMode = 'light' | 'dark' | 'system';
@@ -175,15 +171,12 @@ export class ThemeService {
     root.style.setProperty('--theme-info-dark', theme.infoDark);
     root.style.setProperty('--theme-info-rgb', hexToRgb(theme.info).join(', '));
     root.style.setProperty('--theme-info-dark-rgb', hexToRgb(theme.infoDark).join(', '));
+    // Marque limitée à la barre latérale (décision D3). Les tokens du
+    // design system (--color-accent, --color-bg, --primary-color…) restent
+    // inchangés pour préserver les contrastes des pages.
     root.style.setProperty('--theme-sidebar-bg', theme.sidebarBg);
     root.style.setProperty('--theme-sidebar-hover', theme.sidebarHover);
     root.style.setProperty('--theme-sidebar-active', theme.sidebarActive);
-    root.style.setProperty('--theme-content-bg', theme.contentBg);
-    // Variables globales legacy : propagées automatiquement partout où
-    // les composants utilisent var(--primary-color) / var(--secondary-color) / var(--light-color)
-    root.style.setProperty('--primary-color', theme.primary);
-    root.style.setProperty('--secondary-color', theme.accent);
-    root.style.setProperty('--light-color', theme.contentBg);
   }
 
   private clearCssVars(): void {

@@ -282,4 +282,5 @@
 :root[data-theme='dark'] {
   @include dark-colors;
   @include derived-tokens;
+  @include rd-aliases;
 }
