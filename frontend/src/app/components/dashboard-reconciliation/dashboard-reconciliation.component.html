@@ -13,7 +13,7 @@
                 <p class="subtitle-small">Données réelles de la table result8rec</p>
             </div>
             <div class="header-actions">
-                <button class="btn-preview-global" (click)="goToGlobalPreview()" title="Afficher l'aperçu global avec graphiques">
+                <button type="button" class="btn-preview-global ds-btn ds-btn--primary" (click)="goToGlobalPreview()" title="Afficher l'aperçu global avec graphiques">
                     📊 Aperçu Global
                 </button>
             </div>
@@ -24,24 +24,24 @@
             <div class="data-summary">
                 <div class="summary-item">
                     <span class="summary-label">{{ 'LBL.countryLabel' | translate }}</span>
-                    <span class="summary-value">{{ countryServiceData.length }}</span>
+                    <span class="summary-value ds-num">{{ countryServiceData.length }}</span>
                 </div>
                 <div class="summary-item">
                     <span class="summary-label">Services:</span>
-                    <span class="summary-value">{{ getTotalServicesCount() }}</span>
+                    <span class="summary-value ds-num">{{ getTotalServicesCount() }}</span>
                 </div>
                 <div class="summary-item">
                     <span class="summary-label">Services uniques:</span>
-                    <span class="summary-value">{{ getAllUniqueServices().length }}</span>
+                    <span class="summary-value ds-num">{{ getAllUniqueServices().length }}</span>
                 </div>
             </div>
             <div class="period-and-voir-plus">
                 <span *ngIf="!showAllData" class="period-badge">Données du mois en cours</span>
                 <span *ngIf="showAllData" class="period-badge period-badge-all">Toutes les données</span>
-                <button *ngIf="!showAllData" type="button" class="btn-voir-plus" (click)="showAllDataClick()" title="Afficher toutes les données">
+                <button *ngIf="!showAllData" type="button" class="btn-voir-plus ds-btn ds-btn--secondary ds-btn--sm" (click)="showAllDataClick()" title="Afficher toutes les données">
                     Voir plus
                 </button>
-                <button *ngIf="showAllData" type="button" class="btn-voir-mois" (click)="showMonthDataClick()" title="Revenir aux données du mois en cours">
+                <button *ngIf="showAllData" type="button" class="btn-voir-mois ds-btn ds-btn--secondary ds-btn--sm" (click)="showMonthDataClick()" title="Revenir aux données du mois en cours">
                     Voir mois en cours
                 </button>
             </div>
@@ -69,7 +69,7 @@
     <div *ngIf="!loading && !error && countryServiceData && countryServiceData.length > 0" class="filters-toggle">
         <div class="filters-toggle-inner">
             <h3>🔍 Filtres</h3>
-            <button class="toggle-btn" [class.active]="showFilters" (click)="showFilters = !showFilters">
+            <button type="button" class="toggle-btn ds-btn ds-btn--secondary ds-btn--sm" [class.active]="showFilters" (click)="showFilters = !showFilters">
                 <span class="toggle-icon">▾</span>
                 {{ showFilters ? 'Masquer' : 'Afficher' }}
             </button>
@@ -77,7 +77,7 @@
     </div>
 
     <!-- Filtres -->
-    <div *ngIf="showFilters && !loading && !error && countryServiceData && countryServiceData.length > 0" class="filters-container">
+    <div *ngIf="showFilters && !loading && !error && countryServiceData && countryServiceData.length > 0" class="filters-container ds-filter-bar">
         <div class="filters-header">
             <h3>🔍 Filtres</h3>
         </div>
@@ -101,7 +101,7 @@
                            [(ngModel)]="selectedDateStart"
                            (dateChange)="onDateStartChange()"
                            placeholder="Sélectionner une date de début"
-                           class="filter-date-input">
+                           class="filter-date-input ds-input">
                     <mat-datepicker-toggle matSuffix [for]="dateStartPicker"></mat-datepicker-toggle>
                     <mat-datepicker #dateStartPicker></mat-datepicker>
                 </div>
@@ -115,7 +115,7 @@
                            [(ngModel)]="selectedDateEnd"
                            (dateChange)="onDateEndChange()"
                            placeholder="Sélectionner une date de fin"
-                           class="filter-date-input">
+                           class="filter-date-input ds-input">
                     <mat-datepicker-toggle matSuffix [for]="dateEndPicker"></mat-datepicker-toggle>
                     <mat-datepicker #dateEndPicker></mat-datepicker>
                 </div>
@@ -135,7 +135,7 @@
             <div class="filter-actions">
                 <button type="button" 
                         (click)="resetFilters()" 
-                        class="reset-filters-btn"
+                        class="reset-filters-btn ds-btn ds-btn--secondary ds-btn--sm"
                         [disabled]="!selectedCountry && !selectedService && !selectedDateStart && !selectedDateEnd">
                     🔄 Réinitialiser
                 </button>
@@ -174,7 +174,7 @@
         <div *ngIf="error && !loading" class="error-container">
             <div class="error-icon">❌</div>
             <div class="error-message">{{ error }}</div>
-            <button class="retry-btn" (click)="loadReconciliationData()">🔄 Réessayer</button>
+            <button type="button" class="retry-btn ds-btn ds-btn--secondary" (click)="loadReconciliationData()">🔄 Réessayer</button>
         </div>
 
 
@@ -203,18 +203,18 @@
                             <div *ngSwitchCase="'encours'" class="metrics-grid">
                                 <div class="metric-item" [ngClass]="getRateClass(serviceEntry.value.trxReconNet)">
                                     <div class="metric-label">Réconciliation Nette</div>
-                                    <div class="metric-value">{{ formatPercentage(serviceEntry.value.trxReconNet) }}</div>
+                                    <div class="metric-value ds-num">{{ formatPercentage(serviceEntry.value.trxReconNet) }}</div>
                                 </div>
                                 
                                 <div class="metric-item" [ngClass]="getRateClass(serviceEntry.value.bkRecoBanque)">
                                     <div class="metric-label">Taux de Correspondance</div>
-                                    <div class="metric-value">{{ formatPercentage(serviceEntry.value.bkRecoBanque) }}</div>
+                                    <div class="metric-value ds-num">{{ formatPercentage(serviceEntry.value.bkRecoBanque) }}</div>
                                 </div>
                             </div>
                             <div *ngSwitchCase="'traite'" class="metrics-grid discrepancy-grid">
                                 <div class="metric-item" [ngClass]="getDiscrepancyRateClass(serviceEntry.value.boDiscrepancyRate)">
                                     <div class="metric-label">Taux écarts BO</div>
-                                    <div class="metric-value"
+                                    <div class="metric-value ds-num"
                                          [ngClass]="getPositiveValueClass(serviceEntry.value.boDiscrepancyRate)">
                                         {{ formatDiscrepancyPercentage(serviceEntry.value.boDiscrepancyRate) }}
                                     </div>
@@ -228,7 +228,7 @@
                                 </div>
                                 <div class="metric-item" [ngClass]="getDiscrepancyRateClass(serviceEntry.value.partnerDiscrepancyRate)">
                                     <div class="metric-label">Taux écarts Partenaire</div>
-                                    <div class="metric-value"
+                                    <div class="metric-value ds-num"
                                          [ngClass]="getPositiveValueClass(serviceEntry.value.partnerDiscrepancyRate)">
                                         {{ formatDiscrepancyPercentage(serviceEntry.value.partnerDiscrepancyRate) }}
                                     </div>
@@ -243,7 +243,7 @@
                                 <div class="metric-item metric-item-centered discrepancy-total">
                                     <div class="metric-content">
                                         <div class="metric-label">Total écarts exploités</div>
-                                        <div class="metric-value"
+                                        <div class="metric-value ds-num"
                                              [ngClass]="getPositiveValueClass(getTotalDiscrepancies(serviceEntry.value))">
                                             {{ getTotalDiscrepancies(serviceEntry.value) }}
                                         </div>
@@ -254,12 +254,12 @@
                             <div *ngSwitchDefault class="metrics-grid">
                                 <div class="metric-item" [ngClass]="getRateClass(serviceEntry.value.trxReconNet)">
                                     <div class="metric-label">Réconciliation Nette</div>
-                                    <div class="metric-value">{{ formatPercentage(serviceEntry.value.trxReconNet) }}</div>
+                                    <div class="metric-value ds-num">{{ formatPercentage(serviceEntry.value.trxReconNet) }}</div>
                                 </div>
                                 
                                 <div class="metric-item" [ngClass]="getRateClass(serviceEntry.value.bkRecoBanque)">
                                     <div class="metric-label">Taux de Correspondance</div>
-                                    <div class="metric-value">{{ formatPercentage(serviceEntry.value.bkRecoBanque) }}</div>
+                                    <div class="metric-value ds-num">{{ formatPercentage(serviceEntry.value.bkRecoBanque) }}</div>
                                 </div>
                             </div>
                         </ng-container>
@@ -268,7 +268,7 @@
 
                 <!-- Bouton Afficher plus / Afficher moins -->
                 <div class="services-toggle" *ngIf="getServiceEntries(countryData.services).length > 4">
-                    <button class="toggle-btn" [class.active]="isShowingAll(countryData.countryCode)" (click)="toggleShowMore(countryData.countryCode)">
+                    <button type="button" class="toggle-btn ds-btn ds-btn--secondary ds-btn--sm" [class.active]="isShowingAll(countryData.countryCode)" (click)="toggleShowMore(countryData.countryCode)">
                         <span class="toggle-icon">▾</span>
                         {{ isShowingAll(countryData.countryCode) ? 'Afficher moins' : 'Afficher plus' }}
                     </button>
@@ -278,13 +278,13 @@
 
         <!-- Contrôles de pagination -->
         <div *ngIf="!loading && !error && countryServiceData && countryServiceData.length > 0" class="pagination-controls">
-            <button (click)="previousPage()" [disabled]="currentPage === 1" class="pagination-btn">
+            <button type="button" (click)="previousPage()" [disabled]="currentPage === 1" class="pagination-btn ds-btn ds-btn--secondary ds-btn--sm">
                 ← Précédent
             </button>
             <span class="pagination-info">
                 Page {{ currentPage }} sur {{ getTotalPages() }}
             </span>
-            <button (click)="nextPage()" [disabled]="currentPage === getTotalPages()" class="pagination-btn">
+            <button type="button" (click)="nextPage()" [disabled]="currentPage === getTotalPages()" class="pagination-btn ds-btn ds-btn--secondary ds-btn--sm">
                 Suivant →
             </button>
         </div>
