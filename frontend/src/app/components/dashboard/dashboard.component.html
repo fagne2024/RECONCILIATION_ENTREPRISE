@@ -13,7 +13,7 @@
     <div class="nav-actions">
       <button
         type="button"
-        class="nav-btn secondary"
+        class="ds-btn ds-btn--secondary nav-btn secondary"
         (click)="refreshMetrics()"
         [disabled]="isRefreshButtonBusy"
         title="{{ 'ACT.refreshMetrics' | translate }}"
@@ -31,7 +31,7 @@
         <div class="dvf-segments" role="tablist">
             <button
                 type="button"
-                class="dvf-seg"
+                class="ds-btn ds-btn--secondary dvf-seg"
                 [class.active]="dashboardView === 'transaction'"
                 (click)="setDashboardView('transaction')"
             >
@@ -40,7 +40,7 @@
             </button>
             <button
                 type="button"
-                class="dvf-seg"
+                class="ds-btn ds-btn--secondary dvf-seg"
                 [class.active]="dashboardView === 'banque'"
                 (click)="setDashboardView('banque')"
             >
@@ -59,7 +59,7 @@
                 <span class="sr-ref-hdr-title">{{ 'DASH.serviceReferences' | translate }}</span>
                 <button
                     type="button"
-                    class="sr-ref-btn-hide"
+                    class="ds-btn ds-btn--secondary sr-ref-btn-hide"
                     (click)="showServiceRefSection = !showServiceRefSection"
                 >
                     {{ 'ACT.showWithArrow' | translate }} | {{ 'ACT.hideWithArrow' | translate }}
@@ -83,7 +83,7 @@
         <div class="info-section reconciliation-state">
             <div class="bottom-section-header">
                 <h4>📌 {{ 'DASH.reconciliationStatus' | translate }}</h4>
-                <button class="toggle-btn" [class.active]="showReconciliationSection" (click)="showReconciliationSection = !showReconciliationSection">
+                <button type="button" class="ds-btn ds-btn--secondary toggle-btn" [class.active]="showReconciliationSection" (click)="showReconciliationSection = !showReconciliationSection">
                     <span class="toggle-icon">▾</span>
                     {{ 'ACT.show' | translate }} | {{ 'ACT.hide' | translate }}
                 </button>
@@ -94,7 +94,7 @@
                     <div class="head-title-row">
                         <div class="head-icon">🔄</div>
                         <h3 class="head-title">{{ 'DASH.reconciliationStatus' | translate }}</h3>
-                        <button type="button" class="reco-view-btn" (click)="openRecoViewModal()" title="{{ 'ACT.viewFullWeek' | translate }}">
+                        <button type="button" class="ds-btn ds-btn--secondary reco-view-btn" (click)="openRecoViewModal()" title="{{ 'ACT.viewFullWeek' | translate }}">
                             {{ 'ACT.view' | translate }}
                         </button>
                     </div>
@@ -105,7 +105,7 @@
                         <div class="filter-group">
                             <span class="filter-label">{{ 'TBL.country' | translate }}</span>
                             <select
-                                class="filter-select"
+                                class="ds-select filter-select"
                                 [(ngModel)]="reconciliationSummaryCountry"
                                 (change)="loadReconciliationSummary()"
                             >
@@ -118,7 +118,7 @@
                         <div class="filter-group">
                             <span class="filter-label">{{ 'TBL.service' | translate }}</span>
                             <select
-                                class="filter-select"
+                                class="ds-select filter-select"
                                 [(ngModel)]="reconciliationSummaryService"
                                 (change)="loadReconciliationSummary()"
                             >
@@ -131,7 +131,7 @@
                         <div class="filter-group">
                             <span class="filter-label">{{ 'ACT.createOp' | translate }}</span>
                             <select
-                                class="filter-select"
+                                class="ds-select filter-select"
                                 [(ngModel)]="reconciliationSummaryEnv"
                                 (change)="loadReconciliationSummary()"
                             >
@@ -153,7 +153,7 @@
             </div>
 
             <div *ngIf="(!reconciliationSummaryLoading || reconciliationSummaryRows.length) && !reconciliationSummaryError" class="reco-table-wrapper">
-                <table class="reco-table">
+                <table class="ds-table reco-table">
                     <thead>
                         <tr>
                             <th>{{ 'TBL.service' | translate }}</th>
@@ -164,7 +164,7 @@
                                 <button
                                     *ngIf="i === 0"
                                     type="button"
-                                    class="reco-day-nav reco-day-nav-left"
+                                    class="ds-btn ds-btn--secondary reco-day-nav reco-day-nav-left"
                                     (click)="prevDaysWindow()"
                                     [disabled]="!canGoPrevDays()"
                                     title="{{ 'ACT.previousDays' | translate }}"
@@ -175,7 +175,7 @@
                                 <button
                                     *ngIf="i === visibleWeekDays.length - 1"
                                     type="button"
-                                    class="reco-day-nav reco-day-nav-right"
+                                    class="ds-btn ds-btn--secondary reco-day-nav reco-day-nav-right"
                                     (click)="nextDaysWindow()"
                                     [disabled]="!canGoNextDays()"
                                     title="{{ 'ACT.nextDays' | translate }}"
@@ -245,7 +245,7 @@
             >
                 <button
                     type="button"
-                    class="reco-page-btn"
+                    class="ds-btn ds-btn--secondary reco-page-btn"
                     (click)="prevReconciliationPage()"
                     [disabled]="reconciliationPageIndex === 0"
                 >
@@ -256,7 +256,7 @@
                 </span>
                 <button
                     type="button"
-                    class="reco-page-btn"
+                    class="ds-btn ds-btn--secondary reco-page-btn"
                     (click)="nextReconciliationPage()"
                     [disabled]="reconciliationPageIndex >= getReconciliationTotalPages() - 1"
                 >
@@ -269,7 +269,7 @@
         <div class="info-section">
             <div class="bottom-section-header">
                 <h4>📊 {{ 'DASH.quickMetrics' | translate }}</h4>
-                <button class="toggle-btn" [class.active]="showMetricsSection" (click)="showMetricsSection = !showMetricsSection">
+                <button type="button" class="ds-btn ds-btn--secondary toggle-btn" [class.active]="showMetricsSection" (click)="showMetricsSection = !showMetricsSection">
                     <span class="toggle-icon">▾</span>
                     {{ 'ACT.show' | translate }} | {{ 'ACT.hide' | translate }}
                 </button>
@@ -277,7 +277,7 @@
             <div *ngIf="showMetricsSection">
             <div class="metrics-period-filter">
                 <label for="metricsPeriod">{{ 'LBL.period' | translate }}</label>
-                <select id="metricsPeriod" [(ngModel)]="metricsPeriod" (change)="onMetricsPeriodChange()">
+                <select class="ds-select" id="metricsPeriod" [(ngModel)]="metricsPeriod" (change)="onMetricsPeriodChange()">
                     <option value="jour">Day (D-1)</option>
                     <option value="7_jours">{{ 'LBL.last7Days' | translate }}</option>
                     <option value="30_jours">{{ 'LBL.last30Days' | translate }}</option>
@@ -294,27 +294,27 @@
             </div>
             <div class="metrics-grid">
                 <div class="metric">
-                    <div class="metric-value">{{totalReconciliations}}</div>
+                    <div class="metric-value ds-num">{{totalReconciliations}}</div>
                     <div class="metric-label">{{ 'DASH.totalReconciliations' | translate }}</div>
                 </div>
                 <div class="metric">
-                    <div class="metric-value">{{totalFilesDisplay}}</div>
+                    <div class="metric-value ds-num">{{totalFilesDisplay}}</div>
                     <div class="metric-label">{{ 'DASH.processedFiles' | translate }}</div>
                 </div>
                 <div class="metric">
-                    <div class="metric-value">{{todayReconciliationsDisplay}}</div>
+                    <div class="metric-value ds-num">{{todayReconciliationsDisplay}}</div>
                     <div class="metric-label">{{ 'DASH.reconciliationsToday' | translate }}</div>
                 </div>
                 <div class="metric">
-                    <div class="metric-value">{{lastActivityLabel}}</div>
+                    <div class="metric-value ds-num">{{lastActivityLabel}}</div>
                     <div class="metric-label">{{ 'DASH.lastActivity' | translate }}</div>
                 </div>
             </div>
             <div class="metrics-actions">
-                                    <button type="button" class="btn-status-reconciliation" (click)="openReleveStatusModal()">
+                                    <button type="button" class="ds-btn ds-btn--secondary btn-status-reconciliation" (click)="openReleveStatusModal()">
                     {{ 'DASH.viewReconciliationStatus' | translate }}
                 </button>
-                <button type="button" class="btn-transact-stats-reconciliation" (click)="openTransactStatsModal()" title="{{ 'DASH.aggregatedVolumesFromReports' | translate }}">{{ 'DASH.reconciliationStats' | translate }}</button>
+                <button type="button" class="ds-btn ds-btn--secondary btn-transact-stats-reconciliation" (click)="openTransactStatsModal()" title="{{ 'DASH.aggregatedVolumesFromReports' | translate }}">{{ 'DASH.reconciliationStats' | translate }}</button>
             </div>
 
             <!-- Graphiques état des réconciliations (donut + évolution par jour) -->
@@ -353,7 +353,7 @@
     <div class="dashboard-section section-summary-bar">
         <div class="bottom-section-header">
             <h4>📋 {{ 'DASH.clientServiceCountrySummary' | translate }}</h4>
-            <button class="toggle-btn" [class.active]="showSummaryBarSection" (click)="showSummaryBarSection = !showSummaryBarSection">
+            <button type="button" class="ds-btn ds-btn--secondary toggle-btn" [class.active]="showSummaryBarSection" (click)="showSummaryBarSection = !showSummaryBarSection">
                 <span class="toggle-icon">▾</span>
                     {{ 'ACT.show' | translate }} | {{ 'ACT.hide' | translate }}
             </button>
@@ -379,7 +379,7 @@
     <div class="dashboard-section detailed-metrics-section">
         <div class="bottom-section-header">
             <h4>📈 {{ 'DASHBOARD.detailedMetrics' | translate }}</h4>
-            <button class="toggle-btn" [class.active]="showDetailedMetricsSection" (click)="showDetailedMetricsSection = !showDetailedMetricsSection">
+            <button type="button" class="ds-btn ds-btn--secondary toggle-btn" [class.active]="showDetailedMetricsSection" (click)="showDetailedMetricsSection = !showDetailedMetricsSection">
                 <span class="toggle-icon">▾</span>
                     {{ 'ACT.show' | translate }} | {{ 'ACT.hide' | translate }}
             </button>
@@ -398,7 +398,7 @@
           </div>
           <div style="flex: 2; display: flex; flex-direction: column; align-items: center; gap: 8px;">
             <h3 style="margin: 0;">📈 {{ 'DASHBOARD.detailedMetrics' | translate }}</h3>
-            <button class="btn-show-graph" (click)="openGraphModal()" [disabled]="(!barChartData?.labels?.length || !barChartData?.datasets?.length) && (!lineChartData?.labels?.length || !lineChartData?.datasets?.length)">
+            <button type="button" class="ds-btn ds-btn--secondary btn-show-graph" (click)="openGraphModal()" [disabled]="(!barChartData?.labels?.length || !barChartData?.datasets?.length) && (!lineChartData?.labels?.length || !lineChartData?.datasets?.length)">
               <i class="fas fa-chart-line"></i> {{ 'DASHBOARD.showGraph' | translate }}
             </button>
           </div>
@@ -429,7 +429,7 @@
               <div *ngIf="(!barChartData?.labels?.length || !barChartData?.datasets?.length) && (!lineChartData?.labels?.length || !lineChartData?.datasets?.length)" class="text">{{ 'MSG.noDataToDisplay' | translate }}</div>
             </div>
             <div class="filters-export-row" style="display: flex; justify-content: space-between; align-items: center; gap: 24px; margin-bottom: 16px;">
-              <button class="export-btn" (click)="exportDetailedMetricsExcel()">{{ 'ACT.importFile' | translate }}</button>
+              <button type="button" class="ds-btn ds-btn--secondary export-btn" (click)="exportDetailedMetricsExcel()">{{ 'ACT.importFile' | translate }}</button>
               <div class="filters-container" style="display: flex; gap: 12px; justify-content: center; align-items: center;">
                 <div class="filter-group">
                   <mat-form-field appearance="fill" class="filter-select">
@@ -481,13 +481,13 @@
                   </mat-form-field>
                 </div>
                 <div class="filter-group">
-                  <button type="button" (click)="toggleShowAllData()" class="btn-show-more" [class.active]="showAllData">
+                  <button type="button" (click)="toggleShowAllData()" class="ds-btn ds-btn--secondary btn-show-more" [class.active]="showAllData">
                     <i class="fas" [ngClass]="showAllData ? 'fa-eye-slash' : 'fa-eye'"></i>
                     {{ (showAllData ? 'ACT.showLess' : 'ACT.showMore') | translate }}
                   </button>
                 </div>
               </div>
-              <button type="button" (click)="resetFilters()" class="reset-btn">
+              <button type="button" (click)="resetFilters()" class="ds-btn ds-btn--secondary reset-btn">
                 <i class="fas fa-undo"></i>{{ 'COMMON.actions.reset' | translate }}</button>
             </div>
         </div>
@@ -496,11 +496,11 @@
         <div *ngIf="showCustomDateInputs" class="custom-date-inputs">
             <div class="date-input-group">
                 <label for="startDate">{{ 'LBL.startDateLabel' | translate }}</label>
-                <input type="date" id="startDate" [(ngModel)]="startDate" (change)="onFilterChange()" class="date-input">
+                <input type="date" id="startDate" [(ngModel)]="startDate" (change)="onFilterChange()" class="ds-input date-input">
             </div>
             <div class="date-input-group">
                 <label for="endDate">{{ 'LBL.endDateLabel' | translate }}</label>
-                <input type="date" id="endDate" [(ngModel)]="endDate" (change)="onFilterChange()" class="date-input">
+                <input type="date" id="endDate" [(ngModel)]="endDate" (change)="onFilterChange()" class="ds-input date-input">
             </div>
         </div>
 
@@ -517,37 +517,37 @@
             <div class="main-metrics-grid">
                 <div class="main-metric">
                     <div class="main-metric-icon">💰</div>
-                    <div class="main-metric-value">{{detailedMetrics.totalVolume | number:'1.0-0'}}</div>
+                    <div class="main-metric-value ds-num">{{detailedMetrics.totalVolume | number:'1.0-0'}}</div>
                     <div class="main-metric-label">{{ 'TBL.totalVolume' | translate }}</div>
                 </div>
                 <div class="main-metric">
                     <div class="main-metric-icon">💵</div>
-                    <div class="main-metric-value">{{detailedMetrics.totalFees | number:'1.0-0'}}</div>
+                    <div class="main-metric-value ds-num">{{detailedMetrics.totalFees | number:'1.0-0'}}</div>
                     <div class="main-metric-label">{{ 'DASH.revenueVolume' | translate }}</div>
                 </div>
                 <div class="main-metric">
                     <div class="main-metric-icon">📊</div>
-                    <div class="main-metric-value">{{detailedMetrics.totalTransactions}}</div>
+                    <div class="main-metric-value ds-num">{{detailedMetrics.totalTransactions}}</div>
                     <div class="main-metric-label">{{ 'TBL.transactions' | translate }}</div>
                 </div>
                 <div class="main-metric">
                     <div class="main-metric-icon">👥</div>
-                    <div class="main-metric-value">{{detailedMetrics.totalClients}}</div>
+                    <div class="main-metric-value ds-num">{{detailedMetrics.totalClients}}</div>
                     <div class="main-metric-label">{{ 'DASH.clients' | translate }}</div>
                 </div>
                 <div class="main-metric">
                     <div class="main-metric-icon">📈</div>
-                    <div class="main-metric-value">{{ getAverageTransactionsPerPeriod() }}</div>
+                    <div class="main-metric-value ds-num">{{ getAverageTransactionsPerPeriod() }}</div>
                     <div class="main-metric-label">{{ 'DASH.averageTransactionPerDay' | translate }}</div>
                 </div>
                 <div class="main-metric">
                     <div class="main-metric-icon">💎</div>
-                    <div class="main-metric-value">{{detailedMetrics.averageVolume | number:'1.0-0'}}</div>
+                    <div class="main-metric-value ds-num">{{detailedMetrics.averageVolume | number:'1.0-0'}}</div>
                     <div class="main-metric-label">{{ 'DASH.averageVolumePerDay' | translate }}</div>
                 </div>
                 <div class="main-metric">
                     <div class="main-metric-icon">💸</div>
-                    <div class="main-metric-value">{{detailedMetrics.averageFeesPerDay | number:'1.0-0'}}</div>
+                    <div class="main-metric-value ds-num">{{detailedMetrics.averageFeesPerDay | number:'1.0-0'}}</div>
                     <div class="main-metric-label">{{ 'DASH.averageRevenuePerDay' | translate }}</div>
                 </div>
             </div>
@@ -602,7 +602,7 @@
             <div class="transaction-created-stats-section">
                 <div class="bottom-section-header">
                     <h4>🔄 {{ 'DASH.createdTransactionsByService' | translate }}</h4>
-                    <button class="toggle-btn" [class.active]="showBottomSection" (click)="showBottomSection = !showBottomSection">
+                    <button type="button" class="ds-btn ds-btn--secondary toggle-btn" [class.active]="showBottomSection" (click)="showBottomSection = !showBottomSection">
                         <span class="toggle-icon">▾</span>
                         {{ 'ACT.show' | translate }} | {{ 'ACT.hide' | translate }}
                     </button>
@@ -648,7 +648,7 @@
 
                     <!-- Détail par service -->
                     <div class="service-stats-table">
-                        <table class="stats-table">
+                        <table class="ds-table stats-table">
                             <thead>
                                 <tr>
                                     <th>{{ 'TBL.service' | translate }}</th>
@@ -686,7 +686,7 @@
         <div class="bv-state bv-state-error" *ngIf="!banqueLoading && banqueError">
             <i class="fas fa-exclamation-triangle"></i>
             <span>{{ banqueError }}</span>
-            <button type="button" class="bv-retry" (click)="reloadBanqueDashboard()">{{ 'DASH.banqueRetry' | translate }}</button>
+            <button type="button" class="ds-btn ds-btn--secondary bv-retry" (click)="reloadBanqueDashboard()">{{ 'DASH.banqueRetry' | translate }}</button>
         </div>
 
         <div class="bv-body" *ngIf="!banqueLoading && !banqueError && banqueStats as stats">
@@ -718,22 +718,22 @@
             <div class="bv-kpis">
                 <div class="bv-kpi">
                     <span class="bv-kpi-label">{{ 'DASH.banqueKpiTauxGlobal' | translate }}</span>
-                    <span class="bv-kpi-value">{{ stats.tauxGlobal | number:'1.0-1' }} %</span>
+                    <span class="bv-kpi-value ds-num">{{ stats.tauxGlobal | number:'1.0-1' }} %</span>
                     <span class="bv-kpi-sub">{{ (stats.boOk + stats.revOk) | number }} / {{ (stats.boTotal + stats.revTotal) | number }}</span>
                 </div>
                 <div class="bv-kpi">
                     <span class="bv-kpi-label">{{ 'DASH.banqueKpiBo' | translate }}</span>
-                    <span class="bv-kpi-value">{{ stats.boOk | number }} / {{ stats.boTotal | number }}</span>
+                    <span class="bv-kpi-value ds-num">{{ stats.boOk | number }} / {{ stats.boTotal | number }}</span>
                     <span class="bv-kpi-sub">{{ 'DASH.banqueKpiLignes' | translate }}</span>
                 </div>
                 <div class="bv-kpi">
                     <span class="bv-kpi-label">{{ 'DASH.banqueKpiBanque' | translate }}</span>
-                    <span class="bv-kpi-value">{{ stats.revOk | number }} / {{ stats.revTotal | number }}</span>
+                    <span class="bv-kpi-value ds-num">{{ stats.revOk | number }} / {{ stats.revTotal | number }}</span>
                     <span class="bv-kpi-sub">{{ 'DASH.banqueKpiLignes' | translate }}</span>
                 </div>
                 <div class="bv-kpi">
                     <span class="bv-kpi-label">{{ 'DASH.banqueKpiNonRapproches' | translate }}</span>
-                    <span class="bv-kpi-value">{{ ((stats.boTotal - stats.boOk) + (stats.revTotal - stats.revOk)) | number }}</span>
+                    <span class="bv-kpi-value ds-num">{{ ((stats.boTotal - stats.boOk) + (stats.revTotal - stats.revOk)) | number }}</span>
                     <span class="bv-kpi-sub">{{ stats.boTotal + stats.revTotal | number }} {{ 'DASH.banqueKpiLignes' | translate }}</span>
                 </div>
             </div>
@@ -768,7 +768,7 @@
             <div class="bv-card">
                 <h3 class="bv-section-title">{{ 'DASH.banqueStatementsTitle' | translate }}</h3>
                 <div class="bv-table-wrapper" *ngIf="stats.statements.length">
-                    <table class="bv-table">
+                    <table class="ds-table bv-table">
                         <thead>
                             <tr>
                                 <th>{{ 'DASH.banqueColBanque' | translate }}</th>
@@ -815,7 +815,7 @@
         <div class="graph-modal-container" (click)="$event.stopPropagation()">
             <div class="graph-modal-header">
                 <h2>📈 {{ 'DASH.detailedCharts' | translate }}</h2>
-                <button class="btn-close-modal" (click)="closeGraphModal()" title="{{ 'COMMON.actions.close' | translate }}">
+                <button type="button" class="ds-btn ds-btn--secondary btn-close-modal" (click)="closeGraphModal()" title="{{ 'COMMON.actions.close' | translate }}">
                     <i class="fas fa-times"></i>
                 </button>
             </div>
@@ -891,18 +891,18 @@
                             </mat-select>
                         </mat-form-field>
                     </div>
-                    <button type="button" (click)="resetFilters()" class="reset-btn-modal">
+                    <button type="button" (click)="resetFilters()" class="ds-btn ds-btn--secondary reset-btn-modal">
                         <i class="fas fa-undo"></i>{{ 'COMMON.actions.reset' | translate }}</button>
                 </div>
                 <!-- Champs de dates personnalisées dans le modal -->
                 <div *ngIf="showCustomDateInputs" class="modal-custom-date-inputs">
                     <div class="date-input-group">
                         <label for="startDateModal">{{ 'LBL.startDateLabel' | translate }}</label>
-                        <input type="date" id="startDateModal" [(ngModel)]="startDate" (change)="onFilterChange()" class="date-input">
+                        <input type="date" id="startDateModal" [(ngModel)]="startDate" (change)="onFilterChange()" class="ds-input date-input">
                     </div>
                     <div class="date-input-group">
                         <label for="endDateModal">{{ 'LBL.endDateLabel' | translate }}</label>
-                        <input type="date" id="endDateModal" [(ngModel)]="endDate" (change)="onFilterChange()" class="date-input">
+                        <input type="date" id="endDateModal" [(ngModel)]="endDate" (change)="onFilterChange()" class="ds-input date-input">
                     </div>
                 </div>
             </div>
@@ -929,7 +929,7 @@
         <div class="status-modal-container" (click)="$event.stopPropagation()">
             <div class="status-modal-header">
                 <h3>📋 {{ 'DASH.viewReconciliationStatus' | translate }}</h3>
-                <button type="button" class="btn-close-modal" (click)="closeReleveStatusModal()" title="{{ 'COMMON.actions.close' | translate }}">
+                <button type="button" class="ds-btn ds-btn--secondary btn-close-modal" (click)="closeReleveStatusModal()" title="{{ 'COMMON.actions.close' | translate }}">
                     <i class="fas fa-times"></i>
                 </button>
             </div>
@@ -959,7 +959,7 @@
                 <div class="form-row">
                     <div class="form-group">
                         <label>{{ 'TBL.date' | translate }}</label>
-                        <input type="date" [(ngModel)]="releveStatusDate" (ngModelChange)="onReleveStatusDateChange()" class="status-date-input">
+                        <input type="date" [(ngModel)]="releveStatusDate" (ngModelChange)="onReleveStatusDateChange()" class="ds-input status-date-input">
                     </div>
                     <div class="form-group">
                         <label>{{ 'ACT.createOp' | translate }}</label>
@@ -977,8 +977,8 @@
                 </div>
             </div>
             <div class="status-modal-footer">
-                <button type="button" class="btn-cancel" (click)="closeReleveStatusModal()">{{ 'COMMON.actions.cancel' | translate }}</button>
-                <button type="button" class="btn-confirm" (click)="confirmReleveStatus()">{{ 'ACT.showStatement' | translate }}</button>
+                <button type="button" class="ds-btn ds-btn--secondary btn-cancel" (click)="closeReleveStatusModal()">{{ 'COMMON.actions.cancel' | translate }}</button>
+                <button type="button" class="ds-btn ds-btn--secondary btn-confirm" (click)="confirmReleveStatus()">{{ 'ACT.showStatement' | translate }}</button>
             </div>
         </div>
     </div>
@@ -988,7 +988,7 @@
         <div class="status-modal-container" (click)="$event.stopPropagation()">
             <div class="status-modal-header">
                 <h3>📋 {{ 'DASH.statementStatus' | translate }}</h3>
-                <button type="button" class="btn-close-modal" (click)="showReleveStatusResultModal = false" title="{{ 'COMMON.actions.close' | translate }}">
+                <button type="button" class="ds-btn ds-btn--secondary btn-close-modal" (click)="showReleveStatusResultModal = false" title="{{ 'COMMON.actions.close' | translate }}">
                     <i class="fas fa-times"></i>
                 </button>
             </div>
@@ -1039,10 +1039,10 @@
                 </div>
             </div>
             <div class="status-modal-footer">
-                <button type="button" class="btn-cancel" (click)="showReleveStatusResultModal = false">{{ 'COMMON.actions.close' | translate }}</button>
+                <button type="button" class="ds-btn ds-btn--secondary btn-cancel" (click)="showReleveStatusResultModal = false">{{ 'COMMON.actions.close' | translate }}</button>
                 <button *ngIf="releveStatusAllOk"
                         type="button"
-                        class="btn-confirm"
+                        class="ds-btn ds-btn--secondary btn-confirm"
                         (click)="openReleveDetail()">
                     {{ 'ACT.viewDetail' | translate }}
                 </button>
@@ -1055,7 +1055,7 @@
         <div class="reco-view-modal-container transact-stats-modal-container" (click)="$event.stopPropagation()">
             <div class="reco-view-modal-header">
                 <h3>{{ 'DASH.reconciliationStats' | translate }}</h3>
-                <button type="button" class="btn-close-modal" (click)="closeTransactStatsModal()" title="{{ 'COMMON.actions.close' | translate }}">
+                <button type="button" class="ds-btn ds-btn--secondary btn-close-modal" (click)="closeTransactStatsModal()" title="{{ 'COMMON.actions.close' | translate }}">
                     <i class="fas fa-times"></i>
                 </button>
             </div>
@@ -1067,7 +1067,7 @@
                         type="date"
                         [ngModel]="transactStatsWeekStart"
                         (ngModelChange)="onTransactStatsDateChange($event)"
-                        class="reco-view-date-input"
+                        class="ds-input reco-view-date-input"
                     >
                 </div>
                 <div class="reco-view-date-filter" style="display:flex; gap:12px; align-items:flex-end; flex-wrap:wrap;">
@@ -1078,7 +1078,7 @@
                             type="date"
                             [(ngModel)]="transactStatsPeriodStart"
                             (ngModelChange)="onTransactStatsPeriodRangeChange()"
-                            class="reco-view-date-input"
+                            class="ds-input reco-view-date-input"
                         >
                     </div>
                     <div>
@@ -1088,28 +1088,28 @@
                             type="date"
                             [(ngModel)]="transactStatsPeriodEnd"
                             (ngModelChange)="onTransactStatsPeriodRangeChange()"
-                            class="reco-view-date-input"
+                            class="ds-input reco-view-date-input"
                         >
                     </div>
                 </div>
                 <div class="reco-view-date-filter" style="display:flex; gap:12px; align-items:flex-end; flex-wrap:wrap;">
                     <div>
                         <label for="transactStatsDay">{{ 'LBL.day' | translate }}</label>
-                        <select id="transactStatsDay" class="reco-view-date-input" [(ngModel)]="transactStatsSelectedDay" (ngModelChange)="loadTransactStats()">
+                        <select id="transactStatsDay" class="ds-select reco-view-date-input" [(ngModel)]="transactStatsSelectedDay" (ngModelChange)="loadTransactStats()">
                             <option value="">{{ 'FILT.all' | translate }}</option>
                             <option *ngFor="let d of transactStatsWeekDays" [value]="d.date">{{ d.label }}</option>
                         </select>
                     </div>
                     <div>
                         <label for="transactStatsCountry">{{ 'TBL.country' | translate }}</label>
-                        <select id="transactStatsCountry" class="reco-view-date-input" [(ngModel)]="transactStatsCountry" (ngModelChange)="onTransactStatsFiltersChange()">
+                        <select id="transactStatsCountry" class="ds-select reco-view-date-input" [(ngModel)]="transactStatsCountry" (ngModelChange)="onTransactStatsFiltersChange()">
                             <option value="">{{ 'FILT.all' | translate }}</option>
                             <option *ngFor="let c of reconciliationSummaryCountries" [value]="c">{{ c }}</option>
                         </select>
                     </div>
                     <div>
                         <label for="transactStatsEnv">{{ 'ACT.createOp' | translate }}</label>
-                        <select id="transactStatsEnv" class="reco-view-date-input" [(ngModel)]="transactStatsEnv" (ngModelChange)="onTransactStatsFiltersChange()">
+                        <select id="transactStatsEnv" class="ds-select reco-view-date-input" [(ngModel)]="transactStatsEnv" (ngModelChange)="onTransactStatsFiltersChange()">
                             <option *ngFor="let env of transactStatsEnvSelectOptions" [ngValue]="env">
                                 {{ formatRecoViewEnvOptionLabel(env) }}
                             </option>
@@ -1135,7 +1135,7 @@
                             <div class="transact-stats-card transact-stats-card--correspondance">
                                 <div class="transact-stats-card-title">{{ 'DASH.match' | translate }}</div>
                                 <p class="transact-stats-card-desc">{{ 'DASH.summary' | translate }}<strong>(report + processed gap)</strong>: sum of <em>totalTransactions</em> (report) + <em>processed trx</em> entered on the statement, per row</p>
-                                <div class="transact-stats-card-value">{{ block.stats.correspondance | number:'1.0-0' }}</div>
+                                <div class="transact-stats-card-value ds-num">{{ block.stats.correspondance | number:'1.0-0' }}</div>
                                 <div class="transact-stats-card-volume">Volume: {{ block.stats.correspondanceVolume | number:'1.0-2' }} FCFA</div>
                                 <div class="transact-stats-card-pct">{{ block.stats.pctCorrespondance | number:'1.1-1' }}% of total (summary + refunded)</div>
                                 <div class="transact-stats-card-pct transact-stats-card-pct--vol">{{ block.stats.pctCorrespondanceVolume | number:'1.1-1' }}% vol. of total (summary + refunded)</div>
@@ -1143,7 +1143,7 @@
                             <div class="transact-stats-card transact-stats-card--denoue">
                                 <div class="transact-stats-card-title">{{ 'DASH.resolvedTransaction' | translate }}</div>
                                 <p class="transact-stats-card-desc"><strong>{{ 'DASH.manualProcessedTrx' | translate }}</strong> — <em>releve_manual</em></p>
-                                <div class="transact-stats-card-value">{{ block.stats.transactionDenoue | number:'1.0-0' }}</div>
+                                <div class="transact-stats-card-value ds-num">{{ block.stats.transactionDenoue | number:'1.0-0' }}</div>
                                 <div class="transact-stats-card-volume">Volume: {{ block.stats.transactionDenoueVolume | number:'1.0-2' }} FCFA</div>
                                 <div class="transact-stats-card-pct">{{ block.stats.pctDenoue | number:'1.1-1' }}% of summary</div>
                                 <div class="transact-stats-card-pct transact-stats-card-pct--vol">{{ block.stats.pctDenoueVolume | number:'1.1-1' }}% vol. of summary</div>
@@ -1151,7 +1151,7 @@
                             <div class="transact-stats-card transact-stats-card--echec">
                                 <div class="transact-stats-card-title">{{ 'DASH.failedTransaction' | translate }}</div>
                                 <p class="transact-stats-card-desc"><strong>{{ 'DASH.manualRefundedTrx' | translate }}</strong></p>
-                                <div class="transact-stats-card-value">{{ block.stats.transactionEchec | number:'1.0-0' }}</div>
+                                <div class="transact-stats-card-value ds-num">{{ block.stats.transactionEchec | number:'1.0-0' }}</div>
                                 <div class="transact-stats-card-volume">Volume: {{ block.stats.transactionEchecVolume | number:'1.0-2' }} FCFA</div>
                                 <div class="transact-stats-card-pct">{{ block.stats.pctEchec | number:'1.1-1' }}% of total (summary + refunded)</div>
                                 <div class="transact-stats-card-pct transact-stats-card-pct--vol">{{ block.stats.pctEchecVolume | number:'1.1-1' }}% vol. of total (summary + refunded)</div>
@@ -1172,10 +1172,10 @@
                 </div>
             </div>
             <div class="reco-view-modal-footer">
-                <button type="button" class="btn-export-pdf" (click)="exportTransactStatsToPdf()" [disabled]="transactStatsLoading" title="{{ 'ACT.exportPdf' | translate }}">
+                <button type="button" class="ds-btn ds-btn--secondary btn-export-pdf" (click)="exportTransactStatsToPdf()" [disabled]="transactStatsLoading" title="{{ 'ACT.exportPdf' | translate }}">
                     Export PDF
                 </button>
-                <button type="button" class="btn-cancel" (click)="closeTransactStatsModal()">{{ 'COMMON.actions.close' | translate }}</button>
+                <button type="button" class="ds-btn ds-btn--secondary btn-cancel" (click)="closeTransactStatsModal()">{{ 'COMMON.actions.close' | translate }}</button>
             </div>
         </div>
     </div>
@@ -1185,7 +1185,7 @@
         <div class="reco-view-modal-container" (click)="$event.stopPropagation()">
             <div class="reco-view-modal-header">
                 <h3>{{ 'DASH.weekViewReconciliationStatus' | translate }}</h3>
-                <button type="button" class="btn-close-modal" (click)="closeRecoViewModal()" title="{{ 'COMMON.actions.close' | translate }}">
+                <button type="button" class="ds-btn ds-btn--secondary btn-close-modal" (click)="closeRecoViewModal()" title="{{ 'COMMON.actions.close' | translate }}">
                     <i class="fas fa-times"></i>
                 </button>
             </div>
@@ -1197,7 +1197,7 @@
                         type="date"
                         [ngModel]="recoViewWeekStart"
                         (ngModelChange)="onRecoViewDateChange($event)"
-                        class="reco-view-date-input"
+                        class="ds-input reco-view-date-input"
                     >
                 </div>
                 <div class="reco-view-date-filter" style="display:flex; gap:12px; align-items:flex-end; flex-wrap:wrap;">
@@ -1208,7 +1208,7 @@
                             type="date"
                             [(ngModel)]="recoViewPeriodStart"
                             (ngModelChange)="onRecoViewPeriodRangeChange()"
-                            class="reco-view-date-input"
+                            class="ds-input reco-view-date-input"
                         >
                     </div>
                     <div>
@@ -1218,28 +1218,28 @@
                             type="date"
                             [(ngModel)]="recoViewPeriodEnd"
                             (ngModelChange)="onRecoViewPeriodRangeChange()"
-                            class="reco-view-date-input"
+                            class="ds-input reco-view-date-input"
                         >
                     </div>
                 </div>
                 <div class="reco-view-date-filter" style="display:flex; gap:12px; align-items:flex-end; flex-wrap:wrap;">
                     <div>
                         <label for="recoViewDay">{{ 'LBL.day' | translate }}</label>
-                        <select id="recoViewDay" class="reco-view-date-input" [(ngModel)]="recoViewSelectedDay" (ngModelChange)="onRecoViewDayChange()">
+                        <select id="recoViewDay" class="ds-select reco-view-date-input" [(ngModel)]="recoViewSelectedDay" (ngModelChange)="onRecoViewDayChange()">
                             <option value="">{{ 'FILT.all' | translate }}</option>
                             <option *ngFor="let d of recoViewWeekDays" [value]="d.date">{{ d.label }}</option>
                         </select>
                     </div>
                     <div>
                         <label for="recoViewCountry">{{ 'TBL.country' | translate }}</label>
-                        <select id="recoViewCountry" class="reco-view-date-input" [(ngModel)]="recoViewCountry" (ngModelChange)="onRecoViewFiltersChange()">
+                        <select id="recoViewCountry" class="ds-select reco-view-date-input" [(ngModel)]="recoViewCountry" (ngModelChange)="onRecoViewFiltersChange()">
                             <option value="">{{ 'FILT.all' | translate }}</option>
                             <option *ngFor="let c of reconciliationSummaryCountries" [value]="c">{{ c }}</option>
                         </select>
                     </div>
                     <div>
                         <label for="recoViewEnv">{{ 'ACT.createOp' | translate }}</label>
-                        <select id="recoViewEnv" class="reco-view-date-input" [(ngModel)]="recoViewEnv" (ngModelChange)="onRecoViewFiltersChange()">
+                        <select id="recoViewEnv" class="ds-select reco-view-date-input" [(ngModel)]="recoViewEnv" (ngModelChange)="onRecoViewFiltersChange()">
                             <option *ngFor="let env of recoViewEnvSelectOptions" [ngValue]="env">
                                 {{ formatRecoViewEnvOptionLabel(env) }}
                             </option>
@@ -1259,7 +1259,7 @@
                 <div *ngIf="recoViewLoadingMore" class="reco-loading-more">{{ 'MSG.loadingPreviousDates' | translate }}</div>
                 <div *ngIf="!recoViewLoading && recoViewError" class="reco-error">{{ recoViewError }}</div>
                 <div *ngIf="(!recoViewLoading || recoViewRows.length) && !recoViewError" class="reco-view-table-wrapper">
-                    <table class="reco-table reco-view-table">
+                    <table class="ds-table reco-table reco-view-table">
                         <thead>
                             <tr>
                                 <th>{{ 'TBL.service' | translate }}</th>
@@ -1312,10 +1312,10 @@
                 </div>
             </div>
             <div class="reco-view-modal-footer">
-                <button type="button" class="btn-export-pdf" (click)="exportRecoViewToPdf()" [disabled]="recoViewLoading || !recoViewRows.length" title="{{ 'ACT.exportPdf' | translate }}">
+                <button type="button" class="ds-btn ds-btn--secondary btn-export-pdf" (click)="exportRecoViewToPdf()" [disabled]="recoViewLoading || !recoViewRows.length" title="{{ 'ACT.exportPdf' | translate }}">
                     Export PDF
                 </button>
-                <button type="button" class="btn-cancel" (click)="closeRecoViewModal()">{{ 'COMMON.actions.close' | translate }}</button>
+                <button type="button" class="ds-btn ds-btn--secondary btn-cancel" (click)="closeRecoViewModal()">{{ 'COMMON.actions.close' | translate }}</button>
             </div>
         </div>
     </div>
