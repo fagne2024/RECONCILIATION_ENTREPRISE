@@ -27,35 +27,35 @@
 
     <!-- Actions -->
     <div class="actions">
-      <button 
+      <button type="button" 
         *ngIf="!is2FAEnabled" 
         mat-raised-button 
         color="primary" 
         (click)="setup2FA()" 
         [disabled]="loading"
-        class="action-button">
+        class="ds-btn ds-btn--primary action-button">
         <mat-icon>security</mat-icon>
         {{ 'TFA.actions.enable' | translate }}
       </button>
 
-      <button 
+      <button type="button" 
         *ngIf="is2FAEnabled" 
         mat-raised-button 
         color="warn" 
         (click)="disable2FA()" 
         [disabled]="loading"
-        class="action-button">
+        class="ds-btn ds-btn--secondary action-button">
         <mat-icon>lock_open</mat-icon>
         {{ 'TFA.actions.disable' | translate }}
       </button>
 
-      <button 
+      <button type="button" 
         *ngIf="is2FAEnabled && hasSecret" 
         mat-button 
         color="primary" 
         (click)="setup2FA()" 
         [disabled]="loading"
-        class="action-button secondary">
+        class="ds-btn ds-btn--primary action-button secondary">
         <mat-icon>refresh</mat-icon>
         {{ 'TFA.actions.regenerate' | translate }}
       </button>
@@ -99,7 +99,7 @@
             <label>{{ 'TFA.setup.secretLabel' | translate }}</label>
             <div class="secret-value">
               <code>{{ secret }}</code>
-              <button mat-icon-button (click)="copySecret()" [matTooltip]="'TFA.setup.copySecretTooltip' | translate">
+              <button class="ds-btn ds-btn--secondary" type="button" mat-icon-button (click)="copySecret()" [matTooltip]="'TFA.setup.copySecretTooltip' | translate">
                 <mat-icon>content_copy</mat-icon>
               </button>
             </div>
@@ -109,7 +109,7 @@
             <label>{{ 'TFA.setup.otpUrlLabel' | translate }}</label>
             <div class="secret-value">
               <code class="url-code">{{ otpAuthUrl }}</code>
-              <button mat-icon-button (click)="copyOtpAuthUrl()" [matTooltip]="'TFA.setup.copyUrlTooltip' | translate">
+              <button class="ds-btn ds-btn--secondary" type="button" mat-icon-button (click)="copyOtpAuthUrl()" [matTooltip]="'TFA.setup.copyUrlTooltip' | translate">
                 <mat-icon>content_copy</mat-icon>
               </button>
             </div>
@@ -158,7 +158,7 @@
           color="primary" 
           type="submit" 
           [disabled]="validationForm.invalid || loading"
-          class="validate-button">
+          class="ds-btn ds-btn--primary validate-button">
           <mat-icon *ngIf="!loading">verified_user</mat-icon>
           <mat-spinner *ngIf="loading" diameter="20"></mat-spinner>
           {{ loading ? ('TFA.actions.validating' | translate) : ('TFA.actions.validate' | translate) }}
@@ -169,7 +169,7 @@
           type="button" 
           (click)="cancelSetup()" 
           [disabled]="loading"
-          class="cancel-button">
+          class="ds-btn ds-btn--secondary cancel-button">
           <mat-icon>cancel</mat-icon>{{ 'COMMON.actions.cancel' | translate }}</button>
       </div>
     </form>
