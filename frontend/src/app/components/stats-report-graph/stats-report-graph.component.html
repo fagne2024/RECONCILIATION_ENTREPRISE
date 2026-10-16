@@ -12,13 +12,13 @@
     </div>
     <div class="nav-spacer"></div>
     <div class="nav-actions">
-      <button type="button" class="nav-btn secondary" (click)="goBack()" [disabled]="isLoading || isExporting">
+      <button type="button" class="ds-btn ds-btn--secondary nav-btn secondary" (click)="goBack()" [disabled]="isLoading || isExporting">
         <i class="fas fa-arrow-left"></i> {{ 'SRG.backToReport' | translate }}
       </button>
-      <button type="button" class="nav-btn png" (click)="exportGraphsPng()" [disabled]="isLoading || isExporting || !visibleReportRows.length">
+      <button type="button" class="ds-btn ds-btn--secondary nav-btn png" (click)="exportGraphsPng()" [disabled]="isLoading || isExporting || !visibleReportRows.length">
         <i class="fas fa-image"></i> PNG
       </button>
-      <button type="button" class="nav-btn pdf" (click)="exportGraphsPdf()" [disabled]="isLoading || isExporting || !visibleReportRows.length">
+      <button type="button" class="ds-btn ds-btn--secondary nav-btn pdf" (click)="exportGraphsPdf()" [disabled]="isLoading || isExporting || !visibleReportRows.length">
         <i class="fas fa-file-pdf"></i> PDF
       </button>
     </div>
@@ -80,20 +80,20 @@
           </div>
           <div class="filter-group">
             <label>{{ 'LBL.period' | translate }}</label>
-            <select formControlName="periodType" (change)="onPeriodTypeChange()">
+            <select class="ds-select" formControlName="periodType" (change)="onPeriodTypeChange()">
               <option value="week">{{ 'STA.week' | translate }}</option>
               <option value="month">{{ 'TBL.month' | translate }}</option>
             </select>
           </div>
           <div class="filter-group">
             <label>{{ 'LBL.startDate' | translate }}</label>
-            <input type="date" formControlName="startDate">
+            <input class="ds-input" type="date" formControlName="startDate">
           </div>
           <div class="filter-group">
             <label>{{ 'LBL.endDate' | translate }}</label>
-            <input type="date" formControlName="endDate">
+            <input class="ds-input" type="date" formControlName="endDate">
           </div>
-          <button type="button" class="apply-btn" (click)="onFilterChange()" [disabled]="isLoading || isExporting">
+          <button type="button" class="ds-btn ds-btn--secondary apply-btn" (click)="onFilterChange()" [disabled]="isLoading || isExporting">
             {{ 'STA.applyFilters' | translate }}
           </button>
         </form>
@@ -130,18 +130,18 @@
       <section class="graph-section" id="stats-graph-export-area">
         <div class="graph-topbar">
           <div class="graph-view-tabs">
-            <button type="button" [class.active]="graphView === 'global'" (click)="setGraphView('global')">{{ 'SRG.viewGlobal' | translate }}</button>
-            <button type="button" [class.active]="graphView === 'agency'" (click)="setGraphView('agency')">{{ 'SRG.viewAgency' | translate }}</button>
-            <button type="button" [class.active]="graphView === 'market'" (click)="setGraphView('market')">{{ 'SRG.viewMarket' | translate }}</button>
+            <button class="ds-btn ds-btn--secondary" type="button" [class.active]="graphView === 'global'" (click)="setGraphView('global')">{{ 'SRG.viewGlobal' | translate }}</button>
+            <button class="ds-btn ds-btn--secondary" type="button" [class.active]="graphView === 'agency'" (click)="setGraphView('agency')">{{ 'SRG.viewAgency' | translate }}</button>
+            <button class="ds-btn ds-btn--secondary" type="button" [class.active]="graphView === 'market'" (click)="setGraphView('market')">{{ 'SRG.viewMarket' | translate }}</button>
           </div>
           <div class="graph-metric-tabs">
-            <button type="button" [class.active]="graphMetric === 'volume'" (click)="setGraphMetric('volume')">{{ 'TBL.volume' | translate }}</button>
-            <button type="button" [class.active]="graphMetric === 'count'" (click)="setGraphMetric('count')">{{ 'SRG.metricCount' | translate }}</button>
+            <button class="ds-btn ds-btn--secondary" type="button" [class.active]="graphMetric === 'volume'" (click)="setGraphMetric('volume')">{{ 'TBL.volume' | translate }}</button>
+            <button class="ds-btn ds-btn--secondary" type="button" [class.active]="graphMetric === 'count'" (click)="setGraphMetric('count')">{{ 'SRG.metricCount' | translate }}</button>
           </div>
         </div>
 
         <div *ngIf="graphView === 'agency'" class="graph-agency-toolbar">
-          <select [value]="graphSelectedAgency" (change)="onGraphAgencyChange($event)">
+          <select class="ds-select" [value]="graphSelectedAgency" (change)="onGraphAgencyChange($event)">
             <option *ngFor="let agency of visibleReportRows" [value]="agency.agency">{{ agency.agency }}</option>
           </select>
         </div>
