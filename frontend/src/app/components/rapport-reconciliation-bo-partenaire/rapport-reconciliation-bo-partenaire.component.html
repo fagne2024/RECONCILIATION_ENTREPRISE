@@ -71,25 +71,25 @@
         <h2>{{ 'RBP.filters.section' | translate }}</h2>
       </div>
       <div class="rrbp-filters-body">
-        <div class="rrbp-filters">
+        <div class="rrbp-filters ds-filter-bar">
           <label>
             <span>{{ 'TBL.country' | translate }}</span>
-            <select [(ngModel)]="selectedCountry" (ngModelChange)="appliquerFiltres()">
+            <select class="ds-select" [(ngModel)]="selectedCountry" (ngModelChange)="appliquerFiltres()">
               <option value="">{{ 'RBP.filters.choose' | translate }}</option>
               <option *ngFor="let c of countries; trackBy: trackByString" [value]="c">{{ c }}</option>
             </select>
           </label>
           <label class="rrbp-date-range">
             <span>{{ 'RBP.filters.from' | translate }}</span>
-            <input type="date" [(ngModel)]="dateDebut" (change)="appliquerFiltres()" />
+            <input class="ds-input" type="date" [(ngModel)]="dateDebut" (change)="appliquerFiltres()" />
           </label>
           <label class="rrbp-date-range">
             <span>{{ 'RBP.filters.to' | translate }}</span>
-            <input type="date" [(ngModel)]="dateFin" (change)="appliquerFiltres()" />
+            <input class="ds-input" type="date" [(ngModel)]="dateFin" (change)="appliquerFiltres()" />
           </label>
           <label>
             <span>ENV</span>
-            <select [(ngModel)]="selectedEnv" (ngModelChange)="appliquerFiltres()">
+            <select class="ds-select" [(ngModel)]="selectedEnv" (ngModelChange)="appliquerFiltres()">
               <option *ngFor="let e of envOptions; trackBy: trackByString" [value]="e">{{ e }}</option>
             </select>
           </label>
@@ -117,7 +117,7 @@
             </div>
             <button
               type="button"
-              class="nav-btn secondary rrbp-nav-btn-sm rrbp-effacer-svc"
+              class="nav-btn secondary rrbp-nav-btn-sm rrbp-effacer-svc ds-btn ds-btn--secondary ds-btn--sm"
               *ngIf="showClearServicesButton"
               (click)="clearServiceFilter()"
               title="{{ 'RBP.filters.resetServices' | translate }}"
@@ -133,7 +133,7 @@
           <div class="rrbp-kpi">
             <span class="rrbp-kpi-line">
               <span class="rrbp-kpi-label">{{ 'RBP.kpi.boTransactions' | translate }}</span>
-              <span class="rrbp-kpi-vals"
+              <span class="rrbp-kpi-vals ds-num"
                 >{{ formatNombre(totalBoNombre) }} <span class="sep">·</span> vol {{ formatNombre(totalBoVolume) }}</span
               >
             </span>
@@ -141,13 +141,13 @@
           <div class="rrbp-kpi">
             <span class="rrbp-kpi-line">
               <span class="rrbp-kpi-label">{{ 'RBP.kpi.boMatches' | translate }}</span>
-              <span class="rrbp-kpi-vals">{{ formatNombre(totalMatchesBo) }}</span>
+              <span class="rrbp-kpi-vals ds-num">{{ formatNombre(totalMatchesBo) }}</span>
             </span>
           </div>
           <div class="rrbp-kpi">
             <span class="rrbp-kpi-line">
               <span class="rrbp-kpi-label">{{ 'RBP.kpi.partnerTotal' | translate }}</span>
-              <span class="rrbp-kpi-vals"
+              <span class="rrbp-kpi-vals ds-num"
                 >{{ formatNombre(totalPartNombre) }} <span class="sep">·</span> vol {{ formatNombre(totalPartVolume) }}</span
               >
             </span>
@@ -155,7 +155,7 @@
           <div class="rrbp-kpi">
             <span class="rrbp-kpi-line">
               <span class="rrbp-kpi-label">{{ 'RBP.kpi.gapCount' | translate }}</span>
-              <span class="rrbp-kpi-vals" [ngClass]="classeEcart(totalEcartNombreAjuste)">{{
+              <span class="rrbp-kpi-vals ds-num" [ngClass]="classeEcart(totalEcartNombreAjuste)">{{
                 formatNombre(totalEcartNombreAjuste)
               }}</span>
             </span>
@@ -163,7 +163,7 @@
           <div class="rrbp-kpi">
             <span class="rrbp-kpi-line">
               <span class="rrbp-kpi-label">{{ 'RBP.kpi.gapVolume' | translate }}</span>
-              <span class="rrbp-kpi-vals" [ngClass]="classeEcart(totalEcartVolumeAjuste)">{{
+              <span class="rrbp-kpi-vals ds-num" [ngClass]="classeEcart(totalEcartVolumeAjuste)">{{
                 formatNombre(totalEcartVolumeAjuste)
               }}</span>
             </span>
@@ -171,7 +171,7 @@
           <div class="rrbp-kpi accent">
             <span class="rrbp-kpi-line">
               <span class="rrbp-kpi-label">{{ 'RBP.kpi.servicesWithGap' | translate }}</span>
-              <span class="rrbp-kpi-vals warn">{{ 'RBP.kpi.servicesWithGapValue' | translate: { count: servicesAvecEcart, total: totalServices || 0 } }}</span>
+              <span class="rrbp-kpi-vals warn ds-num">{{ 'RBP.kpi.servicesWithGapValue' | translate: { count: servicesAvecEcart, total: totalServices || 0 } }}</span>
             </span>
           </div>
         </div>
@@ -206,7 +206,7 @@
                   <div class="rrbp-audit-ligne-subtitle">{{ lg.subtitle }}</div>
                   <div *ngIf="lg.entries.length" class="rrbp-audit-panel-card">
                     <div class="rrbp-audit-panel-head">{{ 'RPT.actionHistory' | translate }}</div>
-                    <table class="rrbp-audit-mini-table rrbp-audit-mini-table--enhanced">
+                    <table class="rrbp-audit-mini-table rrbp-audit-mini-table--enhanced ds-table">
                       <thead>
                         <tr>
                           <th class="rrbp-audit-th-date">{{ 'TBL.date' | translate }}</th>
@@ -239,8 +239,8 @@
             </div>
           </ng-container>
         </ng-template>
-        <div class="rrbp-table-wrap">
-          <table class="rrbp-table">
+        <div class="rrbp-table-wrap ds-table-scroll">
+          <table class="rrbp-table ds-table">
             <thead>
               <tr>
                 <th rowspan="3" class="col-audit-expand" [title]="'RBP.audit.thHistTitle' | translate">{{ 'RBP.audit.thHist' | translate }}</th>

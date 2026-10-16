@@ -8,32 +8,15 @@
   flex: 1;
   min-height: 0;
   box-sizing: border-box;
-  --rd-bg: #f2f0eb;
-  --rd-surface: #fafaf8;
-  --rd-surface2: rgba(255, 255, 255, 0.85);
-  --rd-border: #e4e0d8;
-  --rd-border2: #d6d0c6;
-  --rd-navy: #1a2535;
-  --rd-navy2: #243044;
-  --rd-text1: #1a1714;
-  --rd-text2: #5c5650;
-  --rd-text3: #9b9489;
-  --rd-green: #2e6b47;
-  --rd-green-m: #5a9e74;
-  --rd-amber: #a85f1e;
-  --rd-red: #8b2635;
-  --rd-r: 18px;
-  --rd-r-sm: 11px;
-  --rd-shadow: 0 2px 16px rgba(26, 23, 20, 0.07);
 }
 
 /* Zone capturée pour l’export PDF (évite le clip sur overflow/max-height) */
 .rrbp-pdf-export-root {
-  background: #f2f0eb;
+  background: var(--color-bg);
 }
 
 .rrbp-root {
-  font-family: 'Sora', sans-serif;
+  font-family: var(--font-ui);
   background: var(--rd-bg);
   min-height: 100vh;
   width: 100%;
@@ -60,9 +43,9 @@
 }
 
 .nav-brand {
-  font-family: 'Instrument Serif', serif;
+  font-family: var(--font-display);
   font-size: 17px;
-  color: #fff;
+  color: var(--color-nav-text);
   letter-spacing: 0.01em;
   display: flex;
   align-items: center;
@@ -114,7 +97,7 @@
   padding: 7px 16px;
   border-radius: 8px;
   border: none;
-  font-family: 'Sora', sans-serif;
+  font-family: var(--font-ui);
   font-size: 13px;
   font-weight: 600;
   cursor: pointer;
@@ -129,7 +112,7 @@
 
 .nav-btn.primary {
   background: var(--rd-green-m);
-  color: #fff;
+  color: var(--color-nav-text);
 }
 
 .nav-btn.primary:hover:not(:disabled) {
@@ -187,7 +170,7 @@
 }
 
 .ph-title-report {
-  font-family: 'Instrument Serif', serif;
+  font-family: var(--font-display);
   font-size: 28px;
   font-weight: 400;
   color: var(--rd-text1);
@@ -266,7 +249,7 @@
 .rrbp-filters-body {
   padding: 20px 24px;
   border-bottom: 1px solid var(--rd-border);
-  background: #fff;
+  background: var(--color-surface);
 }
 
 .rrbp-filters {
@@ -293,7 +276,7 @@
   border: 1px solid var(--rd-border2);
   border-radius: 8px;
   font-size: 0.9rem;
-  background: #fff;
+  background: var(--color-surface);
   font-family: inherit;
 }
 
@@ -355,7 +338,7 @@
 }
 
 .rrbp-kpi {
-  background: #fff;
+  background: var(--color-surface);
   border-radius: var(--rd-r-sm);
   padding: 0.5rem 0.9rem;
   border: 1px solid var(--rd-border);
@@ -459,7 +442,7 @@
 
 .rrbp-table-wrap {
   overflow-x: auto;
-  background: #fff;
+  background: var(--color-surface);
   border-radius: var(--rd-r-sm);
   box-shadow: var(--rd-shadow);
   border: 1px solid var(--rd-border);
@@ -590,7 +573,7 @@
 .rrbp-audit-panel-card {
   border: 1px solid #cbd5e1;
   border-radius: 8px;
-  background: #fff;
+  background: var(--color-surface);
   box-shadow: 0 1px 4px rgba(15, 23, 42, 0.08);
   overflow: hidden;
   max-width: 100%;
@@ -611,7 +594,7 @@
   width: 100%;
   border-collapse: collapse;
   font-size: 0.8rem;
-  background: #fff;
+  background: var(--color-surface);
   border: 1px solid #e2e8f0;
   border-radius: 6px;
   overflow: hidden;
@@ -1030,7 +1013,7 @@
 .rrbp-footer {
   margin: 0;
   padding: 20px 24px 24px;
-  background: #fff;
+  background: var(--color-surface);
   border-top: 1px solid var(--rd-border);
 }
 
