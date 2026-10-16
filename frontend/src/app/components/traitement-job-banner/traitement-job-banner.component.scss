@@ -6,25 +6,23 @@
   position: fixed;
   right: 20px;
   bottom: 20px;
-  z-index: 1100;
+  z-index: var(--z-toast);
   max-width: 480px;
   min-width: 320px;
-  background: #ffffff;
-  border: 1px solid #e0e0e0;
+  background: var(--color-surface-raised);
+  border: 1px solid var(--color-border);
   border-radius: 10px;
-  box-shadow:
-    0 6px 16px rgba(0, 0, 0, 0.08),
-    0 2px 4px rgba(0, 0, 0, 0.04);
+  box-shadow: var(--shadow-overlay);
   padding: 14px 14px 12px 14px;
   display: flex;
   align-items: flex-start;
   gap: 12px;
-  font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+  font-family: var(--font-ui);
   font-size: 13px;
   line-height: 1.35;
-  color: #333;
+  color: var(--color-text-primary);
   user-select: none;
-  animation: trt-slide-in 0.25s ease-out;
+  animation: trt-slide-in var(--duration-base) var(--ease-standard);
 }
 
 @keyframes trt-slide-in {
@@ -40,19 +38,19 @@
 
 /* ── Statuts ─────────────────────────────────────────────────────────── */
 .trt-job-banner.is-running {
-  border-left: 4px solid #4285f4;
+  border-left: 4px solid var(--color-info);
 }
 
 .trt-job-banner.is-downloading {
-  border-left: 4px solid #5c6bc0;
+  border-left: 4px solid var(--color-accent);
 }
 
 .trt-job-banner.is-done {
-  border-left: 4px solid #34a853;
+  border-left: 4px solid var(--color-success);
 }
 
 .trt-job-banner.is-error {
-  border-left: 4px solid #ea4335;
+  border-left: 4px solid var(--color-error);
 }
 
 /* ── Icône ───────────────────────────────────────────────────────────── */
@@ -62,16 +60,16 @@
   text-align: center;
   font-size: 18px;
   padding-top: 1px;
-  color: #4285f4;
+  color: var(--color-info);
 }
 
 .trt-job-banner.is-downloading .trt-job-icon,
 .trt-job-banner.is-done .trt-job-icon {
-  color: #34a853;
+  color: var(--color-success);
 }
 
 .trt-job-banner.is-error .trt-job-icon {
-  color: #ea4335;
+  color: var(--color-error);
 }
 
 /* ── Corps ───────────────────────────────────────────────────────────── */
@@ -86,14 +84,14 @@
 }
 
 .trt-job-msg {
-  color: #666;
+  color: var(--color-text-muted);
   font-size: 12px;
   word-break: break-word;
   white-space: pre-line;
 }
 
 .trt-job-msg.is-error {
-  color: #c62828;
+  color: var(--color-error);
 }
 
 /* ── Actions ─────────────────────────────────────────────────────────── */
@@ -114,7 +112,8 @@
   display: inline-flex;
   align-items: center;
   gap: 6px;
-  transition: background 0.15s, color 0.15s;
+  transition: background-color var(--duration-fast) var(--ease-standard),
+    color var(--duration-fast) var(--ease-standard);
   line-height: 1;
 }
 
@@ -124,20 +123,20 @@
 }
 
 .trt-job-btn.is-primary {
-  background: #1976d2;
-  color: #fff;
+  background: var(--color-accent);
+  color: var(--color-accent-contrast);
 }
 
 .trt-job-btn.is-primary:hover:not(:disabled) {
-  background: #1565c0;
+  background: var(--color-accent-hover);
 }
 
 .trt-job-btn.is-ghost {
   background: transparent;
-  color: #666;
+  color: var(--color-text-muted);
 }
 
 .trt-job-btn.is-ghost:hover {
-  background: #f1f3f4;
-  color: #333;
+  background: var(--color-hover);
+  color: var(--color-text-primary);
 }

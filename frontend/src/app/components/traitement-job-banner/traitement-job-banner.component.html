@@ -48,7 +48,7 @@
     <button
       *ngIf="job.status === 'done' && !isDownloading"
       type="button"
-      class="trt-job-btn is-primary"
+      class="ds-btn ds-btn--primary ds-btn--sm trt-job-btn is-primary"
       (click)="download()"
       title="Télécharger le(s) fichier(s) produit(s)">
       <i class="fas fa-download"></i>
@@ -56,7 +56,7 @@
     </button>
     <button
       type="button"
-      class="trt-job-btn is-ghost"
+      class="ds-btn ds-btn--ghost ds-btn--sm trt-job-btn is-ghost"
       (click)="clear()"
       title="Masquer">
       <i class="fas fa-times"></i>
