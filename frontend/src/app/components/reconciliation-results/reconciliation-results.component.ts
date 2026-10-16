@@ -88,17 +88,17 @@ interface ApiError {
                     <div class="hero-kpi-strip">
                         <div class="hk-strip-item">
                             <span class="hk-strip-label">{{ 'RES.transactionsBo' | translate }}</span>
-                            <span class="hk-strip-value">{{ displayBoTransactionTotal | number:'1.0-0' }}</span>
+                            <span class="hk-strip-value ds-num">{{ displayBoTransactionTotal | number:'1.0-0' }}</span>
                         </div>
                         <div class="hk-strip-sep"></div>
                         <div class="hk-strip-item">
                             <span class="hk-strip-label">{{ 'RES.matchesBo' | translate }}</span>
-                            <span class="hk-strip-value">{{ filteredMatchesCount | number:'1.0-0' }}</span>
+                            <span class="hk-strip-value ds-num">{{ filteredMatchesCount | number:'1.0-0' }}</span>
                         </div>
                         <div class="hk-strip-sep"></div>
                         <div class="hk-strip-item">
                             <span class="hk-strip-label">{{ 'RES.discrepancies' | translate }}</span>
-                            <span class="hk-strip-value">{{ (filteredBoOnlyCount + filteredPartnerOnlyCount) | number:'1.0-0' }}</span>
+                            <span class="hk-strip-value ds-num">{{ (filteredBoOnlyCount + filteredPartnerOnlyCount) | number:'1.0-0' }}</span>
                         </div>
                     </div>
                 </div>
@@ -129,7 +129,7 @@ interface ApiError {
                 <div class="magic-report-group-bar" *ngIf="visibleMagicSummaries.length">
                     <span class="magic-report-group-label">{{ 'RES.groupedReport' | translate }}</span>
                     <label class="magic-report-group-check">
-                        <input type="checkbox" (change)="toggleAllMagicReportSelection($event)"
+                        <input type="checkbox" class="ds-checkbox" (change)="toggleAllMagicReportSelection($event)"
                                [checked]="allMagicServicesReportSelected()">
                         <span>{{ 'RES.allReconciliations' | translate }}</span>
                     </label>
@@ -179,15 +179,15 @@ interface ApiError {
                         <span class="tab-metrics">
                             <span class="metric metric-match">
                                 <span class="metric-label">{{ 'RES.match' | translate }}</span>
-                                <span class="metric-value">{{ summary.totalMatches | number:'1.0-0' }}</span>
+                                <span class="metric-value ds-num">{{ summary.totalMatches | number:'1.0-0' }}</span>
                             </span>
                             <span class="metric metric-bo">
                                 <span class="metric-label">{{ 'RES.boGap' | translate }}</span>
-                                <span class="metric-value">{{ summary.totalBoOnly | number:'1.0-0' }}</span>
+                                <span class="metric-value ds-num">{{ summary.totalBoOnly | number:'1.0-0' }}</span>
                             </span>
                             <span class="metric metric-partner">
                                 <span class="metric-label">{{ 'RES.partnerGap' | translate }}</span>
-                                <span class="metric-value">{{ summary.totalPartnerOnly | number:'1.0-0' }}</span>
+                                <span class="metric-value ds-num">{{ summary.totalPartnerOnly | number:'1.0-0' }}</span>
                             </span>
                         </span>
                     </button>
@@ -239,29 +239,29 @@ interface ApiError {
             <div class="summary-section">
                 <div class="summary-header">
                     <h3>📊 {{ 'RES.summaryTitle' | translate }}<span *ngIf="isMagicServiceView()"> — {{ selectedMagicPartnerFile || ('RES.partnerFallback' | translate) }} / {{ selectedMagicService }}</span></h3>
-                    <button (click)="openColumnSelector()" class="report-button">
+                    <button type="button" (click)="openColumnSelector()" class="report-button ds-btn ds-btn--primary">
                         📋 {{ 'RES.discrepancyReportBtn' | translate }}
                     </button>
                 </div>
                 <div class="stats-grid">
                     <div class="stat-card stat-card-total">
                         <div class="stat-icon">📊</div>
-                        <div class="stat-value">{{ displayBoTransactionTotal }}</div>
+                        <div class="stat-value ds-num">{{ displayBoTransactionTotal }}</div>
                         <div class="stat-label">{{ 'RES.boTxnCount' | translate }}</div>
                     </div>
                     <div class="stat-card stat-card-matched">
                         <div class="stat-icon">✅</div>
-                        <div class="stat-value">{{filteredMatchesCount}}</div>
+                        <div class="stat-value ds-num">{{filteredMatchesCount}}</div>
                         <div class="stat-label">{{ 'RES.matchingBoTxns' | translate }}</div>
                     </div>
                     <div class="stat-card stat-card-bo">
                         <div class="stat-icon">⚠️</div>
-                        <div class="stat-value">{{filteredBoOnlyCount}}</div>
+                        <div class="stat-value ds-num">{{filteredBoOnlyCount}}</div>
                         <div class="stat-label">{{ 'RES.boGapsNoMatch' | translate }}</div>
                     </div>
                     <div class="stat-card stat-card-partner">
                         <div class="stat-icon">⚠️</div>
-                        <div class="stat-value">{{filteredPartnerOnlyCount}}</div>
+                        <div class="stat-value ds-num">{{filteredPartnerOnlyCount}}</div>
                         <div class="stat-label">{{ 'RES.partnerGapsNoMatch' | translate }}</div>
                     </div>
                 </div>
@@ -269,28 +269,28 @@ interface ApiError {
 
             <div class="results-tabs">
                 <div class="tab-buttons">
-                    <button 
+                    <button type="button" 
                         class="matches-button"
                         (click)="goToMatches()">
                         ✅ {{ 'RES.viewMatches' | translate }} ({{filteredMatchesCount}})
                     </button>
-                    <button 
+                    <button type="button" 
                         class="ecart-bo-button"
                         (click)="goToEcartBo()">
                         ⚠️ {{ 'RES.viewBoGaps' | translate }} ({{filteredBoOnlyCount}})
                     </button>
-                    <button 
+                    <button type="button" 
                         class="ecart-partner-button"
                         (click)="goToEcartPartner()">
                         ⚠️ {{ 'RES.viewPartnerGaps' | translate }} ({{filteredPartnerOnlyCount}})
                     </button>
-                    <button 
+                    <button type="button" 
                         [class.active]="activeTab === 'agencySummary'"
                         (click)="setActiveTab('agencySummary')">
                         📊 {{ 'RES.agencySummary' | translate }}
                     </button>
-                    <button 
-                        class="report-button"
+                    <button type="button" 
+                        class="report-button ds-btn ds-btn--primary"
                         (click)="openReconciliationReport()">
                         📈 {{ 'RES.reconciliationReport' | translate }}
                     </button>
@@ -303,36 +303,36 @@ interface ApiError {
                     <div *ngIf="activeTab === 'agencySummary'" class="agency-summary-section">
                         <div class="summary-header">
                             <h3>{{ 'RES.volumeByAgencyService' | translate }}</h3>
-                            <div class="summary-actions">
+                            <div class="summary-actions ds-filter-bar">
                                 <div class="date-selector">
                                     <label>{{ 'RES.date' | translate }}</label>
-                                    <input type="date" [(ngModel)]="selectedDate">
+                                    <input type="date" class="ds-input" [(ngModel)]="selectedDate">
                                 </div>
-                                <button (click)="saveAgencySummary()" class="save-button">
+                                <button type="button" (click)="saveAgencySummary()" class="save-button ds-btn ds-btn--primary ds-btn--sm">
                                     💾 {{ 'RES.save' | translate }}
                                 </button>
-                                <button (click)="exportResults()" class="export-button">
+                                <button type="button" (click)="exportResults()" class="export-button ds-btn ds-btn--secondary ds-btn--sm">
                                     📥 {{ 'RES.exportSummary' | translate }}
                                 </button>
                             </div>
                             <div class="summary-stats">
                                 <div class="stat-item">
                                     <span class="label">{{ 'RES.boTxnCount' | translate }}:</span>
-                                    <span class="value">{{getTotalRecords() | number:'1.0-0'}}</span>
+                                    <span class="value ds-num">{{getTotalRecords() | number:'1.0-0'}}</span>
                                 </div>
                                 <div class="stat-item">
                                     <span class="label">{{ 'RES.totalVolume' | translate }}</span>
-                                    <span class="value">{{getTotalVolume() | number:'1.0-0'}}</span>
+                                    <span class="value ds-num">{{getTotalVolume() | number:'1.0-0'}}</span>
                                 </div>
                             </div>
                         </div>
                         <div class="summary-tables-row">
                             <div class="summary-table-agency">
                                 <h4>{{ 'RES.volumeByAgency' | translate }}</h4>
-                                <table>
+                                <table class="ds-table">
                                     <thead>
                                         <tr>
-                                            <th><input type="checkbox" [checked]="allAgencySelected" (change)="toggleSelectAllAgency($event)"></th>
+                                            <th><input type="checkbox" class="ds-checkbox" [checked]="allAgencySelected" (change)="toggleSelectAllAgency($event)"></th>
                                             <th>{{ 'RES.agency' | translate }}</th>
                                             <th>{{ 'RES.service' | translate }}</th>
                                             <th>{{ 'RES.country' | translate }}</th>
@@ -342,7 +342,7 @@ interface ApiError {
                                     </thead>
                                     <tbody>
                                         <tr *ngFor="let summary of getPagedAgencySummary(); trackBy: trackByAgencyName">
-                                            <td><input type="checkbox" [checked]="isAgencySelected(summary)" (change)="toggleAgencySelection(summary, $event)"></td>
+                                            <td><input type="checkbox" class="ds-checkbox" [checked]="isAgencySelected(summary)" (change)="toggleAgencySelection(summary, $event)"></td>
                                             <td>{{summary.agency}}</td>
                                             <td>{{summary.service}}</td>
                                             <td>{{summary.country}}</td>
@@ -354,7 +354,7 @@ interface ApiError {
                             </div>
                             <div class="summary-table-service">
                                 <h4>{{ 'RES.volumeByService' | translate }}</h4>
-                                <table>
+                                <table class="ds-table">
                                     <thead>
                                         <tr>
                                             <th>{{ 'RES.service' | translate }}</th>
@@ -371,9 +371,9 @@ interface ApiError {
                             </div>
                         </div>
                         <div class="pagination-controls">
-                            <button (click)="prevAgencyPage()" [disabled]="agencyPage === 1">{{ 'RES.previous' | translate }}</button>
+                            <button type="button" class="ds-btn ds-btn--secondary ds-btn--sm" (click)="prevAgencyPage()" [disabled]="agencyPage === 1">{{ 'RES.previous' | translate }}</button>
                             <span>{{ 'RES.page' | translate }} {{agencyPage}} / {{getTotalAgencyPages()}}</span>
-                            <button (click)="nextAgencyPage()" [disabled]="agencyPage === getTotalAgencyPages()">{{ 'RES.next' | translate }}</button>
+                            <button type="button" class="ds-btn ds-btn--secondary ds-btn--sm" (click)="nextAgencyPage()" [disabled]="agencyPage === getTotalAgencyPages()">{{ 'RES.next' | translate }}</button>
                         </div>
                     </div>
 
@@ -395,27 +395,27 @@ interface ApiError {
                                 </div>
                             </div>
                         </div>
-                        <div class="search-section" *ngIf="!isLoadingMatches">
+                        <div class="search-section ds-filter-bar" *ngIf="!isLoadingMatches">
                             <input 
                                 type="text" 
                                 [(ngModel)]="searchKey" 
                                 (input)="onSearch()"
                                 [placeholder]="'RES.searchByKey' | translate"
-                                class="search-input"
+                                class="search-input ds-input"
                             >
-                            <button (click)="showVolumeSummary = !showVolumeSummary" class="toggle-volume-btn" [class.active]="showVolumeSummary">
+                            <button type="button" (click)="showVolumeSummary = !showVolumeSummary" class="toggle-volume-btn ds-btn ds-btn--secondary ds-btn--sm" [class.active]="showVolumeSummary">
                                 📊 {{ (showVolumeSummary ? 'RES.hideVolumes' : 'RES.showVolumes') | translate }}
                             </button>
-                            <button (click)="showMatchesList = !showMatchesList" class="toggle-matches-btn" [class.active]="showMatchesList">
+                            <button type="button" (click)="showMatchesList = !showMatchesList" class="toggle-matches-btn ds-btn ds-btn--secondary ds-btn--sm" [class.active]="showMatchesList">
                                 📋 {{ (showMatchesList ? 'RES.hideList' : 'RES.showList') | translate }}
                             </button>
-                            <button (click)="exportResultsOptimized('matches')" class="export-button" [disabled]="isExporting" [title]="'RES.exportMatchesTitle' | translate">
+                            <button type="button" (click)="exportResultsOptimized('matches')" class="export-button ds-btn ds-btn--secondary ds-btn--sm" [disabled]="isExporting" [title]="'RES.exportMatchesTitle' | translate">
                                 📥 {{ 'RES.exportMatches' | translate }}
                             </button>
-                            <button (click)="exportResultsOptimized('boOnly')" class="export-button ecart-bo-button" [disabled]="isExporting || !filteredBoOnlyCount" [title]="'RES.exportBoGapsTitle' | translate">
+                            <button type="button" (click)="exportResultsOptimized('boOnly')" class="export-button ecart-bo-button" [disabled]="isExporting || !filteredBoOnlyCount" [title]="'RES.exportBoGapsTitle' | translate">
                                 📥 {{ 'RES.boGaps' | translate }}
                             </button>
-                            <button (click)="exportResultsOptimized('partnerOnly')" class="export-button ecart-partner-button" [disabled]="isExporting || !filteredPartnerOnlyCount" [title]="'RES.exportPartnerGapsTitle' | translate">
+                            <button type="button" (click)="exportResultsOptimized('partnerOnly')" class="export-button ecart-partner-button" [disabled]="isExporting || !filteredPartnerOnlyCount" [title]="'RES.exportPartnerGapsTitle' | translate">
                                 📥 {{ 'RES.partnerGaps' | translate }}
                             </button>
                         </div>
@@ -424,15 +424,15 @@ interface ApiError {
                             <div class="volume-grid">
                                 <div class="volume-card">
                                     <div class="volume-label">{{ 'RES.totalVolumeBo' | translate }}</div>
-                                    <div class="volume-value">{{totalVolumeBo | number:'1.0-0'}}</div>
+                                    <div class="volume-value ds-num">{{totalVolumeBo | number:'1.0-0'}}</div>
                                 </div>
                                 <div class="volume-card">
                                     <div class="volume-label">{{ 'RES.totalVolumePartner' | translate }}</div>
-                                    <div class="volume-value">{{totalVolumePartner | number:'1.0-0'}}</div>
+                                    <div class="volume-value ds-num">{{totalVolumePartner | number:'1.0-0'}}</div>
                                 </div>
                                 <div class="volume-card">
                                     <div class="volume-label">{{ 'RES.totalDiff' | translate }}</div>
-                                    <div class="volume-value" [class.positive]="volumeDifference > 0" [class.negative]="volumeDifference < 0">
+                                    <div class="volume-value ds-num" [class.positive]="volumeDifference > 0" [class.negative]="volumeDifference < 0">
                                         {{volumeDifference | number:'1.0-0'}}
                                     </div>
                                 </div>
@@ -444,9 +444,9 @@ interface ApiError {
                             </div>
                             <div *ngIf="filteredMatchesCount > 0">
                                 <div class="pagination-controls">
-                                    <button (click)="prevPage('matches')" [disabled]="matchesPage === 1">{{ 'RES.previous' | translate }}</button>
+                                    <button type="button" class="ds-btn ds-btn--secondary ds-btn--sm" (click)="prevPage('matches')" [disabled]="matchesPage === 1">{{ 'RES.previous' | translate }}</button>
                                     <span>{{ 'RES.page' | translate }} {{matchesPage}} / {{totalMatchesPages}}</span>
-                                    <button (click)="nextPage('matches')" [disabled]="matchesPage === totalMatchesPages">{{ 'RES.next' | translate }}</button>
+                                    <button type="button" class="ds-btn ds-btn--secondary ds-btn--sm" (click)="nextPage('matches')" [disabled]="matchesPage === totalMatchesPages">{{ 'RES.next' | translate }}</button>
                                 </div>
                                 <div class="match-card" *ngFor="let match of pagedMatches; trackBy: trackByMatchKey">
                             <!-- Fiche des champs clés -->
@@ -542,25 +542,25 @@ interface ApiError {
                                 </div>
                             </div>
                         </div>
-                        <div class="search-section" *ngIf="!isLoadingPartnerOnly">
+                        <div class="search-section ds-filter-bar" *ngIf="!isLoadingPartnerOnly">
                             <input 
                                 type="text" 
                                 [(ngModel)]="searchKey" 
                                 (input)="onSearch()"
                                 [placeholder]="'RES.searchByKey' | translate"
-                                class="search-input"
+                                class="search-input ds-input"
                             >
-                            <button (click)="showVolumeSummary = !showVolumeSummary" class="toggle-volume-btn" [class.active]="showVolumeSummary">
+                            <button type="button" (click)="showVolumeSummary = !showVolumeSummary" class="toggle-volume-btn ds-btn ds-btn--secondary ds-btn--sm" [class.active]="showVolumeSummary">
                                 📊 {{ (showVolumeSummary ? 'RES.hideVolumes' : 'RES.showVolumes') | translate }}
                             </button>
                             <label style="display:flex;align-items:center;gap:6px;">
-                                <input type="checkbox" [checked]="allPartnerSelectedOnPage" (change)="toggleSelectAllPartnerOnPage($event)">
+                                <input type="checkbox" class="ds-checkbox" [checked]="allPartnerSelectedOnPage" (change)="toggleSelectAllPartnerOnPage($event)">
                                 <span>{{ 'RES.selectPage' | translate }}</span>
                             </label>
-                            <button (click)="exportResults()" class="export-button">
+                            <button type="button" (click)="exportResults()" class="export-button ds-btn ds-btn--secondary ds-btn--sm">
                                 📥 {{ 'RES.exportPartnerEcarts' | translate }}
                             </button>
-                            <button (click)="saveEcartPartnerToImpactOP()" class="save-button" [disabled]="isSavingEcartPartnerToImpactOP">
+                            <button type="button" (click)="saveEcartPartnerToImpactOP()" class="save-button ds-btn ds-btn--primary ds-btn--sm" [disabled]="isSavingEcartPartnerToImpactOP">
                                 {{ isSavingEcartPartnerToImpactOP ? '💾 ' + ('RES.saving' | translate) : '💾 ' + ('RES.saveToImportOp' | translate) }}
                             </button>
                         </div>
@@ -569,11 +569,11 @@ interface ApiError {
                             <div class="volume-grid">
                                 <div class="volume-card">
                                     <div class="volume-label">{{ 'RES.totalVolumePartner' | translate }}</div>
-                                    <div class="volume-value">{{calculateTotalVolumePartnerOnly() | number:'1.0-0'}}</div>
+                                    <div class="volume-value ds-num">{{calculateTotalVolumePartnerOnly() | number:'1.0-0'}}</div>
                                 </div>
                                 <div class="volume-card">
                                     <div class="volume-label">{{ 'RES.txnCount' | translate }}</div>
-                                    <div class="volume-value">{{filteredPartnerOnly.length}}</div>
+                                    <div class="volume-value ds-num">{{filteredPartnerOnly.length}}</div>
                                 </div>
                             </div>
                         </div>
@@ -582,18 +582,18 @@ interface ApiError {
                         </div>
                         <div *ngIf="filteredPartnerOnlyCount > 0">
                             <div class="pagination-controls">
-                                <button (click)="prevPage('partnerOnly')" [disabled]="partnerOnlyPage === 1">{{ 'RES.previous' | translate }}</button>
+                                <button type="button" class="ds-btn ds-btn--secondary ds-btn--sm" (click)="prevPage('partnerOnly')" [disabled]="partnerOnlyPage === 1">{{ 'RES.previous' | translate }}</button>
                                 <span>{{ 'RES.page' | translate }} {{partnerOnlyPage}} / {{totalPartnerOnlyPages}}</span>
-                                <button (click)="nextPage('partnerOnly')" [disabled]="partnerOnlyPage === totalPartnerOnlyPages">{{ 'RES.next' | translate }}</button>
+                                <button type="button" class="ds-btn ds-btn--secondary ds-btn--sm" (click)="nextPage('partnerOnly')" [disabled]="partnerOnlyPage === totalPartnerOnlyPages">{{ 'RES.next' | translate }}</button>
                             </div>
                             <div class="unmatched-card" *ngFor="let record of getPagedPartnerOnly(); trackBy: trackByRecordKey">
                             <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:8px;gap:8px;">
                                 <div style="display:flex;align-items:center;gap:10px;">
-                                    <div style="font-weight:600;color:#1976D2;">{{ 'RES.partnerLine' | translate }}</div>
-                                    <button (click)="createOperationFromPartnerRecord(record)" class="save-button" [disabled]="!isPartnerRecordEligible(record)" [title]="'RES.createOp' | translate">➕ {{ 'RES.createOp' | translate }}</button>
+                                    <div style="font-weight:600;color:var(--color-accent);">{{ 'RES.partnerLine' | translate }}</div>
+                                    <button type="button" (click)="createOperationFromPartnerRecord(record)" class="save-button ds-btn ds-btn--primary ds-btn--sm" [disabled]="!isPartnerRecordEligible(record)" [title]="'RES.createOp' | translate">➕ {{ 'RES.createOp' | translate }}</button>
                                 </div>
                                 <label style="display:flex;align-items:center;gap:6px;">
-                                    <input type="checkbox" [checked]="isPartnerRecordSelected(record)" (change)="togglePartnerSelection(record, $event)">
+                                    <input type="checkbox" class="ds-checkbox" [checked]="isPartnerRecordSelected(record)" (change)="togglePartnerSelection(record, $event)">
                                     <span>{{ 'RES.select' | translate }}</span>
                                 </label>
                             </div>
@@ -609,7 +609,7 @@ interface ApiError {
                                 <div class="info-row">
                                     <span class="label">{{ 'RES.source' | translate }}</span>
                                     <span class="value" style="display:flex;align-items:center;gap:6px;">
-                                        <input type="checkbox" checked disabled>
+                                        <input type="checkbox" class="ds-checkbox" checked disabled>
                                         {{ record['SOURCE'] || 'PARTENAIRE' }}
                                     </span>
                                 </div>
@@ -633,7 +633,7 @@ interface ApiError {
                         </div>
                         <div class="info-card-content">
                             <div class="match-rate">
-                                <div class="match-rate-value">{{matchRate | number:'1.1-1'}}%</div>
+                                <div class="match-rate-value ds-num">{{matchRate | number:'1.1-1'}}%</div>
                                 <div class="match-rate-bar">
                                     <div class="match-rate-fill" [style.width.%]="matchRate"></div>
                                 </div>
@@ -653,12 +653,12 @@ interface ApiError {
                             <div class="volume-comparison">
                                 <div class="volume-item">
                                     <span class="volume-item-label">{{ 'RES.bo' | translate }}</span>
-                                    <span class="volume-item-value">{{totalVolumeBo | number:'1.0-0'}}</span>
+                                    <span class="volume-item-value ds-num">{{totalVolumeBo | number:'1.0-0'}}</span>
                                 </div>
                                 <div class="volume-separator">↔</div>
                                 <div class="volume-item">
                                     <span class="volume-item-label">{{ 'RES.partner' | translate }}</span>
-                                    <span class="volume-item-value">{{totalVolumePartner | number:'1.0-0'}}</span>
+                                    <span class="volume-item-value ds-num">{{totalVolumePartner | number:'1.0-0'}}</span>
                                 </div>
                             </div>
                             <div class="volume-diff" [class.positive]="volumeDifference > 0" [class.negative]="volumeDifference < 0" [class.neutral]="volumeDifference === 0">
@@ -697,13 +697,13 @@ interface ApiError {
                         </div>
                         <div class="info-card-content">
                             <div class="quick-actions">
-                                <button class="quick-action-btn" (click)="goToMatches()" [disabled]="filteredMatchesCount === 0">
+                                <button type="button" class="quick-action-btn ds-btn ds-btn--secondary ds-btn--sm" (click)="goToMatches()" [disabled]="filteredMatchesCount === 0">
                                     ✅ {{ 'RES.matches' | translate }}
                                 </button>
-                                <button class="quick-action-btn" (click)="goToEcartBo()" [disabled]="filteredBoOnlyCount === 0">
+                                <button type="button" class="quick-action-btn ds-btn ds-btn--secondary ds-btn--sm" (click)="goToEcartBo()" [disabled]="filteredBoOnlyCount === 0">
                                     ⚠️ {{ 'RES.boGaps' | translate }}
                                 </button>
-                                <button class="quick-action-btn" (click)="goToEcartPartner()" [disabled]="filteredPartnerOnlyCount === 0">
+                                <button type="button" class="quick-action-btn ds-btn ds-btn--secondary ds-btn--sm" (click)="goToEcartPartner()" [disabled]="filteredPartnerOnlyCount === 0">
                                     ⚠️ {{ 'RES.partnerGaps' | translate }}
                                 </button>
                             </div>
@@ -713,10 +713,10 @@ interface ApiError {
             </div>
 
             <div class="action-buttons">
-                <button class="new-reconciliation-btn" (click)="nouvelleReconciliation()">
+                <button type="button" class="new-reconciliation-btn ds-btn ds-btn--primary" (click)="nouvelleReconciliation()">
                     🔄 {{ 'RES.newReconciliation' | translate }}
                 </button>
-                <button class="stats-btn" (click)="goToStats()">
+                <button type="button" class="stats-btn ds-btn ds-btn--secondary" (click)="goToStats()">
                     📊 {{ 'RES.viewStats' | translate }}
                 </button>
             </div>
@@ -737,15 +737,15 @@ interface ApiError {
             <div class="column-selector-popup">
                 <div class="popup-header">
                     <h3>📋 {{ 'RES.columnSelectorTitle' | translate }}</h3>
-                    <button (click)="closeColumnSelector()" class="close-btn">×</button>
+                    <button type="button" (click)="closeColumnSelector()" class="close-btn ds-btn ds-btn--ghost ds-btn--sm">×</button>
                 </div>
                 
                 <div class="popup-content">
                     <div class="selection-controls">
-                        <button (click)="toggleAllColumns(true)" class="select-all-btn">
+                        <button type="button" (click)="toggleAllColumns(true)" class="select-all-btn ds-btn ds-btn--secondary ds-btn--sm">
                             ✅ {{ 'RES.selectAll' | translate }}
                         </button>
-                        <button (click)="toggleAllColumns(false)" class="deselect-all-btn">
+                        <button type="button" (click)="toggleAllColumns(false)" class="deselect-all-btn ds-btn ds-btn--secondary ds-btn--sm">
                             ❌ {{ 'RES.deselectAll' | translate }}
                         </button>
                         <span class="selection-info">
@@ -757,7 +757,8 @@ interface ApiError {
                         <div *ngFor="let column of availableColumns" class="column-item">
                             <label class="column-checkbox">
                                 <input 
-                                    type="checkbox" 
+                                    type="checkbox"
+                                    class="ds-checkbox"
                                     [(ngModel)]="selectedColumns[column]"
                                     [checked]="selectedColumns[column]">
                                 <span class="column-name">{{column}}</span>
@@ -767,10 +768,10 @@ interface ApiError {
                 </div>
                 
                 <div class="popup-actions">
-                    <button (click)="closeColumnSelector()" class="cancel-btn">
+                    <button type="button" (click)="closeColumnSelector()" class="cancel-btn ds-btn ds-btn--secondary">
                         {{ 'RES.cancel' | translate }}
                     </button>
-                    <button (click)="confirmExportWithSelectedColumns()" class="export-btn">
+                    <button type="button" (click)="confirmExportWithSelectedColumns()" class="export-btn ds-btn ds-btn--primary">
                         📥 {{ 'RES.exportSelectedColumns' | translate }}
                     </button>
                 </div>
@@ -780,37 +781,8 @@ interface ApiError {
         </div>
     `,
     styles: [`
-        :host {
-            --rd-bg: #F2F0EB;
-            --rd-surface: #FAFAF8;
-            --rd-surface2: rgba(255, 255, 255, 0.85);
-            --rd-border: #E4E0D8;
-            --rd-border2: #D6D0C6;
-            --rd-navy: #1A2535;
-            --rd-navy2: #243044;
-            --rd-text1: #1A1714;
-            --rd-text2: #5C5650;
-            --rd-text3: #9B9489;
-            --rd-green: #2E6B47;
-            --rd-green-l: #EAF4EE;
-            --rd-green-m: #5A9E74;
-            --rd-amber: #A85F1E;
-            --rd-amber-l: #FBF0E4;
-            --rd-amber-m: #D4915A;
-            --rd-blue: #1E4A7A;
-            --rd-blue-l: #E6EFF8;
-            --rd-blue-m: #5A88B8;
-            --rd-red: #8B2635;
-            --rd-red-l: #FCEAEC;
-            --rd-red-m: #C4566A;
-            --rd-r: 18px;
-            --rd-r-sm: 11px;
-            --rd-shadow: 0 2px 16px rgba(26, 23, 20, 0.07);
-            --rd-shadow-lg: 0 8px 40px rgba(26, 23, 20, 0.12);
-        }
-
         .results-page {
-            font-family: 'Sora', sans-serif;
+            font-family: var(--font-ui);
             background: var(--rd-bg);
             min-height: 100vh;
             width: 100%;
@@ -837,9 +809,9 @@ interface ApiError {
         }
 
         .nav-brand {
-            font-family: 'Instrument Serif', serif;
+            font-family: var(--font-display);
             font-size: 17px;
-            color: #fff;
+            color: var(--color-nav-text);
             letter-spacing: 0.01em;
             display: flex;
             align-items: center;
@@ -891,7 +863,7 @@ interface ApiError {
             padding: 7px 16px;
             border-radius: 8px;
             border: none;
-            font-family: 'Sora', sans-serif;
+            font-family: var(--font-ui);
             font-size: 13px;
             font-weight: 600;
             cursor: pointer;
@@ -906,7 +878,7 @@ interface ApiError {
 
         .nav-btn.primary {
             background: var(--rd-green-m);
-            color: #fff;
+            color: var(--color-nav-text);
         }
 
         .nav-btn.primary:hover:not(:disabled) {
@@ -915,7 +887,7 @@ interface ApiError {
 
         .nav-btn.secondary {
             background: rgba(255, 255, 255, 0.06);
-            color: #fff;
+            color: var(--color-nav-text);
         }
 
         .nav-btn.secondary:hover:not(:disabled) {
@@ -958,7 +930,7 @@ interface ApiError {
         }
 
         .ph-title-results {
-            font-family: 'Instrument Serif', serif;
+            font-family: var(--font-display);
             font-size: 28px;
             font-weight: 400;
             color: var(--rd-text1);
@@ -1011,8 +983,8 @@ interface ApiError {
         .hk-strip-value {
             font-size: 22px;
             font-weight: 700;
-            color: #fff;
-            font-family: 'Instrument Serif', serif;
+            color: var(--color-nav-text);
+            font-family: var(--font-display);
         }
 
         .magic-services-panel {
@@ -1081,7 +1053,7 @@ interface ApiError {
             height: 32px;
             border: 1px solid var(--rd-border2);
             border-radius: 8px;
-            background: #fff;
+            background: var(--color-surface);
             color: var(--rd-text2);
             font-size: 18px;
             line-height: 1;
@@ -1117,7 +1089,7 @@ interface ApiError {
             padding: 8px 12px;
             border: 1px solid var(--rd-border);
             border-radius: var(--rd-r-sm);
-            background: var(--rd-bg2, #f8fafc);
+            background: var(--color-surface-sunken);
         }
 
         .magic-report-group-label {
@@ -1180,7 +1152,7 @@ interface ApiError {
             padding: 14px 16px;
             border: 1.5px solid var(--rd-border);
             border-radius: var(--rd-r-sm);
-            background: #fff;
+            background: var(--color-surface);
             cursor: pointer;
             text-align: left;
             transition: border-color 0.15s, box-shadow 0.15s, transform 0.15s, background 0.15s;
@@ -1194,7 +1166,7 @@ interface ApiError {
 
         .magic-service-tab.active {
             border-color: var(--rd-blue);
-            background: linear-gradient(180deg, var(--rd-blue-l) 0%, #fff 100%);
+            background: linear-gradient(180deg, var(--rd-blue-l) 0%, var(--color-surface) 100%);
             box-shadow: 0 6px 20px rgba(30, 74, 122, 0.12);
         }
 
@@ -1221,7 +1193,7 @@ interface ApiError {
 
         .magic-service-tab.active .tab-index {
             background: var(--rd-blue);
-            color: #fff;
+            color: var(--color-nav-text);
         }
 
         .magic-service-tab .tab-report-check {
@@ -1237,7 +1209,7 @@ interface ApiError {
             height: 18px;
             border: 1.5px solid var(--rd-border2);
             border-radius: 5px;
-            background: #fff;
+            background: var(--color-surface);
             display: inline-flex;
             align-items: center;
             justify-content: center;
@@ -1254,7 +1226,7 @@ interface ApiError {
         }
 
         .magic-service-tab .tab-report-tick {
-            color: #fff;
+            color: var(--color-nav-text);
             font-size: 12px;
             line-height: 1;
             font-weight: 700;
@@ -1335,7 +1307,7 @@ interface ApiError {
             padding: 8px 12px;
             border: 1.5px solid var(--rd-border);
             border-radius: 8px;
-            background: #fff;
+            background: var(--color-surface);
             font-size: 12px;
             font-weight: 600;
             color: var(--rd-text2);
@@ -1373,7 +1345,7 @@ interface ApiError {
         }
 
         .summary-section {
-            background: linear-gradient(135deg, #ffffff 0%, #f8f9fa 100%);
+            background: linear-gradient(135deg, var(--color-surface) 0%, var(--color-surface-sunken) 100%);
             border-radius: 16px;
             padding: 28px;
             margin-bottom: 32px;
@@ -1390,12 +1362,12 @@ interface ApiError {
 
         .summary-header h3 {
             margin: 0;
-            color: #2c3e50;
+            color: var(--color-text-primary);
         }
 
         .report-button {
-            background: linear-gradient(135deg, var(--theme-primary, #667eea) 0%, var(--theme-accent, #764ba2) 100%);
-            color: white;
+            background: linear-gradient(135deg, var(--color-accent) 0%, var(--color-accent-hover) 100%);
+            color: var(--color-accent-contrast);
             border: none;
             border-radius: 6px;
             padding: 10px 16px;
@@ -1409,7 +1381,7 @@ interface ApiError {
         .report-button:hover {
             transform: translateY(-2px);
             box-shadow: 0 4px 8px rgba(var(--theme-primary-rgb), 0.4);
-            background: linear-gradient(135deg, #5a6fd8 0%, #6a4190 100%);
+            background: linear-gradient(135deg, var(--color-accent-hover) 0%, var(--color-accent-hover) 100%);
         }
 
         .report-button:active {
@@ -1432,7 +1404,7 @@ interface ApiError {
         }
 
         .column-selector-popup {
-            background: white;
+            background: var(--color-surface);
             border-radius: 12px;
             box-shadow: 0 10px 30px rgba(0, 0, 0, 0.3);
             width: 90%;
@@ -1447,9 +1419,9 @@ interface ApiError {
             justify-content: space-between;
             align-items: center;
             padding: 20px;
-            border-bottom: 1px solid #e0e0e0;
-            background: linear-gradient(135deg, var(--theme-primary, #667eea) 0%, var(--theme-accent, #764ba2) 100%);
-            color: white;
+            border-bottom: 1px solid var(--color-border);
+            background: linear-gradient(135deg, var(--color-accent) 0%, var(--color-accent-hover) 100%);
+            color: var(--color-accent-contrast);
             border-radius: 12px 12px 0 0;
         }
 
@@ -1461,7 +1433,7 @@ interface ApiError {
         .close-btn {
             background: none;
             border: none;
-            color: white;
+            color: var(--color-accent-contrast);
             font-size: 24px;
             cursor: pointer;
             padding: 0;
@@ -1502,25 +1474,25 @@ interface ApiError {
         }
 
         .select-all-btn {
-            background-color: #4CAF50;
-            color: white;
+            background-color: var(--color-success-solid);
+            color: var(--color-accent-contrast);
         }
 
         .select-all-btn:hover {
-            background-color: #45a049;
+            background-color: var(--color-success-solid);
         }
 
         .deselect-all-btn {
-            background-color: #f44336;
-            color: white;
+            background-color: var(--color-error-solid);
+            color: var(--color-accent-contrast);
         }
 
         .deselect-all-btn:hover {
-            background-color: #da190b;
+            background-color: var(--color-error-solid);
         }
 
         .selection-info {
-            color: #666;
+            color: var(--color-text-muted);
             font-size: 0.9rem;
             margin-left: auto;
         }
@@ -1534,16 +1506,16 @@ interface ApiError {
         }
 
         .column-item {
-            border: 1px solid #e0e0e0;
+            border: 1px solid var(--color-border);
             border-radius: 8px;
             padding: 12px;
-            background: #f9f9f9;
+            background: var(--color-surface-sunken);
             transition: all 0.3s;
         }
 
         .column-item:hover {
-            background: #f0f0f0;
-            border-color: var(--theme-primary, #667eea);
+            background: var(--color-surface-sunken);
+            border-color: var(--color-accent);
         }
 
         .column-checkbox {
@@ -1557,18 +1529,18 @@ interface ApiError {
         .column-checkbox input[type="checkbox"] {
             width: 16px;
             height: 16px;
-            accent-color: var(--theme-primary, #667eea);
+            accent-color: var(--color-accent);
         }
 
         .column-name {
             flex: 1;
             font-weight: 500;
-            color: #333;
+            color: var(--color-text-primary);
         }
 
         .default-badge {
-            background: var(--theme-primary, #667eea);
-            color: white;
+            background: var(--color-accent);
+            color: var(--color-accent-contrast);
             padding: 2px 6px;
             border-radius: 4px;
             font-size: 0.7rem;
@@ -1577,7 +1549,7 @@ interface ApiError {
 
         .popup-actions {
             padding: 20px;
-            border-top: 1px solid #e0e0e0;
+            border-top: 1px solid var(--color-border);
             display: flex;
             gap: 10px;
             justify-content: flex-end;
@@ -1594,18 +1566,18 @@ interface ApiError {
         }
 
         .cancel-btn {
-            background-color: #f5f5f5;
-            color: #666;
-            border: 1px solid #ddd;
+            background-color: var(--color-surface-sunken);
+            color: var(--color-text-muted);
+            border: 1px solid var(--color-border);
         }
 
         .cancel-btn:hover {
-            background-color: #e0e0e0;
+            background-color: var(--color-border);
         }
 
         .export-btn {
-            background: linear-gradient(135deg, var(--theme-primary, #667eea) 0%, var(--theme-accent, #764ba2) 100%);
-            color: white;
+            background: linear-gradient(135deg, var(--color-accent) 0%, var(--color-accent-hover) 100%);
+            color: var(--color-accent-contrast);
             box-shadow: 0 2px 4px rgba(var(--theme-primary-rgb), 0.3);
         }
 
@@ -1623,7 +1595,7 @@ interface ApiError {
         }
 
         .stat-card {
-            background: white;
+            background: var(--color-surface);
             padding: 28px 24px;
             border-radius: 16px;
             text-align: center;
@@ -1641,7 +1613,7 @@ interface ApiError {
             left: 0;
             right: 0;
             height: 4px;
-            background: linear-gradient(90deg, var(--theme-primary, #667eea) 0%, var(--theme-accent, #764ba2) 100%);
+            background: linear-gradient(90deg, var(--color-accent) 0%, var(--color-accent-hover) 100%);
         }
 
         .stat-card:hover {
@@ -1650,19 +1622,19 @@ interface ApiError {
         }
 
         .stat-card-total::before {
-            background: linear-gradient(90deg, var(--theme-primary, #667eea) 0%, var(--theme-accent, #764ba2) 100%);
+            background: linear-gradient(90deg, var(--color-accent) 0%, var(--color-accent-hover) 100%);
         }
 
         .stat-card-matched::before {
-            background: linear-gradient(90deg, #28a745 0%, #20c997 100%);
+            background: linear-gradient(90deg, var(--color-success) 0%, var(--color-success-solid) 100%);
         }
 
         .stat-card-bo::before {
-            background: linear-gradient(90deg, #ffc107 0%, #ff9800 100%);
+            background: linear-gradient(90deg, var(--color-warning-solid) 0%, var(--color-warning-solid) 100%);
         }
 
         .stat-card-partner::before {
-            background: linear-gradient(90deg, #dc3545 0%, #c82333 100%);
+            background: linear-gradient(90deg, var(--color-error) 0%, var(--color-error-solid) 100%);
         }
 
         .stat-icon {
@@ -1674,29 +1646,29 @@ interface ApiError {
         .stat-value {
             font-size: 2.8em;
             font-weight: 700;
-            color: #2c3e50;
+            color: var(--color-text-primary);
             margin-bottom: 8px;
             line-height: 1.2;
         }
 
         .stat-card-total .stat-value {
-            color: var(--theme-primary, #667eea);
+            color: var(--color-accent);
         }
 
         .stat-card-matched .stat-value {
-            color: #28a745;
+            color: var(--color-success);
         }
 
         .stat-card-bo .stat-value {
-            color: #ff9800;
+            color: var(--color-warning-solid);
         }
 
         .stat-card-partner .stat-value {
-            color: #dc3545;
+            color: var(--color-error);
         }
 
         .stat-label {
-            color: #6c757d;
+            color: var(--color-text-muted);
             font-size: 1em;
             font-weight: 500;
             line-height: 1.4;
@@ -1704,7 +1676,7 @@ interface ApiError {
         }
 
         .results-tabs {
-            background: white;
+            background: var(--color-surface);
             border-radius: 16px;
             box-shadow: 0 4px 16px rgba(0, 0, 0, 0.08);
             overflow: hidden;
@@ -1732,8 +1704,8 @@ interface ApiError {
             display: flex;
             gap: 15px;
             padding: 10px;
-            background: #f8f9fa;
-            border-bottom: 1px solid #dee2e6;
+            background: var(--color-surface-sunken);
+            border-bottom: 1px solid var(--color-border);
         }
 
         .tab-buttons button {
@@ -1742,18 +1714,18 @@ interface ApiError {
             background: none;
             cursor: pointer;
             font-size: 1em;
-            color: #666;
+            color: var(--color-text-muted);
             transition: all 0.3s ease;
         }
 
         .tab-buttons button.active {
-            background: #2196F3;
-            color: white;
+            background: var(--color-accent);
+            color: var(--color-accent-contrast);
         }
 
         .matches-button {
-            background: linear-gradient(135deg, #28a745 0%, #20c997 100%) !important;
-            color: white !important;
+            background: linear-gradient(135deg, var(--color-success) 0%, var(--color-success-solid) 100%) !important;
+            color: var(--color-accent-contrast) !important;
             font-weight: 600;
             border-radius: 6px;
             transition: all 0.3s ease;
@@ -1762,12 +1734,12 @@ interface ApiError {
         .matches-button:hover {
             transform: translateY(-2px);
             box-shadow: 0 4px 8px rgba(40, 167, 69, 0.4);
-            background: linear-gradient(135deg, #218838 0%, #1ea085 100%) !important;
+            background: linear-gradient(135deg, var(--color-success) 0%, var(--color-success-solid) 100%) !important;
         }
 
         .ecart-bo-button {
-            background: linear-gradient(135deg, #ff9800 0%, #f57c00 100%) !important;
-            color: white !important;
+            background: linear-gradient(135deg, var(--color-warning-solid) 0%, var(--color-warning-solid) 100%) !important;
+            color: var(--color-accent-contrast) !important;
             font-weight: 600;
             border-radius: 6px;
             transition: all 0.3s ease;
@@ -1776,12 +1748,12 @@ interface ApiError {
         .ecart-bo-button:hover {
             transform: translateY(-2px);
             box-shadow: 0 4px 8px rgba(255, 152, 0, 0.4);
-            background: linear-gradient(135deg, #f57c00 0%, #e65100 100%) !important;
+            background: linear-gradient(135deg, var(--color-warning-solid) 0%, var(--color-warning-solid) 100%) !important;
         }
 
         .ecart-partner-button {
-            background: linear-gradient(135deg, #dc3545 0%, #c82333 100%) !important;
-            color: white !important;
+            background: linear-gradient(135deg, var(--color-error) 0%, var(--color-error-solid) 100%) !important;
+            color: var(--color-accent-contrast) !important;
             font-weight: 600;
             border-radius: 6px;
             transition: all 0.3s ease;
@@ -1790,12 +1762,12 @@ interface ApiError {
         .ecart-partner-button:hover {
             transform: translateY(-2px);
             box-shadow: 0 4px 8px rgba(220, 53, 69, 0.4);
-            background: linear-gradient(135deg, #c82333 0%, #bd2130 100%) !important;
+            background: linear-gradient(135deg, var(--color-error-solid) 0%, var(--color-error-solid) 100%) !important;
         }
 
         .report-button {
-            background: linear-gradient(135deg, var(--theme-primary, #667eea) 0%, var(--theme-accent, #764ba2) 100%) !important;
-            color: white !important;
+            background: linear-gradient(135deg, var(--color-accent) 0%, var(--color-accent-hover) 100%) !important;
+            color: var(--color-accent-contrast) !important;
             font-weight: 600;
             border-radius: 6px;
             box-shadow: 0 2px 4px rgba(0,0,0,0.1);
@@ -1825,10 +1797,10 @@ interface ApiError {
         }
 
         .match-card, .unmatched-card {
-            background: #f8f9fa;
+            background: var(--color-surface-sunken);
             border-radius: 12px;
             padding: 20px;
-            border: 1px solid #dee2e6;
+            border: 1px solid var(--color-border);
             width: 100%;
             box-sizing: border-box;
             margin-bottom: 16px;
@@ -1847,12 +1819,12 @@ interface ApiError {
             align-items: center;
             margin-bottom: 15px;
             padding-bottom: 10px;
-            border-bottom: 1px solid #dee2e6;
+            border-bottom: 1px solid var(--color-border);
         }
 
         .key {
             font-weight: bold;
-            color: #2196F3;
+            color: var(--color-accent);
         }
 
         .status {
@@ -1862,8 +1834,8 @@ interface ApiError {
         }
 
         .status.has-differences {
-            background: #fff3cd;
-            color: #856404;
+            background: var(--color-surface)3cd;
+            color: var(--color-warning-text);
         }
 
         .match-content {
@@ -1874,7 +1846,7 @@ interface ApiError {
 
         .data-column h4 {
             margin: 0 0 10px;
-            color: #2196F3;
+            color: var(--color-accent);
         }
 
         .data-grid {
@@ -1889,23 +1861,23 @@ interface ApiError {
         }
 
         .label {
-            color: #666;
+            color: var(--color-text-muted);
             font-weight: 500;
         }
 
         .differences-section {
             margin-top: 15px;
             padding-top: 15px;
-            border-top: 1px solid #dee2e6;
+            border-top: 1px solid var(--color-border);
         }
 
         .differences-section h4 {
             margin: 0 0 10px;
-            color: #dc3545;
+            color: var(--color-error);
         }
 
         .difference-card {
-            background: #fff3cd;
+            background: var(--color-surface)3cd;
             border-radius: 4px;
             padding: 10px;
             margin-bottom: 10px;
@@ -1914,7 +1886,7 @@ interface ApiError {
         .diff-header {
             font-weight: bold;
             margin-bottom: 5px;
-            color: #856404;
+            color: var(--color-warning-text);
         }
 
         .diff-values {
@@ -1949,8 +1921,8 @@ interface ApiError {
         }
 
         .export-btn {
-            background: linear-gradient(45deg, #2196F3, #1976D2);
-            color: white;
+            background: linear-gradient(45deg, var(--color-accent), var(--color-accent-hover));
+            color: var(--color-accent-contrast);
             border: none;
         }
 
@@ -1960,14 +1932,14 @@ interface ApiError {
         }
 
         .new-reco-btn {
-            background: #f5f5f5;
-            color: #1976D2;
-            border: 1px solid #1976D2;
+            background: var(--color-surface-sunken);
+            color: var(--color-accent-hover);
+            border: 1px solid var(--color-accent-hover);
         }
 
         .new-reco-btn:hover {
-            background: #1976D2;
-            color: white;
+            background: var(--color-accent-hover);
+            color: var(--color-accent-contrast);
         }
 
         .pagination-controls {
@@ -1979,7 +1951,7 @@ interface ApiError {
         }
 
         .volume-summary {
-            background: linear-gradient(135deg, #ffffff 0%, #f8f9fa 100%);
+            background: linear-gradient(135deg, var(--color-surface) 0%, var(--color-surface-sunken) 100%);
             border-radius: 12px;
             padding: 20px;
             margin-bottom: 24px;
@@ -2001,7 +1973,7 @@ interface ApiError {
 
         .volume-summary h4 {
             margin: 0 0 16px 0;
-            color: #2c3e50;
+            color: var(--color-text-primary);
             font-size: 1.1em;
             font-weight: 600;
         }
@@ -2014,7 +1986,7 @@ interface ApiError {
         }
 
         .volume-card {
-            background: white;
+            background: var(--color-surface);
             padding: 18px;
             border-radius: 10px;
             text-align: center;
@@ -2029,7 +2001,7 @@ interface ApiError {
         }
 
         .volume-label {
-            color: #666;
+            color: var(--color-text-muted);
             font-size: 0.9em;
             margin-bottom: 5px;
         }
@@ -2037,15 +2009,15 @@ interface ApiError {
         .volume-value {
             font-size: 1.2em;
             font-weight: bold;
-            color: #2196F3;
+            color: var(--color-accent);
         }
 
         .volume-value.positive {
-            color: #4CAF50;
+            color: var(--color-success-solid);
         }
 
         .volume-value.negative {
-            color: #f44336;
+            color: var(--color-error-solid);
         }
 
         .search-section {
@@ -2055,21 +2027,21 @@ interface ApiError {
         .search-input {
             flex: 1;
             padding: 12px 18px;
-            border: 2px solid #dee2e6;
+            border: 2px solid var(--color-border);
             border-radius: 10px;
             font-size: 1em;
             transition: all 0.3s ease;
-            background: white;
+            background: var(--color-surface);
         }
 
         .search-input:focus {
             outline: none;
-            border-color: var(--theme-primary, #667eea);
+            border-color: var(--color-accent);
             box-shadow: 0 0 0 3px rgba(var(--theme-primary-rgb), 0.15);
         }
 
         .agency-service-info {
-            background: #e3f2fd;
+            background: var(--color-info-bg);
             border-radius: 6px;
             padding: 10px;
             margin-bottom: 15px;
@@ -2087,16 +2059,16 @@ interface ApiError {
 
         .info-row .label {
             font-weight: bold;
-            color: #1976D2;
+            color: var(--color-accent-hover);
         }
 
         .info-row .value {
-            color: #333;
+            color: var(--color-text-primary);
         }
 
         .agency-summary-section {
             padding: 20px;
-            background: white;
+            background: var(--color-surface);
             border-radius: 8px;
             box-shadow: 0 2px 4px rgba(0,0,0,0.1);
         }
@@ -2104,11 +2076,11 @@ interface ApiError {
         .summary-header {
             margin-bottom: 20px;
             padding-bottom: 20px;
-            border-bottom: 1px solid #dee2e6;
+            border-bottom: 1px solid var(--color-border);
         }
 
         .summary-header h3 {
-            color: #1976D2;
+            color: var(--color-accent-hover);
             margin: 0 0 15px 0;
             font-size: 1.4em;
         }
@@ -2131,14 +2103,14 @@ interface ApiError {
         }
 
         .stat-item .label {
-            color: #666;
+            color: var(--color-text-muted);
             font-weight: 500;
         }
 
         .stat-item .value {
             font-size: 1.2em;
             font-weight: bold;
-            color: #1976D2;
+            color: var(--color-accent-hover);
         }
 
         .summary-table {
@@ -2149,27 +2121,27 @@ interface ApiError {
         table {
             width: 100%;
             border-collapse: collapse;
-            background: white;
+            background: var(--color-surface);
         }
 
         th {
-            background: #f8f9fa;
+            background: var(--color-surface-sunken);
             padding: 12px 15px;
             text-align: left;
             font-weight: 600;
-            color: #495057;
-            border-bottom: 2px solid #dee2e6;
+            color: var(--color-text-muted);
+            border-bottom: 2px solid var(--color-border);
         }
 
         td {
             padding: 12px 15px;
-            border-bottom: 1px solid #dee2e6;
+            border-bottom: 1px solid var(--color-border);
         }
 
         .volume-cell {
             text-align: right;
             font-weight: 500;
-            color: #1976D2;
+            color: var(--color-accent-hover);
         }
 
         .count-cell {
@@ -2178,7 +2150,7 @@ interface ApiError {
         }
 
         tbody tr:hover {
-            background-color: #f8f9fa;
+            background-color: var(--color-surface-sunken);
         }
 
         .pagination-controls {
@@ -2191,17 +2163,17 @@ interface ApiError {
 
         .pagination-controls button {
             padding: 8px 16px;
-            border: 1px solid #dee2e6;
-            background: white;
+            border: 1px solid var(--color-border);
+            background: var(--color-surface);
             border-radius: 4px;
             cursor: pointer;
             transition: all 0.3s ease;
         }
 
         .pagination-controls button:hover:not(:disabled) {
-            background: #1976D2;
-            color: white;
-            border-color: #1976D2;
+            background: var(--color-accent-hover);
+            color: var(--color-accent-contrast);
+            border-color: var(--color-accent-hover);
         }
 
         .pagination-controls button:disabled {
@@ -2210,7 +2182,7 @@ interface ApiError {
         }
 
         .pagination-controls span {
-            color: #666;
+            color: var(--color-text-muted);
         }
 
         .summary-tables-row {
@@ -2224,19 +2196,19 @@ interface ApiError {
         .summary-table-agency table, .summary-table-service table {
             width: 100%;
             border-collapse: collapse;
-            background: #f8f9fa;
+            background: var(--color-surface-sunken);
         }
         .summary-table-agency th, .summary-table-service th {
-            background: #e3f2fd;
+            background: var(--color-info-bg);
             padding: 8px 10px;
             text-align: left;
             font-weight: 600;
-            color: #1976D2;
-            border-bottom: 2px solid #dee2e6;
+            color: var(--color-accent-hover);
+            border-bottom: 2px solid var(--color-border);
         }
         .summary-table-agency td, .summary-table-service td {
             padding: 8px 10px;
-            border-bottom: 1px solid #dee2e6;
+            border-bottom: 1px solid var(--color-border);
         }
 
         .non-matching-summary {
@@ -2247,17 +2219,17 @@ interface ApiError {
         }
 
         .non-matching-section {
-            background: white;
+            background: var(--color-surface);
             border-radius: 8px;
             padding: 15px;
             box-shadow: 0 2px 4px rgba(0,0,0,0.1);
         }
 
         .non-matching-section h4 {
-            color: #1976D2;
+            color: var(--color-accent-hover);
             margin: 0 0 15px 0;
             padding-bottom: 10px;
-            border-bottom: 1px solid #dee2e6;
+            border-bottom: 1px solid var(--color-border);
         }
 
         .non-matching-list {
@@ -2267,10 +2239,10 @@ interface ApiError {
         }
 
         .non-matching-item {
-            background: #f8f9fa;
+            background: var(--color-surface-sunken);
             border-radius: 6px;
             padding: 10px;
-            border: 1px solid #dee2e6;
+            border: 1px solid var(--color-border);
         }
 
         .item-header {
@@ -2282,7 +2254,7 @@ interface ApiError {
 
         .item-details {
             font-size: 0.9em;
-            color: #666;
+            color: var(--color-text-muted);
         }
 
         .detail-item {
@@ -2299,9 +2271,9 @@ interface ApiError {
         }
 
         .view-more button {
-            background: #e3f2fd;
-            color: #1976D2;
-            border: 1px solid #1976D2;
+            background: var(--color-info-bg);
+            color: var(--color-accent-hover);
+            border: 1px solid var(--color-accent-hover);
             padding: 8px 16px;
             border-radius: 4px;
             cursor: pointer;
@@ -2309,44 +2281,44 @@ interface ApiError {
         }
 
         .view-more button:hover {
-            background: #1976D2;
-            color: white;
+            background: var(--color-accent-hover);
+            color: var(--color-accent-contrast);
         }
 
         .view-more .export-btn {
-            background: #4CAF50;
-            color: white;
-            border-color: #4CAF50;
+            background: var(--color-success-solid);
+            color: var(--color-accent-contrast);
+            border-color: var(--color-success-solid);
         }
 
         .view-more .export-btn:hover {
-            background: #45a049;
-            border-color: #45a049;
+            background: var(--color-success-solid);
+            border-color: var(--color-success-solid);
         }
 
         .agency {
-            color: #1976D2;
+            color: var(--color-accent-hover);
             font-weight: 500;
         }
 
         .service {
-            color: #666;
+            color: var(--color-text-muted);
         }
 
         .volume {
-            color: #4CAF50;
+            color: var(--color-success-solid);
             font-weight: 500;
         }
 
         .date {
-            color: #666;
+            color: var(--color-text-muted);
             font-size: 0.9em;
         }
 
         .reconcile-button {
             padding: 0.5rem 1rem;
-            background-color: #007bff;
-            color: white;
+            background-color: var(--color-info-solid);
+            color: var(--color-accent-contrast);
             border: none;
             border-radius: 4px;
             cursor: pointer;
@@ -2355,12 +2327,12 @@ interface ApiError {
         }
 
         .reconcile-button:hover {
-            background-color: #0056b3;
+            background-color: var(--color-info-solid);
         }
 
         .save-button {
-            background-color: #4CAF50;
-            color: white;
+            background-color: var(--color-success-solid);
+            color: var(--color-accent-contrast);
             border: none;
             padding: 8px 16px;
             border-radius: 4px;
@@ -2373,15 +2345,15 @@ interface ApiError {
         }
 
         .save-button:hover {
-            background-color: #45a049;
+            background-color: var(--color-success-solid);
         }
 
         .save-button:active {
-            background-color: #3d8b40;
+            background-color: var(--color-success-solid);
         }
 
         .refined-info {
-            background: #f7f7f7;
+            background: var(--color-surface-sunken);
             border-radius: 6px;
             padding: 8px 12px;
             margin-bottom: 8px;
@@ -2405,12 +2377,12 @@ interface ApiError {
 
         .date-selector label {
             font-weight: 500;
-            color: #666;
+            color: var(--color-text-muted);
         }
 
         .date-selector input {
             padding: 8px;
-            border: 1px solid #dee2e6;
+            border: 1px solid var(--color-border);
             border-radius: 4px;
         }
 
@@ -2425,7 +2397,7 @@ interface ApiError {
             margin-top: 40px;
             margin-bottom: 30px;
             padding: 30px;
-            background: linear-gradient(135deg, #f8f9fa 0%, #e9ecef 100%);
+            background: linear-gradient(135deg, var(--color-surface-sunken) 0%, var(--color-surface-sunken) 100%);
             border-radius: 16px;
             box-shadow: 0 4px 16px rgba(0, 0, 0, 0.08);
             width: 100%;
@@ -2440,7 +2412,7 @@ interface ApiError {
         }
 
         .info-card {
-            background: white;
+            background: var(--color-surface);
             border-radius: 12px;
             padding: 24px;
             box-shadow: 0 2px 8px rgba(0, 0, 0, 0.06);
@@ -2459,7 +2431,7 @@ interface ApiError {
             gap: 12px;
             margin-bottom: 20px;
             padding-bottom: 16px;
-            border-bottom: 2px solid #f0f0f0;
+            border-bottom: 2px solid var(--color-surface-sunken);
         }
 
         .info-icon {
@@ -2469,16 +2441,16 @@ interface ApiError {
             justify-content: center;
             width: 48px;
             height: 48px;
-            background: linear-gradient(135deg, var(--theme-primary, #667eea) 0%, var(--theme-accent, #764ba2) 100%);
+            background: linear-gradient(135deg, var(--color-accent) 0%, var(--color-accent-hover) 100%);
             border-radius: 12px;
-            color: white;
+            color: var(--color-accent-contrast);
         }
 
         .info-card-header h4 {
             margin: 0;
             font-size: 1.1em;
             font-weight: 600;
-            color: #2c3e50;
+            color: var(--color-text-primary);
         }
 
         .info-card-content {
@@ -2496,28 +2468,28 @@ interface ApiError {
         .match-rate-value {
             font-size: 2.2em;
             font-weight: 700;
-            color: #28a745;
+            color: var(--color-success);
             text-align: center;
         }
 
         .match-rate-bar {
             width: 100%;
             height: 12px;
-            background: #e9ecef;
+            background: var(--color-surface-sunken);
             border-radius: 6px;
             overflow: hidden;
         }
 
         .match-rate-fill {
             height: 100%;
-            background: linear-gradient(90deg, #28a745 0%, #20c997 100%);
+            background: linear-gradient(90deg, var(--color-success) 0%, var(--color-success-solid) 100%);
             border-radius: 6px;
             transition: width 0.5s ease;
         }
 
         .info-details {
             text-align: center;
-            color: #6c757d;
+            color: var(--color-text-muted);
             font-size: 0.9em;
         }
 
@@ -2527,7 +2499,7 @@ interface ApiError {
             justify-content: space-between;
             gap: 16px;
             padding: 16px;
-            background: #f8f9fa;
+            background: var(--color-surface-sunken);
             border-radius: 8px;
         }
 
@@ -2541,19 +2513,19 @@ interface ApiError {
 
         .volume-item-label {
             font-size: 0.85em;
-            color: #6c757d;
+            color: var(--color-text-muted);
             font-weight: 500;
         }
 
         .volume-item-value {
             font-size: 1.5em;
             font-weight: 700;
-            color: #2196F3;
+            color: var(--color-accent);
         }
 
         .volume-separator {
             font-size: 1.5em;
-            color: var(--theme-primary, #667eea);
+            color: var(--color-accent);
             font-weight: bold;
         }
 
@@ -2566,18 +2538,18 @@ interface ApiError {
         }
 
         .volume-diff.positive {
-            background: #d4edda;
-            color: #155724;
+            background: var(--color-success-bg);
+            color: var(--color-success-text);
         }
 
         .volume-diff.negative {
-            background: #f8d7da;
-            color: #721c24;
+            background: var(--color-error-bg);
+            color: var(--color-error-text);
         }
 
         .volume-diff.neutral {
-            background: #e2e3e5;
-            color: #383d41;
+            background: var(--color-neutral-bg);
+            color: var(--color-neutral-text);
         }
 
         .status-indicators {
@@ -2592,40 +2564,40 @@ interface ApiError {
             gap: 10px;
             padding: 10px;
             border-radius: 6px;
-            background: #f8f9fa;
+            background: var(--color-surface-sunken);
             transition: all 0.3s ease;
         }
 
         .status-item.has-issues {
-            background: #fff3cd;
-            border-left: 3px solid #ffc107;
+            background: var(--color-surface)3cd;
+            border-left: 3px solid var(--color-warning-solid);
         }
 
         .status-item.success {
-            background: #d4edda;
-            border-left: 3px solid #28a745;
+            background: var(--color-success-bg);
+            border-left: 3px solid var(--color-success);
         }
 
         .status-dot {
             width: 10px;
             height: 10px;
             border-radius: 50%;
-            background: #6c757d;
+            background: var(--color-text-muted);
             flex-shrink: 0;
         }
 
         .status-item.has-issues .status-dot {
-            background: #ffc107;
+            background: var(--color-warning-solid);
         }
 
         .status-item.success .status-dot {
-            background: #28a745;
+            background: var(--color-success);
         }
 
         .status-item span:last-child {
             flex: 1;
             font-size: 0.9em;
-            color: #2c3e50;
+            color: var(--color-text-primary);
         }
 
         .quick-actions {
@@ -2642,8 +2614,8 @@ interface ApiError {
             font-size: 0.9em;
             font-weight: 500;
             transition: all 0.3s ease;
-            background: linear-gradient(135deg, var(--theme-primary, #667eea) 0%, var(--theme-accent, #764ba2) 100%);
-            color: white;
+            background: linear-gradient(135deg, var(--color-accent) 0%, var(--color-accent-hover) 100%);
+            color: var(--color-accent-contrast);
             text-align: left;
         }
 
@@ -2653,8 +2625,8 @@ interface ApiError {
         }
 
         .quick-action-btn:disabled {
-            background: #e9ecef;
-            color: #adb5bd;
+            background: var(--color-surface-sunken);
+            color: var(--color-text-muted);
             cursor: not-allowed;
             transform: none;
         }
@@ -2684,41 +2656,41 @@ interface ApiError {
         }
 
         .export-btn {
-            background: #2196F3;
-            color: white;
+            background: var(--color-accent);
+            color: var(--color-accent-contrast);
         }
 
         .export-btn:hover {
-            background: #1976D2;
+            background: var(--color-accent-hover);
         }
 
 
         .new-reconciliation-btn {
-            background: #4CAF50;
-            color: white;
+            background: var(--color-success-solid);
+            color: var(--color-accent-contrast);
         }
 
         .new-reconciliation-btn:hover {
-            background: #388E3C;
+            background: var(--color-success-solid);
         }
 
         .stats-btn {
-            background: #FF9800;
-            color: white;
+            background: var(--color-warning-solid);
+            color: var(--color-accent-contrast);
         }
 
         .stats-btn:hover {
-            background: #F57C00;
+            background: var(--color-warning-solid);
         }
 
         .export-btn:disabled, .new-reconciliation-btn:disabled, .stats-btn:disabled {
-            background: #ccc;
+            background: var(--color-border-emphasis);
             cursor: not-allowed;
         }
 
         .export-button {
-            background-color: #4CAF50;
-            color: white;
+            background-color: var(--color-success-solid);
+            color: var(--color-accent-contrast);
             padding: 8px 16px;
             border: none;
             border-radius: 4px;
@@ -2732,11 +2704,11 @@ interface ApiError {
         }
 
         .export-button:hover {
-            background-color: #45a049;
+            background-color: var(--color-success-solid);
         }
 
         .export-button:active {
-            background-color: #3d8b40;
+            background-color: var(--color-success-solid);
         }
 
         .search-section {
@@ -2745,7 +2717,7 @@ interface ApiError {
             gap: 12px;
             margin-bottom: 24px;
             padding: 16px;
-            background: linear-gradient(135deg, #f8f9fa 0%, #ffffff 100%);
+            background: linear-gradient(135deg, var(--color-surface-sunken) 0%, var(--color-surface) 100%);
             border-radius: 12px;
             box-shadow: 0 2px 8px rgba(0, 0, 0, 0.06);
             border: 1px solid rgba(0, 0, 0, 0.05);
@@ -2753,8 +2725,8 @@ interface ApiError {
         }
 
         .toggle-volume-btn {
-            background: linear-gradient(135deg, var(--theme-primary, #667eea) 0%, var(--theme-accent, #764ba2) 100%);
-            color: white;
+            background: linear-gradient(135deg, var(--color-accent) 0%, var(--color-accent-hover) 100%);
+            color: var(--color-accent-contrast);
             padding: 10px 18px;
             border: none;
             border-radius: 8px;
@@ -2769,22 +2741,22 @@ interface ApiError {
         .toggle-volume-btn:hover {
             transform: translateY(-2px);
             box-shadow: 0 4px 8px rgba(var(--theme-primary-rgb), 0.4);
-            background: linear-gradient(135deg, #5a6fd8 0%, #6a4190 100%);
+            background: linear-gradient(135deg, var(--color-accent-hover) 0%, var(--color-accent-hover) 100%);
         }
 
         .toggle-volume-btn.active {
-            background: linear-gradient(135deg, #28a745 0%, #20c997 100%);
+            background: linear-gradient(135deg, var(--color-success) 0%, var(--color-success-solid) 100%);
             box-shadow: 0 2px 4px rgba(40, 167, 69, 0.3);
         }
 
         .toggle-volume-btn.active:hover {
-            background: linear-gradient(135deg, #218838 0%, #1ea080 100%);
+            background: linear-gradient(135deg, var(--color-success) 0%, var(--color-success-solid) 100%);
             box-shadow: 0 4px 8px rgba(40, 167, 69, 0.4);
         }
 
         .toggle-matches-btn {
-            background: linear-gradient(135deg, #2196F3 0%, #1976D2 100%);
-            color: white;
+            background: linear-gradient(135deg, var(--color-accent) 0%, var(--color-accent-hover) 100%);
+            color: var(--color-accent-contrast);
             padding: 10px 18px;
             border: none;
             border-radius: 8px;
@@ -2799,16 +2771,16 @@ interface ApiError {
         .toggle-matches-btn:hover {
             transform: translateY(-2px);
             box-shadow: 0 4px 8px rgba(33, 150, 243, 0.4);
-            background: linear-gradient(135deg, #1976D2 0%, #1565C0 100%);
+            background: linear-gradient(135deg, var(--color-accent-hover) 0%, var(--color-info-solid) 100%);
         }
 
         .toggle-matches-btn.active {
-            background: linear-gradient(135deg, #28a745 0%, #20c997 100%);
+            background: linear-gradient(135deg, var(--color-success) 0%, var(--color-success-solid) 100%);
             box-shadow: 0 2px 4px rgba(40, 167, 69, 0.3);
         }
 
         .toggle-matches-btn.active:hover {
-            background: linear-gradient(135deg, #218838 0%, #1ea080 100%);
+            background: linear-gradient(135deg, var(--color-success) 0%, var(--color-success-solid) 100%);
             box-shadow: 0 4px 8px rgba(40, 167, 69, 0.4);
         }
 
@@ -2822,7 +2794,7 @@ interface ApiError {
             top: 50%;
             left: 50%;
             transform: translate(-50%, -50%);
-            background: white;
+            background: var(--color-surface);
             padding: 20px;
             border-radius: 8px;
             box-shadow: 0 2px 10px rgba(0,0,0,0.1);
@@ -2833,7 +2805,7 @@ interface ApiError {
         .progress-bar {
             width: 300px;
             height: 20px;
-            background-color: #f0f0f0;
+            background-color: var(--color-surface-sunken);
             border-radius: 10px;
             overflow: hidden;
             margin-bottom: 10px;
@@ -2841,39 +2813,39 @@ interface ApiError {
 
         .progress {
             height: 100%;
-            background-color: #4CAF50;
+            background-color: var(--color-success-solid);
             transition: width 0.3s ease;
         }
 
         .progress-text {
             font-size: 14px;
-            color: #666;
+            color: var(--color-text-muted);
         }
 
         /* Styles pour les doublons TSOP */
         .tsop-duplicate {
-            background-color: #ff4444 !important;
-            color: white !important;
+            background-color: var(--color-error-solid) !important;
+            color: var(--color-accent-contrast) !important;
             font-weight: bold;
         }
 
         .tsop-duplicate td {
-            background-color: #ff4444 !important;
-            color: white !important;
-            border-color: #ff2222 !important;
+            background-color: var(--color-error-solid) !important;
+            color: var(--color-accent-contrast) !important;
+            border-color: var(--color-error-solid) !important;
         }
 
         /* Styles pour IMPACT sans FRAIS */
         .tsop-sans-frais {
-            background-color: #ffeb3b !important;
-            color: #333 !important;
+            background-color: var(--color-warning-bg) !important;
+            color: var(--color-text-primary) !important;
             font-weight: bold;
         }
 
         .tsop-sans-frais td {
-            background-color: #ffeb3b !important;
-            color: #333 !important;
-            border-color: #ffc107 !important;
+            background-color: var(--color-warning-bg) !important;
+            color: var(--color-text-primary) !important;
+            border-color: var(--color-warning-solid) !important;
         }
 
         .tsop-comment {
@@ -2889,7 +2861,7 @@ interface ApiError {
             justify-content: center;
             padding: 40px;
             gap: 16px;
-            color: var(--theme-primary, #667eea);
+            color: var(--color-accent);
             font-size: 1.1em;
             font-weight: 500;
         }
@@ -2913,29 +2885,29 @@ interface ApiError {
         .progress-bar-mini {
             width: 100%;
             height: 8px;
-            background-color: #e0e0e0;
+            background-color: var(--color-border);
             border-radius: 4px;
             overflow: hidden;
         }
 
         .progress-fill-mini {
             height: 100%;
-            background: linear-gradient(90deg, var(--theme-primary, #667eea) 0%, var(--theme-accent, #764ba2) 100%);
+            background: linear-gradient(90deg, var(--color-accent) 0%, var(--color-accent-hover) 100%);
             border-radius: 4px;
             transition: width 0.3s ease;
         }
 
         .progress-text-mini {
             font-size: 0.9em;
-            color: #666;
+            color: var(--color-text-muted);
             text-align: center;
         }
 
         .spinner {
             width: 40px;
             height: 40px;
-            border: 4px solid #f3f3f3;
-            border-top: 4px solid var(--theme-primary, #667eea);
+            border: 4px solid var(--color-surface-sunken);
+            border-top: 4px solid var(--color-accent);
             border-radius: 50%;
             animation: spin 1s linear infinite;
         }
@@ -2948,7 +2920,7 @@ interface ApiError {
         .no-data-message {
             text-align: center;
             padding: 40px;
-            color: #666;
+            color: var(--color-text-muted);
             font-size: 1.1em;
         }
     `]
