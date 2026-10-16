@@ -1,5 +1,6 @@
 import { Component, Input, Output, EventEmitter, OnInit, OnDestroy } from '@angular/core';
 import { I18nService } from '../../services/i18n/i18n.service';
+import { attachDialogA11y } from '../../shared/ui/dialog/dialog-a11y';
 
 export interface PopupConfig {
   title?: string;
@@ -140,13 +141,13 @@ export class ModernPopupComponent implements OnInit, OnDestroy {
 
       // Créer un élément popup dynamiquement
       const popupElement = document.createElement('div');
-      popupElement.className = 'modern-popup-overlay';
+      popupElement.className = 'modern-popup-overlay ds-dialog';
       popupElement.innerHTML = `
         <div class="modern-popup">
           <div class="popup-accent"></div>
           <div class="popup-header">
             <h3 class="popup-title">${title}</h3>
-            <button type="button" class="popup-close" aria-label="${I18nService.t('COMMON.actions.close')}">×</button>
+            <button type="button" class="popup-close" aria-label="${I18nService.t('COMMON.actions.close')}"><i class="fas fa-times" aria-hidden="true"></i></button>
           </div>
           <div class="popup-content">
             <p class="popup-message">${message}</p>
@@ -160,198 +161,12 @@ export class ModernPopupComponent implements OnInit, OnDestroy {
       `;
 
       // Styles alignés ReconciliApp / référentiel services (Sora, navy, tons chauds)
-      const style = document.createElement('style');
-      style.textContent = `
-        .modern-popup-overlay {
-          position: fixed;
-          top: 0;
-          left: 0;
-          width: 100%;
-          height: 100%;
-          background: rgba(26, 37, 53, 0.42);
-          backdrop-filter: blur(5px);
-          -webkit-backdrop-filter: blur(5px);
-          display: flex;
-          justify-content: center;
-          align-items: center;
-          z-index: 10000;
-          animation: mp-fadeIn 0.25s ease-out;
-          font-family: 'Sora', 'Segoe UI', system-ui, sans-serif;
-        }
 
-        .modern-popup {
-          background: #FAFAF8;
-          border-radius: 18px;
-          border: 1px solid #E4E0D8;
-          box-shadow: 0 8px 40px rgba(26, 23, 20, 0.14), 0 2px 16px rgba(26, 23, 20, 0.08);
-          max-width: 440px;
-          width: 92%;
-          animation: mp-slideIn 0.28s cubic-bezier(0.22, 1, 0.36, 1);
-          overflow: hidden;
-        }
-
-        .popup-accent {
-          height: 3px;
-          background: linear-gradient(90deg, #1A2535 0%, #2E6B47 55%, #5A9E74 100%);
-        }
-
-        .popup-header {
-          display: flex;
-          justify-content: space-between;
-          align-items: flex-start;
-          gap: 12px;
-          padding: 18px 22px 0 22px;
-        }
-
-        .popup-title {
-          margin: 0;
-          font-size: 1.15rem;
-          font-weight: 600;
-          color: #1A2535;
-          letter-spacing: -0.02em;
-          line-height: 1.35;
-        }
-
-        .popup-close {
-          flex-shrink: 0;
-          background: rgba(26, 23, 20, 0.06);
-          border: none;
-          font-size: 1.35rem;
-          line-height: 1;
-          cursor: pointer;
-          color: #5C5650;
-          padding: 0;
-          width: 34px;
-          height: 34px;
-          display: flex;
-          align-items: center;
-          justify-content: center;
-          border-radius: 10px;
-          transition: background 0.2s, color 0.2s;
-        }
-
-        .popup-close:hover {
-          background: rgba(139, 38, 53, 0.1);
-          color: #8B2635;
-        }
-
-        .popup-content {
-          padding: 14px 22px 8px 22px;
-        }
-
-        .popup-message {
-          margin: 0;
-          color: #5C5650;
-          line-height: 1.55;
-          font-size: 0.95rem;
-        }
-
-        .popup-lines-saved {
-          margin: 12px 0 0 0;
-          color: #9B9489;
-          font-size: 0.875rem;
-        }
-
-        .popup-actions {
-          display: flex;
-          justify-content: flex-end;
-          flex-wrap: wrap;
-          gap: 10px;
-          padding: 16px 22px 22px 22px;
-        }
-
-        .popup-btn {
-          padding: 10px 20px;
-          border: none;
-          border-radius: 11px;
-          cursor: pointer;
-          font-weight: 600;
-          font-size: 0.9rem;
-          transition: transform 0.15s, box-shadow 0.2s, background 0.2s;
-          min-width: 88px;
-          font-family: inherit;
-        }
-
-        .popup-btn:active {
-          transform: scale(0.98);
-        }
-
-        .popup-btn-cancel {
-          background: #F2F0EB;
-          color: #5C5650;
-          border: 1px solid #E4E0D8;
-        }
-
-        .popup-btn-cancel:hover {
-          background: #E4E0D8;
-          color: #1A1714;
-        }
-
-        .popup-btn-primary {
-          color: #fff;
-          box-shadow: 0 2px 8px rgba(26, 37, 53, 0.2);
-        }
-
-        .popup-btn-primary.popup-btn-info {
-          background: linear-gradient(180deg, #243044 0%, #1A2535 100%);
-        }
-
-        .popup-btn-primary.popup-btn-info:hover {
-          box-shadow: 0 4px 14px rgba(26, 37, 53, 0.28);
-        }
-
-        .popup-btn-primary.popup-btn-success {
-          background: linear-gradient(180deg, #5A9E74 0%, #2E6B47 100%);
-        }
-
-        .popup-btn-primary.popup-btn-success:hover {
-          box-shadow: 0 4px 14px rgba(46, 107, 71, 0.35);
-        }
-
-        .popup-btn-primary.popup-btn-warning {
-          background: linear-gradient(180deg, #D4915A 0%, #A85F1E 100%);
-          color: #fff;
-        }
-
-        .popup-btn-primary.popup-btn-warning:hover {
-          box-shadow: 0 4px 14px rgba(168, 95, 30, 0.35);
-        }
-
-        .popup-btn-primary.popup-btn-error {
-          background: linear-gradient(180deg, #C4566A 0%, #8B2635 100%);
-        }
-
-        .popup-btn-primary.popup-btn-error:hover {
-          box-shadow: 0 4px 14px rgba(139, 38, 53, 0.35);
-        }
-
-        .popup-btn-primary.popup-btn-confirm {
-          background: linear-gradient(180deg, #243044 0%, #1A2535 100%);
-        }
-
-        .popup-btn-primary.popup-btn-confirm:hover {
-          box-shadow: 0 4px 14px rgba(26, 37, 53, 0.28);
-        }
-
-        @keyframes mp-fadeIn {
-          from { opacity: 0; }
-          to { opacity: 1; }
-        }
-
-        @keyframes mp-slideIn {
-          from {
-            opacity: 0;
-            transform: translateY(16px) scale(0.97);
-          }
-          to {
-            opacity: 1;
-            transform: translateY(0) scale(1);
-          }
-        }
-      `;
-
-      document.head.appendChild(style);
       document.body.appendChild(popupElement);
+      const a11y = attachDialogA11y(popupElement, {
+        closeLabel: I18nService.t('COMMON.actions.close'),
+        role: config.type === 'confirm' || config.type === 'error' ? 'alertdialog' : 'dialog'
+      });
 
       // Empêcher le scroll du body
       document.body.style.overflow = 'hidden';
@@ -359,9 +174,7 @@ export class ModernPopupComponent implements OnInit, OnDestroy {
       // Nettoyer les styles après fermeture
       const cleanup = () => {
         document.body.style.overflow = 'auto';
-        if (style.parentNode) {
-          style.parentNode.removeChild(style);
-        }
+        a11y.release();
       };
 
       // Ajouter les event listeners pour la fermeture
@@ -421,59 +234,32 @@ export class ModernPopupComponent implements OnInit, OnDestroy {
   static showTextInput(message: string, title: string = 'Saisie', defaultValue: string = '', placeholder: string = ''): Promise<string | null> {
     return new Promise((resolve) => {
       const overlay = document.createElement('div');
-      overlay.className = 'modern-popup-overlay';
+      overlay.className = 'modern-popup-overlay ds-dialog';
       overlay.innerHTML = `
         <div class="modern-popup">
           <div class="popup-header">
             <h3 class="popup-title">${title}</h3>
-            <button class="popup-close">×</button>
+            <button type="button" class="popup-close"><i class="fas fa-times" aria-hidden="true"></i></button>
           </div>
           <div class="popup-content">
             <p class="popup-message">${message}</p>
             <input type="text" class="popup-input" placeholder="${placeholder || ''}" value="${defaultValue || ''}" />
           </div>
           <div class="popup-actions">
-            <button class="popup-btn popup-btn-cancel">Annuler</button>
-            <button class="popup-btn popup-btn-confirm popup-btn-info">Valider</button>
+            <button type="button" class="popup-btn popup-btn-cancel">Annuler</button>
+            <button type="button" class="popup-btn popup-btn-confirm popup-btn-info">Valider</button>
           </div>
         </div>
       `;
 
-      const style = document.createElement('style');
-      style.textContent = `
-        .modern-popup-overlay {
-          position: fixed;
-          top: 0; left: 0; width: 100%; height: 100%;
-          background: rgba(0,0,0,.5);
-          display: flex; justify-content: center; align-items: center;
-          z-index: 9999; animation: fadeIn .3s ease-out;
-        }
-        .modern-popup { background: #fff; border-radius: 12px; box-shadow: 0 10px 30px rgba(0,0,0,.3); max-width: 420px; width: 92%; animation: slideIn .3s ease-out; }
-        .popup-header { display: flex; justify-content: space-between; align-items: center; padding: 20px 20px 0 20px; }
-        .popup-title { margin: 0; font-size: 18px; font-weight: 600; color: #333; }
-        .popup-close { background: none; border: none; font-size: 24px; cursor: pointer; color: #999; padding: 0; width: 30px; height: 30px; display: flex; align-items: center; justify-content: center; border-radius: 50%; transition: all .2s; }
-        .popup-close:hover { background: #f5f5f5; color: #666; }
-        .popup-content { padding: 20px; }
-        .popup-message { margin: 0 0 10px 0; color: #555; line-height: 1.5; }
-        .popup-actions { display: flex; justify-content: flex-end; gap: 10px; padding: 0 20px 20px 20px; }
-        .popup-btn { padding: 10px 20px; border: none; border-radius: 6px; cursor: pointer; font-weight: 500; transition: all .2s; min-width: 80px; }
-        .popup-btn-cancel { background: #f5f5f5; color: #666; }
-        .popup-btn-cancel:hover { background: #e5e5e5; }
-        .popup-btn-info { background: #007bff; color: #fff; }
-        .popup-btn-info:hover { background: #0056b3; }
-        .popup-input { width: 100%; padding: 10px 12px; border: 1px solid #ddd; border-radius: 6px; font-size: 14px; box-sizing: border-box; }
-        .popup-input:focus { outline: none; border-color: var(--theme-info, #3498db); box-shadow: 0 0 0 2px rgba(var(--theme-info-rgb),.2); }
-        @keyframes fadeIn { from { opacity: 0; } to { opacity: 1; } }
-        @keyframes slideIn { from { opacity: 0; transform: translateY(-20px) scale(.95); } to { opacity: 1; transform: translateY(0) scale(1); } }
-      `;
 
-      document.head.appendChild(style);
       document.body.appendChild(overlay);
+      const a11y = attachDialogA11y(overlay, { closeLabel: I18nService.t('COMMON.actions.close') });
       document.body.style.overflow = 'hidden';
 
       const cleanup = () => {
         document.body.style.overflow = 'auto';
-        if (style.parentNode) style.parentNode.removeChild(style);
+        a11y.release();
       };
 
       const close = (result: string | null) => {
@@ -515,59 +301,32 @@ export class ModernPopupComponent implements OnInit, OnDestroy {
       })();
 
       const overlay = document.createElement('div');
-      overlay.className = 'modern-popup-overlay';
+      overlay.className = 'modern-popup-overlay ds-dialog';
       overlay.innerHTML = `
         <div class="modern-popup">
           <div class="popup-header">
             <h3 class="popup-title">${title}</h3>
-            <button class="popup-close">×</button>
+            <button type="button" class="popup-close"><i class="fas fa-times" aria-hidden="true"></i></button>
           </div>
           <div class="popup-content">
             <p class="popup-message">${message}</p>
             <input type="date" class="popup-input" value="${effectiveDefault}" />
           </div>
           <div class="popup-actions">
-            <button class="popup-btn popup-btn-cancel">Annuler</button>
-            <button class="popup-btn popup-btn-confirm popup-btn-info">Valider</button>
+            <button type="button" class="popup-btn popup-btn-cancel">Annuler</button>
+            <button type="button" class="popup-btn popup-btn-confirm popup-btn-info">Valider</button>
           </div>
         </div>
       `;
 
-      const style = document.createElement('style');
-      style.textContent = `
-        .modern-popup-overlay {
-          position: fixed;
-          top: 0; left: 0; width: 100%; height: 100%;
-          background: rgba(0,0,0,.5);
-          display: flex; justify-content: center; align-items: center;
-          z-index: 9999; animation: fadeIn .3s ease-out;
-        }
-        .modern-popup { background: #fff; border-radius: 12px; box-shadow: 0 10px 30px rgba(0,0,0,.3); max-width: 420px; width: 92%; animation: slideIn .3s ease-out; }
-        .popup-header { display: flex; justify-content: space-between; align-items: center; padding: 20px 20px 0 20px; }
-        .popup-title { margin: 0; font-size: 18px; font-weight: 600; color: #333; }
-        .popup-close { background: none; border: none; font-size: 24px; cursor: pointer; color: #999; padding: 0; width: 30px; height: 30px; display: flex; align-items: center; justify-content: center; border-radius: 50%; transition: all .2s; }
-        .popup-close:hover { background: #f5f5f5; color: #666; }
-        .popup-content { padding: 20px; }
-        .popup-message { margin: 0 0 10px 0; color: #555; line-height: 1.5; }
-        .popup-actions { display: flex; justify-content: flex-end; gap: 10px; padding: 0 20px 20px 20px; }
-        .popup-btn { padding: 10px 20px; border: none; border-radius: 6px; cursor: pointer; font-weight: 500; transition: all .2s; min-width: 80px; }
-        .popup-btn-cancel { background: #f5f5f5; color: #666; }
-        .popup-btn-cancel:hover { background: #e5e5e5; }
-        .popup-btn-info { background: #007bff; color: #fff; }
-        .popup-btn-info:hover { background: #0056b3; }
-        .popup-input { width: 100%; padding: 10px 12px; border: 1px solid #ddd; border-radius: 6px; font-size: 14px; box-sizing: border-box; }
-        .popup-input:focus { outline: none; border-color: var(--theme-info, #3498db); box-shadow: 0 0 0 2px rgba(var(--theme-info-rgb),.2); }
-        @keyframes fadeIn { from { opacity: 0; } to { opacity: 1; } }
-        @keyframes slideIn { from { opacity: 0; transform: translateY(-20px) scale(.95); } to { opacity: 1; transform: translateY(0) scale(1); } }
-      `;
 
-      document.head.appendChild(style);
       document.body.appendChild(overlay);
+      const a11y = attachDialogA11y(overlay, { closeLabel: I18nService.t('COMMON.actions.close') });
       document.body.style.overflow = 'hidden';
 
       const cleanup = () => {
         document.body.style.overflow = 'auto';
-        if (style.parentNode) style.parentNode.removeChild(style);
+        a11y.release();
       };
 
       const close = (result: string | null) => {
@@ -598,7 +357,7 @@ export class ModernPopupComponent implements OnInit, OnDestroy {
   static showSelectInput(message: string, title: string = I18nService.t('POPUP.select'), options: string[] = [], defaultValue: string = ''): Promise<string | null> {
     return new Promise((resolve) => {
       const overlay = document.createElement('div');
-      overlay.className = 'modern-popup-overlay';
+      overlay.className = 'modern-popup-overlay ds-dialog';
       
       const optionsHtml = options.map(option => 
         `<option value="${option}" ${option === defaultValue ? 'selected' : ''}>${option}</option>`
@@ -608,7 +367,7 @@ export class ModernPopupComponent implements OnInit, OnDestroy {
         <div class="modern-popup">
           <div class="popup-header">
             <h3 class="popup-title">${title}</h3>
-            <button class="popup-close">×</button>
+            <button type="button" class="popup-close"><i class="fas fa-times" aria-hidden="true"></i></button>
           </div>
           <div class="popup-content">
             <p class="popup-message">${message}</p>
@@ -617,47 +376,20 @@ export class ModernPopupComponent implements OnInit, OnDestroy {
             </select>
           </div>
           <div class="popup-actions">
-            <button class="popup-btn popup-btn-cancel">Annuler</button>
-            <button class="popup-btn popup-btn-confirm popup-btn-info">Valider</button>
+            <button type="button" class="popup-btn popup-btn-cancel">Annuler</button>
+            <button type="button" class="popup-btn popup-btn-confirm popup-btn-info">Valider</button>
           </div>
         </div>
       `;
 
-      const style = document.createElement('style');
-      style.textContent = `
-        .modern-popup-overlay {
-          position: fixed;
-          top: 0; left: 0; width: 100%; height: 100%;
-          background: rgba(0,0,0,.5);
-          display: flex; justify-content: center; align-items: center;
-          z-index: 9999; animation: fadeIn .3s ease-out;
-        }
-        .modern-popup { background: #fff; border-radius: 12px; box-shadow: 0 10px 30px rgba(0,0,0,.3); max-width: 420px; width: 92%; animation: slideIn .3s ease-out; }
-        .popup-header { display: flex; justify-content: space-between; align-items: center; padding: 20px 20px 0 20px; }
-        .popup-title { margin: 0; font-size: 18px; font-weight: 600; color: #333; }
-        .popup-close { background: none; border: none; font-size: 24px; cursor: pointer; color: #999; padding: 0; width: 30px; height: 30px; display: flex; align-items: center; justify-content: center; border-radius: 50%; transition: all .2s; }
-        .popup-close:hover { background: #f5f5f5; color: #666; }
-        .popup-content { padding: 20px; }
-        .popup-message { margin: 0 0 10px 0; color: #555; line-height: 1.5; }
-        .popup-actions { display: flex; justify-content: flex-end; gap: 10px; padding: 0 20px 20px 20px; }
-        .popup-btn { padding: 10px 20px; border: none; border-radius: 6px; cursor: pointer; font-weight: 500; transition: all .2s; min-width: 80px; }
-        .popup-btn-cancel { background: #f5f5f5; color: #666; }
-        .popup-btn-cancel:hover { background: #e5e5e5; }
-        .popup-btn-info { background: #007bff; color: #fff; }
-        .popup-btn-info:hover { background: #0056b3; }
-        .popup-select { width: 100%; padding: 10px 12px; border: 1px solid #ddd; border-radius: 6px; font-size: 14px; box-sizing: border-box; background: white; }
-        .popup-select:focus { outline: none; border-color: var(--theme-info, #3498db); box-shadow: 0 0 0 2px rgba(var(--theme-info-rgb),.2); }
-        @keyframes fadeIn { from { opacity: 0; } to { opacity: 1; } }
-        @keyframes slideIn { from { opacity: 0; transform: translateY(-20px) scale(.95); } to { opacity: 1; transform: translateY(0) scale(1); } }
-      `;
 
-      document.head.appendChild(style);
       document.body.appendChild(overlay);
+      const a11y = attachDialogA11y(overlay, { closeLabel: I18nService.t('COMMON.actions.close') });
       document.body.style.overflow = 'hidden';
 
       const cleanup = () => {
         document.body.style.overflow = 'auto';
-        if (style.parentNode) style.parentNode.removeChild(style);
+        a11y.release();
       };
 
       const close = (result: string | null) => {
@@ -693,13 +425,13 @@ export class ModernPopupComponent implements OnInit, OnDestroy {
   static showAutocompleteInput(message: string, title: string = I18nService.t('POPUP.select'), options: string[] = [], defaultValue: string = ''): Promise<string | null> {
     return new Promise((resolve) => {
       const overlay = document.createElement('div');
-      overlay.className = 'modern-popup-overlay';
+      overlay.className = 'modern-popup-overlay ds-dialog';
       
       overlay.innerHTML = `
         <div class="modern-popup autocomplete-popup">
           <div class="popup-header">
             <h3 class="popup-title">${title}</h3>
-            <button class="popup-close">×</button>
+            <button type="button" class="popup-close"><i class="fas fa-times" aria-hidden="true"></i></button>
           </div>
           <div class="popup-content">
             <p class="popup-message">${message}</p>
@@ -709,54 +441,20 @@ export class ModernPopupComponent implements OnInit, OnDestroy {
             </div>
           </div>
           <div class="popup-actions">
-            <button class="popup-btn popup-btn-cancel">Annuler</button>
-            <button class="popup-btn popup-btn-confirm popup-btn-info">Valider</button>
+            <button type="button" class="popup-btn popup-btn-cancel">Annuler</button>
+            <button type="button" class="popup-btn popup-btn-confirm popup-btn-info">Valider</button>
           </div>
         </div>
       `;
 
-      const style = document.createElement('style');
-      style.textContent = `
-        .modern-popup-overlay {
-          position: fixed;
-          top: 0; left: 0; width: 100%; height: 100%;
-          background: rgba(0,0,0,.5);
-          display: flex; justify-content: center; align-items: center;
-          z-index: 9999; animation: fadeIn .3s ease-out;
-        }
-        .modern-popup { background: #fff; border-radius: 12px; box-shadow: 0 10px 30px rgba(0,0,0,.3); max-width: 420px; width: 92%; animation: slideIn .3s ease-out; }
-        .autocomplete-popup { overflow: visible; }
-        .popup-header { display: flex; justify-content: space-between; align-items: center; padding: 20px 20px 0 20px; }
-        .popup-title { margin: 0; font-size: 18px; font-weight: 600; color: #333; }
-        .popup-close { background: none; border: none; font-size: 24px; cursor: pointer; color: #999; padding: 0; width: 30px; height: 30px; display: flex; align-items: center; justify-content: center; border-radius: 50%; transition: all .2s; }
-        .popup-close:hover { background: #f5f5f5; color: #666; }
-        .popup-content { padding: 20px; overflow: visible; }
-        .popup-message { margin: 0 0 10px 0; color: #555; line-height: 1.5; }
-        .popup-actions { display: flex; justify-content: flex-end; gap: 10px; padding: 0 20px 20px 20px; }
-        .popup-btn { padding: 10px 20px; border: none; border-radius: 6px; cursor: pointer; font-weight: 500; transition: all .2s; min-width: 80px; }
-        .popup-btn-cancel { background: #f5f5f5; color: #666; }
-        .popup-btn-cancel:hover { background: #e5e5e5; }
-        .popup-btn-info { background: #007bff; color: #fff; }
-        .popup-btn-info:hover { background: #0056b3; }
-        .autocomplete-wrapper { position: relative; }
-        .autocomplete-input { width: 100%; padding: 10px 12px; border: 1px solid #ddd; border-radius: 6px; font-size: 14px; box-sizing: border-box; }
-        .autocomplete-input:focus { outline: none; border-color: var(--theme-info, #3498db); box-shadow: 0 0 0 2px rgba(var(--theme-info-rgb),.2); }
-        .autocomplete-list { position: relative; margin: 6px 0 0 0; background: white; border: 1px solid #ddd; border-radius: 6px; max-height: 200px; overflow-y: auto; z-index: 2; padding: 0; list-style: none; box-shadow: 0 4px 6px rgba(0,0,0,.1); }
-        .autocomplete-list li { padding: 10px 12px; cursor: pointer; border-bottom: 1px solid #f0f0f0; }
-        .autocomplete-list li:hover { background: #f5f5f5; }
-        .autocomplete-list li.selected { background: #e3f2fd; }
-        .autocomplete-list li:last-child { border-bottom: none; }
-        @keyframes fadeIn { from { opacity: 0; } to { opacity: 1; } }
-        @keyframes slideIn { from { opacity: 0; transform: translateY(-20px) scale(.95); } to { opacity: 1; transform: translateY(0) scale(1); } }
-      `;
 
-      document.head.appendChild(style);
       document.body.appendChild(overlay);
+      const a11y = attachDialogA11y(overlay, { closeLabel: I18nService.t('COMMON.actions.close') });
       document.body.style.overflow = 'hidden';
 
       const cleanup = () => {
         document.body.style.overflow = 'auto';
-        if (style.parentNode) style.parentNode.removeChild(style);
+        a11y.release();
       };
 
       const close = (result: string | null) => {
@@ -787,7 +485,7 @@ export class ModernPopupComponent implements OnInit, OnDestroy {
         
         list.innerHTML = '';
         if (filteredOptions.length === 0 && searchTerm) {
-          list.innerHTML = '<li style="color: #999; cursor: default;">Aucun résultat</li>';
+          list.innerHTML = '<li class="autocomplete-empty">Aucun résultat</li>';
         } else {
           filteredOptions.forEach((option, index) => {
             const li = document.createElement('li');
@@ -882,7 +580,7 @@ export class ModernPopupComponent implements OnInit, OnDestroy {
   }): Promise<Record<string, boolean> | null> {
     return new Promise((resolve) => {
       const overlay = document.createElement('div');
-      overlay.className = 'modern-popup-overlay';
+      overlay.className = 'modern-popup-overlay ds-dialog';
 
       const optionsHtml = config.options.map((option, index) => `
         <label class="choice-option" data-key="${option.key}">
@@ -898,62 +596,28 @@ export class ModernPopupComponent implements OnInit, OnDestroy {
         <div class="modern-popup choice-popup">
           <div class="popup-header">
             <h3 class="popup-title">${config.title}</h3>
-            <button class="popup-close">×</button>
+            <button type="button" class="popup-close"><i class="fas fa-times" aria-hidden="true"></i></button>
           </div>
           <div class="popup-content">
             <p class="popup-message">${config.message}</p>
             <div class="choice-list">${optionsHtml}</div>
-            <p class="choice-error" style="display:none; color:#e74c3c; font-size:13px; margin:10px 0 0 0;">Veuillez sélectionner au moins une option.</p>
+            <p class="choice-error" style="display:none;">Veuillez sélectionner au moins une option.</p>
           </div>
           <div class="popup-actions">
-            <button class="popup-btn popup-btn-cancel">${config.cancelLabel || 'Annuler'}</button>
-            <button class="popup-btn popup-btn-confirm popup-btn-info">${config.confirmLabel || 'Valider'}</button>
+            <button type="button" class="popup-btn popup-btn-cancel">${config.cancelLabel || 'Annuler'}</button>
+            <button type="button" class="popup-btn popup-btn-confirm popup-btn-info">${config.confirmLabel || 'Valider'}</button>
           </div>
         </div>
       `;
 
-      const style = document.createElement('style');
-      style.textContent = `
-        .modern-popup-overlay {
-          position: fixed;
-          top: 0; left: 0; width: 100%; height: 100%;
-          background: rgba(0,0,0,.5);
-          display: flex; justify-content: center; align-items: center;
-          z-index: 9999; animation: fadeIn .3s ease-out;
-        }
-        .modern-popup { background: #fff; border-radius: 12px; box-shadow: 0 10px 30px rgba(0,0,0,.3); max-width: 440px; width: 92%; animation: slideIn .3s ease-out; }
-        .popup-header { display: flex; justify-content: space-between; align-items: center; padding: 20px 20px 0 20px; }
-        .popup-title { margin: 0; font-size: 18px; font-weight: 600; color: #333; }
-        .popup-close { background: none; border: none; font-size: 24px; cursor: pointer; color: #999; padding: 0; width: 30px; height: 30px; display: flex; align-items: center; justify-content: center; border-radius: 50%; transition: all .2s; }
-        .popup-close:hover { background: #f5f5f5; color: #666; }
-        .popup-content { padding: 20px; }
-        .popup-message { margin: 0 0 14px 0; color: #555; line-height: 1.5; }
-        .popup-actions { display: flex; justify-content: flex-end; gap: 10px; padding: 0 20px 20px 20px; }
-        .popup-btn { padding: 10px 20px; border: none; border-radius: 6px; cursor: pointer; font-weight: 500; transition: all .2s; min-width: 80px; }
-        .popup-btn-cancel { background: #f5f5f5; color: #666; }
-        .popup-btn-cancel:hover { background: #e5e5e5; }
-        .popup-btn-info { background: #007bff; color: #fff; }
-        .popup-btn-info:hover { background: #0056b3; }
-        .choice-list { display: flex; flex-direction: column; gap: 10px; }
-        .choice-option { display: flex; align-items: flex-start; gap: 10px; padding: 12px 14px; border: 1px solid #e0e0e0; border-radius: 8px; cursor: pointer; transition: all .2s; }
-        .choice-option:hover { border-color: var(--theme-info, #3498db); background: #f8fbff; }
-        .choice-option.has-check { border-color: var(--theme-info, #3498db); background: #eef6ff; }
-        .choice-checkbox { margin-top: 3px; width: 16px; height: 16px; accent-color: var(--theme-info, #3498db); cursor: pointer; }
-        .choice-label { display: flex; flex-direction: column; gap: 2px; }
-        .choice-label strong { font-size: 14px; color: #333; }
-        .choice-label em { font-size: 12px; color: #888; font-style: normal; }
-        .choice-error { color: #e74c3c; font-size: 13px; }
-        @keyframes fadeIn { from { opacity: 0; } to { opacity: 1; } }
-        @keyframes slideIn { from { opacity: 0; transform: translateY(-20px) scale(.95); } to { opacity: 1; transform: translateY(0) scale(1); } }
-      `;
 
-      document.head.appendChild(style);
       document.body.appendChild(overlay);
+      const a11y = attachDialogA11y(overlay, { closeLabel: I18nService.t('COMMON.actions.close') });
       document.body.style.overflow = 'hidden';
 
       const cleanup = () => {
         document.body.style.overflow = 'auto';
-        if (style.parentNode) style.parentNode.removeChild(style);
+        a11y.release();
       };
 
       const collectResult = (): Record<string, boolean> | null => {
@@ -1029,7 +693,7 @@ export class ModernPopupComponent implements OnInit, OnDestroy {
   }): Promise<{ options: Record<string, boolean>; selectedKeys: string[]; dateFilter: { from: string; to: string } } | null> {
     return new Promise((resolve) => {
       const overlay = document.createElement('div');
-      overlay.className = 'modern-popup-overlay';
+      overlay.className = 'modern-popup-overlay ds-dialog';
 
       const optionsHtml = config.options.map((option) => `
         <label class="choice-option" data-key="${option.key}">
@@ -1067,14 +731,14 @@ export class ModernPopupComponent implements OnInit, OnDestroy {
         <div class="modern-popup list-popup">
           <div class="popup-header">
             <h3 class="popup-title">${config.title}</h3>
-            <button class="popup-close">×</button>
+            <button type="button" class="popup-close"><i class="fas fa-times" aria-hidden="true"></i></button>
           </div>
           <div class="popup-content">
             <p class="popup-message">${config.message}</p>
             <div class="list-options">${optionsHtml}</div>
             ${dateFilterHtml}
             <div class="list-toolbar">
-              <input type="text" class="list-filter" placeholder="🔍 Filtrer…" />
+              <input type="text" class="list-filter" placeholder="Filtrer…" aria-label="Filtrer les lignes" />
               <span class="list-counts">0 / ${config.rows.length} sélectionnée(s)</span>
               <button type="button" class="list-select-all">Tout sélectionner</button>
               <button type="button" class="list-select-none">Tout désélectionner</button>
@@ -1088,73 +752,20 @@ export class ModernPopupComponent implements OnInit, OnDestroy {
             <p class="choice-error" style="display:none;">Veuillez sélectionner au moins une ligne.</p>
           </div>
           <div class="popup-actions">
-            <button class="popup-btn popup-btn-cancel">${config.cancelLabel || 'Annuler'}</button>
-            <button class="popup-btn popup-btn-confirm popup-btn-info">${config.confirmLabel || 'Valider'}</button>
+            <button type="button" class="popup-btn popup-btn-cancel">${config.cancelLabel || 'Annuler'}</button>
+            <button type="button" class="popup-btn popup-btn-confirm popup-btn-info">${config.confirmLabel || 'Valider'}</button>
           </div>
         </div>
       `;
 
-      const style = document.createElement('style');
-      style.textContent = `
-        .modern-popup-overlay {
-          position: fixed;
-          top: 0; left: 0; width: 100%; height: 100%;
-          background: rgba(0,0,0,.5);
-          display: flex; justify-content: center; align-items: center;
-          z-index: 9999; animation: fadeIn .3s ease-out;
-        }
-        .modern-popup { background: #fff; border-radius: 12px; box-shadow: 0 10px 30px rgba(0,0,0,.3); max-width: 720px; width: 94%; animation: slideIn .3s ease-out; }
-        .popup-header { display: flex; justify-content: space-between; align-items: center; padding: 20px 20px 0 20px; }
-        .popup-title { margin: 0; font-size: 18px; font-weight: 600; color: #333; }
-        .popup-close { background: none; border: none; font-size: 24px; cursor: pointer; color: #999; padding: 0; width: 30px; height: 30px; display: flex; align-items: center; justify-content: center; border-radius: 50%; transition: all .2s; }
-        .popup-close:hover { background: #f5f5f5; color: #666; }
-        .popup-content { padding: 20px; }
-        .popup-message { margin: 0 0 14px 0; color: #555; line-height: 1.5; }
-        .popup-actions { display: flex; justify-content: flex-end; gap: 10px; padding: 0 20px 20px 20px; }
-        .popup-btn { padding: 10px 20px; border: none; border-radius: 6px; cursor: pointer; font-weight: 500; transition: all .2s; min-width: 80px; }
-        .popup-btn-cancel { background: #f5f5f5; color: #666; }
-        .popup-btn-cancel:hover { background: #e5e5e5; }
-        .popup-btn-info { background: #007bff; color: #fff; }
-        .popup-btn-info:hover { background: #0056b3; }
-        .choice-option { display: flex; align-items: flex-start; gap: 10px; padding: 10px 12px; border: 1px solid #e0e0e0; border-radius: 8px; cursor: pointer; transition: all .2s; margin-bottom: 8px; }
-        .choice-option:hover { border-color: var(--theme-info, #3498db); background: #f8fbff; }
-        .choice-option.has-check { border-color: var(--theme-info, #3498db); background: #eef6ff; }
-        .choice-checkbox { margin-top: 3px; width: 16px; height: 16px; accent-color: var(--theme-info, #3498db); cursor: pointer; }
-        .choice-label strong { font-size: 14px; color: #333; }
-        .choice-label em { font-size: 12px; color: #888; font-style: normal; display: block; margin-top: 2px; }
-        .list-toolbar { display: flex; align-items: center; gap: 10px; margin: 14px 0 10px 0; flex-wrap: wrap; }
-        .list-dates { display: flex; align-items: center; gap: 10px; margin: 12px 0 0 0; flex-wrap: wrap; }
-        .list-dates-label { font-size: 12px; font-weight: 600; color: #555; text-transform: uppercase; letter-spacing: .04em; }
-        .list-date { display: flex; align-items: center; gap: 6px; font-size: 13px; color: #555; }
-        .list-date input { padding: 7px 10px; border: 1px solid #ddd; border-radius: 6px; font-size: 13px; font-family: inherit; }
-        .list-date input:focus { outline: none; border-color: var(--theme-info, #3498db); box-shadow: 0 0 0 2px rgba(var(--theme-info-rgb),.2); }
-        .list-filter { flex: 1; min-width: 160px; padding: 8px 12px; border: 1px solid #ddd; border-radius: 6px; font-size: 13px; box-sizing: border-box; }
-        .list-filter:focus { outline: none; border-color: var(--theme-info, #3498db); box-shadow: 0 0 0 2px rgba(var(--theme-info-rgb),.2); }
-        .list-counts { font-size: 13px; font-weight: 600; color: #555; white-space: nowrap; }
-        .list-select-all, .list-select-none { background: #f5f5f5; border: 1px solid #ddd; border-radius: 6px; padding: 7px 10px; font-size: 12px; cursor: pointer; color: #555; }
-        .list-select-all:hover, .list-select-none:hover { background: #e8f0fe; color: #1a73e8; border-color: #c1d5f5; }
-        .list-wrapper { max-height: 260px; overflow: auto; border: 1px solid #e0e0e0; border-radius: 8px; }
-        .list-table { width: 100%; border-collapse: collapse; font-size: 13px; }
-        .list-table thead th { position: sticky; top: 0; background: #f1f3f5; padding: 8px 10px; text-align: left; font-weight: 600; color: #2c3e50; border-bottom: 1px solid #d0d3d6; white-space: nowrap; z-index: 1; }
-        .list-table tbody td { padding: 6px 10px; border-bottom: 1px solid #f1f3f5; white-space: nowrap; color: #333; }
-        .list-table tbody tr:hover { background: #f8f9fa; }
-        .list-table .row-check { width: 36px; text-align: center; }
-        .row-checkbox { width: 15px; height: 15px; accent-color: var(--theme-info, #3498db); cursor: pointer; }
-        .list-table tbody tr.hidden { display: none; }
-        .list-table tbody tr.row-selected { background: #eef6ff; }
-        .list-empty { text-align: center; color: #999; padding: 20px; font-style: italic; }
-        .choice-error { color: #e74c3c; font-size: 13px; margin: 10px 0 0 0; }
-        @keyframes fadeIn { from { opacity: 0; } to { opacity: 1; } }
-        @keyframes slideIn { from { opacity: 0; transform: translateY(-20px) scale(.95); } to { opacity: 1; transform: translateY(0) scale(1); } }
-      `;
 
-      document.head.appendChild(style);
       document.body.appendChild(overlay);
+      const a11y = attachDialogA11y(overlay, { closeLabel: I18nService.t('COMMON.actions.close') });
       document.body.style.overflow = 'hidden';
 
       const cleanup = () => {
         document.body.style.overflow = 'auto';
-        if (style.parentNode) style.parentNode.removeChild(style);
+        a11y.release();
       };
 
       const updateCounts = () => {

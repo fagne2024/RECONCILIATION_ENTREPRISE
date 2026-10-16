@@ -1,0 +1,404 @@
+// Dialogues créés par `ModernPopupComponent` (DOM construit hors Angular).
+// Portée limitée à `.ds-dialog` : d'autres pages réutilisent les classes
+// `modern-popup-*` pour leurs propres modales et ne doivent pas être affectées.
+
+.ds-dialog.modern-popup-overlay {
+  position: fixed;
+  inset: 0;
+  z-index: var(--z-modal);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: var(--space-4);
+  background: var(--color-overlay-backdrop);
+  font-family: var(--font-ui);
+  animation: ds-dialog-fade var(--duration-base) var(--ease-standard);
+  box-sizing: border-box;
+}
+
+.ds-dialog {
+  .modern-popup {
+    display: flex;
+    flex-direction: column;
+    width: 100%;
+    max-width: 440px;
+    max-height: calc(100vh - 2 * var(--space-4));
+    overflow: hidden;
+    border: var(--border-width) solid var(--color-border);
+    border-radius: var(--radius-xl);
+    background: var(--color-surface-raised);
+    color: var(--color-text-primary);
+    box-shadow: var(--shadow-overlay);
+    animation: ds-dialog-rise var(--duration-slow) var(--ease-standard);
+    box-sizing: border-box;
+  }
+
+  .choice-popup { max-width: 480px; }
+  .list-popup { max-width: 760px; }
+  .autocomplete-popup { overflow: visible; }
+
+  .popup-accent {
+    height: 3px;
+    flex-shrink: 0;
+    background: var(--color-accent);
+  }
+
+  .popup-header {
+    display: flex;
+    align-items: flex-start;
+    justify-content: space-between;
+    gap: var(--space-3);
+    padding: var(--space-5) var(--space-5) 0;
+  }
+
+  .popup-title {
+    margin: 0;
+    font-size: var(--text-lg);
+    font-weight: var(--weight-semibold);
+    line-height: var(--leading-snug);
+    color: var(--color-text-primary);
+  }
+
+  .popup-close {
+    flex-shrink: 0;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    width: var(--control-h-md);
+    height: var(--control-h-md);
+    padding: 0;
+    border: 0;
+    border-radius: var(--radius-md);
+    background: transparent;
+    color: var(--color-text-muted);
+    font-size: var(--icon-lg);
+    line-height: 1;
+    cursor: pointer;
+    transition: background-color var(--duration-fast) var(--ease-standard);
+
+    &:hover {
+      background: var(--color-hover);
+      color: var(--color-text-primary);
+    }
+  }
+
+  .popup-content {
+    flex: 1 1 auto;
+    min-height: 0;
+    overflow: auto;
+    padding: var(--space-3) var(--space-5) var(--space-2);
+  }
+
+  .autocomplete-popup .popup-content { overflow: visible; }
+
+  .popup-message {
+    margin: 0 0 var(--space-3);
+    color: var(--color-text-muted);
+    font-size: var(--text-base);
+    line-height: var(--leading-normal);
+    white-space: pre-line;
+  }
+
+  .popup-lines-saved {
+    margin: 0;
+    color: var(--color-text-muted);
+    font-size: var(--text-md);
+  }
+
+  .popup-actions {
+    display: flex;
+    flex-wrap: wrap;
+    justify-content: flex-end;
+    gap: var(--space-2);
+    padding: var(--space-4) var(--space-5) var(--space-5);
+  }
+
+  .popup-btn {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    min-width: 88px;
+    min-height: var(--control-h-md);
+    padding: 0 var(--space-4);
+    border: var(--border-width) solid transparent;
+    border-radius: var(--radius-md);
+    font-family: inherit;
+    font-size: var(--text-base);
+    font-weight: var(--weight-medium);
+    cursor: pointer;
+    transition: background-color var(--duration-fast) var(--ease-standard);
+  }
+
+  .popup-btn-cancel {
+    border-color: var(--color-border-strong);
+    background: var(--color-surface);
+    color: var(--color-text-primary);
+
+    &:hover { background: var(--color-hover); }
+  }
+
+  .popup-btn-primary,
+  .popup-btn-confirm {
+    border-color: var(--color-accent);
+    background: var(--color-accent);
+    color: var(--color-accent-contrast);
+
+    &:hover { background: var(--color-accent-hover); }
+  }
+
+  // Le bouton principal reprend le ton du message ; « Avertissement »
+  // garde l'accent car sa variante pleine ne garantit pas 4,5:1 avec du blanc.
+  .popup-btn-success {
+    border-color: var(--color-success-solid);
+    background: var(--color-success-solid);
+
+    &:hover { background: color-mix(in srgb, var(--color-success-solid) 85%, var(--color-text-primary)); }
+  }
+
+  .popup-btn-error {
+    border-color: var(--color-error-solid);
+    background: var(--color-error-solid);
+
+    &:hover { background: color-mix(in srgb, var(--color-error-solid) 85%, var(--color-text-primary)); }
+  }
+
+  // Champs
+  .popup-input,
+  .popup-select,
+  .list-filter,
+  .list-date input {
+    width: 100%;
+    min-height: var(--control-h-md);
+    padding: 0 var(--space-3);
+    border: var(--border-width) solid var(--color-border-strong);
+    border-radius: var(--radius-md);
+    background: var(--color-surface);
+    color: var(--color-text-primary);
+    font-family: inherit;
+    font-size: var(--text-base);
+    box-sizing: border-box;
+
+    &:focus-visible {
+      outline: var(--focus-ring-width) solid var(--focus-ring-color);
+      outline-offset: 0;
+      border-color: var(--color-accent);
+    }
+  }
+
+  .list-date input { width: auto; }
+
+  // Autocomplétion
+  .autocomplete-wrapper { position: relative; }
+
+  .autocomplete-list {
+    max-height: 200px;
+    margin: var(--space-1) 0 0;
+    padding: 0;
+    overflow-y: auto;
+    list-style: none;
+    border: var(--border-width) solid var(--color-border);
+    border-radius: var(--radius-md);
+    background: var(--color-surface-raised);
+    box-shadow: var(--shadow-card);
+
+    &:empty { display: none; }
+
+    li {
+      padding: var(--space-2) var(--space-3);
+      border-bottom: var(--border-width) solid var(--color-border);
+      color: var(--color-text-primary);
+      cursor: pointer;
+
+      &:last-child { border-bottom: 0; }
+      &:hover { background: var(--color-hover); }
+      &.selected { background: var(--color-accent-soft); }
+    }
+
+    .autocomplete-empty {
+      color: var(--color-text-muted);
+      cursor: default;
+
+      &:hover { background: transparent; }
+    }
+  }
+
+  // Choix multiples
+  .choice-list {
+    display: flex;
+    flex-direction: column;
+    gap: var(--space-2);
+  }
+
+  .choice-option {
+    display: flex;
+    align-items: flex-start;
+    gap: var(--space-3);
+    padding: var(--space-3);
+    border: var(--border-width) solid var(--color-border);
+    border-radius: var(--radius-md);
+    background: var(--color-surface);
+    cursor: pointer;
+    transition: border-color var(--duration-fast) var(--ease-standard);
+
+    &:hover { border-color: var(--color-accent); }
+
+    &.has-check {
+      border-color: var(--color-accent);
+      background: var(--color-accent-soft);
+    }
+  }
+
+  .list-options .choice-option { margin-bottom: var(--space-2); }
+
+  .choice-checkbox,
+  .row-checkbox {
+    width: 16px;
+    height: 16px;
+    margin: 2px 0 0;
+    flex-shrink: 0;
+    accent-color: var(--color-accent);
+    cursor: pointer;
+  }
+
+  .choice-label {
+    display: flex;
+    flex-direction: column;
+    gap: 2px;
+
+    strong {
+      font-size: var(--text-base);
+      font-weight: var(--weight-medium);
+      color: var(--color-text-primary);
+    }
+
+    em {
+      font-size: var(--text-sm);
+      font-style: normal;
+      color: var(--color-text-muted);
+    }
+  }
+
+  .choice-error {
+    margin: var(--space-2) 0 0;
+    color: var(--color-error-text);
+    font-size: var(--text-md);
+  }
+
+  // Liste sélectionnable
+  .list-dates,
+  .list-toolbar {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    gap: var(--space-2) var(--space-3);
+  }
+
+  .list-dates { margin-top: var(--space-3); }
+  .list-toolbar { margin: var(--space-3) 0 var(--space-2); }
+
+  .list-dates-label {
+    font-size: var(--text-sm);
+    font-weight: var(--weight-semibold);
+    color: var(--color-text-muted);
+  }
+
+  .list-date {
+    display: inline-flex;
+    align-items: center;
+    gap: var(--space-2);
+    font-size: var(--text-md);
+    color: var(--color-text-muted);
+  }
+
+  .list-filter {
+    flex: 1 1 160px;
+    width: auto;
+  }
+
+  .list-counts {
+    font-size: var(--text-md);
+    font-weight: var(--weight-medium);
+    color: var(--color-text-muted);
+    font-variant-numeric: tabular-nums;
+    white-space: nowrap;
+  }
+
+  .list-select-all,
+  .list-select-none {
+    min-height: var(--control-h-sm);
+    padding: 0 var(--space-3);
+    border: var(--border-width) solid var(--color-border-strong);
+    border-radius: var(--radius-sm);
+    background: var(--color-surface);
+    color: var(--color-text-primary);
+    font-family: inherit;
+    font-size: var(--text-sm);
+    cursor: pointer;
+
+    &:hover { background: var(--color-hover); }
+  }
+
+  .list-wrapper {
+    max-height: 260px;
+    overflow: auto;
+    border: var(--border-width) solid var(--color-border);
+    border-radius: var(--radius-md);
+  }
+
+  .list-table {
+    width: 100%;
+    border-collapse: collapse;
+    font-size: var(--text-md);
+
+    thead th {
+      position: sticky;
+      top: 0;
+      z-index: var(--z-raised);
+      padding: var(--space-2) var(--space-3);
+      border-bottom: var(--border-width) solid var(--color-border);
+      background: var(--color-surface-sunken);
+      color: var(--color-text-muted);
+      font-weight: var(--weight-semibold);
+      text-align: left;
+      white-space: nowrap;
+    }
+
+    tbody td {
+      padding: var(--space-1) var(--space-3);
+      border-bottom: var(--border-width) solid var(--color-border);
+      color: var(--color-text-primary);
+      white-space: nowrap;
+    }
+
+    tbody tr:hover { background: var(--color-hover); }
+    tbody tr.row-selected { background: var(--color-accent-soft); }
+    tbody tr.hidden { display: none; }
+
+    .row-check {
+      width: 36px;
+      text-align: center;
+    }
+  }
+
+  .list-empty {
+    padding: var(--space-5);
+    color: var(--color-text-muted);
+    text-align: center;
+  }
+}
+
+@media (max-width: 479.98px) {
+  .ds-dialog {
+    .popup-actions .popup-btn { flex: 1 1 auto; }
+  }
+}
+
+@keyframes ds-dialog-fade {
+  from { opacity: 0; }
+  to { opacity: 1; }
+}
+
+@keyframes ds-dialog-rise {
+  from { opacity: 0; transform: translateY(12px); }
+  to { opacity: 1; transform: none; }
+}

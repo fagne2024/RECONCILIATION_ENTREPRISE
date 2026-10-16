@@ -28,6 +28,7 @@ import { NgxMatSelectSearchModule } from 'ngx-mat-select-search';
 import { DragDropModule } from '@angular/cdk/drag-drop';
 import { TranslateModule } from '@ngx-translate/core';
 import { ProgressPopupComponent } from '../components/shared/progress-popup.component';
+import { DS_UI } from './ui';
 
 const UI_MODULES = [
     CommonModule,
@@ -62,8 +63,8 @@ const UI_MODULES = [
 ];
 
 @NgModule({
-    imports: UI_MODULES,
+    imports: [...UI_MODULES, ...DS_UI],
     declarations: [ProgressPopupComponent],
-    exports: [...UI_MODULES, ProgressPopupComponent]
+    exports: [...UI_MODULES, ProgressPopupComponent, ...DS_UI]
 })
 export class SharedUiModule { }
