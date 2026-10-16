@@ -388,16 +388,14 @@ public class AuthController {
             @RequestParam(name = "username", required = false) String username) {
         Map<String, Object> response = new HashMap<>();
         String code = null;
-        String nom = null;
         if (username != null && !username.isBlank()) {
             Optional<EntrepriseEntity> entreprise = userRepository.findByUsername(username.trim())
                 .map(UserEntity::getEntrepriseId)
                 .flatMap(entrepriseRepository::findById);
             code = entreprise.map(EntrepriseEntity::getCode).orElse(null);
-            nom = entreprise.map(EntrepriseEntity::getNom).orElse(null);
         }
         response.put("entrepriseCode", code);
-        response.put("entrepriseNom", nom);
+        response.put("entrepriseNom", null);
         return ResponseEntity.ok(response);
     }
 
