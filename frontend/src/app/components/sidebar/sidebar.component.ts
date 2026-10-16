@@ -23,6 +23,7 @@ export class SidebarComponent implements OnInit {
   visibleSubmenus: Map<string, AppNavigationSubmenu[]> = new Map();
   openSubmenus: Set<string> = new Set();
   logoUrl: string | null = null;
+  logoBroken = false;
   logoSettings: LogoSettings = { ...DEFAULT_LOGO_SETTINGS };
   userPhoto: string | null = null;
 
@@ -42,6 +43,7 @@ export class SidebarComponent implements OnInit {
     // Logo de l'application
     this.logoService.logo$.pipe(takeUntil(this.destroy$)).subscribe(url => {
       this.logoUrl = url;
+      this.logoBroken = false;
       this.cdr.detectChanges();
     });
     this.logoService.settings$.pipe(takeUntil(this.destroy$)).subscribe(settings => {
@@ -248,6 +250,10 @@ export class SidebarComponent implements OnInit {
 
   getUsername(): string | null {
     return this.appState.getUsername();
+  }
+
+  onLogoError(): void {
+    this.logoBroken = true;
   }
 
   get logoStyle(): { [key: string]: string } {

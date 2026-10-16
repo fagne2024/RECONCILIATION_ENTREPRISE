@@ -42,7 +42,8 @@
 
     .logo-icon {
         font-size: 2rem;
-        color: var(--theme-sidebar-active, var(--color-info));
+        /* --theme-sidebar-active vaut --color-accent = fond teal : glyphe invisible. */
+        color: var(--color-nav-text);
         flex-shrink: 0;
     }
 
