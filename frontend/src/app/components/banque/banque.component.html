@@ -50,28 +50,28 @@
       <h2>{{ 'BQ.Tableaudebordbancaire' | translate }}</h2>
       <div class="banque-stats">
         <div class="stat-card">
-          <div class="stat-icon">💰</div>
+          <div class="stat-icon"><i class="fas fa-coins"></i></div>
           <div class="stat-info">
             <h3>{{ 'BQ.Soldetotal_1' | translate }}</h3>
             <p class="stat-value">{{ totalSoldeComptes | number:'1.0-0' }} FCFA</p>
           </div>
         </div>
         <div class="stat-card">
-          <div class="stat-icon">📈</div>
+          <div class="stat-icon"><i class="fas fa-chart-line"></i></div>
           <div class="stat-info">
             <h3>{{ 'BQ.Opérationsbancaires_1' | translate }}</h3>
             <p class="stat-value">{{ totalOperations }}</p>
           </div>
         </div>
         <div class="stat-card">
-          <div class="stat-icon">🏛️</div>
+          <div class="stat-icon"><i class="fas fa-university"></i></div>
           <div class="stat-info">
             <h3>{{ 'TBL.accounts' | translate }}</h3>
             <p class="stat-value">{{ totalComptes }}</p>
           </div>
         </div>
         <div class="stat-card warning">
-          <div class="stat-icon">⏳</div>
+          <div class="stat-icon"><i class="fas fa-clock"></i></div>
           <div class="stat-info">
             <h3>{{ 'BQ.Relevébancaire' | translate }}</h3>
             <p class="stat-value">{{ totalReleveLignes }}</p>
@@ -108,7 +108,7 @@
           <p>{{ 'BQ.Effectuerdesvirementsetpaiements' | translate }}</p>
         </div>
         <div class="feature-card" (click)="openRapports()">
-          <div class="feature-icon">📋</div>
+          <div class="feature-icon"><i class="fas fa-clipboard-list"></i></div>
           <h3>{{ 'BQ.Relevébancaire_1' | translate }}</h3>
           <p>{{ 'BQ.Générerunrelevébancaire' | translate }}</p>
         </div>
@@ -420,7 +420,7 @@
               </select>
               <button type="button" class="ds-btn ds-btn--secondary btn-bulk-action" (click)="bulkChangeSelectedOpsStatus()" [disabled]="isBulkUpdatingOps || !hasSelectedOps || !selectedOpsTargetStatut">
                 <i class="fas fa-exchange-alt"></i>
-                {{ isBulkUpdatingOps ? '⏳ Changement...' : 'Changer statut (' + selectedOpIds.size + ')' }}
+                {{ isBulkUpdatingOps ? 'Changement...' : 'Changer statut (' + selectedOpIds.size + ')' }}
               </button>
               <button type="button" class="ds-btn ds-btn--secondary btn-success" (click)="quickBulkOps('Validée')" [disabled]="isBulkUpdatingOps || !hasSelectedOps">
                 <i class="fas fa-check"></i> {{ 'BQ.Valider' | translate }}
@@ -1021,7 +1021,7 @@
           </select>
           <button type="button" class="ds-btn ds-btn--secondary btn-bulk-action" (click)="bulkChangeSelectedMainStatus()" [disabled]="isBulkUpdatingMain || !hasSelectedMainOps || !selectedMainTargetStatut">
             <i class="fas fa-exchange-alt"></i>
-            {{ isBulkUpdatingMain ? '⏳ Changement...' : 'Changer statut (' + selectedMainOpIds.size + ')' }}
+            {{ isBulkUpdatingMain ? 'Changement...' : 'Changer statut (' + selectedMainOpIds.size + ')' }}
           </button>
           <button type="button" class="ds-btn ds-btn--secondary btn-success" (click)="quickBulkMain('Validée')" [disabled]="isBulkUpdatingMain || !hasSelectedMainOps">
             <i class="fas fa-check"></i> {{ 'BQ.Valider' | translate }}

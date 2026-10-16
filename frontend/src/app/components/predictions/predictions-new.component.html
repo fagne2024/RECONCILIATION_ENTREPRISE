@@ -59,9 +59,9 @@
 
   <!-- Toast notifications -->
   <div *ngIf="toastMessage" class="toast" [ngClass]="'toast-' + toastType">
-    <span class="toast-icon" *ngIf="toastType === 'success'">✅</span>
-    <span class="toast-icon" *ngIf="toastType === 'error'">❌</span>
-    <span class="toast-icon" *ngIf="toastType === 'info'">ℹ️</span>
+    <span class="toast-icon" *ngIf="toastType === 'success'"><i class="fas fa-check-circle"></i></span>
+    <span class="toast-icon" *ngIf="toastType === 'error'"><i class="fas fa-times-circle"></i></span>
+    <span class="toast-icon" *ngIf="toastType === 'info'"><i class="fas fa-info-circle"></i></span>
     <span class="toast-message">{{ toastMessage }}</span>
   </div>
 
@@ -253,42 +253,42 @@
     <h2>{{ 'PRN.Vuedensembleapprovisionnements' | translate }}</h2>
     <div class="metrics-grid">
       <div class="metric-card">
-        <div class="metric-icon">🏢</div>
+        <div class="metric-icon"><i class="fas fa-building"></i></div>
         <div class="metric-content">
           <div class="metric-label">{{ 'PRN.Totalagences' | translate }}</div>
           <div class="metric-value ds-num">{{ metrics.totalAgencies }}</div>
         </div>
       </div>
       <div class="metric-card critical">
-        <div class="metric-icon">🚨</div>
+        <div class="metric-icon"><i class="fas fa-exclamation-circle"></i></div>
         <div class="metric-content">
           <div class="metric-label">{{ 'PRN.Agencescritiques' | translate }}</div>
           <div class="metric-value ds-num">{{ metrics.criticalAgencies }}</div>
         </div>
       </div>
       <div class="metric-card warning">
-        <div class="metric-icon">⚠️</div>
+        <div class="metric-icon"><i class="fas fa-exclamation-triangle"></i></div>
         <div class="metric-content">
           <div class="metric-label">{{ 'PRN.Surstock' | translate }}</div>
           <div class="metric-value ds-num">{{ metrics.overstockedAgencies }}</div>
         </div>
       </div>
       <div class="metric-card">
-        <div class="metric-icon">📊</div>
+        <div class="metric-icon"><i class="fas fa-chart-bar"></i></div>
         <div class="metric-content">
           <div class="metric-label">{{ 'PRN.Confiancemoyenne' | translate }}</div>
           <div class="metric-value ds-num">{{ formatPercent(metrics.averageConfidenceLevel) }}</div>
         </div>
       </div>
       <div class="metric-card urgent">
-        <div class="metric-icon">🔴</div>
+        <div class="metric-icon"><i class="fas fa-circle"></i></div>
         <div class="metric-content">
           <div class="metric-label">{{ 'PRN.Commandesurgentes' | translate }}</div>
           <div class="metric-value ds-num">{{ metrics.urgentOrders }}</div>
         </div>
       </div>
       <div class="metric-card normal">
-        <div class="metric-icon">🟡</div>
+        <div class="metric-icon"><i class="fas fa-circle"></i></div>
         <div class="metric-content">
           <div class="metric-label">{{ 'PRN.Commandesnormales' | translate }}</div>
           <div class="metric-value ds-num">{{ metrics.normalOrders }}</div>
@@ -299,7 +299,7 @@
     <!-- Alertes critiques -->
     <div *ngIf="metrics.topCriticalAgencies && metrics.topCriticalAgencies.length > 0" class="critical-alerts-section">
       <div class="alert-banner critical">
-        <div class="alert-icon">🚨</div>
+        <div class="alert-icon"><i class="fas fa-exclamation-circle"></i></div>
         <div class="alert-content">
           <h3>{{ 'APM.Attention' | translate }} {{ metrics.topCriticalAgencies.length }} {{ 'PRN.Agencesensituationcritique' | translate }}</h3>
           <div class="alert-list">
@@ -327,56 +327,56 @@
     <h2>{{ 'PRN.Vuedensemblecompensations' | translate }}</h2>
     <div class="metrics-grid">
       <div class="metric-card">
-        <div class="metric-icon">🏢</div>
+        <div class="metric-icon"><i class="fas fa-building"></i></div>
         <div class="metric-content">
           <div class="metric-label">{{ 'PRN.Totalagences' | translate }}</div>
           <div class="metric-value ds-num">{{ compensationMetrics.totalAgencies }}</div>
         </div>
       </div>
       <div class="metric-card critical">
-        <div class="metric-icon">💰</div>
+        <div class="metric-icon"><i class="fas fa-coins"></i></div>
         <div class="metric-content">
           <div class="metric-label">{{ 'PRN.Nécessitantcompensation' | translate }}</div>
           <div class="metric-value ds-num">{{ compensationMetrics.agenciesNeedingCompensation }}</div>
         </div>
       </div>
       <div class="metric-card urgent">
-        <div class="metric-icon">🚨</div>
+        <div class="metric-icon"><i class="fas fa-exclamation-circle"></i></div>
         <div class="metric-content">
           <div class="metric-label">{{ 'PRN.Compensationsurgentes' | translate }}</div>
           <div class="metric-value ds-num">{{ compensationMetrics.urgentCompensations }}</div>
         </div>
       </div>
       <div class="metric-card">
-        <div class="metric-icon">📅</div>
+        <div class="metric-icon"><i class="fas fa-calendar"></i></div>
         <div class="metric-content">
           <div class="metric-label">{{ 'PRN.Fréquencemoyennejours' | translate }}</div>
           <div class="metric-value ds-num">{{ compensationMetrics.averageCompensationFrequency | number:'1.0-0' }}</div>
         </div>
       </div>
       <div class="metric-card success">
-        <div class="metric-icon">💵</div>
+        <div class="metric-icon"><i class="fas fa-dollar-sign"></i></div>
         <div class="metric-content">
           <div class="metric-label">{{ 'PRN.Montanttotalprévu' | translate }}</div>
           <div class="metric-value ds-num">{{ formatCurrency(compensationMetrics.totalCompensationAmount) }}</div>
         </div>
       </div>
       <div class="metric-card">
-        <div class="metric-icon">📈</div>
+        <div class="metric-icon"><i class="fas fa-chart-line"></i></div>
         <div class="metric-content">
           <div class="metric-label">{{ 'PRN.Montantmoyen' | translate }}</div>
           <div class="metric-value ds-num">{{ formatCurrency(compensationMetrics.averageCompensationAmount) }}</div>
         </div>
       </div>
       <div class="metric-card warning">
-        <div class="metric-icon">⬆️</div>
+        <div class="metric-icon"><i class="fas fa-arrow-up"></i></div>
         <div class="metric-content">
           <div class="metric-label">{{ 'PRN.Atteignantleseuil' | translate }}</div>
           <div class="metric-value ds-num">{{ compensationMetrics.agenciesAboveThreshold }}</div>
         </div>
       </div>
       <div class="metric-card info">
-        <div class="metric-icon">⬇️</div>
+        <div class="metric-icon"><i class="fas fa-arrow-down"></i></div>
         <div class="metric-content">
           <div class="metric-label">{{ 'PRN.Endessousduseuil' | translate }}</div>
           <div class="metric-value ds-num">{{ compensationMetrics.agenciesBelowThreshold }}</div>
@@ -386,7 +386,7 @@
 
     <!-- Info sur le seuil configuré -->
     <div class="info-banner">
-      <div class="info-icon">ℹ️</div>
+      <div class="info-icon"><i class="fas fa-info-circle"></i></div>
       <div class="info-content">
         <p><strong>{{ 'PRN.Seuildecompensationpardéfaut' | translate }}</strong> {{ formatCurrency(configForm.get('compensationThresholdAmount')?.value) }}</p>
         <p>{{ 'PRN.Lorsquuneagenceatteintunsoldeégalousupérieuràceseuilmaximumunecompensationestdéclenchée' | translate }}</p>

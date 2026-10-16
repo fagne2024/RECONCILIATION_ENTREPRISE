@@ -109,7 +109,8 @@
         [disabled]="isSaving || filteredItems.length === 0"
         title="{{ 'EBS.Sauvegarderlesécartsboencoursdanslatableecartbosummary' | translate }}"
       >
-        {{ (isSaving ? '💾 ' + ('EBS.Sauvegardeencours' | translate) : '💾 ' + ('COMMON.actions.save' | translate)) }}
+        <i class="fas fa-save"></i>
+        {{ isSaving ? ('EBS.Sauvegardeencours' | translate) : ('COMMON.actions.save' | translate) }}
       </button>
       <button
         type="button"
@@ -134,7 +135,8 @@
         [disabled]="isExporting || filteredItems.length === 0"
         title="{{ 'EBS.Exporterlesdonnéesfiltréesencsv' | translate }}"
       >
-        {{ (isExporting ? '⏳ ' + ('EBS.Exportencours' | translate) : '📥 ' + ('COMMON.actions.export' | translate)) }}
+        <ng-container *ngIf="isExporting"><i class="fas fa-clock"></i> {{ 'EBS.Exportencours' | translate }}</ng-container>
+        <ng-container *ngIf="!isExporting"><i class="fas fa-download"></i> {{ 'COMMON.actions.export' | translate }}</ng-container>
       </button>
       <button
         type="button"
@@ -143,7 +145,8 @@
         [disabled]="isBulkDeleting || selectedDeletableCount === 0"
         title="{{ 'EBS.Supprimerleslignessélectionnées' | translate }}"
       >
-        {{ (isBulkDeleting ? '⏳ ' + ('EBS.Supprimerencours' | translate) : '🗑️ ' + ('EBS.Supprimerlasélection' | translate)) }}{{ selectedDeletableCount > 0 ? ' (' + selectedDeletableCount + ')' : '' }}
+        <ng-container *ngIf="isBulkDeleting"><i class="fas fa-clock"></i> {{ 'EBS.Supprimerencours' | translate }}</ng-container>
+        <ng-container *ngIf="!isBulkDeleting"><i class="fas fa-trash"></i> {{ 'EBS.Supprimerlasélection' | translate }}</ng-container>{{ selectedDeletableCount > 0 ? ' (' + selectedDeletableCount + ')' : '' }}
       </button>
       <button
         type="button"
@@ -554,7 +557,8 @@
           class="btn-save ds-btn ds-btn--primary"
           [disabled]="isAdding"
         >
-          {{ (isAdding ? '⏳ ' + ('CPT.Adding' | translate) : '➕ ' + ('COMMON.actions.add' | translate)) }}
+          <ng-container *ngIf="isAdding"><i class="fas fa-clock"></i> {{ 'CPT.Adding' | translate }}</ng-container>
+          <ng-container *ngIf="!isAdding"><i class="fas fa-plus"></i> {{ 'COMMON.actions.add' | translate }}</ng-container>
         </button>
       </div>
     </div>
@@ -677,7 +681,8 @@
           class="btn-save ds-btn ds-btn--primary"
           [disabled]="isUpdating"
         >
-          {{ (isUpdating ? '⏳ ' + ('RPT.savingEntries' | translate) : '💾 ' + ('RPT.saveChanges' | translate)) }}
+          <ng-container *ngIf="isUpdating"><i class="fas fa-clock"></i> {{ 'RPT.savingEntries' | translate }}</ng-container>
+          <ng-container *ngIf="!isUpdating"><i class="fas fa-save"></i> {{ 'RPT.saveChanges' | translate }}</ng-container>
         </button>
       </div>
     </div>

@@ -49,7 +49,7 @@
   <!-- Indicateur de chargement -->
   <div *ngIf="isLoading" class="loading-overlay">
     <div class="loading-content">
-      <div class="loading-spinner">⏳</div>
+      <div class="loading-spinner"><i class="fas fa-clock"></i></div>
       <div class="loading-text">{{ 'MSG.loadingData' | translate }}</div>
       <div class="loading-progress">
         <div class="progress-bar">
@@ -223,7 +223,7 @@
                 class="create-oppart-row-button ds-btn ds-btn--secondary ds-btn--sm"
                 [disabled]="isSavingOppart"
                 [title]="'EPT.createOpartRowTitle' | translate">
-                ➕ OPPART
+                <i class="fas fa-plus"></i> OPPART
               </button>
             </td>
             <td>

@@ -217,7 +217,7 @@
     <!-- Mode Manuel -->
     <div class="file-upload-area" *ngIf="reconciliationMode === 'manual'">
         <div class="file-input-container" (click)="boFileInput.click()" [class.has-file]="boFile">
-            <div class="file-icon">🏢</div>
+            <div class="file-icon"><i class="fas fa-building"></i></div>
             <h4>{{ 'FU.BObackoffice' | translate }}</h4>
             <p>{{ 'FU.Cliquezpoursélectionnerlefichierbocsvxlsxlsx' | translate }}</p>
             <input #boFileInput type="file" (change)="onBoFileSelected($event)" accept=".csv, .xls, .xlsx, .xlsm, .xlsb" style="display: none">
@@ -230,7 +230,7 @@
         </div>
 
         <div class="file-input-container" (click)="partnerFileInput.click()" [class.has-file]="partnerFile">
-            <div class="file-icon">🤝</div>
+            <div class="file-icon"><i class="fas fa-handshake"></i></div>
             <h4>{{ 'TBL.partner' | translate }}</h4>
             <p>{{ 'FU.Cliquezpoursélectionnerlefichierpartenairecsvxlsxlsx' | translate }}</p>
             <input #partnerFileInput type="file" (change)="onPartnerFileSelected($event)" accept=".csv, .xls, .xlsx, .xlsm, .xlsb" style="display: none">
@@ -559,7 +559,7 @@
     <div class="auto-reconciliation-area" *ngIf="reconciliationMode === 'automatic'">
         <div class="file-upload-area">
             <div class="file-input-container" (click)="autoBoFileInput.click()" [class.has-file]="autoBoFile || autoBoData.length > 0">
-                <div class="file-icon">🏢</div>
+                <div class="file-icon"><i class="fas fa-building"></i></div>
                 <h4>{{ 'FU.BObackoffice' | translate }}</h4>
                 <p>{{ 'FU.Cliquezpoursélectionnerlefichierbocsvxlsxlsx' | translate }}</p>
                 <input #autoBoFileInput type="file" (change)="onAutoBoFileSelected($event)" accept=".csv, .xls, .xlsx, .xlsm, .xlsb" style="display: none">
@@ -572,7 +572,7 @@
             </div>
 
             <div class="file-input-container" (click)="autoPartnerFileInput.click()" [class.has-file]="autoPartnerFile || autoPartnerData.length > 0">
-                <div class="file-icon">🤝</div>
+                <div class="file-icon"><i class="fas fa-handshake"></i></div>
                 <h4>{{ 'TBL.partner' | translate }}</h4>
                 <p>{{ 'FU.Cliquezpoursélectionnerlefichierpartenairecsvxlsxlsx' | translate }}</p>
                 <input #autoPartnerFileInput type="file" (change)="onAutoPartnerFileSelected($event)" accept=".csv, .xls, .xlsx, .xlsm, .xlsb" style="display: none">
@@ -616,7 +616,7 @@
         <!-- Messages d'état pour le mode automatique -->
         <div class="messages-section" *ngIf="errorMessage || successMessage">
             <div class="error-message" *ngIf="errorMessage">
-                <span class="error-icon">❌</span>
+                <span class="error-icon"><i class="fas fa-times-circle"></i></span>
                 <div class="error-content">
                     <div class="error-text">{{ errorMessage }}</div>
                     <div class="error-actions" *ngIf="errorMessage.includes('Aucun modèle de réconciliation trouvé')">
@@ -632,7 +632,7 @@
             </div>
             
             <div class="success-message" *ngIf="successMessage">
-                <span class="success-icon">✅</span>
+                <span class="success-icon"><i class="fas fa-check-circle"></i></span>
                 {{ successMessage }}
                 <button type="button" class="close-btn" (click)="clearMessages()">×</button>
             </div>
@@ -1201,7 +1201,7 @@
     <div class="super-auto-reconciliation-area" *ngIf="reconciliationMode === 'super-auto'">
         <div class="file-upload-area">
             <div class="file-input-container" (click)="superAutoBoFileInput.click()" [class.has-file]="superAutoBoFile">
-                <div class="file-icon">🏢</div>
+                <div class="file-icon"><i class="fas fa-building"></i></div>
                 <h4>BO (Back Office)</h4>
                 <p>Cliquez pour sélectionner le fichier BO (CSV, XLS, XLSX)</p>
                 <input #superAutoBoFileInput type="file" (change)="onSuperAutoBoFileSelected($event)" accept=".csv, .xls, .xlsx, .xlsm, .xlsb" style="display: none">
@@ -1211,7 +1211,7 @@
             </div>
 
             <div class="file-input-container" (click)="superAutoPartnerFileInput.click()" [class.has-file]="superAutoPartnerFile">
-                <div class="file-icon">🤝</div>
+                <div class="file-icon"><i class="fas fa-handshake"></i></div>
                 <h4>{{ 'TBL.partner' | translate }}</h4>
                 <p>Cliquez pour sélectionner le fichier Partenaire (CSV, XLS, XLSX)</p>
                 <input #superAutoPartnerFileInput type="file" (change)="onSuperAutoPartnerFileSelected($event)" accept=".csv, .xls, .xlsx, .xlsm, .xlsb" style="display: none">
@@ -1246,14 +1246,14 @@
 
         <div class="button-container" *ngIf="reconciliationMode === 'super-auto'">
             <button type="button" class="btn proceed-btn super-auto-btn" [disabled]="!canProceedSuperAuto()" (click)="onSuperAutoProceed()" style="background: linear-gradient(135deg, var(--theme-primary, var(--color-accent)) 0%, var(--theme-accent, var(--color-accent-hover)) 100%); color: white; padding: 15px 30px; border: none; border-radius: 5px; cursor: pointer; font-size: 16px; margin: 10px; font-weight: bold;">
-                🚀 Lancer la Réconciliation Super Auto
+                <i class="fas fa-rocket"></i> Lancer la Réconciliation Super Auto
             </button>
             <div class="action-buttons">
                 <button type="button" class="btn dashboard-btn" (click)="goToDashboard()">
-                    📈 Tableau de bord
+                    <i class="fas fa-chart-line"></i> Tableau de bord
                 </button>
                 <button type="button" class="btn stats-btn" (click)="goToStats()">
-                    📊 Statistiques
+                    <i class="fas fa-chart-bar"></i> Statistiques
                 </button>
             </div>
         </div>

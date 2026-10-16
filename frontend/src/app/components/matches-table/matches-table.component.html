@@ -105,7 +105,7 @@
               class="menu-option-button"
               [class.active]="viewMode === 'BO'"
             >
-              {{viewMode === 'BO' ? '✓' : ''}} {{ 'TBL.boTable' | translate }}
+              <i class="fas fa-check" *ngIf="viewMode === 'BO'"></i> {{ 'TBL.boTable' | translate }}
             </button>
             <button
               type="button"
@@ -113,7 +113,7 @@
               class="menu-option-button"
               [class.active]="viewMode === 'PARTNER'"
             >
-              {{viewMode === 'PARTNER' ? '✓' : ''}} {{ 'TBL.partnerTable' | translate }}
+              <i class="fas fa-check" *ngIf="viewMode === 'PARTNER'"></i> {{ 'TBL.partnerTable' | translate }}
             </button>
           </div>
           <div class="menu-divider"></div>

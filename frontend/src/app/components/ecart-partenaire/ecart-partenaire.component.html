@@ -6,7 +6,7 @@
 
 <div class="ecart-partenaire-container">
     <div class="header">
-        <h2>⚠️ Écarts Partenaire ({{getPartnerOnlyCount() | number:'1.0-0'}})</h2>
+        <h2><i class="fas fa-exclamation-triangle"></i> Écarts Partenaire ({{getPartnerOnlyCount() | number:'1.0-0'}})</h2>
     </div>
 
     <div class="search-section">
@@ -18,26 +18,28 @@
             class="search-input"
         >
         <button (click)="showColumnSelector = !showColumnSelector" class="column-button">
-            ⚙️ Colonnes
+            <i class="fas fa-cog"></i> Colonnes
         </button>
         <button (click)="toggleColumnReorderMode()" class="reorder-button" [class.active]="isColumnReorderMode">
-            {{ isColumnReorderMode ? '✅ Fin réorganisation' : '🔄 Réorganiser' }}
+            <ng-container *ngIf="isColumnReorderMode"><i class="fas fa-check-circle"></i> Fin réorganisation</ng-container>
+            <ng-container *ngIf="!isColumnReorderMode"><i class="fas fa-sync-alt"></i> Réorganiser</ng-container>
         </button>
         <label style="display:flex;align-items:center;gap:6px;">
             <input type="checkbox" [checked]="allPartnerSelectedOnPage" (change)="toggleSelectAllPartnerOnPage($event)">
             <span>Sélectionner la page</span>
         </label>
         <button (click)="exportResults()" class="export-button" [disabled]="isExporting || !filteredPartnerOnly.length">
-            {{ isExporting ? '⏳ Export en cours...' : '📥 Exporter les ECART Partenaire' }}
+            <ng-container *ngIf="isExporting"><i class="fas fa-clock"></i> Export en cours...</ng-container>
+            <ng-container *ngIf="!isExporting"><i class="fas fa-download"></i> Exporter les ECART Partenaire</ng-container>
         </button>
         <button (click)="saveEcartPartnerToImpactOP()" class="save-button" [disabled]="isSavingEcartPartnerToImpactOP">
-            {{ isSavingEcartPartnerToImpactOP ? '💾 Sauvegarde...' : '💾 Sauvegarder dans Import OP' }}
+            <i class="fas fa-save"></i> {{ isSavingEcartPartnerToImpactOP ? 'Sauvegarde...' : 'Sauvegarder dans Import OP' }}
         </button>
     </div>
 
     <!-- Sélecteur de colonnes -->
     <div *ngIf="showColumnSelector" class="column-selector-panel">
-        <h4>👁️ Sélection des colonnes</h4>
+        <h4><i class="fas fa-eye"></i> Sélection des colonnes</h4>
         <div class="column-list">
             <label *ngFor="let col of allColumns" class="column-checkbox">
                 <input 
@@ -61,7 +63,7 @@
     <!-- Indicateur de progression de l'export -->
     <div *ngIf="isExporting" class="export-progress-overlay">
         <div class="export-progress-card">
-            <h3>📥 Export en cours</h3>
+            <h3><i class="fas fa-download"></i> Export en cours</h3>
             <div class="export-progress-bar">
                 <div class="export-progress-fill" [style.width.%]="exportProgress"></div>
             </div>
@@ -75,7 +77,7 @@
     </div>
 
     <div class="volume-summary">
-        <h4>📊 Résumé des volumes</h4>
+        <h4><i class="fas fa-chart-bar"></i> Résumé des volumes</h4>
         <div class="volume-grid">
             <div class="volume-card">
                 <div class="volume-label">Volume total Partenaire</div>
@@ -164,7 +166,7 @@
                                 class="create-op-button" 
                                 [disabled]="!isPartnerRecordEligible(record)" 
                                 title="{{ 'LBL.agencyLabel' | translate }}">
-                                ➕ Créer OP
+                                <i class="fas fa-plus"></i> Créer OP
                             </button>
                         </td>
                         <td class="select-cell">
@@ -183,6 +185,6 @@
     </div>
 
     <div *ngIf="!isLoading && getVisibleColumns().length === 0" class="no-columns-message">
-        <p>⚠️ Aucune colonne visible. Veuillez sélectionner au moins une colonne à afficher.</p>
+        <p><i class="fas fa-exclamation-triangle"></i> Aucune colonne visible. Veuillez sélectionner au moins une colonne à afficher.</p>
     </div>
 </div>

@@ -74,7 +74,7 @@
 
   <div class="main">
 <div class="stats-container">
-    <h2 class="stats-inner-title">📊 {{ 'STA.detailedStats' | translate }}</h2>
+    <h2 class="stats-inner-title"><i class="fas fa-chart-bar"></i> {{ 'STA.detailedStats' | translate }}</h2>
 
     <div *ngIf="isLoading" class="loading-message">{{ 'MSG.loadingData' | translate }}</div>
 
@@ -165,35 +165,35 @@
             <!-- Boutons d'action déplacés ici -->
             <div class="action-buttons" style="margin-bottom: 10px;">
                 <button type="button" class="ds-btn ds-btn--secondary new-reconciliation-btn" (click)="startNewReconciliation()" [disabled]="isLoading">
-                    🔄 {{ 'STA.newReconciliation' | translate }}
+                    <i class="fas fa-sync-alt"></i> {{ 'STA.newReconciliation' | translate }}
                 </button>
                 <button type="button" class="ds-btn ds-btn--secondary report-btn" (click)="openAgencyReportPage()" [disabled]="!getAggregatedStats().length || isLoading">
-                    📊 {{ 'STA.report' | translate }}
+                    <i class="fas fa-chart-bar"></i> {{ 'STA.report' | translate }}
                 </button>
                 <button type="button" class="ds-btn ds-btn--secondary export-btn" (click)="exportStats()" [disabled]="!getAggregatedStats().length || isLoading">
-                    📥 {{ 'STA.exportByDay' | translate }}
+                    <i class="fas fa-download"></i> {{ 'STA.exportByDay' | translate }}
                 </button>
                 <button type="button" class="ds-btn ds-btn--secondary export-btn secondary" (click)="exportStatsByWeek()" [disabled]="!getAggregatedStats().length || isLoading">
-                    📅 {{ 'STA.exportByWeek' | translate }}
+                    <i class="fas fa-calendar"></i> {{ 'STA.exportByWeek' | translate }}
                 </button>
                 <button type="button" class="ds-btn ds-btn--secondary export-btn secondary" (click)="exportStatsByMonth()" [disabled]="!getAggregatedStats().length || isLoading">
-                    📆 {{ 'STA.exportByMonth' | translate }}
+                    <i class="fas fa-calendar-alt"></i> {{ 'STA.exportByMonth' | translate }}
                 </button>
                 <button type="button" class="ds-btn ds-btn--secondary export-btn" (click)="exportStatsComplete()" [disabled]="!getAggregatedStats().length || isLoading">
-                    📥 {{ 'STA.exportComplete' | translate }}
+                    <i class="fas fa-download"></i> {{ 'STA.exportComplete' | translate }}
                 </button>
                 <button type="button" class="ds-btn ds-btn--secondary export-btn secondary" (click)="goToServiceReferences()" [disabled]="isLoading">
-                    📚 {{ 'STA.serviceReferences' | translate }}
+                    <i class="fas fa-book"></i> {{ 'STA.serviceReferences' | translate }}
                 </button>
                 <button type="button" class="ds-btn ds-btn--secondary bulk-delete-btn" (click)="deleteSelectedSummaries()" 
                         [disabled]="!hasSelectedItems() || isLoading"
                         *ngIf="hasSelectedItems()">
-                    🗑️ {{ 'STA.deleteSelected' | translate: { count: getSelectedCount() } }}
+                    <i class="fas fa-trash"></i> {{ 'STA.deleteSelected' | translate: { count: getSelectedCount() } }}
                 </button>
                 <button type="button" class="ds-btn ds-btn--secondary clear-selection-btn" (click)="clearSelection()" 
                         [disabled]="!hasSelectedItems() || isLoading"
                         *ngIf="hasSelectedItems()">
-                    ✖️ {{ 'STA.deselectAll' | translate }}
+                    <i class="fas fa-times"></i> {{ 'STA.deselectAll' | translate }}
                 </button>
                 <div class="selection-info" *ngIf="hasSelectedItems()">
                     <span class="selection-count">{{ 'STA.selectedCount' | translate: { count: getSelectedCount() } }}</span>
@@ -459,7 +459,7 @@
                             </td>
                             <td>
                                 <button type="button" class="ds-btn ds-btn--secondary delete-btn" (click)="deleteSummary(summary)" [disabled]="isLoading" title="{{ 'STA.deleteStat' | translate }}">
-                                    🗑️
+                                    <i class="fas fa-trash"></i>
                                 </button>
                             </td>
                         </tr>

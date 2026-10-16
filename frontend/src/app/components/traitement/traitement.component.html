@@ -66,7 +66,7 @@
   <div *ngIf="dataProcessingService.isProcessing$ | async" class="processing-overlay">
     <div class="processing-container">
       <div class="processing-header">
-        <div class="processing-icon">🔄</div>
+        <div class="processing-icon"><i class="fas fa-sync-alt"></i></div>
         <h3>{{ 'TRT.TraitementEnCours' | translate }}</h3>
         <p>{{ dataProcessingService.processingMessage$ | async }}</p>
       </div>
@@ -827,7 +827,7 @@
        </div>
      </div>
      <div class="performance-tips" *ngIf="getFileStats().isLargeFile">
-       <div class="tip-icon">💡</div>
+       <div class="tip-icon"><i class="fas fa-lightbulb"></i></div>
        <div class="tip-content">
          <strong>{{ 'TRT.ConseilsPourLesGrosFichiers' | translate }}</strong>
          <ul>

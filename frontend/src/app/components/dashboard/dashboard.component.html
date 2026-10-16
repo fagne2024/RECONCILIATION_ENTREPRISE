@@ -92,7 +92,7 @@
             <div class="info-header">
                 <div class="head-left">
                     <div class="head-title-row">
-                        <div class="head-icon">🔄</div>
+                        <div class="head-icon"><i class="fas fa-sync-alt"></i></div>
                         <h3 class="head-title">{{ 'DASH.reconciliationStatus' | translate }}</h3>
                         <button type="button" class="ds-btn ds-btn--secondary reco-view-btn" (click)="openRecoViewModal()" title="{{ 'ACT.viewFullWeek' | translate }}">
                             {{ 'ACT.view' | translate }}
@@ -268,7 +268,7 @@
 
         <div class="info-section">
             <div class="bottom-section-header">
-                <h4>📊 {{ 'DASH.quickMetrics' | translate }}</h4>
+                <h4><i class="fas fa-chart-bar"></i> {{ 'DASH.quickMetrics' | translate }}</h4>
                 <button type="button" class="ds-btn ds-btn--secondary toggle-btn" [class.active]="showMetricsSection" (click)="showMetricsSection = !showMetricsSection">
                     <span class="toggle-icon">▾</span>
                     {{ 'ACT.show' | translate }} | {{ 'ACT.hide' | translate }}
@@ -352,7 +352,7 @@
     <!-- Barre récapitulative clients/services/pays -->
     <div class="dashboard-section section-summary-bar">
         <div class="bottom-section-header">
-            <h4>📋 {{ 'DASH.clientServiceCountrySummary' | translate }}</h4>
+            <h4><i class="fas fa-clipboard-list"></i> {{ 'DASH.clientServiceCountrySummary' | translate }}</h4>
             <button type="button" class="ds-btn ds-btn--secondary toggle-btn" [class.active]="showSummaryBarSection" (click)="showSummaryBarSection = !showSummaryBarSection">
                 <span class="toggle-icon">▾</span>
                     {{ 'ACT.show' | translate }} | {{ 'ACT.hide' | translate }}
@@ -378,7 +378,7 @@
     <!-- Nouvelle section pour les métriques détaillées -->
     <div class="dashboard-section detailed-metrics-section">
         <div class="bottom-section-header">
-            <h4>📈 {{ 'DASHBOARD.detailedMetrics' | translate }}</h4>
+            <h4><i class="fas fa-chart-line"></i> {{ 'DASHBOARD.detailedMetrics' | translate }}</h4>
             <button type="button" class="ds-btn ds-btn--secondary toggle-btn" [class.active]="showDetailedMetricsSection" (click)="showDetailedMetricsSection = !showDetailedMetricsSection">
                 <span class="toggle-icon">▾</span>
                     {{ 'ACT.show' | translate }} | {{ 'ACT.hide' | translate }}
@@ -397,7 +397,7 @@
             </mat-form-field>
           </div>
           <div style="flex: 2; display: flex; flex-direction: column; align-items: center; gap: 8px;">
-            <h3 style="margin: 0;">📈 {{ 'DASHBOARD.detailedMetrics' | translate }}</h3>
+            <h3 style="margin: 0;"><i class="fas fa-chart-line"></i> {{ 'DASHBOARD.detailedMetrics' | translate }}</h3>
             <button type="button" class="ds-btn ds-btn--secondary btn-show-graph" (click)="openGraphModal()" [disabled]="(!barChartData?.labels?.length || !barChartData?.datasets?.length) && (!lineChartData?.labels?.length || !lineChartData?.datasets?.length)">
               <i class="fas fa-chart-line"></i> {{ 'DASHBOARD.showGraph' | translate }}
             </button>
@@ -516,17 +516,17 @@
             <!-- Métriques principales -->
             <div class="main-metrics-grid">
                 <div class="main-metric">
-                    <div class="main-metric-icon">💰</div>
+                    <div class="main-metric-icon"><i class="fas fa-coins"></i></div>
                     <div class="main-metric-value ds-num">{{detailedMetrics.totalVolume | number:'1.0-0'}}</div>
                     <div class="main-metric-label">{{ 'TBL.totalVolume' | translate }}</div>
                 </div>
                 <div class="main-metric">
-                    <div class="main-metric-icon">💵</div>
+                    <div class="main-metric-icon"><i class="fas fa-dollar-sign"></i></div>
                     <div class="main-metric-value ds-num">{{detailedMetrics.totalFees | number:'1.0-0'}}</div>
                     <div class="main-metric-label">{{ 'DASH.revenueVolume' | translate }}</div>
                 </div>
                 <div class="main-metric">
-                    <div class="main-metric-icon">📊</div>
+                    <div class="main-metric-icon"><i class="fas fa-chart-bar"></i></div>
                     <div class="main-metric-value ds-num">{{detailedMetrics.totalTransactions}}</div>
                     <div class="main-metric-label">{{ 'TBL.transactions' | translate }}</div>
                 </div>
@@ -536,7 +536,7 @@
                     <div class="main-metric-label">{{ 'DASH.clients' | translate }}</div>
                 </div>
                 <div class="main-metric">
-                    <div class="main-metric-icon">📈</div>
+                    <div class="main-metric-icon"><i class="fas fa-chart-line"></i></div>
                     <div class="main-metric-value ds-num">{{ getAverageTransactionsPerPeriod() }}</div>
                     <div class="main-metric-label">{{ 'DASH.averageTransactionPerDay' | translate }}</div>
                 </div>
@@ -554,7 +554,7 @@
 
             <!-- Statistiques par type d'opération -->
             <div class="operation-stats-section">
-                <h4>📋 {{ 'DASH.statisticsByOperationType' | translate }}</h4>
+                <h4><i class="fas fa-clipboard-list"></i> {{ 'DASH.statisticsByOperationType' | translate }}</h4>
                 <div class="operation-stats-grid">
                     <div *ngFor="let stat of filteredOperationStats; trackBy: trackByIndex" class="operation-stat-card">
                         <div class="operation-stat-header">
@@ -580,7 +580,7 @@
 
             <!-- Fréquence par type d'opération -->
             <div class="frequency-stats-section">
-                <h4>📊 {{ 'DASH.frequencyByOperationType' | translate }}</h4>
+                <h4><i class="fas fa-chart-bar"></i> {{ 'DASH.frequencyByOperationType' | translate }}</h4>
                 <div class="frequency-stats-grid">
                     <div *ngFor="let freq of filteredFrequencyStats; trackBy: trackByIndex" class="frequency-stat-card">
                         <div class="frequency-stat-header">
@@ -601,7 +601,7 @@
             <!-- Statistiques des transactions créées par service -->
             <div class="transaction-created-stats-section">
                 <div class="bottom-section-header">
-                    <h4>🔄 {{ 'DASH.createdTransactionsByService' | translate }}</h4>
+                    <h4><i class="fas fa-sync-alt"></i> {{ 'DASH.createdTransactionsByService' | translate }}</h4>
                     <button type="button" class="ds-btn ds-btn--secondary toggle-btn" [class.active]="showBottomSection" (click)="showBottomSection = !showBottomSection">
                         <span class="toggle-icon">▾</span>
                         {{ 'ACT.show' | translate }} | {{ 'ACT.hide' | translate }}
@@ -624,7 +624,7 @@
                             </div>
                         </div>
                         <div class="summary-card">
-                            <div class="summary-icon">💰</div>
+                            <div class="summary-icon"><i class="fas fa-coins"></i></div>
                             <div class="summary-content">
                                 <div class="summary-value">{{ transactionCreatedStats.totalCashinVolume | number:'1.0-0' }}</div>
                                 <div class="summary-label">{{ 'DASH.totalCashinVolume' | translate }}</div>
@@ -638,7 +638,7 @@
                             </div>
                         </div>
                         <div class="summary-card">
-                            <div class="summary-icon">📊</div>
+                            <div class="summary-icon"><i class="fas fa-chart-bar"></i></div>
                             <div class="summary-content">
                                 <div class="summary-value">{{ transactionCreatedStats.totalTransactionCount }}</div>
                                 <div class="summary-label">{{ 'DASH.createdTransactions' | translate }}</div>
@@ -814,7 +814,7 @@
     <div *ngIf="showGraphModal" class="graph-modal-overlay" (click)="closeGraphModal()">
         <div class="graph-modal-container" (click)="$event.stopPropagation()">
             <div class="graph-modal-header">
-                <h2>📈 {{ 'DASH.detailedCharts' | translate }}</h2>
+                <h2><i class="fas fa-chart-line"></i> {{ 'DASH.detailedCharts' | translate }}</h2>
                 <button type="button" class="ds-btn ds-btn--secondary btn-close-modal" (click)="closeGraphModal()" title="{{ 'COMMON.actions.close' | translate }}">
                     <i class="fas fa-times"></i>
                 </button>
@@ -928,7 +928,7 @@
     <div *ngIf="showReleveStatusModal" class="status-modal-overlay" (click)="closeReleveStatusModal()">
         <div class="status-modal-container" (click)="$event.stopPropagation()">
             <div class="status-modal-header">
-                <h3>📋 {{ 'DASH.viewReconciliationStatus' | translate }}</h3>
+                <h3><i class="fas fa-clipboard-list"></i> {{ 'DASH.viewReconciliationStatus' | translate }}</h3>
                 <button type="button" class="ds-btn ds-btn--secondary btn-close-modal" (click)="closeReleveStatusModal()" title="{{ 'COMMON.actions.close' | translate }}">
                     <i class="fas fa-times"></i>
                 </button>
@@ -987,7 +987,7 @@
     <div *ngIf="showReleveStatusResultModal" class="status-modal-overlay" (click)="showReleveStatusResultModal = false">
         <div class="status-modal-container" (click)="$event.stopPropagation()">
             <div class="status-modal-header">
-                <h3>📋 {{ 'DASH.statementStatus' | translate }}</h3>
+                <h3><i class="fas fa-clipboard-list"></i> {{ 'DASH.statementStatus' | translate }}</h3>
                 <button type="button" class="ds-btn ds-btn--secondary btn-close-modal" (click)="showReleveStatusResultModal = false" title="{{ 'COMMON.actions.close' | translate }}">
                     <i class="fas fa-times"></i>
                 </button>
