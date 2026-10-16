@@ -1,14 +1,14 @@
 // Design tokens ReconciliApp.
-// Source unique des valeurs visuelles rÃ©utilisables. Les tokens mÃ©tier
-// (statuts, types d'opÃ©rations) sont strictement visuels : ils ne dÃ©terminent
+// Source unique des valeurs visuelles réutilisables. Les tokens métier
+// (statuts, types d'opérations) sont strictement visuels : ils ne déterminent
 // jamais un statut.
 //
-// ThÃ¨mes : `:root` porte le thÃ¨me clair, `[data-theme='dark']` le thÃ¨me sombre.
-// L'attribut est posÃ© sur <html> par le script de `index.html` puis par
-// `ThemeService` (choix manuel persistant ou prÃ©fÃ©rence systÃ¨me).
+// Thèmes : `:root` porte le thème clair, `[data-theme='dark']` le thème sombre.
+// L'attribut est posé sur <html> par le script de `index.html` puis par
+// `ThemeService` (choix manuel persistant ou préférence système).
 
 // ---------------------------------------------------------------------------
-// Couleurs par thÃ¨me
+// Couleurs par thème
 // ---------------------------------------------------------------------------
 
 @mixin light-colors {
@@ -21,12 +21,12 @@
   --color-overlay-backdrop: rgba(31, 42, 46, 0.45);
 
   --color-text-primary: #1F2A2E;
-  // #6B7377 (rÃ©fÃ©rence) ne passe pas 4,5:1 sur le fond.
+  // #6B7377 (référence) ne passe pas 4,5:1 sur le fond.
   --color-text-muted: #5F676B;
   --color-text-inverse: #FBF9F4;
 
-  // Bordure dÃ©corative (sÃ©parateurs) ; les limites de contrÃ´les utilisent
-  // `--color-border-strong`, seule Ã  atteindre 3:1.
+  // Bordure décorative (séparateurs) ; les limites de contrôles utilisent
+  // `--color-border-strong`, seule à atteindre 3:1.
   --color-border: #E0DACB;
   --color-border-emphasis: #CBC3B1;
   --color-border-strong: #857D6E;
@@ -41,8 +41,8 @@
   --color-nav-text: #FBF9F4;
   --color-nav-text-muted: color-mix(in srgb, var(--color-nav-text) 78%, var(--color-nav-bg));
 
-  // Couleurs sÃ©mantiques : `-text` pour le texte et les graphiques,
-  // `-bg` / `-border` dÃ©rivÃ©s pour les surfaces teintÃ©es.
+  // Couleurs sémantiques : `-text` pour le texte et les graphiques,
+  // `-bg` / `-border` dérivés pour les surfaces teintées.
   --color-success: #356D4C;
   --color-warning: #855A0E;
   --color-error: #A5453A;
@@ -93,7 +93,7 @@
   --color-nav-text: #ECE8DD;
   --color-nav-text-muted: color-mix(in srgb, var(--color-nav-text) 78%, var(--color-nav-bg));
 
-  // Variantes Ã©claircies : les couleurs du thÃ¨me clair tombent sous 3,3:1
+  // Variantes éclaircies : les couleurs du thème clair tombent sous 3,3:1
   // sur la surface sombre.
   --color-success: #7CC39A;
   --color-warning: #E3B45E;
@@ -119,7 +119,7 @@
 }
 
 // ---------------------------------------------------------------------------
-// Tokens indÃ©pendants du thÃ¨me
+// Tokens indépendants du thème
 // ---------------------------------------------------------------------------
 
 @mixin static-tokens {
@@ -165,7 +165,7 @@
   --radius-xl: 18px;
   --radius-full: 999px;
 
-  // ContrÃ´les et icÃ´nes
+  // Contrôles et icônes
   --control-h-sm: 28px;
   --control-h-md: 36px;
   --control-h-lg: 44px;
@@ -199,8 +199,8 @@
 }
 
 // ---------------------------------------------------------------------------
-// Tokens dÃ©rivÃ©s (sÃ©mantique mÃ©tier). DÃ©clarÃ©s aprÃ¨s les couleurs pour que
-// `color-mix()` se rÃ©Ã©value lorsque le thÃ¨me change.
+// Tokens dérivés (sémantique métier). Déclarés après les couleurs pour que
+// `color-mix()` se réévalue lorsque le thème change.
 // ---------------------------------------------------------------------------
 
 @mixin tone($name, $source) {
@@ -218,20 +218,20 @@
   @include tone('color-duplicate', 'color-duplicate');
   @include tone('color-neutral', 'color-neutral');
 
-  // Statuts de rÃ©conciliation
-  @include tone('status-matched', 'color-success');          // RapprochÃ©
-  @include tone('status-amount-gap', 'color-warning');       // Ã‰cart de montant
-  @include tone('status-missing-statement', 'color-error');  // Absent du relevÃ©
+  // Statuts de réconciliation
+  @include tone('status-matched', 'color-success');          // Rapproché
+  @include tone('status-amount-gap', 'color-warning');       // Écart de montant
+  @include tone('status-missing-statement', 'color-error');  // Absent du relevé
   @include tone('status-missing-bo', 'color-info');          // Absent du BO
   @include tone('status-duplicate', 'color-duplicate');      // Doublon
 
   // Statuts de traitement
-  @include tone('status-done', 'color-success');             // OK / TraitÃ©
+  @include tone('status-done', 'color-success');             // OK / Traité
   @include tone('status-in-progress', 'color-info');         // En cours
   @include tone('status-pending', 'color-neutral');          // En attente
   @include tone('status-failed', 'color-error');             // NOK / Erreur
 
-  // Types d'opÃ©rations
+  // Types d'opérations
   @include tone('type-appro', 'color-type-appro');
   @include tone('type-compense', 'color-type-compense');
   @include tone('type-nivellement', 'color-type-nivellement');
@@ -239,8 +239,8 @@
 }
 
 // ---------------------------------------------------------------------------
-// Alias de compatibilitÃ© avec les variables `--rd-*` copiÃ©es dans les
-// composants. Ils ne s'appliquent qu'aux pages dont le bloc local a Ã©tÃ© retirÃ©.
+// Alias de compatibilité avec les variables `--rd-*` copiées dans les
+// composants. Ils ne s'appliquent qu'aux pages dont le bloc local a été retiré.
 // ---------------------------------------------------------------------------
 
 @mixin rd-aliases {
