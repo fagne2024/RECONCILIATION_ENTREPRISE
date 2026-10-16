@@ -5,11 +5,11 @@
       <p>{{ 'CFG.calcul.subtitle' | translate }}</p>
     </div>
     <div class="top-acts">
-      <button type="button" class="btn p" (click)="openCreate()">
+      <button type="button" class="ds-btn ds-btn--secondary btn p" (click)="openCreate()">
         <i class="fas fa-plus"></i>
         {{ 'CFG.calcul.newRule' | translate }}
       </button>
-      <button type="button" class="icon-btn" (click)="close()" [title]="'CFG.calcul.cancel' | translate">
+      <button type="button" class="ds-btn ds-btn--secondary icon-btn" (click)="close()" [title]="'CFG.calcul.cancel' | translate">
         <i class="fas fa-times"></i>
       </button>
     </div>
@@ -19,26 +19,26 @@
     <div class="tools">
       <label class="search">
         <i class="fas fa-search"></i>
-        <input type="search" [(ngModel)]="searchTerm" (ngModelChange)="onFilterChange()"
+        <input class="ds-input" type="search" [(ngModel)]="searchTerm" (ngModelChange)="onFilterChange()"
                [placeholder]="'CFG.calcul.searchPlaceholder' | translate" />
       </label>
 
-      <select class="fld" [(ngModel)]="moduleFilter" (ngModelChange)="onModuleChange()">
+      <select class="ds-select fld" [(ngModel)]="moduleFilter" (ngModelChange)="onModuleChange()">
         <option value="">{{ 'CFG.calcul.allModules' | translate }}</option>
         <option *ngFor="let m of moduleOptions" [value]="m">{{ moduleLabel(m) }}</option>
       </select>
 
-      <select class="fld" [(ngModel)]="subModuleFilter" (ngModelChange)="onSubModuleChange()"
+      <select class="ds-select fld" [(ngModel)]="subModuleFilter" (ngModelChange)="onSubModuleChange()"
               [disabled]="availableSubModules.length === 0">
         <option value="">{{ 'CFG.calcul.allSubmodules' | translate }}</option>
         <option *ngFor="let s of availableSubModules" [value]="s.code">{{ s.label }}</option>
       </select>
 
       <div class="seg" role="group">
-        <button type="button" class="chip" [attr.aria-pressed]="typeFilter === ''" (click)="setTypeFilter('')">
+        <button type="button" class="ds-btn ds-btn--secondary chip" [attr.aria-pressed]="typeFilter === ''" (click)="setTypeFilter('')">
           {{ 'CFG.calcul.allTypes' | translate }} <b>{{ typeCount('') }}</b>
         </button>
-        <button type="button" class="chip" *ngFor="let t of types"
+        <button type="button" class="ds-btn ds-btn--secondary chip" *ngFor="let t of types"
                 [attr.aria-pressed]="typeFilter === t" (click)="setTypeFilter(t)">
           {{ typeLabel(t) }} <b>{{ typeCount(t) }}</b>
         </button>
@@ -69,7 +69,7 @@
 
       <section class="group" *ngFor="let sub of group.sousModules"
                [class.closed]="isClosed(groupKey(group, sub))">
-        <button type="button" class="ghead" (click)="toggleGroup(groupKey(group, sub))"
+        <button type="button" class="ds-btn ds-btn--secondary ghead" (click)="toggleGroup(groupKey(group, sub))"
                 [attr.aria-expanded]="!isClosed(groupKey(group, sub))">
           <i class="fas fa-chevron-down chev"></i>
           <h3>{{ sub.label }}</h3>
@@ -107,15 +107,15 @@
             </div>
 
             <div class="tog">
-              <button type="button" class="sw" role="switch" [attr.aria-checked]="rule.actif !== false"
+              <button type="button" class="ds-btn ds-btn--secondary sw" role="switch" [attr.aria-checked]="rule.actif !== false"
                       (click)="toggleActif(rule)" [attr.aria-label]="rule.libelle"></button>
             </div>
 
             <div class="act">
-              <button type="button" class="ib" (click)="openEdit(rule)" [title]="'CFG.calcul.edit' | translate">
+              <button type="button" class="ds-btn ds-btn--secondary ib" (click)="openEdit(rule)" [title]="'CFG.calcul.edit' | translate">
                 <i class="fas fa-pen"></i>
               </button>
-              <button type="button" class="ib del" (click)="confirmDelete(rule)"
+              <button type="button" class="ds-btn ds-btn--secondary ib del" (click)="confirmDelete(rule)"
                       [disabled]="rule.systeme" [title]="'CFG.calcul.delete' | translate">
                 <i class="fas fa-trash"></i>
               </button>
@@ -141,18 +141,18 @@
   <div class="modal" (click)="$event.stopPropagation()">
     <div class="modal-header">
       <h2>{{ (isNew ? 'CFG.calcul.newRule' : 'CFG.calcul.editRule') | translate }}</h2>
-      <button type="button" class="icon-btn" (click)="closeModal()"><i class="fas fa-times"></i></button>
+      <button type="button" class="ds-btn ds-btn--secondary icon-btn" (click)="closeModal()"><i class="fas fa-times"></i></button>
     </div>
 
     <div class="modal-body">
       <div class="form-row">
         <div class="form-group">
           <label>{{ 'CFG.calcul.fieldCode' | translate }}</label>
-          <input type="text" [(ngModel)]="form.code" [disabled]="!isNew" placeholder="CERTIF.MA_REGLE" />
+          <input class="ds-input" type="text" [(ngModel)]="form.code" [disabled]="!isNew" placeholder="CERTIF.MA_REGLE" />
         </div>
         <div class="form-group">
           <label>{{ 'CFG.calcul.fieldType' | translate }}</label>
-          <select [(ngModel)]="form.type" [disabled]="!isNew" (ngModelChange)="onTypeChange()">
+          <select class="ds-select" [(ngModel)]="form.type" [disabled]="!isNew" (ngModelChange)="onTypeChange()">
             <option *ngFor="let type of types" [value]="type">{{ typeLabel(type) }}</option>
           </select>
         </div>
@@ -161,13 +161,13 @@
       <div class="form-row">
         <div class="form-group">
           <label>{{ 'CFG.calcul.fieldModule' | translate }}</label>
-          <select [(ngModel)]="form.module">
+          <select class="ds-select" [(ngModel)]="form.module">
             <option *ngFor="let m of moduleOptions" [value]="m">{{ moduleLabel(m) }}</option>
           </select>
         </div>
         <div class="form-group">
           <label>{{ 'CFG.calcul.fieldSubmodule' | translate }}</label>
-          <input type="text" list="submodule-options" [(ngModel)]="form.sousModule" />
+          <input class="ds-input" type="text" list="submodule-options" [(ngModel)]="form.sousModule" />
           <datalist id="submodule-options">
             <option *ngFor="let s of subModuleOptions" [value]="s"></option>
           </datalist>
@@ -176,7 +176,7 @@
 
       <div class="form-group">
         <label>{{ 'CFG.calcul.fieldLabel' | translate }}</label>
-        <input type="text" [(ngModel)]="form.libelle" />
+        <input class="ds-input" type="text" [(ngModel)]="form.libelle" />
       </div>
 
       <div class="form-group">
@@ -189,12 +189,12 @@
         <label>{{ 'CFG.calcul.fieldFormula' | translate }}</label>
         <div class="terms-editor">
           <div class="term-row" *ngFor="let term of form.terms; let i = index">
-            <select class="term-sign" [(ngModel)]="term.signe">
+            <select class="ds-select term-sign" [(ngModel)]="term.signe">
               <option value="+">+</option>
               <option value="-">−</option>
             </select>
-            <input type="number" class="term-coef" [(ngModel)]="term.coefficient" step="any" />
-            <select class="term-variable" [(ngModel)]="term.variable">
+            <input type="number" class="ds-input term-coef" [(ngModel)]="term.coefficient" step="any" />
+            <select class="ds-select term-variable" [(ngModel)]="term.variable">
               <option value="">—</option>
               <option *ngFor="let v of variables" [value]="v.code">{{ v.label }}</option>
             </select>
@@ -202,10 +202,10 @@
               <input type="checkbox" [(ngModel)]="term.absolue" />
               {{ 'CFG.calcul.absolute' | translate }}
             </label>
-            <button type="button" class="ib del" (click)="removeTerm(i)"><i class="fas fa-times"></i></button>
+            <button type="button" class="ds-btn ds-btn--secondary ib del" (click)="removeTerm(i)"><i class="fas fa-times"></i></button>
           </div>
         </div>
-        <button type="button" class="btn ghost sm" (click)="addTerm()">
+        <button type="button" class="ds-btn ds-btn--secondary btn ghost sm" (click)="addTerm()">
           <i class="fas fa-plus"></i> {{ 'CFG.calcul.addTerm' | translate }}
         </button>
       </div>
@@ -215,11 +215,11 @@
         <label>{{ 'CFG.calcul.fieldValues' | translate }}</label>
         <div class="values-editor">
           <div class="value-row" *ngFor="let value of form.values; let i = index">
-            <input type="text" [(ngModel)]="form.values[i]" />
-            <button type="button" class="ib del" (click)="removeValue(i)"><i class="fas fa-times"></i></button>
+            <input class="ds-input" type="text" [(ngModel)]="form.values[i]" />
+            <button type="button" class="ds-btn ds-btn--secondary ib del" (click)="removeValue(i)"><i class="fas fa-times"></i></button>
           </div>
         </div>
-        <button type="button" class="btn ghost sm" (click)="addValue()">
+        <button type="button" class="ds-btn ds-btn--secondary btn ghost sm" (click)="addValue()">
           <i class="fas fa-plus"></i> {{ 'CFG.calcul.addValue' | translate }}
         </button>
       </div>
@@ -228,18 +228,18 @@
       <div class="form-row" *ngIf="form.type === 'PARAMETRE'">
         <div class="form-group">
           <label>{{ 'CFG.calcul.fieldValue' | translate }}</label>
-          <input type="number" step="any" [(ngModel)]="form.valeur" />
+          <input class="ds-input" type="number" step="any" [(ngModel)]="form.valeur" />
         </div>
         <div class="form-group">
           <label>{{ 'CFG.calcul.fieldUnit' | translate }}</label>
-          <input type="text" [(ngModel)]="form.unite" />
+          <input class="ds-input" type="text" [(ngModel)]="form.unite" />
         </div>
       </div>
 
       <div class="form-row">
         <div class="form-group">
           <label>{{ 'CFG.calcul.fieldOrder' | translate }}</label>
-          <input type="number" [(ngModel)]="form.ordre" />
+          <input class="ds-input" type="number" [(ngModel)]="form.ordre" />
         </div>
         <div class="form-group checkbox-group">
           <label>
@@ -251,8 +251,8 @@
     </div>
 
     <div class="modal-footer">
-      <button type="button" class="btn ghost" (click)="closeModal()">{{ 'CFG.calcul.cancel' | translate }}</button>
-      <button type="button" class="btn p" [disabled]="saving" (click)="save()">
+      <button type="button" class="ds-btn ds-btn--secondary btn ghost" (click)="closeModal()">{{ 'CFG.calcul.cancel' | translate }}</button>
+      <button type="button" class="ds-btn ds-btn--secondary btn p" [disabled]="saving" (click)="save()">
         <i class="fas" [ngClass]="saving ? 'fa-spinner fa-spin' : 'fa-save'"></i>
         {{ 'CFG.calcul.save' | translate }}
       </button>
