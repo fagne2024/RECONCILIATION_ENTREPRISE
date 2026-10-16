@@ -306,6 +306,29 @@
   color: #dc3545;
 }
 
+/* Import d'un fichier modèle (CSV / Excel) dans le watch-folder de l'entreprise */
+.template-file-upload {
+  margin-top: 8px;
+}
+
+.template-file-upload-btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  cursor: pointer;
+  margin-bottom: 4px;
+}
+
+.template-file-upload-btn.is-disabled {
+  opacity: 0.65;
+  cursor: not-allowed;
+}
+
+.template-file-upload-error {
+  margin-top: 6px;
+  font-size: 0.875em;
+}
+
 /* Styles pour les suggestions de patterns */
 .pattern-suggestions {
   margin-top: 8px;

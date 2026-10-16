@@ -147,6 +147,40 @@ export function normalizeHeaderForMatch(header: string): string {
 }
 
 /**
+ * Libellés FR/EN des définitions bilingues, pré-normalisés (tables constantes).
+ *
+ * `resolveCanonicalColumnId` est appelée au cœur des boucles sur les lignes (filtres,
+ * règles de colonnes, projection, dédup…) : recalculer les ~45 normalisations des
+ * définitions à chaque appel représentait ~90 µs par échec d'index — soit des dizaines
+ * de secondes à plusieurs minutes de thread principal sur des fichiers volumineux.
+ * On les calcule une seule fois, à l'image de `getNormalizedHeaderIndex`.
+ */
+let _merchantCanonicalLabels: ReadonlyArray<{ id: string; fr: string; en: string }> | null = null;
+let _orangeMoneyCanonicalLabels: ReadonlyArray<{ id: string; fr: string; en: string }> | null = null;
+
+function getMerchantCanonicalLabels(): ReadonlyArray<{ id: string; fr: string; en: string }> {
+  if (!_merchantCanonicalLabels) {
+    _merchantCanonicalLabels = MERCHANT_REPORT_COLUMNS.map(def => ({
+      id: def.id,
+      fr: normalizeHeaderForMatch(def.fr),
+      en: normalizeHeaderForMatch(def.en)
+    }));
+  }
+  return _merchantCanonicalLabels;
+}
+
+function getOrangeMoneyCanonicalLabels(): ReadonlyArray<{ id: string; fr: string; en: string }> {
+  if (!_orangeMoneyCanonicalLabels) {
+    _orangeMoneyCanonicalLabels = ORANGE_MONEY_COLUMN_DEFINITIONS.map(def => ({
+      id: def.id,
+      fr: normalizeHeaderForMatch(def.fr),
+      en: normalizeHeaderForMatch(def.en)
+    }));
+  }
+  return _orangeMoneyCanonicalLabels;
+}
+
+/**
  * Résout un en-tête (FR, EN ou variante) vers son identifiant canonique.
  * Ex. "Receipt No." et "N° de reçu" → "receiptNo"
  */
@@ -161,21 +195,17 @@ export function resolveCanonicalColumnId(header: string): string | null {
     return exact.id;
   }
 
-  for (const def of MERCHANT_REPORT_COLUMNS) {
-    const frNorm = normalizeHeaderForMatch(def.fr);
-    const enNorm = normalizeHeaderForMatch(def.en);
-    if (normalized.includes(frNorm) || frNorm.includes(normalized)) {
+  for (const def of getMerchantCanonicalLabels()) {
+    if (normalized.includes(def.fr) || def.fr.includes(normalized)) {
       return def.id;
     }
-    if (normalized.includes(enNorm) || enNorm.includes(normalized)) {
+    if (normalized.includes(def.en) || def.en.includes(normalized)) {
       return def.id;
     }
   }
 
-  for (const def of ORANGE_MONEY_COLUMN_DEFINITIONS) {
-    const frNorm = normalizeHeaderForMatch(def.fr);
-    const enNorm = normalizeHeaderForMatch(def.en);
-    if (normalized === frNorm || normalized === enNorm) {
+  for (const def of getOrangeMoneyCanonicalLabels()) {
+    if (normalized === def.fr || normalized === def.en) {
       return def.id;
     }
     if (def.id === 'omStatut' && normalized.includes('genere le')) {

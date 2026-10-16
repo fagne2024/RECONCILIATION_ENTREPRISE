@@ -13,13 +13,20 @@
       <div class="kpi-strip">
         <div class="kpi">
           <span class="kpi-label">{{ entreprise.code }}</span>
-          <span class="kpi-value">{{ 'PLT.mod.activeCount' | translate: { count: entreprise.modulesActives ?? 0 } }}</span>
+          <span class="kpi-value">{{ 'PLT.mod.activeOfTotal' | translate: { active: activeCount, total: totalCount } }}</span>
         </div>
       </div>
     </div>
   </div>
 
   <div class="pf-body">
+    <div class="pf-card pf-entreprise-select" *ngIf="entreprises.length">
+      <label for="pf-entreprise">{{ 'PLT.mod.entrepriseLabel' | translate }}</label>
+      <select id="pf-entreprise" class="pf-input" [ngModel]="entrepriseId" (ngModelChange)="onEntrepriseChange($event)">
+        <option *ngFor="let e of entreprises" [ngValue]="e.id">{{ e.nom }} ({{ e.code }})</option>
+      </select>
+    </div>
+
     <div *ngIf="error" class="pf-alert pf-alert-danger">
       <i class="fas fa-exclamation-circle"></i>
       <span>{{ error }}</span>
@@ -62,8 +69,9 @@
                 (change)="toggleModule(parent); checkAllChildren(parent, $event.target.checked)">
               <span class="pf-node-name">
                 <i class="fas fa-folder"></i> {{ parent.nom }}
-                <span class="pf-node-meta" *ngIf="getChildren(parent).length">({{ getActiveChildrenCount(parent) }}/{{ getChildrenCount(parent) }})</span>
+                <span class="pf-node-meta" *ngIf="getChildrenCount(parent)">({{ getActiveChildrenCount(parent) }}/{{ getChildrenCount(parent) }})</span>
               </span>
+              <span class="pf-status" [class.pf-status-on]="parent.actif">{{ (parent.actif ? 'PLT.mod.statusActive' : 'PLT.mod.statusInactive') | translate }}</span>
             </label>
           </div>
           <div class="pf-children">
@@ -73,6 +81,7 @@
                   [checked]="child.actif"
                   (change)="toggleModule(child)">
                 <span class="pf-node-name"><i class="fas fa-file"></i> {{ child.nom }}</span>
+                <span class="pf-status" [class.pf-status-on]="child.actif">{{ (child.actif ? 'PLT.mod.statusActive' : 'PLT.mod.statusInactive') | translate }}</span>
               </label>
             </div>
           </div>
@@ -86,6 +95,7 @@
                 [checked]="module.actif"
                 (change)="toggleModule(module)">
               <span class="pf-node-name"><i class="fas fa-cube"></i> {{ module.nom }}</span>
+              <span class="pf-status" [class.pf-status-on]="module.actif">{{ (module.actif ? 'PLT.mod.statusActive' : 'PLT.mod.statusInactive') | translate }}</span>
             </label>
           </div>
         </div>

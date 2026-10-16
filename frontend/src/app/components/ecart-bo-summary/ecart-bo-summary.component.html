@@ -303,7 +303,7 @@
           </tr>
         </thead>
         <tbody>
-          <tr *ngFor="let item of pagedItems; trackBy: trackBySelectionKey" [class.manual-row]="item.isManual" [class.linked-row]="item.linkedId" [class.duplicate-row]="item.isDuplicate" [class.row-selected]="isSelected(item)">
+          <tr *ngFor="let item of pagedItems; trackBy: trackBySelectionKey" [class.manual-row]="item.isManual" [class.linked-row]="item.linkedId" [class.partenaire-row]="isPartenaireRow(item)" [class.duplicate-row]="item.isDuplicate" [class.row-selected]="isSelected(item)">
             <td class="td-checkbox">
               <input 
                 *ngIf="item.id || item.statut === 'en cours'"

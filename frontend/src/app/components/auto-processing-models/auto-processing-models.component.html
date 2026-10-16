@@ -122,6 +122,26 @@
               {{ 'APM.Lefichiermodèleestobligatoire' | translate }}
             </div>
             <small class="form-text text-muted">{{ 'APM.Fichierderéférencepourlastructuredesdonnées' | translate }}</small>
+            <div class="template-file-upload" *ngIf="!isUploadingTemplateFile">
+              <label class="btn btn-sm btn-outline-primary template-file-upload-btn">
+                <i class="fas fa-upload"></i>
+                {{ 'APM.Importerunfichiermodèle' | translate }}
+                <input type="file" hidden
+                       [attr.accept]="modelFileAccept"
+                       (change)="onTemplateFileSelected($event)">
+              </label>
+              <small class="form-text text-muted">
+                {{ 'APM.Formatsacceptéscsvetexcel' | translate }} {{ modelFileFormatsLabel }}
+              </small>
+            </div>
+            <div class="template-file-upload" *ngIf="isUploadingTemplateFile">
+              <span class="text-muted">
+                <i class="fas fa-spinner fa-spin"></i> {{ 'APM.Importdufichiermodèleencours' | translate }}
+              </span>
+            </div>
+            <div class="template-file-upload-error text-danger" *ngIf="templateUploadError">
+              <i class="fas fa-exclamation-circle"></i> {{ templateUploadError }}
+            </div>
                 </div>
               </div>
 

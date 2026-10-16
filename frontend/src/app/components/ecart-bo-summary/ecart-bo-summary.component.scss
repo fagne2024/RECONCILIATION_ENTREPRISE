@@ -684,6 +684,20 @@
               }
             }
 
+            // Lignes de la plateforme Partenaire : toujours en vert (y compris si liées à une ligne BO)
+            &.partenaire-row {
+              background-color: #d4edda !important;
+
+              &:hover {
+                background-color: #c3e6cb !important;
+              }
+
+              td {
+                color: #155724;
+                font-weight: 500;
+              }
+            }
+
             &.duplicate-row {
               background-color: #fff3e0 !important;
 

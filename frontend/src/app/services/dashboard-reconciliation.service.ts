@@ -1,5 +1,5 @@
 import { Injectable } from '@angular/core';
-import { HttpClient, HttpHeaders, HttpParams } from '@angular/common/http';
+import { HttpClient, HttpHeaders, HttpParams, HttpErrorResponse } from '@angular/common/http';
 import { Observable, firstValueFrom } from 'rxjs';
 import { map } from 'rxjs/operators';
 
@@ -158,7 +158,31 @@ export class DashboardReconciliationService {
     }
 
     /**
-     * Charge result8rec date par date (plus récente en premier) pour un affichage progressif.
+     * Exécute une requête avec un retry simple en cas de 429 (rate limiting) :
+     * attend le délai `Retry-After` (ou 5 s par défaut) puis réessaie (2 max).
+     */
+    private async requestWith429Retry<T>(factory: () => Observable<T>): Promise<T> {
+        const maxRetries = 2;
+        for (let attempt = 0; ; attempt++) {
+            try {
+                return await firstValueFrom(factory());
+            } catch (err) {
+                const is429 = err instanceof HttpErrorResponse && err.status === 429;
+                if (!is429 || attempt >= maxRetries) {
+                    throw err;
+                }
+                const retryAfterHeader = err.headers?.get('Retry-After');
+                const retryAfterSec = Number(retryAfterHeader);
+                const delayMs = (Number.isFinite(retryAfterSec) && retryAfterSec > 0 ? retryAfterSec : 5) * 1000;
+                await new Promise(resolve => setTimeout(resolve, delayMs));
+            }
+        }
+    }
+
+    /**
+     * Charge result8rec sur une plage pour un affichage progressif :
+     * d'abord la journée la plus récente, puis le reste de la plage en une
+     * seule requête (3 requêtes maximum au total, compatible rate limiting).
      */
     async loadResult8RecProgressive(
         startDate: string,
@@ -168,7 +192,7 @@ export class DashboardReconciliationService {
         isCancelled?: () => boolean
     ): Promise<Result8RecData[]> {
         if (startDate === endDate) {
-            const rows = await firstValueFrom(this.getResult8RecDataForDate(startDate, moduleContext));
+            const rows = await this.requestWith429Retry(() => this.getResult8RecDataForDate(startDate, moduleContext));
             const data = Array.isArray(rows) ? rows : [];
             if (!isCancelled?.()) {
                 onBatch(data, true, true);
@@ -176,7 +200,7 @@ export class DashboardReconciliationService {
             return data;
         }
 
-        const datesRaw = await firstValueFrom(this.getResult8RecDates(startDate, endDate, moduleContext));
+        const datesRaw = await this.requestWith429Retry(() => this.getResult8RecDates(startDate, endDate, moduleContext));
         const dates = Array.isArray(datesRaw) ? datesRaw.filter(d => !!d) : [];
         if (!dates.length) {
             if (!isCancelled?.()) {
@@ -200,16 +224,29 @@ export class DashboardReconciliationService {
 
         const snapshot = (): Result8RecData[] => [...byId.values(), ...withoutId];
 
-        for (let i = 0; i < dates.length; i++) {
-            if (isCancelled?.()) {
-                return snapshot();
-            }
-            const date = dates[i];
-            const rows = await firstValueFrom(this.getResult8RecDataForDate(date, moduleContext));
-            mergeRows(Array.isArray(rows) ? rows : []);
-            if (!isCancelled?.()) {
-                onBatch(snapshot(), i === 0, i === dates.length - 1);
-            }
+        // 1) Affichage progressif : on charge d'abord la journée la plus récente (1 requête).
+        const firstDate = dates[0];
+        const firstRows = await this.requestWith429Retry(() => this.getResult8RecDataForDate(firstDate, moduleContext));
+        mergeRows(Array.isArray(firstRows) ? firstRows : []);
+        if (isCancelled?.()) {
+            return snapshot();
+        }
+        onBatch(snapshot(), true, dates.length === 1);
+        if (dates.length === 1) {
+            return snapshot();
+        }
+
+        // 2) Le reste de la plage en UNE seule requête de plage.
+        //    (Une requête par date générait des dizaines de requêtes en rafale et
+        //     déclenchait le 429 Too Many Requests du rate limiting backend.)
+        //    Les dates sont triées DESC : dates[0] (la plus récente) est déjà chargée,
+        //    la plage restante va de la plus ancienne (dates[len-1]) à dates[1].
+        const rangeStart = dates[dates.length - 1];
+        const rangeEnd = dates[1];
+        const restRows = await this.requestWith429Retry(() => this.getResult8RecDataScoped(rangeStart, rangeEnd, moduleContext));
+        mergeRows(Array.isArray(restRows) ? restRows : []);
+        if (!isCancelled?.()) {
+            onBatch(snapshot(), false, true);
         }
 
         return snapshot();

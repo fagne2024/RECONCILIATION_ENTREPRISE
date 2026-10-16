@@ -77,6 +77,12 @@
     "refreshing": "Refreshing..."
   },
   "APM": {
+    "Importerunfichiermodèle": "Upload a model file",
+    "Formatsacceptéscsvetexcel": "Accepted formats:",
+    "Importdufichiermodèleencours": "Uploading the model file…",
+    "Formatdefichiernonprisencharge": "Unsupported file format. Use a CSV or Excel file (.xls, .xlsx).",
+    "Fichiermodèleimportéavecsuccès": "Model file uploaded successfully.",
+    "Erreurlorsdelimportdufichiermodèle": "Error while uploading the model file.",
     "Trxboopparttypessupplementaires": "Additional operation types",
     "Trxboopparttypessupplementairesdesc": "Operation types other than impact / fees / commission: the first declared type found in a group without IMPACT_COMPTE_GENERAL applies its own comment.",
     "Trxbooppartajoutertype": "Add a type",
@@ -5708,6 +5714,10 @@
       "filterActive": "Active only",
       "searchPlaceholder": "Filter by module name...",
       "activeCount": "{{count}} active module(s)",
+      "activeOfTotal": "{{active}} active / {{total}} module(s)",
+      "entrepriseLabel": "Company",
+      "statusActive": "Active",
+      "statusInactive": "Inactive",
       "standalone": "Standalone modules",
       "empty": "No company selected.",
       "errLoad": "Error while loading modules.",

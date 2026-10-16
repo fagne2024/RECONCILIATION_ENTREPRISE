@@ -74,7 +74,7 @@
       </ng-template>
       <h2>{{ 'LOGIN.title' | translate }}</h2>
       <p class="subtitle">{{ 'LOGIN.subtitle' | translate }}</p>
-      <p class="subtitle-brand">{{ 'LOGIN.brand' | translate }}</p>
+      <p class="subtitle-brand">{{ entrepriseNom || ('LOGIN.brand' | translate) }}</p>
     </div>
 
     <div class="login-security-notice">

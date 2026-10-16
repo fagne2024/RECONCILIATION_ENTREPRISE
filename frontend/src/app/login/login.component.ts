@@ -2,11 +2,14 @@ import { Component, OnInit } from '@angular/core';
 import { FormBuilder, FormGroup, Validators } from '@angular/forms';
 import { HttpClient } from '@angular/common/http';
 import { Router, ActivatedRoute } from '@angular/router';
+import { Subject, of } from 'rxjs';
+import { catchError, debounceTime, distinctUntilChanged, map, switchMap } from 'rxjs/operators';
 import { AppStateService } from '../services/app-state.service';
 import { UserService } from '../services/user.service';
 import { UserLogService } from '../services/user-log.service';
 import { LogoService } from '../services/logo.service';
 import { ThemeService } from '../services/theme.service';
+import { BrandingContextService } from '../services/branding-context.service';
 
 @Component({
   selector: 'app-login',
@@ -31,6 +34,11 @@ export class LoginComponent implements OnInit {
   qrCodeBase64: string | null = null; // QR code en base64
   secret: string | null = null; // Clé secrète
   otpAuthUrl: string | null = null; // URL OTP Auth
+  /** Nom de l'entreprise détectée ; null = marque par défaut. */
+  entrepriseNom: string | null = null;
+
+  /** Flux des saisies d'identifiant : déclenche la détection de l'entreprise. */
+  private readonly usernameInput$ = new Subject<string>();
 
   constructor(
     private fb: FormBuilder,
@@ -41,7 +49,8 @@ export class LoginComponent implements OnInit {
     private userService: UserService,
     private userLogService: UserLogService,
     public logoService: LogoService,
-    private themeService: ThemeService
+    private themeService: ThemeService,
+    private brandingContext: BrandingContextService
   ) {
     this.loginForm = this.fb.group({
       username: ['', Validators.required],
@@ -164,8 +173,59 @@ export class LoginComponent implements OnInit {
       this.router.navigateByUrl(this.appState.resolveAccessibleRoute(returnUrl));
       return;
     }
+    // Détecter l'entreprise à la saisie de l'identifiant pour prévisualiser sa
+    // marque (logo + couleurs) AVANT même de cliquer sur « Connexion ».
+    this.setupEntrepriseDetection();
     // Vérifier si l'utilisateur admin existe
     this.checkAdminExists();
+  }
+
+  /**
+   * Met à jour la marque (logo + thème) dès que l'identifiant change, sans
+   * attendre la soumission du formulaire. La résolution de l'entreprise est
+   * faite côté serveur à partir de l'identifiant saisi.
+   */
+  private setupEntrepriseDetection(): void {
+    const usernameControl = this.loginForm.get('username');
+    if (!usernameControl) {
+      return;
+    }
+
+    usernameControl.valueChanges
+      .subscribe(value => this.usernameInput$.next(value ?? ''));
+
+    this.usernameInput$.pipe(
+      map(value => (value ?? '').trim()),
+      debounceTime(400),
+      distinctUntilChanged(),
+      switchMap(username => {
+        if (!username) {
+          return of(null);
+        }
+        return this.http
+          .get<{ entrepriseCode: string | null; entrepriseNom: string | null }>(
+            '/api/auth/entreprise',
+            { params: { username } }
+          )
+          .pipe(catchError(() => of(null)));
+      })
+    ).subscribe(res => this.applyPreLoginBranding(res?.entrepriseCode ?? null, res?.entrepriseNom ?? null));
+
+    // Déclenche une première résolution (couvre l'auto-remplissage navigateur).
+    this.usernameInput$.next(usernameControl.value ?? '');
+  }
+
+  /**
+   * Applique la marque d'une entreprise détectée avant connexion. Un code
+   * `null` (identifiant inconnu / vidé / SUPER_ADMIN) fait reprendre le
+   * contexte d'URL (`?entreprise=CODE` / sous-domaine), sinon les valeurs par
+   * défaut. Le nom détecté remplace le libellé de marque par défaut.
+   */
+  private applyPreLoginBranding(entrepriseCode: string | null, entrepriseNom: string | null = null): void {
+    const code = entrepriseCode ?? this.brandingContext.resolveEntrepriseCode();
+    this.themeService.init(code);
+    this.logoService.load(code);
+    this.entrepriseNom = entrepriseNom && entrepriseNom.trim() ? entrepriseNom.trim() : null;
   }
 
   checkAdminExists() {

@@ -77,6 +77,12 @@
     "refreshing": "Actualisation..."
   },
   "APM": {
+    "Importerunfichiermodèle": "Importer un fichier modèle",
+    "Formatsacceptéscsvetexcel": "Formats acceptés :",
+    "Importdufichiermodèleencours": "Import du fichier modèle en cours…",
+    "Formatdefichiernonprisencharge": "Format de fichier non pris en charge. Utilisez un fichier CSV ou Excel (.xls, .xlsx).",
+    "Fichiermodèleimportéavecsuccès": "Fichier modèle importé avec succès.",
+    "Erreurlorsdelimportdufichiermodèle": "Erreur lors de l'import du fichier modèle.",
     "Trxboopparttypessupplementaires": "Types d'opérations supplémentaires",
     "Trxboopparttypessupplementairesdesc": "Types d'opération hors impact / frais / commission : le premier type déclaré présent dans un groupe sans IMPACT_COMPTE_GENERAL porte son propre commentaire.",
     "Trxbooppartajoutertype": "Ajouter un type",
@@ -5711,6 +5717,10 @@
       "filterActive": "Actifs seulement",
       "searchPlaceholder": "Filtrer par nom de module...",
       "activeCount": "{{count}} module(s) actif(s)",
+      "activeOfTotal": "{{active}} actif(s) / {{total}} module(s)",
+      "entrepriseLabel": "Entreprise",
+      "statusActive": "Actif",
+      "statusInactive": "Inactif",
       "standalone": "Modules autonomes",
       "empty": "Aucune entreprise sélectionnée.",
       "errLoad": "Erreur lors du chargement des modules.",

@@ -1992,6 +1992,11 @@ export class EcartBoSummaryComponent implements OnInit, OnDestroy {
     return statut === 'ok' ? 'statut-ok' : 'statut-en-cours';
   }
 
+  /** Vrai si la ligne provient de la plateforme Partenaire (coloration verte). */
+  isPartenaireRow(item: EcartBoSummaryItem): boolean {
+    return this.normalizeSummaryEnv(item.env) === 'PARTENAIRE';
+  }
+
   /**
    * Affiche uniquement la partie timestamp du token (ex. LINK-1769214369692-1-2 → 1769214369692).
    * Si le token n'est pas au format LINK-*, on affiche le token complet.

@@ -25,6 +25,12 @@ interface EntrepriseModules {
   modules: ModuleItem[];
 }
 
+interface EntrepriseOption {
+  id: number;
+  code: string;
+  nom: string;
+}
+
 interface UpdateModulesRequest {
   activeModuleIds: number[];
 }
@@ -41,6 +47,7 @@ export class PlatformModulesComponent implements OnInit, OnDestroy {
 
   entrepriseId: number | null = null;
   entreprise: EntrepriseModules | null = null;
+  entreprises: EntrepriseOption[] = [];
   loading = false;
   saving = false;
   error: string | null = null;
@@ -60,12 +67,41 @@ export class PlatformModulesComponent implements OnInit, OnDestroy {
       this.router.navigate(['/dashboard']);
       return;
     }
+    this.loadEntreprises();
     this.route.queryParams.pipe(takeUntil(this.destroy$)).subscribe(params => {
       const id = params['entrepriseId'];
       if (id) {
         this.entrepriseId = +id;
         this.loadEntrepriseModules();
+      } else {
+        this.entrepriseId = null;
+        this.entreprise = null;
+        this.selectDefaultEntreprise();
       }
+    });
+  }
+
+  private loadEntreprises(): void {
+    this.http.get<EntrepriseOption[]>('/api/platform/entreprises', this.getAuthHeaders())
+      .pipe(takeUntil(this.destroy$), catchError(() => of([] as EntrepriseOption[])))
+      .subscribe(list => {
+        this.entreprises = list ?? [];
+        this.selectDefaultEntreprise();
+      });
+  }
+
+  private selectDefaultEntreprise(): void {
+    if (!this.entrepriseId && this.entreprises.length) {
+      this.onEntrepriseChange(this.entreprises[0].id, true);
+    }
+  }
+
+  onEntrepriseChange(id: number | string | null, replaceUrl = false): void {
+    if (!id) return;
+    this.router.navigate([], {
+      relativeTo: this.route,
+      queryParams: { entrepriseId: +id },
+      replaceUrl
     });
   }
 
@@ -161,27 +197,43 @@ export class PlatformModulesComponent implements OnInit, OnDestroy {
   }
 
   get parents(): ModuleItem[] {
-    return this.entreprise?.modules.filter(m => this.isParent(m)) ?? [];
+    const visible = this.filteredModules();
+    return (this.entreprise?.modules ?? []).filter(m =>
+      this.isParent(m) && (visible.includes(m) || visible.some(c => c.parent === m.nom))
+    );
   }
 
   get standaloneModules(): ModuleItem[] {
-    return this.entreprise?.modules.filter(m => !this.isParent(m) && !m.parent) ?? [];
+    const parentNames = new Set((this.entreprise?.modules ?? []).filter(m => this.isParent(m)).map(m => m.nom));
+    return this.filteredModules().filter(m => !this.isParent(m) && !parentNames.has(m.parent!));
   }
 
   getChildren(parent: ModuleItem): ModuleItem[] {
+    return this.filteredModules().filter(m => m.parent === parent.nom);
+  }
+
+  getAllChildren(parent: ModuleItem): ModuleItem[] {
     return this.entreprise?.modules.filter(m => m.parent === parent.nom) ?? [];
   }
 
   getChildrenCount(parent: ModuleItem): number {
-    return this.getChildren(parent).length;
+    return this.getAllChildren(parent).length;
   }
 
   getActiveChildrenCount(parent: ModuleItem): number {
-    return this.getChildren(parent).filter(c => c.actif).length;
+    return this.getAllChildren(parent).filter(c => c.actif).length;
+  }
+
+  get totalCount(): number {
+    return this.entreprise?.modules.length ?? 0;
+  }
+
+  get activeCount(): number {
+    return this.entreprise?.modules.filter(m => m.actif).length ?? 0;
   }
 
   checkAllChildren(parent: ModuleItem, checked: boolean): void {
-    const children = this.getChildren(parent);
+    const children = this.getAllChildren(parent);
     children.forEach(child => child.actif = checked);
   }
 

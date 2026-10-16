@@ -132,4 +132,15 @@ export class FileWatcherService {
         })
       );
   }
+
+  /**
+   * Importe un fichier modèle (CSV / Excel) qui sera enregistré dans le dossier
+   * watch-folder de l'entreprise connectée.
+   */
+  uploadModelFile(file: File): Observable<any> {
+    const formData = new FormData();
+    formData.append('file', file);
+    console.log('📤 [FileWatcherService] uploadModelFile() pour:', file?.name);
+    return this.http.post<any>(`${this.apiUrl}/file-watcher/upload`, formData);
+  }
 } 

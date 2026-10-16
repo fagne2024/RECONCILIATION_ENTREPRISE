@@ -1712,16 +1712,23 @@ export class FileUploadComponent implements OnInit, OnDestroy {
         };
     }
 
-    /** Fusionne des lignes sans spread (évite « Maximum call stack size exceeded » sur gros fichiers). */
+    /**
+     * Fusionne des lignes sans spread sur l'ensemble du tableau source.
+     *
+     * `target.push(...source)` déverse tout le tableau dans les arguments de
+     * `push` : au-delà de ~65 000–125 000 éléments (limite de pile d'appels du
+     * moteur), cela lève « RangeError: Maximum call stack size exceeded ». On
+     * copie donc par tranches bornées, sûres quelle que soit la taille du fichier.
+     */
     private appendRowsSafely(target: Record<string, string>[], source: Record<string, string>[]): void {
         if (!source.length) {
             return;
         }
-        if (target.length === 0) {
-            (target as Record<string, string>[]).push(...source);
-            return;
+        const APPEND_CHUNK_SIZE = 10000;
+        for (let i = 0; i < source.length; i += APPEND_CHUNK_SIZE) {
+            const chunk = source.slice(i, i + APPEND_CHUNK_SIZE);
+            target.push(...chunk);
         }
-        (target as Record<string, string>[]).push(...source);
     }
 
     /** Paramètres de traitement par chunks (alignés sur la zone glisser-déposer /traitement). */
@@ -2327,9 +2334,20 @@ export class FileUploadComponent implements OnInit, OnDestroy {
         let succStatut = 0;
         let transacPaiement = 0;
         let both = 0;
+
+        // Les clés de colonnes sont identiques pour toutes les lignes d'une même feuille.
+        // On les résout UNE fois sur un échantillon : `resolveColumnKeyInRow` normalise les
+        // en-têtes et, à défaut de correspondance exacte (« Statut » / « Paiement » absents
+        // du fichier), balaie TOUTES les colonnes de la ligne en normalisant chacune, puis
+        // relance un second balayage par identifiant canonique bilingue — soit plusieurs
+        // millisecondes par appel. Appelé ligne à ligne sur des dizaines (ou centaines) de
+        // milliers de lignes, cela bloque la page pendant des minutes : le dernier message
+        // affiché reste alors « … — finalisation... ».
+        const sample = rows.find(r => Object.keys(r).length > 0) || rows[0] || {};
+        const sKey = resolveColumnKeyInRow(sample, 'Statut');
+        const pKey = resolveColumnKeyInRow(sample, 'Paiement');
+
         for (const row of rows) {
-            const sKey = resolveColumnKeyInRow(row, 'Statut');
-            const pKey = resolveColumnKeyInRow(row, 'Paiement');
             const sVal = sKey ? String(row[sKey] ?? '') : '';
             const pVal = pKey ? String(row[pKey] ?? '') : '';
             if (sKey) {
@@ -2348,8 +2366,24 @@ export class FileUploadComponent implements OnInit, OnDestroy {
                 both++;
             }
         }
-        const fmt = (m: Map<string, number>) =>
-            [...m.entries()].map(([k, v]) => `"${k}"=${v}`).join(', ') || '∅';
+        // Borné : une colonne à forte cardinalité (horodatage, référence…) produirait
+        // sinon une chaîne de plusieurs mégaoctets transmise à `console.error`.
+        const MAX_ENTRIES = 20;
+        const fmt = (m: Map<string, number>) => {
+            if (!m.size) {
+                return '∅';
+            }
+            const parts: string[] = [];
+            for (const [k, v] of m) {
+                if (parts.length >= MAX_ENTRIES) {
+                    break;
+                }
+                parts.push(`"${k}"=${v}`);
+            }
+            const others = m.size - parts.length;
+            const shown = parts.join(', ');
+            return others > 0 ? `${shown}, …(+${others} autres)` : shown;
+        };
         return `| Statut: ${fmt(statut)} | Paiement: ${fmt(paiement)} | Succès=${succStatut} Transaction=${transacPaiement} BOTH=${both}`;
     }
 

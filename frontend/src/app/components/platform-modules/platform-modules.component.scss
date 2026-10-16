@@ -249,6 +249,37 @@
   color: var(--rd-text3);
 }
 
+.pf-status {
+  margin-left: auto;
+  padding: 2px 10px;
+  border-radius: 999px;
+  font-size: 11.5px;
+  font-weight: 600;
+  color: var(--rd-text3);
+  background: rgba(127, 127, 127, 0.12);
+
+  &.pf-status-on {
+    color: #15803d;
+    background: rgba(34, 197, 94, 0.14);
+  }
+}
+
+.pf-entreprise-select {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  margin-bottom: 16px;
+
+  label {
+    font-weight: 600;
+    color: var(--rd-text2);
+  }
+
+  select {
+    max-width: 360px;
+  }
+}
+
 .pf-children {
   margin-left: 22px;
   padding-left: 16px;

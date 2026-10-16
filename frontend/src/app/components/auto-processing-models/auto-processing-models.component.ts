@@ -319,6 +319,13 @@ export class AutoProcessingModelsComponent implements OnInit {
   // États de chargement
   isLoadingTemplateColumns = false;
   isLoadingBOColumns = false;
+
+  // Import du fichier modèle (CSV / Excel) depuis le poste de travail
+  isUploadingTemplateFile = false;
+  templateUploadError = '';
+  private readonly allowedModelExtensions = ['.csv', '.xls', '.xlsx', '.xlsm', '.xlsb', '.xlt', '.xltx', '.xltm'];
+  readonly modelFileAccept = '.csv,.xls,.xlsx,.xlsm,.xlsb,.xlt,.xltx,.xltm';
+  readonly modelFileFormatsLabel = '.csv, .xls, .xlsx';
   
   // Options pour les types de format
   formatTypes = [
@@ -843,6 +850,60 @@ export class AutoProcessingModelsComponent implements OnInit {
     }).catch(error => {
       console.error('Erreur lors du chargement des fichiers:', error);
       this.loading = false;
+    });
+  }
+
+  /**
+   * Sélection d'un fichier modèle depuis le poste de travail : l'import est
+   * déclenché et le fichier est enregistré dans le dossier watch-folder de
+   * l'entreprise, puis la liste des fichiers est rafraîchie.
+   */
+  onTemplateFileSelected(event: Event): void {
+    const input = event.target as HTMLInputElement;
+    const file = input?.files?.[0];
+    // Réinitialise la valeur pour permettre de re-sélectionner le même fichier.
+    if (input) {
+      input.value = '';
+    }
+    if (!file) {
+      return;
+    }
+    this.uploadTemplateFile(file);
+  }
+
+  /** Importe le fichier modèle choisi dans le watch-folder de l'entreprise. */
+  uploadTemplateFile(file: File): void {
+    const lowerName = (file?.name || '').toLowerCase();
+    const isAllowed = this.allowedModelExtensions.some(ext => lowerName.endsWith(ext));
+    if (!isAllowed) {
+      this.templateUploadError = I18nService.t('APM.Formatdefichiernonprisencharge');
+      return;
+    }
+
+    this.isUploadingTemplateFile = true;
+    this.templateUploadError = '';
+    this.successMessage = '';
+
+    this.fileWatcherService.uploadModelFile(file).subscribe({
+      next: (result: any) => {
+        const uploadedName = result?.fileName;
+        this.loadAvailableFiles().then(() => {
+          this.isUploadingTemplateFile = false;
+          if (uploadedName) {
+            this.modelForm.patchValue({ templateFile: uploadedName });
+            this.loadTemplateColumns();
+          }
+          this.successMessage = I18nService.t('APM.Fichiermodèleimportéavecsuccès');
+          this.cdr.detectChanges();
+        });
+      },
+      error: (error: any) => {
+        console.error('❌ Erreur lors de l\'import du fichier modèle:', error);
+        this.isUploadingTemplateFile = false;
+        this.templateUploadError = error?.error?.error
+          || I18nService.t('APM.Erreurlorsdelimportdufichiermodèle');
+        this.cdr.detectChanges();
+      }
     });
   }
 
