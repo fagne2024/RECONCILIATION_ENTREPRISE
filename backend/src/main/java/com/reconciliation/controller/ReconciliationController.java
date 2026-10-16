@@ -58,6 +58,7 @@ public class ReconciliationController {
 
     /** Au-dela de ce seuil, les listes detaillees ne sont pas serialisees dans la reponse HTTP. */
     private static final int MAX_INLINE_RESULT_ROWS = 5_000;
+    private static final int MARK_OK_BULK_LIMIT = 200;
 
     private final CsvReconciliationService reconciliationService;
     @Autowired
@@ -97,6 +98,7 @@ public class ReconciliationController {
 
     // Marquer une clé de réconciliation comme OK (à ignorer)
     @PostMapping("/mark-ok")
+    @org.springframework.transaction.annotation.Transactional
     public ResponseEntity<Map<String, Object>> markOk(@RequestParam("key") String key) {
         if (key == null || key.trim().isEmpty()) {
             return ResponseEntity.badRequest().body(java.util.Map.of("success", false, "message", "Key manquante"));
@@ -109,6 +111,7 @@ public class ReconciliationController {
 
     // Marquer plusieurs clés comme OK (bulk)
     @PostMapping("/mark-ok/bulk")
+    @org.springframework.transaction.annotation.Transactional
     public ResponseEntity<Map<String, Object>> markOkBulk(@RequestBody Map<String, Object> body) {
         try {
             Object keysObj = body != null ? body.get("keys") : null;
@@ -116,6 +119,11 @@ public class ReconciliationController {
                 return ResponseEntity.badRequest().body(java.util.Map.of("success", false, "message", "Liste 'keys' requise"));
             }
             @SuppressWarnings("unchecked") List<Object> keysList = (List<Object>) keysObj;
+            if (keysList.size() > MARK_OK_BULK_LIMIT) {
+                return ResponseEntity.badRequest().body(java.util.Map.of(
+                    "success", false,
+                    "message", "Maximum " + MARK_OK_BULK_LIMIT + " clés par requête"));
+            }
             int created = 0;
             for (Object kObj : keysList) {
                 if (kObj == null) continue;
@@ -157,6 +165,7 @@ public class ReconciliationController {
 
     // Annuler plusieurs clés OK (bulk)
     @PostMapping("/unmark-ok/bulk")
+    @org.springframework.transaction.annotation.Transactional
     public ResponseEntity<Map<String, Object>> unmarkOkBulk(@RequestBody Map<String, Object> body) {
         try {
             Object keysObj = body != null ? body.get("keys") : null;
@@ -164,6 +173,11 @@ public class ReconciliationController {
                 return ResponseEntity.badRequest().body(java.util.Map.of("success", false, "message", "Liste 'keys' requise"));
             }
             @SuppressWarnings("unchecked") List<Object> keysList = (List<Object>) keysObj;
+            if (keysList.size() > MARK_OK_BULK_LIMIT) {
+                return ResponseEntity.badRequest().body(java.util.Map.of(
+                    "success", false,
+                    "message", "Maximum " + MARK_OK_BULK_LIMIT + " clés par requête"));
+            }
             int deleted = 0;
             for (Object kObj : keysList) {
                 if (kObj == null) continue;
