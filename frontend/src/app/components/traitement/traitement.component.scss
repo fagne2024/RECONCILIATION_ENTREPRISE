@@ -1624,32 +1624,6 @@
   }
 }
 
-// Correctif global pour le débordement vertical
-html, body, .main-content, .app-root, .ng-star-inserted {
-  min-height: 0 !important;
-  height: auto !important;
-  overflow-y: visible !important;
-}
-
-body, .main-content, .app-root, .ng-star-inserted {
-  background: #f4f8fb !important;
-  overflow-y: auto;
-  height: auto;
-  min-height: 100vh;
-  position: relative;
-}
-
-// Correction pour éviter le chevauchement des éléments
-* {
-  box-sizing: border-box;
-}
-
-// Correction spécifique pour les éléments Angular
-.ng-star-inserted {
-  position: relative;
-  z-index: 1;
-}
-
 // Styles pour la section d'extraction
 .extract-section {
   .section-header {
