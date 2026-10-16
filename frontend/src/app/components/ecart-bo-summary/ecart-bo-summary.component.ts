@@ -25,6 +25,7 @@ import {
 } from '../../constants/reconciliation-env-options';
 import { SharedModule } from '../../shared/shared.module';
 import { TranslateModule } from '@ngx-translate/core';
+import { DsPaginationComponent } from '../../shared/ui';
 
 export interface EcartBoSummaryItem {
   id?: number; // ID si l'item est sauvegardé
@@ -64,7 +65,7 @@ type SummaryGroupAccumulator = {
 @Component({
   selector: 'app-ecart-bo-summary',
   standalone: true,
-  imports: [TranslateModule, SharedModule],
+  imports: [TranslateModule, SharedModule, DsPaginationComponent],
   templateUrl: './ecart-bo-summary.component.html',
   styleUrls: ['./ecart-bo-summary.component.scss'],
   changeDetection: ChangeDetectionStrategy.OnPush

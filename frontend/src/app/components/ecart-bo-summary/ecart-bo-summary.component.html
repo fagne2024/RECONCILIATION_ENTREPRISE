@@ -44,15 +44,15 @@
       </p>
       <div class="env-preload-row">
         <label for="pendingEnvSelect">ENV</label>
-        <select id="pendingEnvSelect" [(ngModel)]="pendingEnvSelection" class="env-preload-select">
+        <select id="pendingEnvSelect" [(ngModel)]="pendingEnvSelection" class="env-preload-select ds-select">
           <option value="">{{ 'EBS.Teagrégatnonrenseigné' | translate }}</option>
           <option *ngFor="let code of envCodePresetOptions; trackBy: trackByString" [value]="code">{{ code }}</option>
         </select>
-        <button type="button" class="env-preload-btn primary" (click)="confirmEnvAndLoadData()" [disabled]="isLoading">
+        <button type="button" class="env-preload-btn primary ds-btn ds-btn--primary" (click)="confirmEnvAndLoadData()" [disabled]="isLoading">
           {{ (isLoading ? 'COMMON.actions.loading' : 'EBS.Affichadedelonnées') | translate }}
         </button>
       </div>
-      <button type="button" class="env-preload-btn ghost" (click)="loadSavedSummaryData()">
+      <button type="button" class="env-preload-btn ghost ds-btn ds-btn--ghost" (click)="loadSavedSummaryData()">
         {{ 'EBS.Chargerlesdonnéessauvegardéesàlaplace' | translate }}
       </button>
     </div>
@@ -69,17 +69,17 @@
       <div class="hero-kpi-strip">
         <div class="hk-strip-item">
           <span class="hk-strip-label">{{ 'TBL.rows' | translate }}</span>
-          <span class="hk-strip-value">{{ filteredItems.length | number:'1.0-0' }}</span>
+          <span class="hk-strip-value ds-num">{{ filteredItems.length | number:'1.0-0' }}</span>
         </div>
         <div class="hk-strip-sep"></div>
         <div class="hk-strip-item">
           <span class="hk-strip-label">{{ 'EBS.Nombretotal' | translate }}</span>
-          <span class="hk-strip-value">{{ getTotalNombre() | number:'1.0-0' }}</span>
+          <span class="hk-strip-value ds-num">{{ getTotalNombre() | number:'1.0-0' }}</span>
         </div>
         <div class="hk-strip-sep"></div>
         <div class="hk-strip-item">
           <span class="hk-strip-label">{{ 'TBL.volume' | translate }}</span>
-          <span class="hk-strip-value">{{ getTotalVolume() | number:'1.0-0' }}</span>
+          <span class="hk-strip-value ds-num">{{ getTotalVolume() | number:'1.0-0' }}</span>
         </div>
       </div>
     </div>
@@ -102,48 +102,54 @@
       <span class="total-count" *ngIf="selectedSavableCount > 0">
         {{ selectedSavableCount }} {{ 'EBS.Lignescochéesserontenregistrées' | translate }}
       </span>
-      <button 
-        (click)="saveData()" 
-        class="save-button" 
+      <button
+        type="button"
+        (click)="saveData()"
+        class="save-button ds-btn ds-btn--primary ds-btn--sm"
         [disabled]="isSaving || filteredItems.length === 0"
         title="{{ 'EBS.Sauvegarderlesécartsboencoursdanslatableecartbosummary' | translate }}"
       >
         {{ (isSaving ? '💾 ' + ('EBS.Sauvegardeencours' | translate) : '💾 ' + ('COMMON.actions.save' | translate)) }}
       </button>
-      <button 
-        (click)="loadSavedSummaryData()" 
-        class="load-saved-button"
+      <button
+        type="button"
+        (click)="loadSavedSummaryData()"
+        class="load-saved-button ds-btn ds-btn--secondary ds-btn--sm"
         title="{{ 'EBS.Chargerlesdonnéesdéjàsauvegardées' | translate }}"
       >
         {{ 'EBS.Voirlesdonnéessauvegardées' | translate }}
       </button>
-      <button 
-        (click)="openAddModal()" 
-        class="add-button"
+      <button
+        type="button"
+        (click)="openAddModal()"
+        class="add-button ds-btn ds-btn--secondary ds-btn--sm"
         title="{{ 'EBS.Ajouterunenouvelleligne' | translate }}"
       >
         {{ 'EBS.Ajouteruneligne' | translate }}
       </button>
-      <button 
-        (click)="exportData()" 
-        class="export-button"
+      <button
+        type="button"
+        (click)="exportData()"
+        class="export-button ds-btn ds-btn--secondary ds-btn--sm"
         [disabled]="isExporting || filteredItems.length === 0"
         title="{{ 'EBS.Exporterlesdonnéesfiltréesencsv' | translate }}"
       >
         {{ (isExporting ? '⏳ ' + ('EBS.Exportencours' | translate) : '📥 ' + ('COMMON.actions.export' | translate)) }}
       </button>
-      <button 
-        (click)="deleteSelected()" 
-        class="delete-selection-button"
+      <button
+        type="button"
+        (click)="deleteSelected()"
+        class="delete-selection-button ds-btn ds-btn--danger ds-btn--sm"
         [disabled]="isBulkDeleting || selectedDeletableCount === 0"
         title="{{ 'EBS.Supprimerleslignessélectionnées' | translate }}"
       >
         {{ (isBulkDeleting ? '⏳ ' + ('EBS.Supprimerencours' | translate) : '🗑️ ' + ('EBS.Supprimerlasélection' | translate)) }}{{ selectedDeletableCount > 0 ? ' (' + selectedDeletableCount + ')' : '' }}
       </button>
-      <button 
+      <button
+        type="button"
         *ngIf="selectedRowKeys.size > 0"
-        (click)="clearSelection()" 
-        class="clear-selection-button"
+        (click)="clearSelection()"
+        class="clear-selection-button ds-btn ds-btn--ghost ds-btn--sm"
         [disabled]="isBulkDeleting"
         title="{{ 'EBS.Désélectionnertout' | translate }}"
       >
@@ -153,36 +159,36 @@
   </div>
 
   <!-- Filtres -->
-  <div class="filters-section" *ngIf="!isLoading" style="flex-shrink: 0;">
+  <div class="filters-section ds-filter-bar" *ngIf="!isLoading" style="flex-shrink: 0;">
     <div class="filter-row">
-      <div class="filter-item">
+      <div class="filter-item ds-field">
         <label>{{ 'EBS.Datedu' | translate }}</label>
         <input 
           type="date" 
           [(ngModel)]="selectedDateFrom" 
           (change)="applyFilters()"
-          class="filter-input"
+          class="filter-input ds-input"
         >
       </div>
-      <div class="filter-item">
+      <div class="filter-item ds-field">
         <label>{{ 'EBS.Dateau' | translate }}</label>
         <input 
           type="date" 
           [(ngModel)]="selectedDateTo" 
           (change)="applyFilters()"
-          class="filter-input"
+          class="filter-input ds-input"
         >
       </div>
-      <div class="filter-item">
+      <div class="filter-item ds-field">
         <label>{{ 'TBL.agency' | translate }}</label>
-        <select [(ngModel)]="selectedAgence" (change)="applyFilters()" class="filter-select">
+        <select [(ngModel)]="selectedAgence" (change)="applyFilters()" class="filter-select ds-select">
           <option value="">{{ 'FILT.allF' | translate }}</option>
           <option *ngFor="let agence of uniqueAgencies; trackBy: trackByString" [value]="agence">{{agence}}</option>
         </select>
       </div>
-      <div class="filter-item">
+      <div class="filter-item ds-field">
         <label>{{ 'TBL.service' | translate }}</label>
-        <select [(ngModel)]="selectedService" (change)="applyFilters()" class="filter-select" [disabled]="!!magicServiceFilterLocked">
+        <select [(ngModel)]="selectedService" (change)="applyFilters()" class="filter-select ds-select" [disabled]="!!magicServiceFilterLocked">
           <option value="">{{ 'FILT.all' | translate }}</option>
           <option *ngFor="let service of filterOptionsServices; trackBy: trackByString" [value]="service">{{service}}</option>
         </select>
@@ -190,37 +196,37 @@
           {{ 'EBS.Cloisonné' | translate }} {{ magicServiceFilterLocked }} {{ 'EBS.Réconciliationmagique' | translate }}
         </small>
       </div>
-      <div class="filter-item">
+      <div class="filter-item ds-field">
         <label>{{ 'TBL.country' | translate }}</label>
-        <select [(ngModel)]="selectedPays" (change)="applyFilters()" class="filter-select">
+        <select [(ngModel)]="selectedPays" (change)="applyFilters()" class="filter-select ds-select">
           <option value="">{{ 'FILT.all' | translate }}</option>
           <option *ngFor="let pays of filterOptionsPays; trackBy: trackByString" [value]="pays">{{pays}}</option>
         </select>
       </div>
-      <div class="filter-item">
+      <div class="filter-item ds-field">
         <label>{{ 'EBS.Plateforme' | translate }}</label>
-        <select [(ngModel)]="selectedEnv" (change)="applyFilters()" class="filter-select" title="{{ 'EBS.BOoupartenairedonnéesenplateformepartenaire' | translate }}">
+        <select [(ngModel)]="selectedEnv" (change)="applyFilters()" class="filter-select ds-select" title="{{ 'EBS.BOoupartenairedonnéesenplateformepartenaire' | translate }}">
           <option value="">{{ 'FILT.allF' | translate }}</option>
           <option value="BO">BO</option>
           <option value="PARTENAIRE">PARTENAIRE</option>
         </select>
       </div>
-      <div class="filter-item">
+      <div class="filter-item ds-field">
         <label>ENV</label>
-        <select [(ngModel)]="selectedEnvCode" (change)="applyFilters()" class="filter-select" title="{{ 'EBS.Environnementtechniquebethtteagrégat' | translate }}">
+        <select [(ngModel)]="selectedEnvCode" (change)="applyFilters()" class="filter-select ds-select" title="{{ 'EBS.Environnementtechniquebethtteagrégat' | translate }}">
           <option value="">{{ 'FILT.all' | translate }}</option>
           <option *ngFor="let code of filterOptionsEnvCodes; trackBy: trackByString" [value]="code">{{ code }}</option>
         </select>
       </div>
-      <div class="filter-item">
+      <div class="filter-item ds-field">
         <label>{{ 'TBL.status' | translate }}</label>
-        <select [(ngModel)]="selectedStatut" (change)="applyFilters()" class="filter-select">
+        <select [(ngModel)]="selectedStatut" (change)="applyFilters()" class="filter-select ds-select">
           <option value="">{{ 'FILT.all' | translate }}</option>
           <option value="ok">{{ 'COMMON.actions.ok' | translate }}</option>
           <option value="en cours">{{ 'MSG.inProgress' | translate }}</option>
         </select>
       </div>
-      <div class="filter-item">
+      <div class="filter-item ds-field">
         <label>{{ 'EBS.Token' | translate }}</label>
         <div class="filter-inline-token">
           <input 
@@ -229,12 +235,12 @@
             (input)="onSearch()"
             (keyup.enter)="loadByToken()"
             placeholder="{{ 'EBS.Liaisonbopartenaire' | translate }}"
-            class="filter-input"
+            class="filter-input ds-input"
             title="Filtrer par token (lien entre lignes BO et Partenaire OK)"
           >
           <button 
             type="button" 
-            class="btn-search-token"
+            class="btn-search-token ds-btn ds-btn--secondary ds-btn--sm ds-btn--icon"
             (click)="loadByToken()"
             [disabled]="isLoading || !selectedToken?.trim()"
             title="{{ 'EBS.Rechercherapidepartokenapi' | translate }}"
@@ -243,18 +249,18 @@
           </button>
         </div>
       </div>
-      <div class="filter-item">
+      <div class="filter-item ds-field">
         <label>{{ 'BQ.Recherche' | translate }}</label>
         <input 
           type="text" 
           [(ngModel)]="searchKey" 
           (input)="onSearch()"
           placeholder="{{ 'ACT.search' | translate }}"
-          class="filter-input"
+          class="filter-input ds-input"
         >
       </div>
-      <div class="filter-item">
-        <button (click)="clearFilters()" class="clear-filters-btn">{{ 'ACT.clearFilters' | translate }}</button>
+      <div class="filter-item ds-field">
+        <button type="button" (click)="clearFilters()" class="clear-filters-btn ds-btn ds-btn--ghost ds-btn--sm">{{ 'ACT.clearFilters' | translate }}</button>
       </div>
     </div>
   </div>
@@ -276,14 +282,15 @@
 
   <!-- Tableau -->
   <div class="table-section" *ngIf="!isLoading">
-    <div class="table-container">
-      <table class="summary-table">
+    <div class="table-container ds-table-scroll">
+      <table class="summary-table ds-table">
         <thead>
           <tr>
             <th class="th-checkbox">
-              <input 
-                type="checkbox" 
-                [checked]="filteredItems.length > 0 && isAllSelectedFiltered" 
+              <input
+                type="checkbox"
+                class="ds-checkbox"
+                [checked]="filteredItems.length > 0 && isAllSelectedFiltered"
                 [indeterminate]="someFilteredSelected"
                 (change)="toggleSelectAllFiltered()"
                 title="Tout sélectionner / désélectionner les lignes actionnables"
@@ -305,9 +312,10 @@
         <tbody>
           <tr *ngFor="let item of pagedItems; trackBy: trackBySelectionKey" [class.manual-row]="item.isManual" [class.linked-row]="item.linkedId" [class.partenaire-row]="isPartenaireRow(item)" [class.duplicate-row]="item.isDuplicate" [class.row-selected]="isSelected(item)">
             <td class="td-checkbox">
-              <input 
+              <input
                 *ngIf="item.id || item.statut === 'en cours'"
-                type="checkbox" 
+                type="checkbox"
+                class="ds-checkbox"
                 [checked]="isSelected(item)"
                 (change)="toggleSelection(item)"
                 [title]="item.id ? 'Sélectionner pour suppression' : 'Sélectionner pour sauvegarde'"
@@ -318,7 +326,7 @@
             <td>
               {{ item.agence || '-' }}
               <span
-                class="duplicate-badge"
+                class="duplicate-badge ds-badge ds-badge--duplicate"
                 *ngIf="item.isDuplicate"
                 [title]="item.duplicateHint || 'Ligne en doublon'">
                 {{ 'EBS.Doublon' | translate }}
@@ -329,8 +337,8 @@
             <td>{{ item.env || 'BO' }}</td>
             <td>{{ item.envCode || '—' }}</td>
             <td class="token-cell" [title]="item.token || 'Lien BO/Partenaire (recherche rapide)'">{{ getTokenDisplay(item.token) }}</td>
-            <td class="nombre-cell">{{ item.nombre | number:'1.0-0' }}</td>
-            <td class="volume-cell">{{ item.montant | number:'1.0-0' }}</td>
+            <td class="nombre-cell ds-num">{{ item.nombre | number:'1.0-0' }}</td>
+            <td class="volume-cell ds-num">{{ item.montant | number:'1.0-0' }}</td>
             <td class="statut-cell">
               <select 
                 [(ngModel)]="item.statut" 
@@ -344,17 +352,19 @@
             </td>
             <td class="actions-cell">
               <div class="actions-wrap">
-                <button 
-                  (click)="openEditModal(item)" 
-                  class="edit-button"
+                <button
+                  type="button"
+                  (click)="openEditModal(item)"
+                  class="edit-button ds-btn ds-btn--ghost ds-btn--sm ds-btn--icon"
                   title="{{ 'BQ.Modifiercetteligne' | translate }}"
                   aria-label="{{ 'ACT.edit' | translate }}"
                 >
                   <i class="fas fa-pen"></i>
                 </button>
-                <button 
-                  (click)="deleteItem(item)" 
-                  class="delete-button"
+                <button
+                  type="button"
+                  (click)="deleteItem(item)"
+                  class="delete-button ds-btn ds-btn--ghost ds-btn--sm ds-btn--icon"
                   title="{{ 'BQ.Supprimercetteligne' | translate }}"
                   aria-label="{{ 'ACT.delete' | translate }}"
                   [disabled]="isDeleting && deletingItemId === item.id"
@@ -381,47 +391,33 @@
 
   <!-- Pagination -->
   <div class="pagination-section" *ngIf="!isLoading && filteredItems.length > 0" style="flex-shrink: 0;">
-    <div class="pagination-info">
-      <span>
-        {{ 'EBS.Affichagede' | translate }} {{ (currentPage - 1) * pageSize + 1 }} {{ 'TRT.To' | translate }} {{ Math.min(currentPage * pageSize, filteredItems.length) }} 
-        {{ 'CPT.Sur' | translate }} {{ filteredItems.length }} {{ 'EBS.Résultatspage' | translate }} {{currentPage}} / {{totalPages}})
-      </span>
-    </div>
+    <ds-pagination
+      [page]="currentPage"
+      [pageCount]="totalPages"
+      [totalItems]="filteredItems.length"
+      [pageSize]="pageSize"
+      [itemLabel]="'EBS.Écartsbo' | translate"
+      (pageChange)="goToPage($event)">
+    </ds-pagination>
     <div class="pagination-controls">
       <div class="pagination-size">
         <label>{{ 'EBS.Parpage' | translate }}</label>
-        <select [(ngModel)]="pageSize" (change)="onPageSizeChange()" class="page-size-select">
+        <select [(ngModel)]="pageSize" (change)="onPageSizeChange()" class="page-size-select ds-select">
           <option [value]="10">10</option>
           <option [value]="20">20</option>
           <option [value]="50">50</option>
           <option [value]="100">100</option>
         </select>
       </div>
-      <button (click)="prevPage()" [disabled]="currentPage === 1" class="page-btn">
-        {{ 'EBS.Précédent' | translate }}
-      </button>
-      <div class="page-numbers">
-        <button 
-          *ngFor="let page of getPageNumbers(); trackBy: trackByNumber" 
-          (click)="goToPage(page)"
-          [class.active]="page === currentPage"
-          class="page-number-btn"
-        >
-          {{page}}
-        </button>
-      </div>
-      <button (click)="nextPage()" [disabled]="currentPage === totalPages" class="page-btn">
-        {{ 'EBS.Suivant' | translate }}
-      </button>
       <div class="pagination-jump">
         <label>{{ 'EBS.Allerà' | translate }}</label>
-        <input 
-          type="number" 
-          [value]="currentPage" 
+        <input
+          type="number"
+          [value]="currentPage"
           (change)="goToPage($any($event.target).value)"
           [min]="1"
           [max]="totalPages"
-          class="page-jump-input"
+          class="page-jump-input ds-input"
         >
       </div>
     </div>
@@ -432,7 +428,7 @@
     <div class="modal-content" (click)="$event.stopPropagation()">
       <div class="modal-header">
         <h3>{{ 'EBS.Ajouterunenouvelleligne_1' | translate }}</h3>
-        <button (click)="closeAddModal()" class="modal-close-btn">×</button>
+        <button type="button" (click)="closeAddModal()" class="modal-close-btn" [attr.aria-label]="'COMMON.actions.close' | translate">×</button>
       </div>
       <div class="modal-body">
         <div class="form-group">
@@ -440,7 +436,7 @@
           <input 
             type="date" 
             [(ngModel)]="addForm.date" 
-            class="form-control"
+            class="form-control ds-input"
             required
           >
         </div>
@@ -449,7 +445,7 @@
           <input 
             type="text"
             [(ngModel)]="addForm.agence" 
-            class="form-control"
+            class="form-control ds-input"
             placeholder="{{ 'EBS.Saisirouchoisiruneagence' | translate }}"
             list="agenceListAdd"
             autocomplete="off"
@@ -466,7 +462,7 @@
           <input 
             type="text"
             [(ngModel)]="addForm.service" 
-            class="form-control"
+            class="form-control ds-input"
             placeholder="{{ 'EBS.Saisirouchoisirunservice' | translate }}"
             list="serviceListAdd"
             autocomplete="off"
@@ -483,7 +479,7 @@
           <input 
             type="text"
             [(ngModel)]="addForm.pays" 
-            class="form-control"
+            class="form-control ds-input"
             placeholder="{{ 'EBS.Saisirouchoisirunpays' | translate }}"
             list="paysListAdd"
             autocomplete="off"
@@ -500,7 +496,7 @@
           <input 
             type="number" 
             [(ngModel)]="addForm.nombre" 
-            class="form-control"
+            class="form-control ds-input"
             min="0"
             required
             placeholder="0"
@@ -511,7 +507,7 @@
           <input 
             type="number" 
             [(ngModel)]="addForm.volume" 
-            class="form-control"
+            class="form-control ds-input"
             min="0"
             step="0.01"
             required
@@ -520,21 +516,21 @@
         </div>
         <div class="form-group">
           <label>{{ 'TBL.statusRequired' | translate }}</label>
-          <select [(ngModel)]="addForm.statut" class="form-control">
+          <select [(ngModel)]="addForm.statut" class="form-control ds-select">
             <option value="en cours">{{ 'MSG.inProgress' | translate }}</option>
             <option value="ok">{{ 'COMMON.actions.ok' | translate }}</option>
           </select>
         </div>
         <div class="form-group">
           <label>{{ 'EBS.Plateforme_1' | translate }}</label>
-          <select [(ngModel)]="addForm.env" class="form-control" title="{{ 'EBS.BOoupartenaire' | translate }}">
+          <select [(ngModel)]="addForm.env" class="form-control ds-select" title="{{ 'EBS.BOoupartenaire' | translate }}">
             <option value="BO">BO</option>
             <option value="PARTENAIRE">PARTENAIRE</option>
           </select>
         </div>
         <div class="form-group">
           <label>ENV</label>
-          <select [(ngModel)]="addForm.envCode" class="form-control" title="{{ 'EBS.Environnementtechniquebetht' | translate }}">
+          <select [(ngModel)]="addForm.envCode" class="form-control ds-select" title="{{ 'EBS.Environnementtechniquebetht' | translate }}">
             <option value="">{{ 'EBS.Nonrenseigné' | translate }}</option>
             <option *ngFor="let code of uniqueEnvCodes" [value]="code">{{ code }}</option>
           </select>
@@ -544,17 +540,18 @@
           <input 
             type="text" 
             [(ngModel)]="addForm.token" 
-            class="form-control"
+            class="form-control ds-input"
             placeholder="{{ 'EBS.Lienbopartenaireoptionnel' | translate }}"
             maxlength="64"
           >
         </div>
       </div>
       <div class="modal-footer">
-        <button (click)="closeAddModal()" class="btn-cancel">{{ 'COMMON.actions.cancel' | translate }}</button>
-        <button 
-          (click)="addItem()" 
-          class="btn-save"
+        <button type="button" (click)="closeAddModal()" class="btn-cancel ds-btn ds-btn--secondary">{{ 'COMMON.actions.cancel' | translate }}</button>
+        <button
+          type="button"
+          (click)="addItem()"
+          class="btn-save ds-btn ds-btn--primary"
           [disabled]="isAdding"
         >
           {{ (isAdding ? '⏳ ' + ('CPT.Adding' | translate) : '➕ ' + ('COMMON.actions.add' | translate)) }}
@@ -568,7 +565,7 @@
     <div class="modal-content" (click)="$event.stopPropagation()">
       <div class="modal-header">
         <h3>{{ 'EBS.Modifierlaligne' | translate }}</h3>
-        <button (click)="closeEditModal()" class="modal-close-btn">×</button>
+        <button type="button" (click)="closeEditModal()" class="modal-close-btn" [attr.aria-label]="'COMMON.actions.close' | translate">×</button>
       </div>
       <div class="modal-body">
         <div class="form-group">
@@ -576,7 +573,7 @@
           <input 
             type="text" 
             [(ngModel)]="editForm.date" 
-            class="form-control"
+            class="form-control ds-input"
             placeholder="{{ 'EBS.YYYYmmddouyyyymmddthhmmss' | translate }}"
           >
         </div>
@@ -584,7 +581,7 @@
           <label>{{ 'TBL.agencyRequired' | translate }}</label>
           <select 
             [(ngModel)]="editForm.agence" 
-            class="form-control"
+            class="form-control ds-select"
             required
           >
             <option value="">{{ 'EBS.Sélectionneruneagence' | translate }}</option>
@@ -597,7 +594,7 @@
           <label>{{ 'TBL.serviceRequired' | translate }}</label>
           <select 
             [(ngModel)]="editForm.service" 
-            class="form-control"
+            class="form-control ds-select"
             required
           >
             <option value="">{{ 'EBS.Sélectionnerunservice' | translate }}</option>
@@ -610,7 +607,7 @@
           <label>{{ 'TBL.countryRequired' | translate }}</label>
           <select 
             [(ngModel)]="editForm.pays" 
-            class="form-control"
+            class="form-control ds-select"
             required
           >
             <option value="">{{ 'EBS.Sélectionnerunpays' | translate }}</option>
@@ -624,7 +621,7 @@
           <input 
             type="number" 
             [(ngModel)]="editForm.nombre" 
-            class="form-control"
+            class="form-control ds-input"
             min="0"
             required
           >
@@ -634,7 +631,7 @@
           <input 
             type="number" 
             [(ngModel)]="editForm.volume" 
-            class="form-control"
+            class="form-control ds-input"
             min="0"
             step="0.01"
             required
@@ -642,21 +639,21 @@
         </div>
         <div class="form-group">
           <label>{{ 'TBL.statusRequired' | translate }}</label>
-          <select [(ngModel)]="editForm.statut" class="form-control">
+          <select [(ngModel)]="editForm.statut" class="form-control ds-select">
             <option value="en cours">{{ 'MSG.inProgress' | translate }}</option>
             <option value="ok">{{ 'COMMON.actions.ok' | translate }}</option>
           </select>
         </div>
         <div class="form-group">
           <label>{{ 'EBS.Plateforme_1' | translate }}</label>
-          <select [(ngModel)]="editForm.env" class="form-control" title="{{ 'EBS.BOoupartenaire' | translate }}">
+          <select [(ngModel)]="editForm.env" class="form-control ds-select" title="{{ 'EBS.BOoupartenaire' | translate }}">
             <option value="BO">BO</option>
             <option value="PARTENAIRE">PARTENAIRE</option>
           </select>
         </div>
         <div class="form-group">
           <label>ENV</label>
-          <select [(ngModel)]="editForm.envCode" class="form-control" title="{{ 'EBS.Environnementtechniquebetht' | translate }}">
+          <select [(ngModel)]="editForm.envCode" class="form-control ds-select" title="{{ 'EBS.Environnementtechniquebetht' | translate }}">
             <option value="">{{ 'EBS.Nonrenseigné' | translate }}</option>
             <option *ngFor="let code of uniqueEnvCodes" [value]="code">{{ code }}</option>
           </select>
@@ -666,17 +663,18 @@
           <input 
             type="text" 
             [(ngModel)]="editForm.token" 
-            class="form-control"
+            class="form-control ds-input"
             placeholder="{{ 'EBS.Lienbopartenairerechercherapide' | translate }}"
             maxlength="64"
           >
         </div>
       </div>
       <div class="modal-footer">
-        <button (click)="closeEditModal()" class="btn-cancel">{{ 'COMMON.actions.cancel' | translate }}</button>
-        <button 
-          (click)="updateItem()" 
-          class="btn-save"
+        <button type="button" (click)="closeEditModal()" class="btn-cancel ds-btn ds-btn--secondary">{{ 'COMMON.actions.cancel' | translate }}</button>
+        <button
+          type="button"
+          (click)="updateItem()"
+          class="btn-save ds-btn ds-btn--primary"
           [disabled]="isUpdating"
         >
           {{ (isUpdating ? '⏳ ' + ('RPT.savingEntries' | translate) : '💾 ' + ('RPT.saveChanges' | translate)) }}
