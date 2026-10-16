@@ -1,17 +1,15 @@
 :host {
-  --bg: #f3f0e9;
-  --surface: #ffffff;
-  --soft: #faf8f3;
-  --ink: #16233b;
-  --muted: #6a7383;
-  --line: #e6e0d2;
-  --primary: #2d6be0;
+  --bg: var(--color-bg);
+  --surface: var(--color-surface-raised);
+  --soft: var(--color-surface-sunken);
+  --ink: var(--color-text-primary);
+  --muted: var(--color-text-muted);
+  --line: var(--color-border);
+  --primary: var(--color-accent);
   --agents: #2563eb;
   --responsables: #7c3aed;
   --validateurs: #0f766e;
-  --warn: #b7791f;
-  --font-ui: 'Sora', system-ui, -apple-system, 'Segoe UI', sans-serif;
-  --font-display: 'Instrument Serif', Georgia, serif;
+  --warn: var(--color-warning);
   display: block;
   color: var(--ink);
   font-family: var(--font-ui);

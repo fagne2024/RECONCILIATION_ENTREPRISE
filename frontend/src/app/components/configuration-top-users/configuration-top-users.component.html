@@ -5,15 +5,15 @@
       <p>{{ 'CFG.topUsers.subtitle' | translate }}</p>
     </div>
     <div class="top-acts">
-      <button type="button" class="btn ghost" (click)="resetDefaults()" [disabled]="loading || saving">
+      <button type="button" class="ds-btn ds-btn--secondary btn ghost" (click)="resetDefaults()" [disabled]="loading || saving">
         <i class="fas fa-rotate-left"></i>
         {{ 'CFG.topUsers.reset' | translate }}
       </button>
-      <button type="button" class="btn p" (click)="save()" [disabled]="loading || saving || !dirty">
+      <button type="button" class="ds-btn ds-btn--secondary btn p" (click)="save()" [disabled]="loading || saving || !dirty">
         <i class="fas" [ngClass]="saving ? 'fa-spinner fa-spin' : 'fa-save'"></i>
         {{ 'CFG.topUsers.save' | translate }}
       </button>
-      <button type="button" class="icon-btn" (click)="close()" [title]="'CFG.topUsers.close' | translate">
+      <button type="button" class="ds-btn ds-btn--secondary icon-btn" (click)="close()" [title]="'CFG.topUsers.close' | translate">
         <i class="fas fa-times"></i>
       </button>
     </div>
@@ -64,7 +64,7 @@
           <b>{{ 'CFG.topUsers.topN' | translate }}</b>
           <small>{{ 'CFG.topUsers.topNHint' | translate }}</small>
         </span>
-        <select [(ngModel)]="config.topN" [disabled]="saving || !config.enabled">
+        <select class="ds-select" [(ngModel)]="config.topN" [disabled]="saving || !config.enabled">
           <option *ngFor="let n of topNOptions" [ngValue]="n">{{ n }}</option>
         </select>
       </label>
@@ -86,19 +86,19 @@
           <label class="cat-enable">
             <input type="checkbox" [(ngModel)]="cat.enabled" [disabled]="saving || !config.enabled">
           </label>
-          <input type="text" class="cat-title" maxlength="120" [(ngModel)]="cat.title"
+          <input type="text" class="ds-input cat-title" maxlength="120" [(ngModel)]="cat.title"
                  [placeholder]="titlePlaceholder(cat)"
                  [disabled]="saving || !config.enabled">
           <span class="cat-tools">
-            <button type="button" class="icon-btn sm" (click)="moveCategory(i, -1)"
+            <button type="button" class="ds-btn ds-btn--secondary icon-btn sm" (click)="moveCategory(i, -1)"
                     [disabled]="saving || i === 0" [title]="'CFG.topUsers.moveUp' | translate">
               <i class="fas fa-arrow-up"></i>
             </button>
-            <button type="button" class="icon-btn sm" (click)="moveCategory(i, 1)"
+            <button type="button" class="ds-btn ds-btn--secondary icon-btn sm" (click)="moveCategory(i, 1)"
                     [disabled]="saving || i === config.categories.length - 1" [title]="'CFG.topUsers.moveDown' | translate">
               <i class="fas fa-arrow-down"></i>
             </button>
-            <button type="button" class="icon-btn sm danger" (click)="removeCategory(i)"
+            <button type="button" class="ds-btn ds-btn--danger icon-btn sm danger" (click)="removeCategory(i)"
                     [disabled]="saving" [title]="'CFG.topUsers.removeCategory' | translate">
               <i class="fas fa-trash"></i>
             </button>
@@ -108,7 +108,7 @@
         <div class="cat-fields">
           <label class="fld">
             <span>{{ 'CFG.topUsers.actionLabelTitle' | translate }}</span>
-            <input type="text" maxlength="120" [(ngModel)]="cat.actionLabel"
+            <input class="ds-input" type="text" maxlength="120" [(ngModel)]="cat.actionLabel"
                    [placeholder]="actionPlaceholder(cat)"
                    [disabled]="saving || !config.enabled">
           </label>
@@ -143,7 +143,7 @@
       </div>
 
       <div class="cat-add" *ngIf="canAddCategory">
-        <button type="button" class="btn ghost" (click)="addCategory()" [disabled]="saving || !config.enabled">
+        <button type="button" class="ds-btn ds-btn--secondary btn ghost" (click)="addCategory()" [disabled]="saving || !config.enabled">
           <i class="fas fa-plus"></i> {{ 'CFG.topUsers.addCategory' | translate }}
         </button>
       </div>
