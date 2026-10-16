@@ -2,7 +2,7 @@
 <div *ngIf="showPerformancePopup" class="performance-popup-overlay">
     <div class="performance-popup">
         <div class="performance-header">
-            <h3>📊 Performance de la réconciliation</h3>
+            <h3><i class="fas fa-tachometer-alt"></i> Performance de la réconciliation</h3>
         </div>
         <div class="performance-details">
             <div class="performance-item">
@@ -18,7 +18,7 @@
                 <span>Vitesse: {{ (processedRecords / (executionTime / 1000)) | number:'1.0-0' }} enregistrements/seconde</span>
             </div>
         </div>
-        <button class="close-popup-btn" (click)="closePerformancePopup()">{{ 'COMMON.actions.close' | translate }}</button>
+        <button type="button" class="ds-btn ds-btn--secondary close-popup-btn" (click)="closePerformancePopup()">{{ 'COMMON.actions.close' | translate }}</button>
     </div>
 </div>
 
@@ -26,7 +26,7 @@
     <!-- Section de sélection des modes -->
     <div *ngIf="!isLoading && !showProgress && !reconciliationResponse && !error" class="mode-selection-container">
         <div class="mode-selection-header">
-            <h2>🔄 Réconciliation de Données</h2>
+            <h2><i class="fas fa-sync-alt"></i> Réconciliation de Données</h2>
             <p>Choisissez votre mode de réconciliation préféré</p>
         </div>
         
@@ -47,7 +47,7 @@
                         <li>Validation avant exécution</li>
                     </ul>
                 </div>
-                <button class="mode-button assisted-button" (click)="startAssistedMode()">
+                <button type="button" class="ds-btn ds-btn--secondary mode-button assisted-button" (click)="startAssistedMode()">
                     <i class="fas fa-play"></i>
                     Lancer l'analyse
                 </button>
@@ -69,7 +69,7 @@
                         <li>Résultats rapides</li>
                     </ul>
                 </div>
-                <button class="mode-button magic-button" (click)="startMagicMode()">
+                <button type="button" class="ds-btn ds-btn--secondary mode-button magic-button" (click)="startMagicMode()">
                     <i class="fas fa-rocket"></i>
                     Lancer la réconciliation magique
                 </button>
@@ -143,7 +143,7 @@
 
             <!-- Clé sélectionnée automatiquement -->
             <div *ngIf="magicResults?.selectedKey" class="selected-key-section">
-                <h3>🎯 Clé Sélectionnée Automatiquement</h3>
+                <h3><i class="fas fa-key"></i> Clé Sélectionnée Automatiquement</h3>
                 <div class="selected-key-card">
                     <div class="selected-key-header">
                         <i class="fas fa-star"></i>
@@ -165,7 +165,7 @@
 
             <!-- Résumé de l'analyse -->
             <div *ngIf="magicResults?.analysisSummary" class="analysis-summary-section">
-                <h3>📊 Résumé de l'Analyse</h3>
+                <h3><i class="fas fa-chart-bar"></i> Résumé de l'Analyse</h3>
                 <div class="analysis-summary-grid">
                     <div class="summary-item">
                         <i class="fas fa-columns"></i>
@@ -307,11 +307,11 @@
             <h3>Réconciliation magique non possible</h3>
             <p>{{ error }}</p>
             <div class="error-actions">
-                <button class="btn btn-primary" (click)="goToAssistedMode()">
+                <button type="button" class="ds-btn ds-btn--primary btn btn-primary" (click)="goToAssistedMode()">
                     <i class="fas fa-magic"></i>
                     Utiliser le mode Assisté
                 </button>
-                <button class="btn btn-secondary" (click)="goToManualMode()">
+                <button type="button" class="ds-btn ds-btn--secondary btn btn-secondary" (click)="goToManualMode()">
                     <i class="fas fa-cogs"></i>
                     Utiliser le mode Manuel
                 </button>
