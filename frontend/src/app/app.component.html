@@ -1,7 +1,8 @@
 <div class="app-container">
     <app-sidebar *ngIf="showSidebar"></app-sidebar>
+    <div class="sidebar-backdrop" *ngIf="showSidebar" (click)="toggleSidebar()"></div>
     
-    <button class="sidebar-toggle-btn" *ngIf="showSidebarToggle" (click)="toggleSidebar()" [class.sidebar-hidden]="!showSidebar" [attr.title]="(showSidebar ? 'APP.toggleSidebarHide' : 'APP.toggleSidebarShow') | translate">
+    <button type="button" class="sidebar-toggle-btn" *ngIf="showSidebarToggle" (click)="toggleSidebar()" [class.sidebar-hidden]="!showSidebar" [attr.title]="(showSidebar ? 'APP.toggleSidebarHide' : 'APP.toggleSidebarShow') | translate">
         <i class="fas" [ngClass]="showSidebar ? 'fa-times' : 'fa-bars'"></i>
     </button>
     

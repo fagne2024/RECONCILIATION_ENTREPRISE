@@ -25,8 +25,8 @@
             <!-- Groupes avec sous-menus -->
             <ng-container *ngIf="group.children">
                 <li>
-                    <a href="#" class="has-submenu" [class.active]="isGroupOnSection(group)" 
-                       (click)="toggleGroupSubmenu(group.key); $event.preventDefault()">
+                    <button type="button" class="has-submenu" [class.active]="isGroupOnSection(group)"
+                       (click)="toggleGroupSubmenu(group.key)">
                         <i class="fas fa-file-upload menu-icon reconciliation" *ngIf="group.key === 'reconciliation'"></i>
                         <i class="fas fa-poll menu-icon resultats" *ngIf="group.key === 'resultats'"></i>
                         <i class="fas fa-chart-bar menu-icon stats" *ngIf="group.key === 'statistiques'"></i>
@@ -40,7 +40,7 @@
                         <i class="fas fa-server menu-icon administration-plateforme" *ngIf="group.key === 'administration-plateforme'"></i>
                         <span>{{ (group.labelKey || group.label) | translate }}</span>
                         <span class="submenu-arrow" [class.open]="isGroupSubmenuOpen(group.key)">{{ '▼' }}</span>
-                    </a>
+                    </button>
                     <ul class="submenu" *ngIf="isGroupSubmenuOpen(group.key)">
                         <li *ngFor="let submenu of visibleSubmenus.get(group.key) || []">
                             <div class="submenu-row" [class.has-children]="submenu.children?.length">
@@ -75,7 +75,7 @@
         <div class="sidebar-lang-switch">
             <app-language-switcher></app-language-switcher>
         </div>
-        <div class="sidebar-user-info" *ngIf="getUsername()" (click)="goToProfile()" style="cursor: pointer;">
+        <div class="sidebar-user-info" *ngIf="getUsername()" (click)="goToProfile()" (keydown.enter)="goToProfile()" (keydown.space)="$event.preventDefault(); goToProfile()" role="button" tabindex="0">
             <div class="user-info-content">
                 <div class="user-avatar">
                     <img *ngIf="userPhoto" [src]="userPhoto" alt="Photo de profil" class="user-avatar-img">
@@ -91,10 +91,10 @@
             </div>
         </div>
         <div class="sidebar-logout">
-            <a href="#" class="logout-link" (click)="logout(); $event.preventDefault()">
+            <button type="button" class="logout-link" (click)="logout()">
                 <i class="fas fa-sign-out-alt"></i>
                 <span>{{ 'NAV.logout' | translate }}</span>
-            </a>
+            </button>
         </div>
     </div>
 </div>

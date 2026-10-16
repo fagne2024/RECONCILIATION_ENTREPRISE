@@ -140,7 +140,7 @@ export class AppComponent implements OnInit {
   }
 
   get showSidebarToggle(): boolean {
-    return this.showSidebar;
+    return !this.isFullWidthPage;
   }
 
 
