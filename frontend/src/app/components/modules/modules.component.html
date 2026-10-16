@@ -25,7 +25,7 @@
       <div class="hero-kpi-strip">
         <div class="hk-strip-item">
           <div class="hk-strip-label">{{ 'TBL.modules' | translate }}</div>
-          <div class="hk-strip-value">{{ filteredModules.length }}</div>
+          <div class="hk-strip-value ds-num">{{ filteredModules.length }}</div>
         </div>
       </div>
     </div>
@@ -38,7 +38,7 @@
           <h2><i class="fas fa-cube"></i> {{ 'MOD.sectionTitle' | translate }}</h2>
           <span class="modules-count">{{ 'MOD.count' | translate: { count: filteredModules.length } }}</span>
         </div>
-        <button class="btn btn-primary" (click)="showAddForm = true">
+        <button type="button" class="ds-btn ds-btn--primary btn btn-primary" (click)="showAddForm = true">
           <i class="fas fa-plus"></i> {{ 'MOD.newModuleBtn' | translate }}
         </button>
       </div>
@@ -51,10 +51,10 @@
             type="text" 
             [(ngModel)]="searchTerm" 
             [placeholder]="'MOD.searchPlaceholder' | translate"
-            class="search-input"
+            class="ds-input search-input"
             (input)="applyFilters()">
         </div>
-        <button *ngIf="searchTerm" class="btn-clear-filters" (click)="clearFilters()">
+        <button type="button" *ngIf="searchTerm" class="ds-btn ds-btn--secondary btn-clear-filters" (click)="clearFilters()">
           <i class="fas fa-times"></i> {{ 'ACT.clear' | translate }}
         </button>
       </div>
@@ -68,13 +68,13 @@
           <h3>{{ 'MOD.empty.title' | translate }}</h3>
           <p *ngIf="searchTerm" class="help-text">
             {{ 'MOD.empty.searchHint' | translate }}
-            <button class="btn-link" (click)="clearFilters()">{{ 'ACT.clearFilters' | translate }}</button>
+            <button type="button" class="ds-btn ds-btn--secondary btn-link" (click)="clearFilters()">{{ 'ACT.clearFilters' | translate }}</button>
           </p>
           <p *ngIf="!searchTerm">{{ 'MOD.empty.firstModuleHint' | translate }}</p>
         </div>
         
         <div *ngIf="!isLoading && filteredModules.length > 0" class="table-wrapper">
-          <table class="modules-table">
+          <table class="ds-table modules-table">
             <thead>
               <tr>
                 <th>{{ 'MOD.table.name' | translate }}</th>
@@ -104,16 +104,16 @@
                   <span class="profils-count-badge">{{ 'MOD.profilCount' | translate: { count: getProfilsForModule(module).length } }}</span>
                 </td>
                 <td class="actions">
-                  <button class="btn icon-btn" (click)="openProfilsModal(module)" [title]="'MOD.manageProfilsTitle' | translate">
+                  <button type="button" class="ds-btn ds-btn--secondary btn icon-btn" (click)="openProfilsModal(module)" [title]="'MOD.manageProfilsTitle' | translate">
                     <i class="fas fa-users" style="color: #007bff;"></i>
                   </button>
-                  <button class="btn icon-btn" (click)="openSubmenuVisibilityModal(module)" [title]="'MOD.manageSubmenuVisibilityTitle' | translate">
+                  <button type="button" class="ds-btn ds-btn--secondary btn icon-btn" (click)="openSubmenuVisibilityModal(module)" [title]="'MOD.manageSubmenuVisibilityTitle' | translate">
                     <i class="fas fa-eye" style="color: var(--theme-primary, #667eea);"></i>
                   </button>
-                  <button class="btn icon-btn" (click)="editModule(module)" title="{{ 'ACT.edit' | translate }}">
+                  <button type="button" class="ds-btn ds-btn--secondary btn icon-btn" (click)="editModule(module)" title="{{ 'ACT.edit' | translate }}">
                     <i class="fas fa-edit" style="color: #28a745;"></i>
                   </button>
-                  <button class="btn icon-btn" (click)="deleteModule(module)" title="{{ 'ACT.delete' | translate }}">
+                  <button type="button" class="ds-btn ds-btn--secondary btn icon-btn" (click)="deleteModule(module)" title="{{ 'ACT.delete' | translate }}">
                     <i class="fas fa-trash" style="color: #dc3545;"></i>
                   </button>
                 </td>
@@ -128,7 +128,7 @@
         <div class="pagination-controls">
           <div class="items-per-page">
             <label>{{ 'PAG.rowsPerPage' | translate }}</label>
-            <select [(ngModel)]="itemsPerPage" (change)="onItemsPerPageChange()" class="form-control">
+            <select [(ngModel)]="itemsPerPage" (change)="onItemsPerPageChange()" class="ds-select form-control">
               <option [value]="10">10</option>
               <option [value]="20">20</option>
               <option [value]="50">50</option>
@@ -136,24 +136,24 @@
             </select>
           </div>
           
-          <button 
-            class="btn pagination-btn" 
+          <button type="button" 
+            class="ds-btn ds-btn--secondary btn pagination-btn" 
             [disabled]="currentPage === 1"
             (click)="onPageChange(currentPage - 1)">
             <i class="fas fa-chevron-left"></i>{{ 'PAG.previous' | translate }}</button>
           
           <div class="page-numbers">
-            <button 
+            <button type="button" 
               *ngFor="let page of getVisiblePages()"
-              class="btn page-btn"
+              class="ds-btn ds-btn--secondary btn page-btn"
               [class.active]="currentPage === page"
               (click)="onPageChange(page)">
               {{ page }}
             </button>
           </div>
           
-          <button 
-            class="btn pagination-btn" 
+          <button type="button" 
+            class="ds-btn ds-btn--secondary btn pagination-btn" 
             [disabled]="currentPage === totalPages"
             (click)="onPageChange(currentPage + 1)">{{ 'PAG.next' | translate }}<i class="fas fa-chevron-right"></i>
           </button>
@@ -170,7 +170,7 @@
         <div class="modal-container" (click)="$event.stopPropagation()">
           <div class="modal-header">
             <h3>{{ 'MOD.modal.addTitle' | translate }}</h3>
-            <button class="close-btn" (click)="cancelAdd()">
+            <button type="button" class="close-btn" (click)="cancelAdd()">
               <i class="fas fa-times"></i>
             </button>
           </div>
@@ -181,7 +181,7 @@
                   <label for="nom">{{ 'MOD.field.selectMenuLabel' | translate }}</label>
                   <select 
                     id="nom" 
-                    class="text-input" 
+                    class="ds-select text-input" 
                     formControlName="nom"
                   >
                     <option value="">{{ 'MOD.field.selectMenuPlaceholder' | translate }}</option>
@@ -201,8 +201,8 @@
             </div>
             <div class="modal-footer">
               <div class="modal-actions">
-                <button type="button" class="btn btn-secondary" (click)="cancelAdd()">{{ 'COMMON.actions.cancel' | translate }}</button>
-                <button type="submit" class="btn btn-primary" [disabled]="addForm.invalid || isAdding">
+                <button type="button" class="ds-btn ds-btn--secondary btn btn-secondary" (click)="cancelAdd()">{{ 'COMMON.actions.cancel' | translate }}</button>
+                <button type="submit" class="ds-btn ds-btn--primary btn btn-primary" [disabled]="addForm.invalid || isAdding">
                   <span *ngIf="!isAdding">{{ 'ACT.create' | translate }}</span>
                   <span *ngIf="isAdding">
                     <i class="fas fa-spinner fa-spin"></i> {{ 'MOD.submitting' | translate }}
@@ -219,7 +219,7 @@
         <div class="modal-container" (click)="$event.stopPropagation()">
           <div class="modal-header">
             <h3>{{ 'MOD.modal.editTitle' | translate }}</h3>
-            <button class="close-btn" (click)="closeEditModal()">
+            <button type="button" class="close-btn" (click)="closeEditModal()">
               <i class="fas fa-times"></i>
             </button>
           </div>
@@ -230,7 +230,7 @@
                   <label for="edit-nom">{{ 'MOD.field.selectMenuLabel' | translate }}</label>
                   <select 
                     id="edit-nom" 
-                    class="text-input" 
+                    class="ds-select text-input" 
                     formControlName="nom"
                   >
                     <option value="">{{ 'MOD.field.selectMenuPlaceholder' | translate }}</option>
@@ -250,8 +250,8 @@
             </div>
             <div class="modal-footer">
               <div class="modal-actions">
-                <button type="button" class="btn btn-secondary" (click)="cancelEdit()">{{ 'COMMON.actions.cancel' | translate }}</button>
-                <button type="submit" class="btn btn-primary" [disabled]="editForm.invalid || isEditing">
+                <button type="button" class="ds-btn ds-btn--secondary btn btn-secondary" (click)="cancelEdit()">{{ 'COMMON.actions.cancel' | translate }}</button>
+                <button type="submit" class="ds-btn ds-btn--primary btn btn-primary" [disabled]="editForm.invalid || isEditing">
                   <span *ngIf="!isEditing">{{ 'ACT.update' | translate }}</span>
                   <span *ngIf="isEditing">
                     <i class="fas fa-spinner fa-spin"></i> {{ 'ACT.updating' | translate }}
@@ -273,7 +273,7 @@
           <i class="fas fa-users"></i> 
           {{ 'MOD.modal.profilsTitle' | translate: { module: selectedModule.nom } }}
         </h3>
-        <button class="close-btn" (click)="closeProfilsModal()">
+        <button type="button" class="close-btn" (click)="closeProfilsModal()">
           <i class="fas fa-times"></i>
         </button>
       </div>
@@ -302,7 +302,7 @@
       </div>
       <div class="modal-footer">
         <div class="modal-actions">
-          <button type="button" class="btn btn-secondary" (click)="closeProfilsModal()" [disabled]="isSavingProfils">{{ 'COMMON.actions.close' | translate }}</button>
+          <button type="button" class="ds-btn ds-btn--secondary btn btn-secondary" (click)="closeProfilsModal()" [disabled]="isSavingProfils">{{ 'COMMON.actions.close' | translate }}</button>
         </div>
       </div>
     </div>
@@ -316,7 +316,7 @@
           <i class="fas fa-eye"></i> 
           {{ 'MOD.modal.submenuVisibilityTitle' | translate: { module: selectedModuleForSubmenu.nom } }}
         </h3>
-        <button class="close-btn" (click)="closeSubmenuVisibilityModal()">
+        <button type="button" class="close-btn" (click)="closeSubmenuVisibilityModal()">
           <i class="fas fa-times"></i>
         </button>
       </div>
@@ -345,8 +345,8 @@
       </div>
       <div class="modal-footer">
         <div class="modal-actions">
-          <button type="button" class="btn btn-secondary" (click)="closeSubmenuVisibilityModal()" [disabled]="isSavingSubmenuVisibility">{{ 'COMMON.actions.close' | translate }}</button>
-          <button type="button" class="btn btn-primary" (click)="saveSubmenuVisibility()" [disabled]="isSavingSubmenuVisibility">
+          <button type="button" class="ds-btn ds-btn--secondary btn btn-secondary" (click)="closeSubmenuVisibilityModal()" [disabled]="isSavingSubmenuVisibility">{{ 'COMMON.actions.close' | translate }}</button>
+          <button type="button" class="ds-btn ds-btn--primary btn btn-primary" (click)="saveSubmenuVisibility()" [disabled]="isSavingSubmenuVisibility">
             <span *ngIf="!isSavingSubmenuVisibility">{{ 'ACT.save' | translate }}</span>
             <span *ngIf="isSavingSubmenuVisibility">
               <i class="fas fa-spinner fa-spin"></i> {{ 'MOD.submitting' | translate }}
