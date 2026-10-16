@@ -11,10 +11,10 @@
     </div>
     <div class="nav-spacer"></div>
     <div class="nav-actions">
-      <button class="nav-btn secondary" (click)="loadEcartSoldes()" [disabled]="isLoading">
+      <button type="button" class="ds-btn ds-btn--secondary nav-btn secondary" (click)="loadEcartSoldes()" [disabled]="isLoading">
         <i class="fas fa-sync-alt"></i> {{ 'ACT.refresh' | translate }}
       </button>
-      <button class="nav-btn primary" (click)="exportEcartSoldes()" [disabled]="filteredEcartSoldes.length === 0 || isLoading">
+      <button type="button" class="ds-btn ds-btn--primary nav-btn primary" (click)="exportEcartSoldes()" [disabled]="filteredEcartSoldes.length === 0 || isLoading">
         <i class="fas fa-file-excel"></i> {{ 'COMMON.actions.export' | translate }}
       </button>
     </div>
@@ -30,17 +30,17 @@
       <div class="hero-kpi-strip">
         <div class="hk-strip-item">
           <span class="hk-strip-label">{{ 'TBL.rows' | translate }}</span>
-          <span class="hk-strip-value">{{ filteredEcartSoldes.length | number:'1.0-0' }}</span>
+          <span class="hk-strip-value ds-num">{{ filteredEcartSoldes.length | number:'1.0-0' }}</span>
         </div>
         <div class="hk-strip-sep"></div>
         <div class="hk-strip-item">
           <span class="hk-strip-label">{{ 'MSG.pending' | translate }}</span>
-          <span class="hk-strip-value">{{ getStatutCount('EN_ATTENTE') | number:'1.0-0' }}</span>
+          <span class="hk-strip-value ds-num">{{ getStatutCount('EN_ATTENTE') | number:'1.0-0' }}</span>
         </div>
         <div class="hk-strip-sep"></div>
         <div class="hk-strip-item">
           <span class="hk-strip-label">{{ 'TBL.totalVolume' | translate }}</span>
-          <span class="hk-strip-value">{{ formatMontantTotal() }}</span>
+          <span class="hk-strip-value ds-num">{{ formatMontantTotal() }}</span>
         </div>
       </div>
     </div>
@@ -51,10 +51,10 @@
       <div class="header">
         <h2>{{ 'ESD.headerTitle' | translate }}</h2>
         <div class="header-actions">
-          <button class="btn btn-primary" (click)="loadEcartSoldes()" [disabled]="isLoading">
+          <button type="button" class="ds-btn ds-btn--primary btn btn-primary" (click)="loadEcartSoldes()" [disabled]="isLoading">
             <i class="fas fa-sync-alt"></i> {{ 'ACT.refresh' | translate }}
           </button>
-          <button class="btn btn-success" (click)="exportEcartSoldes()" [disabled]="filteredEcartSoldes.length === 0 || isLoading">
+          <button type="button" class="ds-btn ds-btn--secondary btn btn-success" (click)="exportEcartSoldes()" [disabled]="filteredEcartSoldes.length === 0 || isLoading">
             <i class="fas fa-file-excel"></i> {{ 'COMMON.actions.export' | translate }}
           </button>
         </div>
@@ -111,21 +111,21 @@
           #fileInput>
         <button 
           type="button" 
-          class="btn btn-info" 
+          class="ds-btn ds-btn--secondary btn btn-info" 
           (click)="downloadTemplate()"
           title="{{ 'ACT.downloadFileTemplate' | translate }}">
           <i class="fas fa-download"></i> {{ 'ACT.downloadTemplate' | translate }}
         </button>
         <button 
           type="button" 
-          class="btn btn-primary" 
+          class="ds-btn ds-btn--primary btn btn-primary" 
           (click)="validateFile()"
           [disabled]="!selectedFile || isUploading">
           <i class="fas fa-check"></i> {{ 'ACT.validate' | translate }}
         </button>
         <button 
           type="button" 
-          class="btn btn-success" 
+          class="ds-btn ds-btn--secondary btn btn-success" 
           (click)="uploadFile()"
           [disabled]="!selectedFile || isUploading">
           <i class="fas fa-upload"></i> 
@@ -165,7 +165,7 @@
       <div class="filter-row">
         <div class="filter-group">
           <label>{{ 'TBL.agency' | translate }}</label>
-          <select formControlName="agence" class="form-control">
+          <select formControlName="agence" class="ds-select form-control">
             <option value="">{{ 'FILT.allAgencies' | translate }}</option>
             <option *ngFor="let agence of agences" [value]="agence">{{ agence }}</option>
           </select>
@@ -173,7 +173,7 @@
         
         <div class="filter-group">
           <label>{{ 'LBL.serviceLabel' | translate }}</label>
-          <select formControlName="service" class="form-control">
+          <select formControlName="service" class="ds-select form-control">
             <option value="">{{ 'FILT.allServices' | translate }}</option>
             <option *ngFor="let service of services" [value]="service">{{ service }}</option>
           </select>
@@ -181,7 +181,7 @@
         
         <div class="filter-group">
           <label>{{ 'LBL.countryLabel' | translate }}</label>
-          <select formControlName="pays" class="form-control">
+          <select formControlName="pays" class="ds-select form-control">
             <option value="">{{ 'FILT.allCountries' | translate }}</option>
             <option *ngFor="let pays of pays" [value]="pays">{{ pays }}</option>
           </select>
@@ -189,12 +189,12 @@
         
         <div class="filter-group">
           <label>{{ 'FILT.transGu' | translate }}</label>
-          <input type="text" formControlName="numeroTransGu" class="form-control" placeholder="{{ 'FILT.transGuPlaceholder' | translate }}">
+          <input type="text" formControlName="numeroTransGu" class="ds-input form-control" placeholder="{{ 'FILT.transGuPlaceholder' | translate }}">
         </div>
         
         <div class="filter-group">
           <label>{{ 'LBL.statusLabel' | translate }}</label>
-          <select formControlName="statut" class="form-control">
+          <select formControlName="statut" class="ds-select form-control">
             <option value="">{{ 'FILT.allStatuses' | translate }}</option>
             <option *ngFor="let statut of statuts" [value]="statut">{{ getStatutLabel(statut) }}</option>
           </select>
@@ -204,16 +204,16 @@
       <div class="filter-row">
         <div class="filter-group">
           <label>{{ 'FILT.dateStart' | translate }}</label>
-          <input type="date" formControlName="dateDebut" class="form-control" (change)="onDateChange('dateDebut')">
+          <input type="date" formControlName="dateDebut" class="ds-input form-control" (change)="onDateChange('dateDebut')">
         </div>
         
         <div class="filter-group">
           <label>{{ 'FILT.dateEnd' | translate }}</label>
-          <input type="date" formControlName="dateFin" class="form-control" (change)="onDateChange('dateFin')">
+          <input type="date" formControlName="dateFin" class="ds-input form-control" (change)="onDateChange('dateFin')">
         </div>
         
         <div class="filter-actions">
-          <button type="button" class="btn btn-secondary" (click)="clearFilters()">
+          <button type="button" class="ds-btn ds-btn--secondary btn btn-secondary" (click)="clearFilters()">
             <i class="fas fa-times"></i> {{ 'ACT.clear' | translate }}
           </button>
         </div>
@@ -248,18 +248,18 @@
           <span class="selected-count">{{ getSelectedCount() }} {{ 'ESD.selectedCount' | translate }}</span>
         </div>
         <div class="selection-actions">
-          <select [(ngModel)]="selectedStatut" class="form-control status-select">
+          <select [(ngModel)]="selectedStatut" class="ds-select form-control status-select">
             <option value="EN_ATTENTE">{{ 'TBL.statutEnAttente' | translate }}</option>
             <option value="TRAITE">{{ 'TBL.statutTraite' | translate }}</option>
             <option value="ERREUR">{{ 'TBL.statutErreur' | translate }}</option>
           </select>
-          <button class="btn btn-primary" 
+          <button type="button" class="ds-btn ds-btn--primary btn btn-primary" 
                   (click)="updateMultipleStatuts()" 
                   [disabled]="getSelectedCount() === 0 || isUpdatingMultipleStatuts">
             <i class="fas fa-save"></i>
             {{ isUpdatingMultipleStatuts ? ('ACT.updating' | translate) : ('ACT.update' | translate) }}
           </button>
-          <button class="btn btn-danger" 
+          <button type="button" class="ds-btn ds-btn--danger btn btn-danger" 
                   (click)="deleteSelectedEcartSoldes()" 
                   [disabled]="getSelectedCount() === 0 || isDeletingSelected"
                   title="{{ 'ACT.deleteSelectedLines' | translate }}">
@@ -270,7 +270,7 @@
       </div>
       
       <div class="table-actions">
-        <button class="btn" 
+        <button type="button" class="ds-btn ds-btn--secondary btn" 
                 [class.active]="isSelectionMode"
                 (click)="toggleSelectionMode()">
           <i class="fas fa-check-square"></i>
@@ -280,7 +280,7 @@
     </div>
 
     <div class="table-container">
-      <table class="data-table">
+      <table class="ds-table data-table">
         <thead>
           <tr>
             <th *ngIf="isSelectionMode" class="checkbox-header">
@@ -356,7 +356,7 @@
                   <label class="status-label">{{ 'LBL.statusLabel' | translate }}</label>
                   <select (change)="onStatutChange(ecart, $event)" 
                           [value]="ecart.statut || 'EN_ATTENTE'"
-                          class="status-select"
+                          class="ds-select status-select"
                           [ngClass]="getStatutClass(ecart.statut || '')">
                     <option value="EN_ATTENTE">{{ 'TBL.statutEnAttente' | translate }}</option>
                     <option value="TRAITE">{{ 'TBL.statutTraite' | translate }}</option>
@@ -364,7 +364,7 @@
                   </select>
                 </div>
                 
-                <button class="btn btn-danger btn-sm" 
+                <button type="button" class="ds-btn ds-btn--danger btn btn-danger btn-sm" 
                         (click)="deleteEcartSolde(ecart.id!)"
                         title="{{ 'ACT.delete' | translate }}">
                   <i class="fas fa-trash"></i>
@@ -376,27 +376,15 @@
       </table>
     </div>
 
-    <!-- Pagination -->
-    <div class="pagination" *ngIf="totalPages > 1">
-      <button class="pagination-btn" 
-              (click)="prevPage()" 
-              [disabled]="currentPage === 1">
-        <i class="fas fa-chevron-left"></i>{{ 'PAG.previous' | translate }}</button>
-      
-      <div class="pagination-indicators">
-        <span class="page-indicator" 
-              *ngFor="let page of getVisiblePages()" 
-              [ngClass]="{'active': page === currentPage}"
-              (click)="goToPage(page)">
-          {{ page }}
-        </span>
-      </div>
-      
-      <button class="pagination-btn" 
-              (click)="nextPage()" 
-              [disabled]="currentPage === totalPages">{{ 'PAG.next' | translate }}<i class="fas fa-chevron-right"></i>
-      </button>
-    </div>
+    <ds-pagination
+      *ngIf="totalPages > 1"
+      [page]="currentPage"
+      [pageCount]="totalPages"
+      [totalItems]="filteredEcartSoldes.length"
+      [pageSize]="pageSize"
+      [itemLabel]="'TBL.lines' | translate"
+      (pageChange)="goToPage($event)">
+    </ds-pagination>
       </div>
 
       <!-- Modal de commentaire -->
@@ -404,7 +392,7 @@
         <div class="modal-content">
           <div class="modal-header">
             <h4>{{ 'ESD.editStatusTitle' | translate }}</h4>
-            <button class="close-btn" (click)="closeCommentModal()">
+            <button type="button" class="close-btn" (click)="closeCommentModal()">
               <i class="fas fa-times"></i>
             </button>
           </div>
@@ -432,9 +420,9 @@
           </div>
           
           <div class="modal-footer">
-            <button class="btn btn-secondary" (click)="closeCommentModal()">{{ 'COMMON.actions.cancel' | translate }}</button>
-            <button 
-              class="btn btn-primary" 
+            <button type="button" class="ds-btn ds-btn--secondary btn btn-secondary" (click)="closeCommentModal()">{{ 'COMMON.actions.cancel' | translate }}</button>
+            <button type="button" 
+              class="ds-btn ds-btn--primary btn btn-primary" 
               (click)="confirmStatutChange()"
               [disabled]="!commentForm.valid">
               {{ 'COMMON.actions.confirm' | translate }}
