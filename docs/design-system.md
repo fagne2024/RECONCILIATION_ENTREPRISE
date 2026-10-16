@@ -108,14 +108,44 @@ conservées.
   reste uniquement en repli de `--font-ui`.
 - `.i18n-switch--login` : plus de bleu Material `rgba(33,150,243)` ;
   tokens `--color-nav-text*` (le sélecteur repose sur le chrome teal).
-- `.btn` global conservé : encore utilisé par des pages hors `ds-btn`.
+- `.btn` global conservé en compatibilité (classes historiques encore
+  présentes à côté de `ds-btn`).
 
-Hors périmètre (P1, non traités) : échelle `z-index` exhaustive (I11),
-transitions unifiées (I12), remplacement des emoji (D9).
+## Pages restantes (leftover)
+
+Migrées vers les tokens globaux (bloc `--rd-*` local retiré, `ds-*` sur
+les contrôles natifs, `type="button"` conservé ou ajouté, Material
+`mat-*` non recouvert) : `auto-processing-models`, `traitement`,
+`sop-reconciliation-trx`, `niveaux-validation-reco`, `predictions`,
+`reconciliation`, `user-2fa-dialog`. `agency-summary` est uniquement un
+`mat-raised-button` (pas de hex ni de `ds-btn`).
+
+Les topnav marine restent sur `--rd-navy` / `--color-nav-bg`. Les
+couleurs d’identité d’agrégation (`--agg-mode`, `--agg-bo`) sont
+conservées. `ThemeService` ne pilote toujours que la sidebar et le logo.
+
+## I11 — z-index
+
+Les superpositions dures (`9999`, `10000`, `11000`, `99999`, `9999999`,
+`2147483002`, ainsi que `100` / `1000` / `1500` / `2000` / `3000`)
+utilisent l’échelle `--z-sticky` … `--z-overlay`. Les petits `z-index`
+(1–22) de stacking interne (barres de progression, calques) restent
+relatifs.
+
+## I12 — mouvement
+
+`prefers-reduced-motion` est dans `_base.scss`. Les `transition: all` et
+les durées `0.15s` / `0.2s` / `0.3s ease` des feuilles de style
+utilisent `--duration-*` et `--ease-standard`.
+
+## D9 — icônes
+
+Les emoji des boutons, KPI et onglets sont remplacés par Font Awesome.
+Les clés i18n qui contiennent un emoji (`TRT.💡…`) sont inchangées.
+Les `console.log` ne sont pas concernés.
 
 ## Vérifications non faites ici
 
 Contrôle visuel 1440 / 768 / 360 px et clair/sombre dans un navigateur :
-pas d’outil navigateur disponible sur cette session. Le serveur de dev
-(`localhost:4300`) compile ; le build production est le critère de la page
-démo (route absente).
+à faire au regard. Le serveur de dev (`localhost:4200`) compile ; le
+build production est le critère de la page démo (route absente).
