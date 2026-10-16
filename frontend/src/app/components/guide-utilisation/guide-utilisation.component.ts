@@ -1,4 +1,4 @@
-import { Component, OnInit } from '@angular/core';
+import { Component, OnInit, SecurityContext } from '@angular/core';
 import { DomSanitizer, SafeHtml } from '@angular/platform-browser';
 import { Location } from '@angular/common';
 import { Router } from '@angular/router';
@@ -556,7 +556,8 @@ export class GuideUtilisationComponent implements OnInit {
           let formattedHtml = this.formatDocumentText(this.documentContent);
           formattedHtml = `<div class="document-wrapper" style="max-width: 100%; margin: 0 auto;">${formattedHtml}</div>`;
           
-          this.safeDocumentContent = this.sanitizer.bypassSecurityTrustHtml(formattedHtml);
+          const sanitized = this.sanitizer.sanitize(SecurityContext.HTML, formattedHtml) || '';
+          this.safeDocumentContent = this.sanitizer.bypassSecurityTrustHtml(sanitized);
           this.showDocumentView = true;
         } else {
           this.openUploadModal(nodeId, optionType);

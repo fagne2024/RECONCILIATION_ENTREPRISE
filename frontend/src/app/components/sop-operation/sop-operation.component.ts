@@ -1,4 +1,4 @@
-import { Component, OnInit } from '@angular/core';
+import { Component, OnInit, SecurityContext } from '@angular/core';
 import { DomSanitizer, SafeHtml } from '@angular/platform-browser';
 import { Location } from '@angular/common';
 import { Router } from '@angular/router';
@@ -1031,7 +1031,8 @@ export class SopOperationComponent implements OnInit {
           formattedHtml = `<div class="document-wrapper" style="max-width: 100%; margin: 0 auto;">${formattedHtml}</div>`;
           
           // Sanitizer le HTML pour permettre les images base64 et styles inline
-          this.safeDocumentContent = this.sanitizer.bypassSecurityTrustHtml(formattedHtml);
+          const sanitized = this.sanitizer.sanitize(SecurityContext.HTML, formattedHtml) || '';
+          this.safeDocumentContent = this.sanitizer.bypassSecurityTrustHtml(sanitized);
           
           console.log('📄 [LOAD] Document chargé et HTML sécurisé créé');
           console.log('📄 [LOAD] Longueur HTML:', formattedHtml.length);

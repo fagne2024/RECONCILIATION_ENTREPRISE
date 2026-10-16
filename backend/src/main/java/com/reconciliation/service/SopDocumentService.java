@@ -2,6 +2,7 @@ package com.reconciliation.service;
 
 import com.reconciliation.entity.SopDocumentEntity;
 import com.reconciliation.repository.SopDocumentRepository;
+import com.reconciliation.util.HtmlSanitizer;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
@@ -42,7 +43,7 @@ public class SopDocumentService {
         document.setFileName(fileName);
         document.setFileType(fileType);
         document.setFileContent(file.getBytes());
-        document.setExtractedText(extractedText != null ? extractedText : "");
+        document.setExtractedText(HtmlSanitizer.sanitize(extractedText != null ? extractedText : ""));
 
         SopDocumentEntity saved = sopDocumentRepository.save(document);
         log.info("✅ Document sauvegardé avec ID: {}", saved.getId());
@@ -66,7 +67,7 @@ public class SopDocumentService {
         }
         
         if (extractedText != null) {
-            document.setExtractedText(extractedText);
+            document.setExtractedText(HtmlSanitizer.sanitize(extractedText));
         }
 
         return sopDocumentRepository.save(document);
