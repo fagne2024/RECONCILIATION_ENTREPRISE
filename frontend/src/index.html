@@ -33,41 +33,6 @@
             }
         });
     </script>
-    <script>
-        // Script simple pour assurer le scroll sur Chrome
-        document.addEventListener('DOMContentLoaded', function() {
-            // Détecter Chrome
-            const isChrome = /Chrome/.test(navigator.userAgent) && /Google Inc/.test(navigator.vendor);
-            
-            if (isChrome) {
-                // Forcer le scroll sur Chrome
-                document.documentElement.style.overflowY = 'auto';
-                document.body.style.overflowY = 'auto';
-                
-                // S'assurer que tous les éléments scrollables fonctionnent
-                const scrollableElements = document.querySelectorAll('.main-content, .app-container, [class*="-container"], .table-responsive, .table-container');
-                scrollableElements.forEach(function(element) {
-                    if (element) {
-                        element.style.overflowY = 'auto';
-                    }
-                });
-                
-                // Correction après le chargement d'Angular
-                setTimeout(function() {
-                    document.documentElement.style.overflowY = 'auto';
-                    document.body.style.overflowY = 'auto';
-                    
-                    // Réappliquer aux éléments qui pourraient avoir été modifiés
-                    const allElements = document.querySelectorAll('*');
-                    allElements.forEach(function(element) {
-                        if (element.style.overflowY === 'hidden') {
-                            element.style.overflowY = 'auto';
-                        }
-                    });
-                }, 2000);
-            }
-        });
-    </script>
     <meta http-equiv="Cache-Control" content="no-cache, no-store, must-revalidate">
     <meta http-equiv="Pragma" content="no-cache">
     <meta http-equiv="Expires" content="0">

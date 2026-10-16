@@ -42,157 +42,27 @@
     box-sizing: border-box;
 }
 
-// Styles de base pour le scroll
-html {
+html, body {
     height: 100%;
     overflow-y: auto;
 }
 
 body {
+    margin: 0;
     font-family: var(--font-ui);
-    line-height: 1.6;
+    line-height: var(--leading-normal);
     color: var(--color-text-primary);
     background-color: var(--color-bg);
     min-height: 100vh;
-    height: 100%;
-    overflow-y: auto;
 }
 
-// Application principale
 app-root {
     display: block;
     min-height: 100vh;
-    height: 100%;
 }
 
-// Conteneurs principaux
 .main-content, .app-container {
     min-height: 100vh;
-    height: 100%;
-    overflow-y: auto;
-}
-
-// Overlays - s'assurer qu'ils ne bloquent pas le scroll
-.processing-overlay, .progress-overlay, .modal-overlay {
-    overflow-y: auto;
-}
-
-// Conteneurs de pages
-[class*="-container"] {
-    overflow-y: auto;
-}
-
-// Tables et conteneurs de données
-.table-responsive, .table-container {
-    overflow-y: auto;
-}
-
-// Éléments interactifs
-input, select, textarea, button, a {
-    /* Styles de base */
-}
-
-// Formulaires
-form, .form-group, .form-section {
-    overflow-y: auto;
-}
-
-// Styles spécifiques pour Chrome
-@media screen and (-webkit-min-device-pixel-ratio: 0) {
-    html, body {
-        overflow-y: auto !important;
-    }
-    
-    .main-content, .app-container {
-        overflow-y: auto !important;
-    }
-    
-    [class*="-container"] {
-        overflow-y: auto !important;
-    }
-    
-    .table-responsive, .table-container {
-        overflow-y: auto !important;
-    }
-    
-    .processing-overlay, .modal-overlay, .progress-overlay {
-        overflow-y: auto !important;
-    }
-}
-
-// Correction du chevauchement des éléments
-* {
-    box-sizing: border-box;
-}
-
-// Correction spécifique pour éviter le chevauchement
-.traitement-container,
-.csv-preview-section,
-.select-cols-section,
-.extract-section,
-.filtre-section,
-.concat-section,
-.export-by-type-section {
-    position: relative;
-    z-index: 1;
-    background: #fff;
-    margin-bottom: 16px;
-    border-radius: 8px;
-    padding: 16px;
-    box-shadow: 0 1px 3px rgba(0,0,0,0.1);
-}
-
-// Correction pour les overlays
-.processing-overlay {
-    position: fixed !important;
-    top: 0 !important;
-    left: 0 !important;
-    width: 100% !important;
-    height: 100% !important;
-    z-index: 9999 !important;
-    background: rgba(0, 0, 0, 0.7) !important;
-    display: flex !important;
-    justify-content: center !important;
-    align-items: center !important;
-    backdrop-filter: blur(2px) !important;
-}
-
-// Correction pour les tableaux
-.csv-preview-table,
-.preview-table {
-    position: relative;
-    z-index: 2;
-    background: #fff;
-    border-radius: 4px;
-    overflow: hidden;
-}
-
-// Correction pour les boutons et actions
-.preview-actions,
-.format-actions {
-    position: relative;
-    z-index: 3;
-    background: #f8f9fa;
-    border-radius: 8px;
-    padding: 16px;
-    margin-top: 16px;
-}
-
-// Correction pour les éléments Angular
-.ng-star-inserted {
-    position: relative;
-    z-index: 1;
-}
-
-// Correction pour les conteneurs de données
-.file-list,
-.upload-area {
-    position: relative;
-    z-index: 1;
-    background: #fff;
-    border-radius: 8px;
-    padding: 16px;
-    margin-bottom: 16px;
 }
 
 .container {
@@ -236,9 +106,7 @@ form, .form-group, .form-section {
         opacity: 0.6;
         cursor: not-allowed;
     }
-} 
-html, body { height: 100%; }
-body { margin: 0; font-family: var(--font-ui); }
+}
 
 /* Angular CDK (mat-select, menus, dialogs overlay) : défaut ~1000, sinon les panneaux passent derrière
    les modales du dashboard (2000) et le modal graphique (10000). */
