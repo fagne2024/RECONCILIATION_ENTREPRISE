@@ -36,8 +36,8 @@ import java.util.concurrent.ConcurrentHashMap;
  *       compte sans entreprise (SUPER_ADMIN) est refuse (403).</li>
  * </ul>
  *
- * <p>Les libelles de navigation restent GLOBAUX (stockage memoire) : hors
- * perimetre de l'etape 8.</p>
+ * <p>Les libelles de navigation sont scopes par entreprise
+ * ({@code navigation_labels:&lt;entrepriseId&gt;}).</p>
  */
 @RestController
 @RequestMapping("/api/configuration")
@@ -53,7 +53,7 @@ public class ConfigurationController {
     @Autowired
     private EntrepriseBrandingRepository brandingRepository;
 
-    // Libelles de navigation : stockage en mémoire (global, hors perimetre etape 8).
+    // Libelles de navigation : stockage en memoire, cle par tenant.
     private final Map<String, Object> configStorage = new ConcurrentHashMap<>();
 
     private static final String NAVIGATION_LABELS_KEY = "navigation_labels";
@@ -62,7 +62,7 @@ public class ConfigurationController {
     @GetMapping("/navigation-labels")
     public ResponseEntity<Map<String, Object>> getNavigationLabels() {
         @SuppressWarnings("unchecked")
-        List<Map<String, Object>> labels = (List<Map<String, Object>>) configStorage.getOrDefault(NAVIGATION_LABELS_KEY, new ArrayList<>());
+        List<Map<String, Object>> labels = (List<Map<String, Object>>) configStorage.getOrDefault(labelsStorageKey(), new ArrayList<>());
         Map<String, Object> response = new HashMap<>();
         response.put("labels", labels);
         return ResponseEntity.ok(response);
@@ -74,7 +74,7 @@ public class ConfigurationController {
         @SuppressWarnings("unchecked")
         List<Map<String, Object>> labels = (List<Map<String, Object>>) request.get("labels");
         if (labels != null) {
-            configStorage.put(NAVIGATION_LABELS_KEY, labels);
+            configStorage.put(labelsStorageKey(), labels);
         }
         return ResponseEntity.ok().build();
     }
@@ -82,7 +82,7 @@ public class ConfigurationController {
     @DeleteMapping("/navigation-labels")
     @PreAuthorize("hasRole('ADMIN')")
     public ResponseEntity<Void> resetNavigationLabels() {
-        configStorage.remove(NAVIGATION_LABELS_KEY);
+        configStorage.remove(labelsStorageKey());
         return ResponseEntity.ok().build();
     }
 
@@ -202,6 +202,11 @@ public class ConfigurationController {
         return currentTenantId();
     }
 
+    private String labelsStorageKey() {
+        Long tenant = currentTenantId();
+        return tenant == null ? NAVIGATION_LABELS_KEY + ":platform" : NAVIGATION_LABELS_KEY + ":" + tenant;
+    }
+
     /** Entreprise du compte connecte, ou {@code null} (anonyme / SUPER_ADMIN). */
     private Long currentTenantId() {
         Long tenant = TenantContext.get();
@@ -294,14 +299,14 @@ public class ConfigurationController {
             NavigationLabelAuditEntity target = history.get(version);
             // Restaurer l'ancien label
             @SuppressWarnings("unchecked")
-            List<Map<String, Object>> labels = (List<Map<String, Object>>) configStorage.getOrDefault(NAVIGATION_LABELS_KEY, new ArrayList<>());
+            List<Map<String, Object>> labels = (List<Map<String, Object>>) configStorage.getOrDefault(labelsStorageKey(), new ArrayList<>());
             for (Map<String, Object> label : labels) {
                 if (labelId.equals(label.get("id"))) {
                     label.put("label", target.getOldLabel());
                     break;
                 }
             }
-            configStorage.put(NAVIGATION_LABELS_KEY, labels);
+            configStorage.put(labelsStorageKey(), labels);
 
             // Logger la restauration
             auditService.logChange(labelId, target.getLabelType(), target.getGroupKey(),
