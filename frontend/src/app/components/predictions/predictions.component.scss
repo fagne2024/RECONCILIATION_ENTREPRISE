@@ -18,8 +18,8 @@
         position: absolute;
         left: 0;
         padding: 10px 20px;
-        background-color: #95a5a6;
-        color: white;
+        background-color: var(--color-neutral);
+        color: var(--color-nav-text);
         border: none;
         border-radius: 5px;
         cursor: pointer;
@@ -27,11 +27,11 @@
         display: inline-flex;
         align-items: center;
         gap: 8px;
-        transition: all 0.3s ease;
+        transition: background-color var(--duration-slow) var(--ease-standard), color var(--duration-slow) var(--ease-standard), border-color var(--duration-slow) var(--ease-standard), box-shadow var(--duration-slow) var(--ease-standard), transform var(--duration-slow) var(--ease-standard);
         box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
 
         &:hover {
-          background-color: #7f8c8d;
+          background-color: var(--color-text-muted);
           transform: translateX(-3px);
           box-shadow: 0 4px 6px rgba(0, 0, 0, 0.15);
         }
@@ -44,25 +44,25 @@
 
     h1 {
       font-size: 2.5rem;
-      color: #2c3e50;
+      color: var(--color-text-primary);
       margin-bottom: 10px;
     }
 
     .subtitle {
       font-size: 1.1rem;
-      color: #7f8c8d;
+      color: var(--color-text-muted);
     }
   }
 
   .prediction-form-card {
-    background: white;
+    background: var(--color-surface-raised);
     border-radius: 8px;
     padding: 25px;
     box-shadow: 0 2px 10px rgba(0, 0, 0, 0.1);
     margin-bottom: 30px;
 
     h2 {
-      color: #2c3e50;
+      color: var(--color-text-primary);
       margin-bottom: 20px;
       font-size: 1.5rem;
     }
@@ -77,21 +77,21 @@
         label {
           display: block;
           margin-bottom: 8px;
-          color: #34495e;
+          color: var(--color-text-primary);
           font-weight: 500;
         }
 
         .form-control {
           width: 100%;
           padding: 10px;
-          border: 1px solid #ddd;
+          border: 1px solid var(--color-border);
           border-radius: 4px;
           font-size: 14px;
           transition: border-color 0.3s;
 
           &:focus {
             outline: none;
-            border-color: var(--theme-info, #3498db);
+            border-color: var(--color-info);
           }
         }
 
@@ -99,11 +99,11 @@
           display: block;
           margin-top: 5px;
           font-size: 0.85rem;
-          color: #7f8c8d;
+          color: var(--color-text-muted);
         }
 
         .error-message {
-          color: #e74c3c;
+          color: var(--color-error);
           font-size: 0.85rem;
           margin-top: 5px;
         }
@@ -123,11 +123,11 @@
         transition: all 0.3s;
 
         &.btn-primary {
-          background: var(--theme-info, #3498db);
-          color: white;
+          background: var(--color-info);
+          color: var(--color-nav-text);
 
           &:hover:not(:disabled) {
-            background: var(--theme-info-dark, #2980b9);
+            background: var(--color-info);
           }
 
           &:disabled {
@@ -146,19 +146,19 @@
 
     &.alert-error {
       background: #fee;
-      border-left: 4px solid #e74c3c;
-      color: #c0392b;
+      border-left: 4px solid var(--color-error);
+      color: var(--color-error);
     }
 
     &.alert-info {
-      background: #ebf5fb;
-      border-left: 4px solid var(--theme-info, #3498db);
-      color: var(--theme-info-dark, #2980b9);
+      background: var(--color-info-bg);
+      border-left: 4px solid var(--color-info);
+      color: var(--color-info);
     }
   }
 
   .prediction-results {
-    background: white;
+    background: var(--color-surface-raised);
     border-radius: 8px;
     padding: 25px;
     box-shadow: 0 2px 10px rgba(0, 0, 0, 0.1);
@@ -170,21 +170,21 @@
       margin-bottom: 25px;
 
       h2 {
-        color: #2c3e50;
+        color: var(--color-text-primary);
         font-size: 1.5rem;
       }
 
       .btn-secondary {
         padding: 10px 20px;
-        background: #95a5a6;
-        color: white;
+        background: var(--color-neutral);
+        color: var(--color-nav-text);
         border: none;
         border-radius: 4px;
         cursor: pointer;
         transition: background 0.3s;
 
         &:hover {
-          background: #7f8c8d;
+          background: var(--color-text-muted);
         }
       }
     }
@@ -196,12 +196,12 @@
       margin-bottom: 30px;
 
       .stat-card {
-        background: linear-gradient(135deg, var(--theme-primary, #667eea) 0%, var(--theme-accent, #764ba2) 100%);
+        background: linear-gradient(135deg, var(--color-accent) 0%, var(--color-accent-hover) 100%);
         border-radius: 8px;
         padding: 20px;
         display: flex;
         align-items: center;
-        color: white;
+        color: var(--color-nav-text);
         box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
         transition: transform 0.3s;
 
@@ -230,7 +230,7 @@
             }
             
             &.negative {
-              color: #e74c3c;
+              color: var(--color-error);
             }
           }
         }
@@ -240,18 +240,18 @@
     .seuils-section {
       margin-bottom: 30px;
       padding: 25px;
-      background: #f8f9fa;
+      background: var(--color-surface-sunken);
       border-radius: 8px;
-      border-left: 4px solid var(--theme-info, #3498db);
+      border-left: 4px solid var(--color-info);
 
       h3 {
-        color: #2c3e50;
+        color: var(--color-text-primary);
         font-size: 1.3rem;
         margin-bottom: 10px;
       }
 
       .section-description {
-        color: #7f8c8d;
+        color: var(--color-text-muted);
         font-size: 0.95rem;
         margin-bottom: 20px;
         line-height: 1.6;
@@ -263,7 +263,7 @@
         gap: 20px;
 
         .seuil-card {
-          background: white;
+          background: var(--color-surface-raised);
           border-radius: 8px;
           padding: 20px;
           box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
@@ -276,7 +276,7 @@
 
           .seuil-label {
             font-size: 0.9rem;
-            color: #7f8c8d;
+            color: var(--color-text-muted);
             margin-bottom: 10px;
             font-weight: 500;
             text-transform: uppercase;
@@ -286,21 +286,21 @@
           .seuil-value {
             font-size: 1.8rem;
             font-weight: bold;
-            color: #2c3e50;
+            color: var(--color-text-primary);
             margin-bottom: 10px;
 
             &.positive {
-              color: #27ae60;
+              color: var(--color-success);
             }
 
             &.negative {
-              color: #e74c3c;
+              color: var(--color-error);
             }
           }
 
           .seuil-description {
             font-size: 0.85rem;
-            color: #95a5a6;
+            color: var(--color-neutral);
             line-height: 1.4;
           }
         }
@@ -317,7 +317,7 @@
       margin-top: 30px;
 
       h3 {
-        color: #2c3e50;
+        color: var(--color-text-primary);
         margin-bottom: 15px;
         font-size: 1.2rem;
       }
@@ -325,11 +325,11 @@
       .predictions-table {
         width: 100%;
         border-collapse: collapse;
-        background: white;
+        background: var(--color-surface-raised);
 
         thead {
-          background: #34495e;
-          color: white;
+          background: var(--color-text-primary);
+          color: var(--color-nav-text);
 
           th {
             padding: 12px;
@@ -340,11 +340,11 @@
 
         tbody {
           tr {
-            border-bottom: 1px solid #ecf0f1;
+            border-bottom: 1px solid var(--color-border);
             transition: background 0.2s;
 
             &:hover {
-              background: #f8f9fa;
+              background: var(--color-surface-sunken);
             }
 
             td {
@@ -352,21 +352,21 @@
 
               &.amount {
                 font-weight: 600;
-                color: #27ae60;
+                color: var(--color-success);
               }
               
               &.solde-before {
                 font-weight: 500;
-                color: var(--theme-info, #3498db);
+                color: var(--color-info);
               }
               
               &.solde-after {
                 font-weight: 700;
                 &.positive {
-                  color: #27ae60;
+                  color: var(--color-success);
                 }
                 &.negative {
-                  color: #e74c3c;
+                  color: var(--color-error);
                 }
               }
 
@@ -377,18 +377,18 @@
                 font-weight: 600;
 
                 &.high {
-                  background: #d4edda;
-                  color: #155724;
+                  background: var(--color-success-bg);
+                  color: var(--color-success-text);
                 }
 
                 &.medium {
-                  background: #fff3cd;
-                  color: #856404;
+                  background: var(--color-warning-bg);
+                  color: var(--color-warning-text);
                 }
 
                 &.low {
-                  background: #f8d7da;
-                  color: #721c24;
+                  background: var(--color-error-bg);
+                  color: var(--color-error-text);
                 }
               }
             }

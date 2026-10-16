@@ -1,9 +1,9 @@
 <div class="predictions-container">
   <div class="header">
     <div class="header-top">
-      <button (click)="goBack()" class="btn-back">
+      <button type="button" (click)="goBack()" class="ds-btn ds-btn--secondary btn-back">
         <i class="fas fa-arrow-left"></i>{{ 'COMMON.actions.back' | translate }}</button>
-      <h1>🔮 Prédictions des Opérations Bancaires</h1>
+      <h1><i class="fas fa-chart-line"></i> Prédictions des Opérations Bancaires</h1>
     </div>
     <p class="subtitle">Prédisez les approvisionnements, compensations et niveillements futurs basés sur les données historiques</p>
   </div>
@@ -15,7 +15,7 @@
       <div class="form-grid">
         <div class="form-group">
           <label for="typeOperation">Type d'Opération *</label>
-          <select id="typeOperation" formControlName="typeOperation" class="form-control">
+          <select id="typeOperation" formControlName="typeOperation" class="ds-select form-control">
             <option value="">-- Sélectionner un type --</option>
             <option *ngFor="let type of availableTypes" [value]="type.value">{{ type.label }}</option>
           </select>
@@ -26,7 +26,7 @@
 
         <div class="form-group">
           <label for="horizonJours">Horizon de Prédiction (jours) *</label>
-          <input type="number" id="horizonJours" formControlName="horizonJours" class="form-control" min="1" max="365">
+          <input type="number" id="horizonJours" formControlName="horizonJours" class="ds-input form-control" min="1" max="365">
           <small class="form-text">Nombre de jours à prédire (1-365)</small>
           <div *ngIf="predictionForm.get('horizonJours')?.invalid && predictionForm.get('horizonJours')?.touched" class="error-message">
             L'horizon doit être entre 1 et 365 jours
@@ -35,7 +35,7 @@
 
         <div class="form-group">
           <label for="periodeAnalyseJours">Période d'Analyse (jours) *</label>
-          <input type="number" id="periodeAnalyseJours" formControlName="periodeAnalyseJours" class="form-control" min="7" max="730">
+          <input type="number" id="periodeAnalyseJours" formControlName="periodeAnalyseJours" class="ds-input form-control" min="7" max="730">
           <small class="form-text">Nombre de jours d'historique à analyser (7-730)</small>
           <div *ngIf="predictionForm.get('periodeAnalyseJours')?.invalid && predictionForm.get('periodeAnalyseJours')?.touched" class="error-message">
             La période d'analyse doit être entre 7 et 730 jours
@@ -44,31 +44,31 @@
 
         <div class="form-group">
           <label for="methodePrediction">Méthode de Prédiction *</label>
-          <select id="methodePrediction" formControlName="methodePrediction" class="form-control">
+          <select id="methodePrediction" formControlName="methodePrediction" class="ds-select form-control">
             <option *ngFor="let methode of methodesPrediction" [value]="methode.value">{{ methode.label }}</option>
           </select>
         </div>
 
         <div class="form-group">
           <label for="codeProprietaire">Agence (optionnel)</label>
-          <input type="text" id="codeProprietaire" formControlName="codeProprietaire" class="form-control" placeholder="Filtrer par agence">
+          <input type="text" id="codeProprietaire" formControlName="codeProprietaire" class="ds-input form-control" placeholder="Filtrer par agence">
         </div>
 
         <div class="form-group">
           <label for="service">Service (optionnel)</label>
-          <input type="text" id="service" formControlName="service" class="form-control" placeholder="Filtrer par service">
+          <input type="text" id="service" formControlName="service" class="ds-input form-control" placeholder="Filtrer par service">
         </div>
 
         <div class="form-group">
           <label for="pays">Pays (optionnel)</label>
-          <input type="text" id="pays" formControlName="pays" class="form-control" placeholder="Filtrer par pays">
+          <input type="text" id="pays" formControlName="pays" class="ds-input form-control" placeholder="Filtrer par pays">
         </div>
       </div>
 
       <div class="form-actions">
-        <button type="submit" class="btn btn-primary" [disabled]="isLoading || predictionForm.invalid">
-          <span *ngIf="!isLoading">🔮 Générer la Prédiction</span>
-          <span *ngIf="isLoading">⏳ Génération en cours...</span>
+        <button type="submit" class="ds-btn ds-btn--primary btn btn-primary" [disabled]="isLoading || predictionForm.invalid">
+          <span *ngIf="!isLoading"><i class="fas fa-magic"></i> Générer la Prédiction</span>
+          <span *ngIf="isLoading"><i class="fas fa-spinner fa-spin"></i> Génération en cours...</span>
         </button>
       </div>
     </form>
@@ -82,14 +82,14 @@
   <!-- Résultats de la prédiction -->
   <div *ngIf="predictionResponse" class="prediction-results">
     <div class="results-header">
-      <h2>📊 Résultats de la Prédiction</h2>
-      <button class="btn btn-secondary" (click)="exportToCSV()">📥 Exporter en CSV</button>
+      <h2><i class="fas fa-chart-bar"></i> Résultats de la Prédiction</h2>
+      <button type="button" class="ds-btn ds-btn--secondary btn btn-secondary" (click)="exportToCSV()"><i class="fas fa-download"></i> Exporter en CSV</button>
     </div>
 
     <!-- Statistiques globales -->
     <div class="stats-grid">
       <div class="stat-card">
-        <div class="stat-icon">💰</div>
+        <div class="stat-icon"><i class="fas fa-coins"></i></div>
         <div class="stat-content">
           <div class="stat-label">Montant Total Prédit</div>
           <div class="stat-value">{{ formatCurrency(predictionResponse.montantTotalPrediction) }}</div>
@@ -97,7 +97,7 @@
       </div>
 
       <div class="stat-card">
-        <div class="stat-icon">📈</div>
+        <div class="stat-icon"><i class="fas fa-chart-line"></i></div>
         <div class="stat-content">
           <div class="stat-label">Montant Moyen/Jour</div>
           <div class="stat-value">{{ formatCurrency(predictionResponse.montantMoyenParJour) }}</div>
@@ -105,7 +105,7 @@
       </div>
 
       <div class="stat-card">
-        <div class="stat-icon">📊</div>
+        <div class="stat-icon"><i class="fas fa-chart-bar"></i></div>
         <div class="stat-content">
           <div class="stat-label">Nombre d'Opérations</div>
           <div class="stat-value">{{ predictionResponse.nombreOperationsPredites }}</div>
@@ -113,7 +113,7 @@
       </div>
 
       <div class="stat-card">
-        <div class="stat-icon">🎯</div>
+        <div class="stat-icon"><i class="fas fa-bullseye"></i></div>
         <div class="stat-content">
           <div class="stat-label">Confiance</div>
           <div class="stat-value">{{ formatPercent(predictionResponse.confiance) }}</div>
@@ -121,7 +121,7 @@
       </div>
 
       <div class="stat-card">
-        <div class="stat-icon">📉</div>
+        <div class="stat-icon"><i class="fas fa-arrow-down"></i></div>
         <div class="stat-content">
           <div class="stat-label">Montant Minimum</div>
           <div class="stat-value">{{ formatCurrency(predictionResponse.montantMin) }}</div>
@@ -129,7 +129,7 @@
       </div>
 
       <div class="stat-card">
-        <div class="stat-icon">📈</div>
+        <div class="stat-icon"><i class="fas fa-arrow-up"></i></div>
         <div class="stat-content">
           <div class="stat-label">Montant Maximum</div>
           <div class="stat-value">{{ formatCurrency(predictionResponse.montantMax) }}</div>
@@ -200,7 +200,7 @@
     <!-- Tableau des prédictions -->
     <div class="table-container">
       <h3>Prédictions Détaillées par Jour</h3>
-      <table class="predictions-table">
+      <table class="ds-table predictions-table">
         <thead>
           <tr>
             <th>{{ 'TBL.date' | translate }}</th>
