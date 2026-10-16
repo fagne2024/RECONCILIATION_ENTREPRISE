@@ -6,7 +6,7 @@
       {{ 'RDL.ReconciliApp' | translate }}
     </div>
     <div class="nav-sep"></div>
-    <button type="button" class="nav-back" (click)="goBack()">
+    <button type="button" class="ds-btn ds-btn--secondary nav-back" (click)="goBack()">
       <i class="fas fa-chevron-left"></i>
       {{ 'RDL.Retourauxcomptes' | translate }}
     </button>
@@ -18,16 +18,16 @@
     </div>
     <div class="nav-spacer"></div>
     <div class="nav-actions">
-      <button class="nav-btn secondary" (click)="exportToPdf()" [disabled]="!data || isExporting">
+      <button type="button" class="ds-btn ds-btn--secondary nav-btn secondary" (click)="exportToPdf()" [disabled]="!data || isExporting">
         <i class="fas fa-file-pdf" *ngIf="!isExporting"></i>
         <i class="fas fa-spinner fa-spin" *ngIf="isExporting"></i>
         {{ isExporting ? 'Export...' : 'Export PDF' }}
       </button>
-      <button class="nav-btn secondary" (click)="openParamsModal()" [disabled]="!selectedAgence">
+      <button type="button" class="ds-btn ds-btn--secondary nav-btn secondary" (click)="openParamsModal()" [disabled]="!selectedAgence">
         <i class="fas fa-cog"></i>
         {{ 'RDL.Paramètresagence' | translate }}
       </button>
-      <button class="nav-btn primary" (click)="openFluxModal()" [disabled]="!canOpenFluxModal">
+      <button type="button" class="ds-btn ds-btn--primary nav-btn primary" (click)="openFluxModal()" [disabled]="!canOpenFluxModal">
         <i class="fas fa-edit"></i>
         {{ 'RDL.Saisirlesflux' | translate }}
       </button>
@@ -35,7 +35,7 @@
   </nav>
 
   <!-- FILTER BAR -->
-  <div class="filter-bar">
+  <div class="filter-bar ds-filter-bar">
     <div class="filter-label">
       <i class="fas fa-filter"></i>{{ 'LBL.filters' | translate }}</div>
     <div class="filter-sep"></div>
@@ -71,15 +71,15 @@
     <div class="filter-item">
       <span class="fi-label">{{ 'LBL.period' | translate }}</span>
       <div class="fi-date-range">
-        <input type="date" class="fi-input" [(ngModel)]="startDate" (change)="onFilterChange()">
+        <input type="date" class="ds-input fi-input" [(ngModel)]="startDate" (change)="onFilterChange()">
         <span class="fi-date-sep">→</span>
-        <input type="date" class="fi-input" [(ngModel)]="endDate" (change)="onFilterChange()">
+        <input type="date" class="ds-input fi-input" [(ngModel)]="endDate" (change)="onFilterChange()">
       </div>
     </div>
 
     <div class="filter-spacer"></div>
 
-    <button class="filter-apply" (click)="onFilterChange()" [disabled]="isLoading">
+    <button type="button" class="ds-btn ds-btn--secondary filter-apply" (click)="onFilterChange()" [disabled]="isLoading">
       <i class="fas fa-check"></i>
       {{ 'RDL.Appliquerlesfiltres' | translate }}
     </button>
@@ -117,7 +117,7 @@
       <div class="hero-panel" [class.hero-no-chart]="!selectedAgence">
         <div class="hero-kpi">
           <div class="hk-label">{{ 'RDL.Redevanceloterietotale' | translate }}</div>
-          <div class="hk-amount" [class.negative]="data.redevanceTotale < 0">
+          <div class="hk-amount ds-num" [class.negative]="data.redevanceTotale < 0">
             {{ data.redevanceTotale < 0 ? '−' : '' }}{{ formatNum(Math.abs(data.redevanceTotale)) }}
           </div>
           <div class="hk-currency">{{ 'RDL.XOFfranccfaouestafricain' | translate }}</div>
@@ -142,19 +142,19 @@
         <div class="hero-meta">
           <div class="hm-item">
             <div class="hm-label">{{ 'RDL.Basedecalcul' | translate }}</div>
-            <div class="hm-value" [class.negative]="data.baseCalcul < 0">
+            <div class="hm-value ds-num" [class.negative]="data.baseCalcul < 0">
               {{ data.baseCalcul < 0 ? '−' : '' }}{{ formatNumDecimal(Math.abs(data.baseCalcul)) }}
             </div>
           </div>
           <div class="hm-divider"></div>
           <div class="hm-item" *ngIf="selectedAgence">
             <div class="hm-label">{{ 'RDL.Tauxappliqué' | translate }}</div>
-            <div class="hm-value">{{ data.tauxRedevancePourcentage }} %</div>
+            <div class="hm-value ds-num">{{ data.tauxRedevancePourcentage }} %</div>
           </div>
           <div class="hm-divider" *ngIf="selectedAgence"></div>
           <div class="hm-item">
             <div class="hm-label">{{ 'RDL.Formule' | translate }}</div>
-            <div class="hm-value formula">{{ 'RDL.PBJrém×taux' | translate }}</div>
+            <div class="hm-value ds-num formula">{{ 'RDL.PBJrém×taux' | translate }}</div>
           </div>
         </div>
       </div>
@@ -165,28 +165,28 @@
           <div class="rc-icon g"><i class="fas fa-chart-line"></i></div>
           <div class="rc-text">
             <div class="rc-name">{{ 'RDL.Tauxpayin' | translate }}</div>
-            <div class="rc-val">{{ tauxPayin }}</div>
+            <div class="rc-val ds-num">{{ tauxPayin }}</div>
           </div>
         </div>
         <div class="rate-card">
           <div class="rc-icon r"><i class="fas fa-chart-line"></i></div>
           <div class="rc-text">
             <div class="rc-name">{{ 'RDL.Tauxpayout' | translate }}</div>
-            <div class="rc-val">{{ tauxPayout }}</div>
+            <div class="rc-val ds-num">{{ tauxPayout }}</div>
           </div>
         </div>
         <div class="rate-card">
           <div class="rc-icon a"><i class="fas fa-bullseye"></i></div>
           <div class="rc-text">
             <div class="rc-name">{{ 'RDL.Retenuesurgains' | translate }}</div>
-            <div class="rc-val">{{ retenueSurGainsTaux }}</div>
+            <div class="rc-val ds-num">{{ retenueSurGainsTaux }}</div>
           </div>
         </div>
         <div class="rate-card">
           <div class="rc-icon b"><i class="fas fa-university"></i></div>
           <div class="rc-text">
             <div class="rc-name">{{ 'RDL.Taxejeuxhasard' | translate }}</div>
-            <div class="rc-val">{{ taxeJeuxHasard }}</div>
+            <div class="rc-val ds-num">{{ taxeJeuxHasard }}</div>
           </div>
         </div>
       </div>
@@ -202,12 +202,12 @@
         <div class="card" [class.card-zero]="!data.chiffreAffairesBrut">
           <div class="card-top"><div class="card-formula">{{ 'RDL.Misesbonus' | translate }}</div></div>
           <div class="card-title">{{ 'RDL.Chiffredaffairesbrut' | translate }}</div>
-          <div class="card-value">{{ formatNum(data.chiffreAffairesBrut) }}</div>
+          <div class="card-value ds-num">{{ formatNum(data.chiffreAffairesBrut) }}</div>
         </div>
         <div class="card" [class.card-zero]="!data.taxeSurJeuxHasard">
           <div class="card-top"><div class="card-formula">{{ data.taxeJeuxHasardPourcentage }}{{ 'RDL.×cabrut' | translate }}</div></div>
           <div class="card-title">{{ 'RDL.Taxesurjeuxhasard' | translate }}</div>
-          <div class="card-value">{{ formatNum(data.taxeSurJeuxHasard) }}</div>
+          <div class="card-value ds-num">{{ formatNum(data.taxeSurJeuxHasard) }}</div>
         </div>
         <div class="card amber" [class.card-zero]="!data.retenueSurGains">
           <div class="card-top">
@@ -215,7 +215,7 @@
             <div class="card-chip amber">{{ 'TBL.confidence' | translate }}</div>
           </div>
           <div class="card-title">{{ 'RDL.Retenuesurgains' | translate }}</div>
-          <div class="card-value">{{ formatNum(data.retenueSurGains) }}</div>
+          <div class="card-value ds-num">{{ formatNum(data.retenueSurGains) }}</div>
         </div>
       </div>
 
@@ -233,12 +233,12 @@
             <div class="card-chip red" *ngIf="data.produitBrutJeux < 0">{{ 'RDL.Négatif' | translate }}</div>
           </div>
           <div class="card-title">{{ 'RDL.Produitbrutdejeux' | translate }}</div>
-          <div class="card-value">{{ formatNum(data.produitBrutJeux) }}</div>
+          <div class="card-value ds-num">{{ formatNum(data.produitBrutJeux) }}</div>
         </div>
         <div class="card blue" [class.card-zero]="!data.remunerationIntegrateur">
           <div class="card-top"><div class="card-formula">{{ 'RDL.Payin×' | translate }} {{ data.tauxPayin }}{{ 'RDL.Payout×' | translate }} {{ data.tauxPayout }}%)</div></div>
           <div class="card-title">{{ 'RDL.Rémunérationintégrateur' | translate }}</div>
-          <div class="card-value">{{ formatNum(data.remunerationIntegrateur) }}</div>
+          <div class="card-value ds-num">{{ formatNum(data.remunerationIntegrateur) }}</div>
         </div>
         <div class="card featured">
           <div class="card-top">
@@ -246,7 +246,7 @@
             <div class="card-chip amber">{{ 'RDL.Résultatclé' | translate }}</div>
           </div>
           <div class="card-title">{{ 'RDL.Revenugénéréactcom' | translate }}</div>
-          <div class="card-value" [class.negative]="data.revenuGenereActCom < 0">{{ data.revenuGenereActCom < 0 ? '−' : '' }}{{ formatNum(Math.abs(data.revenuGenereActCom)) }}</div>
+          <div class="card-value ds-num" [class.negative]="data.revenuGenereActCom < 0">{{ data.revenuGenereActCom < 0 ? '−' : '' }}{{ formatNum(Math.abs(data.revenuGenereActCom)) }}</div>
           <div class="card-note">{{ 'RDL.Basedecalculdelaredevance' | translate }}</div>
         </div>
       </div>
@@ -256,7 +256,7 @@
         <div class="sh-icon g"><i class="fas fa-coins"></i></div>
         <span class="sh-text">{{ 'RDL.Fluxpari' | translate }}</span>
         <div class="sh-line"></div>
-        <button class="btn-flux-inline" (click)="openFluxModal()" [disabled]="!canOpenFluxModal">
+        <button type="button" class="ds-btn ds-btn--secondary btn-flux-inline" (click)="openFluxModal()" [disabled]="!canOpenFluxModal">
           <i class="fas fa-edit"></i> {{ 'RDL.Saisirlesflux' | translate }}
         </button>
       </div>
@@ -265,17 +265,17 @@
         <div class="card" [class.card-zero]="!data.totalMises">
           <div class="card-top"><div class="card-formula">{{ 'RDL.Montanttotalmisé' | translate }}</div></div>
           <div class="card-title">{{ 'RDL.Totalmises' | translate }}</div>
-          <div class="card-value">{{ formatNum(data.totalMises) }}</div>
+          <div class="card-value ds-num">{{ formatNum(data.totalMises) }}</div>
         </div>
         <div class="card" [class.card-zero]="!data.totalGains">
           <div class="card-top"><div class="card-formula">{{ 'RDL.Montanttotalgagné' | translate }}</div></div>
           <div class="card-title">{{ 'RDL.Totalgains' | translate }}</div>
-          <div class="card-value">{{ formatNum(data.totalGains) }}</div>
+          <div class="card-value ds-num">{{ formatNum(data.totalGains) }}</div>
         </div>
         <div class="card" [class.card-zero]="!data.totalBonus">
           <div class="card-top"><div class="card-formula">{{ 'RDL.Totalpromotionsversées' | translate }}</div></div>
           <div class="card-title">{{ 'RDL.Totalbonus' | translate }}</div>
-          <div class="card-value">{{ formatNum(data.totalBonus) }}</div>
+          <div class="card-value ds-num">{{ formatNum(data.totalBonus) }}</div>
         </div>
       </div>
 
@@ -293,7 +293,7 @@
             <div class="card-chip green">{{ 'RDL.Stats' | translate }}</div>
           </div>
           <div class="card-title">{{ 'RDL.PAYIN' | translate }}</div>
-          <div class="card-value">{{ formatNum(data.payin) }}</div>
+          <div class="card-value ds-num">{{ formatNum(data.payin) }}</div>
         </div>
         <div class="card blue" [class.card-zero]="!data.payout">
           <div class="card-top">
@@ -301,7 +301,7 @@
             <div class="card-chip blue">{{ 'RDL.Stats' | translate }}</div>
           </div>
           <div class="card-title">{{ 'RDL.PAYOUT' | translate }}</div>
-          <div class="card-value">{{ formatNum(data.payout) }}</div>
+          <div class="card-value ds-num">{{ formatNum(data.payout) }}</div>
         </div>
       </div>
 
@@ -352,36 +352,36 @@
       <p class="modal-info">{{ 'CPT.Période' | translate }} {{ fluxForm.dateDebut }} → {{ fluxForm.dateFin }}</p>
       <div class="form-group">
         <label>{{ 'RDL.Totalmisesfcfa' | translate }}</label>
-        <input type="number" [(ngModel)]="fluxForm.totalMises" step="1" min="0" placeholder="0">
+        <input class="ds-input" type="number" [(ngModel)]="fluxForm.totalMises" step="1" min="0" placeholder="0">
       </div>
       <div class="form-group">
         <label>{{ 'RDL.Totalgainsfcfa' | translate }}</label>
-        <input type="number" [(ngModel)]="fluxForm.totalGains" step="1" min="0" placeholder="0">
+        <input class="ds-input" type="number" [(ngModel)]="fluxForm.totalGains" step="1" min="0" placeholder="0">
       </div>
       <div class="form-group">
         <label>{{ 'RDL.Totalbonusfcfa' | translate }}</label>
-        <input type="number" [(ngModel)]="fluxForm.totalBonus" step="1" min="0" placeholder="0">
+        <input class="ds-input" type="number" [(ngModel)]="fluxForm.totalBonus" step="1" min="0" placeholder="0">
       </div>
       <div class="form-group">
         <label>{{ 'RDL.Retenuesurgainsfcfa' | translate }}</label>
-        <input type="number" [(ngModel)]="fluxForm.retenueSurGains" step="1" min="0" placeholder="0">
+        <input class="ds-input" type="number" [(ngModel)]="fluxForm.retenueSurGains" step="1" min="0" placeholder="0">
       </div>
       <div class="form-group">
         <label>{{ 'RDL.Payinfcfa' | translate }}</label>
-        <input type="number" [(ngModel)]="fluxForm.payin" step="1" min="0" placeholder="0">
+        <input class="ds-input" type="number" [(ngModel)]="fluxForm.payin" step="1" min="0" placeholder="0">
       </div>
       <div class="form-group">
         <label>{{ 'RDL.Payoutfcfa' | translate }}</label>
-        <input type="number" [(ngModel)]="fluxForm.payout" step="1" min="0" placeholder="0">
+        <input class="ds-input" type="number" [(ngModel)]="fluxForm.payout" step="1" min="0" placeholder="0">
       </div>
       <div class="form-group">
         <label>{{ 'RDL.Retenuesurgainsfcfa' | translate }}</label>
-        <input type="number" [(ngModel)]="fluxForm.retenueSurGains" step="1" min="0" placeholder="0">
+        <input class="ds-input" type="number" [(ngModel)]="fluxForm.retenueSurGains" step="1" min="0" placeholder="0">
       </div>
     </div>
     <div class="modal-footer">
-      <button class="btn btn-secondary" (click)="closeFluxModal()">{{ 'COMMON.actions.cancel' | translate }}</button>
-      <button class="btn btn-primary" (click)="saveFlux()" [disabled]="isSavingFlux">
+      <button type="button" class="ds-btn ds-btn--secondary btn btn-secondary" (click)="closeFluxModal()">{{ 'COMMON.actions.cancel' | translate }}</button>
+      <button type="button" class="ds-btn ds-btn--primary btn btn-primary" (click)="saveFlux()" [disabled]="isSavingFlux">
         {{ isSavingFlux ? 'Enregistrement...' : 'Enregistrer' }}
       </button>
     </div>
@@ -398,24 +398,24 @@
     <div class="modal-body">
       <div class="form-group">
         <label>{{ 'RDL.Retenuesurgains_1' | translate }}</label>
-        <input type="number" [(ngModel)]="paramsForm.retenueSurGainsPourcentage" step="0.01" min="0" max="100">
+        <input class="ds-input" type="number" [(ngModel)]="paramsForm.retenueSurGainsPourcentage" step="0.01" min="0" max="100">
       </div>
       <div class="form-group">
         <label>{{ 'RDL.Seuilretenuesurgainsfcfa' | translate }}</label>
-        <input type="number" [(ngModel)]="paramsForm.retenueSurGainsSeuil" step="1000" min="0">
+        <input class="ds-input" type="number" [(ngModel)]="paramsForm.retenueSurGainsSeuil" step="1000" min="0">
       </div>
       <div class="form-group">
         <label>{{ 'RDL.Taxejeuxhasard_1' | translate }}</label>
-        <input type="number" [(ngModel)]="paramsForm.taxeJeuxHasardPourcentage" step="0.01" min="0" max="100">
+        <input class="ds-input" type="number" [(ngModel)]="paramsForm.taxeJeuxHasardPourcentage" step="0.01" min="0" max="100">
       </div>
       <div class="form-group">
         <label>{{ 'RDL.Tauxredevance' | translate }}</label>
-        <input type="number" [(ngModel)]="paramsForm.tauxRedevancePourcentage" step="0.01" min="0" max="100">
+        <input class="ds-input" type="number" [(ngModel)]="paramsForm.tauxRedevancePourcentage" step="0.01" min="0" max="100">
       </div>
     </div>
     <div class="modal-footer">
-      <button class="btn btn-secondary" (click)="closeParamsModal()">{{ 'COMMON.actions.cancel' | translate }}</button>
-      <button class="btn btn-primary" (click)="saveParams()" [disabled]="isSavingParams">
+      <button type="button" class="ds-btn ds-btn--secondary btn btn-secondary" (click)="closeParamsModal()">{{ 'COMMON.actions.cancel' | translate }}</button>
+      <button type="button" class="ds-btn ds-btn--primary btn btn-primary" (click)="saveParams()" [disabled]="isSavingParams">
         {{ isSavingParams ? 'Enregistrement...' : 'Enregistrer' }}
       </button>
     </div>
