@@ -40,12 +40,12 @@
       <div class="hero-kpi-strip">
         <div class="hk-strip-item">
           <span class="hk-strip-label">{{ 'TBL.rows' | translate }}</span>
-          <span class="hk-strip-value">{{ filteredMatches.length | number:'1.0-0' }}</span>
+          <span class="hk-strip-value ds-num">{{ filteredMatches.length | number:'1.0-0' }}</span>
         </div>
         <div class="hk-strip-sep"></div>
         <div class="hk-strip-item">
           <span class="hk-strip-label">{{ 'TBL.totalVolume' | translate }}</span>
-          <span class="hk-strip-value">{{ calculateTotalVolume() | number:'1.0-0' }}</span>
+          <span class="hk-strip-value ds-num">{{ calculateTotalVolume() | number:'1.0-0' }}</span>
         </div>
       </div>
     </div>
@@ -55,7 +55,7 @@
   <div class="matches-table-container">
   <div class="header-section">
     <div class="header-top">
-      <button (click)="goBack()" class="back-button">
+      <button type="button" (click)="goBack()" class="back-button ds-btn ds-btn--secondary ds-btn--sm">
         {{ 'COMMON.actions.backToResults' | translate }}
       </button>
       <h2>{{ 'TBL.matchesTitle' | translate }}</h2>
@@ -64,7 +64,7 @@
         <button
           type="button"
           (click)="saveToEcartBoSummary()"
-          class="save-to-summary-btn"
+          class="save-to-summary-btn ds-btn ds-btn--secondary ds-btn--sm"
           [disabled]="!filteredMatches?.length"
           [title]="'TBL.saveToEcartBoSummaryHint' | translate"
         >
@@ -73,18 +73,24 @@
       </div>
     </div>
     
-    <div class="search-section">
-      <input 
-        type="text" 
-        [(ngModel)]="searchKey" 
-        (input)="onSearch()"
-        [placeholder]="'TBL.searchPlaceholder' | translate"
-        class="search-input"
-      >
-      <div class="export-menu-container">
-        <button 
-          (click)="toggleExportMenu($event)" 
-          class="export-menu-button"
+    <div class="search-section ds-filter-bar">
+      <div class="ds-field ds-search">
+        <i class="fas fa-search" aria-hidden="true"></i>
+        <label class="ds-visually-hidden" for="matches-search">{{ 'TBL.searchPlaceholder' | translate }}</label>
+        <input
+          id="matches-search"
+          type="text"
+          [(ngModel)]="searchKey"
+          (input)="onSearch()"
+          [placeholder]="'TBL.searchPlaceholder' | translate"
+          class="search-input ds-input"
+        >
+      </div>
+      <div class="export-menu-container ds-filter-bar__actions">
+        <button
+          type="button"
+          (click)="toggleExportMenu($event)"
+          class="export-menu-button ds-btn ds-btn--secondary"
           [disabled]="isExporting || displayedMatches.length === 0"
         >
           {{ 'TBL.exportAndOptions' | translate }}
@@ -93,15 +99,17 @@
         <div *ngIf="showExportMenu" class="export-menu-dropdown">
           <div class="menu-section">
             <label class="menu-label">{{ 'TBL.display' | translate }}</label>
-            <button 
-              (click)="setViewMode('BO')" 
+            <button
+              type="button"
+              (click)="setViewMode('BO')"
               class="menu-option-button"
               [class.active]="viewMode === 'BO'"
             >
               {{viewMode === 'BO' ? '✓' : ''}} {{ 'TBL.boTable' | translate }}
             </button>
-            <button 
-              (click)="setViewMode('PARTNER')" 
+            <button
+              type="button"
+              (click)="setViewMode('PARTNER')"
               class="menu-option-button"
               [class.active]="viewMode === 'PARTNER'"
             >
@@ -110,24 +118,26 @@
           </div>
           <div class="menu-divider"></div>
           <div class="menu-section">
-            <button (click)="openColumnSelector()" class="menu-option-button">
+            <button type="button" (click)="openColumnSelector()" class="menu-option-button">
               {{ 'TBL.chooseColumnsToExport' | translate }}
             </button>
             <span class="menu-info">{{ 'TBL.columnsSelected' | translate:{ selected: selectedColumnsCount, total: availableColumnsForExport.length } }}</span>
           </div>
           <div class="menu-divider"></div>
           <div class="menu-section">
-            <button 
-              (click)="exportResults(false)" 
-              class="menu-export-button"
+            <button
+              type="button"
+              (click)="exportResults(false)"
+              class="menu-export-button ds-btn ds-btn--primary"
               [disabled]="isExporting || displayedMatches.length === 0"
               [title]="'TBL.exportSearchHint' | translate"
             >
               {{ isExporting ? ('TBL.exporting' | translate) : ('TBL.exportSearchResults' | translate:{ count: (displayedMatches.length | number) }) }}
             </button>
-            <button 
-              (click)="exportResults(true)" 
-              class="menu-export-button menu-export-all"
+            <button
+              type="button"
+              (click)="exportResults(true)"
+              class="menu-export-button menu-export-all ds-btn ds-btn--primary"
               [disabled]="isExporting || filteredMatches.length === 0"
               [title]="'TBL.exportAllHint' | translate"
             >
@@ -164,11 +174,11 @@
     <div class="summary-cards">
       <div class="summary-card">
         <div class="summary-label">{{ 'TBL.totalVolume' | translate }}</div>
-        <div class="summary-value">{{calculateTotalVolume() | number:'1.0-0'}}</div>
+        <div class="summary-value ds-num">{{calculateTotalVolume() | number:'1.0-0'}}</div>
       </div>
       <div class="summary-card">
         <div class="summary-label">{{ 'TBL.transactionCount' | translate }}</div>
-        <div class="summary-value">{{filteredMatches.length}}</div>
+        <div class="summary-value ds-num">{{filteredMatches.length}}</div>
       </div>
     </div>
   </div>
@@ -176,11 +186,11 @@
   <div class="table-scroll-container">
     <div class="table-scroll-nav">
       <span class="scroll-nav-label">{{ 'TBL.scrollHorizontal' | translate }}</span>
-      <button class="scroll-nav-btn" (click)="scrollTableLeft()" [disabled]="tableScrollLeft === 0" [title]="'TBL.scrollLeft' | translate">◀</button>
-      <button class="scroll-nav-btn" (click)="scrollTableRight()" [disabled]="tableScrollLeft >= tableScrollMax" [title]="'TBL.scrollRight' | translate">▶</button>
+      <button type="button" class="scroll-nav-btn" (click)="scrollTableLeft()" [disabled]="tableScrollLeft === 0" [title]="'TBL.scrollLeft' | translate">◀</button>
+      <button type="button" class="scroll-nav-btn" (click)="scrollTableRight()" [disabled]="tableScrollLeft >= tableScrollMax" [title]="'TBL.scrollRight' | translate">▶</button>
     </div>
-    <div class="table-wrapper" #tableWrapper (scroll)="onTableScroll($event)">
-      <table class="matches-table">
+    <div class="table-wrapper ds-table-scroll" #tableWrapper (scroll)="onTableScroll($event)">
+      <table class="matches-table ds-table">
         <thead>
           <tr>
             <th>{{ 'TBL.keyColumn' | translate }}</th>
@@ -192,7 +202,10 @@
           <tr *ngFor="let match of getPagedMatches(); trackBy: trackByMatch" [class.has-differences]="hasDifferences(match)">
             <td class="key-cell">{{match.key}}</td>
             <td class="status-cell">
-              <span [class.has-differences]="hasDifferences(match)">
+              <span class="ds-badge"
+                    [class.ds-badge--amount-gap]="hasDifferences(match)"
+                    [class.ds-badge--matched]="!hasDifferences(match)"
+                    [class.has-differences]="hasDifferences(match)">
                 {{ (hasDifferences(match) ? 'TBL.differences' : 'TBL.okStatus') | translate }}
               </span>
             </td>
@@ -209,44 +222,33 @@
   </div>
 
   <div class="pagination-section">
-    <div class="pagination-info">
-      <span>
-        {{ 'PAG.pageInfo' | translate:{ current: currentPage, total: totalPages, count: displayedMatches.length } }}
-      </span>
-    </div>
-    <div class="pagination-controls">
-      <button (click)="prevPage()" [disabled]="currentPage === 1" class="page-btn">{{ 'PAG.previous' | translate }}</button>
-      <div class="page-numbers">
-        <button 
-          *ngFor="let page of getPageNumbers(); trackBy: trackByIndex" 
-          (click)="goToPage(page)"
-          [class.active]="page === currentPage"
-          class="page-number-btn"
-        >
-          {{page}}
-        </button>
-      </div>
-      <button (click)="nextPage()" [disabled]="currentPage === totalPages" class="page-btn">{{ 'PAG.next' | translate }}</button>
-    </div>
+    <ds-pagination
+      [page]="currentPage"
+      [pageCount]="totalPages"
+      [totalItems]="displayedMatches.length"
+      [pageSize]="pageSize"
+      [itemLabel]="'TBL.lines' | translate"
+      (pageChange)="goToPage($event)">
+    </ds-pagination>
   </div>
 
   <!-- Bouton scroll to top -->
-  <button *ngIf="showScrollTopBtn" (click)="scrollToTop()" class="scroll-to-top-btn" [title]="'TBL.backToTop' | translate">↑</button>
+  <button type="button" *ngIf="showScrollTopBtn" (click)="scrollToTop()" class="scroll-to-top-btn" [title]="'TBL.backToTop' | translate">↑</button>
 
   <!-- Popup de sélection des colonnes -->
   <div *ngIf="showColumnSelector" class="column-selector-overlay" (click)="closeColumnSelector()">
     <div class="column-selector-popup" (click)="$event.stopPropagation()">
       <div class="popup-header">
         <h3>{{ 'TBL.columnSelectorTitle' | translate }}</h3>
-        <button (click)="closeColumnSelector()" class="close-btn">×</button>
+        <button type="button" (click)="closeColumnSelector()" class="close-btn" [attr.aria-label]="'COMMON.actions.close' | translate">×</button>
       </div>
       
       <div class="popup-content">
         <div class="selection-controls">
-          <button (click)="toggleAllColumns(true)" class="select-all-btn">
+          <button type="button" (click)="toggleAllColumns(true)" class="select-all-btn ds-btn ds-btn--secondary ds-btn--sm">
             {{ 'COMMON.actions.selectAll' | translate }}
           </button>
-          <button (click)="toggleAllColumns(false)" class="deselect-all-btn">
+          <button type="button" (click)="toggleAllColumns(false)" class="deselect-all-btn ds-btn ds-btn--secondary ds-btn--sm">
             {{ 'COMMON.actions.deselectAll' | translate }}
           </button>
           <span class="selection-info">
@@ -257,8 +259,9 @@
         <div class="columns-grid">
           <div *ngFor="let column of availableColumnsForExport; trackBy: trackByValue" class="column-item">
             <label class="column-checkbox">
-              <input 
-                type="checkbox" 
+              <input
+                type="checkbox"
+                class="ds-checkbox"
                 [(ngModel)]="selectedColumnsForExport[column]"
                 [checked]="selectedColumnsForExport[column]">
               <span class="column-name">{{column}}</span>
@@ -268,10 +271,11 @@
       </div>
       
       <div class="popup-actions">
-        <button (click)="closeColumnSelector()" class="cancel-btn">{{ 'COMMON.actions.close' | translate }}</button>
-        <button 
-          (click)="exportResults(); closeColumnSelector()" 
-          class="export-btn"
+        <button type="button" (click)="closeColumnSelector()" class="cancel-btn ds-btn ds-btn--secondary">{{ 'COMMON.actions.close' | translate }}</button>
+        <button
+          type="button"
+          (click)="exportResults(); closeColumnSelector()"
+          class="export-btn ds-btn ds-btn--primary"
           [disabled]="selectedColumnsCount === 0 || isExporting">
           {{ isExporting ? ('TBL.exporting' | translate) : ('TBL.exportBtn' | translate) }}
         </button>

@@ -12,6 +12,7 @@ import { ExportOptimizationService, ExportProgress } from '../../services/export
 import { PopupService } from '../../services/popup.service';
 import { fixGarbledCharacters } from '../../utils/encoding-fixer';
 import { TranslateModule, TranslateService } from '@ngx-translate/core';
+import { DsPaginationComponent } from '../../shared/ui';
 import {
     filterMatchBoDataByMagicPartition,
     resolveMagicPartitionContext,
@@ -21,7 +22,7 @@ import {
 @Component({
   selector: 'app-matches-table',
   standalone: true,
-  imports: [TranslateModule, CommonModule, FormsModule, ReactiveFormsModule],
+  imports: [TranslateModule, CommonModule, FormsModule, ReactiveFormsModule, DsPaginationComponent],
   templateUrl: './matches-table.component.html',
   styleUrls: ['./matches-table.component.scss'],
   changeDetection: ChangeDetectionStrategy.OnPush
