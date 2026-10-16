@@ -10,11 +10,11 @@
                     <span class="dot-live" *ngIf="!reconciliationSummaryLoading"></span>
                     {{ refreshLabel }}
                 </div>
-                <button type="button" class="btn" (click)="exportTableCsv()" [disabled]="!reconciliationSummaryRows.length">
+                <button type="button" class="btn ds-btn ds-btn--secondary" (click)="exportTableCsv()" [disabled]="!reconciliationSummaryRows.length">
                     ⭳ {{ 'COMMON.actions.export' | translate }}
                 </button>
                 <select
-                    class="period"
+                    class="period ds-select"
                     [(ngModel)]="summaryPeriod"
                     (change)="onSummaryPeriodChange()"
                 >
@@ -118,35 +118,36 @@
             </div>
         </div>
 
-        <div class="filters">
-            <div class="field">
+        <div class="filters ds-filter-bar">
+            <div class="field ds-field">
                 <label>{{ 'LBL.countryLabel' | translate }}</label>
-                <select [(ngModel)]="reconciliationSummaryCountry" (change)="loadReconciliationSummary()">
+                <select class="ds-select" [(ngModel)]="reconciliationSummaryCountry" (change)="loadReconciliationSummary()">
                     <option value="">{{ 'FILT.all' | translate }}</option>
                     <option *ngFor="let country of reconciliationSummaryCountries; trackBy: trackByValue" [ngValue]="country">{{ country }}</option>
                 </select>
             </div>
-            <div class="field">
+            <div class="field ds-field">
                 <label>{{ 'TBL.service' | translate }}</label>
-                <select [(ngModel)]="reconciliationSummaryService" (change)="loadReconciliationSummary()">
+                <select class="ds-select" [(ngModel)]="reconciliationSummaryService" (change)="loadReconciliationSummary()">
                     <option value="">{{ 'FILT.all' | translate }}</option>
                     <option *ngFor="let service of reconciliationSummaryServices; trackBy: trackByValue" [ngValue]="service">{{ service }}</option>
                 </select>
             </div>
-            <div class="field">
+            <div class="field ds-field">
                 <label>{{ 'ETA.environment' | translate }}</label>
-                <select [(ngModel)]="reconciliationSummaryEnv" (change)="loadReconciliationSummary()">
+                <select class="ds-select" [(ngModel)]="reconciliationSummaryEnv" (change)="loadReconciliationSummary()">
                     <option *ngFor="let env of reconciliationEnvOptions; trackBy: trackByValue" [ngValue]="env">
                         {{ env === 'ALL' ? ('ETA.allEnvs' | translate) : (env === 'TOTAL' ? 'T-E' : env) }}
                     </option>
                 </select>
             </div>
-            <div class="field">
+            <div class="field ds-field">
                 <label>{{ 'ETA.searchService' | translate }}</label>
                 <input
                     type="text"
                     [(ngModel)]="serviceSearchQuery"
                     (ngModelChange)="onServiceSearchChange()"
+                    class="ds-input"
                     [placeholder]="'ETA.searchPlaceholder' | translate"
                 >
             </div>
@@ -198,7 +199,7 @@
         >
             <div class="kpi total">
                 <div class="label">{{ 'ETA.kpi.totalPeriod' | translate }}</div>
-                <div class="value">{{ recoStats.total }}</div>
+                <div class="value ds-num">{{ recoStats.total }}</div>
                 <div class="delta" [ngClass]="formatKpiDelta(recoStats.total, previousRecoStats.total).cls">
                     {{ formatKpiDelta(recoStats.total, previousRecoStats.total).text }}
                 </div>
@@ -208,7 +209,7 @@
             </div>
             <div class="kpi ok">
                 <div class="label">{{ recoValidatedStatusLabelPlural }}</div>
-                <div class="value">{{ recoCoverageCount }}</div>
+                <div class="value ds-num">{{ recoCoverageCount }}</div>
                 <div class="delta" [ngClass]="formatKpiDelta(recoCoverageCount, previousRecoStats.reconcilie + previousRecoStats.enCours).cls">
                     {{ formatKpiDelta(recoCoverageCount, previousRecoStats.reconcilie + previousRecoStats.enCours).text }}
                 </div>
@@ -218,7 +219,7 @@
             </div>
             <div class="kpi progress">
                 <div class="label">{{ 'ETA.kpi.validating' | translate }}</div>
-                <div class="value">{{ recoStats.enCoursCdo }}</div>
+                <div class="value ds-num">{{ recoStats.enCoursCdo }}</div>
                 <div class="delta" [ngClass]="formatKpiDelta(recoStats.enCoursCdo, previousRecoStats.enCoursCdo, false).cls">
                     {{ formatKpiDelta(recoStats.enCoursCdo, previousRecoStats.enCoursCdo, false).text }}
                 </div>
@@ -228,7 +229,7 @@
             </div>
             <div class="kpi">
                 <div class="label">{{ 'ETA.kpi.closing' | translate }}</div>
-                <div class="value">{{ recoStats.enCoursGroup }}</div>
+                <div class="value ds-num">{{ recoStats.enCoursGroup }}</div>
                 <div class="delta" [ngClass]="formatKpiDelta(recoStats.enCoursGroup, previousRecoStats.enCoursGroup, false).cls">
                     {{ formatKpiDelta(recoStats.enCoursGroup, previousRecoStats.enCoursGroup, false).text }}
                 </div>
@@ -238,7 +239,7 @@
             </div>
             <div class="kpi ko">
                 <div class="label">{{ 'ETA.kpi.notReconciled' | translate }}</div>
-                <div class="value">{{ recoStats.nonReco }}</div>
+                <div class="value ds-num">{{ recoStats.nonReco }}</div>
                 <div class="delta" [ngClass]="formatKpiDelta(recoStats.nonReco, previousRecoStats.nonReco, false).cls">
                     {{ formatKpiDelta(recoStats.nonReco, previousRecoStats.nonReco, false).text }}
                 </div>
@@ -269,7 +270,7 @@
                         [class.active]="anomaliesOnlyFilter"
                         (click)="toggleAnomaliesOnly()"
                     >
-                        <input type="checkbox" [checked]="anomaliesOnlyFilter" tabindex="-1" aria-hidden="true">
+                        <input type="checkbox" class="ds-checkbox" [checked]="anomaliesOnlyFilter" tabindex="-1" aria-hidden="true">
                         {{ 'ETA.anomaliesOnly' | translate:{ count: anomalyRowsCount } }}
                     </div>
                     <div class="switch-lbl">
@@ -290,8 +291,8 @@
             <div class="meta" *ngIf="reconciliationSummaryRows.length">
                 {{ 'ETA.meta' | translate:{ count: filteredServiceCount, period: periodRangeLabel } }}
             </div>
-            <div class="table-scroll" *ngIf="reconciliationSummaryRows.length">
-                <table>
+            <div class="table-scroll ds-table-scroll" *ngIf="reconciliationSummaryRows.length">
+                <table class="ds-table">
                     <thead>
                         <tr>
                             <th (click)="toggleServiceSort()">{{ 'TBL.service' | translate }}<span class="arrow">{{ sortServiceAsc ? '▾' : '▴' }}</span>
@@ -303,7 +304,7 @@
                                 <button
                                     *ngIf="i === 0"
                                     type="button"
-                                    class="day-nav"
+                                    class="day-nav ds-btn ds-btn--ghost ds-btn--sm"
                                     (click)="prevDaysWindow(); $event.stopPropagation()"
                                     [disabled]="!canGoPrevDays()"
                                 >‹</button>
@@ -311,7 +312,7 @@
                                 <button
                                     *ngIf="i === visibleWeekDays.length - 1"
                                     type="button"
-                                    class="day-nav"
+                                    class="day-nav ds-btn ds-btn--ghost ds-btn--sm"
                                     (click)="nextDaysWindow(); $event.stopPropagation()"
                                     [disabled]="!canGoNextDays()"
                                 >›</button>
@@ -390,16 +391,16 @@
                 <div class="pagination-left">
                     <label>
                         {{ 'PAG.rowsPerPage' | translate }}
-                        <select [(ngModel)]="reconciliationPageSize" (ngModelChange)="onPageSizeChange()">
+                        <select class="ds-select" [(ngModel)]="reconciliationPageSize" (ngModelChange)="onPageSizeChange()">
                             <option *ngFor="let n of reconciliationPageSizeOptions; trackBy: trackByValue" [ngValue]="n">{{ n }}</option>
                         </select>
                     </label>
                     <span class="pagination-range">{{ paginationLabel }}</span>
                 </div>
                 <div class="pagination-controls pagination-controls-centered" *ngIf="getReconciliationTotalPages() > 1">
-                    <button type="button" (click)="prevReconciliationPage()" [disabled]="reconciliationPageIndex === 0">‹</button>
+                    <button type="button" class="ds-btn ds-btn--secondary ds-btn--sm" (click)="prevReconciliationPage()" [disabled]="reconciliationPageIndex === 0">‹</button>
                     {{ 'ETA.pageOf' | translate:{ current: (reconciliationPageIndex + 1), total: getReconciliationTotalPages() } }}
-                    <button type="button" (click)="nextReconciliationPage()" [disabled]="reconciliationPageIndex >= getReconciliationTotalPages() - 1">›</button>
+                    <button type="button" class="ds-btn ds-btn--secondary ds-btn--sm" (click)="nextReconciliationPage()" [disabled]="reconciliationPageIndex >= getReconciliationTotalPages() - 1">›</button>
                 </div>
             </div>
         </div>
@@ -450,13 +451,14 @@
             </p>
             <textarea
                 rows="4"
+                class="ds-input"
                 [(ngModel)]="blockingCommentDraft"
                 [placeholder]="'ETA.modal.placeholder' | translate"
             ></textarea>
             <div class="j1-modal-error" *ngIf="blockingCommentError">{{ blockingCommentError }}</div>
             <div class="j1-modal-actions">
-                <button type="button" class="btn" (click)="closeBlockingCommentModal()" [disabled]="blockingCommentSaving">{{ 'COMMON.actions.cancel' | translate }}</button>
-                <button type="button" class="btn btn-primary" (click)="saveBlockingComment()" [disabled]="blockingCommentSaving">
+                <button type="button" class="btn ds-btn ds-btn--secondary" (click)="closeBlockingCommentModal()" [disabled]="blockingCommentSaving">{{ 'COMMON.actions.cancel' | translate }}</button>
+                <button type="button" class="btn btn-primary ds-btn ds-btn--primary" (click)="saveBlockingComment()" [disabled]="blockingCommentSaving">
                     {{ blockingCommentSaving ? ('ETA.modal.saving' | translate) : ('ETA.modal.save' | translate) }}
                 </button>
             </div>
