@@ -18,7 +18,7 @@
   <div *ngIf="!isLoading && !profil" class="error-state">
     <i class="fas fa-exclamation-triangle"></i>
     <h3>{{ 'PROF.Profilintrouvable' | translate }}</h3>
-    <button class="btn btn-primary" (click)="goBack()">
+    <button type="button" class="ds-btn ds-btn--primary btn btn-primary" (click)="goBack()">
       <i class="fas fa-arrow-left"></i> {{ 'COMMON.Back' | translate }}
     </button>
   </div>
@@ -26,7 +26,7 @@
   <div *ngIf="!isLoading && profil" class="detail-container">
     <!-- Header avec navigation -->
     <div class="detail-header">
-      <button class="btn btn-secondary back-btn" (click)="goBack()">
+      <button type="button" class="ds-btn ds-btn--secondary btn btn-secondary back-btn" (click)="goBack()">
         <i class="fas fa-arrow-left"></i> {{ 'COMMON.Back' | translate }}
       </button>
       
@@ -55,13 +55,13 @@
       </div>
 
       <div class="detail-header-actions">
-        <button class="btn btn-primary" (click)="savePendingChanges()" [disabled]="!hasPendingChanges || isSavingPermissions">
+        <button type="button" class="ds-btn ds-btn--primary btn btn-primary" (click)="savePendingChanges()" [disabled]="!hasPendingChanges || isSavingPermissions">
           <i class="fas fa-save"></i> {{ isSavingPermissions ? ('PROF.Sauvegardeencours' | translate) : ('PROF.Sauvegarder' | translate) }} {{ hasPendingChanges ? '(' + pendingChangesCount + ')' : '' }}
         </button>
-        <button class="btn btn-secondary" (click)="discardPendingChanges()" [disabled]="!hasPendingChanges || isSavingPermissions">
+        <button type="button" class="ds-btn ds-btn--secondary btn btn-secondary" (click)="discardPendingChanges()" [disabled]="!hasPendingChanges || isSavingPermissions">
           <i class="fas fa-undo"></i> {{ 'PROF.Annuler' | translate }}
         </button>
-        <button class="btn btn-primary" (click)="openPaysModal(profil!)">
+        <button type="button" class="ds-btn ds-btn--primary btn btn-primary" (click)="openPaysModal(profil!)">
           <i class="fas fa-globe"></i> {{ 'PROF.Gérerlespays' | translate }}
         </button>
       </div>
@@ -74,11 +74,11 @@
         <span>{{ 'PROF.Modificationsenattente' | translate }}: <strong>{{ pendingChangesCount }}</strong></span>
       </div>
       <div class="pending-actions">
-        <button type="button" class="btn btn-primary" (click)="savePendingChanges()" [disabled]="isSavingPermissions">
+        <button type="button" class="ds-btn ds-btn--primary btn btn-primary" (click)="savePendingChanges()" [disabled]="isSavingPermissions">
           <i class="fas fa-save"></i>
           {{ isSavingPermissions ? ('PROF.Sauvegardeencours' | translate) : ('PROF.Sauvegarder' | translate) }}
         </button>
-        <button type="button" class="btn btn-secondary" (click)="discardPendingChanges()" [disabled]="isSavingPermissions">
+        <button type="button" class="ds-btn ds-btn--secondary btn btn-secondary" (click)="discardPendingChanges()" [disabled]="isSavingPermissions">
           <i class="fas fa-undo"></i> {{ 'PROF.Annuler' | translate }}
         </button>
       </div>
@@ -86,20 +86,20 @@
 
     <!-- Navigation par onglets -->
     <div class="detail-tabs">
-      <button 
-        class="tab-btn" 
+      <button type="button" 
+        class="ds-btn ds-btn--secondary tab-btn" 
         [class.active]="activeTab === 'navigation'" 
         (click)="activeTab = 'navigation'">
         <i class="fas fa-sitemap"></i> {{ 'PROF.Navigation' | translate }}
       </button>
-      <button 
-        class="tab-btn" 
+      <button type="button" 
+        class="ds-btn ds-btn--secondary tab-btn" 
         [class.active]="activeTab === 'modules'" 
         (click)="activeTab = 'modules'">
         <i class="fas fa-cubes"></i> {{ 'PROF.Modules' | translate }} ({{ getAssociatedModules().length }})
       </button>
-      <button 
-        class="tab-btn" 
+      <button type="button" 
+        class="ds-btn ds-btn--secondary tab-btn" 
         [class.active]="activeTab === 'permissions'" 
         (click)="activeTab = 'permissions'">
         <i class="fas fa-key"></i> {{ 'PROF.Permissions' | translate }} ({{ profilPermissions.length }})
@@ -116,16 +116,16 @@
             [(ngModel)]="navMenuSearch" 
             placeholder="{{ 'PROF.Filtrerunmenuousousmenu' | translate }}"
             (input)="onNavMenuSearchChange()"
-            class="search-input">
-          <button *ngIf="navMenuSearch" class="btn-clear" (click)="clearNavMenuSearch()">
+            class="ds-input search-input">
+          <button type="button" *ngIf="navMenuSearch" class="ds-btn ds-btn--secondary btn-clear" (click)="clearNavMenuSearch()">
             <i class="fas fa-times"></i>
           </button>
         </div>
         <div class="nav-actions">
-          <button class="btn btn-sm btn-secondary" (click)="expandAllNavGroups()">
+          <button type="button" class="ds-btn ds-btn--secondary btn btn-sm btn-secondary" (click)="expandAllNavGroups()">
             <i class="fas fa-expand"></i> {{ 'PROF.Toutdéplier' | translate }}
           </button>
-          <button class="btn btn-sm btn-secondary" (click)="collapseAllNavGroups()">
+          <button type="button" class="ds-btn ds-btn--secondary btn btn-sm btn-secondary" (click)="collapseAllNavGroups()">
             <i class="fas fa-compress"></i> {{ 'PROF.Toutreplier' | translate }}
           </button>
         </div>
@@ -175,7 +175,7 @@
                 <div class="submenu-toolbar">
                   <div class="action-search">
                     <i class="fas fa-search"></i>
-                    <input 
+                    <input class="ds-input" 
                       type="text" 
                       [(ngModel)]="actionSearchByModule[submenu.accessModuleName]"
                       (input)="setActionSearchTerm(submenu.accessModuleName, $event.target.value)"
@@ -183,11 +183,11 @@
                   </div>
                   <div class="submenu-actions-header">
                     <span class="actions-count">{{ getFilteredSubmenuActionDetails(submenu.accessModuleName).length }} actions</span>
-                    <button class="btn btn-sm btn-primary" (click)="selectAllSubmenuActions(submenu.accessModuleName)" [disabled]="isModuleActionsLoading(submenu.accessModuleName) || isModuleActionsSyncing(submenu.accessModuleName)">
+                    <button type="button" class="ds-btn ds-btn--primary btn btn-sm btn-primary" (click)="selectAllSubmenuActions(submenu.accessModuleName)" [disabled]="isModuleActionsLoading(submenu.accessModuleName) || isModuleActionsSyncing(submenu.accessModuleName)">
                       <i class="fas" [ngClass]="isModuleActionsSyncing(submenu.accessModuleName) ? 'fa-spinner fa-spin' : 'fa-check-double'"></i>
                       {{ isModuleActionsSyncing(submenu.accessModuleName) ? ('PROF.Synchronisation' | translate) : ('PROF.Toutcocher' | translate) }}
                     </button>
-                    <button class="btn btn-sm btn-secondary" (click)="syncModuleActions(submenu.accessModuleName, getNavigationContext(group, submenu))" [disabled]="isModuleActionsLoading(submenu.accessModuleName) || isModuleActionsSyncing(submenu.accessModuleName)" *ngIf="hasUnsyncedActions(submenu.accessModuleName)">
+                    <button type="button" class="ds-btn ds-btn--secondary btn btn-sm btn-secondary" (click)="syncModuleActions(submenu.accessModuleName, getNavigationContext(group, submenu))" [disabled]="isModuleActionsLoading(submenu.accessModuleName) || isModuleActionsSyncing(submenu.accessModuleName)" *ngIf="hasUnsyncedActions(submenu.accessModuleName)">
                       <i class="fas" [ngClass]="isModuleActionsSyncing(submenu.accessModuleName) ? 'fa-spinner fa-spin' : 'fa-sync'"></i>
                       {{ 'PROF.Synchroniser' | translate }}
                     </button>
@@ -266,7 +266,7 @@
                 <span class="perm-count">
                   <i class="fas fa-key"></i> {{ getModulePermissionsCount(module) }} {{ 'PROF.Permissions' | translate }}
                 </span>
-                <button class="btn btn-sm btn-outline" (click)="activeTab = 'permissions'">
+                <button type="button" class="ds-btn ds-btn--secondary btn btn-sm btn-outline" (click)="activeTab = 'permissions'">
                   <i class="fas fa-eye"></i> {{ 'PROF.Voirlespermissions' | translate }}
                 </button>
               </div>
@@ -310,11 +310,11 @@
           </div>
 
           <div class="module-actions">
-            <button class="btn-action" (click)="selectAllPermissions(module)" 
+            <button type="button" class="ds-btn ds-btn--secondary btn-action" (click)="selectAllPermissions(module)" 
                     [disabled]="hasAllPermissions(module) || isModulePermissionsLoading(module) || isSavingPermissions">
               <i class="fas fa-check-double"></i>{{ 'ACT.selectAll' | translate }}
             </button>
-            <button class="btn-action" (click)="deselectAllPermissions(module)"
+            <button type="button" class="ds-btn ds-btn--secondary btn-action" (click)="deselectAllPermissions(module)"
                     [disabled]="!hasAnyPermission(module) || isModulePermissionsLoading(module) || isSavingPermissions">
               <i class="fas fa-times"></i> {{ 'APM.Toutdésélectionner' | translate }}
             </button>
@@ -324,7 +324,7 @@
         <div *ngIf="getAssociatedModules().length === 0" class="no-data-message">
           <i class="fas fa-cube"></i>
           <p>{{ 'PROF.Aucunmoduleassocié' | translate }}</p>
-          <button class="btn btn-primary" (click)="activeTab = 'modules'">
+          <button type="button" class="ds-btn ds-btn--primary btn btn-primary" (click)="activeTab = 'modules'">
             <i class="fas fa-plus"></i> {{ 'PROF.Ajouterdesmodules' | translate }}
           </button>
         </div>
@@ -366,7 +366,7 @@
         </div>
       </div>
       <div class="modal-footer">
-        <button class="btn btn-secondary" (click)="closePaysModal()">
+        <button type="button" class="ds-btn ds-btn--secondary btn btn-secondary" (click)="closePaysModal()">
           <i class="fas fa-times"></i> {{ 'COMMON.Close' | translate }}
         </button>
       </div>
