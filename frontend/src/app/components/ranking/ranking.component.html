@@ -13,7 +13,7 @@
     <div class="nav-actions">
       <button
         type="button"
-        class="nav-btn secondary"
+        class="nav-btn secondary ds-btn ds-btn--secondary"
         (click)="refreshRankingData()"
         [disabled]="loadingAgencies || loadingServices"
         title="{{ 'ACT.refreshKeepFilters' | translate }}"
@@ -22,28 +22,28 @@
       </button>
       <button
         type="button"
-        class="nav-btn secondary"
+        class="nav-btn secondary ds-btn ds-btn--secondary"
         (click)="exportAgencyPdf()"
         [disabled]="loadingAgencies || !agencyRankings.length || isExportingAgencyPdf">
         <i class="fas fa-file-pdf"></i> {{ 'RNK.pdfClients' | translate }}
       </button>
       <button 
         type="button" 
-        class="nav-btn secondary" 
+        class="nav-btn secondary ds-btn ds-btn--secondary" 
         (click)="exportAgencyExcel()" 
         [disabled]="loadingAgencies || !agencyRankings.length">
         <i class="fas fa-file-excel"></i> {{ 'RNK.exportClients' | translate }}
       </button>
       <button
         type="button"
-        class="nav-btn primary"
+        class="nav-btn primary ds-btn ds-btn--primary"
         (click)="exportServicePdf()"
         [disabled]="loadingServices || !serviceRankings.length || isExportingServicePdf">
         <i class="fas fa-file-pdf"></i> {{ 'RNK.pdfServices' | translate }}
       </button>
       <button 
         type="button" 
-        class="nav-btn primary" 
+        class="nav-btn primary ds-btn ds-btn--primary" 
         (click)="exportServiceExcel()" 
         [disabled]="loadingServices || !serviceRankings.length">
         <i class="fas fa-file-excel"></i> {{ 'RNK.exportServices' | translate }}
@@ -62,12 +62,12 @@
       <div class="hero-kpi-strip">
         <div class="hk-strip-item">
           <span class="hk-strip-label">{{ 'RNK.rankedClients' | translate }}</span>
-          <span class="hk-strip-value">{{ formatNumber(agencyRankings.length) }}</span>
+          <span class="hk-strip-value ds-num">{{ formatNumber(agencyRankings.length) }}</span>
         </div>
         <div class="hk-strip-sep"></div>
         <div class="hk-strip-item">
           <span class="hk-strip-label">{{ 'RNK.rankedServices' | translate }}</span>
-          <span class="hk-strip-value">{{ formatNumber(serviceRankings.length) }}</span>
+          <span class="hk-strip-value ds-num">{{ formatNumber(serviceRankings.length) }}</span>
         </div>
       </div>
     </div>
@@ -86,7 +86,7 @@
     </div>
   </div>
 
-  <div class="ranking-filter-bar" style="margin-bottom: 24px;">
+  <div class="ranking-filter-bar ds-filter-bar" style="margin-bottom: 24px;">
     <div style="display: flex; flex-wrap: wrap; gap: 24px; align-items: flex-start; justify-content: space-between;">
       <!-- Filtre par pays -->
       <div style="min-width: 200px;">
@@ -127,6 +127,7 @@
           <label style="display: block; margin-bottom: 4px; font-size: 0.9rem; color: #666;">{{ 'LBL.startDateLabel' | translate }}</label>
           <input 
             type="date" 
+            class="ds-input"
             [(ngModel)]="customStartDate"
             (change)="onCustomDateChange()"
             [disabled]="loadingAgencies || loadingServices"
@@ -136,6 +137,7 @@
           <label style="display: block; margin-bottom: 4px; font-size: 0.9rem; color: #666;">{{ 'LBL.endDateLabel' | translate }}</label>
           <input 
             type="date" 
+            class="ds-input"
             [(ngModel)]="customEndDate"
             (change)="onCustomDateChange()"
             [disabled]="loadingAgencies || loadingServices"
@@ -165,23 +167,24 @@
             id="agency-ranking-type" 
             [(ngModel)]="agencyRankingType" 
             (change)="onAgencyRankingTypeChange()"
-            class="ranking-select control-same-width">
+            class="ranking-select control-same-width ds-select">
             <option value="transactions">{{ 'TBL.transactionCount' | translate }}</option>
             <option value="volume">{{ 'TBL.totalVolume' | translate }}</option>
             <option value="fees">{{ 'RNK.revenue' | translate }}</option>
           </select>
-          <button (click)="exportAgencyCSV()" class="export-btn control-same-width">{{ 'RNK.exportCsv' | translate }}</button>
-          <button (click)="exportAgencyExcel()" class="export-btn control-same-width">{{ 'ACT.importFile' | translate }}</button>
+          <button type="button" (click)="exportAgencyCSV()" class="export-btn control-same-width ds-btn ds-btn--secondary">{{ 'RNK.exportCsv' | translate }}</button>
+          <button type="button" (click)="exportAgencyExcel()" class="export-btn control-same-width ds-btn ds-btn--secondary">{{ 'ACT.importFile' | translate }}</button>
           <button
+            type="button"
             (click)="exportAgencyPdf()"
-            class="export-btn control-same-width"
+            class="export-btn control-same-width ds-btn ds-btn--secondary"
             [disabled]="loadingAgencies || !agencyRankings.length || isExportingAgencyPdf">
             {{ isExportingAgencyPdf ? ('RNK.exporting' | translate) : ('ACT.exportPdf' | translate) }}
           </button>
         </div>
       </div>
 
-      <div class="ranking-table-container">
+      <div class="ranking-table-container ds-table-scroll">
         <div *ngIf="loadingAgencies" class="loading">
           <div class="spinner"></div>
           <p>{{ 'RNK.loading' | translate }}</p>
@@ -189,10 +192,10 @@
 
         <div *ngIf="errorAgencies" class="error-message">
           <p>{{ errorAgencies }}</p>
-          <button (click)="loadAgencyRankings()" class="retry-btn">{{ 'COMMON.actions.retry' | translate }}</button>
+          <button type="button" (click)="loadAgencyRankings()" class="retry-btn ds-btn ds-btn--secondary">{{ 'COMMON.actions.retry' | translate }}</button>
         </div>
 
-        <table *ngIf="!loadingAgencies && !errorAgencies && paginatedAgencyRankings.length > 0" class="ranking-table">
+        <table *ngIf="!loadingAgencies && !errorAgencies && paginatedAgencyRankings.length > 0" class="ranking-table ds-table">
           <thead>
             <tr>
               <th class="position">{{ 'TBL.position' | translate }}</th>
@@ -213,25 +216,29 @@
               </td>
               <td class="agency-name">{{ item.agency }}</td>
               <td class="country">{{ item.country || '-' }}</td>
-              <td class="transaction-count">{{ formatNumber(item.transactionCount) }}</td>
-              <td class="total-volume">{{ formatAmount(item.totalVolume) }}</td>
-              <td class="total-fees">{{ formatAmount(item.totalFees) }}</td>
-              <td class="average-volume">{{ formatAmount(item.averageVolume) }}</td>
-              <td class="average-fees">{{ formatAmount(item.averageFees) }}</td>
+              <td class="transaction-count ds-num">{{ formatNumber(item.transactionCount) }}</td>
+              <td class="total-volume ds-num">{{ formatAmount(item.totalVolume) }}</td>
+              <td class="total-fees ds-num">{{ formatAmount(item.totalFees) }}</td>
+              <td class="average-volume ds-num">{{ formatAmount(item.averageVolume) }}</td>
+              <td class="average-fees ds-num">{{ formatAmount(item.averageFees) }}</td>
             </tr>
           </tbody>
         </table>
 
-        <!-- Pagination clients -->
-        <div *ngIf="!showAllAgencies && agencyTotalPages > 1" class="pagination">
-          <button (click)="prevAgencyPage()" [disabled]="agencyPage === 1">&lt;</button>
-          <button *ngFor="let p of [].constructor(agencyTotalPages); let idx = index" (click)="setAgencyPage(idx+1)" [class.active]="agencyPage === (idx+1)">{{ idx+1 }}</button>
-          <button (click)="nextAgencyPage()" [disabled]="agencyPage === agencyTotalPages">&gt;</button>
-        </div>
+        <ds-pagination
+          *ngIf="!showAllAgencies && agencyTotalPages > 1"
+          [page]="agencyPage"
+          [pageCount]="agencyTotalPages"
+          [totalItems]="agencyRankings.length"
+          [pageSize]="agencyPageSize"
+          [itemLabel]="'TBL.client' | translate"
+          [ariaLabel]="'RNK.rankedClients' | translate"
+          (pageChange)="setAgencyPage($event)">
+        </ds-pagination>
         
         <!-- Bouton Voir plus / Voir moins pour clients -->
         <div *ngIf="agencyRankings.length > agencyPageSize" class="view-more-container">
-          <button (click)="toggleShowAllAgencies()" class="view-more-btn">
+          <button type="button" (click)="toggleShowAllAgencies()" class="view-more-btn ds-btn ds-btn--secondary">
             {{ (showAllAgencies ? 'STA.seeLess' : 'STA.seeMore') | translate }}
           </button>
         </div>
@@ -255,23 +262,24 @@
             id="service-ranking-type" 
             [(ngModel)]="serviceRankingType" 
             (change)="onServiceRankingTypeChange()"
-            class="ranking-select control-same-width">
+            class="ranking-select control-same-width ds-select">
             <option value="transactions">{{ 'TBL.transactionCount' | translate }}</option>
             <option value="volume">{{ 'TBL.totalVolume' | translate }}</option>
             <option value="fees">{{ 'RNK.revenue' | translate }}</option>
           </select>
-          <button (click)="exportServiceCSV()" class="export-btn control-same-width">{{ 'RNK.exportCsv' | translate }}</button>
-          <button (click)="exportServiceExcel()" class="export-btn control-same-width">{{ 'ACT.importFile' | translate }}</button>
+          <button type="button" (click)="exportServiceCSV()" class="export-btn control-same-width ds-btn ds-btn--secondary">{{ 'RNK.exportCsv' | translate }}</button>
+          <button type="button" (click)="exportServiceExcel()" class="export-btn control-same-width ds-btn ds-btn--secondary">{{ 'ACT.importFile' | translate }}</button>
           <button
+            type="button"
             (click)="exportServicePdf()"
-            class="export-btn control-same-width"
+            class="export-btn control-same-width ds-btn ds-btn--secondary"
             [disabled]="loadingServices || !serviceRankings.length || isExportingServicePdf">
             {{ isExportingServicePdf ? ('RNK.exporting' | translate) : ('ACT.exportPdf' | translate) }}
           </button>
         </div>
       </div>
 
-      <div class="ranking-table-container">
+      <div class="ranking-table-container ds-table-scroll">
         <div *ngIf="loadingServices" class="loading">
           <div class="spinner"></div>
           <p>{{ 'RNK.loading' | translate }}</p>
@@ -279,10 +287,10 @@
 
         <div *ngIf="errorServices" class="error-message">
           <p>{{ errorServices }}</p>
-          <button (click)="loadServiceRankings()" class="retry-btn">{{ 'COMMON.actions.retry' | translate }}</button>
+          <button type="button" (click)="loadServiceRankings()" class="retry-btn ds-btn ds-btn--secondary">{{ 'COMMON.actions.retry' | translate }}</button>
         </div>
 
-        <table *ngIf="!loadingServices && !errorServices && paginatedServiceRankings.length > 0" class="ranking-table">
+        <table *ngIf="!loadingServices && !errorServices && paginatedServiceRankings.length > 0" class="ranking-table ds-table">
           <thead>
             <tr>
               <th class="position">{{ 'TBL.position' | translate }}</th>
@@ -304,26 +312,30 @@
               </td>
               <td class="service-name">{{ item.service }}</td>
               <td class="country">{{ item.country || '-' }}</td>
-              <td class="transaction-count">{{ formatNumber(item.transactionCount) }}</td>
-              <td class="total-volume">{{ formatAmount(item.totalVolume) }}</td>
-              <td class="total-fees">{{ formatAmount(item.totalFees) }}</td>
-              <td class="unique-agencies">{{ formatNumber(item.uniqueAgencies || 0) }}</td>
-              <td class="average-volume">{{ formatAmount(item.averageVolume) }}</td>
-              <td class="average-fees">{{ formatAmount(item.averageFees) }}</td>
+              <td class="transaction-count ds-num">{{ formatNumber(item.transactionCount) }}</td>
+              <td class="total-volume ds-num">{{ formatAmount(item.totalVolume) }}</td>
+              <td class="total-fees ds-num">{{ formatAmount(item.totalFees) }}</td>
+              <td class="unique-agencies ds-num">{{ formatNumber(item.uniqueAgencies || 0) }}</td>
+              <td class="average-volume ds-num">{{ formatAmount(item.averageVolume) }}</td>
+              <td class="average-fees ds-num">{{ formatAmount(item.averageFees) }}</td>
             </tr>
           </tbody>
         </table>
 
-        <!-- Pagination services -->
-        <div *ngIf="!showAllServices && serviceTotalPages > 1" class="pagination">
-          <button (click)="prevServicePage()" [disabled]="servicePage === 1">&lt;</button>
-          <button *ngFor="let p of [].constructor(serviceTotalPages); let idx = index" (click)="setServicePage(idx+1)" [class.active]="servicePage === (idx+1)">{{ idx+1 }}</button>
-          <button (click)="nextServicePage()" [disabled]="servicePage === serviceTotalPages">&gt;</button>
-        </div>
+        <ds-pagination
+          *ngIf="!showAllServices && serviceTotalPages > 1"
+          [page]="servicePage"
+          [pageCount]="serviceTotalPages"
+          [totalItems]="serviceRankings.length"
+          [pageSize]="servicePageSize"
+          [itemLabel]="'TBL.service' | translate"
+          [ariaLabel]="'RNK.rankedServices' | translate"
+          (pageChange)="setServicePage($event)">
+        </ds-pagination>
         
         <!-- Bouton Voir plus / Voir moins pour services -->
         <div *ngIf="serviceRankings.length > servicePageSize" class="view-more-container">
-          <button (click)="toggleShowAllServices()" class="view-more-btn">
+          <button type="button" (click)="toggleShowAllServices()" class="view-more-btn ds-btn ds-btn--secondary">
             {{ (showAllServices ? 'STA.seeLess' : 'STA.seeMore') | translate }}
           </button>
         </div>
