@@ -10,7 +10,7 @@
       <div class="kpi-strip">
         <div class="kpi">
           <span class="kpi-label">{{ 'PLT.aud.sectionTitle' | translate }}</span>
-          <span class="kpi-value">{{ totalItems }}</span>
+          <span class="kpi-value ds-num">{{ totalItems }}</span>
         </div>
       </div>
     </div>
@@ -28,20 +28,20 @@
         <label>{{ 'PLT.aud.searchLabel' | translate }}</label>
         <div class="pf-search">
           <i class="fas fa-search"></i>
-          <input type="text" class="pf-input" [placeholder]="'PLT.aud.searchPlaceholder' | translate" [(ngModel)]="searchText" (ngModelChange)="onSearchChange()">
-          <button *ngIf="searchText" class="pf-clear" type="button" (click)="clearSearch()"><i class="fas fa-times"></i></button>
+          <input type="text" class="ds-input pf-input" [placeholder]="'PLT.aud.searchPlaceholder' | translate" [(ngModel)]="searchText" (ngModelChange)="onSearchChange()">
+          <button *ngIf="searchText" class="ds-btn ds-btn--secondary pf-clear" type="button" (click)="clearSearch()"><i class="fas fa-times"></i></button>
         </div>
       </div>
       <div class="pf-field">
         <label>{{ 'PLT.aud.actionLabel' | translate }}</label>
-        <select class="pf-input" [(ngModel)]="actionFilter" (ngModelChange)="onActionFilterChange()">
+        <select class="ds-select pf-input" [(ngModel)]="actionFilter" (ngModelChange)="onActionFilterChange()">
           <option value="">{{ 'PLT.aud.allActions' | translate }}</option>
           <option *ngFor="let a of actions" [value]="a">{{ ('PLT.aud.actions.' + a) | translate }}</option>
         </select>
       </div>
       <div class="pf-field">
         <label>{{ 'PLT.aud.perPage' | translate }}</label>
-        <select class="pf-input" [(ngModel)]="pageSize" (ngModelChange)="onPageSizeChange()">
+        <select class="ds-select pf-input" [(ngModel)]="pageSize" (ngModelChange)="onPageSizeChange()">
           <option [ngValue]="10">10</option>
           <option [ngValue]="20">20</option>
           <option [ngValue]="50">50</option>
@@ -60,7 +60,7 @@
       </div>
 
       <div *ngIf="!loading" class="pf-table-wrap">
-        <table class="pf-table">
+        <table class="ds-table pf-table">
           <thead>
             <tr>
               <th>{{ 'PLT.aud.colId' | translate }}</th>
@@ -98,11 +98,11 @@
       </div>
 
       <div *ngIf="!loading && totalItems > pageSize" class="pf-pagination">
-        <button class="pf-page" (click)="onPageChange(currentPage - 1)" [disabled]="currentPage === 1" [title]="'PLT.aud.prev' | translate">
+        <button type="button" class="ds-btn ds-btn--secondary pf-page" (click)="onPageChange(currentPage - 1)" [disabled]="currentPage === 1" [title]="'PLT.aud.prev' | translate">
           <i class="fas fa-chevron-left"></i>
         </button>
-        <button *ngFor="let p of getPageRange()" class="pf-page" [class.is-active]="p === currentPage" (click)="onPageChange(p)">{{ p }}</button>
-        <button class="pf-page" (click)="onPageChange(currentPage + 1)" [disabled]="currentPage === totalPages()" [title]="'PLT.aud.next' | translate">
+        <button type="button" *ngFor="let p of getPageRange()" class="ds-btn ds-btn--secondary pf-page" [class.is-active]="p === currentPage" (click)="onPageChange(p)">{{ p }}</button>
+        <button type="button" class="ds-btn ds-btn--secondary pf-page" (click)="onPageChange(currentPage + 1)" [disabled]="currentPage === totalPages()" [title]="'PLT.aud.next' | translate">
           <i class="fas fa-chevron-right"></i>
         </button>
       </div>
