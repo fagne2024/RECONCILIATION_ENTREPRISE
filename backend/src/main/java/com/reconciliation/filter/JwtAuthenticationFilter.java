@@ -100,7 +100,7 @@ public class JwtAuthenticationFilter extends OncePerRequestFilter {
 
                 // Valider le token
                 if (jwtService.validateToken(jwt, username)) {
-                    if (!userDetails.isEnabled()) {
+                    if (!userDetails.isEnabled() || !userDetails.isAccountNonLocked()) {
                         SecurityContextHolder.clearContext();
                         response.setStatus(HttpServletResponse.SC_UNAUTHORIZED);
                         return;

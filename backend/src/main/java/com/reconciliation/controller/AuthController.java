@@ -100,15 +100,14 @@ public class AuthController {
         }
 
         String storedPassword = user.getPassword();
-        boolean passwordMatches;
-        if (storedPassword != null && (storedPassword.startsWith("$2a$") || storedPassword.startsWith("$2b$"))) {
-            passwordMatches = passwordEncoder.matches(password, storedPassword);
-        } else if (password.equals(storedPassword)) {
-            user.setPassword(passwordEncoder.encode(password));
-            userRepository.save(user);
-            passwordMatches = true;
-        } else {
-            passwordMatches = false;
+        boolean passwordMatches = false;
+        if (storedPassword != null && (storedPassword.startsWith("$2a$")
+                || storedPassword.startsWith("$2b$")
+                || storedPassword.startsWith("$2y$"))) {
+            String hash = storedPassword.startsWith("$2y$")
+                ? "$2a$" + storedPassword.substring(4)
+                : storedPassword;
+            passwordMatches = passwordEncoder.matches(password, hash);
         }
 
         if (!passwordMatches) {
@@ -358,6 +357,37 @@ public class AuthController {
             claims.put(JwtService.CLAIM_ENTREPRISE_ID, user.getEntrepriseId());
         }
         return claims;
+    }
+
+    /**
+     * Resout l'entreprise associee a un identifiant, AVANT authentification.
+     *
+     * <p>Utilise par la page de connexion pour mettre a jour le logo, le theme et
+     * le nom affiche des la saisie de l'identifiant (previsualisation de la
+     * marque). Endpoint volontairement minimal : ne renvoie QUE le code et le nom
+     * d'entreprise, jamais le profil ni une quelconque donnee du compte.</p>
+     *
+     * <p>Renvoie {@code entrepriseCode = null} et {@code entrepriseNom = null}
+     * pour un identifiant inconnu, un compte SUPER_ADMIN (aucune entreprise) ou
+     * un identifiant vide : le frontend reprend alors les couleurs/logo/nom par
+     * defaut.</p>
+     */
+    @GetMapping("/entreprise")
+    public ResponseEntity<Map<String, Object>> resolveEntreprise(
+            @RequestParam(name = "username", required = false) String username) {
+        Map<String, Object> response = new HashMap<>();
+        String code = null;
+        String nom = null;
+        if (username != null && !username.isBlank()) {
+            Optional<EntrepriseEntity> entreprise = userRepository.findByUsername(username.trim())
+                .map(UserEntity::getEntrepriseId)
+                .flatMap(entrepriseRepository::findById);
+            code = entreprise.map(EntrepriseEntity::getCode).orElse(null);
+            nom = entreprise.map(EntrepriseEntity::getNom).orElse(null);
+        }
+        response.put("entrepriseCode", code);
+        response.put("entrepriseNom", nom);
+        return ResponseEntity.ok(response);
     }
 
     @PostMapping("/logout")

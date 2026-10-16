@@ -226,8 +226,7 @@ public class UserController {
 
     @GetMapping("/check-admin")
     public ResponseEntity<Boolean> checkAdminExists() {
-        Optional<UserEntity> adminUser = userRepository.findByUsername("admin");
-        return ResponseEntity.ok(adminUser.isPresent());
+        return ResponseEntity.ok(userRepository.count() > 0);
     }
 
     /**

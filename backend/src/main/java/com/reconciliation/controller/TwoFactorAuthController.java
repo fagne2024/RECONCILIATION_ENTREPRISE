@@ -132,6 +132,10 @@ public class TwoFactorAuthController {
         if (!isAdmin()) {
             return ResponseEntity.status(403).body(Map.of("error", "Accès réservé aux administrateurs"));
         }
+        ResponseEntity<?> forbidden = checkTargetAccess(payload);
+        if (forbidden != null) {
+            return forbidden;
+        }
 
         String username = payload.get("username");
         if (username == null) {
@@ -191,6 +195,24 @@ public class TwoFactorAuthController {
         }
 
         UserEntity user = userOpt.get();
+        String actor = authenticatedUsername();
+        boolean self = actor != null && actor.equals(username);
+        if (self) {
+            String code = payload != null ? payload.get("code") : null;
+            if (code == null || user.getSecret2FA() == null || user.getSecret2FA().isBlank()) {
+                return ResponseEntity.badRequest().body(Map.of("error", "Code TOTP requis pour désactiver votre 2FA"));
+            }
+            try {
+                if (!twoFactorAuthService.validateCode(user.getSecret2FA(), Integer.parseInt(code))) {
+                    return ResponseEntity.status(401).body(Map.of("error", "Code invalide"));
+                }
+            } catch (NumberFormatException e) {
+                return ResponseEntity.badRequest().body(Map.of("error", "Code doit être un nombre à 6 chiffres"));
+            }
+        } else if (!isAdmin()) {
+            return ResponseEntity.status(403).body(Map.of("error", "Accès réservé aux administrateurs"));
+        }
+
         user.setEnabled2FA(false);
         // La clé secrète et le flag de scan sont conservés pour permettre une réactivation
         // avec le même compte Google Authenticator.
@@ -237,6 +259,10 @@ public class TwoFactorAuthController {
     public ResponseEntity<?> reset2FA(@RequestBody Map<String, String> payload) {
         if (!isAdmin()) {
             return ResponseEntity.status(403).body(Map.of("error", "Accès réservé aux administrateurs"));
+        }
+        ResponseEntity<?> forbidden = checkTargetAccess(payload);
+        if (forbidden != null) {
+            return forbidden;
         }
 
         String username = payload.get("username");
@@ -300,15 +326,30 @@ public class TwoFactorAuthController {
      */
     private ResponseEntity<?> checkTargetAccess(Map<String, String> payload) {
         String target = payload != null ? payload.get("username") : null;
-        if (target != null && !target.isBlank() && !target.equals(authenticatedUsername()) && !isAdmin()) {
-            return ResponseEntity.status(403).body(Map.of("error", "Vous ne pouvez gérer que votre propre authentification à deux facteurs"));
-        }
-        return null;
+        return enforceSelfOrSameTenantAdmin(target);
     }
 
     private ResponseEntity<?> checkRequestParamAccess(String username) {
-        if (username != null && !username.isBlank() && !username.equals(authenticatedUsername()) && !isAdmin()) {
-            return ResponseEntity.status(403).body(Map.of("error", "Vous ne pouvez consulter que votre propre authentification à deux facteurs"));
+        return enforceSelfOrSameTenantAdmin(username);
+    }
+
+    private ResponseEntity<?> enforceSelfOrSameTenantAdmin(String targetUsername) {
+        String actor = authenticatedUsername();
+        if (targetUsername == null || targetUsername.isBlank() || targetUsername.equals(actor)) {
+            return null;
+        }
+        if (!isAdmin()) {
+            return ResponseEntity.status(403).body(Map.of("error", "Vous ne pouvez gérer que votre propre authentification à deux facteurs"));
+        }
+        Optional<UserEntity> actorOpt = actor != null ? userRepository.findByUsername(actor) : Optional.empty();
+        Optional<UserEntity> targetOpt = userRepository.findByUsername(targetUsername);
+        if (actorOpt.isEmpty() || targetOpt.isEmpty()) {
+            return ResponseEntity.status(403).body(Map.of("error", "Accès refusé"));
+        }
+        Long actorTenant = actorOpt.get().getEntrepriseId();
+        Long targetTenant = targetOpt.get().getEntrepriseId();
+        if (actorTenant == null || !actorTenant.equals(targetTenant)) {
+            return ResponseEntity.status(403).body(Map.of("error", "Accès refusé hors de votre entreprise"));
         }
         return null;
     }

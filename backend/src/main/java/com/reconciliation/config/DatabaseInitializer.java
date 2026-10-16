@@ -5,6 +5,7 @@ import com.reconciliation.repository.UserRepository;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.CommandLineRunner;
 import org.springframework.context.annotation.Profile;
+import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Component;
 
 import java.security.SecureRandom;
@@ -24,18 +25,22 @@ public class DatabaseInitializer implements CommandLineRunner {
     @Autowired
     private UserRepository userRepository;
 
+    @Autowired
+    private PasswordEncoder passwordEncoder;
+
     @Override
     public void run(String... args) throws Exception {
         // Vérifier s'il existe déjà des utilisateurs
         if (userRepository.count() == 0) {
             System.out.println("=== Initialisation de la base de données (profil dev) ===");
 
+            String rawPassword = generatePassword();
             UserEntity adminUser = new UserEntity();
             adminUser.setUsername("admin");
-            adminUser.setPassword(generatePassword());
+            adminUser.setPassword(passwordEncoder.encode(rawPassword));
             userRepository.save(adminUser);
 
-            System.out.println("✅ Utilisateur admin créé en dev (mot de passe aléatoire, à retrouver en base).");
+            System.out.println("✅ Utilisateur admin créé en dev. Mot de passe (affiché une seule fois) : " + rawPassword);
             System.out.println("=== Initialisation terminée ===");
         } else {
             System.out.println("=== Base de données déjà initialisée ===");

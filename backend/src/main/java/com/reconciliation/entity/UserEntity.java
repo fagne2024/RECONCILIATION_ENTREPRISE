@@ -13,6 +13,7 @@ public class UserEntity {
     @Column(nullable = false, unique = true)
     private String username;
 
+    @JsonIgnore
     @Column(nullable = false)
     private String password;
 
@@ -24,6 +25,7 @@ public class UserEntity {
     @Column(name = "enabled_2fa", nullable = false)
     private Boolean enabled2FA = false;
 
+    @JsonIgnore
     @Column(name = "secret_2fa", length = 32)
     private String secret2FA;
 

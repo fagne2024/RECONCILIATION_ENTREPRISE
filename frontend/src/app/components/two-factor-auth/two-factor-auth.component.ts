@@ -185,10 +185,29 @@ export class TwoFactorAuthComponent implements OnInit {
     if (!confirmed) {
       return;
     }
+
+    const isSelf = this.username === this.appState.getUsername();
+    let code: string | undefined;
+    if (isSelf) {
+      const entered = await this.popupService.showTextInput(
+        'Entrez le code à 6 chiffres de votre application d\'authentification.',
+        'Confirmation 2FA',
+        '',
+        '000000'
+      );
+      if (!entered || !/^\d{6}$/.test(entered.trim())) {
+        await this.popupService.showError(
+          'Code TOTP requis pour désactiver votre 2FA',
+          I18nService.t('TFA.popups.disableError.title')
+        );
+        return;
+      }
+      code = entered.trim();
+    }
     
     this.loading = true;
     
-    this.twoFactorService.disable2FA(this.username).subscribe({
+    this.twoFactorService.disable2FA(this.username, code).subscribe({
       next: async (response) => {
         this.loading = false;
         const message = response.message || I18nService.t('TFA.popups.disableSuccess.message');

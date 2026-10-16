@@ -51,10 +51,12 @@ export class TwoFactorAuthService {
   /**
    * Désactive le 2FA pour un utilisateur
    */
-  disable2FA(username: string): Observable<{ message: string; enabled: boolean }> {
-    return this.http.post<{ message: string; enabled: boolean }>(`${this.apiUrl}/disable`, {
-      username
-    });
+  disable2FA(username: string, code?: string): Observable<{ message: string; enabled: boolean }> {
+    const body: { username: string; code?: string } = { username };
+    if (code) {
+      body.code = code;
+    }
+    return this.http.post<{ message: string; enabled: boolean }>(`${this.apiUrl}/disable`, body);
   }
 
   /**
