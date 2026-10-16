@@ -12,18 +12,18 @@
     </div>
     <div class="nav-spacer"></div>
     <div class="nav-actions">
-      <button type="button" class="nav-btn secondary" (click)="goBack()">
+      <button type="button" class="ds-btn ds-btn--secondary nav-btn secondary" (click)="goBack()">
         <i class="fas fa-arrow-left"></i>{{ 'COMMON.actions.back' | translate }}</button>
       <button 
         type="button" 
-        class="nav-btn primary" 
+        class="ds-btn ds-btn--primary nav-btn primary" 
         (click)="loadMetrics()" 
         [disabled]="!analysisForm.get('typeOperation')?.value">
         <i class="fas fa-chart-bar"></i> {{ 'PRN.Métriques' | translate }}
       </button>
       <button 
         type="button" 
-        class="nav-btn primary" 
+        class="ds-btn ds-btn--primary nav-btn primary" 
         (click)="loadRecommendations()" 
         [disabled]="isLoading || !analysisForm.get('typeOperation')?.value">
         <i class="fas fa-list-alt"></i> {{ 'PRN.Recommandations' | translate }}
@@ -44,11 +44,11 @@
       <div class="hero-kpi-strip">
         <div class="hk-strip-item" *ngIf="metrics">
           <span class="hk-strip-label">{{ 'PRN.Agences' | translate }}</span>
-          <span class="hk-strip-value">{{ metrics.totalAgencies | number:'1.0-0' }}</span>
+          <span class="hk-strip-value ds-num">{{ metrics.totalAgencies | number:'1.0-0' }}</span>
         </div>
         <div class="hk-strip-item" *ngIf="compensationMetrics">
           <span class="hk-strip-label">{{ 'PRN.Comptessuivis' | translate }}</span>
-          <span class="hk-strip-value">{{ compensationMetrics.totalAccounts | number:'1.0-0' }}</span>
+          <span class="hk-strip-value ds-num">{{ compensationMetrics.totalAccounts | number:'1.0-0' }}</span>
         </div>
       </div>
     </div>
@@ -68,7 +68,7 @@
   <!-- Header -->
   <div class="header">
     <div class="header-top">
-      <button (click)="goBack()" class="btn-back">
+      <button type="button" (click)="goBack()" class="ds-btn ds-btn--secondary btn-back">
         <i class="fas fa-arrow-left"></i>{{ 'COMMON.actions.back' | translate }}</button>
       <h1>{{ 'PRN.Systèmedeprédiction' | translate }} {{ (isCompensationType() ? 'PRD.ofCompensationsCap' : 'PRD.ofSupplyCap') | translate }}</h1>
     </div>
@@ -81,7 +81,7 @@
   <div class="config-section" *ngIf="showConfig">
     <div class="config-header">
       <h2>{{ 'PRN.Configuration' | translate }} {{ (isCompensationType() ? 'PRD.ofCompensationsCap' : 'PRD.ofSupplyCap') | translate }}</h2>
-      <button type="button" (click)="showConfig = false" class="btn-close-config" title="{{ 'PRN.Masquerlaconfiguration' | translate }}">
+      <button type="button" (click)="showConfig = false" class="ds-btn ds-btn--secondary btn-close-config" title="{{ 'PRN.Masquerlaconfiguration' | translate }}">
         <i class="fas fa-times"></i>
       </button>
     </div>
@@ -90,32 +90,32 @@
         <!-- Configuration commune -->
         <div class="form-group" *ngIf="!isCompensationType()">
           <label>{{ 'PRN.Délaidapprovisionnementjours' | translate }}</label>
-          <input type="number" formControlName="leadTimeDays" class="form-control" min="1" max="30">
+          <input type="number" formControlName="leadTimeDays" class="ds-input form-control" min="1" max="30">
           <small>{{ 'PRN.Tempsnécessairepourrecevoirunapprovisionnement' | translate }}</small>
         </div>
         
         <div class="form-group" *ngIf="!isCompensationType()">
           <label>{{ 'PRN.Facteurdesécurité' | translate }}</label>
-          <input type="number" formControlName="safetyFactor" class="form-control" step="0.1" min="1.0" max="3.0">
+          <input type="number" formControlName="safetyFactor" class="ds-input form-control" step="0.1" min="1.0" max="3.0">
           <small>{{ 'PRN.Multiplielestockdesécurité1030' | translate }}</small>
         </div>
         
         <!-- Configuration spécifique aux compensations -->
         <div class="form-group" *ngIf="isCompensationType()">
           <label>{{ 'PRN.Seuildecompensationxof' | translate }}</label>
-          <input type="number" formControlName="compensationThresholdAmount" class="form-control" min="0">
+          <input type="number" formControlName="compensationThresholdAmount" class="ds-input form-control" min="0">
           <small>{{ 'PRN.Soldemaximumlorsquelesoldeatteintoudépasseceseuilunecompensationestdéclenchée' | translate }}</small>
         </div>
         
         <div class="form-group">
           <label>{{ 'PRN.Seuilurgentjours' | translate }}</label>
-          <input type="number" formControlName="urgentThresholdDays" class="form-control" min="1">
+          <input type="number" formControlName="urgentThresholdDays" class="ds-input form-control" min="1">
           <small>{{ (isCompensationType() ? 'PRD.urgentHintCompensation' : 'PRD.urgentHintSupply') | translate }}</small>
         </div>
         
         <div class="form-group">
           <label>{{ 'PRN.Seuilnormaljours' | translate }}</label>
-          <input type="number" formControlName="normalThresholdDays" class="form-control" min="1">
+          <input type="number" formControlName="normalThresholdDays" class="ds-input form-control" min="1">
           <small>{{ (isCompensationType() ? 'PRD.normalHintCompensation' : 'PRD.normalHintSupply') | translate }}</small>
         </div>
         <!-- Nouveaux paramètres pour la précision -->
@@ -137,17 +137,17 @@
         </div>
         <div class="form-group">
           <label>{{ 'PRN.Poidsdevolatilité' | translate }}</label>
-          <input type="number" formControlName="volatilityWeight" class="form-control" step="0.1" min="0" max="1">
+          <input type="number" formControlName="volatilityWeight" class="ds-input form-control" step="0.1" min="0" max="1">
           <small>{{ 'PRN.Impactdelavariabilitésurlesprédictions01' | translate }}</small>
         </div>
         <div class="form-group">
           <label>{{ 'PRN.Seuildeconfiance' | translate }}</label>
-          <input type="number" formControlName="predictionConfidenceThreshold" class="form-control" step="0.05" min="0" max="1">
+          <input type="number" formControlName="predictionConfidenceThreshold" class="ds-input form-control" step="0.05" min="0" max="1">
           <small>{{ 'PRN.Niveaudeconfianceminimumrequis01' | translate }}</small>
         </div>
       </div>
       <div class="action-buttons">
-        <button (click)="saveConfiguration()" class="btn btn-secondary">
+        <button type="button" (click)="saveConfiguration()" class="ds-btn ds-btn--secondary btn btn-secondary">
           {{ 'PRN.Sauvegarderconfiguration' | translate }}
         </button>
       </div>
@@ -156,7 +156,7 @@
 
   <!-- Bouton pour afficher la configuration -->
   <div class="config-toggle-section" *ngIf="!showConfig">
-    <button type="button" (click)="showConfig = true" class="btn btn-secondary btn-show-config">
+    <button type="button" (click)="showConfig = true" class="ds-btn ds-btn--secondary btn btn-secondary btn-show-config">
       <i class="fas fa-cog"></i> {{ 'PRN.Afficherlaconfiguration' | translate }}
     </button>
   </div>
@@ -168,32 +168,32 @@
       <div class="form-grid">
         <div class="form-group">
           <label>{{ 'PRN.Typedopération' | translate }}</label>
-          <select formControlName="typeOperation" class="form-control">
+          <select formControlName="typeOperation" class="ds-select form-control">
             <option value="">{{ 'PRN.Sélectionner' | translate }}</option>
             <option *ngFor="let type of availableTypes" [value]="type.value">{{ type.label }}</option>
           </select>
         </div>
         <div class="form-group">
           <label>{{ 'PRN.Paysoptionnel' | translate }}</label>
-          <input type="text" formControlName="pays" class="form-control" placeholder="{{ 'PRN.Excisncm' | translate }}">
+          <input type="text" formControlName="pays" class="ds-input form-control" placeholder="{{ 'PRN.Excisncm' | translate }}">
         </div>
         <div class="form-group">
           <label>{{ 'PRN.Périodedanalysejours' | translate }}</label>
-          <input type="number" formControlName="periodeAnalyseJours" class="form-control" min="7" max="730">
+          <input type="number" formControlName="periodeAnalyseJours" class="ds-input form-control" min="7" max="730">
         </div>
         <div class="form-group">
           <label>{{ 'PRN.Calendrierjours' | translate }}</label>
-          <input type="number" formControlName="calendarDays" class="form-control" min="7" max="365">
+          <input type="number" formControlName="calendarDays" class="ds-input form-control" min="7" max="365">
         </div>
       </div>
       <div class="action-buttons">
-        <button (click)="loadMetrics()" class="btn btn-secondary" [disabled]="!analysisForm.get('typeOperation')?.value">
+        <button type="button" (click)="loadMetrics()" class="ds-btn ds-btn--secondary btn btn-secondary" [disabled]="!analysisForm.get('typeOperation')?.value">
           {{ 'PRN.Métriquesglobales' | translate }}
         </button>
-        <button (click)="loadRecommendations()" class="btn btn-primary" [disabled]="isLoading || !analysisForm.get('typeOperation')?.value">
+        <button type="button" (click)="loadRecommendations()" class="ds-btn ds-btn--primary btn btn-primary" [disabled]="isLoading || !analysisForm.get('typeOperation')?.value">
           {{ 'PRN.Recommandations_1' | translate }}
         </button>
-        <button (click)="loadCalendar()" class="btn btn-primary" [disabled]="isLoading || !analysisForm.get('typeOperation')?.value">
+        <button type="button" (click)="loadCalendar()" class="ds-btn ds-btn--primary btn btn-primary" [disabled]="isLoading || !analysisForm.get('typeOperation')?.value">
           {{ 'PRN.Calendrier' | translate }}
         </button>
       </div>
@@ -213,15 +213,15 @@
 
   <!-- Onglets de navigation -->
   <div *ngIf="(metrics || compensationMetrics) || (recommendations.length > 0 || compensationRecommendations.length > 0) || (calendar || compensationCalendar)" class="tabs-navigation">
-    <button 
-      class="tab-button" 
+    <button type="button" 
+      class="ds-btn ds-btn--secondary tab-button" 
       [class.active]="selectedTab === 'overview'"
       (click)="selectedTab = 'overview'"
       [disabled]="!metrics && !compensationMetrics">
       {{ 'PRN.Vuedensemble' | translate }}
     </button>
-    <button 
-      class="tab-button" 
+    <button type="button" 
+      class="ds-btn ds-btn--secondary tab-button" 
       [class.active]="selectedTab === 'recommendations'"
       (click)="selectedTab = 'recommendations'"
       [disabled]="recommendations.length === 0 && compensationRecommendations.length === 0">
@@ -230,15 +230,15 @@
         {{ isCompensationType() ? compensationRecommendations.length : recommendations.length }}
       </span>
     </button>
-    <button 
-      class="tab-button" 
+    <button type="button" 
+      class="ds-btn ds-btn--secondary tab-button" 
       [class.active]="selectedTab === 'calendar'"
       (click)="selectedTab = 'calendar'"
       [disabled]="!calendar && !compensationCalendar">
       {{ 'PRN.Calendrier' | translate }}
     </button>
-    <button 
-      class="tab-button" 
+    <button type="button" 
+      class="ds-btn ds-btn--secondary tab-button" 
       [class.active]="selectedTab === 'analytics'"
       (click)="selectedTab = 'analytics'"
       [disabled]="!selectedAgencyAnalytics && !selectedCompensationAnalytics">
@@ -256,42 +256,42 @@
         <div class="metric-icon">🏢</div>
         <div class="metric-content">
           <div class="metric-label">{{ 'PRN.Totalagences' | translate }}</div>
-          <div class="metric-value">{{ metrics.totalAgencies }}</div>
+          <div class="metric-value ds-num">{{ metrics.totalAgencies }}</div>
         </div>
       </div>
       <div class="metric-card critical">
         <div class="metric-icon">🚨</div>
         <div class="metric-content">
           <div class="metric-label">{{ 'PRN.Agencescritiques' | translate }}</div>
-          <div class="metric-value">{{ metrics.criticalAgencies }}</div>
+          <div class="metric-value ds-num">{{ metrics.criticalAgencies }}</div>
         </div>
       </div>
       <div class="metric-card warning">
         <div class="metric-icon">⚠️</div>
         <div class="metric-content">
           <div class="metric-label">{{ 'PRN.Surstock' | translate }}</div>
-          <div class="metric-value">{{ metrics.overstockedAgencies }}</div>
+          <div class="metric-value ds-num">{{ metrics.overstockedAgencies }}</div>
         </div>
       </div>
       <div class="metric-card">
         <div class="metric-icon">📊</div>
         <div class="metric-content">
           <div class="metric-label">{{ 'PRN.Confiancemoyenne' | translate }}</div>
-          <div class="metric-value">{{ formatPercent(metrics.averageConfidenceLevel) }}</div>
+          <div class="metric-value ds-num">{{ formatPercent(metrics.averageConfidenceLevel) }}</div>
         </div>
       </div>
       <div class="metric-card urgent">
         <div class="metric-icon">🔴</div>
         <div class="metric-content">
           <div class="metric-label">{{ 'PRN.Commandesurgentes' | translate }}</div>
-          <div class="metric-value">{{ metrics.urgentOrders }}</div>
+          <div class="metric-value ds-num">{{ metrics.urgentOrders }}</div>
         </div>
       </div>
       <div class="metric-card normal">
         <div class="metric-icon">🟡</div>
         <div class="metric-content">
           <div class="metric-label">{{ 'PRN.Commandesnormales' | translate }}</div>
-          <div class="metric-value">{{ metrics.normalOrders }}</div>
+          <div class="metric-value ds-num">{{ metrics.normalOrders }}</div>
         </div>
       </div>
     </div>
@@ -304,8 +304,8 @@
           <h3>{{ 'APM.Attention' | translate }} {{ metrics.topCriticalAgencies.length }} {{ 'PRN.Agencesensituationcritique' | translate }}</h3>
           <div class="alert-list">
             <div *ngFor="let agency of metrics.topCriticalAgencies.slice(0, 5)" class="alert-item">
-              <button 
-                class="alert-link" 
+              <button type="button" 
+                class="ds-btn ds-btn--secondary alert-link" 
                 (click)="loadAgencyAnalytics(agency.codeProprietaire)">
                 <strong>{{ agency.codeProprietaire }}</strong>
                 <span class="alert-days">{{ agency.value | number:'1.0-0' }} {{ 'PRN.Joursrestants' | translate }}</span>
@@ -330,56 +330,56 @@
         <div class="metric-icon">🏢</div>
         <div class="metric-content">
           <div class="metric-label">{{ 'PRN.Totalagences' | translate }}</div>
-          <div class="metric-value">{{ compensationMetrics.totalAgencies }}</div>
+          <div class="metric-value ds-num">{{ compensationMetrics.totalAgencies }}</div>
         </div>
       </div>
       <div class="metric-card critical">
         <div class="metric-icon">💰</div>
         <div class="metric-content">
           <div class="metric-label">{{ 'PRN.Nécessitantcompensation' | translate }}</div>
-          <div class="metric-value">{{ compensationMetrics.agenciesNeedingCompensation }}</div>
+          <div class="metric-value ds-num">{{ compensationMetrics.agenciesNeedingCompensation }}</div>
         </div>
       </div>
       <div class="metric-card urgent">
         <div class="metric-icon">🚨</div>
         <div class="metric-content">
           <div class="metric-label">{{ 'PRN.Compensationsurgentes' | translate }}</div>
-          <div class="metric-value">{{ compensationMetrics.urgentCompensations }}</div>
+          <div class="metric-value ds-num">{{ compensationMetrics.urgentCompensations }}</div>
         </div>
       </div>
       <div class="metric-card">
         <div class="metric-icon">📅</div>
         <div class="metric-content">
           <div class="metric-label">{{ 'PRN.Fréquencemoyennejours' | translate }}</div>
-          <div class="metric-value">{{ compensationMetrics.averageCompensationFrequency | number:'1.0-0' }}</div>
+          <div class="metric-value ds-num">{{ compensationMetrics.averageCompensationFrequency | number:'1.0-0' }}</div>
         </div>
       </div>
       <div class="metric-card success">
         <div class="metric-icon">💵</div>
         <div class="metric-content">
           <div class="metric-label">{{ 'PRN.Montanttotalprévu' | translate }}</div>
-          <div class="metric-value">{{ formatCurrency(compensationMetrics.totalCompensationAmount) }}</div>
+          <div class="metric-value ds-num">{{ formatCurrency(compensationMetrics.totalCompensationAmount) }}</div>
         </div>
       </div>
       <div class="metric-card">
         <div class="metric-icon">📈</div>
         <div class="metric-content">
           <div class="metric-label">{{ 'PRN.Montantmoyen' | translate }}</div>
-          <div class="metric-value">{{ formatCurrency(compensationMetrics.averageCompensationAmount) }}</div>
+          <div class="metric-value ds-num">{{ formatCurrency(compensationMetrics.averageCompensationAmount) }}</div>
         </div>
       </div>
       <div class="metric-card warning">
         <div class="metric-icon">⬆️</div>
         <div class="metric-content">
           <div class="metric-label">{{ 'PRN.Atteignantleseuil' | translate }}</div>
-          <div class="metric-value">{{ compensationMetrics.agenciesAboveThreshold }}</div>
+          <div class="metric-value ds-num">{{ compensationMetrics.agenciesAboveThreshold }}</div>
         </div>
       </div>
       <div class="metric-card info">
         <div class="metric-icon">⬇️</div>
         <div class="metric-content">
           <div class="metric-label">{{ 'PRN.Endessousduseuil' | translate }}</div>
-          <div class="metric-value">{{ compensationMetrics.agenciesBelowThreshold }}</div>
+          <div class="metric-value ds-num">{{ compensationMetrics.agenciesBelowThreshold }}</div>
         </div>
       </div>
     </div>
@@ -394,7 +394,7 @@
           {{ 'PRN.Lesseuilspersonnalisésdéfinispour' | translate }} {{ agencyThresholds.length }} {{ 'PRN.Agence' | translate }}{{ agencyThresholds.length > 1 ? 's' : '' }} {{ 'PRN.Primentautomatiquementsurceseuilglobal' | translate }}
         </p>
         <p style="margin-top: 10px;">
-          <button type="button" (click)="openThresholdModal()" class="btn btn-secondary btn-sm" *ngIf="isCompensationType()">
+          <button type="button" (click)="openThresholdModal()" class="ds-btn ds-btn--secondary btn btn-secondary btn-sm" *ngIf="isCompensationType()">
             <i class="fas fa-cog"></i> {{ 'PRN.Gérerlesseuilspersonnalisésparagence' | translate }}
           </button>
         </p>
@@ -454,7 +454,7 @@
               <div class="item-value">{{ formatPercent(rec.volatilityScore) }}</div>
             </div>
           </div>
-          <button class="btn btn-small" (click)="loadAgencyAnalytics(rec.codeProprietaire)">
+          <button type="button" class="ds-btn ds-btn--secondary btn btn-small" (click)="loadAgencyAnalytics(rec.codeProprietaire)">
             {{ 'PRN.Voirlesanalytiques' | translate }}
           </button>
         </div>
@@ -463,8 +463,8 @@
     
     <!-- Pagination des recommandations -->
     <div *ngIf="getRecommendationsTotalPages() > 1" class="pagination">
-      <button 
-        class="btn-pagination" 
+      <button type="button" 
+        class="ds-btn ds-btn--secondary btn-pagination" 
         [disabled]="recommendationsPage === 1"
         (click)="changeRecommendationsPage(recommendationsPage - 1)">
         <i class="fas fa-chevron-left"></i>{{ 'PAG.previous' | translate }}</button>
@@ -472,8 +472,8 @@
         {{ 'PRN.Page' | translate }} {{ recommendationsPage }} / {{ getRecommendationsTotalPages() }}
         ({{ recommendations.length }} {{ 'PRN.Recommandation' | translate }}{{ recommendations.length > 1 ? 's' : '' }})
       </span>
-      <button 
-        class="btn-pagination" 
+      <button type="button" 
+        class="ds-btn ds-btn--secondary btn-pagination" 
         [disabled]="recommendationsPage === getRecommendationsTotalPages()"
         (click)="changeRecommendationsPage(recommendationsPage + 1)">{{ 'PAG.next' | translate }}<i class="fas fa-chevron-right"></i>
       </button>
@@ -562,7 +562,7 @@
               <div class="item-value">{{ formatPercent(rec.confidenceLevel) }}</div>
             </div>
           </div>
-          <button class="btn btn-small" (click)="loadAgencyAnalytics(rec.codeProprietaire)">
+          <button type="button" class="ds-btn ds-btn--secondary btn btn-small" (click)="loadAgencyAnalytics(rec.codeProprietaire)">
             {{ 'PRN.Voirlesanalytiques' | translate }}
           </button>
         </div>
@@ -571,8 +571,8 @@
     
     <!-- Pagination des recommandations -->
     <div *ngIf="getRecommendationsTotalPages() > 1" class="pagination">
-      <button 
-        class="btn-pagination" 
+      <button type="button" 
+        class="ds-btn ds-btn--secondary btn-pagination" 
         [disabled]="recommendationsPage === 1"
         (click)="changeRecommendationsPage(recommendationsPage - 1)">
         <i class="fas fa-chevron-left"></i>{{ 'PAG.previous' | translate }}</button>
@@ -580,8 +580,8 @@
         {{ 'PRN.Page' | translate }} {{ recommendationsPage }} / {{ getRecommendationsTotalPages() }}
         ({{ 'PRD.recommendationCount' | translate: { count: compensationRecommendations.length } }})
       </span>
-      <button 
-        class="btn-pagination" 
+      <button type="button" 
+        class="ds-btn ds-btn--secondary btn-pagination" 
         [disabled]="recommendationsPage === getRecommendationsTotalPages()"
         (click)="changeRecommendationsPage(recommendationsPage + 1)">{{ 'PAG.next' | translate }}<i class="fas fa-chevron-right"></i>
       </button>
@@ -637,8 +637,8 @@
     
     <!-- Pagination du calendrier -->
     <div *ngIf="getCalendarTotalPages() > 1" class="pagination">
-      <button 
-        class="btn-pagination" 
+      <button type="button" 
+        class="ds-btn ds-btn--secondary btn-pagination" 
         [disabled]="calendarPage === 1"
         (click)="changeCalendarPage(calendarPage - 1)">
         <i class="fas fa-chevron-left"></i>{{ 'PAG.previous' | translate }}</button>
@@ -646,8 +646,8 @@
         {{ 'PRN.Page' | translate }} {{ calendarPage }} / {{ getCalendarTotalPages() }}
         ({{ 'PRD.weekCount' | translate: { count: getCalendarWeeks().length } }})
       </span>
-      <button 
-        class="btn-pagination" 
+      <button type="button" 
+        class="ds-btn ds-btn--secondary btn-pagination" 
         [disabled]="calendarPage === getCalendarTotalPages()"
         (click)="changeCalendarPage(calendarPage + 1)">{{ 'PAG.next' | translate }}<i class="fas fa-chevron-right"></i>
       </button>
@@ -839,7 +839,7 @@
           <i class="fas fa-sliders-h"></i> 
           {{ (editingThreshold ? 'PRD.editThresholdTitle' : 'PRD.createThresholdTitle') | translate }}
         </h2>
-        <button type="button" (click)="closeThresholdModal()" class="btn-close-modal">
+        <button type="button" (click)="closeThresholdModal()" class="ds-btn ds-btn--secondary btn-close-modal">
           <i class="fas fa-times"></i>
         </button>
       </div>
@@ -852,7 +852,7 @@
             <input 
               type="text" 
               formControlName="codeProprietaire" 
-              class="form-control"
+              class="ds-input form-control"
               [readonly]="!!editingThreshold"
               placeholder="{{ 'PRN.Exagencedakar' | translate }}">
             <small>{{ 'PRN.Codeuniquedelagence' | translate }}</small>
@@ -863,7 +863,7 @@
             <input 
               type="number" 
               formControlName="thresholdAmount" 
-              class="form-control"
+              class="ds-input form-control"
               min="1"
               placeholder="{{ 'PRN.Montantenxof' | translate }}">
             <small>{{ 'PRN.Soldemaximumdéclenchantunecompensationpourcetteagence' | translate }}</small>
@@ -874,14 +874,14 @@
             <input 
               type="text" 
               [value]="formatCurrency(configForm.get('compensationThresholdAmount')?.value)" 
-              class="form-control"
+              class="ds-input form-control"
               readonly>
             <small>{{ 'PRN.Seuilutilisépardéfautpourtouteslesagences' | translate }}</small>
           </div>
           
           <div class="modal-actions">
-            <button type="button" (click)="closeThresholdModal()" class="btn btn-secondary">{{ 'COMMON.actions.cancel' | translate }}</button>
-            <button type="submit" class="btn btn-primary" [disabled]="thresholdForm.invalid || isLoading">
+            <button type="button" (click)="closeThresholdModal()" class="ds-btn ds-btn--secondary btn btn-secondary">{{ 'COMMON.actions.cancel' | translate }}</button>
+            <button type="submit" class="ds-btn ds-btn--primary btn btn-primary" [disabled]="thresholdForm.invalid || isLoading">
               <i class="fas fa-save"></i> {{ (editingThreshold ? 'ACT.edit' : 'PRD.createAction') | translate }}
             </button>
           </div>
@@ -891,7 +891,7 @@
         <div class="thresholds-list" *ngIf="agencyThresholds.length > 0">
           <h3>{{ 'PRN.Seuilspersonnalisésconfigurés' | translate }}{{ agencyThresholds.length }})</h3>
           <div class="thresholds-table">
-            <table>
+            <table class="ds-table">
               <thead>
                 <tr>
                   <th>{{ 'TBL.agency' | translate }}</th>
@@ -944,15 +944,15 @@
           <i class="fas fa-exclamation-triangle"></i>
           {{ confirmTitle }}
         </h2>
-        <button type="button" (click)="onConfirmModal(false)" class="btn-close-modal">
+        <button type="button" (click)="onConfirmModal(false)" class="ds-btn ds-btn--secondary btn-close-modal">
           <i class="fas fa-times"></i>
         </button>
       </div>
       <div class="modal-body">
         <p>{{ confirmMessage }}</p>
         <div class="modal-actions">
-          <button type="button" (click)="onConfirmModal(false)" class="btn btn-secondary">{{ 'COMMON.actions.cancel' | translate }}</button>
-          <button type="button" (click)="onConfirmModal(true)" class="btn btn-primary">{{ 'COMMON.actions.confirm' | translate }}</button>
+          <button type="button" (click)="onConfirmModal(false)" class="ds-btn ds-btn--secondary btn btn-secondary">{{ 'COMMON.actions.cancel' | translate }}</button>
+          <button type="button" (click)="onConfirmModal(true)" class="ds-btn ds-btn--primary btn btn-primary">{{ 'COMMON.actions.confirm' | translate }}</button>
         </div>
       </div>
     </div>
