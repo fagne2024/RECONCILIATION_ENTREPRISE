@@ -25,11 +25,11 @@
       <div class="hero-kpi-strip">
         <div class="hk-strip-item">
           <div class="hk-strip-label">{{ 'NAV.profiles' | translate }}</div>
-          <div class="hk-strip-value">{{ filteredProfils.length }}</div>
+          <div class="hk-strip-value ds-num">{{ filteredProfils.length }}</div>
         </div>
         <div class="hk-strip-item">
           <div class="hk-strip-label">{{ 'TBL.modules' | translate }}</div>
-          <div class="hk-strip-value">{{ modules.length }}</div>
+          <div class="hk-strip-value ds-num">{{ modules.length }}</div>
         </div>
       </div>
     </div>
@@ -43,7 +43,7 @@
       <span class="profils-count">{{ filteredProfils.length }} {{ 'PROF.Profils' | translate }}</span>
     </div>
     <div class="toolbar-card-actions">
-      <button type="button" (click)="showAddForm = !showAddForm" class="btn add-btn">
+      <button type="button" (click)="showAddForm = !showAddForm" class="ds-btn ds-btn--secondary btn add-btn">
         <i class="fas fa-plus"></i> {{ 'PROF.Nouveauprofil' | translate }}
       </button>
     </div>
@@ -57,10 +57,10 @@
         type="text" 
         [(ngModel)]="searchTerm" 
         placeholder="{{ 'PROF.Rechercherunprofilparnomoudescription' | translate }}" 
-        class="search-input"
+        class="ds-input search-input"
         (input)="applyFilters()">
     </div>
-    <button *ngIf="searchTerm" type="button" class="btn-clear-filters" (click)="clearFilters()">
+    <button *ngIf="searchTerm" type="button" class="ds-btn ds-btn--secondary btn-clear-filters" (click)="clearFilters()">
       <i class="fas fa-times"></i> {{ 'CPT.Effacer' | translate }}
     </button>
   </div>
@@ -79,7 +79,7 @@
           <div class="form-section">
             <div class="form-group">
               <label>{{ 'PROF.Nomduprofil' | translate }}</label>
-              <input type="text" formControlName="nom" placeholder="{{ 'PROF.Exadministrateur' | translate }}" class="text-input">
+              <input type="text" formControlName="nom" placeholder="{{ 'PROF.Exadministrateur' | translate }}" class="ds-input text-input">
               <div *ngIf="addForm.get('nom')?.invalid && addForm.get('nom')?.touched" class="error-message">
                 {{ 'PROF.Lenomduprofilestrequis' | translate }}
               </div>
@@ -90,7 +90,7 @@
             </div>
             <div class="form-group">
               <label>{{ 'PROF.Associerunmoduleoptionnel' | translate }}</label>
-              <select formControlName="moduleId" class="text-input">
+              <select formControlName="moduleId" class="ds-select text-input">
                 <option value="">{{ 'PROF.Aucunmodule' | translate }}</option>
                 <option *ngFor="let module of modules" [value]="module.id">{{ module.nom }}</option>
               </select>
@@ -100,9 +100,9 @@
           
           <div class="modal-footer">
             <div class="modal-actions">
-              <button type="button" class="btn-secondary" (click)="cancelAdd()">
+              <button type="button" class="ds-btn ds-btn--secondary btn-secondary" (click)="cancelAdd()">
                 <i class="fas fa-times"></i>{{ 'COMMON.actions.cancel' | translate }}</button>
-              <button type="submit" class="btn-primary" [disabled]="!addForm.valid || isAdding">
+              <button type="submit" class="ds-btn ds-btn--primary btn-primary" [disabled]="!addForm.valid || isAdding">
                 <i class="fas fa-plus"></i>
                 {{ isAdding ? ('PROF.Créationencours' | translate) : ('PROF.Créer' | translate) }}
               </button>
@@ -127,7 +127,7 @@
           <div class="form-section">
             <div class="form-group">
               <label>{{ 'PROF.Nomduprofil' | translate }}</label>
-              <input type="text" formControlName="nom" placeholder="{{ 'PROF.Exadministrateur' | translate }}" class="text-input">
+              <input type="text" formControlName="nom" placeholder="{{ 'PROF.Exadministrateur' | translate }}" class="ds-input text-input">
               <div *ngIf="editForm.get('nom')?.invalid && editForm.get('nom')?.touched" class="error-message">
                 {{ 'PROF.Lenomduprofilestrequis' | translate }}
               </div>
@@ -140,9 +140,9 @@
           
           <div class="modal-footer">
             <div class="modal-actions">
-              <button type="button" class="btn-secondary" (click)="cancelEdit()">
+              <button type="button" class="ds-btn ds-btn--secondary btn-secondary" (click)="cancelEdit()">
                 <i class="fas fa-times"></i>{{ 'COMMON.actions.cancel' | translate }}</button>
-              <button type="submit" class="btn-primary" [disabled]="!editForm.valid || isEditing">
+              <button type="submit" class="ds-btn ds-btn--primary btn-primary" [disabled]="!editForm.valid || isEditing">
                 <i class="fas fa-save"></i>
                 {{ isEditing ? ('PROF.Modificationencours' | translate) : ('COMMON.actions.edit' | translate) }}
               </button>
@@ -168,13 +168,13 @@
       <h3>{{ 'PROF.Aucunprofiltrouvé' | translate }}</h3>
       <p *ngIf="searchTerm" class="help-text">
         {{ 'PROF.Aucunprofilnecorrespondàvotrerecherche' | translate }}
-        <button class="btn-link" (click)="clearFilters()">{{ 'ACT.clearFilters' | translate }}</button>
+        <button type="button" class="ds-btn ds-btn--secondary btn-link" (click)="clearFilters()">{{ 'ACT.clearFilters' | translate }}</button>
       </p>
       <p *ngIf="!searchTerm">{{ 'PROF.Créezvotrepremierprofilpourcommencer' | translate }}</p>
     </div>
 
     <div *ngIf="!isLoading && filteredProfils.length > 0" class="table-wrapper">
-      <table class="profils-table">
+      <table class="ds-table profils-table">
         <thead>
           <tr>
             <th>{{ 'PROF.Nom' | translate }}</th>
@@ -231,23 +231,23 @@
                 <span class="pays-text" *ngIf="getPaysForProfil(profil).length === 1 && !hasGNL(profil)">{{ getPaysForProfil(profil)[0].nom }}</span>
                 <span class="pays-text" *ngIf="hasGNL(profil)">{{ 'PROF.GNLtouslespays' | translate }}</span>
                 <span class="pays-text" *ngIf="getPaysForProfil(profil).length > 1 && !hasGNL(profil)">{{ getPaysForProfil(profil).length }} {{ 'OPL.Pays' | translate }}</span>
-                <button (click)="openPaysModal(profil)" [disabled]="isDeleting" class="btn icon-btn pays-btn" title="{{ 'PROF.Gérerlespays' | translate }}">
+                <button type="button" (click)="openPaysModal(profil)" [disabled]="isDeleting" class="ds-btn ds-btn--secondary btn icon-btn pays-btn" title="{{ 'PROF.Gérerlespays' | translate }}">
                   <i class="fas fa-globe" [style.color]="isDeleting ? '#ccc' : '#2196F3'"></i>
                 </button>
               </div>
             </td>
             <td class="actions-cell" (click)="$event.stopPropagation()">
               <div class="row-actions">
-              <button type="button" (click)="editProfil(profil)" [disabled]="isDeleting" class="btn icon-btn edit" title="{{ 'ACT.edit' | translate }}">
+              <button type="button" (click)="editProfil(profil)" [disabled]="isDeleting" class="ds-btn ds-btn--secondary btn icon-btn edit" title="{{ 'ACT.edit' | translate }}">
                 <i class="fas fa-edit"></i>
               </button>
-              <button type="button" (click)="selectProfil(profil)" [disabled]="isDeleting" class="btn icon-btn view" title="{{ 'PROF.Gérerlesdroits' | translate }}">
+              <button type="button" (click)="selectProfil(profil)" [disabled]="isDeleting" class="ds-btn ds-btn--secondary btn icon-btn view" title="{{ 'PROF.Gérerlesdroits' | translate }}">
                 <i class="fas fa-shield-alt"></i>
               </button>
-              <button type="button" (click)="openPaysModal(profil)" [disabled]="isDeleting" class="btn icon-btn pays-action" title="{{ 'PROF.Gérerlespays' | translate }}">
+              <button type="button" (click)="openPaysModal(profil)" [disabled]="isDeleting" class="ds-btn ds-btn--secondary btn icon-btn pays-action" title="{{ 'PROF.Gérerlespays' | translate }}">
                 <i class="fas fa-globe"></i>
               </button>
-              <button type="button" (click)="deleteProfil(profil)" [disabled]="isDeleting" class="btn icon-btn delete" title="{{ 'ACT.delete' | translate }}">
+              <button type="button" (click)="deleteProfil(profil)" [disabled]="isDeleting" class="ds-btn ds-btn--secondary btn icon-btn delete" title="{{ 'ACT.delete' | translate }}">
                 <i class="fas fa-trash"></i>
               </button>
               </div>
@@ -263,7 +263,7 @@
     <div class="pagination-controls">
       <div class="items-per-page">
         <label>{{ 'PAG.rowsPerPage' | translate }}</label>
-        <select [(ngModel)]="itemsPerPage" (change)="onItemsPerPageChange()" class="form-control">
+        <select [(ngModel)]="itemsPerPage" (change)="onItemsPerPageChange()" class="ds-select form-control">
           <option [value]="10">10</option>
           <option [value]="20">20</option>
           <option [value]="50">50</option>
@@ -271,24 +271,24 @@
         </select>
       </div>
       
-      <button 
-        class="btn pagination-btn" 
+      <button type="button" 
+        class="ds-btn ds-btn--secondary btn pagination-btn" 
         [disabled]="currentPage === 1"
         (click)="onPageChange(currentPage - 1)">
         <i class="fas fa-chevron-left"></i>{{ 'PAG.previous' | translate }}</button>
       
       <div class="page-numbers">
-        <button 
+        <button type="button" 
           *ngFor="let page of getVisiblePages()"
-          class="btn page-btn"
+          class="ds-btn ds-btn--secondary btn page-btn"
           [class.active]="currentPage === page"
           (click)="onPageChange(page)">
           {{ page }}
         </button>
       </div>
       
-      <button 
-        class="btn pagination-btn" 
+      <button type="button" 
+        class="ds-btn ds-btn--secondary btn pagination-btn" 
         [disabled]="currentPage === totalPages"
         (click)="onPageChange(currentPage + 1)">{{ 'PAG.next' | translate }}<i class="fas fa-chevron-right"></i>
       </button>
@@ -355,7 +355,7 @@
             </p>
           </div>
           <div class="nav-permissions-toolbar">
-            <button type="button" class="btn-link-toggle" (click)="showLegacyModuleGrid = !showLegacyModuleGrid">
+            <button type="button" class="ds-btn ds-btn--secondary btn-link-toggle" (click)="showLegacyModuleGrid = !showLegacyModuleGrid">
               <i class="fas" [ngClass]="showLegacyModuleGrid ? 'fa-compress-alt' : 'fa-th-large'"></i>
               {{ showLegacyModuleGrid ? ('PROF.Masquermodules' | translate) : ('PROF.Vuemodules' | translate) }}
             </button>
@@ -367,18 +367,18 @@
             <i class="fas fa-search"></i>
             <input
               type="text"
-              class="search-input"
+              class="ds-input search-input"
               [(ngModel)]="navMenuSearch"
               (input)="onNavMenuSearchChange()"
               placeholder="{{ 'PROF.Filtrerunmenuousousmenu' | translate }}">
           </div>
-          <button type="button" class="btn-link-toggle" *ngIf="navMenuSearch" (click)="clearNavMenuSearch()">
+          <button type="button" class="ds-btn ds-btn--secondary btn-link-toggle" *ngIf="navMenuSearch" (click)="clearNavMenuSearch()">
             <i class="fas fa-times"></i> {{ 'CPT.Effacer' | translate }}
           </button>
-          <button type="button" class="btn-link-toggle" (click)="expandAllNavGroups()" title="{{ 'PROF.Toutdéplier' | translate }}">
+          <button type="button" class="ds-btn ds-btn--secondary btn-link-toggle" (click)="expandAllNavGroups()" title="{{ 'PROF.Toutdéplier' | translate }}">
             <i class="fas fa-expand-alt"></i>
           </button>
-          <button type="button" class="btn-link-toggle" (click)="collapseAllNavGroups()" title="{{ 'PROF.Toutreplier' | translate }}">
+          <button type="button" class="ds-btn ds-btn--secondary btn-link-toggle" (click)="collapseAllNavGroups()" title="{{ 'PROF.Toutreplier' | translate }}">
             <i class="fas fa-compress-alt"></i>
           </button>
         </div>
@@ -393,7 +393,7 @@
             class="nav-group-card"
             *ngFor="let group of filteredNavigationCatalog; trackBy: trackNavGroup"
             [ngClass]="getNavGroupStatusClass(group)">
-            <button type="button" class="nav-group-header" (click)="toggleNavGroup(group.key)">
+            <button type="button" class="ds-btn ds-btn--secondary nav-group-header" (click)="toggleNavGroup(group.key)">
               <span class="nav-group-title">
                 <span class="nav-status-dot"></span>
                 <i class="fas" [ngClass]="group.icon || 'fa-folder'"></i>
@@ -428,7 +428,7 @@
                   </label>
                   <button
                     type="button"
-                    class="nav-actions-toggle"
+                    class="ds-btn ds-btn--secondary nav-actions-toggle"
                     *ngIf="getNavigationContext(group) && hasNavigationAccess(getNavigationContext(group)!)"
                     (click)="toggleSubmenuActions(group.key, getNavigationContext(group) || undefined)">
                     <i class="fas" [ngClass]="isSubmenuActionsExpanded(group.key) ? 'fa-chevron-up' : 'fa-chevron-down'"></i>{{ 'TBL.actions' | translate }}<ng-container *ngIf="getNavigationContext(group) as navContext">
@@ -468,7 +468,7 @@
                   </label>
                   <button
                     type="button"
-                    class="nav-actions-toggle"
+                    class="ds-btn ds-btn--secondary nav-actions-toggle"
                     *ngIf="getNavigationContext(group, submenu) && hasNavigationAccess(getNavigationContext(group, submenu)!)"
                     (click)="toggleSubmenuActions(submenu.key, getNavigationContext(group, submenu) || undefined)">
                     <i class="fas" [ngClass]="isSubmenuActionsExpanded(submenu.key) ? 'fa-chevron-up' : 'fa-chevron-down'"></i>{{ 'TBL.actions' | translate }}<ng-container *ngIf="getNavigationContext(group, submenu) as navContext">
@@ -498,7 +498,7 @@
           <div class="nav-actions-empty" *ngIf="getSubmenuActionDetails(accessContext.accessModuleName).length === 0">
             <i class="fas fa-info-circle"></i>
             {{ 'PROF.Aucuneactiondétectéepourcesousmenu' | translate }}
-            <button type="button" class="btn-action btn-sync" (click)="syncModuleActions(accessContext.accessModuleName, accessContext)" [disabled]="isModuleActionsSyncing(accessContext.accessModuleName)">
+            <button type="button" class="ds-btn ds-btn--secondary btn-action btn-sync" (click)="syncModuleActions(accessContext.accessModuleName, accessContext)" [disabled]="isModuleActionsSyncing(accessContext.accessModuleName)">
               <i class="fas" [ngClass]="isModuleActionsSyncing(accessContext.accessModuleName) ? 'fa-spinner fa-spin' : 'fa-sync-alt'"></i>
               {{ 'PROF.Synchroniserlesactions' | translate }}
             </button>
@@ -507,24 +507,24 @@
           <div class="nav-actions-panel" *ngIf="getSubmenuActionDetails(accessContext.accessModuleName).length > 0">
             <div class="nav-actions-search">
               <i class="fas fa-search"></i>
-              <input
+              <input class="ds-input"
                 type="search"
                 [value]="getActionSearchTerm(accessContext.accessModuleName)"
                 (input)="setActionSearchTerm(accessContext.accessModuleName, $any($event.target).value)"
                 placeholder="{{ 'PROF.Filtrerparnomlibelléouendpoint' | translate }}">
-              <button type="button" class="nav-actions-search-clear" *ngIf="getActionSearchTerm(accessContext.accessModuleName)" (click)="clearActionSearch(accessContext.accessModuleName)">
+              <button type="button" class="ds-btn ds-btn--secondary nav-actions-search-clear" *ngIf="getActionSearchTerm(accessContext.accessModuleName)" (click)="clearActionSearch(accessContext.accessModuleName)">
                 <i class="fas fa-times"></i>
               </button>
             </div>
 
             <div class="nav-actions-toolbar">
-              <button type="button" class="btn-action" (click)="selectAllSubmenuActions(accessContext.accessModuleName)" [disabled]="isModuleActionsSyncing(accessContext.accessModuleName)">
+              <button type="button" class="ds-btn ds-btn--secondary btn-action" (click)="selectAllSubmenuActions(accessContext.accessModuleName)" [disabled]="isModuleActionsSyncing(accessContext.accessModuleName)">
                 <i class="fas fa-check-double"></i> {{ 'PROF.Toutcocher' | translate }}
               </button>
-              <button type="button" class="btn-action" (click)="deselectAllSubmenuActions(accessContext.accessModuleName)">
+              <button type="button" class="ds-btn ds-btn--secondary btn-action" (click)="deselectAllSubmenuActions(accessContext.accessModuleName)">
                 <i class="fas fa-times"></i> {{ 'FU.Toutdécocher' | translate }}
               </button>
-              <button type="button" class="btn-action btn-sync" (click)="syncModuleActions(accessContext.accessModuleName, accessContext)" [disabled]="isModuleActionsSyncing(accessContext.accessModuleName)">
+              <button type="button" class="ds-btn ds-btn--secondary btn-action btn-sync" (click)="syncModuleActions(accessContext.accessModuleName, accessContext)" [disabled]="isModuleActionsSyncing(accessContext.accessModuleName)">
                 <i class="fas" [ngClass]="isModuleActionsSyncing(accessContext.accessModuleName) ? 'fa-spinner fa-spin' : 'fa-sync-alt'"></i>
                 {{ 'PROF.Synchroniser' | translate }}
               </button>
@@ -578,7 +578,7 @@
       <div class="permissions-overview">
         <div class="overview-header">
           <h4><i class="fas fa-list"></i> {{ 'PROF.Vuedensembledespermissions' | translate }}</h4>
-          <button class="toggle-overview-btn" (click)="showOverview = !showOverview" [class.active]="showOverview">
+          <button type="button" class="ds-btn ds-btn--secondary toggle-overview-btn" (click)="showOverview = !showOverview" [class.active]="showOverview">
             <i class="fas" [class.fa-chevron-down]="!showOverview" [class.fa-chevron-up]="showOverview"></i>
             {{ showOverview ? ('ACT.hide' | translate) : ('ACT.show' | translate) }}
           </button>
@@ -603,11 +603,11 @@
             <span>{{ 'PROF.Modificationsenattente' | translate }}: <strong>{{ pendingChangesCount }}</strong></span>
           </div>
           <div class="pending-actions">
-            <button type="button" class="btn btn-primary" (click)="savePendingChanges()" [disabled]="isSavingPermissions">
+            <button type="button" class="ds-btn ds-btn--primary btn btn-primary" (click)="savePendingChanges()" [disabled]="isSavingPermissions">
               <i class="fas fa-save"></i>
               {{ isSavingPermissions ? ('PROF.Sauvegardeencours' | translate) : ('PROF.Sauvegarder' | translate) }}
             </button>
-            <button type="button" class="btn btn-secondary" (click)="discardPendingChanges()" [disabled]="isSavingPermissions">
+            <button type="button" class="ds-btn ds-btn--secondary btn btn-secondary" (click)="discardPendingChanges()" [disabled]="isSavingPermissions">
               <i class="fas fa-undo"></i> {{ 'PROF.Annuler' | translate }}
             </button>
           </div>
@@ -646,10 +646,10 @@
             </div>
 
             <div class="module-actions">
-              <button class="btn-action" (click)="selectAllPermissions(module)" 
+              <button type="button" class="ds-btn ds-btn--secondary btn-action" (click)="selectAllPermissions(module)" 
                       [disabled]="hasAllPermissions(module)">
                 <i class="fas fa-check-double"></i>{{ 'ACT.selectAll' | translate }}</button>
-              <button class="btn-action" (click)="deselectAllPermissions(module)"
+              <button type="button" class="ds-btn ds-btn--secondary btn-action" (click)="deselectAllPermissions(module)"
                       [disabled]="!hasAnyPermission(module)">
                 <i class="fas fa-times"></i> {{ 'APM.Toutdésélectionner' | translate }}
               </button>
@@ -661,7 +661,7 @@
   </div>
 
   <div class="module-selection-section module-selection-section--collapsible" *ngIf="selectedProfil">
-    <button type="button" class="module-selection-toggle" (click)="showModuleSelection = !showModuleSelection">
+    <button type="button" class="ds-btn ds-btn--secondary module-selection-toggle" (click)="showModuleSelection = !showModuleSelection">
       <span>
         <i class="fas fa-plus-circle"></i>
         {{ 'PROF.Ajouterdesmodulesauprofil' | translate }}
@@ -784,9 +784,9 @@
       </div>
       <div class="modal-footer">
         <div class="modal-actions">
-          <button type="button" class="btn-secondary" (click)="closePaysModal()" [disabled]="isSavingPays">
+          <button type="button" class="ds-btn ds-btn--secondary btn-secondary" (click)="closePaysModal()" [disabled]="isSavingPays">
             <i class="fas fa-times"></i>{{ 'COMMON.actions.close' | translate }}</button>
-          <button type="button" class="btn-primary" (click)="savePaysForProfil()" [disabled]="isSavingPays">
+          <button type="button" class="ds-btn ds-btn--primary btn-primary" (click)="savePaysForProfil()" [disabled]="isSavingPays">
             <i class="fas fa-save"></i>
             {{ isSavingPays ? ('PROF.Sauvegarde' | translate) : ('COMMON.actions.save' | translate) }}
           </button>
