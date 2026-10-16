@@ -1,0 +1,21 @@
+name: ci
+
+on:
+  push:
+  pull_request:
+
+jobs:
+  backend-tests:
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: backend
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: '17'
+          cache: maven
+      - name: Tests unitaires (hors MySQL local)
+        run: mvn -B test -Dtest='!TenantIsolationPilotTest,!EnterpriseModuleManagementTest,!PlatformAccountServiceTest,!PlatformEntrepriseProvisioningTest,!PermissionGeneratorControleInterneTest,!PermissionGeneratorAllSubmenusTest'
