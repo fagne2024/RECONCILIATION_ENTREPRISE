@@ -25,7 +25,7 @@ import { ReconciliationRequest } from '../../models/reconciliation-request.model
                 <h3>⚙️ Options d'analyse</h3>
                 <div class="analysis-toggle">
                     <label class="toggle-label">
-                        <input type="checkbox" 
+                        <input type="checkbox" class="ds-checkbox"
                                [(ngModel)]="disableAutoAnalysis" 
                                (ngModelChange)="onAnalysisToggleChange($event)">
                         <span class="toggle-text">Désactiver l'analyse automatique des clés</span>
@@ -75,7 +75,7 @@ import { ReconciliationRequest } from '../../models/reconciliation-request.model
                 </div>
 
                 <div class="auto-apply-section">
-                    <button class="auto-apply-btn" (click)="applyTopSuggestions()" 
+                    <button type="button" class="auto-apply-btn ds-btn ds-btn--primary" (click)="applyTopSuggestions()" 
                             [disabled]="keySuggestions.length === 0">
                         ✅ Appliquer les suggestions automatiquement
                     </button>
@@ -99,7 +99,7 @@ import { ReconciliationRequest } from '../../models/reconciliation-request.model
                 <div class="key-columns">
                     <div class="column-group">
                         <label>Colonne clé BO</label>
-                        <select 
+                        <select class="ds-select"
                             [(ngModel)]="selectedBoKeyColumn"
                             (ngModelChange)="onBoKeyColumnChange($event)">
                             <option value="">Sélectionnez une colonne</option>
@@ -111,7 +111,7 @@ import { ReconciliationRequest } from '../../models/reconciliation-request.model
 
                     <div class="column-group">
                         <label>Colonne clé Partenaire</label>
-                        <select 
+                        <select class="ds-select"
                             [(ngModel)]="selectedPartnerKeyColumn"
                             (ngModelChange)="onPartnerKeyColumnChange($event)">
                             <option value="">Sélectionnez une colonne</option>
@@ -133,7 +133,7 @@ import { ReconciliationRequest } from '../../models/reconciliation-request.model
                         <div class="key-columns-wrapper">
                             <div class="column-group">
                                 <label>Colonne clé BO</label>
-                                <select 
+                                <select class="ds-select"
                                     [(ngModel)]="keyPair.boColumn"
                                     (ngModelChange)="onAdditionalBoKeyChange($event, i)">
                                     <option value="">Sélectionnez une colonne</option>
@@ -145,7 +145,7 @@ import { ReconciliationRequest } from '../../models/reconciliation-request.model
 
                             <div class="column-group">
                                 <label>Colonne clé Partenaire</label>
-                                <select 
+                                <select class="ds-select"
                                     [(ngModel)]="keyPair.partnerColumn"
                                     (ngModelChange)="onAdditionalPartnerKeyChange($event, i)">
                                     <option value="">Sélectionnez une colonne</option>
@@ -156,13 +156,13 @@ import { ReconciliationRequest } from '../../models/reconciliation-request.model
                             </div>
                         </div>
                         
-                        <button class="remove-key-btn" (click)="removeAdditionalKey(i)" title="Supprimer cette clé">
+                        <button type="button" class="remove-key-btn ds-btn ds-btn--ghost ds-btn--sm" (click)="removeAdditionalKey(i)" title="Supprimer cette clé">
                             🗑️ Supprimer
                         </button>
                     </div>
                 </div>
 
-                <button class="add-btn" (click)="addAdditionalKey()">
+                <button type="button" class="add-btn ds-btn ds-btn--secondary ds-btn--sm" (click)="addAdditionalKey()">
                     ➕ Ajouter une clé supplémentaire
                 </button>
             </div>
@@ -171,7 +171,7 @@ import { ReconciliationRequest } from '../../models/reconciliation-request.model
             <div class="section" *ngIf="additionalKeys.length === 0">
                 <h3>🔑 Clés supplémentaires (optionnel)</h3>
                 <p class="section-description">Ajoutez des clés supplémentaires pour une réconciliation plus précise</p>
-                <button class="add-btn" (click)="addAdditionalKey()">
+                <button type="button" class="add-btn ds-btn ds-btn--secondary ds-btn--sm" (click)="addAdditionalKey()">
                     ➕ Ajouter une clé supplémentaire
                 </button>
             </div>
@@ -197,8 +197,8 @@ import { ReconciliationRequest } from '../../models/reconciliation-request.model
 
             <!-- Bouton de validation -->
             <div class="validation-section">
-                <button 
-                    class="validate-btn" 
+                <button type="button" 
+                    class="validate-btn ds-btn ds-btn--primary" 
                     [disabled]="!isValid"
                     [class.processing]="isReconciliationActive()"
                     (click)="proceedWithReconciliation()">
@@ -214,29 +214,29 @@ import { ReconciliationRequest } from '../../models/reconciliation-request.model
         }
 
         h2 {
-            color: #2196F3;
+            color: var(--color-info-solid);
             margin-bottom: 10px;
         }
 
         .description {
-            color: #666;
+            color: var(--color-text-muted);
             margin-bottom: 30px;
         }
 
         .section {
-            background: #f8f9fa;
+            background: var(--color-surface-sunken);
             border-radius: 8px;
             padding: 20px;
             margin-bottom: 30px;
         }
 
         h3 {
-            color: #1976D2;
+            color: var(--color-accent-hover);
             margin-bottom: 10px;
         }
 
         .section-description {
-            color: #666;
+            color: var(--color-text-muted);
             margin-bottom: 20px;
             font-size: 0.9em;
         }
@@ -254,15 +254,15 @@ import { ReconciliationRequest } from '../../models/reconciliation-request.model
         }
 
         label {
-            color: #333;
+            color: var(--color-text-primary);
             font-weight: 500;
         }
 
         select {
             padding: 10px;
-            border: 1px solid #ddd;
+            border: 1px solid var(--color-border);
             border-radius: 4px;
-            background: white;
+            background: var(--color-surface);
             font-size: 1em;
         }
 
@@ -283,7 +283,7 @@ import { ReconciliationRequest } from '../../models/reconciliation-request.model
         .remove-btn {
             background: none;
             border: none;
-            color: #dc3545;
+            color: var(--color-error);
             font-size: 1.2em;
             cursor: pointer;
             padding: 10px;
@@ -291,9 +291,9 @@ import { ReconciliationRequest } from '../../models/reconciliation-request.model
         }
 
         .add-btn {
-            background: #e3f2fd;
-            border: 1px solid #2196F3;
-            color: #2196F3;
+            background: var(--color-info-bg);
+            border: 1px solid var(--color-info-solid);
+            color: var(--color-info-solid);
             padding: 10px 20px;
             border-radius: 4px;
             cursor: pointer;
@@ -302,8 +302,8 @@ import { ReconciliationRequest } from '../../models/reconciliation-request.model
         }
 
         .add-btn:hover {
-            background: #2196F3;
-            color: white;
+            background: var(--color-info-solid);
+            color: var(--color-accent-contrast);
         }
 
         /* Styles pour les clés supplémentaires */
@@ -319,9 +319,9 @@ import { ReconciliationRequest } from '../../models/reconciliation-request.model
             flex-direction: column;
             gap: 10px;
             padding: 15px;
-            background: white;
+            background: var(--color-surface);
             border-radius: 8px;
-            border: 1px solid #e0e0e0;
+            border: 1px solid var(--color-border);
         }
 
         .key-columns-wrapper {
@@ -331,9 +331,9 @@ import { ReconciliationRequest } from '../../models/reconciliation-request.model
         }
 
         .remove-key-btn {
-            background: #fff3f3;
-            border: 1px solid #dc3545;
-            color: #dc3545;
+            background: var(--color-surface)3f3;
+            border: 1px solid var(--color-error);
+            color: var(--color-error);
             padding: 8px 16px;
             border-radius: 4px;
             cursor: pointer;
@@ -343,14 +343,14 @@ import { ReconciliationRequest } from '../../models/reconciliation-request.model
         }
 
         .remove-key-btn:hover {
-            background: #dc3545;
-            color: white;
+            background: var(--color-error);
+            color: var(--color-accent-contrast);
         }
 
         /* Styles pour les suggestions automatiques */
         .suggestions-section {
-            background: linear-gradient(135deg, #e3f2fd 0%, #f3e5f5 100%);
-            border: 2px solid #2196F3;
+            background: linear-gradient(135deg, var(--color-info-bg) 0%, var(--color-duplicate-bg) 100%);
+            border: 2px solid var(--color-info-solid);
         }
 
         .confidence-indicator {
@@ -359,7 +359,7 @@ import { ReconciliationRequest } from '../../models/reconciliation-request.model
             gap: 15px;
             margin-bottom: 20px;
             padding: 15px;
-            background: white;
+            background: var(--color-surface);
             border-radius: 8px;
             box-shadow: 0 2px 4px rgba(0,0,0,0.1);
         }
@@ -367,20 +367,20 @@ import { ReconciliationRequest } from '../../models/reconciliation-request.model
         .confidence-bar {
             flex: 1;
             height: 20px;
-            background: #e0e0e0;
+            background: var(--color-border);
             border-radius: 10px;
             overflow: hidden;
         }
 
         .confidence-fill {
             height: 100%;
-            background: linear-gradient(90deg, #4CAF50, #8BC34A);
+            background: linear-gradient(90deg, var(--color-success-solid), var(--color-success-solid));
             transition: width 0.5s ease;
         }
 
         .confidence-text {
             font-weight: bold;
-            color: #1976D2;
+            color: var(--color-accent-hover);
             min-width: 150px;
         }
 
@@ -392,11 +392,11 @@ import { ReconciliationRequest } from '../../models/reconciliation-request.model
         }
 
         .suggestion-item {
-            background: white;
+            background: var(--color-surface);
             border-radius: 8px;
             padding: 15px;
             box-shadow: 0 2px 4px rgba(0,0,0,0.1);
-            border-left: 4px solid #2196F3;
+            border-left: 4px solid var(--color-info-solid);
         }
 
         .suggestion-header {
@@ -407,8 +407,8 @@ import { ReconciliationRequest } from '../../models/reconciliation-request.model
         }
 
         .suggestion-rank {
-            background: #2196F3;
-            color: white;
+            background: var(--color-info-solid);
+            color: var(--color-accent-contrast);
             padding: 4px 8px;
             border-radius: 12px;
             font-size: 0.8em;
@@ -417,7 +417,7 @@ import { ReconciliationRequest } from '../../models/reconciliation-request.model
 
         .suggestion-confidence {
             font-weight: bold;
-            color: #2196f3;
+            color: var(--color-info-solid);
             font-size: 14px;
             margin-left: 10px;
         }
@@ -431,14 +431,14 @@ import { ReconciliationRequest } from '../../models/reconciliation-request.model
         .confidence-bar-small {
             width: 60px;
             height: 8px;
-            background: #e0e0e0;
+            background: var(--color-border);
             border-radius: 4px;
             overflow: hidden;
         }
 
         .confidence-fill-small {
             height: 100%;
-            background: linear-gradient(90deg, #ff6b6b, #ffa726, #66bb6a);
+            background: linear-gradient(90deg, var(--color-error-solid), var(--color-warning-solid), var(--color-success-solid));
             border-radius: 4px;
             transition: width 0.3s ease;
         }
@@ -448,8 +448,8 @@ import { ReconciliationRequest } from '../../models/reconciliation-request.model
         }
 
         .transformation-badge {
-            background: linear-gradient(135deg, #ff9800, #ff5722);
-            color: white;
+            background: linear-gradient(135deg, var(--color-warning-solid), var(--color-error-solid));
+            color: var(--color-accent-contrast);
             padding: 6px 12px;
             border-radius: 15px;
             font-size: 0.85em;
@@ -467,46 +467,46 @@ import { ReconciliationRequest } from '../../models/reconciliation-request.model
         }
 
         .bo-column {
-            background: #e3f2fd;
+            background: var(--color-info-bg);
             padding: 4px 8px;
             border-radius: 4px;
-            color: #1976D2;
+            color: var(--color-accent-hover);
         }
 
         .arrow {
-            color: #666;
+            color: var(--color-text-muted);
             font-size: 1.2em;
         }
 
         .partner-column {
-            background: #f3e5f5;
+            background: var(--color-duplicate-bg);
             padding: 4px 8px;
             border-radius: 4px;
-            color: #7B1FA2;
+            color: var(--color-duplicate);
         }
 
         .suggestion-reason {
-            color: #666;
+            color: var(--color-text-muted);
             font-size: 0.9em;
             margin-bottom: 5px;
         }
 
         .suggestion-samples {
-            color: #999;
+            color: var(--color-text-muted);
             font-size: 0.8em;
         }
 
         .auto-apply-section {
             text-align: center;
             padding: 20px;
-            background: white;
+            background: var(--color-surface);
             border-radius: 8px;
             box-shadow: 0 2px 4px rgba(0,0,0,0.1);
         }
 
         .auto-apply-btn {
-            background: linear-gradient(135deg, #4CAF50, #8BC34A);
-            color: white;
+            background: linear-gradient(135deg, var(--color-success-solid), var(--color-success-solid));
+            color: var(--color-accent-contrast);
             border: none;
             padding: 12px 24px;
             border-radius: 6px;
@@ -523,12 +523,12 @@ import { ReconciliationRequest } from '../../models/reconciliation-request.model
         }
 
         .auto-apply-btn:disabled {
-            background: #ccc;
+            background: var(--color-border-emphasis);
             cursor: not-allowed;
         }
 
         .auto-apply-note {
-            color: #666;
+            color: var(--color-text-muted);
             font-size: 0.9em;
         }
 
@@ -538,7 +538,7 @@ import { ReconciliationRequest } from '../../models/reconciliation-request.model
             justify-content: center;
             gap: 15px;
             padding: 30px;
-            background: white;
+            background: var(--color-surface);
             border-radius: 8px;
             box-shadow: 0 2px 4px rgba(0,0,0,0.1);
         }
@@ -546,8 +546,8 @@ import { ReconciliationRequest } from '../../models/reconciliation-request.model
         .spinner {
             width: 30px;
             height: 30px;
-            border: 3px solid #e0e0e0;
-            border-top: 3px solid #2196F3;
+            border: 3px solid var(--color-border);
+            border-top: 3px solid var(--color-info-solid);
             border-radius: 50%;
             animation: spin 1s linear infinite;
         }
@@ -563,8 +563,8 @@ import { ReconciliationRequest } from '../../models/reconciliation-request.model
         }
 
         .validate-btn {
-            background: linear-gradient(45deg, #2196F3, #1976D2);
-            color: white;
+            background: linear-gradient(45deg, var(--color-info-solid), var(--color-accent-hover));
+            color: var(--color-accent-contrast);
             border: none;
             padding: 15px 30px;
             border-radius: 8px;
@@ -574,7 +574,7 @@ import { ReconciliationRequest } from '../../models/reconciliation-request.model
         }
 
         .validate-btn:disabled {
-            background: #ccc;
+            background: var(--color-border-emphasis);
             cursor: not-allowed;
         }
 
@@ -593,8 +593,8 @@ import { ReconciliationRequest } from '../../models/reconciliation-request.model
         }
 
         .progress-card {
-            background: linear-gradient(135deg, #f8fff5 0%, #e8f5e9 100%);
-            border: 2px solid #28a745;
+            background: linear-gradient(135deg, var(--color-success-bg) 0%, var(--color-success-bg) 100%);
+            border: 2px solid var(--color-success);
             border-radius: 10px;
             padding: 20px;
             box-shadow: 0 4px 12px rgba(40, 167, 69, 0.15);
@@ -616,7 +616,7 @@ import { ReconciliationRequest } from '../../models/reconciliation-request.model
         .progress-bar {
             width: 100%;
             height: 20px;
-            background: #e9ecef;
+            background: var(--color-border);
             border-radius: 10px;
             overflow: hidden;
             margin-bottom: 12px;
@@ -624,7 +624,7 @@ import { ReconciliationRequest } from '../../models/reconciliation-request.model
 
         .progress-fill {
             height: 100%;
-            background: linear-gradient(90deg, #28a745, #20c997);
+            background: linear-gradient(90deg, var(--color-success), var(--color-success-solid));
             border-radius: 10px;
             transition: width 0.3s ease;
         }
@@ -647,8 +647,8 @@ import { ReconciliationRequest } from '../../models/reconciliation-request.model
 
         /* Styles pour les options d'analyse */
         .analysis-options-section {
-            background: linear-gradient(135deg, #f8f9fa 0%, #e9ecef 100%);
-            border: 2px solid #6c757d;
+            background: linear-gradient(135deg, var(--color-surface-sunken) 0%, var(--color-border) 100%);
+            border: 2px solid var(--color-text-muted);
         }
 
         .analysis-toggle {
@@ -663,7 +663,7 @@ import { ReconciliationRequest } from '../../models/reconciliation-request.model
             gap: 10px;
             cursor: pointer;
             font-weight: 500;
-            color: #495057;
+            color: var(--color-text-muted);
         }
 
         .toggle-label input[type="checkbox"] {
@@ -674,11 +674,11 @@ import { ReconciliationRequest } from '../../models/reconciliation-request.model
 
         .toggle-text {
             font-size: 1em;
-            color: #495057;
+            color: var(--color-text-muted);
         }
 
         .toggle-description {
-            color: #6c757d;
+            color: var(--color-text-muted);
             font-size: 0.9em;
             margin: 0;
             padding-left: 28px;
@@ -686,18 +686,18 @@ import { ReconciliationRequest } from '../../models/reconciliation-request.model
 
         /* Styles pour le mode manuel */
         .manual-mode-section {
-            background: linear-gradient(135deg, #fff3cd 0%, #ffeaa7 100%);
-            border: 2px solid #ffc107;
+            background: linear-gradient(135deg, var(--color-surface)3cd 0%, var(--color-warning-bg) 100%);
+            border: 2px solid var(--color-warning-solid);
         }
 
         .manual-mode-description {
-            color: #856404;
+            color: var(--color-warning-text);
             font-size: 1em;
             margin: 0;
             padding: 15px;
             background: rgba(255, 255, 255, 0.7);
             border-radius: 6px;
-            border-left: 4px solid #ffc107;
+            border-left: 4px solid var(--color-warning-solid);
         }
     `]
 })
