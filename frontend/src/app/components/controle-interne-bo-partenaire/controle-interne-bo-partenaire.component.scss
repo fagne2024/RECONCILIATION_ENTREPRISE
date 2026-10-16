@@ -1,18 +1,9 @@
 :host {
   display: block;
-  --rd-bg: #f2f0eb;
-  --rd-navy: #1a2535;
-  --rd-green-m: #5a9e74;
-  --rd-border: #e4e0d8;
-  --rd-text1: #1a1714;
-  --rd-text2: #5c5650;
-  --rd-text3: #9b9489;
-  --rd-amber: #a85f1e;
-  --rd-green: #2e6b47;
 }
 
 .ci-root {
-  font-family: 'Sora', sans-serif;
+  font-family: var(--font-ui);
   background: var(--rd-bg);
   min-height: 100vh;
   color: var(--rd-text1);
@@ -31,9 +22,9 @@
 }
 
 .nav-brand {
-  font-family: 'Instrument Serif', serif;
+  font-family: var(--font-display);
   font-size: 17px;
-  color: #fff;
+  color: var(--color-nav-text);
   display: flex;
   align-items: center;
   gap: 10px;
@@ -93,7 +84,7 @@
 
 .nav-btn.secondary {
   background: rgba(255, 255, 255, 0.08);
-  color: #fff;
+  color: var(--color-nav-text);
 }
 
 .nav-btn.secondary:hover:not(:disabled) {
@@ -106,7 +97,7 @@
 }
 
 .page-header-report {
-  background: #fafaf8;
+  background: var(--rd-surface);
   border-bottom: 1px solid var(--rd-border);
   padding: 20px 28px;
 }
@@ -121,7 +112,7 @@
 }
 
 .ph-title-report {
-  font-family: 'Instrument Serif', serif;
+  font-family: var(--font-display);
   font-size: 28px;
   font-weight: 400;
   margin: 0 0 8px;
@@ -143,7 +134,7 @@
 }
 
 .ci-filters-card {
-  background: #fff;
+  background: var(--color-surface);
   border: 1px solid var(--rd-border);
   border-radius: 12px;
   padding: 20px;
@@ -184,7 +175,7 @@
 
 .ci-error {
   background: #fceaea;
-  color: #8b2635;
+  color: var(--rd-red);
   padding: 12px 16px;
   border-radius: 8px;
   margin-bottom: 16px;
@@ -204,7 +195,7 @@
 }
 
 .ci-section {
-  background: #fff;
+  background: var(--color-surface);
   border: 1px solid var(--rd-border);
   border-radius: 12px;
   padding: 20px;
@@ -298,7 +289,7 @@
 }
 
 .ci-total-card--nombre .ci-total-label {
-  color: #1e4a7a;
+  color: var(--rd-blue);
 }
 
 .ci-total-card--volume .ci-total-label {
@@ -433,7 +424,7 @@
   border: none;
   border-radius: 8px;
   background: var(--rd-green-m);
-  color: #fff;
+  color: var(--color-nav-text);
   font-size: 12px;
   font-weight: 600;
   cursor: pointer;
@@ -456,7 +447,7 @@
   border: none;
   border-radius: 8px;
   background: #e8b4b8;
-  color: #8b2635;
+  color: var(--rd-red);
   font-size: 12px;
   font-weight: 600;
   cursor: pointer;
@@ -570,7 +561,7 @@
 
 .ci-pill--validation {
   background: #e6eff8;
-  color: #1e4a7a;
+  color: var(--rd-blue);
 }
 
 .ci-panels {
@@ -586,7 +577,7 @@
 }
 
 .ci-panel {
-  background: #fff;
+  background: var(--color-surface);
   border: 1px solid var(--rd-border);
   border-radius: 12px;
   padding: 20px;
@@ -658,7 +649,7 @@
   border: 1px solid var(--rd-border);
   border-radius: 6px;
   font-size: 12px;
-  background: #fff;
+  background: var(--color-surface);
 }
 
 .ci-panel-filter-reset {
@@ -667,7 +658,7 @@
   padding: 6px 12px;
   border: 1px solid var(--rd-border);
   border-radius: 6px;
-  background: #fff;
+  background: var(--color-surface);
   font-size: 12px;
   color: var(--rd-text2);
   cursor: pointer;
@@ -781,13 +772,13 @@
 
 .ci-btn-save-comment {
   background: #eef4fb;
-  color: #1e4a7a;
+  color: var(--rd-blue);
   border: 1px solid #c8daf0;
 }
 
 .ci-btn-send-email {
   background: var(--rd-green-m);
-  color: #fff;
+  color: var(--color-nav-text);
 }
 
 .ci-btn-save-comment:disabled,
@@ -810,7 +801,7 @@
   padding: 9px 14px;
   border-radius: 8px;
   border: 1px solid var(--rd-border);
-  background: #fff;
+  background: var(--color-surface);
   font-size: 13px;
   font-weight: 600;
   cursor: pointer;
@@ -833,7 +824,7 @@
 
 .ci-tool-btn--pdf {
   border-color: #e8b4b8;
-  color: #8b2635;
+  color: var(--rd-red);
 }
 
 .ci-export-root {
@@ -899,11 +890,11 @@
 .ci-ticket-badge--btn:hover {
   background: #e3eaf3;
   border-color: #b8c5d6;
-  color: #1e4a7a;
+  color: var(--rd-blue);
 }
 
 .ci-ticket-badge--btn:focus-visible {
-  outline: 2px solid #1e4a7a;
+  outline: 2px solid var(--rd-blue);
   outline-offset: 2px;
 }
 
@@ -913,7 +904,7 @@
   border-radius: 999px;
   background: #eef4fb;
   border: 1px solid #c8daf0;
-  color: #1e4a7a;
+  color: var(--rd-blue);
   font-size: 11px;
   font-weight: 600;
   text-decoration: none;
@@ -964,7 +955,7 @@
   max-height: min(80vh, 520px);
   display: flex;
   flex-direction: column;
-  background: #fff;
+  background: var(--color-surface);
   border-radius: 12px;
   box-shadow: 0 20px 48px rgba(15, 23, 42, 0.22);
   overflow: hidden;
@@ -1076,7 +1067,7 @@
   height: 32px;
   border: 1px solid var(--rd-border);
   border-radius: 8px;
-  background: #fff;
+  background: var(--color-surface);
   color: var(--rd-text1);
   cursor: pointer;
   transition: background 0.15s, border-color 0.15s;
@@ -1104,7 +1095,7 @@
   padding: 0 8px;
   border: 1px solid var(--rd-border);
   border-radius: 8px;
-  background: #fff;
+  background: var(--color-surface);
   color: var(--rd-text1);
   font-size: 12px;
   font-weight: 600;
@@ -1117,6 +1108,6 @@
   &--active {
     background: var(--rd-navy);
     border-color: var(--rd-navy);
-    color: #fff;
+    color: var(--color-nav-text);
   }
 }

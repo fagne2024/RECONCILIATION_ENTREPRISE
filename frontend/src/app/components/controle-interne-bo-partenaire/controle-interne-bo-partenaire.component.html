@@ -31,35 +31,35 @@
   <div class="main">
     <div class="ci-filters-card">
       <h2>{{ 'CIB.filters.scope' | translate }}</h2>
-      <div class="ci-filters">
+      <div class="ci-filters ds-filter-bar">
         <label>
           <span>{{ 'TBL.country' | translate }}</span>
-          <select [(ngModel)]="selectedCountry" (ngModelChange)="appliquerFiltres()">
+          <select class="ds-select" [(ngModel)]="selectedCountry" (ngModelChange)="appliquerFiltres()">
             <option value="">{{ 'RBP.filters.choose' | translate }}</option>
             <option *ngFor="let c of countries" [value]="c">{{ c }}</option>
           </select>
         </label>
         <label>
           <span>{{ 'TBL.year' | translate }}</span>
-          <select [(ngModel)]="selectedYear" (ngModelChange)="appliquerFiltres()">
+          <select class="ds-select" [(ngModel)]="selectedYear" (ngModelChange)="appliquerFiltres()">
             <option *ngFor="let y of yearOptions" [value]="y">{{ y }}</option>
           </select>
         </label>
         <label>
           <span>{{ 'TBL.month' | translate }}</span>
-          <select [(ngModel)]="selectedMonth" (ngModelChange)="appliquerFiltres()">
+          <select class="ds-select" [(ngModel)]="selectedMonth" (ngModelChange)="appliquerFiltres()">
             <option *ngFor="let m of monthOptions" [value]="m.value">{{ m.label }}</option>
           </select>
         </label>
         <label>
           <span>ENV</span>
-          <select [(ngModel)]="selectedEnv" (ngModelChange)="appliquerFiltres()">
+          <select class="ds-select" [(ngModel)]="selectedEnv" (ngModelChange)="appliquerFiltres()">
             <option *ngFor="let e of envOptions" [value]="e">{{ e }}</option>
           </select>
         </label>
         <label class="ci-filter-service">
           <span>{{ 'TBL.service' | translate }}</span>
-          <select [(ngModel)]="selectedService" (ngModelChange)="onServiceFilterChange()">
+          <select class="ds-select" [(ngModel)]="selectedService" (ngModelChange)="onServiceFilterChange()">
             <option value="">{{ 'FILT.allServices' | translate }}</option>
             <option *ngFor="let s of availableServices" [value]="s">{{ s }}</option>
           </select>
@@ -197,7 +197,7 @@
           [class.ci-table-wrap--wide]="showEcartColumns"
           *ngIf="monthlyRows.length; else noMonthly"
         >
-          <table class="ci-table">
+          <table class="ci-table ds-table">
             <thead>
               <tr>
                 <th class="ci-col-month">{{ 'TBL.month' | translate }}</th>
@@ -290,58 +290,13 @@
           </table>
         </div>
         <div class="ci-pagination" *ngIf="monthlyRows.length > itemsPerPage">
-          <div class="ci-pagination-info">
-            {{ 'CIB.pagination.info' | translate: { start: getMonthlyPaginationStartIndex(), end: getMonthlyPaginationEndIndex(), total: monthlyRows.length | number: '1.0-0' } }}
-          </div>
-          <div class="ci-pagination-controls">
-            <button
-              type="button"
-              class="ci-pagination-btn"
-              (click)="goToMonthlyPage(1)"
-              [disabled]="currentPage === 1"
-              title="{{ 'PAG.first' | translate }}"
-            >
-              <i class="fas fa-angle-double-left"></i>
-            </button>
-            <button
-              type="button"
-              class="ci-pagination-btn"
-              (click)="previousMonthlyPage()"
-              [disabled]="currentPage === 1"
-              title="{{ 'PAG.previousPage' | translate }}"
-            >
-              <i class="fas fa-angle-left"></i>
-            </button>
-            <div class="ci-page-numbers">
-              <button
-                type="button"
-                *ngFor="let page of getMonthlyPageNumbers()"
-                class="ci-page-number"
-                [class.ci-page-number--active]="page === currentPage"
-                (click)="goToMonthlyPage(page)"
-              >
-                {{ page }}
-              </button>
-            </div>
-            <button
-              type="button"
-              class="ci-pagination-btn"
-              (click)="nextMonthlyPage()"
-              [disabled]="currentPage === totalPages"
-              title="{{ 'PAG.nextPage' | translate }}"
-            >
-              <i class="fas fa-angle-right"></i>
-            </button>
-            <button
-              type="button"
-              class="ci-pagination-btn"
-              (click)="goToMonthlyPage(totalPages)"
-              [disabled]="currentPage === totalPages"
-              title="{{ 'PAG.last' | translate }}"
-            >
-              <i class="fas fa-angle-double-right"></i>
-            </button>
-          </div>
+          <ds-pagination
+            [page]="currentPage"
+            [pageCount]="totalPages"
+            [totalItems]="monthlyRows.length"
+            [pageSize]="itemsPerPage"
+            (pageChange)="goToMonthlyPage($event)">
+          </ds-pagination>
         </div>
         <ng-template #noMonthly>
           <p class="ci-empty" *ngIf="emptyScopeHint; else noMonthlyFilters">{{ emptyScopeHint }}</p>
@@ -423,7 +378,7 @@
           </div>
           <div class="ci-mini-table-wrap ci-mini-table-wrap--paginated" *ngIf="nonValidesCloturesAll.length; else noNonValides">
             <p class="ci-empty-small" *ngIf="!filteredNonValidesClotures.length">{{ 'CIB.empty.noResult' | translate }}</p>
-            <table class="ci-mini-table" *ngIf="filteredNonValidesClotures.length">
+            <table class="ci-mini-table ds-table" *ngIf="filteredNonValidesClotures.length">
               <thead>
                 <tr>
                   <th>{{ 'TBL.date' | translate }}</th>
@@ -451,58 +406,13 @@
               </tfoot>
             </table>
             <div class="ci-pagination ci-pagination--panel" *ngIf="filteredNonValidesClotures.length > panelItemsPerPage">
-              <div class="ci-pagination-info">
-                {{ 'CIB.pagination.info' | translate: { start: getPanelPaginationStartIndex('nonValides'), end: getPanelPaginationEndIndex('nonValides'), total: filteredNonValidesClotures.length | number: '1.0-0' } }}
-              </div>
-              <div class="ci-pagination-controls">
-                <button
-                  type="button"
-                  class="ci-pagination-btn"
-                  (click)="goToPanelPage('nonValides', 1)"
-                  [disabled]="nonValidesPanelPage === 1"
-                  title="{{ 'PAG.first' | translate }}"
-                >
-                  <i class="fas fa-angle-double-left"></i>
-                </button>
-                <button
-                  type="button"
-                  class="ci-pagination-btn"
-                  (click)="previousPanelPage('nonValides')"
-                  [disabled]="nonValidesPanelPage === 1"
-                  title="{{ 'PAG.previousPage' | translate }}"
-                >
-                  <i class="fas fa-angle-left"></i>
-                </button>
-                <div class="ci-page-numbers">
-                  <button
-                    type="button"
-                    *ngFor="let page of getPanelPageNumbers('nonValides')"
-                    class="ci-page-number"
-                    [class.ci-page-number--active]="page === nonValidesPanelPage"
-                    (click)="goToPanelPage('nonValides', page)"
-                  >
-                    {{ page }}
-                  </button>
-                </div>
-                <button
-                  type="button"
-                  class="ci-pagination-btn"
-                  (click)="nextPanelPage('nonValides')"
-                  [disabled]="nonValidesPanelPage === nonValidesPanelTotalPages"
-                  title="{{ 'PAG.nextPage' | translate }}"
-                >
-                  <i class="fas fa-angle-right"></i>
-                </button>
-                <button
-                  type="button"
-                  class="ci-pagination-btn"
-                  (click)="goToPanelPage('nonValides', nonValidesPanelTotalPages)"
-                  [disabled]="nonValidesPanelPage === nonValidesPanelTotalPages"
-                  title="{{ 'PAG.last' | translate }}"
-                >
-                  <i class="fas fa-angle-double-right"></i>
-                </button>
-              </div>
+              <ds-pagination
+                [page]="nonValidesPanelPage"
+                [pageCount]="nonValidesPanelTotalPages"
+                [totalItems]="filteredNonValidesClotures.length"
+                [pageSize]="panelItemsPerPage"
+                (pageChange)="goToPanelPage('nonValides', $event)">
+              </ds-pagination>
             </div>
           </div>
           <ng-template #noNonValides>
@@ -560,7 +470,7 @@
           </div>
           <div class="ci-mini-table-wrap ci-mini-table-wrap--paginated" *ngIf="validesCloturesAll.length; else noValides">
             <p class="ci-empty-small" *ngIf="!filteredValidesClotures.length">{{ 'CIB.empty.noResult' | translate }}</p>
-            <table class="ci-mini-table" *ngIf="filteredValidesClotures.length">
+            <table class="ci-mini-table ds-table" *ngIf="filteredValidesClotures.length">
               <thead>
                 <tr>
                   <th>{{ 'TBL.date' | translate }}</th>
@@ -588,58 +498,13 @@
               </tfoot>
             </table>
             <div class="ci-pagination ci-pagination--panel" *ngIf="filteredValidesClotures.length > panelItemsPerPage">
-              <div class="ci-pagination-info">
-                {{ 'CIB.pagination.info' | translate: { start: getPanelPaginationStartIndex('valides'), end: getPanelPaginationEndIndex('valides'), total: filteredValidesClotures.length | number: '1.0-0' } }}
-              </div>
-              <div class="ci-pagination-controls">
-                <button
-                  type="button"
-                  class="ci-pagination-btn"
-                  (click)="goToPanelPage('valides', 1)"
-                  [disabled]="validesPanelPage === 1"
-                  title="{{ 'PAG.first' | translate }}"
-                >
-                  <i class="fas fa-angle-double-left"></i>
-                </button>
-                <button
-                  type="button"
-                  class="ci-pagination-btn"
-                  (click)="previousPanelPage('valides')"
-                  [disabled]="validesPanelPage === 1"
-                  title="{{ 'PAG.previousPage' | translate }}"
-                >
-                  <i class="fas fa-angle-left"></i>
-                </button>
-                <div class="ci-page-numbers">
-                  <button
-                    type="button"
-                    *ngFor="let page of getPanelPageNumbers('valides')"
-                    class="ci-page-number"
-                    [class.ci-page-number--active]="page === validesPanelPage"
-                    (click)="goToPanelPage('valides', page)"
-                  >
-                    {{ page }}
-                  </button>
-                </div>
-                <button
-                  type="button"
-                  class="ci-pagination-btn"
-                  (click)="nextPanelPage('valides')"
-                  [disabled]="validesPanelPage === validesPanelTotalPages"
-                  title="{{ 'PAG.nextPage' | translate }}"
-                >
-                  <i class="fas fa-angle-right"></i>
-                </button>
-                <button
-                  type="button"
-                  class="ci-pagination-btn"
-                  (click)="goToPanelPage('valides', validesPanelTotalPages)"
-                  [disabled]="validesPanelPage === validesPanelTotalPages"
-                  title="{{ 'PAG.last' | translate }}"
-                >
-                  <i class="fas fa-angle-double-right"></i>
-                </button>
-              </div>
+              <ds-pagination
+                [page]="validesPanelPage"
+                [pageCount]="validesPanelTotalPages"
+                [totalItems]="filteredValidesClotures.length"
+                [pageSize]="panelItemsPerPage"
+                (pageChange)="goToPanelPage('valides', $event)">
+              </ds-pagination>
             </div>
           </div>
           <ng-template #noValides>
