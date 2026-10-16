@@ -11,25 +11,25 @@
     </div>
     <div class="nav-spacer"></div>
     <div class="nav-actions">
-      <button class="nav-btn secondary" (click)="downloadImportTemplate()" [disabled]="isImportBusy"
+      <button type="button" class="ds-btn ds-btn--secondary nav-btn secondary" (click)="downloadImportTemplate()" [disabled]="isImportBusy"
               title="{{ 'OPL.Téléchargerlemodèlexlsxàremplirpourlimport' | translate }}">
         <i class="fas fa-file-excel"></i> {{ 'BQ.Modèle' | translate }}
       </button>
-      <button class="nav-btn secondary" (click)="toggleImportPanel()" [disabled]="isUploadingImport"
+      <button type="button" class="ds-btn ds-btn--secondary nav-btn secondary" (click)="toggleImportPanel()" [disabled]="isUploadingImport"
               [class.active]="isImportPanelOpen"
               title="{{ 'OPL.Importerdeslignesopérationsdepuisunfichiercsvouexcel' | translate }}">
         <i class="fas fa-upload"></i> {{ 'COMMON.actions.import' | translate }}
       </button>
-      <button class="nav-btn secondary" (click)="loadOpparts()" [disabled]="isLoading">
+      <button type="button" class="ds-btn ds-btn--secondary nav-btn secondary" (click)="loadOpparts()" [disabled]="isLoading">
         <i class="fas fa-sync-alt"></i> {{ 'CPT.Actualiser' | translate }}
       </button>
-      <button class="nav-btn secondary" (click)="exportLinkedPdf()"
+      <button type="button" class="ds-btn ds-btn--secondary nav-btn secondary" (click)="exportLinkedPdf()"
               [disabled]="!canExportLinkedPdf"
               [title]="'PDF des lignes liees (Token) presentes dans le filtre courant, source principale a gauche, autres sources a droite. Plusieurs groupes par page.'">
         <i class="fas fa-file-pdf"></i>
         {{ isExportingPdf ? 'Generation...' : 'PDF lignes liees (' + linkedGroupsCount + ')' }}
       </button>
-      <button class="nav-btn primary" (click)="exportOpparts()" [disabled]="filteredOpparts.length === 0">
+      <button type="button" class="ds-btn ds-btn--primary nav-btn primary" (click)="exportOpparts()" [disabled]="filteredOpparts.length === 0">
         <i class="fas fa-download"></i> {{ 'COMMON.actions.export' | translate }}
       </button>
     </div>
@@ -45,27 +45,27 @@
       <div class="hero-kpi-strip">
         <div class="hk-strip-item">
           <span class="hk-strip-label">{{ 'TBL.rows' | translate }}</span>
-          <span class="hk-strip-value">{{ filteredOpparts.length | number:'1.0-0' }}</span>
+          <span class="hk-strip-value ds-num">{{ filteredOpparts.length | number:'1.0-0' }}</span>
         </div>
         <div class="hk-strip-sep"></div>
         <div class="hk-strip-item">
           <span class="hk-strip-label">{{ 'MSG.inProgress' | translate }}</span>
-          <span class="hk-strip-value hk-strip-amber">{{ stats.enCoursCount | number:'1.0-0' }}</span>
+          <span class="hk-strip-value ds-num hk-strip-amber">{{ stats.enCoursCount | number:'1.0-0' }}</span>
         </div>
         <div class="hk-strip-sep"></div>
         <div class="hk-strip-item">
           <span class="hk-strip-label">{{ 'COMMON.actions.ok' | translate }}</span>
-          <span class="hk-strip-value hk-strip-green">{{ stats.okCount | number:'1.0-0' }}</span>
+          <span class="hk-strip-value ds-num hk-strip-green">{{ stats.okCount | number:'1.0-0' }}</span>
         </div>
         <div class="hk-strip-sep"></div>
         <div class="hk-strip-item">
           <span class="hk-strip-label">{{ 'OPL.Clientsdistincts' | translate }}</span>
-          <span class="hk-strip-value">{{ stats.clientCount | number:'1.0-0' }}</span>
+          <span class="hk-strip-value ds-num">{{ stats.clientCount | number:'1.0-0' }}</span>
         </div>
         <div class="hk-strip-sep"></div>
         <div class="hk-strip-item">
           <span class="hk-strip-label">{{ 'TBL.totalAmount' | translate }}</span>
-          <span class="hk-strip-value">{{ formatMontant(stats.montantTotal) }}</span>
+          <span class="hk-strip-value ds-num">{{ formatMontant(stats.montantTotal) }}</span>
       </div>
     </div>
   </div>
@@ -76,7 +76,7 @@
   <div class="header">
     <h2>{{ 'OPL.Gestiondesopérations' | translate }}</h2>
     <div class="header-actions">
-      <button class="btn btn-success" (click)="openCreateModal()">
+      <button type="button" class="ds-btn ds-btn--secondary btn btn-success" (click)="openCreateModal()">
         <i class="fas fa-plus"></i> {{ 'OPL.Nouvelleopération' | translate }}
       </button>
     </div>
@@ -112,7 +112,7 @@
   <div class="import-section" *ngIf="isImportPanelOpen">
     <div class="import-head">
       <h3><i class="fas fa-file-import"></i> {{ 'OPL.Importdefichieropérations' | translate }}</h3>
-      <button type="button" class="btn btn-sm btn-link import-close" (click)="toggleImportPanel()"
+      <button type="button" class="ds-btn ds-btn--secondary btn btn-sm btn-link import-close" (click)="toggleImportPanel()"
               title="{{ 'COMMON.actions.close' | translate }}">
         <i class="fas fa-times"></i>
       </button>
@@ -126,16 +126,16 @@
     </p>
 
     <div class="import-actions">
-      <button type="button" class="btn btn-outline-primary" (click)="downloadImportTemplate()" [disabled]="isImportBusy">
+      <button type="button" class="ds-btn ds-btn--primary btn btn-outline-primary" (click)="downloadImportTemplate()" [disabled]="isImportBusy">
         <i class="fas fa-download"></i> {{ 'BQ.Téléchargerlemodèle' | translate }}
       </button>
-      <button type="button" class="btn btn-primary" (click)="triggerImportInput()" [disabled]="isImportBusy">
+      <button type="button" class="ds-btn ds-btn--primary btn btn-primary" (click)="triggerImportInput()" [disabled]="isImportBusy">
         <i class="fas fa-folder-open"></i> {{ 'BQ.Choisirunfichier' | translate }}
       </button>
       <input #importFileInput type="file" [attr.accept]="importFileAccept" hidden
              (change)="onImportFileSelected($event)">
 
-      <button type="button" class="btn btn-success" (click)="uploadImportFile()" [disabled]="!canUploadImport">
+      <button type="button" class="ds-btn ds-btn--secondary btn btn-success" (click)="uploadImportFile()" [disabled]="!canUploadImport">
         <i class="fas fa-upload"></i>
         {{ isUploadingImport ? ('OPL.Importencours' | translate) : ('COMMON.actions.import' | translate) }}
         <span *ngIf="!isUploadingImport && importableCount > 0">({{ importableCount }})</span>
@@ -143,7 +143,7 @@
 
       <span class="import-file-name" *ngIf="selectedImportFile">
         <i class="fas fa-file"></i> {{ selectedImportFile.name }}
-        <button type="button" class="import-clear" (click)="resetImportState()" title="{{ 'OPL.Retirerlefichier' | translate }}">
+        <button type="button" class="ds-btn ds-btn--secondary import-clear" (click)="resetImportState()" title="{{ 'OPL.Retirerlefichier' | translate }}">
           <i class="fas fa-times"></i>
         </button>
       </span>
@@ -187,7 +187,7 @@
         </h4>
       </div>
       <div class="table-wrapper">
-        <table class="import-table">
+        <table class="ds-table import-table">
           <thead>
             <tr>
               <th>{{ 'OPL.Ligne' | translate }}</th>
@@ -239,7 +239,7 @@
       <div class="filter-row">
         <div class="filter-group">
           <label>{{ 'OPL.Client' | translate }}</label>
-          <select formControlName="client" class="form-control">
+          <select formControlName="client" class="ds-select form-control">
             <option value="">{{ 'OPL.Touslesclients' | translate }}</option>
             <option *ngFor="let client of clients" [value]="client">{{ client }}</option>
           </select>
@@ -247,7 +247,7 @@
 
         <div class="filter-group">
           <label>Type_OP :</label>
-          <select formControlName="typeOp" class="form-control">
+          <select formControlName="typeOp" class="ds-select form-control">
             <option value="">{{ 'FILT.allTypes' | translate }}</option>
             <option *ngFor="let type of typeOps" [value]="type">{{ type }}</option>
           </select>
@@ -255,7 +255,7 @@
 
         <div class="filter-group">
           <label>{{ 'OPS.Pays' | translate }}</label>
-          <select formControlName="pays" class="form-control">
+          <select formControlName="pays" class="ds-select form-control">
             <option value="">{{ 'FILT.allCountries' | translate }}</option>
             <option *ngFor="let pay of pays" [value]="pay">{{ pay }}</option>
           </select>
@@ -263,7 +263,7 @@
 
         <div class="filter-group">
           <label>{{ 'TRT.Source' | translate }}</label>
-          <select formControlName="source" class="form-control">
+          <select formControlName="source" class="ds-select form-control">
             <option value="">{{ 'OPL.Touteslessources' | translate }}</option>
             <option *ngFor="let source of sources" [value]="source">{{ source }}</option>
           </select>
@@ -271,7 +271,7 @@
 
         <div class="filter-group">
           <label>{{ 'TBL.environment' | translate }}</label>
-          <select formControlName="statut" class="form-control">
+          <select formControlName="statut" class="ds-select form-control">
             <option value="">{{ 'FILT.allStatuses' | translate }}</option>
             <option [value]="STATUT_EN_COURS">{{ 'MSG.inProgress' | translate }}</option>
             <option [value]="STATUT_OK">{{ 'COMMON.actions.ok' | translate }}</option>
@@ -282,34 +282,34 @@
       <div class="filter-row">
         <div class="filter-group">
           <label>{{ 'CPT.Datedébut' | translate }}</label>
-          <input type="date" formControlName="dateDebut" class="form-control">
+          <input type="date" formControlName="dateDebut" class="ds-input form-control">
         </div>
 
         <div class="filter-group">
           <label>{{ 'CPT.Datefin' | translate }}</label>
-          <input type="date" formControlName="dateFin" class="form-control">
+          <input type="date" formControlName="dateFin" class="ds-input form-control">
         </div>
 
         <div class="filter-group">
           <label>{{ 'CPT.Montantmin' | translate }}</label>
-          <input type="number" formControlName="montantMin" class="form-control" step="0.01">
+          <input type="number" formControlName="montantMin" class="ds-input form-control" step="0.01">
         </div>
 
         <div class="filter-group">
           <label>{{ 'CPT.Montantmax' | translate }}</label>
-          <input type="number" formControlName="montantMax" class="form-control" step="0.01">
+          <input type="number" formControlName="montantMax" class="ds-input form-control" step="0.01">
         </div>
 
         <div class="filter-group">
           <label>{{ 'OPL.Token' | translate }}</label>
-          <input type="text" formControlName="token" class="form-control"
+          <input type="text" formControlName="token" class="ds-input form-control"
                  placeholder="{{ 'OPL.Recherchepartielledansletoken' | translate }}"
                  title="Filtre sur le token de correspondance (recherche partielle, insensible à la casse).">
         </div>
       </div>
 
       <div class="filter-actions">
-        <button type="button" class="btn btn-secondary" (click)="clearFilters()">
+        <button type="button" class="ds-btn ds-btn--secondary btn btn-secondary" (click)="clearFilters()">
           <i class="fas fa-times"></i>{{ 'ACT.clearFilters' | translate }}</button>
       </div>
     </form>
@@ -335,14 +335,14 @@
         <div class="match-tolerance">
           <label for="matchTolerance">{{ 'OPL.Tolérancemontant' | translate }}</label>
           <input id="matchTolerance" type="number" formControlName="tolerance"
-                 class="form-control" min="0" step="0.01" placeholder="0">
+                 class="ds-input form-control" min="0" step="0.01" placeholder="0">
         </div>
         <label class="match-relaxed" for="matchRelaxedTypes"
                [title]="'Somme : cherche aussi des combinaisons mêlant plusieurs Types_OP (ex. COMPENSE + AJUSTEMENT_SOLDE = COMPENSE_PART). L\'appariement par paires reste inchangé.'">
           <input id="matchRelaxedTypes" type="checkbox" formControlName="relaxedTypes">
           <span>{{ 'OPL.Sommetypesdifférentsautorisés' | translate }}</span>
         </label>
-        <button type="button" class="btn btn-primary match-btn" (click)="searchMatches()"
+        <button type="button" class="ds-btn ds-btn--primary btn btn-primary match-btn" (click)="searchMatches()"
                 [disabled]="isLoading">
           <i class="fas fa-magnifying-glass"></i> {{ 'OPL.Recherchedecorrespondance' | translate }}
         </button>
@@ -384,7 +384,7 @@
           </div>
 
           <div class="match-actions">
-            <button type="button" class="btn btn-sm btn-success" (click)="linkMatchPair(pair)"
+            <button type="button" class="ds-btn ds-btn--secondary btn btn-sm btn-success" (click)="linkMatchPair(pair)"
                     [disabled]="isPairLinked(pair)">
               <i class="fas fa-link"></i> {{ isPairLinked(pair) ? 'Liaison...' : 'Lier' }}
             </button>
@@ -439,7 +439,7 @@
             </div>
 
             <div class="match-actions">
-              <button type="button" class="btn btn-sm btn-success"
+              <button type="button" class="ds-btn ds-btn--secondary btn btn-sm btn-success"
                       (click)="linkAggregateMatch(match)"
                       [disabled]="isAggregateLinked(match)">
                 <i class="fas fa-link"></i>
@@ -482,25 +482,25 @@
           </span>
         </div>
         <div class="selection-actions">
-          <button class="btn btn-outline-primary" (click)="selectAll()" [disabled]="filteredOpparts.length === 0">
+          <button type="button" class="ds-btn ds-btn--primary btn btn-outline-primary" (click)="selectAll()" [disabled]="filteredOpparts.length === 0">
             <i class="fas fa-check-square"></i>{{ 'ACT.selectAll' | translate }}</button>
-          <button class="btn btn-outline-secondary" (click)="clearSelection()" [disabled]="!hasSelection()">
+          <button type="button" class="ds-btn ds-btn--secondary btn btn-outline-secondary" (click)="clearSelection()" [disabled]="!hasSelection()">
             <i class="fas fa-square"></i> {{ 'APM.Toutdésélectionner' | translate }}
           </button>
-          <button class="btn btn-success" (click)="linkSelected()"
+          <button type="button" class="ds-btn ds-btn--secondary btn btn-success" (click)="linkSelected()"
                   [disabled]="getSelectedCount() < 2 || isLinkingSelection"
                   title="{{ 'OPL.Lieleslignescochéessousunmêmetokenetlespasseaustatutok' | translate }}">
             <i class="fas fa-link"></i>
             {{ isLinkingSelection ? ('OPL.Liaisonencours' | translate) : ('OPL.Lierlasélection' | translate) }}
           </button>
-          <button class="btn btn-danger" (click)="deleteSelected()" [disabled]="getSelectedCount() === 0">
+          <button type="button" class="ds-btn ds-btn--danger btn btn-danger" (click)="deleteSelected()" [disabled]="getSelectedCount() === 0">
             <i class="fas fa-trash"></i> {{ 'OPL.Supprimersélection' | translate }}
           </button>
         </div>
       </div>
 
       <div class="table-actions">
-        <button class="btn" [class.active]="isSelectionMode" (click)="toggleSelectionMode()">
+        <button type="button" class="ds-btn ds-btn--secondary btn" [class.active]="isSelectionMode" (click)="toggleSelectionMode()">
           <i class="fas fa-check-square"></i>
           {{ isSelectionMode ? ('ACT.exitMultipleSelection' | translate) : ('ACT.enableMultipleSelection' | translate) }}
         </button>
@@ -508,7 +508,7 @@
     </div>
 
     <div class="table-container" *ngIf="!isLoading">
-      <table class="oppart-table">
+      <table class="ds-table oppart-table">
         <colgroup>
           <col *ngIf="isSelectionMode" class="col-select">
           <col class="col-id">
@@ -564,7 +564,7 @@
               <span class="source-badge">{{ oppart.source || 'MANUEL' }}</span>
             </td>
             <td>
-              <button type="button" class="statut-badge"
+              <button type="button" class="ds-btn ds-btn--secondary statut-badge"
                       [ngClass]="isStatutOk(oppart) ? 'statut-ok' : 'statut-encours'"
                       (click)="toggleStatut(oppart)"
                       title="{{ 'OPL.Cliquerpourbasculerlestatut' | translate }}">
@@ -580,14 +580,14 @@
             </td>
             <td>
               <div class="action-buttons">
-                <button class="btn btn-sm btn-primary" (click)="openEditModal(oppart)" title="{{ 'ACT.edit' | translate }}">
+                <button type="button" class="ds-btn ds-btn--primary btn btn-sm btn-primary" (click)="openEditModal(oppart)" title="{{ 'ACT.edit' | translate }}">
                   <i class="fas fa-edit"></i>
                 </button>
-                <button class="btn btn-sm btn-warning" *ngIf="hasToken(oppart)"
+                <button type="button" class="ds-btn ds-btn--secondary btn btn-sm btn-warning" *ngIf="hasToken(oppart)"
                         (click)="unlinkOppart(oppart)" title="{{ 'OPL.Déliersupprimerletoken' | translate }}">
                   <i class="fas fa-unlink"></i>
                 </button>
-                <button class="btn btn-sm btn-danger" (click)="deleteOppart(oppart.id!)" title="{{ 'ACT.delete' | translate }}">
+                <button type="button" class="ds-btn ds-btn--danger btn btn-sm btn-danger" (click)="deleteOppart(oppart.id!)" title="{{ 'ACT.delete' | translate }}">
                   <i class="fas fa-trash"></i>
                 </button>
               </div>
@@ -610,23 +610,15 @@
       </div>
     </div>
 
-    <!-- Pagination -->
-    <div class="pagination" *ngIf="totalPages > 1">
-      <button (click)="prevPage()" [disabled]="currentPage === 1" class="btn pagination-btn">
-        <i class="fas fa-chevron-left"></i>{{ 'PAG.previous' | translate }}</button>
-
-      <div class="pagination-indicators">
-        <span *ngFor="let page of getVisiblePages()"
-              class="page-indicator"
-              [class.active]="currentPage === page"
-              (click)="goToPage(page)">
-          {{ page }}
-        </span>
-      </div>
-
-      <button (click)="nextPage()" [disabled]="currentPage === totalPages" class="btn pagination-btn">{{ 'PAG.next' | translate }}<i class="fas fa-chevron-right"></i>
-      </button>
-    </div>
+    <ds-pagination
+      *ngIf="totalPages > 1"
+      [page]="currentPage"
+      [pageCount]="totalPages"
+      [totalItems]="filteredOpparts.length"
+      [pageSize]="pageSize"
+      [itemLabel]="'TBL.lines' | translate"
+      (pageChange)="goToPage($event)">
+    </ds-pagination>
   </div>
   </div><!-- .oppart-container -->
   </div><!-- .main -->
@@ -637,7 +629,7 @@
   <div class="modal-content">
     <div class="modal-header">
       <h4>{{ editingOppart ? 'Modifier l\'Opération' : 'Nouvelle Opération' }}</h4>
-      <button class="close-btn" (click)="closeEditModal()" [disabled]="isSaving">
+      <button type="button" class="close-btn" (click)="closeEditModal()" [disabled]="isSaving">
         <i class="fas fa-times"></i>
       </button>
     </div>
@@ -647,24 +639,24 @@
         <div class="form-row">
           <div class="form-group">
             <label>{{ 'TBL.client' | translate }}<span class="required">*</span> :</label>
-            <input type="text" formControlName="client" class="form-control" placeholder="{{ 'OPL.Exclient001' | translate }}">
+            <input type="text" formControlName="client" class="ds-input form-control" placeholder="{{ 'OPL.Exclient001' | translate }}">
           </div>
 
           <div class="form-group">
             <label>Type_OP :</label>
-            <input type="text" formControlName="typeOp" class="form-control" placeholder="{{ 'OPL.Excashin' | translate }}">
+            <input type="text" formControlName="typeOp" class="ds-input form-control" placeholder="{{ 'OPL.Excashin' | translate }}">
           </div>
         </div>
 
         <div class="form-row">
           <div class="form-group">
             <label>{{ 'TBL.amount' | translate }}<span class="required">*</span> :</label>
-            <input type="number" formControlName="montant" class="form-control" step="0.01">
+            <input type="number" formControlName="montant" class="ds-input form-control" step="0.01">
           </div>
 
           <div class="form-group">
             <label>{{ 'OPL.IDtransaction' | translate }}</label>
-            <input type="text" formControlName="idTransaction" class="form-control" placeholder="{{ 'OPL.Exgu123456789' | translate }}">
+            <input type="text" formControlName="idTransaction" class="ds-input form-control" placeholder="{{ 'OPL.Exgu123456789' | translate }}">
           </div>
         </div>
 
@@ -676,14 +668,14 @@
 
           <div class="form-group">
             <label>{{ 'OPS.Pays' | translate }}</label>
-            <input type="text" formControlName="pays" class="form-control" placeholder="{{ 'OPL.Exci' | translate }}">
+            <input type="text" formControlName="pays" class="ds-input form-control" placeholder="{{ 'OPL.Exci' | translate }}">
           </div>
         </div>
 
         <div class="form-row">
           <div class="form-group">
             <label for="oppartSource">{{ 'TRT.Source' | translate }}</label>
-            <input id="oppartSource" type="text" formControlName="source" class="form-control"
+            <input id="oppartSource" type="text" formControlName="source" class="ds-input form-control"
                    list="oppartSourceOptions" placeholder="{{ 'OPL.Exmanuelecartpartner' | translate }}"
                    autocomplete="off">
             <datalist id="oppartSourceOptions">
@@ -694,7 +686,7 @@
 
           <div class="form-group">
             <label>{{ 'TBL.environment' | translate }}</label>
-            <select formControlName="statut" class="form-control">
+            <select formControlName="statut" class="ds-select form-control">
               <option [value]="STATUT_EN_COURS">{{ 'MSG.inProgress' | translate }}</option>
               <option [value]="STATUT_OK">{{ 'COMMON.actions.ok' | translate }}</option>
             </select>
@@ -704,7 +696,7 @@
         <div class="form-row" *ngIf="editingOppart">
           <div class="form-group">
             <label>{{ 'OPL.Token' | translate }}</label>
-            <input type="text" class="form-control token-input" [value]="editingOppart.token || ''" readonly
+            <input type="text" class="ds-input form-control token-input" [value]="editingOppart.token || ''" readonly
                    placeholder="{{ 'OPL.Générélorsdelaliaisonde2lignes' | translate }}">
           </div>
         </div>
@@ -712,8 +704,8 @@
     </div>
 
     <div class="modal-footer">
-      <button class="btn btn-secondary" (click)="closeEditModal()" [disabled]="isSaving">{{ 'COMMON.actions.cancel' | translate }}</button>
-      <button class="btn btn-primary" (click)="saveOppart()" [disabled]="isSaving || !editForm.valid">
+      <button type="button" class="ds-btn ds-btn--secondary btn btn-secondary" (click)="closeEditModal()" [disabled]="isSaving">{{ 'COMMON.actions.cancel' | translate }}</button>
+      <button type="button" class="ds-btn ds-btn--primary btn btn-primary" (click)="saveOppart()" [disabled]="isSaving || !editForm.valid">
         <i class="fas fa-save"></i>
         {{ isSaving ? 'Sauvegarde...' : 'Enregistrer' }}
       </button>
@@ -741,7 +733,7 @@
         </div>
       </div>
 
-      <table class="pdf-linked-table">
+      <table class="ds-table pdf-linked-table">
         <thead>
           <tr>
             <th class="pdf-th-left">
