@@ -1,33 +1,6 @@
 // Design system (mêmes couleurs que redevance-loterie)
-:host {
-  --rd-bg: #F2F0EB;
-  --rd-surface: #FAFAF8;
-  --rd-surface2: rgba(255, 255, 255, 0.85);
-  --rd-border: #E4E0D8;
-  --rd-border2: #D6D0C6;
-  --rd-navy: #1A2535;
-  --rd-navy2: #243044;
-  --rd-text1: #1A1714;
-  --rd-text2: #5C5650;
-  --rd-text3: #9B9489;
-  --rd-green: #2E6B47;
-  --rd-green-l: #EAF4EE;
-  --rd-green-m: #5A9E74;
-  --rd-amber: #A85F1E;
-  --rd-amber-l: #FBF0E4;
-  --rd-amber-m: #D4915A;
-  --rd-blue: #1E4A7A;
-  --rd-blue-l: #E6EFF8;
-  --rd-blue-m: #5A88B8;
-  --rd-red: #8B2635;
-  --rd-red-l: #FCEAEC;
-  --rd-red-m: #C4566A;
-  --rd-shadow: 0 2px 16px rgba(26, 23, 20, 0.07);
-  --rd-shadow-lg: 0 8px 40px rgba(26, 23, 20, 0.12);
-}
 
-:host {
-  display: flex;
+:host {  display: flex;
   flex-direction: column;
   height: 100%;
   min-height: 0;
@@ -36,7 +9,7 @@
 
 .comptes-container {
   padding: 2rem;
-  font-family: 'Sora', sans-serif;
+  font-family: var(--font-ui);
   background: var(--rd-bg);
   color: var(--rd-text1);
     display: flex;
@@ -975,7 +948,7 @@
         margin: 0;
         color: var(--rd-text1);
         font-size: 1.5rem;
-        font-family: 'Instrument Serif', serif;
+        font-family: var(--font-display);
     }
 
     .modal-close {

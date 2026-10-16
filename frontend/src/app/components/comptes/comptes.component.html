@@ -2,22 +2,22 @@
     <div class="header">
         <h1>{{ 'CPT.Gestiondescomptes' | translate }}</h1>
         <div class="actions">
-            <button (click)="showAddForm = !showAddForm" class="btn add-btn">
+            <button type="button" (click)="showAddForm = !showAddForm" class="ds-btn ds-btn--secondary btn add-btn">
                 <i class="fas fa-plus"></i> {{ 'CPT.Nouveaucompte' | translate }}
             </button>
-            <button (click)="goToServiceBalance()" class="btn service-balance-btn">
+            <button type="button" (click)="goToServiceBalance()" class="ds-btn ds-btn--secondary btn service-balance-btn">
                 <i class="fas fa-layer-group"></i> {{ 'CPT.Fusionservice' | translate }}
             </button>
-            <button (click)="goToRedevance()" class="btn redevance-btn">
+            <button type="button" (click)="goToRedevance()" class="ds-btn ds-btn--secondary btn redevance-btn">
                 <i class="fas fa-percentage"></i> {{ 'CPT.Redevance' | translate }}
             </button>
-            <button (click)="goToPredictions()" class="btn predictions-btn">
+            <button type="button" (click)="goToPredictions()" class="ds-btn ds-btn--secondary btn predictions-btn">
                 <i class="fas fa-crystal-ball"></i> {{ 'CPT.Prédictions' | translate }}
             </button>
-            <button (click)="refreshComptes()" class="btn refresh-btn" [disabled]="isLoading" title="{{ 'CPT.Actualiserlalisteenconservantlesfiltres' | translate }}">
+            <button type="button" (click)="refreshComptes()" class="ds-btn ds-btn--secondary btn refresh-btn" [disabled]="isLoading" title="{{ 'CPT.Actualiserlalisteenconservantlesfiltres' | translate }}">
                 <i class="fas" [ngClass]="isLoading ? 'fa-spinner fa-spin' : 'fa-sync-alt'"></i> {{ 'CPT.Actualiser' | translate }}
             </button>
-            <button (click)="exportComptes()" class="btn export-btn" [disabled]="isExporting">
+            <button type="button" (click)="exportComptes()" class="ds-btn ds-btn--secondary btn export-btn" [disabled]="isExporting">
                 <i class="fas fa-file-excel"></i> {{ (isExporting ? 'CPT.Exporting' : 'CPT.ExportExcel') | translate }}
             </button>
         </div>
@@ -38,14 +38,14 @@
                         <div class="form-row">
                             <div class="form-group">
                                 <label>{{ 'CPT.Numérodecompte' | translate }}</label>
-                                <input type="text" formControlName="numeroCompte" placeholder="{{ 'CPT.Ex123456789' | translate }}" class="text-input">
+                                <input type="text" formControlName="numeroCompte" placeholder="{{ 'CPT.Ex123456789' | translate }}" class="ds-input text-input">
                                 <div *ngIf="addForm.get('numeroCompte')?.invalid && addForm.get('numeroCompte')?.touched" class="error-message">
                                     {{ 'CPT.Lenumérodecompteestrequis' | translate }}
                                 </div>
                             </div>
                             <div class="form-group">
                                 <label>{{ 'CPT.Soldeinitial' | translate }}</label>
-                                <input type="number" formControlName="solde" placeholder="0.00" class="text-input">
+                                <input type="number" formControlName="solde" placeholder="0.00" class="ds-input text-input">
                                 <div *ngIf="addForm.get('solde')?.invalid && addForm.get('solde')?.touched" class="error-message">
                                     {{ 'CPT.Lesoldeestrequis' | translate }}
                                 </div>
@@ -69,7 +69,7 @@
                                 <div *ngIf="paysList.length > 0" class="pays-existing-list">
                                     <span class="pays-existing-title">{{ 'CPT.Paysdéjàenregistréscliquerpourremplirlechamp' | translate }}</span>
                                     <div class="pays-existing-chips">
-                                        <button type="button" class="pays-chip"
+                                        <button type="button" class="ds-btn ds-btn--secondary pays-chip"
                                                 *ngFor="let p of paysListSorted"
                                                 (click)="selectPaysFromList('add', p)">{{ p }}</button>
                                     </div>
@@ -82,7 +82,7 @@
                         <div class="form-row">
                             <div class="form-group">
                                 <label>{{ 'CPT.Typedecompte' | translate }}</label>
-                                <select formControlName="type" class="modern-select">
+                                <select formControlName="type" class="ds-select modern-select">
                                     <option value="" disabled>{{ 'CPT.Sélectionneruntype' | translate }}</option>
                                     <option *ngFor="let t of compteTypes" [value]="t">{{ t }}</option>
                                 </select>
@@ -92,7 +92,7 @@
                             </div>
                             <div class="form-group">
                                 <label>{{ 'CPT.Catégorie' | translate }}</label>
-                                <select formControlName="categorie" class="modern-select">
+                                <select formControlName="categorie" class="ds-select modern-select">
                                     <option value="" disabled>{{ 'CPT.Sélectionnerunecatégorie' | translate }}</option>
                                     <option *ngFor="let c of compteCategories" [value]="c">{{ c }}</option>
                                 </select>
@@ -104,7 +104,7 @@
                         <div class="form-row">
                             <div class="form-group full-width">
                                 <label>{{ 'TBL.ownerCode' | translate }}</label>
-                                <input type="text" formControlName="codeProprietaire" placeholder="{{ 'CPT.Exprop001' | translate }}" class="text-input">
+                                <input type="text" formControlName="codeProprietaire" placeholder="{{ 'CPT.Exprop001' | translate }}" class="ds-input text-input">
                             </div>
                         </div>
                     </div>
@@ -112,9 +112,9 @@
             </div>
             <div class="modal-footer">
                 <div class="modal-actions">
-                    <button type="button" class="btn-secondary" (click)="cancelAdd()">
+                    <button type="button" class="ds-btn ds-btn--secondary btn-secondary" (click)="cancelAdd()">
                         <i class="fas fa-times"></i>{{ 'COMMON.actions.cancel' | translate }}</button>
-                    <button type="submit" class="btn-primary" [disabled]="!addForm.valid || isAdding" (click)="addCompte()">
+                    <button type="submit" class="ds-btn ds-btn--primary btn-primary" [disabled]="!addForm.valid || isAdding" (click)="addCompte()">
                         <i class="fas fa-plus"></i>
                         {{ (isAdding ? 'CPT.Adding' : 'COMMON.actions.add') | translate }}
                     </button>
@@ -139,14 +139,14 @@
                         <div class="form-row">
                             <div class="form-group">
                                 <label>{{ 'CPT.Numérodecompte' | translate }}</label>
-                                <input type="text" formControlName="numeroCompte" placeholder="{{ 'CPT.Ex123456789' | translate }}" class="text-input">
+                                <input type="text" formControlName="numeroCompte" placeholder="{{ 'CPT.Ex123456789' | translate }}" class="ds-input text-input">
                                 <div *ngIf="editForm.get('numeroCompte')?.invalid && editForm.get('numeroCompte')?.touched" class="error-message">
                                     {{ 'CPT.Lenumérodecompteestrequis' | translate }}
                                 </div>
                             </div>
                             <div class="form-group">
                                 <label>{{ 'CPT.Solde' | translate }}</label>
-                                <input type="number" formControlName="solde" placeholder="0.00" class="text-input">
+                                <input type="number" formControlName="solde" placeholder="0.00" class="ds-input text-input">
                                 <div *ngIf="editForm.get('solde')?.invalid && editForm.get('solde')?.touched" class="error-message">
                                     {{ 'CPT.Lesoldeestrequis' | translate }}
                                 </div>
@@ -170,7 +170,7 @@
                                 <div *ngIf="paysList.length > 0" class="pays-existing-list">
                                     <span class="pays-existing-title">{{ 'CPT.Paysdéjàenregistréscliquerpourremplirlechamp' | translate }}</span>
                                     <div class="pays-existing-chips">
-                                        <button type="button" class="pays-chip"
+                                        <button type="button" class="ds-btn ds-btn--secondary pays-chip"
                                                 *ngFor="let p of paysListSorted"
                                                 (click)="selectPaysFromList('edit', p)">{{ p }}</button>
                                     </div>
@@ -183,7 +183,7 @@
                         <div class="form-row">
                             <div class="form-group">
                                 <label>{{ 'CPT.Typedecompte' | translate }}</label>
-                                <select formControlName="type" class="modern-select">
+                                <select formControlName="type" class="ds-select modern-select">
                                     <option value="" disabled>{{ 'CPT.Sélectionneruntype' | translate }}</option>
                                     <option *ngFor="let t of compteTypes" [value]="t">{{ t }}</option>
                                 </select>
@@ -193,7 +193,7 @@
                             </div>
                             <div class="form-group">
                                 <label>{{ 'CPT.Catégorie' | translate }}</label>
-                                <select formControlName="categorie" class="modern-select">
+                                <select formControlName="categorie" class="ds-select modern-select">
                                     <option value="" disabled>{{ 'CPT.Sélectionnerunecatégorie' | translate }}</option>
                                     <option *ngFor="let c of compteCategories" [value]="c">{{ c }}</option>
                                 </select>
@@ -205,7 +205,7 @@
                         <div class="form-row">
                             <div class="form-group full-width">
                                 <label>{{ 'TBL.ownerCode' | translate }}</label>
-                                <input type="text" formControlName="codeProprietaire" placeholder="{{ 'CPT.Exprop001' | translate }}" class="text-input">
+                                <input type="text" formControlName="codeProprietaire" placeholder="{{ 'CPT.Exprop001' | translate }}" class="ds-input text-input">
                             </div>
                         </div>
                     </div>
@@ -213,9 +213,9 @@
             </div>
             <div class="modal-footer">
                 <div class="modal-actions">
-                    <button type="button" class="btn-secondary" (click)="cancelEdit()">
+                    <button type="button" class="ds-btn ds-btn--secondary btn-secondary" (click)="cancelEdit()">
                         <i class="fas fa-times"></i>{{ 'COMMON.actions.cancel' | translate }}</button>
-                    <button type="submit" class="btn-primary" [disabled]="!editForm.valid || isEditing" (click)="updateCompte()">
+                    <button type="submit" class="ds-btn ds-btn--primary btn-primary" [disabled]="!editForm.valid || isEditing" (click)="updateCompte()">
                         <i class="fas fa-save"></i>
                         {{ (isEditing ? 'CPT.Saving' : 'CPT.Update') | translate }}
                     </button>
@@ -298,7 +298,7 @@
                         <div class="form-field">
                             <mat-form-field appearance="fill" class="filter-select filter-select--full">
                                 <mat-label>{{ 'LBL.startDate' | translate }}</mat-label>
-                                <input matInput type="date" formControlName="dateDebut">
+                                <input class="ds-input" matInput type="date" formControlName="dateDebut">
                             </mat-form-field>
                         </div>
                         <div class="form-field filters-period-separator" aria-hidden="true">
@@ -307,7 +307,7 @@
                         <div class="form-field">
                             <mat-form-field appearance="fill" class="filter-select filter-select--full">
                                 <mat-label>{{ 'LBL.endDate' | translate }}</mat-label>
-                                <input matInput type="date" formControlName="dateFin">
+                                <input class="ds-input" matInput type="date" formControlName="dateFin">
                             </mat-form-field>
                         </div>
                     </div>
@@ -315,19 +315,19 @@
 
                 <div class="filters-actions">
                     <div class="filters-actions-main">
-                        <button type="submit" class="btn primary">
+                        <button type="submit" class="ds-btn ds-btn--primary btn primary">
                             <i class="fas fa-filter"></i> {{ 'CPT.Filtrer' | translate }}
                         </button>
-                        <button type="button" (click)="clearFilters()" class="btn">
+                        <button type="button" (click)="clearFilters()" class="ds-btn ds-btn--secondary btn">
                             <i class="fas fa-undo"></i>{{ 'COMMON.actions.reset' | translate }}</button>
                     </div>
                     <div class="filters-actions-tools">
-                        <button type="button" class="btn" (click)="downloadSoldeBoTemplate()" title="{{ 'CPT.CSVdatenumérodecomptemontant' | translate }}">
+                        <button type="button" class="ds-btn ds-btn--secondary btn" (click)="downloadSoldeBoTemplate()" title="{{ 'CPT.CSVdatenumérodecomptemontant' | translate }}">
                             <i class="fas fa-file-download"></i> {{ 'CPT.Modèlesoldebo' | translate }}
                         </button>
                         <input #soldeBoBulkFileInput type="file" accept=".csv,.txt,.xlsx,.xls,text/csv,application/vnd.ms-excel,application/vnd.openxmlformats-officedocument.spreadsheetml.sheet" style="display:none"
                                (change)="onSoldeBoBulkFileSelected($event); soldeBoBulkFileInput.value = ''">
-                        <button type="button" class="btn" (click)="soldeBoBulkFileInput.click()" [disabled]="isImportingSoldeBoBulk"
+                        <button type="button" class="ds-btn ds-btn--secondary btn" (click)="soldeBoBulkFileInput.click()" [disabled]="isImportingSoldeBoBulk"
                                 title="{{ 'CPT.Enregistrerlessoldesboligneparlignemêmeformatquelemodèle' | translate }}">
                             <i class="fas fa-file-upload"></i> {{ (isImportingSoldeBoBulk ? 'CPT.Importing' : 'CPT.ImportBoBalances') | translate }}
                         </button>
@@ -338,13 +338,13 @@
         <div class="card stats">
             <div class="stats-header">
             <h2>{{ 'CPT.Soldescritiques' | translate }}</h2>
-                <button (click)="exportSoldesCritiques()" class="btn export-btn" [disabled]="isExporting || comptesCritiques.length === 0">
+                <button type="button" (click)="exportSoldesCritiques()" class="ds-btn ds-btn--secondary btn export-btn" [disabled]="isExporting || comptesCritiques.length === 0">
                     <i class="fas fa-file-excel"></i> {{ (isExporting ? 'CPT.Exporting' : 'CPT.ExportCritical') | translate }}
                 </button>
             </div>
             <div class="config-periode">
                 <label for="periodeJours">{{ 'CPT.Période' | translate }}</label>
-                <select id="periodeJours" [(ngModel)]="periodeJours" (ngModelChange)="onPeriodeJoursChange()" style="width:130px; margin-left:8px;">
+                <select class="ds-select" id="periodeJours" [(ngModel)]="periodeJours" (ngModelChange)="onPeriodeJoursChange()" style="width:130px; margin-left:8px;">
                     <option *ngFor="let opt of periodeOptions" [value]="opt.value">{{ opt.label }}</option>
                 </select>
             </div>
@@ -352,7 +352,7 @@
                 {{ 'CPT.Aucunsoldecritiquedétecté' | translate }}
             </div>
             <div *ngIf="comptesCritiques.length > 0" class="critical-cards-container">
-                <button class="arrow-btn left" (click)="prevCriticalPage()" [disabled]="criticalPage === 1">&#8592;</button>
+                <button type="button" class="ds-btn ds-btn--secondary arrow-btn left" (click)="prevCriticalPage()" [disabled]="criticalPage === 1">&#8592;</button>
                 <div class="critical-cards-list">
                     <div class="critical-card" *ngFor="let item of pagedComptesCritiques">
                         <div class="card-header">{{ item.compte.codeProprietaire || item.compte.numeroCompte }}</div>
@@ -373,7 +373,7 @@
                         <div class="card-label">{{ 'CPT.Soldemoyennevolume' | translate }}</div>
                     </div>
                 </div>
-                <button class="arrow-btn right" (click)="nextCriticalPage()" [disabled]="criticalPage === totalCriticalPages">&#8594;</button>
+                <button type="button" class="ds-btn ds-btn--secondary arrow-btn right" (click)="nextCriticalPage()" [disabled]="criticalPage === totalCriticalPages">&#8594;</button>
             </div>
             <div *ngIf="comptesCritiques.length > criticalPageSize" class="critical-pagination-indicator">
                 {{ 'CPT.Page' | translate }} {{criticalPage}} / {{totalCriticalPages}}
@@ -386,7 +386,7 @@
         <div *ngIf="isLoading" class="loading-overlay">
             <div class="spinner"></div> <span>{{ 'MSG.loadingData' | translate }}</span>
         </div>
-        <table *ngIf="!isLoading && comptes.length > 0">
+        <table class="ds-table" *ngIf="!isLoading && comptes.length > 0">
             <thead>
                 <tr>
                     <th>{{ 'CPT.Numérodecompte_1' | translate }}</th>
@@ -418,16 +418,16 @@
                         </span>
                     </td>
                     <td class="actions-cell">
-                        <button (click)="viewReleve(compte)" class="btn icon-btn" title="{{ 'CPT.Voirlerelevé' | translate }}">
+                        <button type="button" (click)="viewReleve(compte)" class="ds-btn ds-btn--secondary btn icon-btn" title="{{ 'CPT.Voirlerelevé' | translate }}">
                             <i class="fas fa-file-alt" style="color: blue;"></i>
                         </button>
-                        <button (click)="editCompte(compte)" class="btn icon-btn" title="{{ 'ACT.edit' | translate }}">
+                        <button type="button" (click)="editCompte(compte)" class="ds-btn ds-btn--secondary btn icon-btn" title="{{ 'ACT.edit' | translate }}">
                             <i class="fas fa-edit" style="color: green;"></i>
                         </button>
-                        <button (click)="deleteCompte(compte.id!)" class="btn icon-btn delete" *ngIf="compte.id" title="{{ 'ACT.delete' | translate }}">
+                        <button type="button" (click)="deleteCompte(compte.id!)" class="ds-btn ds-btn--secondary btn icon-btn delete" *ngIf="compte.id" title="{{ 'ACT.delete' | translate }}">
                             <i class="fas fa-trash"></i>
                         </button>
-                        <button (click)="openSoldeBoModal(compte)" class="btn icon-btn" title="{{ 'CPT.Soldebo' | translate }}">
+                        <button type="button" (click)="openSoldeBoModal(compte)" class="ds-btn ds-btn--secondary btn icon-btn" title="{{ 'CPT.Soldebo' | translate }}">
                             <i class="fas fa-balance-scale" style="color: orange;"></i>
                         </button>
                     </td>
@@ -438,29 +438,15 @@
             {{ 'CPT.Aucuncomptetrouvé' | translate }}
         </div>
 
-        <!-- Pagination -->
-        <div class="pagination" *ngIf="totalPages > 1">
-            <div class="pagination-info">
-                {{ 'CPT.Affichage' | translate }} {{ (currentPage - 1) * pageSize + 1 }} - {{ Math.min(currentPage * pageSize, comptes.length) }} {{ 'CPT.Sur' | translate }} {{ comptes.length }}
-            </div>
-            
-            <div class="pagination-controls">
-                <button (click)="prevPage()" [disabled]="currentPage === 1">
-                    <i class="fas fa-chevron-left"></i>{{ 'PAG.previous' | translate }}</button>
-                
-                <div class="pagination-indicators">
-                    <span *ngFor="let page of getVisiblePages()" 
-                          class="page-indicator"
-                          [class.active]="currentPage === page"
-                          (click)="goToPage(page)">
-                        {{ page }}
-                    </span>
-                </div>
-                
-                <button (click)="nextPage()" [disabled]="currentPage === totalPages">{{ 'PAG.next' | translate }}<i class="fas fa-chevron-right"></i>
-                </button>
-            </div>
-        </div>
+        <ds-pagination
+            *ngIf="totalPages > 1"
+            [page]="currentPage"
+            [pageCount]="totalPages"
+            [totalItems]="comptes.length"
+            [pageSize]="pageSize"
+            [itemLabel]="'TBL.lines' | translate"
+            (pageChange)="goToPage($event)">
+        </ds-pagination>
     </div>
 </div>
 
@@ -469,7 +455,7 @@
     <div class="modal-content releve-modal" (click)="$event.stopPropagation()">
         <div class="modal-header">
             <h2>{{ 'CPT.Relevédecompte' | translate }} {{ selectedCompte?.numeroCompte }}</h2>
-            <button class="modal-close" (click)="closeReleveModal()">
+            <button type="button" class="modal-close" (click)="closeReleveModal()">
                 <i class="fas fa-times"></i>
             </button>
         </div>
@@ -502,39 +488,39 @@
             <!-- Onglets -->
             <div class="tabs-container">
                 <div class="tabs-header">
-                    <button class="tab-button" 
+                    <button type="button" class="ds-btn ds-btn--secondary tab-button" 
                             [class.active]="activeTab === 'operations'"
                             (click)="switchTab('operations')">
                         <i class="fas fa-list"></i>{{ 'TBL.operations' | translate }}</button>
-                    <button class="tab-button" 
+                    <button type="button" class="ds-btn ds-btn--secondary tab-button" 
                             [class.active]="activeTab === 'ecart-solde'"
                             (click)="switchTab('ecart-solde')"
                             *ngIf="showEcartSoldeTab">
                         <i class="fas fa-exclamation-triangle"></i>
                         {{ 'CPT.Écartsdesolde' | translate }}
                     </button>
-                    <button class="tab-button" 
+                    <button type="button" class="ds-btn ds-btn--secondary tab-button" 
                             [class.active]="activeTab === 'impact-op'"
                             (click)="switchTab('impact-op')"
                             *ngIf="showImpactOPTab">
                         <i class="fas fa-chart-line"></i>
                         {{ 'CPT.Ecartrégularisé' | translate }}
                     </button>
-                    <button class="tab-button" 
+                    <button type="button" class="ds-btn ds-btn--secondary tab-button" 
                             [class.active]="activeTab === 'revenu-journalier'"
                             (click)="switchTab('revenu-journalier')"
                             *ngIf="showRevenuJournalierTab">
                         <i class="fas fa-money-bill-wave"></i>
                         {{ 'CPT.Revenujournalier' | translate }}
                     </button>
-                    <button class="tab-button" 
+                    <button type="button" class="ds-btn ds-btn--secondary tab-button" 
                             [class.active]="activeTab === 'control-revenu'"
                             (click)="switchTab('control-revenu')"
                             *ngIf="showControlRevenuTab">
                         <i class="fas fa-chart-bar"></i>
                         {{ 'CPT.Controlrevenu' | translate }}
                     </button>
-                    <button class="tab-button" 
+                    <button type="button" class="ds-btn ds-btn--secondary tab-button" 
                             [class.active]="activeTab === 'ecart-frais'"
                             (click)="switchTab('ecart-frais')"
                             *ngIf="showEcartFraisTab">
@@ -549,7 +535,7 @@
                     <div class="releve-filters">
                         <div class="filter-group">
                             <label>{{ 'CPT.Période_1' | translate }}</label>
-                            <select [(ngModel)]="releveDateDebut" (change)="onRelevePeriodChange()" [disabled]="showAllDataReleve">
+                            <select class="ds-select" [(ngModel)]="releveDateDebut" (change)="onRelevePeriodChange()" [disabled]="showAllDataReleve">
                                 <option value="">{{ 'CPT.Moispardéfautprécédentjusquau1erpuisencours' | translate }}</option>
                                 <option value="7">{{ 'LBL.last7Days' | translate }}</option>
                                 <option value="30">{{ 'LBL.last30Days' | translate }}</option>
@@ -558,7 +544,7 @@
                             </select>
                         </div>
                         <div class="filter-group">
-                            <button type="button" (click)="toggleShowAllDataReleve()" class="btn-show-more" [class.active]="showAllDataReleve">
+                            <button type="button" (click)="toggleShowAllDataReleve()" class="ds-btn ds-btn--secondary btn-show-more" [class.active]="showAllDataReleve">
                                 <i class="fas" [ngClass]="showAllDataReleve ? 'fa-eye-slash' : 'fa-eye'"></i>
                                 {{ (showAllDataReleve ? 'CPT.ShowLess' : 'CPT.ShowMore') | translate }}
                             </button>
@@ -568,33 +554,33 @@
                         <div class="filter-group custom-date-filters export-interval-filters">
                             <div class="date-input-group">
                                 <label>{{ 'CPT.Du' | translate }}</label>
-                                <input type="date" [(ngModel)]="releveDateDebutCustom" (change)="onReleveCustomDateChange()" [disabled]="showAllDataReleve">
+                                <input class="ds-input" type="date" [(ngModel)]="releveDateDebutCustom" (change)="onReleveCustomDateChange()" [disabled]="showAllDataReleve">
                             </div>
                             <div class="date-input-group">
                                 <label>{{ 'CPT.Au' | translate }}</label>
-                                <input type="date" [(ngModel)]="releveDateFinCustom" (change)="onReleveCustomDateChange()" [disabled]="showAllDataReleve">
+                                <input class="ds-input" type="date" [(ngModel)]="releveDateFinCustom" (change)="onReleveCustomDateChange()" [disabled]="showAllDataReleve">
                             </div>
-                            <button type="button" class="btn btn-sm" (click)="applyReleveDateInterval()" [disabled]="showAllDataReleve" title="{{ 'CPT.Rechargerlhistoriquesurcetintervalle' | translate }}">
+                            <button type="button" class="ds-btn ds-btn--secondary btn btn-sm" (click)="applyReleveDateInterval()" [disabled]="showAllDataReleve" title="{{ 'CPT.Rechargerlhistoriquesurcetintervalle' | translate }}">
                                 <i class="fas fa-filter"></i>{{ 'ACT.apply' | translate }}</button>
                         </div>
                         
                         <div class="filter-group">
                             <label>{{ 'CPT.Typedopération' | translate }}</label>
-                            <select [(ngModel)]="releveTypeOperation" (change)="loadReleveOperations()">
+                            <select class="ds-select" [(ngModel)]="releveTypeOperation" (change)="loadReleveOperations()">
                                 <option value="">{{ 'CPT.Sélectionneruntype_1' | translate }}</option>
                                 <option *ngFor="let type of operationTypes" [value]="type">{{ type }}</option>
                             </select>
                         </div>
-                         <button class="btn view-toggle-btn" (click)="toggleReleveView()">
+                         <button type="button" class="ds-btn ds-btn--secondary btn view-toggle-btn" (click)="toggleReleveView()">
                             <i class="fas" [ngClass]="showSoldesSeulement ? 'fa-list-alt' : 'fa-coins'"></i> 
                             {{ (showSoldesSeulement ? 'CPT.ShowOperations' : 'CPT.ShowBalancesOnly') | translate }}
                         </button>
-                        <button class="btn export-btn" (click)="exportReleve()" [disabled]="isExporting"
+                        <button type="button" class="ds-btn ds-btn--secondary btn export-btn" (click)="exportReleve()" [disabled]="isExporting"
                                 [title]="getReleveExportIntervalLabel() ? 'Exporter sur l\'intervalle : ' + getReleveExportIntervalLabel() : 'Exporter le relevé (toutes les données chargées)'">
                             <i class="fas fa-file-excel"></i> {{ 'CPT.Exporterlerelevé' | translate }}
                             <span class="export-interval-hint" *ngIf="getReleveExportIntervalLabel()">({{ getReleveExportIntervalLabel() }})</span>
                         </button>
-                        <button class="btn" (click)="toggleReleveSummary()">
+                        <button type="button" class="ds-btn ds-btn--secondary btn" (click)="toggleReleveSummary()">
                             <i class="fas" [ngClass]="showReleveSummary ? 'fa-eye-slash' : 'fa-eye'"></i>
                             {{ (showReleveSummary ? 'CPT.HideCalculations' : 'CPT.ShowCalculations') | translate }}
                         </button>
@@ -612,11 +598,11 @@
                                         <label style="display:flex; align-items:center; gap:8px;">
                                             <input type="checkbox" [(ngModel)]="useMonthlyAverage"> {{ 'CPT.Moyennemensuelleex' | translate }} {{ referenceMonthLabel }})
                                         </label>
-                                        <select [(ngModel)]="selectedMonthIndex" [disabled]="!useMonthlyAverage" style="padding:6px 8px; border:1px solid #ddd; border-radius:6px;">
+                                        <select class="ds-select" [(ngModel)]="selectedMonthIndex" [disabled]="!useMonthlyAverage" style="padding:6px 8px; border:1px solid #ddd; border-radius:6px;">
                                             <option [ngValue]="null">{{ 'CPT.Moisréf' | translate }}</option>
                                             <option *ngFor="let m of [0,1,2,3,4,5,6,7,8,9,10,11]" [ngValue]="m">{{ getMonthLabel(m) }}</option>
                                         </select>
-                                        <input type="number" [(ngModel)]="selectedYear" [disabled]="!useMonthlyAverage" placeholder="{{ 'TBL.year' | translate }}" style="width:90px; padding:6px 8px; border:1px solid #ddd; border-radius:6px;">
+                                        <input class="ds-input" type="number" [(ngModel)]="selectedYear" [disabled]="!useMonthlyAverage" placeholder="{{ 'TBL.year' | translate }}" style="width:90px; padding:6px 8px; border:1px solid #ddd; border-radius:6px;">
                                     </div>
                                 </div>
                                 <div>
@@ -633,11 +619,11 @@
                                 </div>
                                 <div>
                                     <label style="font-size:12px; color:#777; display:block;">{{ 'CPT.Délaijours' | translate }}</label>
-                                    <input type="number" [(ngModel)]="leadTimeDays" min="0" style="width:90px; padding:6px 8px; border:1px solid #ddd; border-radius:6px;">
+                                    <input class="ds-input" type="number" [(ngModel)]="leadTimeDays" min="0" style="width:90px; padding:6px 8px; border:1px solid #ddd; border-radius:6px;">
                                 </div>
                                 <div>
                                     <label style="font-size:12px; color:#777; display:block;">{{ 'CPT.Stocksécuritéjours' | translate }}</label>
-                                    <input type="number" [(ngModel)]="safetyStockDaysOverride" placeholder="{{ 'CPT.Auto' | translate }}" min="0" step="0.1" style="width:120px; padding:6px 8px; border:1px solid #ddd; border-radius:6px;">
+                                    <input class="ds-input" type="number" [(ngModel)]="safetyStockDaysOverride" placeholder="{{ 'CPT.Auto' | translate }}" min="0" step="0.1" style="width:120px; padding:6px 8px; border:1px solid #ddd; border-radius:6px;">
                                 </div>
                                 <div>
                                     <div style="font-size:12px; color:#777;">{{ 'CPT.Pointderéapprojours' | translate }}</div>
@@ -694,13 +680,13 @@
                         <!-- Boutons de vue jour / semaine / mois (Historique des opérations) -->
                         <div *ngIf="!isLoadingReleve && releveOperations.length > 0 && !showSoldesSeulement" class="releve-solde-view-mode" style="margin-bottom: 10px;">
                             <span style="margin-right: 8px;">{{ 'CPT.Vue' | translate }}</span>
-                            <button type="button" class="btn btn-sm" [class.active]="releveOperationsViewMode === 'day'" (click)="onReleveOperationsViewModeChange('day')">
+                            <button type="button" class="ds-btn ds-btn--secondary btn btn-sm" [class.active]="releveOperationsViewMode === 'day'" (click)="onReleveOperationsViewModeChange('day')">
                                 <i class="fas fa-calendar-day"></i> {{ 'CPT.Journalier' | translate }}
                             </button>
-                            <button type="button" class="btn btn-sm" [class.active]="releveOperationsViewMode === 'week'" (click)="onReleveOperationsViewModeChange('week')">
+                            <button type="button" class="ds-btn ds-btn--secondary btn btn-sm" [class.active]="releveOperationsViewMode === 'week'" (click)="onReleveOperationsViewModeChange('week')">
                                 <i class="fas fa-calendar-week"></i> {{ 'CPT.Semaine' | translate }}
                             </button>
-                            <button type="button" class="btn btn-sm" [class.active]="releveOperationsViewMode === 'month'" (click)="onReleveOperationsViewModeChange('month')">
+                            <button type="button" class="ds-btn ds-btn--secondary btn btn-sm" [class.active]="releveOperationsViewMode === 'month'" (click)="onReleveOperationsViewModeChange('month')">
                                 <i class="fas fa-calendar-alt"></i>{{ 'TBL.month' | translate }}</button>
                         </div>
 
@@ -712,7 +698,7 @@
                                     {{ 'CPT.Affichage_1' | translate }} {{ (releveCurrentPage - 1) * relevePageSize + 1 }} - {{ Math.min(releveCurrentPage * relevePageSize, releveOperations.length) }} {{ 'CPT.Sur' | translate }} {{ releveOperations.length }}
                                 </span>
                             </div>
-                            <table class="table table-bordered table-hover table-sm">
+                            <table class="ds-table table table-bordered table-hover table-sm">
                                 <thead>
                                     <tr>
                                         <th>{{ 'TBL.date' | translate }}</th>
@@ -795,7 +781,7 @@
                                     {{ 'CPT.Affichage_1' | translate }} {{ (releveCurrentPage - 1) * relevePageSize + 1 }} - {{ Math.min(releveCurrentPage * relevePageSize, releveOperationsGroupedSummary.length) }} {{ 'CPT.Sur' | translate }} {{ releveOperationsGroupedSummary.length }}
                                 </span>
                             </div>
-                            <table class="table table-bordered table-hover table-sm">
+                            <table class="ds-table table table-bordered table-hover table-sm">
                                 <thead>
                                     <tr>
                                         <th>{{ 'LBL.period' | translate }}</th>
@@ -829,13 +815,13 @@
                         <!-- Vue des soldes (journaliers, hebdomadaires ou mensuels) -->
                         <div *ngIf="showSoldesSeulement && releveSoldesJournaliers.length > 0" class="releve-solde-view-mode" style="margin-bottom: 10px;">
                             <span style="margin-right: 8px;">{{ 'CPT.Vue' | translate }}</span>
-                            <button type="button" class="btn btn-sm" [class.active]="releveSoldeViewMode === 'day'" (click)="releveSoldeViewMode = 'day'; calculateRelevePagination()">
+                            <button type="button" class="ds-btn ds-btn--secondary btn btn-sm" [class.active]="releveSoldeViewMode === 'day'" (click)="releveSoldeViewMode = 'day'; calculateRelevePagination()">
                                 <i class="fas fa-calendar-day"></i> {{ 'CPT.Journalier' | translate }}
                             </button>
-                            <button type="button" class="btn btn-sm" [class.active]="releveSoldeViewMode === 'week'" (click)="releveSoldeViewMode = 'week'; calculateRelevePagination()">
+                            <button type="button" class="ds-btn ds-btn--secondary btn btn-sm" [class.active]="releveSoldeViewMode === 'week'" (click)="releveSoldeViewMode = 'week'; calculateRelevePagination()">
                                 <i class="fas fa-calendar-week"></i> {{ 'CPT.Semaine' | translate }}
                             </button>
-                            <button type="button" class="btn btn-sm" [class.active]="releveSoldeViewMode === 'month'" (click)="releveSoldeViewMode = 'month'; calculateRelevePagination()">
+                            <button type="button" class="ds-btn ds-btn--secondary btn btn-sm" [class.active]="releveSoldeViewMode === 'month'" (click)="releveSoldeViewMode = 'month'; calculateRelevePagination()">
                                 <i class="fas fa-calendar-alt"></i>{{ 'TBL.month' | translate }}</button>
                         </div>
                         <div *ngIf="!isLoadingReleve && releveSoldesJournaliers.length > 0 && showSoldesSeulement" class="operations-table">
@@ -845,7 +831,7 @@
                                     {{ 'CPT.Affichage_1' | translate }} {{ (releveCurrentPage - 1) * relevePageSize + 1 }} - {{ Math.min(releveCurrentPage * relevePageSize, releveSoldesDisplayRows.length) }} {{ 'CPT.Sur' | translate }} {{ releveSoldesDisplayRows.length }}
                                 </span>
                             </div>
-                            <table class="table table-bordered table-hover table-sm">
+                            <table class="ds-table table table-bordered table-hover table-sm">
                                 <thead>
                                     <tr>
                                         <th>{{ ('CPT.' + (releveSoldeViewMode === 'day' ? 'Date' : 'Period')) | translate }}</th>
@@ -871,7 +857,7 @@
                                                     <span *ngIf="hasManualClosingOverrideRow(row)" class="manual-badge">{{ 'CPT.Manuel' | translate }}</span>
                                                 </div>
                                                 <button *ngIf="releveSoldeViewMode === 'day'" type="button"
-                                                        class="btn btn-link btn-xs closing-edit-btn"
+                                                        class="ds-btn ds-btn--secondary btn btn-link btn-xs closing-edit-btn"
                                                         (click)="openClosingOverrideModal(row.ecartRef)"
                                                         title="{{ 'CPT.Corrigerlesoldedeclôture' | translate }}">
                                                     <i class="fas fa-edit"></i>
@@ -909,7 +895,7 @@
                             
                         <!-- Pagination pour les opérations -->
                         <div class="releve-pagination" *ngIf="releveTotalPages > 1">
-                            <button (click)="prevRelevePage()" [disabled]="releveCurrentPage === 1" class="btn pagination-btn">
+                            <button type="button" (click)="prevRelevePage()" [disabled]="releveCurrentPage === 1" class="ds-btn ds-btn--secondary btn pagination-btn">
                                 <i class="fas fa-chevron-left"></i>{{ 'PAG.previous' | translate }}</button>
                             
                             <div class="pagination-indicators">
@@ -921,7 +907,7 @@
                                 </span>
                             </div>
                             
-                            <button (click)="nextRelevePage()" [disabled]="releveCurrentPage === releveTotalPages" class="btn pagination-btn">{{ 'PAG.next' | translate }}<i class="fas fa-chevron-right"></i>
+                            <button type="button" (click)="nextRelevePage()" [disabled]="releveCurrentPage === releveTotalPages" class="ds-btn ds-btn--secondary btn pagination-btn">{{ 'PAG.next' | translate }}<i class="fas fa-chevron-right"></i>
                             </button>
                         </div>
                     </div>
@@ -962,7 +948,7 @@
                                         id="revenuDateDebut"
                                         [(ngModel)]="revenuJournalierDateDebut" 
                                         (change)="onRevenuJournalierFiltersChange()"
-                                        class="filter-input">
+                                        class="ds-input filter-input">
                                 </div>
                                 <div class="filter-group">
                                     <label for="revenuDateFin">{{ 'CPT.Datefin' | translate }}</label>
@@ -971,7 +957,7 @@
                                         id="revenuDateFin"
                                         [(ngModel)]="revenuJournalierDateFin" 
                                         (change)="onRevenuJournalierFiltersChange()"
-                                        class="filter-input">
+                                        class="ds-input filter-input">
                                 </div>
                                 <div class="filter-group">
                                     <label for="revenuTypeRevenu">{{ 'CPT.Typederevenu' | translate }}</label>
@@ -979,7 +965,7 @@
                                         id="revenuTypeRevenu"
                                         [(ngModel)]="revenuJournalierTypeRevenu" 
                                         (change)="onRevenuJournalierFiltersChange()"
-                                        class="filter-select">
+                                        class="ds-select filter-select">
                                         <option value="">{{ 'CPT.Touslesrevenus' | translate }}</option>
                                         <option value="cashin">{{ 'CPT.Fraiscashin' | translate }}</option>
                                         <option value="paiement">{{ 'CPT.Fraispaiement' | translate }}</option>
@@ -998,7 +984,7 @@
                                         placeholder="0.00"
                                         step="0.01"
                                         min="0"
-                                        class="filter-input">
+                                        class="ds-input filter-input">
                                 </div>
                                 <div class="filter-group">
                                     <label for="revenuMontantMax">{{ 'CPT.Montantmax' | translate }}</label>
@@ -1010,11 +996,11 @@
                                         placeholder="0.00"
                                         step="0.01"
                                         min="0"
-                                        class="filter-input">
+                                        class="ds-input filter-input">
                                 </div>
                                 <div class="filter-group filter-actions">
-                                    <button 
-                                        class="btn filter-clear-btn" 
+                                    <button type="button" 
+                                        class="ds-btn ds-btn--secondary btn filter-clear-btn" 
                                         (click)="clearRevenuJournalierFilters()"
                                         title="{{ 'CPT.Réinitialiserlesfiltres' | translate }}">
                                         <i class="fas fa-times"></i>{{ 'COMMON.actions.reset' | translate }}</button>
@@ -1076,7 +1062,7 @@
                                         <strong>{{ 'CPT.Affichage_1' | translate }}</strong> {{ (revenuJournalierCurrentPage - 1) * revenuJournalierPageSize + 1 }} - {{ Math.min(revenuJournalierCurrentPage * revenuJournalierPageSize, revenuJournalierDataFiltered.length) }} {{ 'CPT.Sur' | translate }} {{ revenuJournalierDataFiltered.length }}
                                     </span>
                                 </div>
-                                <table class="table table-bordered table-hover table-sm">
+                                <table class="ds-table table table-bordered table-hover table-sm">
                                     <thead>
                                         <tr>
                                             <th>{{ 'TBL.date' | translate }}</th>
@@ -1108,7 +1094,7 @@
 
                             <!-- Pagination pour le revenu journalier -->
                             <div class="releve-pagination" *ngIf="revenuJournalierTotalPages > 1">
-                                <button (click)="prevRevenuJournalierPage()" [disabled]="revenuJournalierCurrentPage === 1" class="btn pagination-btn">
+                                <button type="button" (click)="prevRevenuJournalierPage()" [disabled]="revenuJournalierCurrentPage === 1" class="ds-btn ds-btn--secondary btn pagination-btn">
                                     <i class="fas fa-chevron-left"></i>{{ 'PAG.previous' | translate }}</button>
                                 
                                 <div class="pagination-indicators">
@@ -1120,7 +1106,7 @@
                                     </span>
                                 </div>
                                 
-                                <button (click)="nextRevenuJournalierPage()" [disabled]="revenuJournalierCurrentPage === revenuJournalierTotalPages" class="btn pagination-btn">{{ 'PAG.next' | translate }}<i class="fas fa-chevron-right"></i>
+                                <button type="button" (click)="nextRevenuJournalierPage()" [disabled]="revenuJournalierCurrentPage === revenuJournalierTotalPages" class="ds-btn ds-btn--secondary btn pagination-btn">{{ 'PAG.next' | translate }}<i class="fas fa-chevron-right"></i>
                                 </button>
                             </div>
                         </div>
@@ -1137,7 +1123,7 @@
                         {{ 'CPT.Filtreactifagence' | translate }} <strong>{{ ecartFraisAgence }}</strong> {{ 'CPT.Date' | translate }} <strong>{{ ecartFraisDate }}</strong> {{ 'CPT.00002359statut' | translate }} <strong>{{ 'CPT.ENattente' | translate }}</strong>
                       </div>
                       <div class="header-actions">
-                        <button class="btn btn-success" (click)="exportEcartFrais()" [disabled]="ecartFraisItems.length === 0">
+                        <button type="button" class="ds-btn ds-btn--secondary btn btn-success" (click)="exportEcartFrais()" [disabled]="ecartFraisItems.length === 0">
                           <i class="fas fa-download"></i> {{ 'CPT.Exporter' | translate }}
                         </button>
                       </div>
@@ -1175,7 +1161,7 @@
                         </div>
                         <div class="page-size-controls">
                           <label>{{ 'CPT.Affichage_1' | translate }}</label>
-                          <select [(ngModel)]="ecartFraisPageSize" (change)="onChangeEcartFraisPageSize(ecartFraisPageSize)" class="form-control page-size-select">
+                          <select [(ngModel)]="ecartFraisPageSize" (change)="onChangeEcartFraisPageSize(ecartFraisPageSize)" class="ds-select form-control page-size-select">
                             <option [ngValue]="10">10</option>
                             <option [ngValue]="20">20</option>
                             <option [ngValue]="50">50</option>
@@ -1193,20 +1179,20 @@
                                    [(ngModel)]="ecartFraisSearchTerm" 
                                    (input)="onEcartFraisSearch()"
                                    placeholder="{{ 'CPT.Rechercherparidserviceagence' | translate }}"
-                                   class="search-input">
+                                   class="ds-input search-input">
                           </div>
                           <div class="filter-controls">
-                            <select [(ngModel)]="ecartFraisStatusFilter" (change)="onEcartFraisFilterChange()" class="filter-select">
+                            <select [(ngModel)]="ecartFraisStatusFilter" (change)="onEcartFraisFilterChange()" class="ds-select filter-select">
                               <option value="">{{ 'FILT.allStatuses' | translate }}</option>
                               <option value="EN_ATTENTE">{{ 'MSG.pending' | translate }}</option>
                               <option value="TRAITE">{{ 'CPT.Traité' | translate }}</option>
                               <option value="ERREUR">{{ 'CPT.Erreur' | translate }}</option>
                             </select>
-                            <select [(ngModel)]="ecartFraisServiceFilter" (change)="onEcartFraisFilterChange()" class="filter-select">
+                            <select [(ngModel)]="ecartFraisServiceFilter" (change)="onEcartFraisFilterChange()" class="ds-select filter-select">
                               <option value="">{{ 'FILT.allServices' | translate }}</option>
                               <option *ngFor="let service of getUniqueServicesEcartFrais()" [value]="service">{{ service }}</option>
                             </select>
-                            <button (click)="clearEcartFraisFilters()" class="btn btn-outline-secondary btn-sm">
+                            <button type="button" (click)="clearEcartFraisFilters()" class="ds-btn ds-btn--secondary btn btn-outline-secondary btn-sm">
                               <i class="fas fa-times"></i> {{ 'CPT.Effacer' | translate }}
                             </button>
                           </div>
@@ -1214,7 +1200,7 @@
                       </div>
 
                       <div class="table-container" *ngIf="!isLoadingEcartFrais">
-                        <table class="ecart-frais-table">
+                        <table class="ds-table ecart-frais-table">
                           <thead>
                             <tr>
                               <th class="sortable" (click)="sortEcartFrais('idTransaction')">
@@ -1257,7 +1243,7 @@
                                 <div class="id-transaction-content">
                                   <span class="id-prefix">{{ getTransactionIdPrefix(it.idTransaction) }}</span>
                                   <span class="id-suffix">{{ getTransactionIdSuffix(it.idTransaction) }}</span>
-                                  <button class="copy-btn" (click)="copyToClipboard(it.idTransaction)" title="{{ 'CPT.Copierlid' | translate }}">
+                                  <button type="button" class="ds-btn ds-btn--secondary copy-btn" (click)="copyToClipboard(it.idTransaction)" title="{{ 'CPT.Copierlid' | translate }}">
                                     <i class="fas fa-copy"></i>
                                   </button>
                                 </div>
@@ -1347,16 +1333,16 @@
                         </div>
                         
                         <div class="pagination-controls">
-                          <button (click)="goToEcartFraisPage(1)" 
+                          <button type="button" (click)="goToEcartFraisPage(1)" 
                                   [disabled]="ecartFraisCurrentPage === 1" 
-                                  class="btn pagination-btn pagination-btn-first"
+                                  class="ds-btn ds-btn--secondary btn pagination-btn pagination-btn-first"
                                   title="{{ 'PAG.first' | translate }}">
                             <i class="fas fa-angle-double-left"></i>
                           </button>
                           
-                          <button (click)="prevEcartFraisPage()" 
+                          <button type="button" (click)="prevEcartFraisPage()" 
                                   [disabled]="ecartFraisCurrentPage === 1" 
-                                  class="btn pagination-btn">
+                                  class="ds-btn ds-btn--secondary btn pagination-btn">
                           <i class="fas fa-chevron-left"></i>{{ 'PAG.previous' | translate }}</button>
                         
                         <div class="pagination-indicators">
@@ -1368,14 +1354,14 @@
                           </span>
                         </div>
                         
-                          <button (click)="nextEcartFraisPage()" 
+                          <button type="button" (click)="nextEcartFraisPage()" 
                                   [disabled]="ecartFraisCurrentPage === ecartFraisTotalPages" 
-                                  class="btn pagination-btn">{{ 'PAG.next' | translate }}<i class="fas fa-chevron-right"></i>
+                                  class="ds-btn ds-btn--secondary btn pagination-btn">{{ 'PAG.next' | translate }}<i class="fas fa-chevron-right"></i>
                         </button>
                           
-                          <button (click)="goToEcartFraisPage(ecartFraisTotalPages)" 
+                          <button type="button" (click)="goToEcartFraisPage(ecartFraisTotalPages)" 
                                   [disabled]="ecartFraisCurrentPage === ecartFraisTotalPages" 
-                                  class="btn pagination-btn pagination-btn-last"
+                                  class="ds-btn ds-btn--secondary btn pagination-btn pagination-btn-last"
                                   title="{{ 'PAG.last' | translate }}">
                             <i class="fas fa-angle-double-right"></i>
                           </button>
@@ -1388,8 +1374,8 @@
                                  (keyup.enter)="jumpToEcartFraisPage()"
                                  [min]="1" 
                                  [max]="ecartFraisTotalPages"
-                                 class="page-jump-input">
-                          <button (click)="jumpToEcartFraisPage()" class="btn btn-sm btn-outline-primary">
+                                 class="ds-input page-jump-input">
+                          <button type="button" (click)="jumpToEcartFraisPage()" class="ds-btn ds-btn--primary btn btn-sm btn-outline-primary">
                             <i class="fas fa-arrow-right"></i>
                           </button>
                         </div>
@@ -1398,7 +1384,7 @@
 
                     <!-- Bouton d'export en bas -->
                     <div class="export-footer" *ngIf="!isLoadingEcartFrais && ecartFraisItems.length > 0">
-                      <button class="btn btn-success" (click)="exportEcartFrais()" [disabled]="ecartFraisItems.length === 0">
+                      <button type="button" class="ds-btn ds-btn--secondary btn btn-success" (click)="exportEcartFrais()" [disabled]="ecartFraisItems.length === 0">
                         <i class="fas fa-download"></i> {{ 'CPT.Exporterlesdonnées' | translate }}
                       </button>
                     </div>
@@ -1420,7 +1406,7 @@
                                         id="controlRevenuDateDebut"
                                         [(ngModel)]="controlRevenuDateDebut" 
                                         (change)="onControlRevenuFiltersChange()"
-                                        class="filter-input">
+                                        class="ds-input filter-input">
                                 </div>
                                 <div class="filter-group">
                                     <label for="controlRevenuDateFin">{{ 'CPT.Datefin' | translate }}</label>
@@ -1429,7 +1415,7 @@
                                         id="controlRevenuDateFin"
                                         [(ngModel)]="controlRevenuDateFin" 
                                         (change)="onControlRevenuFiltersChange()"
-                                        class="filter-input">
+                                        class="ds-input filter-input">
                                 </div>
                                 <div class="filter-group">
                                     <label for="controlRevenuService">{{ 'CPT.Service' | translate }}</label>
@@ -1437,7 +1423,7 @@
                                         id="controlRevenuService"
                                         [(ngModel)]="controlRevenuService" 
                                         (change)="onControlRevenuFiltersChange()"
-                                        class="filter-select">
+                                        class="ds-select filter-select">
                                         <option value="">{{ 'FILT.allServices' | translate }}</option>
                                         <option *ngFor="let service of getUniqueServicesControlRevenu()" [value]="service">
                                             {{ service }}
@@ -1450,7 +1436,7 @@
                                         id="controlRevenuType"
                                         [(ngModel)]="controlRevenuType" 
                                         (change)="onControlRevenuFiltersChange()"
-                                        class="filter-select">
+                                        class="ds-select filter-select">
                                         <option value="">{{ 'CPT.Touslescontrôles' | translate }}</option>
                                         <option value="anomalie">{{ 'CPT.Anomaliesdétectées' | translate }}</option>
                                         <option value="normal">{{ 'CPT.Contrôlesnormaux' | translate }}</option>
@@ -1469,11 +1455,11 @@
                                         placeholder="0.00"
                                         step="0.01"
                                         min="0"
-                                        class="filter-input">
+                                        class="ds-input filter-input">
                                 </div>
                                 <div class="filter-group filter-actions">
-                                    <button 
-                                        class="btn filter-clear-btn" 
+                                    <button type="button" 
+                                        class="ds-btn ds-btn--secondary btn filter-clear-btn" 
                                         (click)="clearControlRevenuFilters()"
                                         title="{{ 'CPT.Réinitialiserlesfiltres' | translate }}">
                                         <i class="fas fa-times"></i>{{ 'COMMON.actions.reset' | translate }}</button>
@@ -1546,7 +1532,7 @@
                                         <strong>{{ 'CPT.Affichage_1' | translate }}</strong> {{ (controlRevenuCurrentPage - 1) * controlRevenuPageSize + 1 }} - {{ Math.min(controlRevenuCurrentPage * controlRevenuPageSize, controlRevenuDataFiltered.length) }} {{ 'CPT.Sur' | translate }} {{ controlRevenuDataFiltered.length }}
                                     </span>
                                 </div>
-                                <table class="table table-bordered table-hover table-sm">
+                                <table class="ds-table table table-bordered table-hover table-sm">
                                     <thead>
                                         <tr>
                                             <th>{{ 'TBL.date' | translate }}</th>
@@ -1582,10 +1568,10 @@
                                                 </span>
                                             </td>
                                             <td>
-                                                <button class="btn btn-sm btn-info" (click)="viewControlRevenuDetails(controle)" title="{{ 'CPT.Voirlesdétails' | translate }}">
+                                                <button type="button" class="ds-btn ds-btn--secondary btn btn-sm btn-info" (click)="viewControlRevenuDetails(controle)" title="{{ 'CPT.Voirlesdétails' | translate }}">
                                                     <i class="fas fa-eye"></i>
                                                 </button>
-                                                <button class="btn btn-sm btn-warning" (click)="exportControlRevenu(controle)" title="{{ 'CPT.Exporter' | translate }}">
+                                                <button type="button" class="ds-btn ds-btn--secondary btn btn-sm btn-warning" (click)="exportControlRevenu(controle)" title="{{ 'CPT.Exporter' | translate }}">
                                                     <i class="fas fa-file-excel"></i>
                                                 </button>
                                             </td>
@@ -1596,14 +1582,14 @@
 
                             <!-- Actions pour le control revenu -->
                             <div class="control-revenu-actions">
-                                <button class="btn btn-success" (click)="exportControlRevenuData()" [disabled]="controlRevenuDataFiltered.length === 0">
+                                <button type="button" class="ds-btn ds-btn--secondary btn btn-success" (click)="exportControlRevenuData()" [disabled]="controlRevenuDataFiltered.length === 0">
                                     <i class="fas fa-file-excel"></i> {{ 'CPT.Exportercontrolrevenu' | translate }}
                                 </button>
                             </div>
 
                             <!-- Pagination pour le control revenu -->
                             <div class="releve-pagination" *ngIf="controlRevenuTotalPages > 1">
-                                <button (click)="prevControlRevenuPage()" [disabled]="controlRevenuCurrentPage === 1" class="btn pagination-btn">
+                                <button type="button" (click)="prevControlRevenuPage()" [disabled]="controlRevenuCurrentPage === 1" class="ds-btn ds-btn--secondary btn pagination-btn">
                                     <i class="fas fa-chevron-left"></i>{{ 'PAG.previous' | translate }}</button>
                                 
                                 <div class="pagination-indicators">
@@ -1615,7 +1601,7 @@
                                     </span>
                                 </div>
                                 
-                                <button (click)="nextControlRevenuPage()" [disabled]="controlRevenuCurrentPage === controlRevenuTotalPages" class="btn pagination-btn">{{ 'PAG.next' | translate }}<i class="fas fa-chevron-right"></i>
+                                <button type="button" (click)="nextControlRevenuPage()" [disabled]="controlRevenuCurrentPage === controlRevenuTotalPages" class="ds-btn ds-btn--secondary btn pagination-btn">{{ 'PAG.next' | translate }}<i class="fas fa-chevron-right"></i>
                                 </button>
                             </div>
                         </div>
@@ -1631,7 +1617,7 @@
   <div class="modal-content">
     <h2>{{ 'CPT.Soldebopour' | translate }} {{ selectedCompteForBo?.numeroCompte }}</h2>
     <label>{{ 'CPT.Datedusolde' | translate }}</label>
-    <input type="date" [(ngModel)]="dateSoldeBo" (change)="onDateSoldeBoChange()" style="margin-bottom: 0.7rem;" />
+    <input class="ds-input" type="date" [(ngModel)]="dateSoldeBo" (change)="onDateSoldeBoChange()" style="margin-bottom: 0.7rem;" />
     <div *ngIf="dernierSoldeBo !== null">
       <p>{{ 'CPT.Soldeboenregistrépourcettedate' | translate }} <b>{{ dernierSoldeBo | number:'1.2-2' }}</b></p>
     </div>
@@ -1639,9 +1625,9 @@
       <p>{{ 'CPT.Aucunsoldeboenregistrépourcettedate' | translate }}</p>
     </div>
     <label>{{ 'CPT.Nouveausoldebo' | translate }}</label>
-    <input type="number" [(ngModel)]="dernierSoldeBo" />
-    <button (click)="saveSoldeBo()">{{ 'COMMON.actions.save' | translate }}</button>
-    <button (click)="closeSoldeBoModal()">{{ 'COMMON.actions.close' | translate }}</button>
+    <input class="ds-input" type="number" [(ngModel)]="dernierSoldeBo" />
+    <button class="ds-btn ds-btn--secondary" type="button" (click)="saveSoldeBo()">{{ 'COMMON.actions.save' | translate }}</button>
+    <button class="ds-btn ds-btn--secondary" type="button" (click)="closeSoldeBoModal()">{{ 'COMMON.actions.close' | translate }}</button>
   </div>
 </div>
 
@@ -1651,14 +1637,14 @@
     <h2>{{ 'CPT.Correctiondusoldedeclôture' | translate }}</h2>
     <p>{{ 'CPT.Datesélectionnée' | translate }} <b>{{ closingOverrideDate || 'N/A' }}</b></p>
     <label>{{ 'CPT.Nouveausoldedeclôture' | translate }}</label>
-    <input type="number" [(ngModel)]="closingOverrideValue" />
+    <input class="ds-input" type="number" [(ngModel)]="closingOverrideValue" />
     <div class="modal-actions">
-      <button type="button" class="btn btn-success" (click)="saveClosingOverride()" [disabled]="closingOverrideLoading">
+      <button type="button" class="ds-btn ds-btn--secondary btn btn-success" (click)="saveClosingOverride()" [disabled]="closingOverrideLoading">
         <i class="fas fa-save"></i>{{ 'COMMON.actions.save' | translate }}</button>
-      <button type="button" class="btn btn-danger" *ngIf="hasManualOverrideFor(closingOverrideDate)" (click)="removeClosingOverride()" [disabled]="closingOverrideLoading">
+      <button type="button" class="ds-btn ds-btn--danger btn btn-danger" *ngIf="hasManualOverrideFor(closingOverrideDate)" (click)="removeClosingOverride()" [disabled]="closingOverrideLoading">
         <i class="fas fa-trash"></i> {{ 'CPT.Supprimerlacorrection' | translate }}
       </button>
-      <button type="button" class="btn" (click)="closeClosingOverrideModal()" [disabled]="closingOverrideLoading">{{ 'COMMON.actions.close' | translate }}</button>
+      <button type="button" class="ds-btn ds-btn--secondary btn" (click)="closeClosingOverrideModal()" [disabled]="closingOverrideLoading">{{ 'COMMON.actions.close' | translate }}</button>
     </div>
   </div>
 </div>
@@ -1849,7 +1835,7 @@
   }
 </style>
 <div class="comptes-resume">
-  <table class="resume-table-comptes">
+  <table class="ds-table resume-table-comptes">
     <thead>
       <tr>
         <th>{{ 'CPT.Résumé' | translate }}</th>
@@ -1950,12 +1936,12 @@
     </div>
 
     <div class="modal-footer">
-      <button type="button" class="btn btn-secondary" (click)="closeControlRevenuModal()">
+      <button type="button" class="ds-btn ds-btn--secondary btn btn-secondary" (click)="closeControlRevenuModal()">
         <i class="fas fa-times"></i>{{ 'COMMON.actions.close' | translate }}</button>
-      <button type="button" class="btn btn-primary" (click)="openDateViewModal(selectedControlRevenu.date)" *ngIf="selectedControlRevenu">
+      <button type="button" class="ds-btn ds-btn--primary btn btn-primary" (click)="openDateViewModal(selectedControlRevenu.date)" *ngIf="selectedControlRevenu">
         <i class="fas fa-calendar-alt"></i> {{ 'CPT.Voirpardate' | translate }}
       </button>
-      <button type="button" class="btn btn-info" (click)="exportControlRevenu(selectedControlRevenu)" *ngIf="selectedControlRevenu">
+      <button type="button" class="ds-btn ds-btn--secondary btn btn-info" (click)="exportControlRevenu(selectedControlRevenu)" *ngIf="selectedControlRevenu">
         <i class="fas fa-file-excel"></i> {{ 'CPT.Exporter' | translate }}
       </button>
     </div>
@@ -2021,7 +2007,7 @@
       <div *ngIf="!isLoadingDateView && dateViewData.length > 0" class="services-table-container">
         <h5>{{ 'CPT.Détailparservice' | translate }}</h5>
         <div class="table-responsive">
-          <table class="table table-bordered table-hover">
+          <table class="ds-table table table-bordered table-hover">
             <thead>
               <tr>
                 <th>{{ 'TBL.service' | translate }}</th>
@@ -2060,9 +2046,9 @@
     </div>
 
     <div class="modal-footer">
-      <button type="button" class="btn btn-secondary" (click)="closeDateViewModal()">
+      <button type="button" class="ds-btn ds-btn--secondary btn btn-secondary" (click)="closeDateViewModal()">
         <i class="fas fa-times"></i>{{ 'COMMON.actions.close' | translate }}</button>
-      <button type="button" class="btn btn-success" (click)="exportDateViewData()" *ngIf="dateViewData.length > 0">
+      <button type="button" class="ds-btn ds-btn--secondary btn btn-success" (click)="exportDateViewData()" *ngIf="dateViewData.length > 0">
         <i class="fas fa-file-excel"></i> {{ 'CPT.Exporter' | translate }}
       </button>
     </div>
