@@ -4,6 +4,7 @@ import com.reconciliation.entity.*;
 import com.reconciliation.service.ProfilService;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.ResponseEntity;
+import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.web.bind.annotation.*;
 
 import java.util.List;
@@ -83,17 +84,20 @@ public class ProfilController {
     }
 
     @PostMapping("/modules")
+    @PreAuthorize("hasRole('SUPER_ADMIN')")
     public ModuleEntity createModule(@RequestBody ModuleEntity module) {
         return profilService.createModule(module);
     }
 
     @PutMapping("/modules/{id}")
+    @PreAuthorize("hasRole('SUPER_ADMIN')")
     public ModuleEntity updateModule(@PathVariable Long id, @RequestBody ModuleEntity module) {
         module.setId(id);
         return profilService.updateModule(module);
     }
 
     @DeleteMapping("/modules/{id}")
+    @PreAuthorize("hasRole('SUPER_ADMIN')")
     public ResponseEntity<Map<String, String>> deleteModule(@PathVariable Long id) {
         System.out.println("🗑️ DELETE /api/profils/modules/" + id + " - Requête reçue");
         try {
@@ -124,11 +128,13 @@ public class ProfilController {
     }
 
     @PostMapping("/permissions")
+    @PreAuthorize("hasRole('SUPER_ADMIN')")
     public PermissionEntity createPermission(@RequestBody PermissionEntity permission) {
         return profilService.createPermission(permission);
     }
 
     @DeleteMapping("/permissions/{id}")
+    @PreAuthorize("hasRole('SUPER_ADMIN')")
     public ResponseEntity<Map<String, String>> deletePermission(@PathVariable Long id) {
         System.out.println("🗑️ DELETE /api/profils/permissions/" + id + " - Requête reçue");
         try {
@@ -154,6 +160,7 @@ public class ProfilController {
 
     // Attribution de droits à un profil
     @PostMapping("/{profilId}/droits")
+    @PreAuthorize("hasRole('ADMIN')")
     public ProfilPermissionEntity addPermissionToProfil(
             @PathVariable Long profilId,
             @RequestParam Long moduleId,
@@ -163,6 +170,7 @@ public class ProfilController {
 
     // Attribution de plusieurs droits à un profil en une seule requête (pour éviter les erreurs 429)
     @PostMapping("/{profilId}/droits/batch")
+    @PreAuthorize("hasRole('ADMIN')")
     public ResponseEntity<List<ProfilPermissionEntity>> addMultiplePermissionsToProfil(
             @PathVariable Long profilId,
             @RequestParam Long moduleId,
@@ -176,6 +184,7 @@ public class ProfilController {
     }
 
     @DeleteMapping("/droits/{profilPermissionId}")
+    @PreAuthorize("hasRole('ADMIN')")
     public void removePermissionFromProfil(@PathVariable Long profilPermissionId) {
         profilService.removePermissionFromProfil(profilPermissionId);
     }
