@@ -5,8 +5,8 @@ import java.time.LocalDateTime;
 
 @Entity
 @jakarta.persistence.EntityListeners(com.reconciliation.tenant.TenantGuardEntityListener.class)
-@Table(name = "reconciliation_ok_keys", indexes = {
-    @Index(name = "idx_recon_ok_key", columnList = "key_value", unique = true)
+@Table(name = "reconciliation_ok_keys", uniqueConstraints = {
+    @UniqueConstraint(name = "uk_reconciliation_ok_keys_tenant", columnNames = {"entreprise_id", "key_value"})
 })
 public class ReconciliationOkEntity {
 
@@ -20,7 +20,7 @@ public class ReconciliationOkEntity {
     @com.fasterxml.jackson.annotation.JsonIgnore
     private Long entrepriseId;
 
-    @Column(name = "key_value", nullable = false, unique = true, length = 255)
+    @Column(name = "key_value", nullable = false, length = 255)
     private String keyValue;
 
     @Column(name = "created_at", nullable = false)

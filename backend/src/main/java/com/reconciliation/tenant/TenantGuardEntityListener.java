@@ -24,7 +24,11 @@ public class TenantGuardEntityListener {
             return;
         }
         Long current = TenantContext.get();
-        if (current != null && !entityEntrepriseId.equals(current)) {
+        if (current == null) {
+            throw new TenantAccessException(
+                "Acces refuse : aucun contexte entreprise.");
+        }
+        if (!entityEntrepriseId.equals(current)) {
             throw new TenantAccessException(
                 "Acces refuse : ressource appartenant a une autre entreprise.");
         }
