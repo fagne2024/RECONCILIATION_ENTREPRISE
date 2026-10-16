@@ -1,0 +1,144 @@
+<div class="dsp">
+  <ds-page-header
+    eyebrow="Développement"
+    title="Système de design"
+    subtitle="Catalogue interne. Cette route n’est enregistrée qu’avec isDevMode().">
+    <button dsPageHeaderActions type="button" class="ds-btn ds-btn--secondary" disabled>
+      Hors production
+    </button>
+  </ds-page-header>
+
+  <p class="dsp__lead">
+    Les classes <code>ds-*</code> et les composants <code>ds-*</code> sont de la présentation :
+    aucun appel API. Voir <code>docs/design-system.md</code>.
+  </p>
+
+  <section class="dsp__section">
+    <h2>Couleurs (thème courant)</h2>
+    <p class="dsp__hint">Le thème sombre s’applique via <code>data-theme="dark"</code> sur <code>:root</code> (ThemeService).</p>
+    <div class="dsp__swatches">
+      <div class="dsp__swatch" *ngFor="let v of colorVars">
+        <i [style.background]="'var(' + v + ')'"></i>
+        <code>{{ v }}</code>
+      </div>
+    </div>
+  </section>
+
+  <section class="dsp__section">
+    <h2>Typographie</h2>
+    <p class="dsp__ui">Sora — interface (<code>--font-ui</code>)</p>
+    <p class="dsp__display">Instrument Serif — titres (<code>--font-display</code>)</p>
+    <p class="dsp__mono">123 456,78 — nombres (<code>ds-num</code> / <code>--font-mono</code>)</p>
+  </section>
+
+  <section class="dsp__section">
+    <h2>Boutons</h2>
+    <div class="dsp__row">
+      <button type="button" class="ds-btn ds-btn--primary">Primaire</button>
+      <button type="button" class="ds-btn ds-btn--secondary">Secondaire</button>
+      <button type="button" class="ds-btn ds-btn--ghost">Fantôme</button>
+      <button type="button" class="ds-btn ds-btn--danger">Danger</button>
+      <button type="button" class="ds-btn ds-btn--primary ds-btn--sm">Petit</button>
+      <button type="button" class="ds-btn ds-btn--primary" disabled>Désactivé</button>
+    </div>
+  </section>
+
+  <section class="dsp__section">
+    <h2>Champs</h2>
+    <div class="ds-filter-bar">
+      <label class="ds-field">
+        <span class="ds-label">Recherche</span>
+        <input class="ds-input" type="search" placeholder="Clé, agence…">
+      </label>
+      <label class="ds-field">
+        <span class="ds-label">Statut</span>
+        <select class="ds-select">
+          <option>Tous</option>
+          <option>Rapproché</option>
+        </select>
+      </label>
+      <label class="ds-check-label">
+        <input type="checkbox" class="ds-checkbox"> Anomalies
+      </label>
+      <button type="button" class="ds-btn ds-btn--secondary">Filtrer</button>
+    </div>
+  </section>
+
+  <section class="dsp__section">
+    <h2>KPI</h2>
+    <div class="dsp__kpis">
+      <ds-kpi-card label="Correspondances" [value]="12840" icon="fa-check" tone="success"></ds-kpi-card>
+      <ds-kpi-card label="Écarts BO" [value]="214" icon="fa-exclamation-triangle" tone="warning"></ds-kpi-card>
+      <ds-kpi-card label="Écarts partenaire" [value]="91" icon="fa-unlink" tone="error"></ds-kpi-card>
+      <ds-kpi-card label="Chargement" [value]="0" [loading]="true" tone="neutral"></ds-kpi-card>
+    </div>
+  </section>
+
+  <section class="dsp__section">
+    <h2>Badges</h2>
+    <div class="dsp__row">
+      <ds-status-badge *ngFor="let s of statuses" [status]="s"></ds-status-badge>
+    </div>
+    <div class="dsp__row">
+      <ds-type-badge *ngFor="let t of types" [type]="t"></ds-type-badge>
+    </div>
+  </section>
+
+  <section class="dsp__section">
+    <h2>Onglets</h2>
+    <ds-tabs [tabs]="tabs" [activeId]="activeTab" (activeIdChange)="onTab($event)" ariaLabel="Exemple d’onglets"></ds-tabs>
+    <p class="dsp__hint">Panneau actif : {{ activeTab }}</p>
+  </section>
+
+  <section class="dsp__section">
+    <h2>Tableau</h2>
+    <div class="ds-table-scroll">
+      <table class="ds-table">
+        <thead>
+          <tr>
+            <th>Service</th>
+            <th>Statut</th>
+            <th class="ds-num">Volume</th>
+          </tr>
+        </thead>
+        <tbody>
+          <tr>
+            <td>Orange Money</td>
+            <td><ds-status-badge status="matched"></ds-status-badge></td>
+            <td class="ds-num">1 250 000</td>
+          </tr>
+          <tr>
+            <td>Wave</td>
+            <td><ds-status-badge status="amount-gap"></ds-status-badge></td>
+            <td class="ds-num">88 400</td>
+          </tr>
+        </tbody>
+      </table>
+    </div>
+  </section>
+
+  <section class="dsp__section">
+    <h2>Pagination</h2>
+    <ds-pagination
+      [page]="demoPage"
+      [pageCount]="8"
+      [totalItems]="73"
+      [pageSize]="demoPageSize"
+      [pageSizes]="[10, 25, 50]"
+      itemLabel="lignes"
+      (pageChange)="onPage($event)"
+      (pageSizeChange)="onPageSize($event)">
+    </ds-pagination>
+  </section>
+
+  <section class="dsp__section">
+    <h2>États</h2>
+    <div class="dsp__states">
+      <ds-state kind="empty" message="Aucune ligne pour ces filtres."></ds-state>
+      <ds-state kind="loading"></ds-state>
+      <ds-state kind="error" message="Exemple d’erreur réseau.">
+        <button type="button" class="ds-btn ds-btn--secondary ds-btn--sm">Réessayer</button>
+      </ds-state>
+    </div>
+  </section>
+</div>

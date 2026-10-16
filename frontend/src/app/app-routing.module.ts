@@ -1,5 +1,6 @@
 import { NgModule } from '@angular/core';
 import { RouterModule, Routes } from '@angular/router';
+import { DESIGN_SYSTEM_ROUTES } from './design-system.routes';
 import { FileUploadComponent } from './components/file-upload/file-upload.component';
 import { DashboardComponent } from './components/dashboard/dashboard.component';
 import { ComptesComponent } from './components/comptes/comptes.component';
@@ -333,6 +334,7 @@ const routes: Routes = [
     canActivate: [AuthGuard, ModuleAccessGuard],
     data: { module: 'Résultats', permissions: ['consulter'] }
   },
+  ...DESIGN_SYSTEM_ROUTES
 ];
 
 @NgModule({

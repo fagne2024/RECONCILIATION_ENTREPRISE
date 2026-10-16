@@ -56,7 +56,13 @@
                         "optimization": true,
                         "buildOptimizer": true,
                         "aot": true,
-                            "outputHashing": "all"
+                            "outputHashing": "all",
+                            "fileReplacements": [
+                                {
+                                    "replace": "src/app/design-system.routes.ts",
+                                    "with": "src/app/design-system.routes.prod.ts"
+                                }
+                            ]
                         },
                         "development": {
                             "buildOptimizer": false,
