@@ -20,13 +20,13 @@
     <div class="country-header">
       <label class="country-label">{{ 'NIVEAUX.PAYS_GNL' | translate }}</label>
       <div class="country-actions">
-        <button class="btn btn-secondary btn-sm" (click)="sauvegarderPaysActuel()" [disabled]="!configLocale.niveauxTraitement?.length">
+        <button type="button" class="ds-btn ds-btn--secondary btn btn-secondary btn-sm" (click)="sauvegarderPaysActuel()" [disabled]="!configLocale.niveauxTraitement?.length">
           <i class="fa fa-save"></i> {{ 'NIVEAUX.SAUVEGARDER_PAYS' | translate }}
         </button>
       </div>
     </div>
     <div class="country-select-wrapper">
-      <select [(ngModel)]="selectedPaysCode" (ngModelChange)="onPaysChange()" class="country-select">
+      <select [(ngModel)]="selectedPaysCode" (ngModelChange)="onPaysChange()" class="ds-select country-select">
         <option value="GNL"><i class="fa fa-globe"></i> {{ 'NIVEAUX.GNL_TOUTS_PAYS' | translate }}</option>
         <option *ngFor="let p of paysList" [value]="p.code" [disabled]="p.code === 'GNL'">
           <i class="fa fa-flag"></i> {{ p.nom }}
@@ -41,7 +41,7 @@
   <section class="config-section">
     <div class="section-header">
       <h2><i class="fa fa-list-ol"></i> {{ 'NIVEAUX.NIVEAUX_TRAITEMENT' | translate }}</h2>
-      <button class="btn btn-primary btn-sm" (click)="resetForm()" *ngIf="isEditingNiveau">
+      <button type="button" class="ds-btn ds-btn--primary btn btn-primary btn-sm" (click)="resetForm()" *ngIf="isEditingNiveau">
         <i class="fa fa-plus"></i> {{ 'COMMON.NEW' | translate }}
       </button>
     </div>
@@ -52,7 +52,7 @@
           <div class="form-group">
             <label>{{ 'NIVEAUX.VALEUR' | translate }} *</label>
             <input type="text" [(ngModel)]="nouvelNiveau.valeur" name="niveauValeur" [disabled]="isEditingNiveau" required
-                   list="niveau-suggestions" placeholder="{{ 'NIVEAUX.SAISIR_VALEUR' | translate }}" />
+                   list="niveau-suggestions" placeholder="{{ 'NIVEAUX.SAISIR_VALEUR' | translate }}" class="ds-input">
             <datalist id="niveau-suggestions">
               <option *ngFor="let s of niveauTraitementSuggestions" [value]="s"></option>
             </datalist>
@@ -60,26 +60,26 @@
           <div class="form-group">
             <label>{{ 'NIVEAUX.STATUT_ASSOCIE' | translate }} *</label>
             <input type="text" [(ngModel)]="nouvelNiveau.statutAssocie" name="niveauStatutAssocie" required
-                   list="statut-suggestions" placeholder="{{ 'NIVEAUX.SELECTIONNER_STATUT' | translate }}" />
+                   list="statut-suggestions" placeholder="{{ 'NIVEAUX.SELECTIONNER_STATUT' | translate }}" class="ds-input">
             <datalist id="statut-suggestions">
               <option *ngFor="let s of statutSuggestions" [value]="s"></option>
             </datalist>
           </div>
           <div class="form-group">
             <label>{{ 'NIVEAUX.ORDRE' | translate }}</label>
-            <input type="number" [(ngModel)]="nouvelNiveau.ordre" name="niveauOrdre" min="1" class="small-input" />
+            <input type="number" [(ngModel)]="nouvelNiveau.ordre" name="niveauOrdre" min="1" class="ds-input small-input" />
           </div>
           <div class="form-group">
             <label>{{ 'NIVEAUX.ACTIF' | translate }}</label>
             <div class="checkbox-wrapper">
-              <input type="checkbox" [(ngModel)]="nouvelNiveau.actif" name="niveauActif" id="niveauActif" />
+              <input type="checkbox" [(ngModel)]="nouvelNiveau.actif" name="niveauActif" id="niveauActif" class="ds-checkbox">
               <label for="niveauActif">{{ 'COMMON.ACTIVE' | translate }}</label>
             </div>
           </div>
         </div>
         <div class="form-group full-width">
           <label>{{ 'NIVEAUX.DESCRIPTION' | translate }}</label>
-          <textarea [(ngModel)]="nouvelNiveau.description" name="niveauDescription" rows="2"></textarea>
+          <textarea [(ngModel)]="nouvelNiveau.description" name="niveauDescription" rows="2" class="ds-textarea"></textarea>
         </div>
 
         <!-- Profils autorisés pour ce niveau -->
@@ -87,7 +87,7 @@
           <label>{{ 'NIVEAUX.PROFILS_AUTORISES' | translate }}</label>
           <div class="profils-checkboxes" *ngIf="profilsDisponibles.length > 0">
             <label class="profil-checkbox" *ngFor="let profil of profilsDisponibles">
-              <input type="checkbox" [checked]="isProfilAutorise(profil.id)" (change)="toggleProfilAutorise(profil.id)" />
+              <input type="checkbox" [checked]="isProfilAutorise(profil.id)" (change)="toggleProfilAutorise(profil.id)" class="ds-checkbox">
               <span class="profil-nom">{{ profil.nom }}</span>
               <span class="profil-description" *ngIf="profil.description">{{ profil.description }}</span>
             </label>
@@ -101,10 +101,10 @@
         </div>
 
         <div class="form-actions">
-          <button type="submit" class="btn btn-success">
+          <button type="submit" class="ds-btn ds-btn--primary btn btn-success">
             <i class="fa fa-save"></i> {{ isEditingNiveau ? ('COMMON.UPDATE' | translate) : ('COMMON.ADD' | translate) }}
           </button>
-          <button type="button" class="btn btn-secondary" (click)="resetForm()" *ngIf="isEditingNiveau">
+          <button type="button" class="ds-btn ds-btn--secondary btn btn-secondary" (click)="resetForm()" *ngIf="isEditingNiveau">
             <i class="fa fa-times"></i> {{ 'COMMON.CANCEL' | translate }}
           </button>
         </div>
@@ -112,7 +112,7 @@
     </div>
 
     <div class="table-responsive">
-      <table class="config-table">
+      <table class="ds-table config-table">
         <thead>
           <tr>
             <th>{{ 'NIVEAUX.VALEUR' | translate }}</th>
@@ -144,16 +144,16 @@
             </td>
             <td>{{ niveau.description }}</td>
             <td class="actions-col">
-              <button class="btn-icon btn-edit" (click)="editerNiveau(i)" title="{{ 'COMMON.EDIT' | translate }}">
+              <button type="button" class="ds-btn ds-btn--secondary btn-icon btn-edit" (click)="editerNiveau(i)" title="{{ 'COMMON.EDIT' | translate }}">
                 <i class="fa fa-edit"></i>
               </button>
-              <button class="btn-icon btn-delete" (click)="supprimerNiveau(i)" title="{{ 'COMMON.DELETE' | translate }}">
+              <button type="button" class="ds-btn ds-btn--danger btn-icon btn-delete" (click)="supprimerNiveau(i)" title="{{ 'COMMON.DELETE' | translate }}">
                 <i class="fa fa-trash"></i>
               </button>
-              <button class="btn-icon btn-move" (click)="monter(i)" title="{{ 'COMMON.MOVE_UP' | translate }}" [disabled]="i === 0">
+              <button type="button" class="ds-btn ds-btn--secondary btn-icon btn-move" (click)="monter(i)" title="{{ 'COMMON.MOVE_UP' | translate }}" [disabled]="i === 0">
                 <i class="fa fa-arrow-up"></i>
               </button>
-              <button class="btn-icon btn-move" (click)="descendre(i)" title="{{ 'COMMON.MOVE_DOWN' | translate }}" [disabled]="i === niveauxTraitement.length - 1">
+              <button type="button" class="ds-btn ds-btn--secondary btn-icon btn-move" (click)="descendre(i)" title="{{ 'COMMON.MOVE_DOWN' | translate }}" [disabled]="i === niveauxTraitement.length - 1">
                 <i class="fa fa-arrow-down"></i>
               </button>
             </td>
@@ -174,7 +174,7 @@
     </div>
 
     <div class="matrix-wrapper" *ngIf="profilsDisponibles.length > 0">
-      <table class="validation-matrix">
+      <table class="ds-table validation-matrix">
         <thead>
           <tr>
             <th class="matrix-level-header">{{ 'NIVEAUX.NIVEAU' | translate }}</th>
@@ -239,10 +239,10 @@
 
   <!-- Actions globales -->
   <div class="global-actions">
-    <button class="btn btn-secondary" (click)="sauvegarderPaysActuel()">
+    <button type="button" class="ds-btn ds-btn--secondary btn btn-secondary" (click)="sauvegarderPaysActuel()">
       <i class="fa fa-save"></i> {{ 'NIVEAUX.SAUVEGARDER_PAYS' | translate }}
     </button>
-    <button class="btn btn-primary btn-lg" (click)="sauvegarderTout()">
+    <button type="button" class="ds-btn ds-btn--primary btn btn-primary btn-lg" (click)="sauvegarderTout()">
       <i class="fa fa-save"></i> {{ 'NIVEAUX.SAUVEGARDER_TOUT' | translate }}
     </button>
   </div>
