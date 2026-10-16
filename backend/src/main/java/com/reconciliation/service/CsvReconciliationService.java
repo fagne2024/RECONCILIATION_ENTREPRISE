@@ -4,6 +4,7 @@ import com.reconciliation.dto.ColumnComparison;
 import com.reconciliation.dto.ReconciliationRequest;
 import com.reconciliation.dto.ReconciliationResponse;
 import com.reconciliation.model.ReconciliationProgress;
+import com.reconciliation.util.AmountComparator;
 import java.util.ArrayList;
 import java.util.Collections;
 import java.util.HashMap;
@@ -1000,7 +1001,7 @@ implements DisposableBean {
             for (ColumnComparison comparison : comparisonColumns) {
                 String boValue = boRecord.get(comparison.getBoColumn());
                 String partnerValue = partnerRecord.get(comparison.getPartnerColumn());
-                if (!Objects.equals(boValue, partnerValue)) {
+                if (!AmountComparator.valuesMatch(boValue, partnerValue)) {
                     ReconciliationResponse.Difference difference = new ReconciliationResponse.Difference();
                     difference.setBoColumn(comparison.getBoColumn());
                     difference.setPartnerColumn(comparison.getPartnerColumn());
@@ -1111,7 +1112,7 @@ implements DisposableBean {
             for (ColumnComparison comparison : comparisonColumns) {
                 String partnerValue;
                 String boValue = boRecord.get(comparison.getBoColumn());
-                if (Objects.equals(boValue, partnerValue = partnerRecord.get(comparison.getPartnerColumn()))) continue;
+                if (AmountComparator.valuesMatch(boValue, partnerValue = partnerRecord.get(comparison.getPartnerColumn()))) continue;
                 ReconciliationResponse.Difference difference = new ReconciliationResponse.Difference();
                 difference.setBoColumn(comparison.getBoColumn());
                 difference.setPartnerColumn(comparison.getPartnerColumn());
