@@ -56,6 +56,7 @@ import * as XLSX from 'xlsx';
 import html2canvas from 'html2canvas';
 import { jsPDF } from 'jspdf';
 import { SharedModule } from '../../shared/shared.module';
+import { DsPaginationComponent } from '../../shared/ui';
 
 import { TranslateService } from '@ngx-translate/core';
 
@@ -94,7 +95,7 @@ export interface ReconciliationReportData {
 @Component({
     selector: 'app-reconciliation-report',
     standalone: true,
-    imports: [SharedModule],
+    imports: [SharedModule, DsPaginationComponent],
     template: `
         <div class="reconciliation-report-page">
             <!-- TOP NAV (aligné sur redevance-loterie) -->
@@ -149,27 +150,27 @@ export interface ReconciliationReportData {
                     <div class="hero-kpi-strip">
                         <div class="hk-strip-item">
                             <span class="hk-strip-label">{{ 'RPT.lines' | translate }}</span>
-                            <span class="hk-strip-value">{{ kpiSummary.lineCount | number:'1.0-0' }}</span>
+                            <span class="hk-strip-value ds-num">{{ kpiSummary.lineCount | number:'1.0-0' }}</span>
                         </div>
                         <div class="hk-strip-sep"></div>
                         <div class="hk-strip-item">
                             <span class="hk-strip-label">{{ 'RPT.agencies' | translate }}</span>
-                            <span class="hk-strip-value">{{ kpiSummary.agencies | number:'1.0-0' }}</span>
+                            <span class="hk-strip-value ds-num">{{ kpiSummary.agencies | number:'1.0-0' }}</span>
                         </div>
                         <div class="hk-strip-sep"></div>
                         <div class="hk-strip-item">
                             <span class="hk-strip-label">{{ 'RPT.avgRate' | translate }}</span>
-                            <span class="hk-strip-value">{{ kpiSummary.averageMatchRate }}%</span>
+                            <span class="hk-strip-value ds-num">{{ kpiSummary.averageMatchRate }}%</span>
                         </div>
                         <div class="hk-strip-sep"></div>
                         <div class="hk-strip-item">
                             <span class="hk-strip-label">{{ 'RPT.trxCount' | translate }}</span>
-                            <span class="hk-strip-value">{{ kpiSummary.totalTransactions | number:'1.0-0' }}</span>
+                            <span class="hk-strip-value ds-num">{{ kpiSummary.totalTransactions | number:'1.0-0' }}</span>
                         </div>
                         <div class="hk-strip-sep"></div>
                         <div class="hk-strip-item">
                             <span class="hk-strip-label">{{ 'RPT.volume' | translate }}</span>
-                            <span class="hk-strip-value">{{ kpiSummary.totalVolume | number:'1.0-0' }}</span>
+                            <span class="hk-strip-value ds-num">{{ kpiSummary.totalVolume | number:'1.0-0' }}</span>
                         </div>
                     </div>
                 </div>
@@ -178,7 +179,7 @@ export interface ReconciliationReportData {
             <div class="main">
                 <div class="reconciliation-report-container">
                     <div class="report-header">
-                <h2>📊 {{ 'RPT.reportTitle' | translate }} <span class="badge" [ngClass]="currentSource === 'live' ? 'badge-live' : 'badge-db'">{{ (currentSource === 'live' ? 'RPT.inProgress' : 'RPT.savedDb') | translate }}</span></h2>
+                <h2>📊 {{ 'RPT.reportTitle' | translate }} <span class="badge ds-badge" [ngClass]="currentSource === 'live' ? 'badge-live' : 'badge-db'">{{ (currentSource === 'live' ? 'RPT.inProgress' : 'RPT.savedDb') | translate }}</span></h2>
                 <p class="magic-report-scope" *ngIf="magicReportServices?.length > 1">
                     {{ 'RPT.selectedReconciliations' | translate: { count: magicReportServices.length } }}
                     <strong class="magic-report-scope-list">{{ magicReportServices.join(' • ') }}</strong>
@@ -190,10 +191,10 @@ export interface ReconciliationReportData {
                     <strong>{{ magicReportService }}</strong>
                 </p>
                 <div class="report-actions">
-                    <button class="btn btn-toggle-source" (click)="toggleDataSource()" [title]="(currentSource === 'live' ? 'RPT.switchToDb' : 'RPT.switchToLive') | translate">
+                    <button type="button" class="btn btn-toggle-source ds-btn ds-btn--secondary ds-btn--sm" (click)="toggleDataSource()" [title]="(currentSource === 'live' ? 'RPT.switchToDb' : 'RPT.switchToLive') | translate">
                         🔄 {{ (currentSource === 'live' ? 'RPT.viewDbData' : 'RPT.liveData') | translate }}
                     </button>
-                    <button class="btn btn-voir-plus" (click)="toggleShowAllMonths()" *ngIf="!hasSelectedRows() && currentSource !== 'live'" [title]="(showAllMonths ? 'RPT.showCurrentMonth' : 'RPT.showAllData') | translate">
+                    <button type="button" class="btn btn-voir-plus ds-btn ds-btn--secondary ds-btn--sm" (click)="toggleShowAllMonths()" *ngIf="!hasSelectedRows() && currentSource !== 'live'" [title]="(showAllMonths ? 'RPT.showCurrentMonth' : 'RPT.showAllData') | translate">
                         {{ (showAllMonths ? '📅' : '📋') }} {{ (showAllMonths ? 'RPT.currentMonth' : 'RPT.seeMore') | translate }}
                     </button>
                     <span class="report-display-mode" *ngIf="!hasSelectedRows() && currentSource !== 'live'">
@@ -203,28 +204,28 @@ export interface ReconciliationReportData {
                         ⏳ {{ (isLoadingLiveDetails ? 'RPT.loadingLiveDetails' : 'RPT.loadingPreviousDates') | translate }}
                     </span>
                     <span class="report-load-error" *ngIf="dbLoadError">{{ dbLoadError }}</span>
-                    <button class="btn btn-add" *ngIf="showExtendedReportActions" (click)="addNewRow()" [title]="'RPT.addNewRow' | translate">
+                    <button type="button" class="btn btn-add ds-btn ds-btn--primary ds-btn--sm" *ngIf="showExtendedReportActions" (click)="addNewRow()" [title]="'RPT.addNewRow' | translate">
                         ➕ {{ 'RPT.newRow' | translate }}
                     </button>
-                    <button class="btn btn-export" (click)="exportToExcel()" [disabled]="!reportData.length">
+                    <button type="button" class="btn btn-export ds-btn ds-btn--secondary ds-btn--sm" (click)="exportToExcel()" [disabled]="!reportData.length">
                         📥 {{ 'COMMON.actions.export' | translate }}
                     </button>
-                    <button class="btn btn-save-all" (click)="saveAll()" [disabled]="!hasSelectedRows()">
+                    <button type="button" class="btn btn-save-all ds-btn ds-btn--primary ds-btn--sm" (click)="saveAll()" [disabled]="!hasSelectedRows()">
                         💾 {{ 'RPT.save' | translate }}
                     </button>
-                    <button class="btn btn-dashboard" *ngIf="showExtendedReportActions" (click)="goToReconciliationDashboard()" [disabled]="!filteredReportData.length && !reportData.length">
+                    <button type="button" class="btn btn-dashboard ds-btn ds-btn--primary ds-btn--sm" *ngIf="showExtendedReportActions" (click)="goToReconciliationDashboard()" [disabled]="!filteredReportData.length && !reportData.length">
                         📈 {{ 'RPT.dashboard' | translate }}
                     </button>
-                    <button class="btn btn-toggle-actions" (click)="toggleActionsColumn()" [title]="(showActionsColumn ? 'RPT.hideActionsCol' : 'RPT.showActionsCol') | translate">
+                    <button type="button" class="btn btn-toggle-actions ds-btn ds-btn--secondary ds-btn--sm" (click)="toggleActionsColumn()" [title]="(showActionsColumn ? 'RPT.hideActionsCol' : 'RPT.showActionsCol') | translate">
                         {{ showActionsColumn ? '👁️' : '👁️‍🗨️' }} {{ (showActionsColumn ? 'RPT.hideActionsBtn' : 'RPT.showActionsBtn') | translate }}
                     </button>
-                    <button class="btn btn-close" (click)="goBack()">
+                    <button type="button" class="btn btn-close ds-btn ds-btn--secondary ds-btn--sm" (click)="goBack()">
                         ❌ {{ 'RPT.close' | translate }}
                     </button>
                 </div>
             </div>
 
-            <div class="report-filters">
+            <div class="report-filters ds-filter-bar">
                 <div class="filter-group" *ngIf="!hasSelectedRows()">
                     <mat-form-field appearance="fill" class="filter-mat-select">
                         <mat-label>{{ 'RPT.agency' | translate }}</mat-label>
@@ -280,7 +281,7 @@ export interface ReconciliationReportData {
                         type="date" 
                         [(ngModel)]="selectedDateDebut" 
                         (change)="filterReport()"
-                        class="filter-date"
+                        class="filter-date ds-input"
                         [placeholder]="'RPT.startDate' | translate">
                 </div>
                 <div class="filter-group" *ngIf="!hasSelectedRows()">
@@ -290,12 +291,12 @@ export interface ReconciliationReportData {
                             type="date" 
                             [(ngModel)]="selectedDateFin" 
                             (change)="filterReport()"
-                            class="filter-date"
+                            class="filter-date ds-input"
                             [placeholder]="'RPT.endDate' | translate">
                         <button 
                             type="button" 
                             (click)="clearDateFilters()" 
-                            class="btn-clear-dates"
+                            class="btn-clear-dates ds-btn ds-btn--secondary ds-btn--sm"
                             [title]="'RPT.clearDateFilters' | translate">
                             🗑️ Effacer dates
                         </button>
@@ -329,18 +330,18 @@ export interface ReconciliationReportData {
                     <div class="bulk-status-controls">
                         <select 
                             [(ngModel)]="bulkStatusSelection" 
-                            class="filter-select bulk-status-select">
+                            class="filter-select bulk-status-select ds-select">
                             <option value="">{{ 'RPT.selectStatus' | translate }}</option>
                             <option *ngFor="let status of statusOptions" [value]="status">{{ getDisplayStatus(status) }}</option>
                         </select>
-                        <button 
-                            class="btn btn-bulk-status" 
+                        <button type="button" 
+                            class="btn btn-bulk-status ds-btn ds-btn--primary ds-btn--sm" 
                             (click)="applyBulkStatusChange()" 
                             [disabled]="!bulkStatusSelection">
                             ✅ Appliquer
                         </button>
-                        <button 
-                            class="btn btn-clear-selection" 
+                        <button type="button" 
+                            class="btn btn-clear-selection ds-btn ds-btn--secondary ds-btn--sm" 
                             (click)="clearSelection()">
                             🗑️ {{ 'RPT.deselect' | translate }}
                         </button>
@@ -354,19 +355,19 @@ export interface ReconciliationReportData {
                     <div class="bulk-status-controls">
                         <select 
                             [(ngModel)]="bulkTraitementSelection" 
-                            class="filter-select bulk-status-select">
+                            class="filter-select bulk-status-select ds-select">
                             <option value="">{{ 'RPT.selectProcessing' | translate }}</option>
                             <option value="__CLEAR__">- (Effacer)</option>
                             <option *ngFor="let traitement of traitementOptions" [value]="traitement">{{ getTraitementDisplayLabel(traitement) }}</option>
                         </select>
-                        <button 
-                            class="btn btn-bulk-status" 
+                        <button type="button" 
+                            class="btn btn-bulk-status ds-btn ds-btn--primary ds-btn--sm" 
                             (click)="applyBulkTraitementChange()" 
                             [disabled]="!bulkTraitementSelection">
                             ✅ Appliquer
                         </button>
-                        <button 
-                            class="btn btn-clear-selection" 
+                        <button type="button" 
+                            class="btn btn-clear-selection ds-btn ds-btn--secondary ds-btn--sm" 
                             (click)="clearSelection()">
                             🗑️ {{ 'RPT.deselect' | translate }}
                         </button>
@@ -380,7 +381,7 @@ export interface ReconciliationReportData {
                     <div class="bulk-status-controls">
                         <button
                             type="button"
-                            class="btn btn-bulk-delete"
+                            class="btn btn-bulk-delete ds-btn ds-btn--danger ds-btn--sm"
                             (click)="applyBulkDelete()"
                             [disabled]="getBulkDeletableCount() === 0"
                             [title]="'RPT.deleteHint' | translate">
@@ -398,12 +399,12 @@ export interface ReconciliationReportData {
                             type="text" 
                             [(ngModel)]="ticketIdFilter" 
                             (ngModelChange)="onTicketIdFilterChange($event)"
-                            class="filter-date"
+                            class="filter-date ds-input"
                             [placeholder]="'RPT.searchTicketId' | translate">
                         <button 
                             type="button" 
                             (click)="clearTicketIdFilter()" 
-                            class="btn-clear-dates"
+                            class="btn-clear-dates ds-btn ds-btn--secondary ds-btn--sm"
                             [title]="'RPT.clearTicketFilter' | translate">
                             🗑️ Effacer
                         </button>
@@ -418,21 +419,21 @@ export interface ReconciliationReportData {
                         <div class="card-icon">🏢</div>
                         <div class="card-content">
                             <div class="card-title">{{ 'RPT.agencies' | translate }}</div>
-                            <div class="card-value">{{ kpiSummary.agencies }}</div>
+                            <div class="card-value ds-num">{{ kpiSummary.agencies }}</div>
                         </div>
                     </div>
                     <div class="summary-card">
                         <div class="card-icon">⚙️</div>
                         <div class="card-content">
                             <div class="card-title">{{ 'RPT.services' | translate }}</div>
-                            <div class="card-value">{{ kpiSummary.services }}</div>
+                            <div class="card-value ds-num">{{ kpiSummary.services }}</div>
                         </div>
                     </div>
                     <div class="summary-card">
                         <div class="card-icon">📊</div>
                         <div class="card-content">
                             <div class="card-title">{{ 'RPT.avgRateCard' | translate }}</div>
-                            <div class="card-value">{{ kpiSummary.averageMatchRate }}%</div>
+                            <div class="card-value ds-num">{{ kpiSummary.averageMatchRate }}%</div>
                         </div>
                     </div>
                     <div class="summary-card clickable-card" 
@@ -442,7 +443,7 @@ export interface ReconciliationReportData {
                         <div class="card-icon">⏳</div>
                         <div class="card-content">
                             <div class="card-title">{{ 'RPT.gapsInProgress' | translate }}</div>
-                            <div class="card-value">{{ kpiSummary.inProgressDiscrepancies | number }}</div>
+                            <div class="card-value ds-num">{{ kpiSummary.inProgressDiscrepancies | number }}</div>
                         </div>
                     </div>
                     <div class="summary-card clickable-card" 
@@ -452,7 +453,7 @@ export interface ReconciliationReportData {
                         <div class="card-icon">📊</div>
                         <div class="card-content">
                             <div class="card-title">{{ 'RPT.transactions' | translate }}</div>
-                            <div class="card-value">{{ kpiSummary.totalTransactions | number }}</div>
+                            <div class="card-value ds-num">{{ kpiSummary.totalTransactions | number }}</div>
                         </div>
                     </div>
                     <div class="summary-card clickable-card" 
@@ -462,20 +463,21 @@ export interface ReconciliationReportData {
                         <div class="card-icon">💰</div>
                         <div class="card-content">
                             <div class="card-title">{{ 'RPT.volume' | translate }}</div>
-                            <div class="card-value">{{ kpiSummary.totalVolume | number }}</div>
+                            <div class="card-value ds-num">{{ kpiSummary.totalVolume | number }}</div>
                         </div>
                     </div>
                 </div>
             </div>
 
-            <div class="report-table-container">
-                <table class="report-table">
+            <div class="report-table-container ds-table-scroll">
+                <table class="report-table ds-table">
                     <thead>
                         <tr>
                             <th class="col-expand" title="Historique (sauvegarde, statut, validation)"></th>
                             <th class="col-checkbox">
                                 <input 
-                                    type="checkbox" 
+                                    type="checkbox"
+                                    class="ds-checkbox"
                                     [checked]="isAllSelected()" 
                                     [indeterminate]="isSomeSelected()"
                                     (change)="toggleSelectAll($event)"
@@ -537,7 +539,8 @@ export interface ReconciliationReportData {
                             </td>
                             <td class="checkbox-cell">
                                 <input 
-                                    type="checkbox" 
+                                    type="checkbox"
+                                    class="ds-checkbox"
                                     [checked]="isRowSelected(item)"
                                     (change)="toggleRowSelection(item, $event)"
                                     [title]="'RPT.selectRow' | translate">
@@ -622,7 +625,7 @@ export interface ReconciliationReportData {
                                 <div class="ecart-cell-container">
                                     <ng-container *ngIf="editingRow !== item; else editBoOnly">
                                         <span class="ecart-value">{{item.boOnly | number}}</span>
-                                        <button 
+                                        <button type="button" 
                                             *ngIf="item.boOnly > 0"
                                             class="btn-transfer-ecart" 
                                             (click)="transferEcartToMatches(item, 'boOnly')"
@@ -647,7 +650,7 @@ export interface ReconciliationReportData {
                                 <div class="ecart-cell-container">
                                     <ng-container *ngIf="editingRow !== item; else editPartnerOnly">
                                         <span class="ecart-value">{{getDisplayPartnerOnly(item) | number}}</span>
-                                        <button 
+                                        <button type="button" 
                                             *ngIf="getDisplayPartnerOnly(item) > 0"
                                             class="btn-transfer-ecart" 
                                             (click)="transferEcartToMatches(item, 'partnerOnly')"
@@ -689,7 +692,7 @@ export interface ReconciliationReportData {
                                                 (ngModelChange)="onGlpiIdInputChange(item, $event)"
                                                 (blur)="onGlpiIdInputBlur(item)"
                                                 (keyup.enter)="onGlpiIdInputEnter(item)"/>
-                                            <button 
+                                            <button type="button" 
                                                 *ngIf="!item.glpiId || item.glpiId.trim() === ''" 
                                                 class="btn-glpi-create"
                                                 (click)="showTicketCreateOptionsPopup(item)"
@@ -712,7 +715,7 @@ export interface ReconciliationReportData {
                                               [title]="(isRowLocked(item) ? 'RPT.rowLocked' : 'RPT.clickToEdit') | translate">
                                             {{getDisplayStatus(item.status)}}
                                         </span>
-                                        <button 
+                                        <button type="button" 
                                             *ngIf="item.status === 'OK'"
                                             class="btn-releve" 
                                             (click)="showReleveModal(item)"
@@ -757,14 +760,14 @@ export interface ReconciliationReportData {
                             </td>
                             <td *ngIf="showActionsColumn" class="actions-cell">
                                 <ng-container *ngIf="editingRow !== item; else editingActions">
-                                    <button class="icon-btn icon-edit" 
+                                    <button type="button" class="icon-btn icon-edit" 
                                             [title]="'RPT.edit' | translate" 
                                             [attr.aria-label]="'RPT.edit' | translate" 
                                             (click)="startEdit(item)"
                                             [disabled]="isRowLocked(item)">
                                         ✏️
                                     </button>
-                                    <button class="icon-btn icon-delete" 
+                                    <button type="button" class="icon-btn icon-delete" 
                                             [title]="'RPT.delete' | translate" 
                                             [attr.aria-label]="'RPT.delete' | translate" 
                                             (click)="deleteRow(item)" 
@@ -773,8 +776,8 @@ export interface ReconciliationReportData {
                                     </button>
                                 </ng-container>
                                 <ng-template #editingActions>
-                                    <button class="icon-btn icon-save" [title]="'RPT.saveChanges' | translate" [attr.aria-label]="'RPT.save' | translate" (click)="saveEdit(item)">💾</button>
-                                    <button class="icon-btn icon-cancel" [title]="'RPT.cancel' | translate" [attr.aria-label]="'RPT.cancel' | translate" (click)="cancelEdit(item)">❌</button>
+                                    <button type="button" class="icon-btn icon-save" [title]="'RPT.saveChanges' | translate" [attr.aria-label]="'RPT.save' | translate" (click)="saveEdit(item)">💾</button>
+                                    <button type="button" class="icon-btn icon-cancel" [title]="'RPT.cancel' | translate" [attr.aria-label]="'RPT.cancel' | translate" (click)="cancelEdit(item)">❌</button>
                                 </ng-template>
                             </td>
                         </tr>
@@ -786,7 +789,7 @@ export interface ReconciliationReportData {
                                 </div>
                                 <div *ngIf="!isAuditLoading(item.id!) && getAuditRows(item.id!).length" class="audit-panel-card">
                                     <div class="audit-panel-head">{{ 'RPT.actionHistory' | translate }}</div>
-                                    <table class="audit-mini-table audit-mini-table--enhanced">
+                                    <table class="audit-mini-table audit-mini-table--enhanced ds-table">
                                         <thead>
                                             <tr>
                                                 <th class="audit-th-date">{{ 'RPT.dateCol' | translate }}</th>
@@ -822,50 +825,14 @@ export interface ReconciliationReportData {
 
             <!-- Contrôles de pagination -->
             <div *ngIf="filteredReportData && filteredReportData.length > 0" class="pagination-container">
-                <div class="pagination-info">
-                    <span>{{ 'RPT.paginationInfo' | translate: { start: getPaginationStartIndex(), end: getPaginationEndIndex(), total: filteredReportData?.length || 0 } }}</span>
-                </div>
-                <div class="pagination-controls">
-                    <button 
-                        class="pagination-btn" 
-                        (click)="goToPage(1)" 
-                        [disabled]="currentPage === 1"
-                        [title]="'RPT.firstPage' | translate">
-                        ⏮️
-                    </button>
-                    <button 
-                        class="pagination-btn" 
-                        (click)="previousPage()" 
-                        [disabled]="currentPage === 1"
-                        [title]="'RPT.previousPage' | translate">
-                        ⏪
-                    </button>
-                    
-                    <div class="page-numbers">
-                        <button 
-                            *ngFor="let page of getPageNumbers()" 
-                            class="page-number" 
-                            [class.active]="page === currentPage"
-                            (click)="goToPage(page)">
-                            {{page}}
-                        </button>
-                    </div>
-                    
-                    <button 
-                        class="pagination-btn" 
-                        (click)="nextPage()" 
-                        [disabled]="currentPage === totalPages"
-                        [title]="'RPT.nextPage' | translate">
-                        ⏩
-                    </button>
-                    <button 
-                        class="pagination-btn" 
-                        (click)="goToPage(totalPages)" 
-                        [disabled]="currentPage === totalPages"
-                        [title]="'RPT.lastPage' | translate">
-                        ⏭️
-                    </button>
-                </div>
+                <ds-pagination
+                    [page]="currentPage"
+                    [pageCount]="totalPages"
+                    [totalItems]="filteredReportData.length"
+                    [pageSize]="itemsPerPage"
+                    [itemLabel]="'RPT.lines' | translate"
+                    (pageChange)="goToPage($event)">
+                </ds-pagination>
             </div>
 
             <div *ngIf="!filteredReportData || !filteredReportData.length" class="no-data">
@@ -880,7 +847,7 @@ export interface ReconciliationReportData {
                 <div #releveExportContent>
                 <div class="modal-header-releve">
                     <h3>📋 {{ 'RPT.statementTitle' | translate }}</h3>
-                    <button class="modal-close-btn" (click)="closeReleveModal()">✕</button>
+                    <button type="button" class="modal-close-btn" (click)="closeReleveModal()">✕</button>
                 </div>
                 <div class="modal-body-releve" *ngIf="!isLoadingReleve">
                     <div class="releve-service-title">
@@ -940,7 +907,7 @@ export interface ReconciliationReportData {
                             </div>
                         </div>
                         <div class="releve-ecart-details" *ngIf="releveEcartData && releveEcartData.length > 0">
-                            <table class="releve-table">
+                            <table class="releve-table ds-table">
                                 <thead>
                                     <tr>
                                         <th>{{ 'RPT.agency' | translate }}</th>
@@ -982,7 +949,7 @@ export interface ReconciliationReportData {
                             </div>
                         </div>
                         <div class="releve-ecart-details">
-                            <table class="releve-table">
+                            <table class="releve-table ds-table">
                                 <thead>
                                     <tr>
                                         <th>{{ 'RPT.agency' | translate }}</th>
@@ -1022,7 +989,7 @@ export interface ReconciliationReportData {
                                 accept=".csv,.xls,.xlsx" 
                                 (change)="onReleveManualFileSelected($event)"
                                 style="display: none">
-                            <button type="button" class="btn-releve-upload" (click)="releveManualFileInput.click()" [disabled]="isReleveManualFileLoading">
+                            <button type="button" class="btn-releve-upload ds-btn ds-btn--secondary ds-btn--sm" (click)="releveManualFileInput.click()" [disabled]="isReleveManualFileLoading">
                                 {{ isReleveManualFileLoading ? '⏳ Chargement...' : '📤 Charger un fichier (CSV / XLS)' }}
                             </button>
                             <span class="releve-upload-hint">{{ 'RPT.uploadHint' | translate }}</span>
@@ -1073,7 +1040,7 @@ export interface ReconciliationReportData {
                                 accept=".csv,.xls,.xlsx" 
                                 (change)="onReleveAnnuleFileSelected($event)"
                                 style="display: none">
-                            <button type="button" class="btn-releve-upload" (click)="releveAnnuleFileInput.click()" [disabled]="isReleveAnnuleFileLoading">
+                            <button type="button" class="btn-releve-upload ds-btn ds-btn--secondary ds-btn--sm" (click)="releveAnnuleFileInput.click()" [disabled]="isReleveAnnuleFileLoading">
                                 {{ isReleveAnnuleFileLoading ? '⏳ Chargement...' : '📤 Charger un fichier (CSV / XLS)' }}
                             </button>
                             <span class="releve-upload-hint">{{ 'RPT.uploadHintCancel' | translate }}</span>
@@ -1124,7 +1091,7 @@ export interface ReconciliationReportData {
                                 accept=".csv,.xls,.xlsx" 
                                 (change)="onReleveRembourseFileSelected($event)"
                                 style="display: none">
-                            <button type="button" class="btn-releve-upload" (click)="releveRembourseFileInput.click()" [disabled]="isReleveRembourseFileLoading">
+                            <button type="button" class="btn-releve-upload ds-btn ds-btn--secondary ds-btn--sm" (click)="releveRembourseFileInput.click()" [disabled]="isReleveRembourseFileLoading">
                                 {{ isReleveRembourseFileLoading ? '⏳ Chargement...' : '📤 Charger un fichier (CSV / XLS)' }}
                             </button>
                             <span class="releve-upload-hint">{{ 'RPT.uploadHint' | translate }}</span>
@@ -1208,22 +1175,22 @@ export interface ReconciliationReportData {
                 </div>
                 </div>
                 <div class="modal-footer-releve">
-                    <button class="btn btn-export-releve" (click)="exportReleveToExcel()" [disabled]="!releveData">
+                    <button type="button" class="btn btn-export-releve ds-btn ds-btn--secondary ds-btn--sm" (click)="exportReleveToExcel()" [disabled]="!releveData">
                         📥 {{ 'COMMON.actions.export' | translate }}
                     </button>
-                    <button class="btn btn-export-releve" (click)="exportReleveToPdf()" [disabled]="!releveData">
+                    <button type="button" class="btn btn-export-releve ds-btn ds-btn--secondary ds-btn--sm" (click)="exportReleveToPdf()" [disabled]="!releveData">
                         🧾 {{ 'RPT.exportPdf' | translate }}
                     </button>
-                    <button class="btn btn-export-releve" (click)="saveReleveManualData(true)" [disabled]="!releveData || isSavingReleveManualData || !hasPendingReleveManualChanges">
+                    <button type="button" class="btn btn-export-releve ds-btn ds-btn--secondary ds-btn--sm" (click)="saveReleveManualData(true)" [disabled]="!releveData || isSavingReleveManualData || !hasPendingReleveManualChanges">
                         {{ isSavingReleveManualData ? ('RPT.savingEntries' | translate) : ('💾 ' + ('RPT.saveEntries' | translate)) }}
                     </button>
-                    <button class="btn btn-validate-releve" (click)="validateReleve()" [disabled]="isReleveValidateButtonDisabled()" [class.btn-validated]="isReleveCdoClosed() || isReleveFullyClosed()" [title]="getReleveActionButtonTitle()">
+                    <button type="button" class="btn btn-validate-releve ds-btn ds-btn--primary ds-btn--sm" (click)="validateReleve()" [disabled]="isReleveValidateButtonDisabled()" [class.btn-validated]="isReleveCdoClosed() || isReleveFullyClosed()" [title]="getReleveActionButtonTitle()">
                         {{ getReleveActionButtonLabel() }}
                     </button>
-                    <button class="btn btn-reject-releve" (click)="openRejectReleveModal()" [disabled]="!releveData || isRejectingReleve">
+                    <button type="button" class="btn btn-reject-releve ds-btn ds-btn--danger ds-btn--sm" (click)="openRejectReleveModal()" [disabled]="!releveData || isRejectingReleve">
                         ⛔ {{ 'RPT.rejectReleve' | translate }}
                     </button>
-                    <button class="btn btn-close-modal" (click)="closeReleveModal()">{{ 'RPT.close' | translate }}</button>
+                    <button type="button" class="btn btn-close-modal ds-btn ds-btn--secondary ds-btn--sm" (click)="closeReleveModal()">{{ 'RPT.close' | translate }}</button>
 </div>
         </div>
     </div>
@@ -1257,7 +1224,7 @@ export interface ReconciliationReportData {
                 <label class="reject-label" for="rejectReason">
                     {{ 'RPT.rejectReason' | translate }}<span class="required">*</span>
                 </label>
-                <select id="rejectReason" name="rejectReason" class="reject-input" [(ngModel)]="rejectReleveReason">
+                <select id="rejectReason" name="rejectReason" class="reject-input ds-select" [(ngModel)]="rejectReleveReason">
                     <option value="">{{ 'RPT.selectReason' | translate }}</option>
                     <option value="incorrect_data">{{ 'RPT.reasonIncorrectData' | translate }}</option>
                     <option value="incomplete_file">{{ 'RPT.reasonIncompleteFile' | translate }}</option>
@@ -1273,7 +1240,7 @@ export interface ReconciliationReportData {
                 <label class="reject-label" for="otherReason">
                     {{ 'RPT.otherReason' | translate }}<span class="required">*</span>
                 </label>
-                <input id="otherReason" name="otherReason" type="text" class="reject-input"
+                <input id="otherReason" name="otherReason" type="text" class="reject-input ds-input"
                        [(ngModel)]="rejectReleveOtherReason"
                        [placeholder]="'RPT.otherReasonPlaceholder' | translate" />
                 <span class="reject-error" *ngIf="rejectFormSubmitted && !rejectReleveOtherReason?.trim()">{{ 'RPT.otherReasonRequired' | translate }}</span>
@@ -1283,7 +1250,7 @@ export interface ReconciliationReportData {
                 <label class="reject-label" for="rejectComment">
                     {{ 'RPT.rejectComment' | translate }}<span class="required">*</span>
                 </label>
-                <textarea id="rejectComment" name="rejectComment" rows="4" class="reject-input reject-textarea"
+                <textarea id="rejectComment" name="rejectComment" rows="4" class="reject-input reject-textarea ds-input"
                           [(ngModel)]="rejectReleveCommentaire"
                           [placeholder]="'RPT.rejectCommentPlaceholder' | translate"></textarea>
                 <div class="reject-hint-row">
@@ -1299,10 +1266,10 @@ export interface ReconciliationReportData {
         </div>
 
         <div class="reject-footer">
-            <button type="button" class="btn btn-cancel-reject" (click)="closeRejectReleveModal()" [disabled]="isRejectingReleve">
+            <button type="button" class="btn btn-cancel-reject ds-btn ds-btn--secondary" (click)="closeRejectReleveModal()" [disabled]="isRejectingReleve">
                 {{ 'RPT.close' | translate }}
             </button>
-            <button type="button" class="btn btn-confirm-reject" (click)="confirmRejectReleve()" [disabled]="isRejectingReleve">
+            <button type="button" class="btn btn-confirm-reject ds-btn ds-btn--danger" (click)="confirmRejectReleve()" [disabled]="isRejectingReleve">
                 {{ isRejectingReleve ? ('RPT.rejecting' | translate) : ('RPT.confirmReject' | translate) }}
             </button>
         </div>
@@ -1314,36 +1281,10 @@ export interface ReconciliationReportData {
             display: block;
             max-width: 100%;
             overflow-x: hidden;
-            --rd-bg: #F2F0EB;
-            --rd-surface: #FAFAF8;
-            --rd-surface2: rgba(255, 255, 255, 0.85);
-            --rd-border: #E4E0D8;
-            --rd-border2: #D6D0C6;
-            --rd-navy: #1A2535;
-            --rd-navy2: #243044;
-            --rd-text1: #1A1714;
-            --rd-text2: #5C5650;
-            --rd-text3: #9B9489;
-            --rd-green: #2E6B47;
-            --rd-green-l: #EAF4EE;
-            --rd-green-m: #5A9E74;
-            --rd-amber: #A85F1E;
-            --rd-amber-l: #FBF0E4;
-            --rd-amber-m: #D4915A;
-            --rd-blue: #1E4A7A;
-            --rd-blue-l: #E6EFF8;
-            --rd-blue-m: #5A88B8;
-            --rd-red: #8B2635;
-            --rd-red-l: #FCEAEC;
-            --rd-red-m: #C4566A;
-            --rd-r: 18px;
-            --rd-r-sm: 11px;
-            --rd-shadow: 0 2px 16px rgba(26, 23, 20, 0.07);
-            --rd-shadow-lg: 0 8px 40px rgba(26, 23, 20, 0.12);
         }
 
         .reconciliation-report-page {
-            font-family: 'Sora', sans-serif;
+            font-family: var(--font-ui);
             background: var(--rd-bg);
             min-height: 100vh;
             width: 100%;
@@ -1370,9 +1311,9 @@ export interface ReconciliationReportData {
         }
 
         .nav-brand {
-            font-family: 'Instrument Serif', serif;
+            font-family: var(--font-display);
             font-size: 17px;
-            color: #fff;
+            color: var(--color-nav-text);
             letter-spacing: 0.01em;
             display: flex;
             align-items: center;
@@ -1424,7 +1365,7 @@ export interface ReconciliationReportData {
             padding: 7px 16px;
             border-radius: 8px;
             border: none;
-            font-family: 'Sora', sans-serif;
+            font-family: var(--font-ui);
             font-size: 13px;
             font-weight: 600;
             cursor: pointer;
@@ -1439,7 +1380,7 @@ export interface ReconciliationReportData {
 
         .nav-btn.primary {
             background: var(--rd-green-m);
-            color: #fff;
+            color: var(--color-nav-text);
         }
 
         .nav-btn.primary:hover:not(:disabled) {
@@ -1492,7 +1433,7 @@ export interface ReconciliationReportData {
         }
 
         .ph-title-report {
-            font-family: 'Instrument Serif', serif;
+            font-family: var(--font-display);
             font-size: 28px;
             font-weight: 400;
             color: var(--rd-text1);
@@ -1545,8 +1486,8 @@ export interface ReconciliationReportData {
         .hk-strip-value {
             font-size: 22px;
             font-weight: 700;
-            color: #fff;
-            font-family: 'Instrument Serif', serif;
+            color: var(--color-nav-text);
+            font-family: var(--font-display);
         }
 
         .main {
@@ -1558,9 +1499,9 @@ export interface ReconciliationReportData {
         }
 
         .page-header {
-            background: #f8f9fa;
+            background: var(--color-surface-sunken);
             padding: 15px 20px;
-            border-bottom: 1px solid #dee2e6;
+            border-bottom: 1px solid var(--color-border);
             min-width: 0;
         }
 
@@ -1570,7 +1511,7 @@ export interface ReconciliationReportData {
         }
 
         .breadcrumb-link {
-            color: #007bff;
+            color: var(--color-info-solid);
             text-decoration: none;
             font-weight: 500;
             padding: 8px 12px;
@@ -1579,9 +1520,9 @@ export interface ReconciliationReportData {
         }
 
         .breadcrumb-link:hover {
-            background: #e9ecef;
+            background: var(--color-surface-sunken);
             text-decoration: none;
-            color: #0056b3;
+            color: var(--color-info-solid);
         }
 
         .reconciliation-report-container {
@@ -1597,7 +1538,7 @@ export interface ReconciliationReportData {
 
         .report-header {
             background: var(--rd-navy);
-            color: white;
+            color: var(--color-accent-contrast);
             padding: 20px;
             display: flex;
             justify-content: space-between;
@@ -1620,7 +1561,7 @@ export interface ReconciliationReportData {
             width: 100%;
         }
         .magic-report-scope-list {
-            color: #ffd98a;
+            color: var(--color-warning-solid);
             font-weight: 600;
         }
 
@@ -1644,8 +1585,8 @@ export interface ReconciliationReportData {
             font-size: 0.8rem;
             font-weight: 600;
         }
-        .badge-live { background: #e6f4ea; color: #1e7e34; }
-        .badge-db { background: #e8f0fe; color: #1b6ec2; }
+        .badge-live { background: var(--color-success-bg); color: var(--color-success-text); }
+        .badge-db { background: var(--color-info-bg); color: var(--color-info-solid); }
 
         .btn {
             padding: 8px 16px;
@@ -1658,82 +1599,82 @@ export interface ReconciliationReportData {
         }
 
         .btn-export {
-            background: #28a745;
-            color: white;
+            background: var(--color-success);
+            color: var(--color-accent-contrast);
         }
 
         .btn-export:hover:not(:disabled) {
-            background: #218838;
+            background: var(--color-success);
             transform: translateY(-1px);
         }
 
         .btn-close {
-            background: #dc3545;
-            color: white;
+            background: var(--color-error);
+            color: var(--color-accent-contrast);
         }
 
         .btn-save-all {
-            background: #0069d9;
-            color: #fff;
+            background: var(--color-info-solid);
+            color: var(--color-nav-text);
         }
 
         .btn-report {
-            background: #6f42c1;
-            color: white;
+            background: var(--color-duplicate);
+            color: var(--color-accent-contrast);
         }
 
         .btn-report:hover:not(:disabled) {
-            background: #5a32a3;
+            background: var(--color-duplicate);
             transform: translateY(-1px);
         }
 
         .btn-dashboard {
-            background: #fd7e14;
-            color: white;
+            background: var(--color-warning-solid);
+            color: var(--color-accent-contrast);
         }
 
         .btn-dashboard:hover:not(:disabled) {
-            background: #e8650e;
+            background: var(--color-warning-text);
             transform: translateY(-1px);
         }
 
         .btn-suivi-ecarts {
-            background: #6f42c1;
-            color: white;
+            background: var(--color-duplicate);
+            color: var(--color-accent-contrast);
         }
 
         .btn-suivi-ecarts:hover:not(:disabled) {
-            background: #5a32a3;
+            background: var(--color-duplicate);
             transform: translateY(-1px);
         }
 
         .btn-toggle-source {
-            background: #6c757d;
-            color: white;
+            background: var(--color-text-muted);
+            color: var(--color-accent-contrast);
         }
 
         .btn-toggle-source:hover:not(:disabled) {
-            background: #5a6268;
+            background: var(--color-text-muted);
             transform: translateY(-1px);
         }
 
         .btn-toggle-actions {
-            background: #795548;
-            color: white;
+            background: var(--color-type-compense);
+            color: var(--color-accent-contrast);
         }
 
         .btn-toggle-actions:hover:not(:disabled) {
-            background: #6d4c41;
+            background: var(--color-type-compense);
             transform: translateY(-1px);
         }
 
         .btn-add {
-            background: #17a2b8;
-            color: white;
+            background: var(--color-info-solid);
+            color: var(--color-accent-contrast);
         }
 
         .btn-add:hover:not(:disabled) {
-            background: #138496;
+            background: var(--color-info-text);
             transform: translateY(-1px);
         }
 
@@ -1747,13 +1688,13 @@ export interface ReconciliationReportData {
             border-radius: 4px;
         }
         .icon-btn:disabled { opacity: 0.4; cursor: not-allowed; }
-        .icon-save { color: #28a745; }
+        .icon-save { color: var(--color-success); }
         .icon-save:hover { background: rgba(40,167,69,0.1); }
-        .icon-delete { color: #dc3545; }
+        .icon-delete { color: var(--color-error); }
         .icon-delete:hover { background: rgba(220,53,69,0.1); }
 
         .btn-close:hover {
-            background: #c82333;
+            background: var(--color-error-solid);
             transform: translateY(-1px);
         }
 
@@ -1764,8 +1705,8 @@ export interface ReconciliationReportData {
 
         .report-filters {
             padding: 20px;
-            background: #f8f9fa;
-            border-bottom: 1px solid #dee2e6;
+            background: var(--color-surface-sunken);
+            border-bottom: 1px solid var(--color-border);
             display: flex;
             gap: 15px;
             flex-wrap: wrap;
@@ -1782,26 +1723,26 @@ export interface ReconciliationReportData {
 
         .filter-group label {
             font-weight: 600;
-            color: #495057;
+            color: var(--color-text-muted);
             font-size: 0.9rem;
         }
 
         .filter-group select {
             padding: 8px 12px;
-            border: 1px solid #ced4da;
+            border: 1px solid var(--color-border);
             border-radius: 6px;
             font-size: 0.9rem;
-            background: white;
+            background: var(--color-surface);
             min-width: 120px;
             width: 100%;
             max-width: 180px;
         }
 
         .bulk-status-group {
-            background: #f8f9fa;
+            background: var(--color-surface-sunken);
             padding: 15px;
             border-radius: 8px;
-            border: 2px solid #dee2e6;
+            border: 2px solid var(--color-border);
             margin-top: 20px;
         }
 
@@ -1819,8 +1760,8 @@ export interface ReconciliationReportData {
         }
 
         .btn-bulk-status {
-            background: linear-gradient(135deg, #28a745 0%, #20c997 100%);
-            color: white;
+            background: linear-gradient(135deg, var(--color-success) 0%, var(--color-success-solid) 100%);
+            color: var(--color-accent-contrast);
             border: none;
             padding: 8px 20px;
             border-radius: 6px;
@@ -1830,7 +1771,7 @@ export interface ReconciliationReportData {
         }
 
         .btn-bulk-status:hover:not(:disabled) {
-            background: linear-gradient(135deg, #218838 0%, #1ea085 100%);
+            background: linear-gradient(135deg, var(--color-success) 0%, var(--color-success-solid) 100%);
             transform: translateY(-1px);
             box-shadow: 0 4px 8px rgba(40, 167, 69, 0.3);
         }
@@ -1845,8 +1786,8 @@ export interface ReconciliationReportData {
         }
 
         .btn-bulk-delete {
-            background: linear-gradient(135deg, #dc3545 0%, #c82333 100%);
-            color: white;
+            background: linear-gradient(135deg, var(--color-error) 0%, var(--color-error-solid) 100%);
+            color: var(--color-accent-contrast);
             border: none;
             padding: 8px 20px;
             border-radius: 6px;
@@ -1856,7 +1797,7 @@ export interface ReconciliationReportData {
         }
 
         .btn-bulk-delete:hover:not(:disabled) {
-            background: linear-gradient(135deg, #c82333 0%, #bd2130 100%);
+            background: linear-gradient(135deg, var(--color-error-solid) 0%, var(--color-error-solid) 100%);
             transform: translateY(-1px);
             box-shadow: 0 4px 8px rgba(220, 53, 69, 0.35);
         }
@@ -1867,14 +1808,14 @@ export interface ReconciliationReportData {
         }
 
         .selection-hint {
-            color: #6c757d;
+            color: var(--color-text-muted);
             font-size: 0.85rem;
             max-width: 420px;
         }
 
         .btn-clear-selection {
-            background: linear-gradient(135deg, #6c757d 0%, #5a6268 100%);
-            color: white;
+            background: linear-gradient(135deg, var(--color-text-muted) 0%, var(--color-text-muted) 100%);
+            color: var(--color-accent-contrast);
             border: none;
             padding: 8px 20px;
             border-radius: 6px;
@@ -1884,7 +1825,7 @@ export interface ReconciliationReportData {
         }
 
         .btn-clear-selection:hover:not(:disabled) {
-            background: linear-gradient(135deg, #5a6268 0%, #495057 100%);
+            background: linear-gradient(135deg, var(--color-text-muted) 0%, var(--color-text-muted) 100%);
             transform: translateY(-1px);
             box-shadow: 0 4px 8px rgba(108, 117, 125, 0.3);
         }
@@ -1895,20 +1836,20 @@ export interface ReconciliationReportData {
         }
 
         .selection-count {
-            color: #495057;
+            color: var(--color-text-muted);
             font-weight: 600;
             padding: 8px 15px;
-            background: #e9ecef;
+            background: var(--color-surface-sunken);
             border-radius: 6px;
             font-size: 0.9rem;
         }
 
         .filter-input {
             padding: 8px 12px;
-            border: 1px solid #ced4da;
+            border: 1px solid var(--color-border);
             border-radius: 6px;
             font-size: 0.9rem;
-            background: white;
+            background: var(--color-surface);
             min-width: 140px;
             width: 100%;
             max-width: 180px;
@@ -1917,16 +1858,16 @@ export interface ReconciliationReportData {
 
         .filter-input:focus {
             outline: none;
-            border-color: #007bff;
+            border-color: var(--color-info-solid);
             box-shadow: 0 0 0 2px rgba(0, 123, 255, 0.25);
         }
 
         .filter-date {
             padding: 8px 12px;
-            border: 1px solid #ced4da;
+            border: 1px solid var(--color-border);
             border-radius: 6px;
             font-size: 0.9rem;
-            background: white;
+            background: var(--color-surface);
             min-width: 140px;
             width: 100%;
             max-width: 160px;
@@ -1935,7 +1876,7 @@ export interface ReconciliationReportData {
 
         .filter-date:focus {
             outline: none;
-            border-color: #007bff;
+            border-color: var(--color-info-solid);
             box-shadow: 0 0 0 2px rgba(0, 123, 255, 0.25);
         }
 
@@ -1948,10 +1889,10 @@ export interface ReconciliationReportData {
 
         .filter-select {
             padding: 8px 12px;
-            border: 1px solid #ced4da;
+            border: 1px solid var(--color-border);
             border-radius: 6px;
             font-size: 0.9rem;
-            background: white;
+            background: var(--color-surface);
             min-width: 120px;
             width: 100%;
             max-width: 180px;
@@ -1960,7 +1901,7 @@ export interface ReconciliationReportData {
 
         .filter-select:focus {
             outline: none;
-            border-color: #007bff;
+            border-color: var(--color-info-solid);
             box-shadow: 0 0 0 2px rgba(0, 123, 255, 0.25);
         }
 
@@ -1981,9 +1922,9 @@ export interface ReconciliationReportData {
 
         .btn-clear-dates {
             padding: 8px 12px;
-            border: 1px solid #dc3545;
-            background: #dc3545;
-            color: white;
+            border: 1px solid var(--color-error);
+            background: var(--color-error);
+            color: var(--color-accent-contrast);
             border-radius: 6px;
             font-size: 0.9rem;
             cursor: pointer;
@@ -1992,8 +1933,8 @@ export interface ReconciliationReportData {
         }
 
         .btn-clear-dates:hover {
-            background: #c82333;
-            border-color: #bd2130;
+            background: var(--color-error-solid);
+            border-color: var(--color-error-solid);
             transform: translateY(-1px);
         }
 
@@ -2002,17 +1943,17 @@ export interface ReconciliationReportData {
         }
 
         .btn-voir-plus {
-            background: #17a2b8;
-            color: white;
+            background: var(--color-info-solid);
+            color: var(--color-accent-contrast);
         }
         .btn-voir-plus:hover:not(:disabled) {
-            background: #138496;
+            background: var(--color-info-text);
             transform: translateY(-1px);
         }
 
         .report-summary {
             padding: 20px;
-            background: #f8f9fa;
+            background: var(--color-surface-sunken);
         }
 
         .summary-cards {
@@ -2023,7 +1964,7 @@ export interface ReconciliationReportData {
         }
 
         .summary-card {
-            background: white;
+            background: var(--color-surface);
             border-radius: 8px;
             padding: 15px;
             display: flex;
@@ -2040,12 +1981,12 @@ export interface ReconciliationReportData {
         .summary-card.clickable-card:hover {
             transform: translateY(-2px);
             box-shadow: 0 4px 8px rgba(0,0,0,0.15);
-            background: #f8f9fa;
+            background: var(--color-surface-sunken);
         }
 
         .summary-card.clickable-card.active {
-            background: #e3f2fd;
-            border: 2px solid #2196f3;
+            background: var(--color-info-bg);
+            border: 2px solid var(--color-accent);
             box-shadow: 0 4px 12px rgba(33, 150, 243, 0.3);
         }
 
@@ -2059,7 +2000,7 @@ export interface ReconciliationReportData {
 
         .card-title {
             font-size: 0.8rem;
-            color: #6c757d;
+            color: var(--color-text-muted);
             font-weight: 500;
             margin-bottom: 4px;
         }
@@ -2067,7 +2008,7 @@ export interface ReconciliationReportData {
         .card-value {
             font-size: 1.2rem;
             font-weight: 700;
-            color: #495057;
+            color: var(--color-text-muted);
         }
 
         .report-table-container {
@@ -2086,12 +2027,12 @@ export interface ReconciliationReportData {
         }
 
         .report-table th {
-            background: #e9ecef;
+            background: var(--color-surface-sunken);
             padding: 12px 8px;
             text-align: left;
             font-weight: 600;
-            color: #495057;
-            border-bottom: 2px solid #dee2e6;
+            color: var(--color-text-muted);
+            border-bottom: 2px solid var(--color-border);
             position: sticky;
             top: 0;
             z-index: 10;
@@ -2100,16 +2041,16 @@ export interface ReconciliationReportData {
 
         .report-table td {
             padding: 10px 8px;
-            border-bottom: 1px solid #dee2e6;
+            border-bottom: 1px solid var(--color-border);
         }
 
         .report-table tr:hover {
-            background: #f8f9fa;
+            background: var(--color-surface-sunken);
         }
 
         .number-cell {
             text-align: right;
-            font-family: 'Courier New', monospace;
+            font-family: var(--font-mono);
         }
 
         .text-cell { text-align: left; }
@@ -2125,12 +2066,12 @@ export interface ReconciliationReportData {
             transition: background 0.2s ease, color 0.2s ease;
         }
         th.th-filter-ecart:hover {
-            background: #f0f4f8;
-            color: #1565c0;
+            background: var(--color-surface-sunken);
+            color: var(--color-info-solid);
         }
         th.th-filter-ecart-active {
-            background: #e3f2fd !important;
-            color: #0d47a1;
+            background: var(--color-info-bg) !important;
+            color: var(--color-info-text);
             text-decoration-style: solid;
         }
         .col-select { text-align: left; }
@@ -2142,8 +2083,8 @@ export interface ReconciliationReportData {
         .expand-cell { text-align: center; vertical-align: middle; }
         .btn-row-expand {
             border: none;
-            background: #e9ecef;
-            color: #495057;
+            background: var(--color-surface-sunken);
+            color: var(--color-text-muted);
             border-radius: 4px;
             width: 28px;
             height: 28px;
@@ -2152,58 +2093,58 @@ export interface ReconciliationReportData {
             line-height: 1;
             padding: 0;
         }
-        .btn-row-expand:hover { background: #dee2e6; }
-        .btn-row-expand.open { background: #cce5ff; color: #004085; }
+        .btn-row-expand:hover { background: var(--color-border); }
+        .btn-row-expand.open { background: var(--color-info-bg); color: var(--color-info-text); }
         .expand-placeholder { display: inline-block; width: 28px; }
-        .row-audit-open { box-shadow: inset 3px 0 0 #1e4a7a; }
+        .row-audit-open { box-shadow: inset 3px 0 0 var(--rd-blue); }
         .audit-detail-row td.audit-detail-cell {
             padding: 0 12px 12px 12px !important;
-            background: linear-gradient(to bottom, #eef2f7 0%, #f8f9fa 100%);
-            border-bottom: 1px solid #ced4da;
+            background: linear-gradient(to bottom, var(--color-surface-sunken) 0%, var(--color-surface-sunken) 100%);
+            border-bottom: 1px solid var(--color-border);
         }
         .service-group-header {
-            background: linear-gradient(180deg, #eaf1fb 0%, #f6f9fe 100%);
+            background: linear-gradient(180deg, var(--color-info-bg) 0%, var(--color-info-bg) 100%);
         }
         .service-group-header td.service-group-header-cell {
             padding: 8px 12px !important;
-            border-top: 2px solid #c9d8ef;
-            border-bottom: 1px solid #d5e0f0;
+            border-top: 2px solid var(--color-info-border);
+            border-bottom: 1px solid var(--color-info-border);
         }
         .service-group-header-dot {
             display: inline-block;
             width: 8px;
             height: 8px;
             border-radius: 50%;
-            background: var(--rd-blue, #2f6bb0);
+            background: var(--rd-blue);
             margin-right: 8px;
             vertical-align: middle;
         }
         .service-group-header-label {
             font-weight: 700;
             font-size: 0.9rem;
-            color: var(--rd-blue, #2f6bb0);
+            color: var(--rd-blue);
             text-transform: uppercase;
             letter-spacing: 0.3px;
         }
         .service-group-header-count {
             margin-left: 12px;
             font-size: 0.8rem;
-            color: #66727f;
+            color: var(--color-text-muted);
             font-weight: 600;
         }
-        .audit-detail-inner { padding: 10px 4px 4px 4px; font-size: 0.82rem; color: #495057; }
+        .audit-detail-inner { padding: 10px 4px 4px 4px; font-size: 0.82rem; color: var(--color-text-muted); }
         .audit-empty { font-style: italic; max-width: 900px; }
         .audit-mini-table {
             width: 100%;
             border-collapse: collapse;
             font-size: 0.82rem;
-            background: #fff;
-            border: 1px solid #dee2e6;
+            background: var(--color-surface);
+            border: 1px solid var(--color-border);
             border-radius: 6px;
             overflow: hidden;
         }
         .audit-mini-table th {
-            background: #e9ecef;
+            background: var(--color-surface-sunken);
             padding: 8px 10px;
             text-align: left;
             font-weight: 600;
@@ -2211,38 +2152,38 @@ export interface ReconciliationReportData {
         }
         .audit-mini-table td {
             padding: 8px 10px;
-            border-top: 1px solid #eee;
+            border-top: 1px solid var(--color-border);
             vertical-align: top;
         }
-        .audit-td-date { white-space: nowrap; font-family: 'Courier New', monospace; font-size: 0.8rem; }
-        .audit-td-detail { word-break: break-word; max-width: 320px; color: #343a40; }
-        .audit-td-event { color: #212529; }
-        .audit-td-user { font-weight: 500; color: #1e4a7a; }
+        .audit-td-date { white-space: nowrap; font-family: var(--font-mono); font-size: 0.8rem; }
+        .audit-td-detail { word-break: break-word; max-width: 320px; color: var(--color-text-primary); }
+        .audit-td-event { color: var(--color-text-primary); }
+        .audit-td-user { font-weight: 500; color: var(--rd-blue); }
         .audit-panel-card {
-            border: 1px solid #ced4da;
+            border: 1px solid var(--color-border);
             border-radius: 8px;
-            background: #fff;
+            background: var(--color-surface);
             box-shadow: 0 1px 4px rgba(0, 0, 0, 0.06);
             overflow: hidden;
             max-width: 100%;
         }
         .audit-panel-head {
             padding: 10px 12px;
-            background: linear-gradient(180deg, #f8f9fb 0%, #eef1f5 100%);
-            border-bottom: 1px solid #dee2e6;
+            background: linear-gradient(180deg, var(--color-surface-sunken) 0%, var(--color-surface-sunken) 100%);
+            border-bottom: 1px solid var(--color-border);
             font-size: 0.72rem;
             font-weight: 700;
             letter-spacing: 0.08em;
             text-transform: uppercase;
-            color: #495057;
+            color: var(--color-text-muted);
         }
         .audit-mini-table--enhanced { border-radius: 0; border: none; box-shadow: none; }
         .audit-mini-table--enhanced th {
             font-size: 0.68rem;
             letter-spacing: 0.06em;
             text-transform: uppercase;
-            color: #495057;
-            background: #f1f3f5;
+            color: var(--color-text-muted);
+            background: var(--color-surface-sunken);
         }
         .audit-th-date { min-width: 8.5rem; }
         .audit-th-pill { text-align: center; }
@@ -2257,36 +2198,36 @@ export interface ReconciliationReportData {
             cursor: pointer;
         }
         .row-selected {
-            background-color: #e3f2fd !important;
+            background-color: var(--color-info-bg) !important;
         }
         .row-selected:hover {
-            background-color: #bbdefb !important;
+            background-color: var(--color-info-bg) !important;
         }
         /* Mise en évidence des lignes selon l'étape de traitement */
         .row-traitement-support {
             background-color: rgba(254, 243, 199, 0.35) !important;
-            border-left: 4px solid #f59e0b;
+            border-left: 4px solid var(--color-warning-solid);
         }
         .row-traitement-support:hover {
             background-color: rgba(253, 230, 138, 0.45) !important;
         }
         .row-traitement-cdo {
             background-color: rgba(209, 236, 241, 0.45) !important;
-            border-left: 4px solid #17a2b8;
+            border-left: 4px solid var(--color-info-solid);
         }
         .row-traitement-cdo:hover {
             background-color: rgba(190, 229, 235, 0.55) !important;
         }
         .row-traitement-group {
             background-color: rgba(219, 234, 254, 0.4) !important;
-            border-left: 4px solid #3b82f6;
+            border-left: 4px solid var(--color-info-solid);
         }
         .row-traitement-group:hover {
             background-color: rgba(191, 219, 254, 0.5) !important;
         }
         .row-traitement-termine {
             background-color: rgba(209, 250, 229, 0.45) !important;
-            border-left: 4px solid #10b981;
+            border-left: 4px solid var(--color-success-solid);
         }
         .row-traitement-termine:hover {
             background-color: rgba(167, 243, 208, 0.55) !important;
@@ -2315,13 +2256,13 @@ export interface ReconciliationReportData {
             overflow: hidden;
             text-overflow: ellipsis;
             font-weight: 500;
-            color: #495057;
+            color: var(--color-text-muted);
         }
         
         .service-text:hover {
             white-space: normal;
             word-wrap: break-word;
-            background: #f8f9fa;
+            background: var(--color-surface-sunken);
             padding: 2px 4px;
             border-radius: 4px;
             z-index: 10;
@@ -2336,20 +2277,20 @@ export interface ReconciliationReportData {
             overflow: hidden;
             text-overflow: ellipsis;
             font-weight: 500;
-            color: #495057;
+            color: var(--color-text-muted);
         }
         
         .country-text:hover {
             white-space: normal;
             word-wrap: break-word;
-            background: #f8f9fa;
+            background: var(--color-surface-sunken);
             padding: 2px 4px;
             border-radius: 4px;
             z-index: 10;
             position: relative;
         }
         .glpi-cell { display: flex; gap: 8px; align-items: center; }
-        .glpi-link { color: #007bff; text-decoration: none; font-weight: 600; }
+        .glpi-link { color: var(--color-info-solid); text-decoration: none; font-weight: 600; }
         .glpi-link:hover { text-decoration: underline; }
         .glpi-input-container.glpi-disabled {
             opacity: 0.7;
@@ -2359,8 +2300,8 @@ export interface ReconciliationReportData {
             cursor: not-allowed;
         }
         .glpi-input-container.glpi-disabled .edit-input {
-            background-color: #e9ecef;
-            color: #6c757d;
+            background-color: var(--color-surface-sunken);
+            color: var(--color-text-muted);
             cursor: not-allowed;
         }
         
@@ -2372,8 +2313,8 @@ export interface ReconciliationReportData {
         }
         
         .btn-glpi-create {
-            background: #28a745;
-            color: white;
+            background: var(--color-success);
+            color: var(--color-accent-contrast);
             border: none;
             padding: 4px 8px;
             border-radius: 4px;
@@ -2387,7 +2328,7 @@ export interface ReconciliationReportData {
         }
         
         .btn-glpi-create:hover {
-            background: #218838;
+            background: var(--color-success);
             transform: translateY(-1px);
         }
         
@@ -2397,19 +2338,19 @@ export interface ReconciliationReportData {
 
         .match-cell {
             text-align: right;
-            color: #28a745;
+            color: var(--color-success);
             font-weight: 600;
         }
 
         .bo-only-cell {
             text-align: right;
-            color: #ffc107;
+            color: var(--color-warning-solid);
             font-weight: 600;
         }
 
         .partner-only-cell {
             text-align: right;
-            color: #fd7e14;
+            color: var(--color-warning-solid);
             font-weight: 600;
         }
 
@@ -2425,8 +2366,8 @@ export interface ReconciliationReportData {
         }
 
         .btn-transfer-ecart {
-            background: #28a745;
-            color: white;
+            background: var(--color-success);
+            color: var(--color-accent-contrast);
             border: none;
             padding: 4px 8px;
             border-radius: 4px;
@@ -2442,7 +2383,7 @@ export interface ReconciliationReportData {
         }
 
         .btn-transfer-ecart:hover {
-            background: #218838;
+            background: var(--color-success);
             transform: translateY(-1px);
             box-shadow: 0 2px 4px rgba(0,0,0,0.2);
         }
@@ -2454,11 +2395,11 @@ export interface ReconciliationReportData {
         .btn-transfer-ecart:disabled {
             opacity: 0.5;
             cursor: not-allowed;
-            background: #6c757d;
+            background: var(--color-text-muted);
         }
 
         .btn-transfer-ecart:disabled:hover {
-            background: #6c757d;
+            background: var(--color-text-muted);
             transform: none;
             box-shadow: none;
         }
@@ -2472,7 +2413,7 @@ export interface ReconciliationReportData {
 
         .mismatch-cell {
             text-align: right;
-            color: #dc3545;
+            color: var(--color-error);
             font-weight: 600;
         }
 
@@ -2485,32 +2426,32 @@ export interface ReconciliationReportData {
         .cell-select {
             width: 100%;
             padding: 6px 8px;
-            border: 1px solid #ced4da;
+            border: 1px solid var(--color-border);
             border-radius: 4px;
-            background: #fff;
+            background: var(--color-surface);
             font-size: 0.9rem;
         }
 
         .rate-excellent {
-            color: #28a745;
+            color: var(--color-success);
         }
 
         .rate-good {
-            color: #17a2b8;
+            color: var(--color-info-solid);
         }
 
         .rate-average {
-            color: #ffc107;
+            color: var(--color-warning-solid);
         }
 
         .rate-poor {
-            color: #dc3545;
+            color: var(--color-error);
         }
 
         .no-data {
             text-align: center;
             padding: 60px 20px;
-            color: #6c757d;
+            color: var(--color-text-muted);
         }
 
         .no-data-icon {
@@ -2526,8 +2467,8 @@ export interface ReconciliationReportData {
         /* Styles de pagination */
         .pagination-container {
             padding: 20px;
-            background: #f8f9fa;
-            border-top: 1px solid #dee2e6;
+            background: var(--color-surface-sunken);
+            border-top: 1px solid var(--color-border);
             display: flex;
             justify-content: space-between;
             align-items: center;
@@ -2536,7 +2477,7 @@ export interface ReconciliationReportData {
         }
 
         .pagination-info {
-            color: #6c757d;
+            color: var(--color-text-muted);
             font-size: 0.9rem;
             font-weight: 500;
         }
@@ -2549,9 +2490,9 @@ export interface ReconciliationReportData {
 
         .pagination-btn {
             padding: 8px 12px;
-            border: 1px solid #dee2e6;
-            background: white;
-            color: #495057;
+            border: 1px solid var(--color-border);
+            background: var(--color-surface);
+            color: var(--color-text-muted);
             border-radius: 6px;
             cursor: pointer;
             font-size: 0.9rem;
@@ -2564,15 +2505,15 @@ export interface ReconciliationReportData {
         }
 
         .pagination-btn:hover:not(:disabled) {
-            background: #e9ecef;
-            border-color: #adb5bd;
+            background: var(--color-surface-sunken);
+            border-color: var(--color-text-muted);
             transform: translateY(-1px);
         }
 
         .pagination-btn:disabled {
             opacity: 0.5;
             cursor: not-allowed;
-            background: #f8f9fa;
+            background: var(--color-surface-sunken);
         }
 
         .page-numbers {
@@ -2583,9 +2524,9 @@ export interface ReconciliationReportData {
 
         .page-number {
             padding: 8px 12px;
-            border: 1px solid #dee2e6;
-            background: white;
-            color: #495057;
+            border: 1px solid var(--color-border);
+            background: var(--color-surface);
+            color: var(--color-text-muted);
             border-radius: 6px;
             cursor: pointer;
             font-size: 0.9rem;
@@ -2599,46 +2540,46 @@ export interface ReconciliationReportData {
         }
 
         .page-number:hover {
-            background: #e9ecef;
-            border-color: #adb5bd;
+            background: var(--color-surface-sunken);
+            border-color: var(--color-text-muted);
             transform: translateY(-1px);
         }
 
         .page-number.active {
-            background: #007bff;
-            color: white;
-            border-color: #007bff;
+            background: var(--color-info-solid);
+            color: var(--color-accent-contrast);
+            border-color: var(--color-info-solid);
             font-weight: 600;
         }
 
         .page-number.active:hover {
-            background: #0056b3;
-            border-color: #0056b3;
+            background: var(--color-info-solid);
+            border-color: var(--color-info-solid);
         }
 
         /* Styles pour l'édition en ligne */
         .editing-row {
-            background: #fff3cd !important;
-            border: 2px solid #ffc107 !important;
+            background: var(--color-warning-bg) !important;
+            border: 2px solid var(--color-warning-solid) !important;
         }
 
         .editing-row:hover {
-            background: #fff3cd !important;
+            background: var(--color-warning-bg) !important;
         }
 
         .edit-input, .edit-select, .edit-textarea {
             width: 100%;
             padding: 6px 8px;
-            border: 1px solid #007bff;
+            border: 1px solid var(--color-info-solid);
             border-radius: 4px;
-            background: white;
+            background: var(--color-surface);
             font-size: 0.9rem;
             box-sizing: border-box;
         }
 
         .edit-input:focus, .edit-select:focus, .edit-textarea:focus {
             outline: none;
-            border-color: #0056b3;
+            border-color: var(--color-info-solid);
             box-shadow: 0 0 0 2px rgba(0, 123, 255, 0.25);
         }
 
@@ -2659,28 +2600,28 @@ export interface ReconciliationReportData {
         }
 
         .status-ok {
-            background: #d4edda;
-            color: #155724;
+            background: var(--color-success-bg);
+            color: var(--color-success-text);
         }
 
         .status-nok {
-            background: #f8d7da;
-            color: #721c24;
+            background: var(--color-error-bg);
+            color: var(--color-error-text);
         }
 
         .status-reporting-incomplet {
-            background: #fff3cd;
-            color: #856404;
+            background: var(--color-warning-bg);
+            color: var(--color-warning-text);
         }
 
         .status-reporting-indisponible {
-            background: #d1ecf1;
-            color: #0c5460;
+            background: var(--color-info-bg);
+            color: var(--color-info-text);
         }
 
-        .status-en-cours..... {
-            background: #e2e3e5;
-            color: #383d41;
+        .status-en-cours {
+            background: var(--color-neutral-bg);
+            color: var(--color-neutral-text);
         }
 
         .traitement-cell {
@@ -2726,14 +2667,14 @@ export interface ReconciliationReportData {
             .edit-select {
                 width: 100%;
                 padding: 4px 8px;
-                border: 1px solid #ddd;
+                border: 1px solid var(--color-border);
                 border-radius: 4px;
                 font-size: 0.9rem;
-                background: white;
+                background: var(--color-surface);
                 
                 &:focus {
                     outline: none;
-                    border-color: #4caf50;
+                    border-color: var(--color-success-solid);
                 }
             }
         }
@@ -2751,33 +2692,33 @@ export interface ReconciliationReportData {
         }
 
         .traitement-kind--support {
-            background: linear-gradient(180deg, #fef3c7 0%, #fde68a 100%);
-            color: #92400e;
-            border-color: #f59e0b;
+            background: linear-gradient(180deg, var(--color-warning-bg) 0%, var(--color-warning-bg) 100%);
+            color: var(--color-warning-text);
+            border-color: var(--color-warning-solid);
         }
 
         .traitement-kind--cdo {
-            background: linear-gradient(180deg, #d1ecf1 0%, #bee5eb 100%);
-            color: #0c5460;
-            border-color: #17a2b8;
+            background: linear-gradient(180deg, var(--color-info-bg) 0%, var(--color-info-bg) 100%);
+            color: var(--color-info-text);
+            border-color: var(--color-info-solid);
         }
 
         .traitement-kind--group {
-            background: linear-gradient(180deg, #dbeafe 0%, #bfdbfe 100%);
-            color: #1e3a8a;
-            border-color: #3b82f6;
+            background: linear-gradient(180deg, var(--color-info-bg) 0%, var(--color-info-border) 100%);
+            color: var(--color-info-text);
+            border-color: var(--color-info-solid);
         }
 
         .traitement-kind--termine {
-            background: linear-gradient(180deg, #d1fae5 0%, #a7f3d0 100%);
-            color: #065f46;
-            border-color: #10b981;
+            background: linear-gradient(180deg, var(--color-success-bg) 0%, var(--color-success-bg) 100%);
+            color: var(--color-success-text);
+            border-color: var(--color-success-solid);
         }
 
         .traitement-kind--none {
-            background: #f3f4f6;
-            color: #6b7280;
-            border-color: #d1d5db;
+            background: var(--color-surface-sunken);
+            color: var(--color-text-muted);
+            border-color: var(--color-border);
         }
 
         .comment-text {
@@ -2788,7 +2729,7 @@ export interface ReconciliationReportData {
         }
 
         .icon-edit {
-            color: #007bff;
+            color: var(--color-info-solid);
         }
 
         .icon-edit:hover {
@@ -2796,7 +2737,7 @@ export interface ReconciliationReportData {
         }
 
         .icon-cancel {
-            color: #6c757d;
+            color: var(--color-text-muted);
         }
 
         .icon-cancel:hover {
@@ -2816,8 +2757,8 @@ export interface ReconciliationReportData {
         }
 
         .btn-releve {
-            background: #17a2b8;
-            color: white;
+            background: var(--color-info-solid);
+            color: var(--color-accent-contrast);
             border: none;
             padding: 4px 8px;
             border-radius: 4px;
@@ -2832,7 +2773,7 @@ export interface ReconciliationReportData {
         }
 
         .btn-releve:hover {
-            background: #138496;
+            background: var(--color-info-text);
             transform: translateY(-1px);
             box-shadow: 0 2px 4px rgba(0,0,0,0.2);
         }
@@ -2852,7 +2793,7 @@ export interface ReconciliationReportData {
         }
 
         .modal-content-releve {
-            background: white;
+            background: var(--color-surface);
             border-radius: 12px;
             box-shadow: 0 8px 24px rgba(0, 0, 0, 0.3);
             max-width: 900px;
@@ -2865,12 +2806,12 @@ export interface ReconciliationReportData {
 
         .modal-header-releve {
             padding: 20px;
-            border-bottom: 1px solid #dee2e6;
+            border-bottom: 1px solid var(--color-border);
             display: flex;
             justify-content: space-between;
             align-items: center;
-            background: linear-gradient(135deg, var(--theme-primary, #667eea) 0%, var(--theme-accent, #764ba2) 100%);
-            color: white;
+            background: linear-gradient(135deg, var(--color-accent) 0%, var(--color-accent-hover) 100%);
+            color: var(--color-accent-contrast);
             border-radius: 12px 12px 0 0;
         }
 
@@ -2883,7 +2824,7 @@ export interface ReconciliationReportData {
         .modal-close-btn {
             background: transparent;
             border: none;
-            color: white;
+            color: var(--color-accent-contrast);
             font-size: 1.5rem;
             cursor: pointer;
             padding: 0;
@@ -2909,7 +2850,7 @@ export interface ReconciliationReportData {
         .releve-service-title {
             margin-bottom: 20px;
             padding-bottom: 15px;
-            border-bottom: 2px solid #dee2e6;
+            border-bottom: 2px solid var(--color-border);
             display: flex;
             align-items: flex-end;
             justify-content: space-between;
@@ -2919,25 +2860,25 @@ export interface ReconciliationReportData {
         .releve-service-main h4 {
             margin: 0 0 8px 0;
             font-size: 1.5rem;
-            color: #495057;
+            color: var(--color-text-muted);
             font-weight: 600;
         }
 
         .releve-date {
-            color: #6c757d;
+            color: var(--color-text-muted);
             font-size: 0.95rem;
         }
 
         .releve-env {
             font-size: 0.95rem;
-            color: #495057;
+            color: var(--color-text-muted);
             font-weight: 500;
             white-space: nowrap;
         }
 
         .releve-env-value {
             font-weight: 700;
-            color: #007bff;
+            color: var(--color-info-solid);
         }
 
         .releve-env-select-wrap {
@@ -2949,7 +2890,7 @@ export interface ReconciliationReportData {
 
         .releve-env-select-wrap label {
             font-size: 0.8rem;
-            color: #6c757d;
+            color: var(--color-text-muted);
             font-weight: 600;
             text-transform: uppercase;
             letter-spacing: 0.02em;
@@ -2960,16 +2901,16 @@ export interface ReconciliationReportData {
             padding: 8px 12px;
             font-size: 0.95rem;
             font-weight: 700;
-            color: #007bff;
-            border: 1px solid #ced4da;
+            color: var(--color-info-solid);
+            border: 1px solid var(--color-border);
             border-radius: 8px;
-            background: #fff;
+            background: var(--color-surface);
             cursor: pointer;
         }
 
         .releve-env-select:focus {
             outline: none;
-            border-color: #007bff;
+            border-color: var(--color-info-solid);
             box-shadow: 0 0 0 2px rgba(0, 123, 255, 0.2);
         }
 
@@ -2980,10 +2921,10 @@ export interface ReconciliationReportData {
         .releve-section h5 {
             margin: 0 0 15px 0;
             font-size: 1.1rem;
-            color: #495057;
+            color: var(--color-text-muted);
             font-weight: 600;
             padding-bottom: 8px;
-            border-bottom: 1px solid #e9ecef;
+            border-bottom: 1px solid var(--color-surface-sunken);
         }
 
         .releve-grid, .releve-ecart-grid {
@@ -2997,30 +2938,30 @@ export interface ReconciliationReportData {
             display: flex;
             flex-direction: column;
             padding: 12px;
-            background: #f8f9fa;
+            background: var(--color-surface-sunken);
             border-radius: 8px;
-            border: 1px solid #dee2e6;
+            border: 1px solid var(--color-border);
         }
 
         .releve-label {
             font-size: 0.85rem;
-            color: #6c757d;
+            color: var(--color-text-muted);
             margin-bottom: 5px;
             font-weight: 500;
         }
 
         .releve-value {
             font-size: 1.2rem;
-            color: #495057;
+            color: var(--color-text-muted);
             font-weight: 700;
-            font-family: 'Courier New', monospace;
+            font-family: var(--font-mono);
         }
 
         .releve-total-summary {
             margin: 20px 0;
             padding: 15px;
-            background: linear-gradient(135deg, #d4edda 0%, #c3e6cb 100%);
-            border: 2px solid #28a745;
+            background: linear-gradient(135deg, var(--color-success-bg) 0%, var(--color-success-bg) 100%);
+            border: 2px solid var(--color-success);
             border-radius: 8px;
             box-shadow: 0 2px 8px rgba(40, 167, 69, 0.2);
         }
@@ -3035,19 +2976,19 @@ export interface ReconciliationReportData {
 
         .releve-total-label {
             font-size: 1rem;
-            color: #155724;
+            color: var(--color-success-text);
             font-weight: 600;
         }
 
         .releve-total-value {
             font-size: 1.5rem;
-            color: #155724;
+            color: var(--color-success-text);
             font-weight: 700;
-            font-family: 'Courier New', monospace;
-            background: white;
+            font-family: var(--font-mono);
+            background: var(--color-surface);
             padding: 8px 16px;
             border-radius: 6px;
-            border: 2px solid #28a745;
+            border: 2px solid var(--color-success);
             box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
         }
 
@@ -3062,29 +3003,29 @@ export interface ReconciliationReportData {
         }
 
         .releve-table thead {
-            background: #e9ecef;
+            background: var(--color-surface-sunken);
         }
 
         .releve-table th {
             padding: 10px;
             text-align: left;
             font-weight: 600;
-            color: #495057;
-            border-bottom: 2px solid #dee2e6;
+            color: var(--color-text-muted);
+            border-bottom: 2px solid var(--color-border);
         }
 
         .releve-table td {
             padding: 10px;
-            border-bottom: 1px solid #dee2e6;
+            border-bottom: 1px solid var(--color-border);
         }
 
         .releve-table tbody tr:hover {
-            background: #f8f9fa;
+            background: var(--color-surface-sunken);
         }
 
         .statut-ok {
-            background: #d4edda;
-            color: #155724;
+            background: var(--color-success-bg);
+            color: var(--color-success-text);
             padding: 4px 8px;
             border-radius: 12px;
             font-size: 0.8rem;
@@ -3092,8 +3033,8 @@ export interface ReconciliationReportData {
         }
 
         .statut-en-cours {
-            background: #fff3cd;
-            color: #856404;
+            background: var(--color-warning-bg);
+            color: var(--color-warning-text);
             padding: 4px 8px;
             border-radius: 12px;
             font-size: 0.8rem;
@@ -3101,7 +3042,7 @@ export interface ReconciliationReportData {
         }
 
         .releve-no-data {
-            color: #6c757d;
+            color: var(--color-text-muted);
             font-style: italic;
             text-align: center;
             padding: 20px;
@@ -3117,17 +3058,17 @@ export interface ReconciliationReportData {
         }
         .btn-releve-upload {
             padding: 10px 16px;
-            border: 1px solid #17a2b8;
+            border: 1px solid var(--color-info-solid);
             border-radius: 6px;
-            background: #17a2b8;
-            color: #fff;
+            background: var(--color-info-solid);
+            color: var(--color-nav-text);
             font-size: 0.95rem;
             cursor: pointer;
             transition: background 0.2s, border-color 0.2s;
         }
         .btn-releve-upload:hover:not(:disabled) {
-            background: #138496;
-            border-color: #138496;
+            background: var(--color-info-text);
+            border-color: var(--color-info-text);
         }
         .btn-releve-upload:disabled {
             opacity: 0.7;
@@ -3135,11 +3076,11 @@ export interface ReconciliationReportData {
         }
         .releve-upload-hint {
             font-size: 0.85rem;
-            color: #6c757d;
+            color: var(--color-text-muted);
         }
         .releve-manual-or {
             font-size: 0.9rem;
-            color: #495057;
+            color: var(--color-text-muted);
             margin-bottom: 10px;
             font-weight: 600;
         }
@@ -3159,31 +3100,31 @@ export interface ReconciliationReportData {
 
         .releve-input-label {
             font-size: 0.9rem;
-            color: #495057;
+            color: var(--color-text-muted);
             font-weight: 600;
         }
 
         .releve-input {
             padding: 10px;
-            border: 1px solid #ced4da;
+            border: 1px solid var(--color-border);
             border-radius: 6px;
             font-size: 1rem;
-            font-family: 'Courier New', monospace;
+            font-family: var(--font-mono);
             transition: border-color 0.2s ease;
         }
 
         .releve-input:focus {
             outline: none;
-            border-color: #17a2b8;
+            border-color: var(--color-info-solid);
             box-shadow: 0 0 0 2px rgba(23, 162, 184, 0.25);
         }
 
         .releve-manual-summary {
             margin-top: 15px;
             padding: 15px;
-            background: #f8f9fa;
+            background: var(--color-surface-sunken);
             border-radius: 8px;
-            border: 1px solid #dee2e6;
+            border: 1px solid var(--color-border);
             display: grid;
             grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
             gap: 15px;
@@ -3201,43 +3142,43 @@ export interface ReconciliationReportData {
             justify-content: space-between;
             align-items: center;
             padding: 12px 15px;
-            background: #e9ecef;
+            background: var(--color-surface-sunken);
             border-radius: 6px;
-            border: 1px solid #dee2e6;
+            border: 1px solid var(--color-border);
         }
 
         .releve-final-label {
             font-size: 1rem;
-            color: #495057;
+            color: var(--color-text-muted);
             font-weight: 600;
         }
 
         .releve-final-value {
             font-size: 1.2rem;
-            color: #495057;
+            color: var(--color-text-muted);
             font-weight: 700;
-            font-family: 'Courier New', monospace;
+            font-family: var(--font-mono);
         }
 
         .loading-spinner {
             text-align: center;
             padding: 40px;
             font-size: 1.1rem;
-            color: #6c757d;
+            color: var(--color-text-muted);
         }
 
         .modal-footer-releve {
             padding: 15px 20px;
-            border-top: 1px solid #dee2e6;
+            border-top: 1px solid var(--color-border);
             display: flex;
             justify-content: flex-end;
-            background: #f8f9fa;
+            background: var(--color-surface-sunken);
             border-radius: 0 0 12px 12px;
         }
 
         .btn-close-modal {
-            background: #6c757d;
-            color: white;
+            background: var(--color-text-muted);
+            color: var(--color-accent-contrast);
             border: none;
             padding: 8px 20px;
             border-radius: 6px;
@@ -3248,13 +3189,13 @@ export interface ReconciliationReportData {
         }
 
         .btn-close-modal:hover {
-            background: #5a6268;
+            background: var(--color-text-muted);
             transform: translateY(-1px);
         }
 
         .btn-validate-releve {
-            background: #28a745;
-            color: white;
+            background: var(--color-success);
+            color: var(--color-accent-contrast);
             border: none;
             padding: 8px 20px;
             border-radius: 6px;
@@ -3266,7 +3207,7 @@ export interface ReconciliationReportData {
         }
 
         .btn-validate-releve:hover:not(:disabled) {
-            background: #218838;
+            background: var(--color-success);
             transform: translateY(-1px);
             box-shadow: 0 2px 4px rgba(40, 167, 69, 0.3);
         }
@@ -3277,20 +3218,20 @@ export interface ReconciliationReportData {
         }
 
         .btn-validate-releve.btn-validated {
-            background: #6c757d;
-            color: white;
+            background: var(--color-text-muted);
+            color: var(--color-accent-contrast);
             cursor: default;
         }
 
         .btn-validate-releve.btn-validated:hover {
-            background: #6c757d;
+            background: var(--color-text-muted);
             transform: none;
             box-shadow: none;
         }
 
         .btn-reject-releve {
             background: var(--rd-red);
-            color: white;
+            color: var(--color-accent-contrast);
             border: none;
             padding: 8px 20px;
             border-radius: 6px;
@@ -3313,8 +3254,8 @@ export interface ReconciliationReportData {
         }
 
         .btn-export-releve {
-            background: #28a745;
-            color: white;
+            background: var(--color-success);
+            color: var(--color-accent-contrast);
             border: none;
             padding: 8px 20px;
             border-radius: 6px;
@@ -3326,7 +3267,7 @@ export interface ReconciliationReportData {
         }
 
         .btn-export-releve:hover:not(:disabled) {
-            background: #218838;
+            background: var(--color-success);
             transform: translateY(-1px);
             box-shadow: 0 2px 4px rgba(40, 167, 69, 0.3);
         }
@@ -3473,7 +3414,7 @@ export interface ReconciliationReportData {
             line-height: 1;
             padding: 4px 8px;
             border-radius: 6px;
-            color: var(--rd-text2, #5A6472);
+            color: var(--rd-text2);
         }
 
         .reject-close:hover:not(:disabled) {
@@ -3494,7 +3435,7 @@ export interface ReconciliationReportData {
             font-weight: 600;
             text-transform: uppercase;
             letter-spacing: 0.04em;
-            color: var(--rd-text2, #5A6472);
+            color: var(--rd-text2);
             margin-bottom: 8px;
         }
 
@@ -3510,7 +3451,7 @@ export interface ReconciliationReportData {
 
         .reject-summary-item {
             font-size: 0.85rem;
-            color: var(--rd-text1, #1A1714);
+            color: var(--rd-text1);
             overflow-wrap: anywhere;
         }
 
@@ -3535,19 +3476,19 @@ export interface ReconciliationReportData {
         .reject-label {
             font-size: 0.85rem;
             font-weight: 600;
-            color: var(--rd-text1, #1A1714);
+            color: var(--rd-text1);
         }
 
         .reject-input {
             width: 100%;
             box-sizing: border-box;
             padding: 9px 11px;
-            border: 1px solid var(--rd-border2, #D6D0C6);
+            border: 1px solid var(--rd-border2);
             border-radius: 8px;
-            background: #fff;
+            background: var(--color-surface);
             font-size: 0.88rem;
             font-family: inherit;
-            color: var(--rd-text1, #1A1714);
+            color: var(--rd-text1);
         }
 
         .reject-input:focus {
@@ -3576,7 +3517,7 @@ export interface ReconciliationReportData {
         .reject-counter {
             margin-left: auto;
             font-size: 0.75rem;
-            color: var(--rd-text2, #5A6472);
+            color: var(--rd-text2);
         }
 
         .reject-error-banner {
@@ -3619,16 +3560,16 @@ export interface ReconciliationReportData {
 
         .btn-cancel-reject {
             background: var(--rd-border);
-            color: var(--rd-text1, #1A1714);
+            color: var(--rd-text1);
         }
 
         .btn-cancel-reject:hover:not(:disabled) {
-            background: var(--rd-border2, #D6D0C6);
+            background: var(--rd-border2);
         }
 
         .btn-confirm-reject {
             background: var(--rd-red);
-            color: #fff;
+            color: var(--color-nav-text);
         }
 
         .btn-confirm-reject:hover:not(:disabled) {
@@ -8548,29 +8489,29 @@ reportData: ReconciliationReportData[] = [];
                 background: rgba(0, 0, 0, 0.6); backdrop-filter: blur(4px); display: flex;
                 justify-content: center; align-items: center; z-index: 9999;
                 animation: fadeIn 0.25s cubic-bezier(0.4, 0, 0.2, 1); }
-            .modern-popup { background: white; border-radius: 16px;
+            .modern-popup { background: var(--color-surface); border-radius: 16px;
                 box-shadow: 0 20px 60px rgba(0, 0, 0, 0.3), 0 0 0 1px rgba(0, 0, 0, 0.05);
-                max-width: 450px; width: 90%; overflow: hidden; border-top: 4px solid #007bff; }
+                max-width: 450px; width: 90%; overflow: hidden; border-top: 4px solid var(--color-info-solid); }
             .popup-header { display: flex; justify-content: space-between; align-items: center;
-                padding: 24px 24px 16px 24px; background: linear-gradient(135deg, #f8f9fa 0%, #ffffff 100%); }
+                padding: 24px 24px 16px 24px; background: linear-gradient(135deg, var(--color-surface-sunken) 0%, var(--color-surface) 100%); }
             .popup-title-wrapper { display: flex; align-items: center; gap: 12px; }
             .popup-icon { font-size: 24px; }
-            .popup-title { margin: 0; font-size: 20px; font-weight: 700; color: #212529; }
+            .popup-title { margin: 0; font-size: 20px; font-weight: 700; color: var(--color-text-primary); }
             .popup-close { background: rgba(0, 0, 0, 0.05); border: none; font-size: 22px; cursor: pointer;
-                color: #6c757d; padding: 0; width: 32px; height: 32px; border-radius: 50%;
+                color: var(--color-text-muted); padding: 0; width: 32px; height: 32px; border-radius: 50%;
                 display: flex; align-items: center; justify-content: center; }
-            .popup-close:hover { background: rgba(0, 0, 0, 0.1); color: #212529; }
+            .popup-close:hover { background: rgba(0, 0, 0, 0.1); color: var(--color-text-primary); }
             .popup-content { padding: 20px 24px; }
-            .popup-message { margin: 0; color: #495057; line-height: 1.6; font-size: 15px; }
+            .popup-message { margin: 0; color: var(--color-text-muted); line-height: 1.6; font-size: 15px; }
             .popup-actions-two-buttons { display: flex; justify-content: center; gap: 12px;
-                padding: 16px 24px 24px 24px; background: #f8f9fa; border-top: 1px solid #e9ecef; }
+                padding: 16px 24px 24px 24px; background: var(--color-surface-sunken); border-top: 1px solid var(--color-surface-sunken); }
             .popup-btn { padding: 12px 24px; border: none; border-radius: 8px; cursor: pointer;
                 font-weight: 600; font-size: 14px; min-width: 140px; box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1); }
             .popup-btn:hover { transform: translateY(-1px); box-shadow: 0 4px 8px rgba(0, 0, 0, 0.15); }
-            .popup-btn-glpi { background: linear-gradient(135deg, #007bff 0%, #0056b3 100%); color: white; }
-            .popup-btn-glpi:hover { background: linear-gradient(135deg, #0056b3 0%, #004085 100%); }
-            .popup-btn-bometier { background: linear-gradient(135deg, #28a745 0%, #1e7e34 100%); color: white; }
-            .popup-btn-bometier:hover { background: linear-gradient(135deg, #1e7e34 0%, #155724 100%); }
+            .popup-btn-glpi { background: linear-gradient(135deg, var(--color-info-solid) 0%, var(--color-info-solid) 100%); color: var(--color-accent-contrast); }
+            .popup-btn-glpi:hover { background: linear-gradient(135deg, var(--color-info-solid) 0%, var(--color-info-text) 100%); }
+            .popup-btn-bometier { background: linear-gradient(135deg, var(--color-success) 0%, var(--color-success-text) 100%); color: var(--color-accent-contrast); }
+            .popup-btn-bometier:hover { background: linear-gradient(135deg, var(--color-success-text) 0%, var(--color-success-text) 100%); }
             @keyframes fadeIn { from { opacity: 0; } to { opacity: 1; } }
         `;
         document.head.appendChild(style);
@@ -8654,21 +8595,21 @@ reportData: ReconciliationReportData[] = [];
                 animation: fadeIn 0.25s cubic-bezier(0.4, 0, 0.2, 1);
             }
             .modern-popup {
-                background: white;
+                background: var(--color-surface);
                 border-radius: 16px;
                 box-shadow: 0 20px 60px rgba(0, 0, 0, 0.3), 0 0 0 1px rgba(0, 0, 0, 0.05);
                 max-width: 450px;
                 width: 90%;
                 animation: slideIn 0.3s cubic-bezier(0.34, 1.56, 0.64, 1);
                 overflow: hidden;
-                border-top: 4px solid #007bff;
+                border-top: 4px solid var(--color-info-solid);
             }
             .popup-header {
                 display: flex;
                 justify-content: space-between;
                 align-items: center;
                 padding: 24px 24px 16px 24px;
-                background: linear-gradient(135deg, #f8f9fa 0%, #ffffff 100%);
+                background: linear-gradient(135deg, var(--color-surface-sunken) 0%, var(--color-surface) 100%);
             }
             .popup-title-wrapper {
                 display: flex;
@@ -8683,14 +8624,14 @@ reportData: ReconciliationReportData[] = [];
                 margin: 0;
                 font-size: 20px;
                 font-weight: 700;
-                color: #212529;
+                color: var(--color-text-primary);
             }
             .popup-close {
                 background: rgba(0, 0, 0, 0.05);
                 border: none;
                 font-size: 22px;
                 cursor: pointer;
-                color: #6c757d;
+                color: var(--color-text-muted);
                 padding: 0;
                 width: 32px;
                 height: 32px;
@@ -8702,7 +8643,7 @@ reportData: ReconciliationReportData[] = [];
             }
             .popup-close:hover {
                 background: rgba(0, 0, 0, 0.1);
-                color: #212529;
+                color: var(--color-text-primary);
                 transform: rotate(90deg);
             }
             .popup-content {
@@ -8710,7 +8651,7 @@ reportData: ReconciliationReportData[] = [];
             }
             .popup-message {
                 margin: 0;
-                color: #495057;
+                color: var(--color-text-muted);
                 line-height: 1.6;
                 font-size: 15px;
             }
@@ -8719,8 +8660,8 @@ reportData: ReconciliationReportData[] = [];
                 justify-content: center;
                 gap: 12px;
                 padding: 16px 24px 24px 24px;
-                background: #f8f9fa;
-                border-top: 1px solid #e9ecef;
+                background: var(--color-surface-sunken);
+                border-top: 1px solid var(--color-surface-sunken);
             }
             .popup-btn {
                 padding: 12px 24px;
@@ -8738,18 +8679,18 @@ reportData: ReconciliationReportData[] = [];
                 box-shadow: 0 4px 8px rgba(0, 0, 0, 0.15);
             }
             .popup-btn-glpi {
-                background: linear-gradient(135deg, #007bff 0%, #0056b3 100%);
-                color: white;
+                background: linear-gradient(135deg, var(--color-info-solid) 0%, var(--color-info-solid) 100%);
+                color: var(--color-accent-contrast);
             }
             .popup-btn-glpi:hover {
-                background: linear-gradient(135deg, #0056b3 0%, #004085 100%);
+                background: linear-gradient(135deg, var(--color-info-solid) 0%, var(--color-info-text) 100%);
             }
             .popup-btn-bometier {
-                background: linear-gradient(135deg, #28a745 0%, #1e7e34 100%);
-                color: white;
+                background: linear-gradient(135deg, var(--color-success) 0%, var(--color-success-text) 100%);
+                color: var(--color-accent-contrast);
             }
             .popup-btn-bometier:hover {
-                background: linear-gradient(135deg, #1e7e34 0%, #155724 100%);
+                background: linear-gradient(135deg, var(--color-success-text) 0%, var(--color-success-text) 100%);
             }
             @keyframes fadeIn {
                 from { opacity: 0; }
@@ -13318,7 +13259,7 @@ reportData: ReconciliationReportData[] = [];
                 scale: 2,
                 useCORS: true,
                 logging: false,
-                backgroundColor: '#F2F0EB'
+                backgroundColor: 'var(--color-bg)'
             });
 
             // Restaurer les styles après la capture
