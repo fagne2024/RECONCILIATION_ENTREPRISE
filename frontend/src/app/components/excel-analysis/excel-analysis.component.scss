@@ -14,20 +14,20 @@
       align-items: center;
       gap: 10px;
       margin: 0;
-      color: #333;
+      color: var(--color-text-primary);
     }
 
     .loading-indicator {
       display: flex;
       align-items: center;
       gap: 10px;
-      color: #666;
+      color: var(--color-text-muted);
 
       .spinner {
         width: 20px;
         height: 20px;
-        border: 2px solid #f3f3f3;
-        border-top: 2px solid var(--theme-info, #3498db);
+        border: 2px solid var(--color-border);
+        border-top: 2px solid var(--color-accent);
         border-radius: 50%;
         animation: spin 1s linear infinite;
       }
@@ -49,8 +49,8 @@
     align-items: center;
     gap: 10px;
     padding: 15px;
-    background-color: #ffebee;
-    color: #c62828;
+    background-color: var(--color-error-bg);
+    color: var(--color-error);
     border-radius: 4px;
     margin-bottom: 20px;
   }
@@ -75,18 +75,18 @@
 
   .file-info {
     .card {
-      background: white;
+      background: var(--color-surface-raised);
       border-radius: 8px;
-      box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+      box-shadow: var(--shadow-sm);
       margin-bottom: 20px;
 
       .card-header {
         padding: 16px;
-        border-bottom: 1px solid #e0e0e0;
+        border-bottom: 1px solid var(--color-border);
 
         h3 {
           margin: 0;
-          color: #333;
+          color: var(--color-text-primary);
           font-size: 18px;
         }
       }
@@ -103,27 +103,27 @@
 
       .info-item {
         padding: 10px;
-        background-color: #f5f5f5;
+        background-color: var(--color-surface-sunken);
         border-radius: 4px;
-        border-left: 4px solid #2196F3;
+        border-left: 4px solid var(--color-accent);
       }
     }
   }
 
   .data-quality {
     .card {
-      background: white;
+      background: var(--color-surface-raised);
       border-radius: 8px;
-      box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+      box-shadow: var(--shadow-sm);
       margin-bottom: 20px;
 
       .card-header {
         padding: 16px;
-        border-bottom: 1px solid #e0e0e0;
+        border-bottom: 1px solid var(--color-border);
 
         h3 {
           margin: 0;
-          color: #333;
+          color: var(--color-text-primary);
           font-size: 18px;
         }
       }
@@ -149,7 +149,7 @@
 
         .quality-bar {
           height: 8px;
-          background-color: #e0e0e0;
+          background-color: var(--color-border);
           border-radius: 4px;
           overflow: hidden;
 
@@ -171,7 +171,7 @@
 
       h4 {
         margin-bottom: 10px;
-        color: #d32f2f;
+        color: var(--color-error);
       }
 
       .issues-list {
@@ -183,7 +183,7 @@
           align-items: center;
           gap: 8px;
           padding: 8px 0;
-          color: #d32f2f;
+          color: var(--color-error);
 
                      .icon {
              font-size: 18px;
@@ -195,18 +195,18 @@
 
   .columns-analysis {
     .card {
-      background: white;
+      background: var(--color-surface-raised);
       border-radius: 8px;
-      box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+      box-shadow: var(--shadow-sm);
       margin-bottom: 20px;
 
       .card-header {
         padding: 16px;
-        border-bottom: 1px solid #e0e0e0;
+        border-bottom: 1px solid var(--color-border);
 
         h3 {
           margin: 0;
-          color: #333;
+          color: var(--color-text-primary);
           font-size: 18px;
         }
       }
@@ -223,19 +223,19 @@
 
       .column-card {
         padding: 15px;
-        border: 2px solid #e0e0e0;
+        border: 2px solid var(--color-border);
         border-radius: 8px;
         cursor: pointer;
         transition: all 0.3s ease;
 
         &:hover {
-          border-color: #2196F3;
-          box-shadow: 0 4px 8px rgba(33, 150, 243, 0.1);
+          border-color: var(--color-accent);
+          box-shadow: 0 4px 8px color-mix(in srgb, var(--color-accent) 15%, transparent);
         }
 
         &.selected {
-          border-color: #2196F3;
-          background-color: #e3f2fd;
+          border-color: var(--color-accent);
+          background-color: var(--color-info-bg);
         }
 
         .column-header {
@@ -247,13 +247,13 @@
           .column-name {
             font-weight: 600;
             font-size: 14px;
-            color: #333;
+            color: var(--color-text-primary);
           }
 
           .column-type {
             padding: 4px 8px;
             border-radius: 12px;
-            color: white;
+            color: var(--color-accent-contrast);
             font-size: 12px;
             font-weight: 500;
             text-transform: uppercase;
@@ -272,7 +272,7 @@
             font-size: 12px;
 
             .stat-label {
-              color: #666;
+              color: var(--color-text-muted);
             }
 
             .stat-value {
@@ -291,10 +291,10 @@
             align-items: center;
             gap: 4px;
             padding: 4px 8px;
-            background-color: #fff3e0;
+            background-color: var(--color-warning-bg);
             border-radius: 12px;
             font-size: 11px;
-            color: #e65100;
+            color: var(--color-warning);
 
                          .icon {
                font-size: 14px;
@@ -307,18 +307,18 @@
 
   .column-details {
     .card {
-      background: white;
+      background: var(--color-surface-raised);
       border-radius: 8px;
-      box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+      box-shadow: var(--shadow-sm);
       margin-bottom: 20px;
 
       .card-header {
         padding: 16px;
-        border-bottom: 1px solid #e0e0e0;
+        border-bottom: 1px solid var(--color-border);
 
         h3 {
           margin: 0;
-          color: #333;
+          color: var(--color-text-primary);
           font-size: 18px;
         }
       }
@@ -336,8 +336,8 @@
       .detail-section {
         h4 {
           margin-bottom: 10px;
-          color: #333;
-          border-bottom: 2px solid #e0e0e0;
+          color: var(--color-text-primary);
+          border-bottom: 2px solid var(--color-border);
           padding-bottom: 5px;
         }
 
@@ -345,7 +345,7 @@
           display: flex;
           justify-content: space-between;
           padding: 8px 0;
-          border-bottom: 1px solid #f0f0f0;
+          border-bottom: 1px solid var(--color-border);
 
           &:last-child {
             border-bottom: none;
@@ -359,10 +359,10 @@
 
           .sample-value {
             padding: 4px 8px;
-            background-color: #f5f5f5;
+            background-color: var(--color-surface-sunken);
             border-radius: 12px;
             font-size: 12px;
-            color: #666;
+            color: var(--color-text-muted);
           }
         }
       }
@@ -371,18 +371,18 @@
 
   .recommendations {
     .card {
-      background: white;
+      background: var(--color-surface-raised);
       border-radius: 8px;
-      box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+      box-shadow: var(--shadow-sm);
       margin-bottom: 20px;
 
       .card-header {
         padding: 16px;
-        border-bottom: 1px solid #e0e0e0;
+        border-bottom: 1px solid var(--color-border);
 
         h3 {
           margin: 0;
-          color: #333;
+          color: var(--color-text-primary);
           font-size: 18px;
         }
       }
@@ -398,10 +398,10 @@
 
       .recommendation-item {
         padding: 15px;
-        border: 1px solid #e0e0e0;
+        border: 1px solid var(--color-border);
         border-radius: 8px;
         border-left: 4px solid;
-        background-color: #fafafa;
+        background-color: var(--color-surface);
 
         .recommendation-header {
           display: flex;
@@ -410,7 +410,7 @@
           margin-bottom: 10px;
 
           .icon {
-            color: #666;
+            color: var(--color-text-muted);
           }
 
           .recommendation-title {
@@ -420,12 +420,12 @@
 
             strong {
               font-size: 14px;
-              color: #333;
+              color: var(--color-text-primary);
             }
 
             .recommendation-type {
               font-size: 11px;
-              color: #666;
+              color: var(--color-text-muted);
               text-transform: uppercase;
             }
           }
@@ -433,7 +433,7 @@
           .recommendation-priority {
             padding: 4px 8px;
             border-radius: 12px;
-            color: white;
+            color: var(--color-accent-contrast);
             font-size: 11px;
             font-weight: 500;
             text-transform: uppercase;
@@ -446,18 +446,18 @@
           .recommendation-description {
             font-weight: 500;
             margin-bottom: 5px;
-            color: #333;
+            color: var(--color-text-primary);
           }
 
           .recommendation-impact {
             font-size: 12px;
-            color: #666;
+            color: var(--color-text-muted);
             margin-bottom: 5px;
           }
 
           .recommendation-confidence {
             font-size: 11px;
-            color: #999;
+            color: var(--color-text-muted);
           }
         }
 
@@ -477,11 +477,11 @@
             transition: background-color 0.3s ease;
 
             &.btn-primary {
-              background-color: #2196F3;
-              color: white;
+              background-color: var(--color-accent);
+              color: var(--color-accent-contrast);
 
               &:hover {
-                background-color: #1976D2;
+                background-color: var(--color-accent-hover);
               }
             }
           }

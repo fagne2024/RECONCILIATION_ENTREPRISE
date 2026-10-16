@@ -2,7 +2,7 @@
   <!-- En-tête -->
   <div class="analysis-header">
     <h2>
-      <i class="icon">📊</i>
+      <i class="fas fa-file-excel icon" aria-hidden="true"></i>
       Analyse Excel - {{ fileName }}
     </h2>
     <div class="loading-indicator" *ngIf="loading">
@@ -13,7 +13,7 @@
 
   <!-- Message d'erreur -->
   <div class="error-message" *ngIf="error">
-    <i class="icon">❌</i>
+    <i class="fas fa-times-circle icon" aria-hidden="true"></i>
     <span>{{ error }}</span>
   </div>
 
@@ -90,7 +90,7 @@
             <h4>Problèmes détectés:</h4>
             <ul class="issues-list">
               <li *ngFor="let issue of getAnalysis()?.dataQuality?.issues">
-                <i class="icon">⚠️</i>
+                <i class="fas fa-exclamation-triangle icon" aria-hidden="true"></i>
                 {{ issue }}
               </li>
             </ul>
@@ -143,11 +143,11 @@
               <!-- Propriétés Excel spécifiques -->
               <div class="excel-properties" *ngIf="column.hasFormulas || column.hasErrors">
                 <div class="property-item" *ngIf="column.hasFormulas">
-                  <i class="icon">🔧</i>
+                  <i class="fas fa-wrench icon" aria-hidden="true"></i>
                   <span>Formules</span>
                 </div>
                 <div class="property-item" *ngIf="column.hasErrors">
-                  <i class="icon">❌</i>
+                  <i class="fas fa-times-circle icon" aria-hidden="true"></i>
                   <span>Erreurs</span>
                 </div>
               </div>
@@ -237,9 +237,9 @@
                 </div>
               </div>
               <div class="recommendation-actions">
-                <button class="btn btn-primary" 
+                <button type="button" class="ds-btn ds-btn--primary btn btn-primary" 
                         (click)="applyRecommendation(recommendation)">
-                  <i class="icon">▶️</i>{{ 'ACT.apply' | translate }}</button>
+                  <i class="fas fa-play icon" aria-hidden="true"></i>{{ 'ACT.apply' | translate }}</button>
               </div>
             </div>
           </div>
