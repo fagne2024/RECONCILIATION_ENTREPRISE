@@ -52,15 +52,20 @@
     list-style: none;
     padding: 0;
     margin: 0;
-    flex: 1;
+    flex: 1 1 auto;
+    min-height: 0;
     overflow-y: auto;
     overflow-x: hidden;
-    scrollbar-width: none; /* Firefox */
-    -ms-overflow-style: none; /* IE and Edge */
-    
-    /* Masquer la barre de défilement pour Chrome, Safari et Opera */
+    scrollbar-width: thin;
+    scrollbar-color: color-mix(in srgb, var(--color-nav-text) 35%, transparent) transparent;
+
     &::-webkit-scrollbar {
-        display: none;
+        width: 6px;
+    }
+
+    &::-webkit-scrollbar-thumb {
+        background: color-mix(in srgb, var(--color-nav-text) 35%, transparent);
+        border-radius: var(--radius-full);
     }
 
     li a,
@@ -95,10 +100,12 @@
 
     li button.has-submenu {
         width: 100%;
+        appearance: none;
         background: transparent;
         border: none;
         cursor: pointer;
         font: inherit;
+        color: var(--color-nav-text);
         text-align: left;
     }
 }
@@ -122,7 +129,7 @@
 }
 
 .submenu a {
-    color: var(--color-nav-text-muted);
+    color: color-mix(in srgb, var(--color-nav-text) 82%, transparent);
     font-size: 1.05rem;
     display: flex;
     align-items: center;
@@ -331,7 +338,9 @@
 .menu-icon.impact-op       { color: #ff6b6b; }
 .menu-icon.oppart          { color: #8e5ad6; }
 .menu-icon.trx-sf          { color: #9c27b0; }
-.menu-icon.banque          { color: #2e7d32; }
-.menu-icon.parametre       { color: #455a64; }
-.menu-icon.configuration   { color: var(--theme-primary, #546e7a); }
-.menu-icon.security        { color: #4caf50; } 
+.menu-icon.banque          { color: #81c784; }
+.menu-icon.parametre       { color: #b0bec5; }
+.menu-icon.configuration   { color: #80cbc4; }
+.menu-icon.aide            { color: #64b5f6; }
+.menu-icon.administration-plateforme { color: #ffb74d; }
+.menu-icon.security        { color: #81c784; } 
