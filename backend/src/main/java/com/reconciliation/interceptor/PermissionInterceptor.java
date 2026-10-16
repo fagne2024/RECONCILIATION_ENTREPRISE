@@ -41,6 +41,8 @@ public class PermissionInterceptor implements HandlerInterceptor {
     private static final String[] EXCLUDED_PATHS = {
         "/api/auth/login",
         "/api/auth/verify-2fa",
+        "/api/auth/2fa",
+        "/api/auth/entreprise",
         "/api/auth/logout",
         "/api/users/check-admin",
         "/api/users/forgot-password",
@@ -61,6 +63,7 @@ public class PermissionInterceptor implements HandlerInterceptor {
         "/api/users/me/password",
         "/api/log-utilisateur/log-activity",
         "/api/platform",
+        "/api/profils/modules",
         "/error"
     };
 
@@ -91,21 +94,18 @@ public class PermissionInterceptor implements HandlerInterceptor {
             }
         }
         
-        // Patterns spéciaux avec paramètres dynamiques
-        // /api/profils/{id}/droits
-        if (path.matches("/api/profils/\\d+/droits")) {
-            return true;
-        }
-        // /api/pays/profil/{id}
-        if (path.matches("/api/pays/profil/\\d+")) {
-            return true;
-        }
+        // Lecture du périmètre pays de l'utilisateur connecté (écran login / filtres).
         if (path.equals("/api/pays/user/allowed-codes")) {
             return true;
         }
 
         // Ignorer les requêtes OPTIONS (CORS)
         if ("OPTIONS".equals(method)) {
+            return true;
+        }
+
+        // Lecture publique du paramétrage d'affichage (déjà permitAll côté SecurityConfig).
+        if ("GET".equalsIgnoreCase(method) && isPublicConfigurationPath(path)) {
             return true;
         }
 
@@ -258,12 +258,9 @@ public class PermissionInterceptor implements HandlerInterceptor {
                     }
                 }
             } catch (Exception e) {
-                // En cas d'erreur lors de la vérification, autoriser la requête pour éviter de bloquer l'application
-                // Log l'erreur pour le débogage
-                System.err.println("Erreur lors de la vérification des permissions pour " + path + ": " + e.getMessage());
-                e.printStackTrace();
-                // Autoriser la requête en cas d'erreur (mode permissif pour éviter de bloquer l'application)
-                return true;
+                log.error("Erreur lors de la vérification des permissions pour {} {} : {}", method, path, e.getMessage());
+                writeForbidden(response, path, "Accès refusé (contrôle de permission indisponible).");
+                return false;
             }
         }
 
@@ -374,38 +371,20 @@ public class PermissionInterceptor implements HandlerInterceptor {
     }
 
     private String getUsernameFromRequest(HttpServletRequest request) {
-        // Essayer d'abord depuis le SecurityContext (rempli par JwtAuthenticationFilter)
         Authentication authentication = SecurityContextHolder.getContext().getAuthentication();
-        if (authentication != null && authentication.isAuthenticated()) {
+        if (authentication != null && authentication.isAuthenticated()
+                && !(authentication instanceof org.springframework.security.authentication.AnonymousAuthenticationToken)) {
             Object principal = authentication.getPrincipal();
-            log.trace("PermissionInterceptor principal type={}", principal != null ? principal.getClass().getName() : "null");
             if (principal instanceof UserDetails) {
                 return ((UserDetails) principal).getUsername();
-            } else if (principal instanceof String) {
-                return (String) principal;
             }
-        } else {
-            log.trace("PermissionInterceptor: aucune authentication dans SecurityContext");
+            if (principal instanceof String username
+                    && username != null
+                    && !username.isBlank()
+                    && !"anonymousUser".equalsIgnoreCase(username)) {
+                return username;
+            }
         }
-
-        // Essayer depuis le header X-Username (si envoyé par le frontend)
-        String username = request.getHeader("X-Username");
-        if (username != null && !username.isEmpty()) {
-            return username;
-        }
-
-        // Essayer depuis la session
-        Object sessionUser = request.getSession().getAttribute("username");
-        if (sessionUser != null) {
-            return sessionUser.toString();
-        }
-
-        // Essayer depuis les paramètres de requête (pour le développement)
-        username = request.getParameter("username");
-        if (username != null && !username.isEmpty()) {
-            return username;
-        }
-
         return null;
     }
 

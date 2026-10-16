@@ -369,11 +369,9 @@ public class PermissionCheckService {
     }
 
     public boolean hasPermissionForApiPath(String username, String apiPath, String httpMethod, String moduleOverride, String permissionOverride) {
-        // Si l'utilisateur est admin, il a toutes les permissions
-        if ("admin".equals(username)) {
-            return true;
-        }
-        
+        moduleOverride = sanitizeModuleOverride(moduleOverride);
+        permissionOverride = sanitizePermissionOverride(httpMethod, permissionOverride);
+
         // Vérifier si l'utilisateur a un profil administrateur
         Optional<UserEntity> userOpt = userRepository.findByUsername(username);
         if (userOpt.isPresent()) {
@@ -417,14 +415,12 @@ public class PermissionCheckService {
 
         String moduleName = resolveModuleForApiPath(apiPath, httpMethod, moduleOverride);
         if (moduleName == null) {
-            System.out.println("⚠️ Module non mappé pour le chemin: " + apiPath + " - Autorisation par défaut");
-            return true;
+            return false;
         }
 
         String permissionName = resolvePermissionForApiPath(apiPath, httpMethod, moduleOverride, permissionOverride);
         if (permissionName == null) {
-            System.out.println("⚠️ Permission non mappée pour " + httpMethod + " sur " + apiPath + " - Autorisation par défaut");
-            return true;
+            return false;
         }
 
         return checkPermissionAcrossModules(username, apiPath, httpMethod, moduleOverride, permissionOverride, permissionName);
@@ -580,8 +576,45 @@ public class PermissionCheckService {
         if (apiPath.startsWith("/api/report-dashboard")) return "Résultats";
         if (apiPath.startsWith("/api/service-references")) return "Dashboard";
         if (apiPath.startsWith("/api/aide")) return "AIDE";
-        
+        if (apiPath.startsWith("/api/guide-nodes")) return "AIDE";
+        if (apiPath.startsWith("/api/guide-documents")) return "AIDE";
+        if (apiPath.startsWith("/api/sop-nodes")) return "AIDE";
+        if (apiPath.startsWith("/api/sop-documents")) return "AIDE";
+        if (apiPath.startsWith("/api/configuration/calcul")) return "Modèles";
+        if (apiPath.startsWith("/api/configuration/top-users")) return "Dashboard";
+        if (apiPath.startsWith("/api/configuration")) return "Profil";
+        if (apiPath.startsWith("/api/conversion")) return "Modèles";
+        if (apiPath.startsWith("/api/renommer")) return "Traitement";
+        if (apiPath.startsWith("/api/suivi-ecart")) return "Résultats";
+        if (apiPath.startsWith("/api/agency-summary")) return "Dashboard";
+        if (apiPath.startsWith("/api/modules")) return "Dashboard";
+        if (apiPath.startsWith("/api/pays")) return "Profil";
+        if (apiPath.startsWith("/api/oppart")) return "Opérations";
+        if (apiPath.startsWith("/api/compte-solde-bo")) return "Comptes";
+        if (apiPath.startsWith("/api/compte-solde-cloture")) return "Comptes";
+        if (apiPath.startsWith("/api/user-profil")) return "Profil";
+
         return null;
+    }
+
+    private String sanitizeModuleOverride(String moduleOverride) {
+        if (moduleOverride == null || moduleOverride.isBlank()) {
+            return null;
+        }
+        String canonical = canonicalizeModuleOverride(moduleOverride);
+        return com.reconciliation.config.NavigationSubmenuRegistry.isSubmenuAccessModule(canonical)
+            ? canonical
+            : null;
+    }
+
+    private String sanitizePermissionOverride(String httpMethod, String permissionOverride) {
+        if (permissionOverride == null || permissionOverride.isBlank()) {
+            return null;
+        }
+        if (httpMethod == null || !"GET".equalsIgnoreCase(httpMethod)) {
+            return null;
+        }
+        return permissionOverride;
     }
 
     private String mapDashboardReadApiPathToModule(String apiPath, String httpMethod) {
