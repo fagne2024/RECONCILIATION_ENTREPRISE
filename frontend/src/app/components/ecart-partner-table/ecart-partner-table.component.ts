@@ -17,6 +17,7 @@ import { ReconciliationService } from '../../services/reconciliation.service';
 import { extractRecordAmount } from '../../utils/record-amount.util';
 import { partitionEcartRecords, resolveMagicPartitionContext } from '../../utils/magic-partition.util';
 import { SharedModule } from '../../shared/shared.module';
+import { DsPaginationComponent } from '../../shared/ui';
 import { OppartService } from '../../services/oppart.service';
 import { Oppart } from '../../models/oppart.model';
 import { TranslateModule, TranslateService } from '@ngx-translate/core';
@@ -47,7 +48,7 @@ interface OppartTargetFieldDef {
 @Component({
   selector: 'app-ecart-partner-table',
   standalone: true,
-  imports: [TranslateModule, SharedModule],
+  imports: [TranslateModule, SharedModule, DsPaginationComponent],
   templateUrl: './ecart-partner-table.component.html',
   styleUrls: ['./ecart-partner-table.component.scss'],
   changeDetection: ChangeDetectionStrategy.OnPush
