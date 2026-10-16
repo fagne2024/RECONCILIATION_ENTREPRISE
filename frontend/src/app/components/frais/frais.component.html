@@ -11,7 +11,7 @@
     </div>
     <div class="nav-spacer"></div>
     <div class="nav-actions">
-      <button type="button" class="nav-btn primary" (click)="showAddForm = true" *ngIf="!showAddForm && !showEditForm">
+      <button type="button" class="ds-btn ds-btn--primary nav-btn primary" (click)="showAddForm = true" *ngIf="!showAddForm && !showEditForm">
         <i class="fas fa-plus"></i> {{ 'FRS.Ajouterunfrais' | translate }}
       </button>
     </div>
@@ -27,7 +27,7 @@
       <div class="hero-kpi-strip">
         <div class="hk-strip-item">
           <span class="hk-strip-label">{{ 'FRS.Fraisdéfinis' | translate }}</span>
-          <span class="hk-strip-value">{{ (filteredFrais?.length || 0) | number:'1.0-0' }}</span>
+          <span class="hk-strip-value ds-num">{{ (filteredFrais?.length || 0) | number:'1.0-0' }}</span>
         </div>
       </div>
     </div>
@@ -38,7 +38,7 @@
     <!-- En-tête -->
     <div class="header">
         <h1>{{ 'FRS.Gestiondesfraisdetransaction' | translate }}</h1>
-        <button class="btn-primary" (click)="showAddForm = true" *ngIf="!showAddForm && !showEditForm">
+        <button type="button" class="ds-btn ds-btn--primary btn-primary" (click)="showAddForm = true" *ngIf="!showAddForm && !showEditForm">
             <i class="fas fa-plus"></i> {{ 'FRS.Ajouterunfrais' | translate }}
         </button>
     </div>
@@ -65,7 +65,7 @@
                             <div class="form-group">
                                 <label>{{ 'TBL.serviceRequired' | translate }}</label>
                                 <input type="text" formControlName="service" 
-                                    placeholder="{{ 'FRS.Saisirlenomduservice' | translate }}" class="text-input">
+                                    placeholder="{{ 'FRS.Saisirlenomduservice' | translate }}" class="ds-input text-input">
                                 <div *ngIf="addForm.get('service')?.invalid && addForm.get('service')?.touched" class="error-message">
                                     <i class="fas fa-exclamation-circle"></i>
                                     {{ 'FRS.Leserviceestrequis' | translate }}
@@ -76,11 +76,11 @@
                                 <div class="clients-chips-wrapper">
                                     <input type="text" [(ngModel)]="newClientInput" (keydown)="onClientInputKeydown($event)"
                                         (blur)="addClientFromInput()" [ngModelOptions]="{standalone: true}"
-                                        placeholder="{{ 'FRS.Saisirunnomdeclient' | translate }}" class="text-input clients-input" />
+                                        placeholder="{{ 'FRS.Saisirunnomdeclient' | translate }}" class="ds-input text-input clients-input" />
                                     <div class="clients-chips" *ngIf="addClients.length > 0">
                                         <span class="chip" *ngFor="let c of addClients; let i = index">
                                             {{ c }}
-                                            <button type="button" class="chip-remove" (click)="removeAddClient(i)"><i class="fas fa-times"></i></button>
+                                            <button type="button" class="ds-btn ds-btn--secondary chip-remove" (click)="removeAddClient(i)"><i class="fas fa-times"></i></button>
                                         </span>
                                     </div>
                                 </div>
@@ -103,7 +103,7 @@
                             <div class="form-group">
                                 <label>{{ 'FRS.Typedecalcul' | translate }}</label>
                                 <div class="select-wrapper">
-                                    <select formControlName="typeCalcul" (change)="onTypeCalculChange()" class="modern-select">
+                                    <select formControlName="typeCalcul" (change)="onTypeCalculChange()" class="ds-select modern-select">
                                         <option value="NOMINAL">{{ 'FRS.Fraisfixe' | translate }}</option>
                                         <option value="POURCENTAGE">{{ 'FRS.Fraisenpourcentage' | translate }}</option>
                                     </select>
@@ -121,7 +121,7 @@
                                 <label>{{ 'FRS.Montantdufraisfcfa' | translate }}</label>
                                 <div class="amount-input-wrapper">
                                     <input type="number" formControlName="montantFrais" 
-                                        placeholder="0.00" step="0.01" min="0" class="amount-input">
+                                        placeholder="0.00" step="0.01" min="0" class="ds-input amount-input">
                                     <span class="currency-symbol">FCFA</span>
                                 </div>
                                 <div *ngIf="addForm.get('montantFrais')?.invalid && addForm.get('montantFrais')?.touched" class="error-message">
@@ -136,7 +136,7 @@
                                 <label>{{ 'FRS.Pourcentage' | translate }}</label>
                                 <div class="percentage-input-wrapper">
                                     <input type="number" formControlName="pourcentage" 
-                                        placeholder="0.00" step="0.01" min="0" max="100" class="percentage-input">
+                                        placeholder="0.00" step="0.01" min="0" max="100" class="ds-input percentage-input">
                                     <span class="percentage-symbol">%</span>
                                 </div>
                                 <div *ngIf="addForm.get('pourcentage')?.invalid && addForm.get('pourcentage')?.touched" class="error-message">
@@ -188,7 +188,7 @@
                             <div class="form-group full-width">
                                 <label>{{ 'TBL.description' | translate }}</label>
                                 <input type="text" formControlName="description" 
-                                    placeholder="{{ 'FRS.Descriptiondufraisoptionnel' | translate }}" class="text-input">
+                                    placeholder="{{ 'FRS.Descriptiondufraisoptionnel' | translate }}" class="ds-input text-input">
                             </div>
                         </div>
 
@@ -211,9 +211,9 @@
 
             <div class="modal-footer">
                 <div class="modal-actions">
-                    <button type="button" class="btn-secondary" (click)="cancelAdd()">
+                    <button type="button" class="ds-btn ds-btn--secondary btn-secondary" (click)="cancelAdd()">
                         <i class="fas fa-times"></i>{{ 'COMMON.actions.cancel' | translate }}</button>
-                    <button type="submit" class="btn-primary" 
+                    <button type="submit" class="ds-btn ds-btn--primary btn-primary" 
                         [disabled]="!addForm.valid || isAdding"
                         (click)="addFraisTransaction()">
                         <i class="fas fa-plus"></i>
@@ -251,7 +251,7 @@
                             <div class="form-group">
                                 <label>{{ 'TBL.serviceRequired' | translate }}</label>
                                 <input type="text" formControlName="service" 
-                                    placeholder="{{ 'FRS.Saisirlenomduservice' | translate }}" class="text-input">
+                                    placeholder="{{ 'FRS.Saisirlenomduservice' | translate }}" class="ds-input text-input">
                                 <div *ngIf="editForm.get('service')?.invalid && editForm.get('service')?.touched" class="error-message">
                                     <i class="fas fa-exclamation-circle"></i>
                                     {{ 'FRS.Leserviceestrequis' | translate }}
@@ -260,7 +260,7 @@
                             <div class="form-group">
                                 <label>{{ 'FRS.Client' | translate }}</label>
                                 <input type="text" formControlName="agence" 
-                                    placeholder="{{ 'FRS.Saisirlenomduclient' | translate }}" class="text-input">
+                                    placeholder="{{ 'FRS.Saisirlenomduclient' | translate }}" class="ds-input text-input">
                                 <div *ngIf="editForm.get('agence')?.invalid && editForm.get('agence')?.touched" class="error-message">
                                     <i class="fas fa-exclamation-circle"></i>
                                     {{ 'FRS.Leclientestrequis' | translate }}
@@ -279,7 +279,7 @@
                             <div class="form-group">
                                 <label>{{ 'FRS.Typedecalcul' | translate }}</label>
                                 <div class="select-wrapper">
-                                    <select formControlName="typeCalcul" (change)="onTypeCalculChange()" class="modern-select">
+                                    <select formControlName="typeCalcul" (change)="onTypeCalculChange()" class="ds-select modern-select">
                                         <option value="NOMINAL">{{ 'FRS.Fraisfixe' | translate }}</option>
                                         <option value="POURCENTAGE">{{ 'FRS.Fraisenpourcentage' | translate }}</option>
                                     </select>
@@ -297,7 +297,7 @@
                                 <label>{{ 'FRS.Montantdufraisfcfa' | translate }}</label>
                                 <div class="amount-input-wrapper">
                                     <input type="number" formControlName="montantFrais" 
-                                        placeholder="0.00" step="0.01" min="0" class="amount-input">
+                                        placeholder="0.00" step="0.01" min="0" class="ds-input amount-input">
                                     <span class="currency-symbol">FCFA</span>
                                 </div>
                                 <div *ngIf="editForm.get('montantFrais')?.invalid && editForm.get('montantFrais')?.touched" class="error-message">
@@ -312,7 +312,7 @@
                                 <label>{{ 'FRS.Pourcentage' | translate }}</label>
                                 <div class="percentage-input-wrapper">
                                     <input type="number" formControlName="pourcentage" 
-                                        placeholder="0.00" step="0.01" min="0" max="100" class="percentage-input">
+                                        placeholder="0.00" step="0.01" min="0" max="100" class="ds-input percentage-input">
                                     <span class="percentage-symbol">%</span>
                                 </div>
                                 <div *ngIf="editForm.get('pourcentage')?.invalid && editForm.get('pourcentage')?.touched" class="error-message">
@@ -364,7 +364,7 @@
                             <div class="form-group full-width">
                                 <label>{{ 'TBL.description' | translate }}</label>
                                 <input type="text" formControlName="description" 
-                                    placeholder="{{ 'FRS.Descriptiondufraisoptionnel' | translate }}" class="text-input">
+                                    placeholder="{{ 'FRS.Descriptiondufraisoptionnel' | translate }}" class="ds-input text-input">
                             </div>
                         </div>
 
@@ -387,9 +387,9 @@
 
             <div class="modal-footer">
                 <div class="modal-actions">
-                    <button type="button" class="btn-secondary" (click)="cancelEdit()">
+                    <button type="button" class="ds-btn ds-btn--secondary btn-secondary" (click)="cancelEdit()">
                         <i class="fas fa-times"></i>{{ 'COMMON.actions.cancel' | translate }}</button>
-                    <button type="submit" class="btn-primary" 
+                    <button type="submit" class="ds-btn ds-btn--primary btn-primary" 
                         [disabled]="!editForm.valid || isEditing"
                         (click)="updateFraisTransaction()">
                         <i class="fas fa-check"></i>
@@ -449,7 +449,7 @@
                 </div>
                 <div class="form-group">
                     <label>{{ 'TBL.status' | translate }}</label>
-                    <select formControlName="actif" (change)="applyFilters()">
+                    <select class="ds-select" formControlName="actif" (change)="applyFilters()">
                         <option value="">{{ 'FILT.all' | translate }}</option>
                         <option [value]="true">{{ 'TBL.confidence' | translate }}</option>
                         <option [value]="false">{{ 'FRS.Inactif' | translate }}</option>
@@ -457,14 +457,14 @@
                 </div>
                 <div class="form-group">
                     <label for="dateDebut">{{ 'LBL.startDate' | translate }}</label>
-                    <input id="dateDebut" type="date" [value]="dateDebut" (change)="onDateDebutChange($event)">
+                    <input class="ds-input" id="dateDebut" type="date" [value]="dateDebut" (change)="onDateDebutChange($event)">
                 </div>
                 <div class="form-group">
                     <label for="dateFin">{{ 'LBL.endDate' | translate }}</label>
-                    <input id="dateFin" type="date" [value]="dateFin" (change)="onDateFinChange($event)">
+                    <input class="ds-input" id="dateFin" type="date" [value]="dateFin" (change)="onDateFinChange($event)">
                 </div>
                 <div class="form-group">
-                    <button type="button" (click)="clearFilters()">{{ 'ACT.clearFilters' | translate }}</button>
+                    <button class="ds-btn ds-btn--secondary" type="button" (click)="clearFilters()">{{ 'ACT.clearFilters' | translate }}</button>
                 </div>
             </div>
         </form>
@@ -475,15 +475,15 @@
         <div class="list-header">
             <h3>{{ 'FRS.Listedesfraisdetransaction' | translate }}</h3>
             <div class="export-buttons" *ngIf="!isLoading && pagedFrais.length > 0">
-                <button class="btn-export btn-csv" (click)="exportToCSV()" [disabled]="isExporting">
+                <button type="button" class="ds-btn ds-btn--secondary btn-export btn-csv" (click)="exportToCSV()" [disabled]="isExporting">
                     <i class="fas fa-file-csv"></i>
                     {{ isExporting ? 'Export en cours...' : 'Exporter CSV' }}
                 </button>
-                <button class="btn-export btn-excel" (click)="exportToExcel()" [disabled]="isExporting">
+                <button type="button" class="ds-btn ds-btn--secondary btn-export btn-excel" (click)="exportToExcel()" [disabled]="isExporting">
                     <i class="fas fa-file-excel"></i>
                     {{ isExporting ? 'Export en cours...' : 'Exporter Excel' }}
                 </button>
-                <button class="btn-export btn-api" (click)="exportViaAPI()" [disabled]="isExporting">
+                <button type="button" class="ds-btn ds-btn--secondary btn-export btn-api" (click)="exportViaAPI()" [disabled]="isExporting">
                     <i class="fas fa-download"></i>
                     {{ isExporting ? 'Export en cours...' : 'Export API' }}
                 </button>
@@ -499,7 +499,7 @@
         </div>
 
         <div *ngIf="!isLoading && pagedFrais.length > 0" class="table-container">
-            <table class="frais-table">
+            <table class="ds-table frais-table">
                 <thead>
                     <tr>
                         <th>{{ 'TBL.service' | translate }}</th>
@@ -543,13 +543,13 @@
                         <td>{{ frais.dateCreation | date:'dd/MM/yyyy HH:mm' }}</td>
                         <td>{{ frais.dateModification | date:'dd/MM/yyyy HH:mm' }}</td>
                         <td class="actions">
-                            <button class="btn-icon" (click)="editFraisTransaction(frais)">
+                            <button type="button" class="btn-icon" (click)="editFraisTransaction(frais)">
                                 <i class="fas fa-edit"></i>
                             </button>
-                            <button class="btn-icon btn-toggle" (click)="toggleFraisTransaction(frais.id)" *ngIf="frais.id">
+                            <button type="button" class="btn-icon btn-toggle" (click)="toggleFraisTransaction(frais.id)" *ngIf="frais.id">
                                 <i class="fas" [class.fa-toggle-on]="frais.actif" [class.fa-toggle-off]="!frais.actif"></i>
                             </button>
-                            <button class="btn-icon btn-danger" (click)="deleteFraisTransaction(frais.id)" *ngIf="frais.id">
+                            <button type="button" class="btn-icon btn-danger" (click)="deleteFraisTransaction(frais.id)" *ngIf="frais.id">
                                 <i class="fas fa-trash"></i>
                             </button>
                         </td>
@@ -558,23 +558,15 @@
             </table>
         </div>
 
-        <!-- Pagination -->
-        <div class="pagination" *ngIf="totalPages > 1">
-            <button (click)="prevPage()" [disabled]="currentPage === 1">
-                <i class="fas fa-chevron-left"></i>{{ 'PAG.previous' | translate }}</button>
-            
-            <div class="pagination-indicators">
-                <span *ngFor="let page of getVisiblePages()" 
-                      class="page-indicator"
-                      [class.active]="currentPage === page"
-                      (click)="goToPage(page)">
-                    {{ page }}
-                </span>
-            </div>
-            
-            <button (click)="nextPage()" [disabled]="currentPage === totalPages">{{ 'PAG.next' | translate }}<i class="fas fa-chevron-right"></i>
-            </button>
-        </div>
+        <ds-pagination
+            *ngIf="totalPages > 1"
+            [page]="currentPage"
+            [pageCount]="totalPages"
+            [totalItems]="filteredFrais.length"
+            [pageSize]="pageSize"
+            [itemLabel]="'TBL.lines' | translate"
+            (pageChange)="goToPage($event)">
+        </ds-pagination>
     </div>
 
     <!-- Section d'information sur la logique de calcul -->
@@ -603,15 +595,15 @@
             <div class="form-row">
                 <div class="form-group">
                     <label>{{ 'TBL.service' | translate }}</label>
-                    <input type="text" [(ngModel)]="testService" placeholder="{{ 'FRS.Exairtime' | translate }}">
+                    <input class="ds-input" type="text" [(ngModel)]="testService" placeholder="{{ 'FRS.Exairtime' | translate }}">
                 </div>
                 <div class="form-group">
                     <label>{{ 'TBL.client' | translate }}</label>
-                    <input type="text" [(ngModel)]="testAgence" placeholder="{{ 'FRS.Excl001' | translate }}">
+                    <input class="ds-input" type="text" [(ngModel)]="testAgence" placeholder="{{ 'FRS.Excl001' | translate }}">
                 </div>
                 <div class="form-group">
                     <label>{{ 'FRS.Typedecalcul_1' | translate }}</label>
-                    <select [(ngModel)]="testTypeCalcul" (change)="onTestTypeChange()">
+                    <select class="ds-select" [(ngModel)]="testTypeCalcul" (change)="onTestTypeChange()">
                         <option value="NOMINAL">{{ 'FRS.Fraisfixe' | translate }}</option>
                         <option value="POURCENTAGE">{{ 'FRS.Fraisenpourcentage' | translate }}</option>
                     </select>
@@ -620,24 +612,24 @@
             <div class="form-row">
                 <div class="form-group" *ngIf="testTypeCalcul === 'NOMINAL'">
                     <label>{{ 'FRS.Montantdufraisfcfa_1' | translate }}</label>
-                    <input type="number" [(ngModel)]="testMontantFrais" placeholder="{{ 'FRS.Ex100' | translate }}">
+                    <input class="ds-input" type="number" [(ngModel)]="testMontantFrais" placeholder="{{ 'FRS.Ex100' | translate }}">
                 </div>
                 <div class="form-group" *ngIf="testTypeCalcul === 'POURCENTAGE'">
                     <label>{{ 'FRS.Pourcentage_2' | translate }}</label>
-                    <input type="number" [(ngModel)]="testPourcentage" placeholder="{{ 'FRS.Ex25' | translate }}">
+                    <input class="ds-input" type="number" [(ngModel)]="testPourcentage" placeholder="{{ 'FRS.Ex25' | translate }}">
                 </div>
                 <div class="form-group">
                     <label>{{ 'FRS.Volumedelopérationfcfa' | translate }}</label>
-                    <input type="number" [(ngModel)]="testVolumeOperation" placeholder="{{ 'FRS.Ex10000' | translate }}">
+                    <input class="ds-input" type="number" [(ngModel)]="testVolumeOperation" placeholder="{{ 'FRS.Ex10000' | translate }}">
                 </div>
                 <div class="form-group" *ngIf="testTypeCalcul === 'NOMINAL'">
                     <label>{{ 'DASH.transactionCount' | translate }}</label>
-                    <input type="number" [(ngModel)]="testNombreTransactions" placeholder="{{ 'FRS.Ex50' | translate }}">
+                    <input class="ds-input" type="number" [(ngModel)]="testNombreTransactions" placeholder="{{ 'FRS.Ex50' | translate }}">
                 </div>
             </div>
             <div class="form-row">
                 <div class="form-group">
-                    <button type="button" (click)="testFraisCalculation()" class="btn btn-primary">
+                    <button type="button" (click)="testFraisCalculation()" class="ds-btn ds-btn--primary btn btn-primary">
                         {{ 'FRS.Testerlecalcul' | translate }}
                     </button>
                 </div>
