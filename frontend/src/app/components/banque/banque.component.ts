@@ -15,6 +15,7 @@ import { PopupService } from '../../services/popup.service';
 import { ConfigurationCalculService } from '../../services/configuration-calcul.service';
 import { countryDisplayLabel, countriesMatch, normalizeCountryFilterOptions } from '../../utils/country-codes.util';
 import { TranslateModule } from '@ngx-translate/core';
+import { DsPaginationComponent } from '../../shared/ui/pagination/ds-pagination.component';
 
 // Interface locale pour les opérations bancaires avec Date
 interface OperationBancaireDisplay extends Omit<OperationBancaire, 'dateOperation'> {
@@ -43,7 +44,7 @@ interface ReconFilters {
 @Component({
   selector: 'app-banque',
   standalone: true,
-  imports: [TranslateModule, CommonModule, FormsModule, ReactiveFormsModule],
+  imports: [TranslateModule, CommonModule, FormsModule, ReactiveFormsModule, DsPaginationComponent],
   templateUrl: './banque.component.html',
   styleUrls: ['./banque.component.scss']
 })
