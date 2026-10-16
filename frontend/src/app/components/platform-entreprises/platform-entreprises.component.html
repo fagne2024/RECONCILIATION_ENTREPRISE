@@ -10,19 +10,19 @@
       <div class="kpi-strip">
         <div class="kpi">
           <span class="kpi-label">{{ 'PLT.ent.kpiTotal' | translate }}</span>
-          <span class="kpi-value">{{ entreprises.length }}</span>
+          <span class="kpi-value ds-num">{{ entreprises.length }}</span>
         </div>
         <div class="kpi">
           <span class="kpi-label">{{ 'PLT.ent.kpiActive' | translate }}</span>
-          <span class="kpi-value">{{ countStatut('ACTIVE') }}</span>
+          <span class="kpi-value ds-num">{{ countStatut('ACTIVE') }}</span>
         </div>
         <div class="kpi">
           <span class="kpi-label">{{ 'PLT.ent.kpiSuspended' | translate }}</span>
-          <span class="kpi-value">{{ countStatut('SUSPENDUE') }}</span>
+          <span class="kpi-value ds-num">{{ countStatut('SUSPENDUE') }}</span>
         </div>
         <div class="kpi">
           <span class="kpi-label">{{ 'PLT.ent.kpiArchived' | translate }}</span>
-          <span class="kpi-value">{{ countStatut('ARCHIVEE') }}</span>
+          <span class="kpi-value ds-num">{{ countStatut('ARCHIVEE') }}</span>
         </div>
       </div>
     </div>
@@ -42,10 +42,10 @@
             <input type="checkbox" [(ngModel)]="includeArchived">
             <span>{{ 'PLT.ent.showArchived' | translate }}</span>
           </label>
-          <button class="btn-rd btn-rd-ghost" (click)="loadEntreprises()" [disabled]="loading">
+          <button type="button" class="ds-btn ds-btn--secondary btn-rd btn-rd-ghost" (click)="loadEntreprises()" [disabled]="loading">
             <i class="fas fa-sync-alt"></i> {{ 'PLT.ent.refresh' | translate }}
           </button>
-          <button class="btn-rd btn-rd-primary" (click)="openCreateModal()" [disabled]="loading">
+          <button type="button" class="ds-btn ds-btn--primary btn-rd btn-rd-primary" (click)="openCreateModal()" [disabled]="loading">
             <i class="fas fa-plus"></i> {{ 'PLT.ent.create' | translate }}
           </button>
         </div>
@@ -57,7 +57,7 @@
       </div>
 
       <div *ngIf="!loading" class="pf-table-wrap">
-        <table class="pf-table">
+        <table class="ds-table pf-table">
           <thead>
             <tr>
               <th>{{ 'PLT.ent.colId' | translate }}</th>
@@ -83,25 +83,25 @@
               <td><span class="pf-count">{{ e.modulesActives }}</span></td>
               <td>
                 <div class="pf-row-actions">
-                  <button class="btn-rd btn-rd-ghost btn-rd-sm" (click)="openEditModal(e)" [title]="'PLT.ent.actionEdit' | translate">
+                  <button type="button" class="ds-btn ds-btn--secondary btn-rd btn-rd-ghost btn-rd-sm" (click)="openEditModal(e)" [title]="'PLT.ent.actionEdit' | translate">
                     <i class="fas fa-pen"></i> <span class="btn-label">{{ 'PLT.ent.actionEdit' | translate }}</span>
                   </button>
-                  <button *ngIf="e.statut !== 'ARCHIVEE'" class="btn-rd btn-rd-ghost btn-rd-sm" (click)="viewEntreprise(e)" [title]="'PLT.ent.actionManageModules' | translate">
+                  <button type="button" *ngIf="e.statut !== 'ARCHIVEE'" class="ds-btn ds-btn--secondary btn-rd btn-rd-ghost btn-rd-sm" (click)="viewEntreprise(e)" [title]="'PLT.ent.actionManageModules' | translate">
                     <i class="fas fa-cubes"></i> <span class="btn-label">{{ 'PLT.ent.actionManageModules' | translate }}</span>
                   </button>
-                  <button *ngIf="e.statut === 'ACTIVE'" class="btn-rd btn-rd-warn btn-rd-sm" (click)="openSuspendModal(e)" [title]="'PLT.ent.actionSuspend' | translate">
+                  <button type="button" *ngIf="e.statut === 'ACTIVE'" class="ds-btn ds-btn--secondary btn-rd btn-rd-warn btn-rd-sm" (click)="openSuspendModal(e)" [title]="'PLT.ent.actionSuspend' | translate">
                     <i class="fas fa-pause"></i> <span class="btn-label">{{ 'PLT.ent.actionSuspend' | translate }}</span>
                   </button>
-                  <button *ngIf="e.statut === 'SUSPENDUE'" class="btn-rd btn-rd-success btn-rd-sm" (click)="openReactivateModal(e)" [title]="'PLT.ent.actionReactivate' | translate">
+                  <button type="button" *ngIf="e.statut === 'SUSPENDUE'" class="ds-btn ds-btn--secondary btn-rd btn-rd-success btn-rd-sm" (click)="openReactivateModal(e)" [title]="'PLT.ent.actionReactivate' | translate">
                     <i class="fas fa-play"></i> <span class="btn-label">{{ 'PLT.ent.actionReactivate' | translate }}</span>
                   </button>
-                  <button *ngIf="e.statut === 'ARCHIVEE'" class="btn-rd btn-rd-success btn-rd-sm" (click)="openRestoreModal(e)" [title]="'PLT.ent.actionRestore' | translate">
+                  <button type="button" *ngIf="e.statut === 'ARCHIVEE'" class="ds-btn ds-btn--secondary btn-rd btn-rd-success btn-rd-sm" (click)="openRestoreModal(e)" [title]="'PLT.ent.actionRestore' | translate">
                     <i class="fas fa-rotate-left"></i> <span class="btn-label">{{ 'PLT.ent.actionRestore' | translate }}</span>
                   </button>
-                  <button *ngIf="e.statut !== 'ARCHIVEE'" class="btn-rd btn-rd-info btn-rd-sm" (click)="openResendModal(e)" [title]="'PLT.ent.actionResend' | translate">
+                  <button type="button" *ngIf="e.statut !== 'ARCHIVEE'" class="ds-btn ds-btn--secondary btn-rd btn-rd-info btn-rd-sm" (click)="openResendModal(e)" [title]="'PLT.ent.actionResend' | translate">
                     <i class="fas fa-paper-plane"></i> <span class="btn-label">{{ 'PLT.ent.actionResend' | translate }}</span>
                   </button>
-                  <button *ngIf="e.statut !== 'ARCHIVEE'" class="btn-rd btn-rd-danger btn-rd-sm" (click)="openArchiveModal(e)" [title]="'PLT.ent.actionArchive' | translate">
+                  <button type="button" *ngIf="e.statut !== 'ARCHIVEE'" class="ds-btn ds-btn--danger btn-rd btn-rd-danger btn-rd-sm" (click)="openArchiveModal(e)" [title]="'PLT.ent.actionArchive' | translate">
                     <i class="fas fa-trash"></i> <span class="btn-label">{{ 'PLT.ent.actionArchive' | translate }}</span>
                   </button>
                 </div>
@@ -134,20 +134,20 @@
           <div class="pf-grid">
             <div class="pf-field">
               <label for="pe-code">{{ 'PLT.ent.createCode' | translate }} *</label>
-              <input id="pe-code" type="text" class="pf-input" [(ngModel)]="createForm.code" name="code" required maxlength="64" pattern="^[a-zA-Z0-9_-]+$" [placeholder]="'PLT.ent.createCodePlaceholder' | translate">
+              <input id="pe-code" type="text" class="ds-input pf-input" [(ngModel)]="createForm.code" name="code" required maxlength="64" pattern="^[a-zA-Z0-9_-]+$" [placeholder]="'PLT.ent.createCodePlaceholder' | translate">
               <span class="pf-hint">{{ 'PLT.ent.createCodeHint' | translate }}</span>
             </div>
             <div class="pf-field">
               <label for="pe-nom">{{ 'PLT.ent.createNom' | translate }} *</label>
-              <input id="pe-nom" type="text" class="pf-input" [(ngModel)]="createForm.nom" name="nom" required maxlength="255" [placeholder]="'PLT.ent.createNomPlaceholder' | translate">
+              <input id="pe-nom" type="text" class="ds-input pf-input" [(ngModel)]="createForm.nom" name="nom" required maxlength="255" [placeholder]="'PLT.ent.createNomPlaceholder' | translate">
             </div>
             <div class="pf-field">
               <label for="pe-user">{{ 'PLT.ent.createAdminUsername' | translate }} *</label>
-              <input id="pe-user" type="text" class="pf-input" [(ngModel)]="createForm.adminUsername" name="adminUsername" required maxlength="100" [placeholder]="'PLT.ent.createAdminUsernamePlaceholder' | translate">
+              <input id="pe-user" type="text" class="ds-input pf-input" [(ngModel)]="createForm.adminUsername" name="adminUsername" required maxlength="100" [placeholder]="'PLT.ent.createAdminUsernamePlaceholder' | translate">
             </div>
             <div class="pf-field">
               <label for="pe-mail">{{ 'PLT.ent.createAdminEmail' | translate }} *</label>
-              <input id="pe-mail" type="email" class="pf-input" [(ngModel)]="createForm.adminEmail" name="adminEmail" required maxlength="255" [placeholder]="'PLT.ent.createAdminEmailPlaceholder' | translate">
+              <input id="pe-mail" type="email" class="ds-input pf-input" [(ngModel)]="createForm.adminEmail" name="adminEmail" required maxlength="255" [placeholder]="'PLT.ent.createAdminEmailPlaceholder' | translate">
             </div>
           </div>
           <div class="pf-alert pf-alert-info">
@@ -156,10 +156,10 @@
           </div>
         </div>
         <div class="pf-modal-foot">
-          <button type="button" class="btn-rd btn-rd-ghost" (click)="closeCreateModal()" [disabled]="loading">
+          <button type="button" class="ds-btn ds-btn--secondary btn-rd btn-rd-ghost" (click)="closeCreateModal()" [disabled]="loading">
             {{ 'COMMON.actions.cancel' | translate }}
           </button>
-          <button type="submit" class="btn-rd btn-rd-primary" [disabled]="loading">
+          <button type="submit" class="ds-btn ds-btn--primary btn-rd btn-rd-primary" [disabled]="loading">
             <i class="fas fa-check"></i> {{ 'ACT.create' | translate }}
           </button>
         </div>
@@ -179,7 +179,7 @@
         <div class="pf-modal-body">
           <div class="pf-field">
             <label for="pe-edit-nom">{{ 'PLT.ent.editNom' | translate }} *</label>
-            <input id="pe-edit-nom" type="text" class="pf-input" [(ngModel)]="editForm.nom" name="editNom" required maxlength="255" [placeholder]="'PLT.ent.createNomPlaceholder' | translate">
+            <input id="pe-edit-nom" type="text" class="ds-input pf-input" [(ngModel)]="editForm.nom" name="editNom" required maxlength="255" [placeholder]="'PLT.ent.createNomPlaceholder' | translate">
           </div>
           <div class="pf-admin-box">
             <div class="pf-admin-head">
@@ -188,11 +188,11 @@
             <div class="pf-grid">
               <div class="pf-field">
                 <label>{{ 'PLT.ent.editAdminUsername' | translate }}</label>
-                <input type="text" class="pf-input" [value]="adminInfo?.username || ''" readonly>
+                <input type="text" class="ds-input pf-input" [value]="adminInfo?.username || ''" readonly>
               </div>
               <div class="pf-field">
                 <label>{{ 'PLT.ent.editAdminEmail' | translate }}</label>
-                <input type="text" class="pf-input" [value]="adminInfo?.email || ''" readonly>
+                <input type="text" class="ds-input pf-input" [value]="adminInfo?.email || ''" readonly>
               </div>
             </div>
             <span *ngIf="adminLoading" class="pf-hint">{{ 'PLT.loading' | translate }}</span>
@@ -200,7 +200,7 @@
           </div>
           <div class="pf-field">
             <label for="pe-edit-code">{{ 'PLT.ent.editCode' | translate }}</label>
-            <input id="pe-edit-code" type="text" class="pf-input" [(ngModel)]="editForm.code" name="editCode" maxlength="64" pattern="^[a-zA-Z0-9_-]+$" [placeholder]="'PLT.ent.createCodePlaceholder' | translate">
+            <input id="pe-edit-code" type="text" class="ds-input pf-input" [(ngModel)]="editForm.code" name="editCode" maxlength="64" pattern="^[a-zA-Z0-9_-]+$" [placeholder]="'PLT.ent.createCodePlaceholder' | translate">
             <span class="pf-hint">{{ 'PLT.ent.editCodeHint' | translate }}</span>
           </div>
           <div class="pf-alert pf-alert-warn">
@@ -209,10 +209,10 @@
           </div>
         </div>
         <div class="pf-modal-foot">
-          <button type="button" class="btn-rd btn-rd-ghost" (click)="closeEditModal()" [disabled]="loading">
+          <button type="button" class="ds-btn ds-btn--secondary btn-rd btn-rd-ghost" (click)="closeEditModal()" [disabled]="loading">
             {{ 'COMMON.actions.cancel' | translate }}
           </button>
-          <button type="submit" class="btn-rd btn-rd-primary" [disabled]="loading">
+          <button type="submit" class="ds-btn ds-btn--primary btn-rd btn-rd-primary" [disabled]="loading">
             <i class="fas fa-check"></i> {{ 'COMMON.actions.save' | translate }}
           </button>
         </div>
@@ -236,8 +236,8 @@
         </div>
       </div>
       <div class="pf-modal-foot">
-        <button type="button" class="btn-rd btn-rd-ghost" (click)="closeSuspendModal()">{{ 'COMMON.actions.cancel' | translate }}</button>
-        <button type="button" class="btn-rd btn-rd-warn" (click)="confirmSuspend()" [disabled]="loading">
+        <button type="button" class="ds-btn ds-btn--secondary btn-rd btn-rd-ghost" (click)="closeSuspendModal()">{{ 'COMMON.actions.cancel' | translate }}</button>
+        <button type="button" class="ds-btn ds-btn--secondary btn-rd btn-rd-warn" (click)="confirmSuspend()" [disabled]="loading">
           <i class="fas fa-pause"></i> {{ 'PLT.ent.actionSuspend' | translate }}
         </button>
       </div>
@@ -256,8 +256,8 @@
         <p class="pf-modal-text">{{ 'PLT.ent.reactivateBody' | translate: { code: selectedEntreprise?.code, nom: selectedEntreprise?.nom } }}</p>
       </div>
       <div class="pf-modal-foot">
-        <button type="button" class="btn-rd btn-rd-ghost" (click)="closeReactivateModal()">{{ 'COMMON.actions.cancel' | translate }}</button>
-        <button type="button" class="btn-rd btn-rd-success" (click)="confirmReactivate()" [disabled]="loading">
+        <button type="button" class="ds-btn ds-btn--secondary btn-rd btn-rd-ghost" (click)="closeReactivateModal()">{{ 'COMMON.actions.cancel' | translate }}</button>
+        <button type="button" class="ds-btn ds-btn--secondary btn-rd btn-rd-success" (click)="confirmReactivate()" [disabled]="loading">
           <i class="fas fa-play"></i> {{ 'PLT.ent.actionReactivate' | translate }}
         </button>
       </div>
@@ -280,8 +280,8 @@
         </div>
       </div>
       <div class="pf-modal-foot">
-        <button type="button" class="btn-rd btn-rd-ghost" (click)="closeResendModal()">{{ 'COMMON.actions.cancel' | translate }}</button>
-        <button type="button" class="btn-rd btn-rd-info" (click)="confirmResend()" [disabled]="loading">
+        <button type="button" class="ds-btn ds-btn--secondary btn-rd btn-rd-ghost" (click)="closeResendModal()">{{ 'COMMON.actions.cancel' | translate }}</button>
+        <button type="button" class="ds-btn ds-btn--secondary btn-rd btn-rd-info" (click)="confirmResend()" [disabled]="loading">
           <i class="fas fa-paper-plane"></i> {{ 'PLT.ent.actionResend' | translate }}
         </button>
       </div>
@@ -304,8 +304,8 @@
         </div>
       </div>
       <div class="pf-modal-foot">
-        <button type="button" class="btn-rd btn-rd-ghost" (click)="closeArchiveModal()">{{ 'COMMON.actions.cancel' | translate }}</button>
-        <button type="button" class="btn-rd btn-rd-danger" (click)="confirmArchive()" [disabled]="loading">
+        <button type="button" class="ds-btn ds-btn--secondary btn-rd btn-rd-ghost" (click)="closeArchiveModal()">{{ 'COMMON.actions.cancel' | translate }}</button>
+        <button type="button" class="ds-btn ds-btn--danger btn-rd btn-rd-danger" (click)="confirmArchive()" [disabled]="loading">
           <i class="fas fa-trash"></i> {{ 'PLT.ent.actionArchive' | translate }}
         </button>
       </div>
@@ -328,8 +328,8 @@
         </div>
       </div>
       <div class="pf-modal-foot">
-        <button type="button" class="btn-rd btn-rd-ghost" (click)="closeRestoreModal()">{{ 'COMMON.actions.cancel' | translate }}</button>
-        <button type="button" class="btn-rd btn-rd-success" (click)="confirmRestore()" [disabled]="loading">
+        <button type="button" class="ds-btn ds-btn--secondary btn-rd btn-rd-ghost" (click)="closeRestoreModal()">{{ 'COMMON.actions.cancel' | translate }}</button>
+        <button type="button" class="ds-btn ds-btn--secondary btn-rd btn-rd-success" (click)="confirmRestore()" [disabled]="loading">
           <i class="fas fa-check"></i> {{ 'PLT.ent.actionRestore' | translate }}
         </button>
       </div>
