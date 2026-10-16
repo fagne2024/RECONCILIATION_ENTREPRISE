@@ -1,15 +1,15 @@
 <div class="guide-container">
   <div class="guide-header">
     <div class="header-navigation">
-      <button class="btn-back" (click)="goBack()" title="{{ 'COMMON.actions.back' | translate }}">
+      <button type="button" class="ds-btn ds-btn--ghost btn-back" (click)="goBack()" title="{{ 'COMMON.actions.back' | translate }}">
         <i class="fas fa-arrow-left"></i>
         <span>{{ 'COMMON.actions.back' | translate }}</span>
       </button>
-      <button class="btn-aide" (click)="goToAide()" [title]="'SOP.shared.nav.helpPage' | translate">
+      <button type="button" class="ds-btn ds-btn--ghost btn-aide" (click)="goToAide()" [title]="'SOP.shared.nav.helpPage' | translate">
         <i class="fas fa-question-circle"></i>
         <span>{{ 'LBL.help' | translate }}</span>
       </button>
-      <button class="btn-home" (click)="goHome()" [title]="'SOP.shared.nav.home' | translate">
+      <button type="button" class="ds-btn ds-btn--ghost btn-home" (click)="goHome()" [title]="'SOP.shared.nav.home' | translate">
         <i class="fas fa-home"></i>
       </button>
     </div>
@@ -27,7 +27,7 @@
     <div class="guide-tree" *ngIf="guideStructure && !isLoadingStructure">
       <!-- Bouton d'ajout principal -->
       <div class="add-guide-section">
-        <button class="btn-add-guide" (click)="openAddModal(guideStructure, $event)">
+        <button type="button" class="ds-btn ds-btn--primary btn-add-guide" (click)="openAddModal(guideStructure, $event)">
           <i class="fas fa-plus-circle"></i>
           <span>{{ 'GUD.actions.addGuide' | translate }}</span>
         </button>
@@ -37,23 +37,24 @@
       <div class="pagination-controls" *ngIf="guideStructure.children && guideStructure.children.length > 0">
         <div class="pagination-info">
           <span>{{ rangeLabel }}</span>
-          <select (change)="changeItemsPerPage($event)" [value]="itemsPerPage" class="items-per-page-select"
+          <select (change)="changeItemsPerPage($event)" [value]="itemsPerPage" class="ds-select items-per-page-select">
             [attr.aria-label]="'PAG.rowsPerPage' | translate">
             <option *ngFor="let size of pageSizeOptions" [value]="size">{{ 'GUD.pagination.perPage' | translate: { count: size } }}</option>
           </select>
         </div>
         <div class="pagination-buttons">
-          <button class="pagination-btn" (click)="previousPage()" [disabled]="currentPage === 1" [title]="'PAG.previous' | translate">
+          <button type="button" class="ds-btn ds-btn--secondary ds-btn--sm pagination-btn" (click)="previousPage()" [disabled]="currentPage === 1" [title]="'PAG.previous' | translate">
             <i class="fas fa-chevron-left"></i>
           </button>
           <button 
             *ngFor="let page of pageNumbers"
-            class="pagination-btn"
+            type="button"
+            class="ds-btn ds-btn--secondary ds-btn--sm pagination-btn"
             [class.active]="page === currentPage"
             (click)="goToPage(page)">
             {{ page }}
           </button>
-          <button class="pagination-btn" (click)="nextPage()" [disabled]="currentPage === totalPages" [title]="'PAG.next' | translate">
+          <button type="button" class="ds-btn ds-btn--secondary ds-btn--sm pagination-btn" (click)="nextPage()" [disabled]="currentPage === totalPages" [title]="'PAG.next' | translate">
             <i class="fas fa-chevron-right"></i>
           </button>
         </div>
@@ -70,13 +71,13 @@
             <span>{{ guide.labelKey ? (guide.labelKey | translate) : guide.label }}</span>
           </div>
           <div class="node-actions" (click)="$event.stopPropagation()">
-            <button class="action-btn add-btn" (click)="openAddModal(guide, $event)" [title]="'GUD.actions.addSubGuide' | translate">
+            <button type="button" class="ds-btn ds-btn--ghost ds-btn--sm action-btn add-btn" (click)="openAddModal(guide, $event)" [title]="'GUD.actions.addSubGuide' | translate">
               <i class="fas fa-plus"></i>
             </button>
-            <button class="action-btn edit-btn" (click)="openEditModal(guide, $event)" [title]="'ACT.edit' | translate">
+            <button type="button" class="ds-btn ds-btn--ghost ds-btn--sm action-btn edit-btn" (click)="openEditModal(guide, $event)" [title]="'ACT.edit' | translate">
               <i class="fas fa-edit"></i>
             </button>
-            <button class="action-btn delete-btn" (click)="openDeleteModal(guide, $event)" [title]="'ACT.delete' | translate">
+            <button type="button" class="ds-btn ds-btn--ghost ds-btn--sm action-btn delete-btn" (click)="openDeleteModal(guide, $event)" [title]="'ACT.delete' | translate">
               <i class="fas fa-trash"></i>
             </button>
           </div>
@@ -92,13 +93,13 @@
                 <span>{{ subGuide.labelKey ? (subGuide.labelKey | translate) : subGuide.label }}</span>
               </div>
               <div class="node-actions" (click)="$event.stopPropagation()">
-                <button class="action-btn add-btn" (click)="openAddModal(subGuide, $event)" [title]="'ACT.add' | translate">
+                <button type="button" class="ds-btn ds-btn--ghost ds-btn--sm action-btn add-btn" (click)="openAddModal(subGuide, $event)" [title]="'ACT.add' | translate">
                   <i class="fas fa-plus"></i>
                 </button>
-                <button class="action-btn edit-btn" (click)="openEditModal(subGuide, $event)" [title]="'ACT.edit' | translate">
+                <button type="button" class="ds-btn ds-btn--ghost ds-btn--sm action-btn edit-btn" (click)="openEditModal(subGuide, $event)" [title]="'ACT.edit' | translate">
                   <i class="fas fa-edit"></i>
                 </button>
-                <button class="action-btn delete-btn" (click)="openDeleteModal(subGuide, $event)" [title]="'ACT.delete' | translate">
+                <button type="button" class="ds-btn ds-btn--ghost ds-btn--sm action-btn delete-btn" (click)="openDeleteModal(subGuide, $event)" [title]="'ACT.delete' | translate">
                   <i class="fas fa-trash"></i>
                 </button>
               </div>
@@ -110,10 +111,10 @@
       <!-- Contrôles de pagination en bas -->
       <div class="pagination-controls pagination-bottom" *ngIf="guideStructure.children && guideStructure.children.length > 0 && totalPages > 1">
         <div class="pagination-buttons">
-          <button class="pagination-btn" (click)="previousPage()" [disabled]="currentPage === 1">
+          <button type="button" class="ds-btn ds-btn--secondary ds-btn--sm pagination-btn" (click)="previousPage()" [disabled]="currentPage === 1">
             <i class="fas fa-chevron-left"></i>{{ 'PAG.previous' | translate }}</button>
           <span class="page-indicator">{{ 'GUD.pagination.pageOf' | translate: { current: currentPage, total: totalPages } }}</span>
-          <button class="pagination-btn" (click)="nextPage()" [disabled]="currentPage === totalPages">{{ 'PAG.next' | translate }}<i class="fas fa-chevron-right"></i>
+          <button type="button" class="ds-btn ds-btn--secondary ds-btn--sm pagination-btn" (click)="nextPage()" [disabled]="currentPage === totalPages">{{ 'PAG.next' | translate }}<i class="fas fa-chevron-right"></i>
           </button>
         </div>
       </div>
@@ -132,18 +133,18 @@
     <div class="popup-content" (click)="$event.stopPropagation()">
       <div class="popup-header">
         <h3>{{ popupNode.labelKey ? (popupNode.labelKey | translate) : popupNode.label }}</h3>
-        <button class="btn-close-popup" (click)="closePopup()" [attr.aria-label]="'COMMON.actions.close' | translate">
+        <button type="button" class="ds-btn ds-btn--ghost btn-close-popup" (click)="closePopup()" [attr.aria-label]="'COMMON.actions.close' | translate">
           <i class="fas fa-times"></i>
         </button>
       </div>
       <div class="popup-body">
         <p class="popup-description">{{ 'GUD.popup.optionsPrompt' | translate }}</p>
         <div class="popup-options">
-          <button class="popup-option-btn" (click)="onOptionClick('grandes-lignes')">
+          <button type="button" class="ds-btn ds-btn--secondary popup-option-btn" (click)="onOptionClick('grandes-lignes')">
             <i class="fas fa-list-ul"></i>
             <span>{{ 'GUD.popup.optionOutline' | translate }}</span>
           </button>
-          <button class="popup-option-btn" (click)="onOptionClick('document-complet')">
+          <button type="button" class="ds-btn ds-btn--secondary popup-option-btn" (click)="onOptionClick('document-complet')">
             <i class="fas fa-file-alt"></i>
             <span>{{ 'GUD.popup.optionFullDocument' | translate }}</span>
           </button>
@@ -157,7 +158,7 @@
     <div class="modal-content upload-modal" (click)="$event.stopPropagation()">
       <div class="modal-header">
         <h3>{{ 'GUD.upload.modalTitle' | translate }}</h3>
-        <button class="btn-close-modal" (click)="closeUploadModal()" [attr.aria-label]="'COMMON.actions.close' | translate">
+        <button type="button" class="ds-btn ds-btn--ghost btn-close-modal" (click)="closeUploadModal()" [attr.aria-label]="'COMMON.actions.close' | translate">
           <i class="fas fa-times"></i>
         </button>
       </div>
@@ -213,8 +214,8 @@
         </div>
       </div>
       <div class="modal-footer">
-        <button class="btn btn-secondary" (click)="closeUploadModal()" [disabled]="isUploading || isExtractingText">{{ 'COMMON.actions.cancel' | translate }}</button>
-        <button class="btn btn-primary" (click)="uploadDocument()" [disabled]="!selectedFile || isUploading || isExtractingText">
+        <button type="button" class="ds-btn ds-btn--secondary btn btn-secondary" (click)="closeUploadModal()" [disabled]="isUploading || isExtractingText">{{ 'COMMON.actions.cancel' | translate }}</button>
+        <button type="button" class="ds-btn ds-btn--primary btn btn-primary" (click)="uploadDocument()" [disabled]="!selectedFile || isUploading || isExtractingText">
           <span *ngIf="!isUploading">{{ 'ACT.upload' | translate }}</span>
           <span *ngIf="isUploading">
             <i class="fas fa-spinner fa-spin"></i> {{ 'ACT.uploading' | translate }}
@@ -230,16 +231,16 @@
       <div class="document-view-header">
         <h2>{{ documentTitle }}</h2>
         <div class="document-header-actions">
-          <button class="btn-document-action btn-download" (click)="downloadDocument(); $event.stopPropagation()" [title]="'GUD.document.download' | translate">
+          <button type="button" class="ds-btn ds-btn--ghost ds-btn--sm btn-document-action btn-download" (click)="downloadDocument(); $event.stopPropagation()" [title]="'GUD.document.download' | translate">
             <i class="fas fa-download"></i>
           </button>
-          <button class="btn-document-action btn-edit" (click)="openEditDocumentModal(); $event.stopPropagation()" [title]="'ACT.edit' | translate">
+          <button type="button" class="ds-btn ds-btn--ghost ds-btn--sm btn-document-action btn-edit" (click)="openEditDocumentModal(); $event.stopPropagation()" [title]="'ACT.edit' | translate">
             <i class="fas fa-edit"></i>
           </button>
-          <button class="btn-document-action btn-delete" (click)="openDeleteDocumentModal(); $event.stopPropagation()" [title]="'ACT.delete' | translate">
+          <button type="button" class="ds-btn ds-btn--ghost ds-btn--sm btn-document-action btn-delete" (click)="openDeleteDocumentModal(); $event.stopPropagation()" [title]="'ACT.delete' | translate">
             <i class="fas fa-trash"></i>
           </button>
-          <button class="btn-close-document" (click)="closeDocumentView()" [attr.aria-label]="'COMMON.actions.close' | translate">
+          <button type="button" class="ds-btn ds-btn--ghost btn-close-document" (click)="closeDocumentView()" [attr.aria-label]="'COMMON.actions.close' | translate">
             <i class="fas fa-times"></i>
           </button>
         </div>
@@ -255,7 +256,7 @@
     <div class="modal-content upload-modal" (click)="$event.stopPropagation()">
       <div class="modal-header">
         <h3>{{ 'GUD.edit.modalTitle' | translate }}</h3>
-        <button class="btn-close-modal" (click)="closeEditDocumentModal()" [attr.aria-label]="'COMMON.actions.close' | translate">
+        <button type="button" class="ds-btn ds-btn--ghost btn-close-modal" (click)="closeEditDocumentModal()" [attr.aria-label]="'COMMON.actions.close' | translate">
           <i class="fas fa-times"></i>
         </button>
       </div>
@@ -295,8 +296,8 @@
         </div>
       </div>
       <div class="modal-footer">
-        <button class="btn btn-secondary" (click)="closeEditDocumentModal()" [disabled]="isEditingDocument">{{ 'COMMON.actions.cancel' | translate }}</button>
-        <button class="btn btn-primary" (click)="updateDocument()" [disabled]="isEditingDocument || !editDocumentText.trim()">
+        <button type="button" class="ds-btn ds-btn--secondary btn btn-secondary" (click)="closeEditDocumentModal()" [disabled]="isEditingDocument">{{ 'COMMON.actions.cancel' | translate }}</button>
+        <button type="button" class="ds-btn ds-btn--primary btn btn-primary" (click)="updateDocument()" [disabled]="isEditingDocument || !editDocumentText.trim()">
           <span *ngIf="!isEditingDocument">{{ 'COMMON.actions.save' | translate }}</span>
           <span *ngIf="isEditingDocument">
             <i class="fas fa-spinner fa-spin"></i> {{ 'GUD.edit.inProgress' | translate }}
