@@ -1,25 +1,11 @@
 /* Espace SUPER_ADMIN — aligné sur le design system ReconciliApp
    (palette chaude, titres « Instrument Serif », police « Sora »). */
-:host {
-  --rd-bg: #F2F0EB;
-  --rd-surface: #FAFAF8;
-  --rd-border: #E4E0D8;
-  --rd-navy: #1A2535;
-  --rd-text1: #1A1714;
-  --rd-text2: #5C5650;
-  --rd-text3: #9B9489;
-  --rd-green-m: #5A9E74;
-  --rd-amber: #A85F1E;
-  --rd-r: 18px;
-  --rd-r-sm: 11px;
-  --rd-shadow: 0 2px 16px rgba(26, 23, 20, 0.07);
-
-  display: block;
+:host {  display: block;
   min-height: 100%;
 }
 
 .platform-page {
-  font-family: 'Sora', sans-serif;
+  font-family: var(--font-ui);
   background: var(--rd-bg);
   min-height: 100%;
   color: var(--rd-text1);
@@ -66,7 +52,7 @@
 }
 
 .pf-title {
-  font-family: 'Instrument Serif', serif;
+  font-family: var(--font-display);
   font-size: 28px;
   font-weight: 400;
   color: var(--rd-text1);
@@ -491,7 +477,7 @@
   background: var(--rd-surface);
   border-radius: var(--rd-r);
   box-shadow: 0 24px 60px rgba(26, 23, 20, 0.28);
-  font-family: 'Sora', sans-serif;
+  font-family: var(--font-ui);
   color: var(--rd-text1);
 }
 
@@ -505,7 +491,7 @@
 
   h3 {
     margin: 0;
-    font-family: 'Instrument Serif', serif;
+    font-family: var(--font-display);
     font-weight: 400;
     font-size: 21px;
     display: flex;
