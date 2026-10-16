@@ -13,6 +13,11 @@
     flex-direction: column;
     box-shadow: var(--shadow-sm);
     overflow: hidden;
+
+    /* Material typography colore les <a> en primary (= fond teal) : texte illisible. */
+    a {
+        color: var(--color-nav-text);
+    }
 }
 
 .logo-container {
@@ -21,6 +26,7 @@
     gap: 15px;
     margin-bottom: 30px;
     padding-bottom: 20px;
+    flex-shrink: 0;
     border-bottom: 1px solid var(--theme-sidebar-hover, var(--color-nav-bg-hover));
 
     .logo-media {
@@ -52,7 +58,9 @@
     list-style: none;
     padding: 0;
     margin: 0;
-    flex: 1 1 auto;
+    /* basis 0% : occupe l'espace restant. Sans ça, margin-top:auto du
+       footer avale tout le free-space et min-height:0 réduit la liste à 0 px. */
+    flex: 1 1 0%;
     min-height: 0;
     overflow-y: auto;
     overflow-x: hidden;
@@ -196,7 +204,6 @@
 }
 
 .sidebar-footer {
-    margin-top: auto;
     flex-shrink: 0;
     background-color: var(--theme-sidebar-bg, var(--color-nav-bg));
     position: relative;
