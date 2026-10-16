@@ -74,14 +74,21 @@ class SecurityPolicyTest {
         }
 
         @Bean
+        com.reconciliation.repository.UserRepository userRepository() {
+            return mock(com.reconciliation.repository.UserRepository.class);
+        }
+
+        @Bean
         JwtAuthenticationFilter jwtAuthenticationFilter(JwtService jwtService,
                                                         UserDetailsService userDetailsService,
                                                         com.reconciliation.repository.EntrepriseRepository entrepriseRepository,
+                                                        com.reconciliation.repository.UserRepository userRepository,
                                                         com.reconciliation.service.AuthCookieService authCookieService) {
             JwtAuthenticationFilter filter = new JwtAuthenticationFilter();
             ReflectionTestUtils.setField(filter, "jwtService", jwtService);
             ReflectionTestUtils.setField(filter, "userDetailsService", userDetailsService);
             ReflectionTestUtils.setField(filter, "entrepriseRepository", entrepriseRepository);
+            ReflectionTestUtils.setField(filter, "userRepository", userRepository);
             ReflectionTestUtils.setField(filter, "authCookieService", authCookieService);
             return filter;
         }

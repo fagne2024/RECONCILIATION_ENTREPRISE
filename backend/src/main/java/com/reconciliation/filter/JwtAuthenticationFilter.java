@@ -42,6 +42,9 @@ public class JwtAuthenticationFilter extends OncePerRequestFilter {
     private EntrepriseRepository entrepriseRepository;
 
     @Autowired
+    private com.reconciliation.repository.UserRepository userRepository;
+
+    @Autowired
     private com.reconciliation.service.AuthCookieService authCookieService;
 
     @Override
@@ -87,10 +90,10 @@ public class JwtAuthenticationFilter extends OncePerRequestFilter {
             // Si username extrait et pas d'authentification dans le contexte actuel
             if (username != null && SecurityContextHolder.getContext().getAuthentication() == null) {
 
-                // Scope entreprise du jeton : renseigne AVANT tout acces ORM afin que
-                // les entites @TenantId soient filtrees des le chargement de l'utilisateur.
-                // Un SUPER_ADMIN (claim absent) n'a pas de scope entreprise.
-                Long entrepriseId = jwtService.extractEntrepriseId(jwt);
+                // Scope entreprise lu en base (pas le claim JWT) avant tout acces ORM
+                // afin que les entites @TenantId soient filtrees des le chargement.
+                // Un SUPER_ADMIN (entreprise_id null) n'a pas de scope entreprise.
+                Long entrepriseId = userRepository.findEntrepriseIdByUsername(username).orElse(null);
                 if (entrepriseId != null) {
                     TenantContext.set(entrepriseId);
                 }
@@ -108,7 +111,7 @@ public class JwtAuthenticationFilter extends OncePerRequestFilter {
 
                     // Controle du statut de l'entreprise a chaque requete : la
                     // suspension invalide immediatement les jetons deja emis.
-                    // Un SUPER_ADMIN (claim entrepriseId absent) n'est pas concerne.
+                    // Un SUPER_ADMIN (entreprise_id null) n'est pas concerne.
                     if (entrepriseId != null) {
                         EntrepriseEntity entreprise = entrepriseRepository.findById(entrepriseId).orElse(null);
                         if (entreprise == null || entreprise.getStatut() != EntrepriseStatut.ACTIVE) {
