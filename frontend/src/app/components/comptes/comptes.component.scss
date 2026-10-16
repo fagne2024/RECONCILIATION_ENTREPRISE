@@ -607,7 +607,7 @@
 // Tooltip global pour les soldes (toujours au-dessus de tout)
 .solde-tooltip {
     position: fixed;
-    z-index: 9999999 !important;
+    z-index: var(--z-overlay) !important;
     padding: 12px 16px;
     background: linear-gradient(135deg, var(--rd-blue-m) 0%, var(--rd-navy) 100%);
     color: white;
@@ -922,7 +922,7 @@
     display: flex;
     justify-content: center;
     align-items: center;
-    z-index: 1000;
+    z-index: var(--z-nav);
 }
 
 .modal-content {
@@ -1475,7 +1475,7 @@
   display: flex;
   align-items: center;
   justify-content: center;
-  z-index: 1000;
+  z-index: var(--z-nav);
 }
 
 .modal-content {
@@ -1624,7 +1624,7 @@
     display: flex;
     align-items: center;
     justify-content: center;
-    z-index: 1000;
+    z-index: var(--z-nav);
     animation: fadeIn 0.3s ease-out;
 }
 

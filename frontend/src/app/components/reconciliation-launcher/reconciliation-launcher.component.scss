@@ -739,7 +739,7 @@
   opacity: 0;
   pointer-events: none;
   transition: opacity .2s;
-  z-index: 1000;
+  z-index: var(--z-nav);
 
   &.show {
     opacity: 1;

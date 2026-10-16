@@ -121,7 +121,7 @@
     display: flex;
     justify-content: center;
     align-items: center;
-    z-index: 1000;
+    z-index: var(--z-nav);
     backdrop-filter: blur(4px);
 }
 
@@ -136,7 +136,7 @@
     display: flex;
     justify-content: center;
     align-items: center;
-    z-index: 1000;
+    z-index: var(--z-nav);
     backdrop-filter: blur(4px);
 }
 
@@ -1152,7 +1152,7 @@
     display: flex !important;
     justify-content: center !important;
     align-items: center !important;
-    z-index: 99999 !important;
+    z-index: var(--z-overlay) !important;
     backdrop-filter: blur(5px);
     visibility: visible !important;
     opacity: 1 !important;
@@ -1813,7 +1813,7 @@
 .traitement-modal-overlay {
     position: fixed;
     inset: 0;
-    z-index: 2000;
+    z-index: var(--z-dropdown);
     display: flex;
     align-items: center;
     justify-content: center;

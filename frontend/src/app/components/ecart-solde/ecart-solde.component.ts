@@ -531,7 +531,7 @@ export class EcartSoldeComponent implements OnInit, OnDestroy {
       border-radius: 4px;
       color: white;
       font-weight: bold;
-      z-index: 1000;
+      z-index: var(--z-nav);
       ${type === 'success' ? 'background-color: #28a745;' : 'background-color: #dc3545;'}
     `;
     

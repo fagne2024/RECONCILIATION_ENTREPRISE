@@ -1306,7 +1306,7 @@ export interface ReconciliationReportData {
             gap: 20px;
             position: sticky;
             top: 0;
-            z-index: 100;
+            z-index: var(--z-sticky);
             box-shadow: 0 1px 0 rgba(255, 255, 255, 0.04);
         }
 
@@ -2789,7 +2789,7 @@ export interface ReconciliationReportData {
             display: flex;
             align-items: center;
             justify-content: center;
-            z-index: 1000;
+            z-index: var(--z-nav);
         }
 
         .modal-content-releve {
@@ -8487,7 +8487,7 @@ reportData: ReconciliationReportData[] = [];
         style.textContent = `
             .modern-popup-overlay { position: fixed; top: 0; left: 0; width: 100%; height: 100%;
                 background: rgba(0, 0, 0, 0.6); backdrop-filter: blur(4px); display: flex;
-                justify-content: center; align-items: center; z-index: 9999;
+                justify-content: center; align-items: center; z-index: var(--z-modal);
                 animation: fadeIn 0.25s cubic-bezier(0.4, 0, 0.2, 1); }
             .modern-popup { background: var(--color-surface); border-radius: 16px;
                 box-shadow: 0 20px 60px rgba(0, 0, 0, 0.3), 0 0 0 1px rgba(0, 0, 0, 0.05);
@@ -8591,7 +8591,7 @@ reportData: ReconciliationReportData[] = [];
                 display: flex;
                 justify-content: center;
                 align-items: center;
-                z-index: 9999;
+                z-index: var(--z-modal);
                 animation: fadeIn 0.25s cubic-bezier(0.4, 0, 0.2, 1);
             }
             .modern-popup {

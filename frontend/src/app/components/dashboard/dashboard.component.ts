@@ -4886,7 +4886,7 @@ export class DashboardComponent implements OnInit, OnDestroy {
               display: flex;
               justify-content: center;
               align-items: center;
-              z-index: 9999;
+              z-index: var(--z-modal);
               animation: fadeIn 0.25s cubic-bezier(0.4, 0, 0.2, 1);
           }
           .modern-popup {

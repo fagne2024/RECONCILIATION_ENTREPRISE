@@ -56,7 +56,7 @@
   flex-wrap: wrap;
   position: sticky;
   top: 0;
-  z-index: 100;
+  z-index: var(--z-sticky);
 }
 
 .nav-brand {
@@ -553,7 +553,7 @@
 
 .row-menu {
   position: fixed;
-  z-index: 1500;
+  z-index: var(--z-dropdown);
   min-width: 250px;
   max-width: 280px;
   background: var(--card);
@@ -612,7 +612,7 @@
   opacity: 0;
   pointer-events: none;
   transition: opacity 0.2s;
-  z-index: 1500;
+  z-index: var(--z-dropdown);
 
   &.on {
     opacity: 1;
@@ -632,7 +632,7 @@
   transform: translateX(100%);
   transition: transform 0.25s;
   overflow: auto;
-  z-index: 1501;
+  z-index: var(--z-dropdown);
   box-sizing: border-box;
 
   &.on {

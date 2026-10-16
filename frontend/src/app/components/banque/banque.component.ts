@@ -3797,7 +3797,7 @@ export class BanqueComponent implements OnInit {
     style.textContent = `
       .modern-popup-overlay { position: fixed; top: 0; left: 0; width: 100%; height: 100%;
         background: rgba(0, 0, 0, 0.6); backdrop-filter: blur(4px); display: flex;
-        justify-content: center; align-items: center; z-index: 9999;
+        justify-content: center; align-items: center; z-index: var(--z-modal);
         animation: fadeIn 0.25s cubic-bezier(0.4, 0, 0.2, 1); }
       .modern-popup { background: white; border-radius: 16px;
         box-shadow: 0 20px 60px rgba(0, 0, 0, 0.3), 0 0 0 1px rgba(0, 0, 0, 0.05);

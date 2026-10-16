@@ -804,7 +804,7 @@ interface ApiError {
             gap: 20px;
             position: sticky;
             top: 0;
-            z-index: 100;
+            z-index: var(--z-sticky);
             box-shadow: 0 1px 0 rgba(255, 255, 255, 0.04);
         }
 
@@ -1400,7 +1400,7 @@ interface ApiError {
             display: flex;
             justify-content: center;
             align-items: center;
-            z-index: 1000;
+            z-index: var(--z-nav);
         }
 
         .column-selector-popup {
@@ -2798,7 +2798,7 @@ interface ApiError {
             padding: 20px;
             border-radius: 8px;
             box-shadow: 0 2px 10px rgba(0,0,0,0.1);
-            z-index: 1000;
+            z-index: var(--z-nav);
             text-align: center;
         }
 

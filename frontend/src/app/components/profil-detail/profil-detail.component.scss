@@ -19,7 +19,7 @@
   position: fixed;
   top: 24px;
   right: 24px;
-  z-index: 9999;
+  z-index: var(--z-modal);
   display: flex;
   align-items: center;
   gap: 12px;
@@ -852,7 +852,7 @@
   display: flex;
   align-items: center;
   justify-content: center;
-  z-index: 1000;
+  z-index: var(--z-nav);
   padding: 24px;
 }
 

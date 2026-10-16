@@ -552,7 +552,7 @@
   background: rgba(0, 0, 0, 0.5);
   display: flex;
   justify-content: flex-end;
-  z-index: 1000;
+  z-index: var(--z-nav);
   animation: fadeIn 0.2s ease;
 
   @keyframes fadeIn {

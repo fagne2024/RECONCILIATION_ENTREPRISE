@@ -22,7 +22,7 @@
   gap: 20px;
   position: sticky;
   top: 0;
-  z-index: 100;
+  z-index: var(--z-sticky);
   box-shadow: 0 1px 0 rgba(255, 255, 255, 0.04);
 }
 
@@ -372,7 +372,7 @@ h2 {
   box-shadow: 0 8px 24px rgba(0, 0, 0, 0.15);
   min-width: 320px;
   max-width: 400px;
-  z-index: 2147483002;
+  z-index: var(--z-overlay);
   padding: 16px;
   animation: slideDown 0.2s ease;
   border: 1px solid var(--color-border);
@@ -552,7 +552,7 @@ h2 {
   display: flex;
   align-items: center;
   justify-content: center;
-  z-index: 2000;
+  z-index: var(--z-dropdown);
   animation: fadeIn 0.2s ease;
 }
 
@@ -846,7 +846,7 @@ h2 {
   display: flex;
   align-items: center;
   justify-content: center;
-  z-index: 9999;
+  z-index: var(--z-modal);
   transition: all 0.3s ease;
   animation: fadeIn 0.3s ease;
 

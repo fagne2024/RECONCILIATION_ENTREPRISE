@@ -770,7 +770,7 @@ import { ReconciliationReportService, PilotReportFilters } from '../../services/
             border-radius: 6px;
             font-size: 0.9rem;
             white-space: nowrap;
-            z-index: 1000;
+            z-index: var(--z-nav);
             pointer-events: none;
             box-shadow: 0 4px 12px rgba(0,0,0,0.3);
         }
@@ -783,7 +783,7 @@ import { ReconciliationReportService, PilotReportFilters } from '../../services/
             transform: translateX(-50%);
             border: 5px solid transparent;
             border-top-color: rgba(0,0,0,0.9);
-            z-index: 1000;
+            z-index: var(--z-nav);
             pointer-events: none;
         }
 

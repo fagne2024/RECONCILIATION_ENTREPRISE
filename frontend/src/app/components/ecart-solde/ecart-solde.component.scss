@@ -23,7 +23,7 @@
   gap: 20px;
   position: sticky;
   top: 0;
-  z-index: 100;
+  z-index: var(--z-sticky);
   box-shadow: 0 1px 0 rgba(255, 255, 255, 0.04);
 }
 
@@ -791,7 +791,7 @@
   display: flex;
   justify-content: center;
   align-items: center;
-  z-index: 1000;
+  z-index: var(--z-nav);
 
   .modal-content {
     background: white;
