@@ -824,6 +824,10 @@ implements DisposableBean {
         if (primaryKey == null) {
             return null;
         }
+        primaryKey = primaryKey.trim();
+        if (primaryKey.isEmpty()) {
+            return null;
+        }
         if (additionalKeys == null || additionalKeys.isEmpty()) {
             return primaryKey;
         }
@@ -831,6 +835,9 @@ implements DisposableBean {
         for (ReconciliationRequest.AdditionalKey additionalKey : additionalKeys) {
             String columnName = isBoRecord ? additionalKey.getBoColumn() : additionalKey.getPartnerColumn();
             String value = record.get(columnName);
+            if (value != null) {
+                value = value.trim();
+            }
             compositeKey.append("||").append(value != null ? value : "");
         }
         return compositeKey.toString();
@@ -1097,7 +1104,11 @@ implements DisposableBean {
             }
             ArrayList<ReconciliationResponse.Difference> differences = new ArrayList<ReconciliationResponse.Difference>();
             boolean isMatch = true;
-            for (ColumnComparison comparison : request.getComparisonColumns()) {
+            List<ColumnComparison> comparisonColumns = request.getComparisonColumns();
+            if (comparisonColumns == null) {
+                comparisonColumns = List.of();
+            }
+            for (ColumnComparison comparison : comparisonColumns) {
                 String partnerValue;
                 String boValue = boRecord.get(comparison.getBoColumn());
                 if (Objects.equals(boValue, partnerValue = partnerRecord.get(comparison.getPartnerColumn()))) continue;

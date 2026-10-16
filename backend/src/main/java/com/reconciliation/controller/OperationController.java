@@ -601,16 +601,13 @@ public class OperationController {
         try {
             logger.info("Demande de recalcul du solde de clôture pour le compte {}", compteId);
             
-            // Note: Le recalcul automatique du solde est désactivé pour éviter d'écraser les soldes corrects
-            // operationService.recalculerSoldeClotureCompte(compteId);
-            
             Map<String, Object> response = new HashMap<>();
-            response.put("success", true);
-            response.put("message", "Solde de clôture recalculé avec succès pour le compte " + compteId);
+            response.put("success", false);
+            response.put("message", "Le recalcul automatique du solde de clôture est désactivé.");
             response.put("compteId", compteId);
             response.put("timestamp", LocalDateTime.now());
-            
-            return ResponseEntity.ok(response);
+
+            return ResponseEntity.status(org.springframework.http.HttpStatus.NOT_IMPLEMENTED).body(response);
         } catch (Exception e) {
             logger.error("Erreur lors du recalcul du solde de clôture pour le compte {}: {}", compteId, e.getMessage(), e);
             

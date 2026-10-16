@@ -11,7 +11,9 @@ import com.reconciliation.entity.ReconciliationJob;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
+import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
+import com.reconciliation.tenant.TenantContext;
 import org.springframework.web.bind.annotation.*;
 import org.springframework.web.multipart.MultipartFile;
 import jakarta.servlet.http.HttpServletRequest;
@@ -313,7 +315,7 @@ public class ReconciliationController {
         
         long startTime = System.currentTimeMillis();
         String userId = extractUserId(httpRequest);
-        String lockKey = "reconcile_streaming_" + userId + "_" + System.currentTimeMillis();
+        String lockKey = stableReconcileLockKey(userId);
         
         try {
             log.info("🚀 === REQUÊTE DE RÉCONCILIATION STREAMING REÇUE ===");
@@ -325,6 +327,7 @@ public class ReconciliationController {
             
             if (!lockAcquired) {
                 log.warn("⚠️ Impossible d'acquérir le verrou - Une autre réconciliation en cours");
+                return ResponseEntity.status(HttpStatus.TOO_MANY_REQUESTS).build();
             }
             
             try {
@@ -424,7 +427,7 @@ public class ReconciliationController {
     public ResponseEntity<ReconciliationResponse> reconcile(@RequestBody ReconciliationRequest request, HttpServletRequest httpRequest) {
         long startTime = System.currentTimeMillis();
         String userId = extractUserId(httpRequest);
-        String lockKey = "reconcile_" + userId + "_" + System.currentTimeMillis();
+        String lockKey = stableReconcileLockKey(userId);
         
         try {
             log.info("🚀 === REQUÊTE DE RÉCONCILIATION REÇUE ===");
@@ -434,14 +437,11 @@ public class ReconciliationController {
             log.info("👤 User ID: {}", userId);
             log.info("⏱️  Timeout configuré: 10 minutes");
             
-            // Tenter d'acquérir un verrou pour cette réconciliation
-            // Utiliser un verrou de type USER pour permettre plusieurs réconciliations simultanées par utilisateur
             boolean lockAcquired = lockService.acquireLock(lockKey, ReconciliationLockService.LOCK_TYPE_USER, userId, null, 60);
             
             if (!lockAcquired) {
                 log.warn("⚠️ Impossible d'acquérir le verrou pour la réconciliation - Une autre réconciliation est peut-être en cours");
-                // Ne pas bloquer complètement, mais logger l'avertissement
-                // Dans un environnement de production, on pourrait retourner une erreur 429 (Too Many Requests)
+                return ResponseEntity.status(HttpStatus.TOO_MANY_REQUESTS).build();
             }
             
             try {
@@ -637,11 +637,10 @@ public class ReconciliationController {
 
     @PostMapping("/start")
     public ResponseEntity<Map<String, String>> startReconciliation(@RequestBody ReconciliationRequest req) {
-        String jobId = UUID.randomUUID().toString();
-        // reconciliationService.reconcileAsync(jobId, req); // Lancer en asynchrone (méthode non implémentée)
         Map<String, String> resp = new HashMap<>();
-        resp.put("jobId", jobId);
-        return ResponseEntity.ok(resp);
+        resp.put("error", "Endpoint retiré");
+        resp.put("message", "Utilisez POST /api/reconciliation/reconcile. Le démarrage asynchrone n'est pas implémenté.");
+        return ResponseEntity.badRequest().body(resp);
     }
 
     @GetMapping("/progress")
@@ -1960,13 +1959,12 @@ public class ReconciliationController {
             return username.trim();
         }
 
-        // Fallback : pseudo-identifiant IP (clé de progression uniquement)
         String remoteAddr = request.getRemoteAddr();
-        String forwardedFor = request.getHeader("X-Forwarded-For");
-        if (forwardedFor != null && !forwardedFor.trim().isEmpty()) {
-            remoteAddr = forwardedFor.split(",")[0].trim();
-        }
-
         return "user_" + (remoteAddr != null ? remoteAddr : "unknown");
+    }
+
+    private String stableReconcileLockKey(String userId) {
+        Long tenant = TenantContext.get();
+        return "reconcile:" + (tenant != null ? tenant : "none") + ":" + userId;
     }
 } 
