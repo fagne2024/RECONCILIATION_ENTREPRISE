@@ -1,7 +1,7 @@
 <div class="global-preview-container">
     <div class="page-header">
         <div class="breadcrumb">
-            <button class="breadcrumb-link" (click)="goBack()">← Retour au tableau de bord</button>
+            <button type="button" class="breadcrumb-link ds-btn ds-btn--ghost ds-btn--sm" (click)="goBack()">← Retour au tableau de bord</button>
         </div>
     </div>
     
@@ -22,14 +22,14 @@
         <div *ngIf="error && !loading" class="error-container">
             <div class="error-icon">❌</div>
             <div class="error-message">{{ error }}</div>
-            <button class="retry-btn" (click)="loadReportData()">🔄 Réessayer</button>
+            <button type="button" class="retry-btn ds-btn ds-btn--secondary" (click)="loadReportData()">🔄 Réessayer</button>
         </div>
         
         <!-- Filtres -->
-        <div *ngIf="!loading && !error" class="filters-container">
+        <div *ngIf="!loading && !error" class="filters-container ds-filter-bar">
             <div class="filters-header">
                 <h3>🔍 Filtres</h3>
-                <button class="toggle-filters-btn" (click)="showFilters = !showFilters">
+                <button type="button" class="toggle-filters-btn ds-btn ds-btn--secondary ds-btn--sm" (click)="showFilters = !showFilters">
                     {{ showFilters ? 'Masquer' : 'Afficher' }} les filtres
                 </button>
             </div>
@@ -42,7 +42,7 @@
                         [(ngModel)]="selectedService" 
                         (input)="onFilterChange()"
                         placeholder="Tapez pour rechercher un service..."
-                        class="filter-input"
+                        class="filter-input ds-input"
                         list="service-list">
                     <datalist id="service-list">
                         <option *ngFor="let service of uniqueServices" [value]="service">{{service}}</option>
@@ -56,7 +56,7 @@
                         [(ngModel)]="selectedCountry" 
                         (input)="onFilterChange()"
                         placeholder="Tapez pour rechercher un pays..."
-                        class="filter-input"
+                        class="filter-input ds-input"
                         list="country-list">
                     <datalist id="country-list">
                         <option *ngFor="let country of uniqueCountries" [value]="country">{{country}}</option>
@@ -70,7 +70,7 @@
                         [(ngModel)]="selectedAgency" 
                         (input)="onFilterChange()"
                         placeholder="Tapez pour rechercher une agence..."
-                        class="filter-input"
+                        class="filter-input ds-input"
                         list="agency-list">
                     <datalist id="agency-list">
                         <option *ngFor="let agency of uniqueAgencies" [value]="agency">{{agency}}</option>
@@ -83,7 +83,7 @@
                         type="date" 
                         [(ngModel)]="selectedDateStart" 
                         (change)="onFilterChange()"
-                        class="filter-date">
+                        class="filter-date ds-input">
                 </div>
                 
                 <div class="filter-group">
@@ -92,13 +92,13 @@
                         type="date" 
                         [(ngModel)]="selectedDateEnd" 
                         (change)="onFilterChange()"
-                        class="filter-date">
+                        class="filter-date ds-input">
                 </div>
                 
                 <div class="filter-actions">
                     <button type="button" 
                             (click)="resetFilters()" 
-                            class="reset-filters-btn">
+                            class="reset-filters-btn ds-btn ds-btn--secondary ds-btn--sm">
                         🔄 Réinitialiser
                     </button>
                 </div>
@@ -113,7 +113,7 @@
                     <div class="kpi-icon">💰</div>
                     <div class="kpi-content">
                         <div class="kpi-label">Montant Total</div>
-                        <div class="kpi-value">{{ formatAmount(totalAmount) }}</div>
+                        <div class="kpi-value ds-num">{{ formatAmount(totalAmount) }}</div>
                     </div>
                 </div>
                 
@@ -121,7 +121,7 @@
                     <div class="kpi-icon">✅</div>
                     <div class="kpi-content">
                         <div class="kpi-label">Taux de Réussite</div>
-                        <div class="kpi-value">{{ successRate.toFixed(1) }}%</div>
+                        <div class="kpi-value ds-num">{{ successRate.toFixed(1) }}%</div>
                     </div>
                 </div>
                 
@@ -129,7 +129,7 @@
                     <div class="kpi-icon">⏳</div>
                     <div class="kpi-content">
                         <div class="kpi-label">Écarts en Cours</div>
-                        <div class="kpi-value">{{ pendingDiscrepancies }}</div>
+                        <div class="kpi-value ds-num">{{ pendingDiscrepancies }}</div>
                     </div>
                 </div>
                 
@@ -137,7 +137,7 @@
                     <div class="kpi-icon">✓✓</div>
                     <div class="kpi-content">
                         <div class="kpi-label">Écarts Résolus</div>
-                        <div class="kpi-value">{{ resolvedDiscrepancies }}</div>
+                        <div class="kpi-value ds-num">{{ resolvedDiscrepancies }}</div>
                     </div>
                 </div>
                 
@@ -145,7 +145,7 @@
                     <div class="kpi-icon">📈</div>
                     <div class="kpi-content">
                         <div class="kpi-label">{{ 'TBL.matches' | translate }}</div>
-                        <div class="kpi-value">{{ formatNumber(totalMatches) }}</div>
+                        <div class="kpi-value ds-num">{{ formatNumber(totalMatches) }}</div>
                     </div>
                 </div>
             </div>
