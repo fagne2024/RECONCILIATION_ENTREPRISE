@@ -2,7 +2,7 @@
   <!-- PAGE HEADER -->
   <div class="pf-header">
     <div class="pf-header-left">
-      <button class="btn-rd btn-rd-ghost btn-rd-sm pf-back" (click)="goBack()">
+      <button type="button" class="ds-btn ds-btn--secondary btn-rd btn-rd-ghost btn-rd-sm pf-back" (click)="goBack()">
         <i class="fas fa-arrow-left"></i> {{ 'PLT.mod.back' | translate }}
       </button>
       <div class="pf-eyebrow"><span></span>{{ 'PLT.eyebrow' | translate }}</div>
@@ -13,7 +13,7 @@
       <div class="kpi-strip">
         <div class="kpi">
           <span class="kpi-label">{{ entreprise.code }}</span>
-          <span class="kpi-value">{{ 'PLT.mod.activeOfTotal' | translate: { active: activeCount, total: totalCount } }}</span>
+          <span class="kpi-value ds-num">{{ 'PLT.mod.activeOfTotal' | translate: { active: activeCount, total: totalCount } }}</span>
         </div>
       </div>
     </div>
@@ -22,7 +22,7 @@
   <div class="pf-body">
     <div class="pf-card pf-entreprise-select" *ngIf="entreprises.length">
       <label for="pf-entreprise">{{ 'PLT.mod.entrepriseLabel' | translate }}</label>
-      <select id="pf-entreprise" class="pf-input" [ngModel]="entrepriseId" (ngModelChange)="onEntrepriseChange($event)">
+      <select id="pf-entreprise" class="ds-select pf-input" [ngModel]="entrepriseId" (ngModelChange)="onEntrepriseChange($event)">
         <option *ngFor="let e of entreprises" [ngValue]="e.id">{{ e.nom }} ({{ e.code }})</option>
       </select>
     </div>
@@ -46,14 +46,14 @@
       <div class="pf-card-head">
         <div class="pf-search">
           <i class="fas fa-search"></i>
-          <input type="text" class="pf-input" [placeholder]="'PLT.mod.searchPlaceholder' | translate" [(ngModel)]="searchText">
+          <input type="text" class="ds-input pf-input" [placeholder]="'PLT.mod.searchPlaceholder' | translate" [(ngModel)]="searchText">
         </div>
         <div class="pf-card-actions">
-          <button class="btn-rd btn-rd-ghost" (click)="showOnlyActive = !showOnlyActive">
+          <button type="button" class="ds-btn ds-btn--secondary btn-rd btn-rd-ghost" (click)="showOnlyActive = !showOnlyActive">
             <i class="fas fa-filter"></i>
             {{ (showOnlyActive ? 'PLT.mod.filterAll' : 'PLT.mod.filterActive') | translate }}
           </button>
-          <button class="btn-rd btn-rd-primary" (click)="saveModules()" [disabled]="saving || loading">
+          <button type="button" class="ds-btn ds-btn--primary btn-rd btn-rd-primary" (click)="saveModules()" [disabled]="saving || loading">
             <i class="fas" [ngClass]="saving ? 'fa-spinner fa-spin' : 'fa-save'"></i>
             {{ (saving ? 'PLT.mod.saving' : 'PLT.mod.save') | translate }}
           </button>
