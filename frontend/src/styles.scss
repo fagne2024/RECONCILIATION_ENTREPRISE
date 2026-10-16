@@ -143,35 +143,35 @@ app-root {
     transition: background 0.15s ease, color 0.15s ease;
 
     &:hover {
-      color: #fff;
+      color: var(--color-nav-text);
     }
 
     &:focus-visible {
-      outline: 2px solid #fff;
+      outline: 2px solid var(--color-nav-text);
       outline-offset: 1px;
     }
 
     &.is-active {
-      background: #fff;
+      background: var(--color-nav-text);
       color: var(--color-accent);
     }
   }
 
-  /* Variante sur fond clair (page de connexion) */
+  /* Variante sur le chrome de connexion (fond accent / nav, pas une carte claire). */
   &--login {
-    border-color: rgba(0, 0, 0, 0.12);
-    background: rgba(33, 150, 243, 0.08);
+    border-color: color-mix(in srgb, var(--color-nav-text) 22%, transparent);
+    background: color-mix(in srgb, var(--color-nav-text) 8%, transparent);
 
     .i18n-switch__btn {
-      color: rgba(0, 0, 0, 0.55);
+      color: var(--color-nav-text-muted);
 
       &:hover {
-        color: var(--color-accent);
+        color: var(--color-nav-text);
       }
 
       &.is-active {
-        background: var(--color-accent);
-        color: var(--color-accent-contrast);
+        background: var(--color-nav-text);
+        color: var(--color-nav-bg);
       }
     }
   }

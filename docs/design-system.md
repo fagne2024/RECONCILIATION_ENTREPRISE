@@ -73,8 +73,45 @@ NgModule : `SharedUiModule` est exporté par `AppModule`. Standalone : importer
 `reconciliation-launcher`, `file-upload`, `column-selection`,
 `certification-solde`.
 
-Hors périmètre immédiat (étape 6 de l’audit) : shell/sidebar restant, pages
-rd26 hors réconciliation, administration.
+## Écrans migrés (phase 4, étape 6)
+
+Shell : `--sidebar-width: 350px` ; bascule toujours visible (`type="button"`) ;
+overlay sous 768 px. La sidebar conserve `--theme-sidebar-*` (marque
+entreprise) ; le chrome applicatif utilise `--color-accent`.
+
+Pages rd26 et métier : `ranking`, `redevance-loterie`, `frais`, `commission`,
+`comptabilite`, `banque`, `dashboard`, `operations`, `stats`, `stats-report`,
+`stats-report-graph`, `ecart-solde`, `impact-op`, `trx-sf`, `service-balance`,
+`service-references`, `predictions-new`, `comptes`, `oppart-list`.
+
+Administration et profil : `profil`, `profil-detail`, `modules`, `permissions`,
+`two-factor-auth`, `sop-operation`, `configuration-renommer`,
+`platform-modules`, `platform-comptes`, `platform-entreprises`,
+`platform-audit`, `users`, `configuration-top-users`, `configuration-calcul`,
+`aide`, `user-log`, `configuration-logo`.
+
+Auth : `login` (accent `--color-accent`, pas `--theme-primary` /
+`--theme-info`), `reset-password`. Fond QR `#FFFFFF` (lisibilité du scan).
+
+Les couleurs d’identité de catégorie (icônes menu, `--agents` /
+`--responsables` / `--validateurs` sur `configuration-top-users`) sont
+conservées.
+
+## Nettoyage final (étape 8)
+
+- I1 : `html`/`body` `overflow-y: auto` une seule fois ; plus de
+  `.ng-star-inserted`, `[class*="-container"]`, script Chrome d’overflow
+  dans `index.html`, ni `enableMouseScroll()` sur `*`. Overlay CDK :
+  `z-index: var(--z-overlay)`.
+- Polices (D5) : CDN Google Fonts **Sora** + **Instrument Serif** conservé.
+  Plus Jakarta Sans et le double chargement Roboto sont absents. Roboto
+  reste uniquement en repli de `--font-ui`.
+- `.i18n-switch--login` : plus de bleu Material `rgba(33,150,243)` ;
+  tokens `--color-nav-text*` (le sélecteur repose sur le chrome teal).
+- `.btn` global conservé : encore utilisé par des pages hors `ds-btn`.
+
+Hors périmètre (P1, non traités) : échelle `z-index` exhaustive (I11),
+transitions unifiées (I12), remplacement des emoji (D9).
 
 ## Vérifications non faites ici
 
