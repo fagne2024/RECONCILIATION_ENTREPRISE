@@ -25,7 +25,7 @@
       <div class="hero-kpi-strip">
         <div class="hk-strip-item">
           <div class="hk-strip-label">{{ 'PRM.kpi.permissions' | translate }}</div>
-          <div class="hk-strip-value">{{ filteredPermissions.length }}</div>
+          <div class="hk-strip-value ds-num">{{ filteredPermissions.length }}</div>
         </div>
       </div>
     </div>
@@ -39,21 +39,21 @@
       <span class="permissions-count">{{ 'PRM.count' | translate: { count: filteredPermissions.length } }}</span>
     </div>
     <div class="header-actions">
-      <button class="btn btn-info" (click)="analyzeModuleActions()" [disabled]="isAnalyzing">
+      <button type="button" class="ds-btn ds-btn--secondary btn btn-info" (click)="analyzeModuleActions()" [disabled]="isAnalyzing">
         <i class="fas fa-search"></i> 
         <span *ngIf="!isAnalyzing">{{ 'PRM.analyzeBtn' | translate }}</span>
         <span *ngIf="isAnalyzing">
           <i class="fas fa-spinner fa-spin"></i> {{ 'PRM.analyzing' | translate }}
         </span>
       </button>
-      <button class="btn btn-success" (click)="generatePermissions()" [disabled]="isGenerating">
+      <button type="button" class="ds-btn ds-btn--secondary btn btn-success" (click)="generatePermissions()" [disabled]="isGenerating">
         <i class="fas fa-magic"></i> 
         <span *ngIf="!isGenerating">{{ 'PRM.generateBtn' | translate }}</span>
         <span *ngIf="isGenerating">
           <i class="fas fa-spinner fa-spin"></i> {{ 'PRM.generating' | translate }}
         </span>
       </button>
-      <button class="btn btn-primary" (click)="showAddForm = true">
+      <button type="button" class="ds-btn ds-btn--primary btn btn-primary" (click)="showAddForm = true">
         <i class="fas fa-plus"></i> {{ 'PRM.newPermissionBtn' | translate }}
       </button>
     </div>
@@ -63,7 +63,7 @@
     <div class="result-header">
       <i class="fas" [class.fa-check-circle]="generationResult.totalCreated > 0" [class.fa-info-circle]="generationResult.totalCreated === 0"></i>
       <strong>{{ generationResult.message }}</strong>
-      <button class="close-result" (click)="generationResult = null">
+      <button type="button" class="ds-btn ds-btn--secondary close-result" (click)="generationResult = null">
         <i class="fas fa-times"></i>
       </button>
     </div>
@@ -83,10 +83,10 @@
         type="text" 
         [(ngModel)]="searchTerm" 
         [placeholder]="'PRM.searchPlaceholder' | translate"
-        class="search-input"
+        class="ds-input search-input"
         (input)="applyFilters()">
     </div>
-    <button *ngIf="searchTerm" class="btn-clear-filters" (click)="clearFilters()">
+    <button type="button" *ngIf="searchTerm" class="ds-btn ds-btn--secondary btn-clear-filters" (click)="clearFilters()">
       <i class="fas fa-times"></i> {{ 'ACT.clear' | translate }}
     </button>
   </div>
@@ -100,7 +100,7 @@
       <h3>{{ 'PRM.empty.title' | translate }}</h3>
       <p *ngIf="searchTerm" class="help-text">
         {{ 'PRM.empty.searchHint' | translate }}
-        <button class="btn-link" (click)="clearFilters()">{{ 'ACT.clearFilters' | translate }}</button>
+        <button type="button" class="ds-btn ds-btn--secondary btn-link" (click)="clearFilters()">{{ 'ACT.clearFilters' | translate }}</button>
       </p>
       <p *ngIf="!searchTerm">{{ 'PRM.empty.generateHint' | translate }}</p>
     </div>
@@ -126,10 +126,10 @@
               </div>
             </div>
             <div class="permission-actions">
-              <button class="btn icon-btn edit-btn" (click)="editPermission(permission)" title="{{ 'ACT.edit' | translate }}">
+              <button type="button" class="ds-btn ds-btn--secondary btn icon-btn edit-btn" (click)="editPermission(permission)" title="{{ 'ACT.edit' | translate }}">
                 <i class="fas fa-edit"></i>
               </button>
-              <button class="btn icon-btn delete-btn" (click)="deletePermission(permission)" title="{{ 'ACT.delete' | translate }}">
+              <button type="button" class="ds-btn ds-btn--secondary btn icon-btn delete-btn" (click)="deletePermission(permission)" title="{{ 'ACT.delete' | translate }}">
                 <i class="fas fa-trash"></i>
               </button>
             </div>
@@ -144,7 +144,7 @@
     <div class="pagination-controls">
       <div class="items-per-page">
         <label>{{ 'PAG.rowsPerPage' | translate }}</label>
-        <select [(ngModel)]="itemsPerPage" (change)="onItemsPerPageChange()" class="form-control">
+        <select [(ngModel)]="itemsPerPage" (change)="onItemsPerPageChange()" class="ds-select form-control">
           <option [value]="10">10</option>
           <option [value]="20">20</option>
           <option [value]="50">50</option>
@@ -152,24 +152,24 @@
         </select>
       </div>
       
-      <button 
-        class="btn pagination-btn" 
+      <button type="button" 
+        class="ds-btn ds-btn--secondary btn pagination-btn" 
         [disabled]="currentPage === 1"
         (click)="onPageChange(currentPage - 1)">
         <i class="fas fa-chevron-left"></i>{{ 'PAG.previous' | translate }}</button>
       
       <div class="page-numbers">
-        <button 
+        <button type="button" 
           *ngFor="let page of getVisiblePages()"
-          class="btn page-btn"
+          class="ds-btn ds-btn--secondary btn page-btn"
           [class.active]="currentPage === page"
           (click)="onPageChange(page)">
           {{ page }}
         </button>
       </div>
       
-      <button 
-        class="btn pagination-btn" 
+      <button type="button" 
+        class="ds-btn ds-btn--secondary btn pagination-btn" 
         [disabled]="currentPage === totalPages"
         (click)="onPageChange(currentPage + 1)">{{ 'PAG.next' | translate }}<i class="fas fa-chevron-right"></i>
       </button>
@@ -186,7 +186,7 @@
     <div class="modal-container" (click)="$event.stopPropagation()">
       <div class="modal-header">
         <h3>{{ 'PRM.modal.addTitle' | translate }}</h3>
-        <button class="close-btn" (click)="cancelAdd()">
+        <button type="button" class="close-btn" (click)="cancelAdd()">
           <i class="fas fa-times"></i>
         </button>
       </div>
@@ -198,7 +198,7 @@
               <input 
                 type="text" 
                 id="nom" 
-                class="text-input" 
+                class="ds-input text-input" 
                 formControlName="nom" 
                 [placeholder]="'PRM.field.namePlaceholder' | translate"
               >
@@ -211,8 +211,8 @@
         </div>
         <div class="modal-footer">
           <div class="modal-actions">
-            <button type="button" class="btn btn-secondary" (click)="cancelAdd()">{{ 'COMMON.actions.cancel' | translate }}</button>
-            <button type="submit" class="btn btn-primary" [disabled]="addForm.invalid || isAdding">
+            <button type="button" class="ds-btn ds-btn--secondary btn btn-secondary" (click)="cancelAdd()">{{ 'COMMON.actions.cancel' | translate }}</button>
+            <button type="submit" class="ds-btn ds-btn--primary btn btn-primary" [disabled]="addForm.invalid || isAdding">
               <span *ngIf="!isAdding">{{ 'ACT.create' | translate }}</span>
               <span *ngIf="isAdding">
                 <i class="fas fa-spinner fa-spin"></i> {{ 'PRM.submitting' | translate }}
@@ -229,7 +229,7 @@
     <div class="modal-container" (click)="$event.stopPropagation()">
       <div class="modal-header">
         <h3>{{ 'PRM.modal.editTitle' | translate }}</h3>
-        <button class="close-btn" (click)="cancelEdit()">
+        <button type="button" class="close-btn" (click)="cancelEdit()">
           <i class="fas fa-times"></i>
         </button>
       </div>
@@ -241,7 +241,7 @@
               <input 
                 type="text" 
                 id="edit-nom" 
-                class="text-input" 
+                class="ds-input text-input" 
                 formControlName="nom" 
                 [placeholder]="'PRM.field.namePlaceholder' | translate"
               >
@@ -254,8 +254,8 @@
         </div>
         <div class="modal-footer">
           <div class="modal-actions">
-            <button type="button" class="btn btn-secondary" (click)="cancelEdit()">{{ 'COMMON.actions.cancel' | translate }}</button>
-            <button type="submit" class="btn btn-primary" [disabled]="editForm.invalid || isEditing">
+            <button type="button" class="ds-btn ds-btn--secondary btn btn-secondary" (click)="cancelEdit()">{{ 'COMMON.actions.cancel' | translate }}</button>
+            <button type="submit" class="ds-btn ds-btn--primary btn btn-primary" [disabled]="editForm.invalid || isEditing">
               <span *ngIf="!isEditing">{{ 'ACT.update' | translate }}</span>
               <span *ngIf="isEditing">
                 <i class="fas fa-spinner fa-spin"></i> {{ 'ACT.updating' | translate }}
@@ -272,7 +272,7 @@
     <div class="modal-container large-modal" (click)="$event.stopPropagation()">
       <div class="modal-header">
         <h3><i class="fas fa-search"></i> {{ 'PRM.analysis.title' | translate }}</h3>
-        <button class="close-btn" (click)="closeActionsAnalysis()">
+        <button type="button" class="close-btn" (click)="closeActionsAnalysis()">
           <i class="fas fa-times"></i>
         </button>
       </div>
@@ -319,7 +319,7 @@
           <div *ngIf="selectedModule" class="module-actions-detail">
             <h4>
               <i class="fas fa-list"></i> {{ 'PRM.analysis.moduleActions' | translate: { module: selectedModule } }}
-              <button class="btn-close-detail" (click)="selectedModule = null; moduleActions = []">
+              <button type="button" class="ds-btn ds-btn--secondary btn-close-detail" (click)="selectedModule = null; moduleActions = []">
                 <i class="fas fa-times"></i>
               </button>
             </h4>
@@ -329,7 +329,7 @@
             </div>
 
             <div *ngIf="!isLoadingModuleActions && moduleActions.length > 0" class="actions-table">
-              <table>
+              <table class="ds-table">
                 <thead>
                   <tr>
                     <th><i class="fas fa-tasks"></i>{{ 'COMMON.actions.action' | translate }}</th>
@@ -372,7 +372,7 @@
         </div>
       </div>
       <div class="modal-footer">
-        <button type="button" class="btn btn-secondary" (click)="closeActionsAnalysis()">{{ 'COMMON.actions.close' | translate }}</button>
+        <button type="button" class="ds-btn ds-btn--secondary btn btn-secondary" (click)="closeActionsAnalysis()">{{ 'COMMON.actions.close' | translate }}</button>
       </div>
     </div>
   </div>
