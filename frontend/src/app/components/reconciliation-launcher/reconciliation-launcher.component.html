@@ -118,10 +118,10 @@
         {{ 'LNC.selectedModeLabel' | translate }}
         <strong>{{ selectedMode ? getModeDisplayName(selectedMode) : ('LNC.chooseModeToProceed' | translate) }}</strong>
       </div>
-      <button class="btn ghost" type="button" [disabled]="!hasDataToReset" (click)="resetData()">
+      <button class="btn ghost ds-btn ds-btn--ghost" type="button" [disabled]="!hasDataToReset" (click)="resetData()">
         {{ 'LNC.resetData' | translate }}
       </button>
-      <button class="btn primary" type="button" [disabled]="!selectedMode" (click)="proceedWithSelectedMode()">
+      <button class="btn primary ds-btn ds-btn--primary" type="button" [disabled]="!selectedMode" (click)="proceedWithSelectedMode()">
         <span>{{ selectedMode ? ('LNC.proceedWithMode' | translate: { mode: getModeDisplayName(selectedMode) }) : ('LNC.chooseModeToProceed' | translate) }}</span>
         <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><path d="M5 12h14M13 6l6 6-6 6"/></svg>
       </button>
@@ -153,7 +153,7 @@
           <span class="txt">
             {{ magicBoFiles.length ? magicBoFiles[0].name : ('LNC.magicDropBoHint' | translate) }}
           </span>
-          <button type="button" class="sm" (click)="magicBoPicker.click()">
+          <button type="button" class="sm ds-btn ds-btn--secondary ds-btn--sm" (click)="magicBoPicker.click()">
             {{ (magicBoFiles.length ? 'LNC.magicChangeFile' : 'LNC.selectFile') | translate }}
           </button>
           <input #magicBoPicker type="file" class="hidden-input" accept=".csv,.xlsx,.xls"
@@ -176,7 +176,7 @@
              (dragleave)="partnerDragOver = false"
              (drop)="onPartnerDrop($event)">
           <span class="txt">{{ 'LNC.magicDropPartnersHint' | translate }}</span>
-          <button type="button" class="sm" (click)="magicPartnerPicker.click()">
+          <button type="button" class="sm ds-btn ds-btn--secondary ds-btn--sm" (click)="magicPartnerPicker.click()">
             {{ 'LNC.add' | translate }}
           </button>
           <input #magicPartnerPicker type="file" class="hidden-input" multiple accept=".csv,.xlsx,.xls"
@@ -198,8 +198,8 @@
           <ng-container *ngIf="magicBoFiles.length && !magicPartnerFiles.length">{{ 'LNC.magicStatePartnerMissing' | translate }}</ng-container>
           <ng-container *ngIf="canLaunchMagic">{{ 'LNC.magicStateReady' | translate: { count: magicPartnerFiles.length } }}</ng-container>
         </span>
-        <button type="button" class="btn-m-cancel" (click)="closeMagicModal()">{{ 'LNC.cancel' | translate }}</button>
-        <button type="button" class="btn-m-launch" [disabled]="!canLaunchMagic" (click)="confirmMagicLaunch()">
+        <button type="button" class="btn-m-cancel ds-btn ds-btn--secondary" (click)="closeMagicModal()">{{ 'LNC.cancel' | translate }}</button>
+        <button type="button" class="btn-m-launch ds-btn ds-btn--primary" [disabled]="!canLaunchMagic" (click)="confirmMagicLaunch()">
           {{ 'LNC.launchMagic' | translate }}
         </button>
       </div>
