@@ -1,27 +1,5 @@
-:host {
-    --rd-bg: #F2F0EB;
-    --rd-surface: #FAFAF8;
-    --rd-surface2: rgba(255, 255, 255, 0.85);
-    --rd-border: #E4E0D8;
-    --rd-border2: #D6D0C6;
-    --rd-navy: #1A2535;
-    --rd-navy2: #243044;
-    --rd-text1: #1A1714;
-    --rd-text2: #5C5650;
-    --rd-text3: #9B9489;
-    --rd-green: #2E6B47;
-    --rd-green-l: #EAF4EE;
-    --rd-green-m: #5A9E74;
-    --rd-red: #8B2635;
-    --rd-red-l: #FCEAEC;
-    --rd-red-m: #C4566A;
-    --rd-r: 18px;
-    --rd-r-sm: 11px;
-    --rd-shadow: 0 2px 16px rgba(26, 23, 20, 0.07);
-    --rd-shadow-lg: 0 8px 40px rgba(26, 23, 20, 0.12);
-
-    display: block;
-    font-family: 'Sora', sans-serif;
+:host {    display: block;
+    font-family: var(--font-ui);
     color: var(--rd-text1);
 }
 
@@ -100,7 +78,7 @@
 }
 
 .sr-dash-card-value {
-    font-family: 'Instrument Serif', serif;
+    font-family: var(--font-display);
     font-size: 2.65rem;
     font-weight: 500;
     line-height: 1.1;

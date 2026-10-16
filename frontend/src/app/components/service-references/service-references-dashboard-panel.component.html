@@ -9,29 +9,29 @@
                 <button
                     *ngIf="!compactLayout"
                     type="button"
-                    class="sr-dash-card-menu"
+                    class="ds-btn ds-btn--secondary sr-dash-card-menu"
                     title="More options"
                     aria-label="More options"
                 >
                     <i class="fas fa-ellipsis-v"></i>
                 </button>
                 <span class="sr-dash-card-title">{{ cardTotalTitle }}</span>
-                <strong class="sr-dash-card-value">{{ cardTotalValue | number:'1.0-0' }}{{ cardValueSuffix }}</strong>
+                <strong class="sr-dash-card-value ds-num">{{ cardTotalValue | number:'1.0-0' }}{{ cardValueSuffix }}</strong>
                 <span class="sr-dash-card-sub">{{ dashboardTotalCardSubtitle }}</span>
             </div>
             <div class="sr-dash-card sr-dash-card--blue">
                 <span class="sr-dash-card-title">{{ cardReconciliableTitle }}</span>
-                <strong class="sr-dash-card-value">{{ cardReconciliableValue | number:'1.0-0' }}{{ cardValueSuffix }}</strong>
+                <strong class="sr-dash-card-value ds-num">{{ cardReconciliableValue | number:'1.0-0' }}{{ cardValueSuffix }}</strong>
                 <span class="sr-dash-card-sub">{{ cardReconciliablePercent }}% of {{ cardPercentBasisLabel }}</span>
             </div>
             <div class="sr-dash-card sr-dash-card--green">
                 <span class="sr-dash-card-title">{{ cardReconcilieTitle }}</span>
-                <strong class="sr-dash-card-value">{{ cardReconcilieValue | number:'1.0-0' }}{{ cardValueSuffix }}</strong>
+                <strong class="sr-dash-card-value ds-num">{{ cardReconcilieValue | number:'1.0-0' }}{{ cardValueSuffix }}</strong>
                 <span class="sr-dash-card-sub">{{ cardReconciliePercent }}% of {{ cardReconciliePercentBasisLabel }}</span>
             </div>
             <div class="sr-dash-card sr-dash-card--red">
                 <span class="sr-dash-card-title">{{ cardNonReconciliableTitle }}</span>
-                <strong class="sr-dash-card-value">{{ cardNonReconciliableValue | number:'1.0-0' }}{{ cardValueSuffix }}</strong>
+                <strong class="sr-dash-card-value ds-num">{{ cardNonReconciliableValue | number:'1.0-0' }}{{ cardValueSuffix }}</strong>
                 <span class="sr-dash-card-sub">{{ cardNonReconciliablePercent }}% of {{ cardPercentBasisLabel }}</span>
             </div>
         </div>
@@ -129,7 +129,7 @@
             <button
                 *ngIf="showOpenDetailsButton"
                 type="button"
-                class="sr-btn-det"
+                class="ds-btn ds-btn--secondary sr-btn-det"
                 (click)="onOpenDetailsClick()"
             >
                 Open details
