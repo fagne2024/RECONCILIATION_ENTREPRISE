@@ -1,7 +1,7 @@
 <div class="user-profile-container">
   <div class="header">
     <h2><i class="fas fa-user-circle"></i> Mon Profil</h2>
-    <button class="btn-close" (click)="closeProfile()" title="{{ 'COMMON.actions.close' | translate }}">
+    <button type="button" class="ds-btn ds-btn--ghost btn-close" (click)="closeProfile()" title="{{ 'COMMON.actions.close' | translate }}">
       <i class="fas fa-times"></i>
     </button>
   </div>
@@ -27,7 +27,7 @@
           <div class="avatar-overlay">
             <button
               type="button"
-              class="avatar-btn"
+              class="ds-btn ds-btn--ghost avatar-btn"
               (click)="photoInput.click()"
               [disabled]="isUploadingPhoto"
               title="Changer la photo">
@@ -36,7 +36,7 @@
             <button
               *ngIf="photo"
               type="button"
-              class="avatar-btn avatar-btn-danger"
+              class="ds-btn ds-btn--ghost avatar-btn avatar-btn-danger"
               (click)="removePhoto()"
               [disabled]="isUploadingPhoto"
               title="Supprimer la photo">
@@ -95,7 +95,8 @@
       <div class="section-header">
         <h3><i class="fas fa-key"></i> Changer le mot de passe</h3>
         <button 
-          class="btn btn-secondary" 
+          type="button"
+          class="ds-btn ds-btn--secondary btn btn-secondary" 
           (click)="togglePasswordForm()"
           [class.active]="showPasswordForm">
           <i class="fas" [class.fa-chevron-down]="!showPasswordForm" [class.fa-chevron-up]="showPasswordForm"></i>
@@ -106,7 +107,7 @@
       <div *ngIf="showPasswordForm" class="password-form">
         <form (ngSubmit)="changePassword()" #passwordFormRef="ngForm">
           <div class="form-group">
-            <label for="currentPassword">
+            <label class="ds-label" for="currentPassword">
               <i class="fas fa-lock"></i> Mot de passe actuel *
             </label>
             <input 
@@ -115,13 +116,13 @@
               name="currentPassword"
               [(ngModel)]="passwordForm.currentPassword"
               required
-              class="form-control"
+              class="ds-input form-control"
               placeholder="Entrez votre mot de passe actuel"
               [disabled]="isChangingPassword">
           </div>
 
           <div class="form-group">
-            <label for="newPassword">
+            <label class="ds-label" for="newPassword">
               <i class="fas fa-key"></i> Nouveau mot de passe *
             </label>
             <input 
@@ -131,13 +132,13 @@
               [(ngModel)]="passwordForm.newPassword"
               required
               minlength="6"
-              class="form-control"
+              class="ds-input form-control"
               placeholder="Entrez votre nouveau mot de passe (min. 6 caractères)"
               [disabled]="isChangingPassword">
           </div>
 
           <div class="form-group">
-            <label for="confirmPassword">
+            <label class="ds-label" for="confirmPassword">
               <i class="fas fa-check-circle"></i> Confirmer le nouveau mot de passe *
             </label>
             <input 
@@ -147,7 +148,7 @@
               [(ngModel)]="passwordForm.confirmPassword"
               required
               minlength="6"
-              class="form-control"
+              class="ds-input form-control"
               placeholder="Confirmez votre nouveau mot de passe"
               [disabled]="isChangingPassword">
           </div>
@@ -155,14 +156,14 @@
           <div class="form-actions">
             <button 
               type="submit" 
-              class="btn btn-primary"
+              class="ds-btn ds-btn--primary btn btn-primary"
               [disabled]="isChangingPassword || !passwordFormRef.valid">
               <i class="fas fa-save"></i>
               {{ isChangingPassword ? 'Modification en cours...' : 'Modifier le mot de passe' }}
             </button>
             <button 
               type="button" 
-              class="btn btn-secondary"
+              class="ds-btn ds-btn--secondary btn btn-secondary"
               (click)="togglePasswordForm()"
               [disabled]="isChangingPassword">{{ 'COMMON.actions.cancel' | translate }}</button>
           </div>
