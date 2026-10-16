@@ -1,28 +1,10 @@
-:host {
-  --rd-bg: #f2f0eb;
-  --rd-surface: #fdfcfa;
-  --rd-border: #e6e1d8;
-  --rd-border2: #d0c9bc;
-  --rd-navy: #1a2535;
-  --rd-navy2: #243044;
-  --rd-text1: #1c1916;
-  --rd-text2: #5a5349;
-  --rd-text3: #9c9388;
-  --rd-blue: #1e4e8c;
-  --rd-blue-l: #e8f0fb;
-  --rd-green: #2a6644;
-  --rd-green-m: #4a9e6a;
-  --rd-amber: #8c4e1a;
-  --rd-r: 16px;
-  --rd-r-sm: 10px;
-  --rd-shadow: 0 2px 16px rgba(28, 25, 22, 0.07);
-}
+
 
 .stats-report-page {
   min-height: 100vh;
   background: var(--rd-bg);
   color: var(--rd-text1);
-  font-family: 'Sora', sans-serif;
+  font-family: var(--font-ui);
 }
 
 .topnav {
@@ -42,7 +24,7 @@
   align-items: center;
   gap: 10px;
   color: #fff;
-  font-family: 'Instrument Serif', serif;
+  font-family: var(--font-display);
   font-size: 17px;
 }
 
@@ -150,7 +132,7 @@
 
 .ph-title {
   margin: 0;
-  font-family: 'Instrument Serif', serif;
+  font-family: var(--font-display);
   font-size: 30px;
   font-weight: 400;
 }
@@ -307,7 +289,7 @@
 }
 
 .kpi-v {
-  font-family: 'Instrument Serif', serif;
+  font-family: var(--font-display);
   font-size: 24px;
   font-weight: 600;
 }

@@ -10,15 +10,15 @@
     </div>
     <div class="nav-spacer"></div>
     <div class="nav-actions">
-      <button type="button" class="nav-btn secondary" (click)="goBack()" [disabled]="isLoading || isExportingPdf">
+      <button type="button" class="ds-btn ds-btn--secondary nav-btn secondary" (click)="goBack()" [disabled]="isLoading || isExportingPdf">
         <i class="fas fa-arrow-left"></i>{{ 'COMMON.actions.back' | translate }}</button>
-      <button type="button" class="nav-btn graph" (click)="openGraphPage()" [disabled]="!visibleReportRows.length || isLoading || isExportingPdf">
+      <button type="button" class="ds-btn ds-btn--secondary nav-btn graph" (click)="openGraphPage()" [disabled]="!visibleReportRows.length || isLoading || isExportingPdf">
         <i class="fas fa-chart-line"></i> {{ 'SRP.graph' | translate }}
       </button>
-      <button type="button" class="nav-btn excel" (click)="exportAgencyReportExcel()" [disabled]="!visibleReportRows.length || isLoading || isExportingPdf">
+      <button type="button" class="ds-btn ds-btn--secondary nav-btn excel" (click)="exportAgencyReportExcel()" [disabled]="!visibleReportRows.length || isLoading || isExportingPdf">
         <i class="fas fa-file-excel"></i> Excel
       </button>
-      <button type="button" class="nav-btn pdf" (click)="exportAgencyReportPdf()" [disabled]="!visibleReportRows.length || isLoading || isExportingPdf">
+      <button type="button" class="ds-btn ds-btn--secondary nav-btn pdf" (click)="exportAgencyReportPdf()" [disabled]="!visibleReportRows.length || isLoading || isExportingPdf">
         <i class="fas fa-file-pdf"></i> PDF
       </button>
     </div>
@@ -83,7 +83,7 @@
 
           <div class="filter-group">
             <label>{{ 'LBL.period' | translate }}</label>
-            <select formControlName="periodType" (change)="onPeriodTypeChange()">
+            <select class="ds-select" formControlName="periodType" (change)="onPeriodTypeChange()">
               <option value="week">{{ 'STA.week' | translate }}</option>
               <option value="month">{{ 'TBL.month' | translate }}</option>
             </select>
@@ -91,24 +91,24 @@
 
           <div class="filter-group">
             <label>{{ 'LBL.startDate' | translate }}</label>
-            <input type="date" formControlName="startDate">
+            <input class="ds-input" type="date" formControlName="startDate">
           </div>
 
           <div class="filter-group">
             <label>{{ 'LBL.endDate' | translate }}</label>
-            <input type="date" formControlName="endDate">
+            <input class="ds-input" type="date" formControlName="endDate">
           </div>
 
           <div class="filter-group">
             <label>{{ 'ACT.show' | translate }}</label>
-            <select [value]="reportMode" (change)="onReportModeChange($event)">
+            <select class="ds-select" [value]="reportMode" (change)="onReportModeChange($event)">
               <option value="both">{{ 'STA.modeBoth' | translate }}</option>
               <option value="vol">{{ 'STA.modeVolume' | translate }}</option>
               <option value="trx">{{ 'STA.modeTrx' | translate }}</option>
             </select>
           </div>
 
-          <button type="button" class="apply-btn" (click)="onFilterChange()" [disabled]="isLoading || isExportingPdf">
+          <button type="button" class="ds-btn ds-btn--secondary apply-btn" (click)="onFilterChange()" [disabled]="isLoading || isExportingPdf">
             {{ 'STA.applyFilters' | translate }}
           </button>
         </form>
@@ -119,7 +119,7 @@
           <label>{{ 'SRP.searchAgencyLabel' | translate }}</label>
           <input
             type="text"
-            class="report-search-input"
+            class="ds-input report-search-input"
             [value]="reportSearchTerm"
             (input)="onReportSearchChange($event)"
             [placeholder]="'STA.searchAgency' | translate"
@@ -127,14 +127,14 @@
         </div>
         <div class="report-filter-group">
           <label>{{ 'SRP.agencyDisplayLabel' | translate }}</label>
-          <select [value]="reportSelectedAgency" (change)="onReportAgencyChange($event)">
+          <select class="ds-select" [value]="reportSelectedAgency" (change)="onReportAgencyChange($event)">
             <option value="all">{{ 'FILT.allF' | translate }}</option>
             <option *ngFor="let agency of reportAgencyOptions" [value]="agency">{{ agency }}</option>
           </select>
         </div>
           <div class="report-filter-group">
             <label>{{ 'SRP.itemsPerPage' | translate }}</label>
-            <select [value]="reportPageSize" (change)="onReportPageSizeChange($event)">
+            <select class="ds-select" [value]="reportPageSize" (change)="onReportPageSizeChange($event)">
               <option [value]="10">10</option>
               <option [value]="20">20</option>
               <option [value]="50">50</option>
@@ -142,8 +142,8 @@
           </div>
         <div class="report-chip">{{ 'STA.agencyCount' | translate: { count: visibleReportRows.length } }}</div>
         <div class="density-toggle">
-          <button type="button" [class.active]="tableDensity === 'compact'" (click)="setTableDensity('compact')">{{ 'SRP.densityCompact' | translate }}</button>
-          <button type="button" [class.active]="tableDensity === 'large'" (click)="setTableDensity('large')">{{ 'SRP.densityLarge' | translate }}</button>
+          <button class="ds-btn ds-btn--secondary" type="button" [class.active]="tableDensity === 'compact'" (click)="setTableDensity('compact')">{{ 'SRP.densityCompact' | translate }}</button>
+          <button class="ds-btn ds-btn--secondary" type="button" [class.active]="tableDensity === 'large'" (click)="setTableDensity('large')">{{ 'SRP.densityLarge' | translate }}</button>
         </div>
       </div>
 
@@ -178,7 +178,7 @@
 
         <div *ngIf="visibleReportRows.length > 0; else noReportRows" class="table-card" [class.table-compact]="tableDensity === 'compact' || isExportingPdf" [class.table-large]="tableDensity === 'large' && !isExportingPdf">
           <div class="table-scroll agency-report-table-scroll">
-            <table class="agency-report-table">
+            <table class="ds-table agency-report-table">
               <thead>
                 <tr>
                   <th class="sticky report-col-index">#</th>
@@ -252,7 +252,7 @@
               {{ 'SRP.pagination' | translate: { page: reportPage, total: totalReportPages, count: visibleReportRows.length } }}
             </div>
             <div class="pagination-controls">
-              <button type="button" (click)="previousReportPage()" [disabled]="reportPage === 1">
+              <button class="ds-btn ds-btn--secondary" type="button" (click)="previousReportPage()" [disabled]="reportPage === 1">
                 <i class="fas fa-chevron-left"></i>{{ 'PAG.previous' | translate }}</button>
               <div class="pagination-indicators">
                 <span *ngFor="let page of getVisibleReportPages()"
@@ -262,7 +262,7 @@
                   {{ page }}
                 </span>
               </div>
-              <button type="button" (click)="nextReportPage()" [disabled]="reportPage === totalReportPages">{{ 'PAG.next' | translate }}<i class="fas fa-chevron-right"></i>
+              <button class="ds-btn ds-btn--secondary" type="button" (click)="nextReportPage()" [disabled]="reportPage === totalReportPages">{{ 'PAG.next' | translate }}<i class="fas fa-chevron-right"></i>
               </button>
             </div>
           </div>
