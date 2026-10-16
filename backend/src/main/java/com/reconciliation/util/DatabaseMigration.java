@@ -2,10 +2,12 @@ package com.reconciliation.util;
 
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.CommandLineRunner;
+import org.springframework.context.annotation.Profile;
 import org.springframework.jdbc.core.JdbcTemplate;
 import org.springframework.stereotype.Component;
 
 @Component
+@Profile("legacy-schema-repair")
 public class DatabaseMigration implements CommandLineRunner {
 
     @Autowired

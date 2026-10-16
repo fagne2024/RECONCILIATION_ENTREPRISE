@@ -1,6 +1,9 @@
 package com.reconciliation.controller;
 
+import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
+import org.springframework.jdbc.core.JdbcTemplate;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.RestController;
 
@@ -13,6 +16,9 @@ import java.util.Map;
  */
 @RestController
 public class HomeController {
+
+    @Autowired
+    private JdbcTemplate jdbcTemplate;
 
     @GetMapping("/")
     public ResponseEntity<Map<String, Object>> home() {
@@ -37,9 +43,17 @@ public class HomeController {
     @GetMapping("/health")
     public ResponseEntity<Map<String, Object>> health() {
         Map<String, Object> response = new HashMap<>();
-        response.put("status", "UP");
         response.put("timestamp", LocalDateTime.now());
-        return ResponseEntity.ok(response);
+        try {
+            jdbcTemplate.queryForObject("SELECT 1", Integer.class);
+            response.put("status", "UP");
+            response.put("db", "UP");
+            return ResponseEntity.ok(response);
+        } catch (Exception e) {
+            response.put("status", "DOWN");
+            response.put("db", "DOWN");
+            return ResponseEntity.status(HttpStatus.SERVICE_UNAVAILABLE).body(response);
+        }
     }
 }
 

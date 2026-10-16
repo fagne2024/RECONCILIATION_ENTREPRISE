@@ -13,6 +13,7 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
+import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.web.bind.annotation.*;
 
 import java.time.LocalDateTime;
@@ -68,6 +69,7 @@ public class ConfigurationController {
     }
 
     @PostMapping("/navigation-labels")
+    @PreAuthorize("hasRole('ADMIN')")
     public ResponseEntity<Void> saveNavigationLabels(@RequestBody Map<String, Object> request) {
         @SuppressWarnings("unchecked")
         List<Map<String, Object>> labels = (List<Map<String, Object>>) request.get("labels");
@@ -78,6 +80,7 @@ public class ConfigurationController {
     }
 
     @DeleteMapping("/navigation-labels")
+    @PreAuthorize("hasRole('ADMIN')")
     public ResponseEntity<Void> resetNavigationLabels() {
         configStorage.remove(NAVIGATION_LABELS_KEY);
         return ResponseEntity.ok().build();
@@ -96,6 +99,7 @@ public class ConfigurationController {
     }
 
     @PostMapping("/logo")
+    @PreAuthorize("hasRole('ADMIN')")
     public ResponseEntity<Void> saveLogo(@RequestBody Map<String, Object> request) {
         Long entrepriseId = currentTenantId();
         if (entrepriseId == null) {
@@ -118,6 +122,7 @@ public class ConfigurationController {
     }
 
     @DeleteMapping("/logo")
+    @PreAuthorize("hasRole('ADMIN')")
     public ResponseEntity<Void> deleteLogo() {
         Long entrepriseId = currentTenantId();
         if (entrepriseId == null) {
@@ -143,6 +148,7 @@ public class ConfigurationController {
     }
 
     @PostMapping("/theme")
+    @PreAuthorize("hasRole('ADMIN')")
     public ResponseEntity<Void> saveTheme(@RequestBody Map<String, Object> request) {
         Long entrepriseId = currentTenantId();
         if (entrepriseId == null) {
@@ -162,6 +168,7 @@ public class ConfigurationController {
     }
 
     @DeleteMapping("/theme")
+    @PreAuthorize("hasRole('ADMIN')")
     public ResponseEntity<Void> deleteTheme() {
         Long entrepriseId = currentTenantId();
         if (entrepriseId == null) {
@@ -279,6 +286,7 @@ public class ConfigurationController {
     }
 
     @PostMapping("/navigation-labels/restore/{labelId}/{version}")
+    @PreAuthorize("hasRole('ADMIN')")
     public ResponseEntity<Void> restoreVersion(@PathVariable String labelId, @PathVariable int version) {
         // Récupérer l'historique pour ce label
         List<NavigationLabelAuditEntity> history = auditService.getHistoryForLabel(labelId);
