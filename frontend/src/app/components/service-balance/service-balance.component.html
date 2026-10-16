@@ -11,10 +11,10 @@
     </div>
     <div class="nav-spacer"></div>
     <div class="nav-actions">
-      <button type="button" class="nav-btn secondary" (click)="loadServiceComptes()" [disabled]="isLoading">
+      <button type="button" class="ds-btn ds-btn--secondary nav-btn secondary" (click)="loadServiceComptes()" [disabled]="isLoading">
         <i class="fas fa-sync-alt" [class.fa-spin]="isLoading"></i> {{ 'STA.refresh' | translate }}
       </button>
-      <button type="button" class="nav-btn secondary" (click)="loadAllComptes()" [disabled]="isLoading">
+      <button type="button" class="ds-btn ds-btn--secondary nav-btn secondary" (click)="loadAllComptes()" [disabled]="isLoading">
         <i class="fas fa-list" [class.fa-spin]="isLoading"></i> {{ 'SBL.allAccounts' | translate }}
       </button>
     </div>
@@ -31,17 +31,17 @@
       <div class="hero-kpi-strip">
         <div class="hk-strip-item">
           <span class="hk-strip-label">{{ 'TBL.accounts' | translate }}</span>
-          <span class="hk-strip-value">{{ serviceComptes.length | number:'1.0-0' }}</span>
+          <span class="hk-strip-value ds-num">{{ serviceComptes.length | number:'1.0-0' }}</span>
         </div>
         <div class="hk-strip-sep"></div>
         <div class="hk-strip-item">
           <span class="hk-strip-label">{{ 'TBL.country' | translate }}</span>
-          <span class="hk-strip-value">{{ getCountries().length | number:'1.0-0' }}</span>
+          <span class="hk-strip-value ds-num">{{ getCountries().length | number:'1.0-0' }}</span>
         </div>
         <div class="hk-strip-sep"></div>
         <div class="hk-strip-item">
           <span class="hk-strip-label">{{ 'SBL.selected' | translate }}</span>
-          <span class="hk-strip-value">{{ getSelectedComptesCount() | number:'1.0-0' }}</span>
+          <span class="hk-strip-value ds-num">{{ getSelectedComptesCount() | number:'1.0-0' }}</span>
         </div>
       </div>
     </div>
@@ -56,11 +56,11 @@
             <p class="subtitle">{{ 'SBL.subtitleShort' | translate }}</p>
         </div>
         <div class="header-actions">
-            <button class="btn btn-secondary" (click)="loadServiceComptes()" [disabled]="isLoading">
+            <button type="button" class="ds-btn ds-btn--secondary btn btn-secondary" (click)="loadServiceComptes()" [disabled]="isLoading">
                 <i class="fas fa-sync-alt" [class.fa-spin]="isLoading"></i>
                 {{ 'STA.refresh' | translate }}
             </button>
-            <button class="btn btn-info" (click)="loadAllComptes()" [disabled]="isLoading">
+            <button type="button" class="ds-btn ds-btn--secondary btn btn-info" (click)="loadAllComptes()" [disabled]="isLoading">
                 <i class="fas fa-list" [class.fa-spin]="isLoading"></i>
                 {{ 'SBL.viewAllAccounts' | translate }}
             </button>
@@ -129,8 +129,8 @@
     <div class="comptes-section" *ngIf="!isLoading && selectedCountry && filteredServiceComptes.length > 0">
         <div class="section-header">
             <h3><i class="fas fa-list"></i> {{ 'SBL.accountsFor' | translate: { country: countryLabel(selectedCountry) } }}</h3>
-            <button 
-                class="btn btn-primary" 
+            <button type="button" 
+                class="ds-btn ds-btn--primary btn btn-primary" 
                 (click)="showMergeDialog()"
                 [disabled]="getSelectedComptesCount() < 2">
                 <i class="fas fa-layer-group"></i>
@@ -148,14 +148,14 @@
                         [(ngModel)]="searchTerm" 
                         (input)="onSearchChange()"
                         placeholder="{{ 'SBL.searchPlaceholder' | translate }}"
-                        class="search-input">
+                        class="ds-input search-input">
                 </div>
                 
                 <div class="filter-controls">
                     <select 
                         [(ngModel)]="filterBySolde" 
                         (change)="onFilterChange()"
-                        class="filter-select">
+                        class="ds-select filter-select">
                         <option value="all">{{ 'SBL.allBalances' | translate }}</option>
                         <option value="positive">{{ 'SBL.positiveBalances' | translate }}</option>
                         <option value="negative">{{ 'SBL.negativeBalances' | translate }}</option>
@@ -165,22 +165,22 @@
                     <select 
                         [(ngModel)]="sortBy" 
                         (change)="onSortChange()"
-                        class="filter-select">
+                        class="ds-select filter-select">
                         <option value="numeroCompte">{{ 'SBL.sortByName' | translate }}</option>
                         <option value="solde">{{ 'SBL.sortByBalance' | translate }}</option>
                         <option value="dateDerniereMaj">{{ 'SBL.sortByDate' | translate }}</option>
                     </select>
                     
-                    <button 
+                    <button type="button" 
                         (click)="sortOrder = sortOrder === 'asc' ? 'desc' : 'asc'; onSortChange()"
-                        class="btn btn-secondary sort-btn">
+                        class="ds-btn ds-btn--secondary btn btn-secondary sort-btn">
                         <i class="fas" [class.fa-sort-amount-up]="sortOrder === 'asc'" [class.fa-sort-amount-down]="sortOrder === 'desc'"></i>
                         {{ (sortOrder === 'asc' ? 'SBL.ascending' : 'SBL.descending') | translate }}
                     </button>
                     
-                    <button 
+                    <button type="button" 
                         (click)="clearFilters()"
-                        class="btn btn-warning clear-btn">
+                        class="ds-btn ds-btn--secondary btn btn-warning clear-btn">
                         <i class="fas fa-times"></i>{{ 'ACT.clearFilters' | translate }}</button>
                 </div>
             </div>
@@ -220,7 +220,7 @@
                     <div class="compte-actions">
                         <button 
                             type="button"
-                            class="btn btn-danger btn-sm"
+                            class="ds-btn ds-btn--danger btn btn-danger btn-sm"
                             (click)="openRejectDialog(compte); $event.stopPropagation()"
                             [disabled]="isRejecting"
                             title="{{ 'SBL.rejectTooltip' | translate }}">
@@ -236,37 +236,15 @@
             </div>
         </div>
 
-        <!-- Pagination -->
-        <div class="pagination-section" *ngIf="totalPages > 1">
-            <div class="pagination-info">
-                {{ 'SBL.pageInfo' | translate: { current: currentPage, total: totalPages } }}
-                {{ 'SBL.pageRange' | translate: { from: (currentPage - 1) * itemsPerPage + 1, to: Math.min(currentPage * itemsPerPage, getTotalFilteredCount()), total: getTotalFilteredCount() } }}
-            </div>
-            
-            <div class="pagination-controls">
-                <button 
-                    (click)="previousPage()"
-                    [disabled]="currentPage === 1"
-                    class="btn btn-secondary pagination-btn">
-                    <i class="fas fa-chevron-left"></i>{{ 'PAG.previous' | translate }}</button>
-                
-                <div class="page-numbers">
-                    <button 
-                        *ngFor="let page of getPageNumbers()"
-                        (click)="goToPage(page)"
-                        [class.active]="page === currentPage"
-                        class="btn page-btn">
-                        {{ page }}
-                    </button>
-                </div>
-                
-                <button 
-                    (click)="nextPage()"
-                    [disabled]="currentPage === totalPages"
-                    class="btn btn-secondary pagination-btn">{{ 'PAG.next' | translate }}<i class="fas fa-chevron-right"></i>
-                </button>
-            </div>
-        </div>
+        <ds-pagination
+            *ngIf="totalPages > 1"
+            [page]="currentPage"
+            [pageCount]="totalPages"
+            [totalItems]="getTotalFilteredCount()"
+            [pageSize]="itemsPerPage"
+            [itemLabel]="'TBL.lines' | translate"
+            (pageChange)="goToPage($event)">
+        </ds-pagination>
     </div>
 
     <!-- Message si aucun compte -->
@@ -340,7 +318,7 @@
                             type="text" 
                             formControlName="newCompteName" 
                             placeholder="Ex: SERVICE_FUSION_CM_2025"
-                            class="text-input">
+                            class="ds-input text-input">
                         <div *ngIf="mergeForm.get('newCompteName')?.invalid && mergeForm.get('newCompteName')?.touched" 
                              class="error-message">
                             {{ 'SBL.nameRequired' | translate }}
@@ -354,7 +332,7 @@
                             formControlName="selectedCountry" 
                             [value]="selectedCountry"
                             readonly
-                            class="text-input readonly">
+                            class="ds-input text-input readonly">
                     </div>
                 </div>
 
@@ -371,11 +349,11 @@
 
                 <!-- Actions -->
                 <div class="modal-actions">
-                    <button type="button" class="btn btn-secondary" (click)="cancelMerge()">
+                    <button type="button" class="ds-btn ds-btn--secondary btn btn-secondary" (click)="cancelMerge()">
                         <i class="fas fa-times"></i>{{ 'COMMON.actions.cancel' | translate }}</button>
                     <button 
                         type="submit" 
-                        class="btn btn-primary" 
+                        class="ds-btn ds-btn--primary btn btn-primary" 
                         [disabled]="!mergeForm.valid || isMerging">
                         <i class="fas fa-layer-group" [class.fa-spin]="isMerging"></i>
                         {{ (isMerging ? 'SBL.merging' : 'SBL.mergeAccounts') | translate }}
@@ -433,7 +411,7 @@
                             type="text" 
                             formControlName="titre" 
                             placeholder="{{ 'SBL.rejectTitlePlaceholder' | translate }}"
-                            class="text-input">
+                            class="ds-input text-input">
                         <div *ngIf="rejectForm.get('titre')?.invalid && rejectForm.get('titre')?.touched" 
                              class="error-message">
                             <span *ngIf="rejectForm.get('titre')?.errors?.['required']">{{ 'SBL.titleRequired' | translate }}</span>
@@ -458,11 +436,11 @@
 
                 <!-- Actions -->
                 <div class="modal-actions">
-                    <button type="button" class="btn btn-secondary" (click)="cancelReject()">
+                    <button type="button" class="ds-btn ds-btn--secondary btn btn-secondary" (click)="cancelReject()">
                         <i class="fas fa-times"></i>{{ 'COMMON.actions.cancel' | translate }}</button>
                     <button 
                         type="submit" 
-                        class="btn btn-danger" 
+                        class="ds-btn ds-btn--danger btn btn-danger" 
                         [disabled]="!rejectForm.valid || isRejecting">
                         <i class="fas fa-ban" [class.fa-spin]="isRejecting"></i>
                         {{ (isRejecting ? 'SBL.rejecting' : 'SBL.confirmReject') | translate }}
