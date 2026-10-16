@@ -2,7 +2,9 @@
   <div class="modern-popup" (click)="$event.stopPropagation()">
     <div class="popup-header">
       <h3 class="popup-title">{{ config.title || ('POPUP.notification' | translate) }}</h3>
-      <button class="popup-close" (click)="onClose()">×</button>
+      <button type="button" class="popup-close ds-btn ds-btn--ghost" (click)="onClose()" [attr.aria-label]="'COMMON.actions.close' | translate">
+        <i class="fas fa-times" aria-hidden="true"></i>
+      </button>
     </div>
     
     <div class="popup-content">
@@ -14,13 +16,15 @@
     
     <div class="popup-actions">
       <button 
-        class="popup-btn popup-btn-cancel" 
+        type="button"
+        class="ds-btn ds-btn--ghost popup-btn popup-btn-cancel" 
         *ngIf="config.showCancelButton"
         (click)="onCancel()">
         {{ config.cancelText || ('COMMON.actions.cancel' | translate) }}
       </button>
       <button 
-        class="popup-btn popup-btn-confirm popup-btn-{{ config.type || 'info' }}"
+        type="button"
+        class="ds-btn ds-btn--primary popup-btn popup-btn-confirm popup-btn-{{ config.type || 'info' }}"
         (click)="onConfirm()">
         {{ config.confirmText || ('COMMON.actions.ok' | translate) }}
       </button>
