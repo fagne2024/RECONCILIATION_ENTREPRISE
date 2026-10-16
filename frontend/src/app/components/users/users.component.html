@@ -7,13 +7,13 @@
     </div>
     <div class="nav-crumb">{{ 'USR.eyebrow.administration' | translate }} › {{ 'USR.nav.users' | translate }}</div>
     <div class="nav-spacer"></div>
-    <button type="button" class="nav-ghost" (click)="goBack()" [title]="'COMMON.actions.back' | translate">
+    <button type="button" class="ds-btn ds-btn--secondary nav-ghost" (click)="goBack()" [title]="'COMMON.actions.back' | translate">
       <i class="fas fa-arrow-left"></i><span>{{ 'COMMON.actions.back' | translate }}</span>
     </button>
-    <button type="button" class="nav-ghost" (click)="goToAide()" [title]="'SOP.shared.nav.helpPage' | translate">
+    <button type="button" class="ds-btn ds-btn--secondary nav-ghost" (click)="goToAide()" [title]="'SOP.shared.nav.helpPage' | translate">
       <i class="fas fa-question-circle"></i><span>{{ 'LBL.help' | translate }}</span>
     </button>
-    <button type="button" class="nav-ghost icon-only" (click)="goHome()" [title]="'SOP.shared.nav.home' | translate">
+    <button type="button" class="ds-btn ds-btn--secondary nav-ghost icon-only" (click)="goHome()" [title]="'SOP.shared.nav.home' | translate">
       <i class="fas fa-home"></i>
     </button>
   </nav>
@@ -27,10 +27,10 @@
         <p class="ph-subtitle-users">{{ 'USR.subtitle' | translate }}</p>
       </div>
       <div class="ph-users-actions">
-        <button type="button" class="btn btn-ghost" (click)="refresh()" [title]="'USR.refreshBtnTitle' | translate">
+        <button type="button" class="ds-btn ds-btn--secondary btn btn-ghost" (click)="refresh()" [title]="'USR.refreshBtnTitle' | translate">
           <i class="fas fa-sync-alt"></i> {{ 'USR.refreshBtn' | translate }}
         </button>
-        <button type="button" class="btn btn-primary" (click)="openCreateDrawer()">
+        <button type="button" class="ds-btn ds-btn--primary btn btn-primary" (click)="openCreateDrawer()">
           <i class="fas fa-plus"></i> {{ 'USR.newUserBtn' | translate }}
         </button>
       </div>
@@ -38,16 +38,16 @@
 
     <!-- STATS -->
     <div class="stats">
-      <button type="button" class="stat card" [attr.aria-pressed]="statusFilter === 'all'" (click)="setStatusFilter('all')">
+      <button type="button" class="ds-btn ds-btn--secondary stat card" [attr.aria-pressed]="statusFilter === 'all'" (click)="setStatusFilter('all')">
         <span>{{ 'USR.kpi.users' | translate }}</span><b>{{ users.length }}</b>
       </button>
-      <button type="button" class="stat card" [attr.aria-pressed]="statusFilter === 'on'" (click)="setStatusFilter('on')">
+      <button type="button" class="ds-btn ds-btn--secondary stat card" [attr.aria-pressed]="statusFilter === 'on'" (click)="setStatusFilter('on')">
         <span>{{ 'USR.stats.active' | translate }}</span><b>{{ activeCount }}</b>
       </button>
-      <button type="button" class="stat card" [attr.aria-pressed]="statusFilter === 'off'" (click)="setStatusFilter('off')">
+      <button type="button" class="ds-btn ds-btn--secondary stat card" [attr.aria-pressed]="statusFilter === 'off'" (click)="setStatusFilter('off')">
         <span>{{ 'USR.stats.inactive' | translate }}</span><b>{{ inactiveCount }}</b>
       </button>
-      <button type="button" class="stat card" [attr.aria-pressed]="statusFilter === 'notfa'" (click)="setStatusFilter('notfa')">
+      <button type="button" class="ds-btn ds-btn--secondary stat card" [attr.aria-pressed]="statusFilter === 'notfa'" (click)="setStatusFilter('notfa')">
         <span>{{ 'USR.stats.no2fa' | translate }}</span><b>{{ no2faCount }}</b>
       </button>
     </div>
@@ -68,10 +68,10 @@
       <div class="tools">
         <label class="search-box">
           <i class="fas fa-search"></i>
-          <input type="search" [(ngModel)]="searchTerm" (input)="applyFilters()"
+          <input class="ds-input" type="search" [(ngModel)]="searchTerm" (input)="applyFilters()"
                  [placeholder]="'USR.searchPlaceholder' | translate" />
         </label>
-        <select class="profile-select" [(ngModel)]="selectedProfilFilter" (change)="applyFilters()">
+        <select class="ds-select profile-select" [(ngModel)]="selectedProfilFilter" (change)="applyFilters()">
           <option value="">{{ 'USR.allProfilsFilter' | translate }}</option>
           <option *ngFor="let profil of profils" [value]="profil.id">{{ profil.nom }}</option>
         </select>
@@ -82,7 +82,7 @@
       </div>
 
       <div class="sc">
-        <table class="users-table">
+        <table class="ds-table users-table">
           <thead>
             <tr>
               <th>{{ 'USR.table.user' | translate }}</th>
@@ -126,8 +126,8 @@
               <td class="muted">{{ formatLastLogin(user) }}</td>
               <td>
                 <div class="ac">
-                  <button type="button" class="btn btn-sm" (click)="openEditDrawer(user)">{{ 'USR.menu.edit' | translate }}</button>
-                  <button type="button" class="btn btn-sm btn-dots" (click)="openMenu(user, $event)"
+                  <button type="button" class="ds-btn ds-btn--secondary btn btn-sm" (click)="openEditDrawer(user)">{{ 'USR.menu.edit' | translate }}</button>
+                  <button type="button" class="ds-btn ds-btn--secondary btn btn-sm btn-dots" (click)="openMenu(user, $event)"
                           [attr.aria-label]="'USR.table.actions' | translate" aria-haspopup="menu">
                     <i class="fas fa-ellipsis-h"></i>
                   </button>
@@ -163,23 +163,23 @@
         {{ 'USR.pagination.info' | translate: { from: (currentPage - 1) * pageSize + 1, to: Math.min(currentPage * pageSize, filteredUsers.length), total: filteredUsers.length } }}
       </div>
       <div class="pagination-controls">
-        <button type="button" class="btn-page" (click)="prevPage()" [disabled]="currentPage === 1" [title]="'PAG.previous' | translate">
+        <button type="button" class="ds-btn ds-btn--secondary btn-page" (click)="prevPage()" [disabled]="currentPage === 1" [title]="'PAG.previous' | translate">
           <i class="fas fa-chevron-left"></i>
         </button>
         <button type="button"
                 *ngFor="let page of visiblePages"
-                class="btn-page"
+                class="ds-btn ds-btn--secondary btn-page"
                 [class.active]="page === currentPage"
                 (click)="goToPage(page)">
           {{ page }}
         </button>
-        <button type="button" class="btn-page" (click)="nextPage()" [disabled]="currentPage === totalPages" [title]="'PAG.next' | translate">
+        <button type="button" class="ds-btn ds-btn--secondary btn-page" (click)="nextPage()" [disabled]="currentPage === totalPages" [title]="'PAG.next' | translate">
           <i class="fas fa-chevron-right"></i>
         </button>
       </div>
       <div class="pagination-size">
         <label>{{ 'USR.pagination.perPage' | translate }}</label>
-        <select [(ngModel)]="pageSize" (change)="currentPage = 1">
+        <select class="ds-select" [(ngModel)]="pageSize" (change)="currentPage = 1">
           <option [ngValue]="5">5</option>
           <option [ngValue]="10">10</option>
           <option [ngValue]="20">20</option>
@@ -191,22 +191,22 @@
 
   <!-- ROW ACTION MENU -->
   <div class="row-menu" *ngIf="menuUser as u" [style.top.px]="menuPos.top" [style.left.px]="menuPos.left" role="menu">
-    <button type="button" role="menuitem" (click)="menuEdit(u)">{{ 'USR.menu.edit' | translate }}</button>
-    <button type="button" role="menuitem" [disabled]="!u.email" (click)="menuResetPassword(u)">
+    <button class="ds-btn ds-btn--secondary" type="button" role="menuitem" (click)="menuEdit(u)">{{ 'USR.menu.edit' | translate }}</button>
+    <button class="ds-btn ds-btn--secondary" type="button" role="menuitem" [disabled]="!u.email" (click)="menuResetPassword(u)">
       {{ 'USR.menu.resetPassword' | translate }}
       <small *ngIf="!u.email">{{ 'USR.menu.emailRequired' | translate }}</small>
     </button>
-    <button type="button" role="menuitem" *ngIf="!isUser2FA(u)" (click)="menuToggle2FA(u)">{{ 'USR.menu.enable2fa' | translate }}</button>
+    <button class="ds-btn ds-btn--secondary" type="button" role="menuitem" *ngIf="!isUser2FA(u)" (click)="menuToggle2FA(u)">{{ 'USR.menu.enable2fa' | translate }}</button>
     <ng-container *ngIf="isUser2FA(u)">
-      <button type="button" role="menuitem" (click)="menuReset2FA(u)">{{ 'USR.menu.reset2fa' | translate }}</button>
-      <button type="button" role="menuitem" (click)="menuToggle2FA(u)">{{ 'USR.menu.disable2fa' | translate }}</button>
+      <button class="ds-btn ds-btn--secondary" type="button" role="menuitem" (click)="menuReset2FA(u)">{{ 'USR.menu.reset2fa' | translate }}</button>
+      <button class="ds-btn ds-btn--secondary" type="button" role="menuitem" (click)="menuToggle2FA(u)">{{ 'USR.menu.disable2fa' | translate }}</button>
     </ng-container>
-    <button type="button" role="menuitem" [disabled]="u.username === 'admin'" (click)="menuToggleEnabled(u)">
+    <button class="ds-btn ds-btn--secondary" type="button" role="menuitem" [disabled]="u.username === 'admin'" (click)="menuToggleEnabled(u)">
       {{ isUserEnabled(u) ? ('USR.menu.disableAccount' | translate) : ('USR.menu.enableAccount' | translate) }}
       <small *ngIf="u.username === 'admin'">{{ 'USR.menu.adminProtected' | translate }}</small>
     </button>
     <hr />
-    <button type="button" role="menuitem" class="danger" [disabled]="u.username === 'admin'" (click)="menuDelete(u)">
+    <button type="button" role="menuitem" class="ds-btn ds-btn--danger danger" [disabled]="u.username === 'admin'" (click)="menuDelete(u)">
       {{ 'USR.menu.delete' | translate }}
       <small *ngIf="u.username === 'admin'">{{ 'USR.menu.adminProtected' | translate }}</small>
     </button>
@@ -223,18 +223,18 @@
 
     <div class="fg">
       <label for="drawerUsername">{{ 'USR.drawer.usernameLabel' | translate }}</label>
-      <input id="drawerUsername" type="text" [(ngModel)]="drawerUser.username" autocomplete="off" />
+      <input class="ds-input" id="drawerUsername" type="text" [(ngModel)]="drawerUser.username" autocomplete="off" />
     </div>
 
     <div class="fg">
       <label for="drawerEmail">{{ 'USR.drawer.emailLabel' | translate }}</label>
-      <input id="drawerEmail" type="email" [(ngModel)]="drawerUser.email" />
+      <input class="ds-input" id="drawerEmail" type="email" [(ngModel)]="drawerUser.email" />
       <small class="fg-hint" *ngIf="drawerMode === 'create'">{{ 'USR.drawer.emailHint' | translate }}</small>
     </div>
 
     <div class="fg">
       <label for="drawerProfil">{{ 'USR.drawer.profilLabel' | translate }}</label>
-      <select id="drawerProfil" [(ngModel)]="drawerUser.profil">
+      <select class="ds-select" id="drawerProfil" [(ngModel)]="drawerUser.profil">
         <option [ngValue]="noProfilValue">{{ 'USR.drawer.noneProfile' | translate }}</option>
         <option *ngFor="let profil of profils" [ngValue]="profil">{{ profil.nom }}</option>
       </select>
@@ -242,7 +242,7 @@
 
     <div class="fg" *ngIf="drawerMode === 'edit'">
       <label for="drawerPassword">{{ 'USR.drawer.passwordLabel' | translate }}</label>
-      <input id="drawerPassword" type="password" [(ngModel)]="drawerPassword"
+      <input class="ds-input" id="drawerPassword" type="password" [(ngModel)]="drawerPassword"
              [placeholder]="'USR.drawer.passwordPlaceholder' | translate" autocomplete="new-password" />
     </div>
 
@@ -256,8 +256,8 @@
     </label>
 
     <div class="drawer-actions">
-      <button type="button" class="btn btn-ghost" (click)="closeDrawer()">{{ 'USR.drawer.cancelBtn' | translate }}</button>
-      <button type="button" class="btn btn-primary" [disabled]="isSavingDrawer" (click)="saveDrawer()">
+      <button type="button" class="ds-btn ds-btn--secondary btn btn-ghost" (click)="closeDrawer()">{{ 'USR.drawer.cancelBtn' | translate }}</button>
+      <button type="button" class="ds-btn ds-btn--primary btn btn-primary" [disabled]="isSavingDrawer" (click)="saveDrawer()">
         {{ isSavingDrawer
           ? ('USR.create.submitting' | translate)
           : (drawerMode === 'create' ? ('USR.drawer.createBtn' | translate) : ('USR.drawer.saveBtn' | translate)) }}

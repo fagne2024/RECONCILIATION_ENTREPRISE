@@ -1,24 +1,24 @@
 /* Design aligné sur la maquette « Gestion des utilisateurs » */
 :host {
-  --bg: #F3F1EC;
-  --card: #FFFFFF;
-  --ink: #1B2430;
-  --mute: #6A7480;
-  --line: #E6E2D9;
-  --soft: #F7F5F0;
-  --nav: #111B2E;
-  --b: #1F5FD6;
-  --bs: #E7EFFD;
-  --gold: #A8601A;
-  --ok: #1E7B45;
-  --okb: #E0F3E8;
-  --wa: #A04E08;
-  --wab: #FDEBD0;
-  --bad: #C62828;
-  --badb: #FBE3E1;
-  --nb: #EEF0F3;
-  --serif: 'Instrument Serif', Georgia, serif;
-  --sans: 'Sora', system-ui, sans-serif;
+  --bg: var(--color-bg);
+  --card: var(--color-surface-raised);
+  --ink: var(--color-text-primary);
+  --mute: var(--color-text-muted);
+  --line: var(--color-border);
+  --soft: var(--color-surface-sunken);
+  --nav: var(--color-nav-bg);
+  --b: var(--color-accent);
+  --bs: var(--color-accent-soft);
+  --gold: var(--color-warning);
+  --ok: var(--color-success);
+  --okb: var(--color-success-bg);
+  --wa: var(--color-warning);
+  --wab: var(--color-warning-bg);
+  --bad: var(--color-error);
+  --badb: var(--color-error-bg);
+  --nb: var(--color-surface-sunken);
+  --serif: var(--font-display);
+  --sans: var(--font-ui);
   display: block;
 }
 
