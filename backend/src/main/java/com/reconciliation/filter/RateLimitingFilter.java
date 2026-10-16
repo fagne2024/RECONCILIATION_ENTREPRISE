@@ -116,10 +116,8 @@ public class RateLimitingFilter extends OncePerRequestFilter {
             return;
         }
 
-        // Le flux de reconciliation enchaine analyse, traitement, polling et lecture
-        // des resultats. On l'exclut du rate limiting global pour eviter les 429
-        // sur des usages legitimes pendant les traitements longs.
-        if (isReconciliationFlowPath(path)) {
+        // Polling de progression / resultats seulement : POST reco/upload restent quota.
+        if ("GET".equalsIgnoreCase(request.getMethod()) && isReconciliationPollingPath(path)) {
             filterChain.doFilter(request, response);
             return;
         }
@@ -172,14 +170,8 @@ public class RateLimitingFilter extends OncePerRequestFilter {
         return false;
     }
 
-    private boolean isReconciliationFlowPath(String path) {
-        return path.equals("/api/reconciliation/analyze-keys")
-            || path.equals("/api/reconciliation/reconcile")
-            || path.equals("/api/reconciliation/upload")
-            || path.equals("/api/reconciliation/start")
-            || path.equals("/api/reconciliation/execute-magic")
-            || path.equals("/api/reconciliation/save-summary")
-            || path.startsWith("/api/reconciliation/progress")
+    private boolean isReconciliationPollingPath(String path) {
+        return path.startsWith("/api/reconciliation/progress")
             || path.startsWith("/api/reconciliation/live-progress")
             || path.startsWith("/api/reconciliation/results");
     }
