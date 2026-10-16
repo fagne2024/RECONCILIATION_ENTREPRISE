@@ -11,14 +11,14 @@
     </div>
     <div class="nav-spacer"></div>
     <div class="nav-actions">
-      <button class="nav-btn secondary" (click)="toggleShowAllDataTrxSf()" [class.active]="showAllDataTrxSf" [disabled]="isLoading">
+      <button type="button" class="ds-btn ds-btn--secondary nav-btn secondary" (click)="toggleShowAllDataTrxSf()" [class.active]="showAllDataTrxSf" [disabled]="isLoading">
         <i class="fas" [ngClass]="showAllDataTrxSf ? 'fa-eye-slash' : 'fa-eye'"></i>
         {{ showAllDataTrxSf ? ('ACT.showLess' | translate) : ('ACT.showMore' | translate) }}
       </button>
-      <button class="nav-btn secondary" (click)="refreshData()" [disabled]="isLoading">
+      <button type="button" class="ds-btn ds-btn--secondary nav-btn secondary" (click)="refreshData()" [disabled]="isLoading">
         <i class="fas fa-sync-alt"></i> {{ 'ACT.refresh' | translate }}
       </button>
-      <button class="nav-btn primary" (click)="exportTrxSfData()" [disabled]="filteredTrxSfData.length === 0 || isLoading">
+      <button type="button" class="ds-btn ds-btn--primary nav-btn primary" (click)="exportTrxSfData()" [disabled]="filteredTrxSfData.length === 0 || isLoading">
         <i class="fas fa-file-excel"></i> {{ 'COMMON.actions.export' | translate }}
       </button>
     </div>
@@ -34,17 +34,17 @@
       <div class="hero-kpi-strip">
         <div class="hk-strip-item">
           <span class="hk-strip-label">{{ 'TBL.rows' | translate }}</span>
-          <span class="hk-strip-value">{{ filteredTrxSfData.length | number:'1.0-0' }}</span>
+          <span class="hk-strip-value ds-num">{{ filteredTrxSfData.length | number:'1.0-0' }}</span>
         </div>
         <div class="hk-strip-sep"></div>
         <div class="hk-strip-item">
           <span class="hk-strip-label">{{ 'TBL.totalAmount' | translate }}</span>
-          <span class="hk-strip-value">{{ formatMontantTotal() }}</span>
+          <span class="hk-strip-value ds-num">{{ formatMontantTotal() }}</span>
         </div>
         <div class="hk-strip-sep"></div>
         <div class="hk-strip-item">
           <span class="hk-strip-label">{{ 'TBL.labelTotalFeesTitle' | translate }}</span>
-          <span class="hk-strip-value">{{ formatFraisTotal() }}</span>
+          <span class="hk-strip-value ds-num">{{ formatFraisTotal() }}</span>
         </div>
       </div>
     </div>
@@ -55,20 +55,20 @@
   <div class="header">
     <h2>{{ 'TSF.headerTitle' | translate }}</h2>
     <div class="header-actions">
-      <button class="btn btn-show-more" (click)="toggleShowAllDataTrxSf()" [class.active]="showAllDataTrxSf" [disabled]="isLoading">
+      <button type="button" class="ds-btn ds-btn--secondary btn btn-show-more" (click)="toggleShowAllDataTrxSf()" [class.active]="showAllDataTrxSf" [disabled]="isLoading">
         <i class="fas" [ngClass]="showAllDataTrxSf ? 'fa-eye-slash' : 'fa-eye'"></i>
         {{ showAllDataTrxSf ? ('ACT.showLess' | translate) : ('ACT.showMore' | translate) }}
       </button>
-      <button class="btn btn-primary" (click)="refreshData()" [disabled]="isLoading">
+      <button type="button" class="ds-btn ds-btn--primary btn btn-primary" (click)="refreshData()" [disabled]="isLoading">
         <i class="fas fa-sync-alt"></i> {{ 'ACT.refresh' | translate }}
       </button>
-      <button class="btn btn-success" (click)="exportTrxSfData()" [disabled]="filteredTrxSfData.length === 0 || isLoading">
+      <button type="button" class="ds-btn ds-btn--secondary btn btn-success" (click)="exportTrxSfData()" [disabled]="filteredTrxSfData.length === 0 || isLoading">
         <i class="fas fa-file-excel"></i> {{ 'COMMON.actions.export' | translate }}
       </button>
-      <button class="btn btn-outline-success" (click)="exportNumeroTransGuOnly()" [disabled]="filteredTrxSfData.length === 0 || isLoading">
+      <button type="button" class="ds-btn ds-btn--secondary btn btn-outline-success" (click)="exportNumeroTransGuOnly()" [disabled]="filteredTrxSfData.length === 0 || isLoading">
         <i class="fas fa-file-excel"></i> {{ 'ACT.exportTransGu' | translate }}
       </button>
-      <button class="btn btn-warning" (click)="verifierFrais()" [disabled]="filteredTrxSfData.length === 0 || isLoading || isVerifyingFrais">
+      <button type="button" class="ds-btn ds-btn--secondary btn btn-warning" (click)="verifierFrais()" [disabled]="filteredTrxSfData.length === 0 || isLoading || isVerifyingFrais">
         <i class="fas fa-file-upload"></i> 
         {{ isVerifyingFrais ? ('ACT.processing' | translate) : ('ACT.importStatuses' | translate) }}
       </button>
@@ -124,10 +124,10 @@
           <li><strong>{{ 'TSF.fileStatutColumns' | translate }}</strong> : {{ 'TSF.fileStatutHint' | translate }}</li>
         </ul>
         <div class="template-buttons">
-          <button class="btn btn-outline-primary btn-sm" (click)="downloadTemplate('full')">
+          <button type="button" class="ds-btn ds-btn--primary btn btn-outline-primary btn-sm" (click)="downloadTemplate('full')">
             <i class="fas fa-download"></i> {{ 'ACT.downloadTemplateFull' | translate }}
           </button>
-          <button class="btn btn-outline-info btn-sm ml-2" (click)="downloadTemplate('statut')">
+          <button type="button" class="ds-btn ds-btn--secondary btn btn-outline-info btn-sm ml-2" (click)="downloadTemplate('statut')">
             <i class="fas fa-download"></i> {{ 'ACT.downloadTemplateStatut' | translate }}
           </button>
         </div>
@@ -150,7 +150,7 @@
             </span>
             <button 
               type="button" 
-              class="btn btn-sm btn-outline-secondary ml-2" 
+              class="ds-btn ds-btn--secondary btn btn-sm btn-outline-secondary ml-2" 
               (click)="toggleFileType()"
               title="{{ 'ACT.changeFileType' | translate }}">
               <i class="fas fa-edit"></i>{{ 'ACT.edit' | translate }}</button>
@@ -178,14 +178,14 @@
           <div class="button-group" *ngIf="fileType === 'full'">
             <button 
               type="button" 
-              class="btn btn-primary" 
+              class="ds-btn ds-btn--primary btn btn-primary" 
               (click)="validateFile()"
               [disabled]="!selectedFile || isUploading">
               <i class="fas fa-check"></i> {{ 'ACT.validate' | translate }}
             </button>
             <button 
               type="button" 
-              class="btn btn-success" 
+              class="ds-btn ds-btn--secondary btn btn-success" 
               (click)="uploadFile()"
               [disabled]="!selectedFile || !validationResult || isUploading">
               <i class="fas fa-upload"></i> 
@@ -197,7 +197,7 @@
           <div class="button-group" *ngIf="fileType === 'statut'">
             <button 
               type="button" 
-              class="btn btn-info" 
+              class="ds-btn ds-btn--secondary btn btn-info" 
               (click)="changeStatutFile()"
               [disabled]="!selectedFile || isChangingStatut">
               <i class="fas fa-exchange-alt"></i> 
@@ -234,7 +234,7 @@
         <div class="alert alert-secondary">
           <h6>{{ 'TSF.previewTitle' | translate: { count: previewTotal } }}</h6>
           <div class="table-responsive">
-            <table class="table table-sm table-bordered">
+            <table class="ds-table table table-sm table-bordered">
               <thead>
                 <tr>
                   <th *ngFor="let h of previewHeaders">{{ h }}</th>
@@ -263,11 +263,11 @@
   <div class="duplicates-section">
     <h3>{{ 'TSF.duplicatesTitle' | translate }}</h3>
     <div class="duplicates-controls">
-      <button class="btn btn-warning" (click)="loadDuplicates()" [disabled]="isLoadingDuplicates">
+      <button type="button" class="ds-btn ds-btn--secondary btn btn-warning" (click)="loadDuplicates()" [disabled]="isLoadingDuplicates">
         <i class="fas fa-search"></i> 
         {{ isLoadingDuplicates ? ('ACT.searching' | translate) : ('ACT.findDuplicates' | translate) }}
       </button>
-      <button class="btn btn-danger" (click)="removeDuplicates()" [disabled]="duplicates.length === 0 || isRemovingDuplicates">
+      <button type="button" class="ds-btn ds-btn--danger btn btn-danger" (click)="removeDuplicates()" [disabled]="duplicates.length === 0 || isRemovingDuplicates">
         <i class="fas fa-trash"></i> 
         {{ isRemovingDuplicates ? ('ACT.deleting' | translate) : ('ACT.deleteDuplicates' | translate) }}
       </button>
@@ -281,7 +281,7 @@
     </div>
     
     <div class="duplicates-table" *ngIf="duplicates.length > 0">
-      <table class="data-table">
+      <table class="ds-table data-table">
         <thead>
           <tr>
             <th>{{ 'TBL.transactionId' | translate }}</th>
@@ -317,7 +317,7 @@
       <div class="filter-row">
         <div class="filter-group">
           <label>{{ 'TBL.agency' | translate }}</label>
-          <select formControlName="agence" class="form-control">
+          <select formControlName="agence" class="ds-select form-control">
             <option value="">{{ 'FILT.allAgencies' | translate }}</option>
             <option *ngFor="let agence of getUniqueAgences()" [value]="agence">{{ agence }}</option>
           </select>
@@ -325,7 +325,7 @@
         
         <div class="filter-group">
           <label>{{ 'LBL.serviceLabel' | translate }}</label>
-          <select formControlName="service" class="form-control">
+          <select formControlName="service" class="ds-select form-control">
             <option value="">{{ 'FILT.allServices' | translate }}</option>
             <option *ngFor="let service of getUniqueServices()" [value]="service">{{ service }}</option>
           </select>
@@ -333,7 +333,7 @@
         
         <div class="filter-group">
           <label>{{ 'LBL.countryLabel' | translate }}</label>
-          <select formControlName="pays" class="form-control">
+          <select formControlName="pays" class="ds-select form-control">
             <option value="">{{ 'FILT.allCountries' | translate }}</option>
             <option *ngFor="let pays of getUniquePays()" [value]="pays">{{ pays }}</option>
           </select>
@@ -341,12 +341,12 @@
         
         <div class="filter-group">
           <label>{{ 'FILT.transGu' | translate }}</label>
-          <input type="text" formControlName="numeroTransGu" class="form-control" placeholder="{{ 'FILT.transGuPlaceholder' | translate }}">
+          <input type="text" formControlName="numeroTransGu" class="ds-input form-control" placeholder="{{ 'FILT.transGuPlaceholder' | translate }}">
         </div>
         
         <div class="filter-group">
           <label>{{ 'LBL.statusLabel' | translate }}</label>
-          <select formControlName="statut" class="form-control">
+          <select formControlName="statut" class="ds-select form-control">
             <option value="">{{ 'FILT.allStatuses' | translate }}</option>
             <option *ngFor="let statut of statuts" [value]="statut">{{ getStatutLabel(statut) }}</option>
           </select>
@@ -356,16 +356,16 @@
       <div class="filter-row">
         <div class="filter-group">
           <label>{{ 'FILT.dateStart' | translate }}</label>
-          <input type="date" formControlName="dateDebut" class="form-control" (change)="onDateChange('dateDebut')">
+          <input type="date" formControlName="dateDebut" class="ds-input form-control" (change)="onDateChange('dateDebut')">
         </div>
         
         <div class="filter-group">
           <label>{{ 'FILT.dateEnd' | translate }}</label>
-          <input type="date" formControlName="dateFin" class="form-control" (change)="onDateChange('dateFin')">
+          <input type="date" formControlName="dateFin" class="ds-input form-control" (change)="onDateChange('dateFin')">
         </div>
         
         <div class="filter-actions">
-          <button type="button" class="btn btn-secondary" (click)="clearFilters()">
+          <button type="button" class="ds-btn ds-btn--secondary btn btn-secondary" (click)="clearFilters()">
             <i class="fas fa-times"></i> {{ 'ACT.clear' | translate }}
           </button>
         </div>
@@ -387,12 +387,12 @@
           <span class="selected-count">{{ getSelectedCount() }} {{ 'ESD.selectedCount' | translate }}</span>
         </div>
         <div class="selection-actions">
-          <select [(ngModel)]="selectedStatut" class="form-control status-select">
+          <select [(ngModel)]="selectedStatut" class="ds-select form-control status-select">
             <option value="EN_ATTENTE">{{ 'TBL.statutEnAttente' | translate }}</option>
             <option value="TRAITE">{{ 'TBL.statutTraite' | translate }}</option>
             <option value="ERREUR">{{ 'TBL.statutErreur' | translate }}</option>
           </select>
-          <button class="btn btn-primary" 
+          <button type="button" class="ds-btn ds-btn--primary btn btn-primary" 
                   (click)="updateMultipleStatuts()" 
                   [disabled]="getSelectedCount() === 0 || isUpdatingMultipleStatuts">
             <i class="fas fa-save"></i>
@@ -402,7 +402,7 @@
       </div>
       
       <div class="table-actions">
-        <button class="btn btn-secondary" (click)="toggleSelectionMode()" [class.active]="isSelectionMode">
+        <button type="button" class="ds-btn ds-btn--secondary btn btn-secondary" (click)="toggleSelectionMode()" [class.active]="isSelectionMode">
           <i class="fas fa-check-square"></i>
           {{ isSelectionMode ? ('ACT.selectionMode' | translate) : ('ACT.multipleSelection' | translate) }}
         </button>
@@ -410,7 +410,7 @@
     </div>
 
     <div class="table-container" *ngIf="!isLoading">
-      <table class="data-table">
+      <table class="ds-table data-table">
         <thead>
           <tr>
             <th *ngIf="isSelectionMode" class="checkbox-header">
@@ -475,7 +475,7 @@
                   <label class="status-label">{{ 'LBL.statusLabel' | translate }}</label>
                   <select (change)="onStatutChange(item, $event)" 
                           [value]="item.statut || 'EN_ATTENTE'"
-                          class="status-select"
+                          class="ds-select status-select"
                           [ngClass]="getStatutClass(item.statut || '')">
                     <option value="EN_ATTENTE">{{ 'TBL.statutEnAttente' | translate }}</option>
                     <option value="TRAITE">{{ 'TBL.statutTraite' | translate }}</option>
@@ -483,7 +483,7 @@
                   </select>
                 </div>
                 
-                <button class="btn btn-danger btn-sm" 
+                <button type="button" class="ds-btn ds-btn--danger btn btn-danger btn-sm" 
                         (click)="deleteTrxSf(item.id!)"
                         title="{{ 'ACT.delete' | translate }}">
                   <i class="fas fa-trash"></i>
@@ -513,7 +513,7 @@
     <div class="pagination-controls">
       <div class="items-per-page">
         <label>{{ 'PAG.rowsPerPage' | translate }}</label>
-        <select [(ngModel)]="itemsPerPage" (change)="onItemsPerPageChange()" class="form-control">
+        <select [(ngModel)]="itemsPerPage" (change)="onItemsPerPageChange()" class="ds-select form-control">
           <option [value]="10">10</option>
           <option [value]="20">20</option>
           <option [value]="50">50</option>
@@ -521,24 +521,24 @@
         </select>
       </div>
       
-      <button 
-        class="btn pagination-btn" 
+      <button type="button" 
+        class="ds-btn ds-btn--secondary btn pagination-btn" 
         [disabled]="currentPage === 1"
         (click)="onPageChange(currentPage - 1)">
         <i class="fas fa-chevron-left"></i>{{ 'PAG.previous' | translate }}</button>
       
       <div class="page-numbers">
-        <button 
+        <button type="button" 
           *ngFor="let page of getVisiblePages()"
-          class="btn page-btn"
+          class="ds-btn ds-btn--secondary btn page-btn"
           [class.active]="currentPage === page"
           (click)="onPageChange(page)">
           {{ page }}
         </button>
       </div>
       
-      <button 
-        class="btn pagination-btn" 
+      <button type="button" 
+        class="ds-btn ds-btn--secondary btn pagination-btn" 
         [disabled]="currentPage === totalPages"
         (click)="onPageChange(currentPage + 1)">{{ 'PAG.next' | translate }}<i class="fas fa-chevron-right"></i>
       </button>
