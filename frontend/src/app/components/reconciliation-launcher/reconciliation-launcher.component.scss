@@ -239,7 +239,7 @@
   place-items: center;
   color: transparent;
   flex: none;
-  transition: all .2s;
+  transition: background-color var(--duration-base) var(--ease-standard), color var(--duration-base) var(--ease-standard), border-color var(--duration-base) var(--ease-standard), box-shadow var(--duration-base) var(--ease-standard), transform var(--duration-base) var(--ease-standard), opacity var(--duration-base) var(--ease-standard);
 
   svg {
     width: 14px;

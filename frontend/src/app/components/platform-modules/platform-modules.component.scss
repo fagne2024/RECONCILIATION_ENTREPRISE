@@ -274,7 +274,7 @@
 
   .pf-node-child {
     padding: 8px 12px;
-    transition: background 0.15s ease;
+    transition: background var(--duration-fast) var(--ease-standard);
 
     &:hover {
       background: #FCFBF8;
@@ -319,7 +319,7 @@
   font-size: 13px;
   font-weight: 600;
   cursor: pointer;
-  transition: background 0.15s ease, border-color 0.15s ease, color 0.15s ease;
+  transition: background var(--duration-fast) var(--ease-standard), border-color var(--duration-fast) var(--ease-standard), color var(--duration-fast) var(--ease-standard);
   white-space: nowrap;
 
   &:disabled {

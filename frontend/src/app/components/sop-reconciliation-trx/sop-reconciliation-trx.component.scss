@@ -108,7 +108,7 @@
   align-items: center;
   margin-bottom: 60px;
   cursor: pointer;
-  transition: transform 0.2s ease;
+  transition: transform var(--duration-base) var(--ease-standard);
   position: relative;
   z-index: 10;
   gap: 10px;
@@ -240,7 +240,7 @@
 
 .branch-node {
   cursor: pointer;
-  transition: transform 0.2s ease;
+  transition: transform var(--duration-base) var(--ease-standard);
   margin-bottom: 20px;
   width: 100%;
 
@@ -378,7 +378,7 @@
   align-items: center;
   justify-content: center;
   z-index: var(--z-dropdown);
-  animation: fadeIn 0.3s ease;
+  animation: fadeIn var(--duration-slow) var(--ease-standard);
 }
 
 .popup-content {
@@ -389,7 +389,7 @@
   width: 95%;
   max-height: 85vh;
   overflow: hidden;
-  animation: slideDown 0.3s ease;
+  animation: slideDown var(--duration-slow) var(--ease-standard);
 }
 
 .popup-header {
@@ -419,7 +419,7 @@
   display: flex;
   align-items: center;
   justify-content: center;
-  transition: background 0.2s ease;
+  transition: background var(--duration-base) var(--ease-standard);
 
   &:hover {
     background: rgba(255, 255, 255, 0.3);
@@ -526,7 +526,7 @@
   margin-left: 10px;
   align-items: center;
   opacity: 0;
-  transition: opacity 0.2s ease;
+  transition: opacity var(--duration-base) var(--ease-standard);
   pointer-events: none;
 }
 
@@ -643,7 +643,7 @@
   align-items: center;
   justify-content: center;
   z-index: var(--z-dropdown);
-  animation: fadeIn 0.3s ease;
+  animation: fadeIn var(--duration-slow) var(--ease-standard);
 }
 
 .modal-content {
@@ -654,7 +654,7 @@
   width: 95%;
   max-height: 85vh;
   overflow: hidden;
-  animation: slideDown 0.3s ease;
+  animation: slideDown var(--duration-slow) var(--ease-standard);
   display: flex;
   flex-direction: column;
 }
@@ -686,7 +686,7 @@
   display: flex;
   align-items: center;
   justify-content: center;
-  transition: background 0.2s ease;
+  transition: background var(--duration-base) var(--ease-standard);
 
   &:hover {
     background: rgba(255, 255, 255, 0.3);
@@ -717,7 +717,7 @@
   border: 2px solid var(--color-border);
   border-radius: 8px;
   font-size: 1rem;
-  transition: border-color 0.2s ease;
+  transition: border-color var(--duration-base) var(--ease-standard);
   box-sizing: border-box;
 
   &:focus {
@@ -939,7 +939,7 @@
   resize: vertical;
   min-height: 150px;
   box-sizing: border-box;
-  transition: border-color 0.3s ease;
+  transition: border-color var(--duration-slow) var(--ease-standard);
 
   &:focus {
     outline: none;
@@ -979,7 +979,7 @@
   align-items: center;
   justify-content: center;
   z-index: var(--z-dropdown);
-  animation: fadeIn 0.3s ease;
+  animation: fadeIn var(--duration-slow) var(--ease-standard);
   padding: 10px;
   box-sizing: border-box;
   overflow: auto;
@@ -995,7 +995,7 @@
   max-height: 95vh;
   display: flex;
   flex-direction: column;
-  animation: slideDown 0.3s ease;
+  animation: slideDown var(--duration-slow) var(--ease-standard);
   overflow: hidden;
   margin: auto;
   

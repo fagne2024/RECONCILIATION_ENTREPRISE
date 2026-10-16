@@ -87,7 +87,7 @@
   font-size: 13px;
   font-weight: 600;
   cursor: pointer;
-  transition: all 0.2s;
+  transition: background-color var(--duration-base) var(--ease-standard), color var(--duration-base) var(--ease-standard), border-color var(--duration-base) var(--ease-standard), box-shadow var(--duration-base) var(--ease-standard), transform var(--duration-base) var(--ease-standard), opacity var(--duration-base) var(--ease-standard);
   letter-spacing: 0.02em;
 
   &:disabled {
@@ -443,7 +443,7 @@
     display: inline-flex;
     align-items: center;
     gap: 8px;
-    transition: all 0.2s;
+    transition: background-color var(--duration-base) var(--ease-standard), color var(--duration-base) var(--ease-standard), border-color var(--duration-base) var(--ease-standard), box-shadow var(--duration-base) var(--ease-standard), transform var(--duration-base) var(--ease-standard), opacity var(--duration-base) var(--ease-standard);
 
     &:hover {
       background: #125ea8;
@@ -475,7 +475,7 @@
       display: inline-flex;
       align-items: center;
       gap: 8px;
-      transition: all 0.2s;
+      transition: background-color var(--duration-base) var(--ease-standard), color var(--duration-base) var(--ease-standard), border-color var(--duration-base) var(--ease-standard), box-shadow var(--duration-base) var(--ease-standard), transform var(--duration-base) var(--ease-standard), opacity var(--duration-base) var(--ease-standard);
       font-weight: 500;
 
       &:hover {
@@ -506,7 +506,7 @@
       display: inline-flex;
       align-items: center;
       gap: 10px;
-      transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+      transition: background-color var(--duration-slow) var(--ease-standard), color var(--duration-slow) var(--ease-standard), border-color var(--duration-slow) var(--ease-standard), box-shadow var(--duration-slow) var(--ease-standard), transform var(--duration-slow) var(--ease-standard), opacity var(--duration-slow) var(--ease-standard);
       font-size: 13px;
       font-weight: 600;
       box-shadow: 0 2px 8px rgba(108, 117, 125, 0.2);
@@ -552,7 +552,7 @@
 
       i {
         font-size: 16px;
-        transition: transform 0.3s ease;
+        transition: transform var(--duration-slow) var(--ease-standard);
       }
 
       &:hover i {
@@ -570,7 +570,7 @@
       display: inline-flex;
       align-items: center;
       gap: 10px;
-      transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+      transition: background-color var(--duration-slow) var(--ease-standard), color var(--duration-slow) var(--ease-standard), border-color var(--duration-slow) var(--ease-standard), box-shadow var(--duration-slow) var(--ease-standard), transform var(--duration-slow) var(--ease-standard), opacity var(--duration-slow) var(--ease-standard);
       font-size: 13px;
       font-weight: 600;
       box-shadow: 0 2px 8px rgba(139, 92, 246, 0.2);
@@ -617,7 +617,7 @@
 
       i {
         font-size: 16px;
-        transition: transform 0.3s ease;
+        transition: transform var(--duration-slow) var(--ease-standard);
       }
 
       &:hover i {
@@ -647,7 +647,7 @@
       line-height: 1.4;
       word-wrap: break-word;
       overflow-y: auto;
-      transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+      transition: background-color var(--duration-slow) var(--ease-standard), color var(--duration-slow) var(--ease-standard), border-color var(--duration-slow) var(--ease-standard), box-shadow var(--duration-slow) var(--ease-standard), transform var(--duration-slow) var(--ease-standard), opacity var(--duration-slow) var(--ease-standard);
       box-shadow: 0 1px 3px rgba(0, 0, 0, 0.05);
 
       &:hover {
@@ -680,7 +680,7 @@
       font-size: 12px;
       font-family: inherit;
       resize: vertical;
-      transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+      transition: background-color var(--duration-slow) var(--ease-standard), color var(--duration-slow) var(--ease-standard), border-color var(--duration-slow) var(--ease-standard), box-shadow var(--duration-slow) var(--ease-standard), transform var(--duration-slow) var(--ease-standard), opacity var(--duration-slow) var(--ease-standard);
       background: #ffffff;
       box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
 
@@ -714,7 +714,7 @@
     font-size: 14px;
     font-family: inherit;
     resize: vertical;
-    transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+    transition: background-color var(--duration-slow) var(--ease-standard), color var(--duration-slow) var(--ease-standard), border-color var(--duration-slow) var(--ease-standard), box-shadow var(--duration-slow) var(--ease-standard), transform var(--duration-slow) var(--ease-standard), opacity var(--duration-slow) var(--ease-standard);
     background: #ffffff;
     box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
 
@@ -743,7 +743,7 @@
     cursor: pointer;
     padding: 8px;
     border-radius: 6px;
-    transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+    transition: background-color var(--duration-slow) var(--ease-standard), color var(--duration-slow) var(--ease-standard), border-color var(--duration-slow) var(--ease-standard), box-shadow var(--duration-slow) var(--ease-standard), transform var(--duration-slow) var(--ease-standard), opacity var(--duration-slow) var(--ease-standard);
     color: #6b7280;
     font-size: 14px;
 
@@ -827,7 +827,7 @@
     background: #fff;
     box-shadow: 0 1px 3px rgba(16, 24, 40, 0.06), 0 1px 2px rgba(16, 24, 40, 0.04);
     border-radius: 8px;
-    transition: all 0.2s ease;
+    transition: background-color var(--duration-base) var(--ease-standard), color var(--duration-base) var(--ease-standard), border-color var(--duration-base) var(--ease-standard), box-shadow var(--duration-base) var(--ease-standard), transform var(--duration-base) var(--ease-standard), opacity var(--duration-base) var(--ease-standard);
     
     &:nth-child(even) {
       background: linear-gradient(135deg, #f8fffe 0%, #f1f8e9 100%);
@@ -888,7 +888,7 @@
 
   .btn-copy {
     border: none; background: #eef2f7; color: #34495e; border-radius: 6px;
-    padding: 6px 8px; cursor: pointer; transition: all .2s;
+    padding: 6px 8px; cursor: pointer; transition: background-color var(--duration-base) var(--ease-standard), color var(--duration-base) var(--ease-standard), border-color var(--duration-base) var(--ease-standard), box-shadow var(--duration-base) var(--ease-standard), transform var(--duration-base) var(--ease-standard), opacity var(--duration-base) var(--ease-standard);
   }
   .btn-copy:hover { background: #dfe6ee; }
 
@@ -897,7 +897,7 @@
     background: #ffffff;
     color: #1f2937;
     border-color: #d0d7de;
-    transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+    transition: background-color var(--duration-slow) var(--ease-standard), color var(--duration-slow) var(--ease-standard), border-color var(--duration-slow) var(--ease-standard), box-shadow var(--duration-slow) var(--ease-standard), transform var(--duration-slow) var(--ease-standard), opacity var(--duration-slow) var(--ease-standard);
     position: relative;
     overflow: hidden;
 
@@ -976,7 +976,7 @@
     font-size: 12px;
     font-weight: 600;
     cursor: pointer;
-    transition: all 0.2s ease;
+    transition: background-color var(--duration-base) var(--ease-standard), color var(--duration-base) var(--ease-standard), border-color var(--duration-base) var(--ease-standard), box-shadow var(--duration-base) var(--ease-standard), transform var(--duration-base) var(--ease-standard), opacity var(--duration-base) var(--ease-standard);
     box-shadow: 0 2px 4px rgba(255, 107, 107, 0.3);
     
     &:hover {
@@ -1026,7 +1026,7 @@
       display: inline-flex;
       align-items: center;
       gap: 10px;
-      transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+      transition: background-color var(--duration-slow) var(--ease-standard), color var(--duration-slow) var(--ease-standard), border-color var(--duration-slow) var(--ease-standard), box-shadow var(--duration-slow) var(--ease-standard), transform var(--duration-slow) var(--ease-standard), opacity var(--duration-slow) var(--ease-standard);
       font-size: 13px;
       font-weight: 600;
       box-shadow: 0 2px 8px rgba(59, 130, 246, 0.2);
@@ -1061,7 +1061,7 @@
 
       i {
         font-size: 16px;
-        transition: transform 0.3s ease;
+        transition: transform var(--duration-slow) var(--ease-standard);
       }
 
       &:hover i {
@@ -1079,7 +1079,7 @@
       display: inline-flex;
       align-items: center;
       gap: 8px;
-      transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+      transition: background-color var(--duration-slow) var(--ease-standard), color var(--duration-slow) var(--ease-standard), border-color var(--duration-slow) var(--ease-standard), box-shadow var(--duration-slow) var(--ease-standard), transform var(--duration-slow) var(--ease-standard), opacity var(--duration-slow) var(--ease-standard);
       font-size: 13px;
       font-weight: 600;
       box-shadow: 0 2px 8px rgba(16, 185, 129, 0.2);
@@ -1104,7 +1104,7 @@
 
       i {
         font-size: 14px;
-        transition: transform 0.3s ease;
+        transition: transform var(--duration-slow) var(--ease-standard);
       }
 
       &:hover:not(:disabled) i {
@@ -1122,7 +1122,7 @@
       display: inline-flex;
       align-items: center;
       gap: 8px;
-      transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+      transition: background-color var(--duration-slow) var(--ease-standard), color var(--duration-slow) var(--ease-standard), border-color var(--duration-slow) var(--ease-standard), box-shadow var(--duration-slow) var(--ease-standard), transform var(--duration-slow) var(--ease-standard), opacity var(--duration-slow) var(--ease-standard);
       font-size: 13px;
       font-weight: 600;
       box-shadow: 0 2px 8px rgba(239, 68, 68, 0.2);
@@ -1147,7 +1147,7 @@
 
       i {
         font-size: 14px;
-        transition: transform 0.3s ease;
+        transition: transform var(--duration-slow) var(--ease-standard);
       }
 
       &:hover:not(:disabled) i {
@@ -1166,7 +1166,7 @@
     background: #ffffff;
     cursor: pointer;
     position: relative;
-    transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+    transition: background-color var(--duration-slow) var(--ease-standard), color var(--duration-slow) var(--ease-standard), border-color var(--duration-slow) var(--ease-standard), box-shadow var(--duration-slow) var(--ease-standard), transform var(--duration-slow) var(--ease-standard), opacity var(--duration-slow) var(--ease-standard);
     box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
 
     &:hover {
@@ -1189,7 +1189,7 @@
         color: #ffffff;
         font-size: 14px;
         font-weight: bold;
-        animation: checkmark 0.3s ease;
+        animation: checkmark var(--duration-slow) var(--ease-standard);
       }
     }
 
@@ -1207,7 +1207,7 @@
         color: #ffffff;
         font-size: 16px;
         font-weight: bold;
-        animation: checkmark 0.3s ease;
+        animation: checkmark var(--duration-slow) var(--ease-standard);
       }
     }
 
@@ -1289,7 +1289,7 @@
     display: inline-flex;
     align-items: center;
     gap: 8px;
-    transition: all 0.2s;
+    transition: background-color var(--duration-base) var(--ease-standard), color var(--duration-base) var(--ease-standard), border-color var(--duration-base) var(--ease-standard), box-shadow var(--duration-base) var(--ease-standard), transform var(--duration-base) var(--ease-standard), opacity var(--duration-base) var(--ease-standard);
 
     &:hover:enabled { background: linear-gradient(135deg,#1b5e20,#388e3c); transform: translateY(-1px); }
     &:disabled { opacity: .6; cursor: not-allowed; }
@@ -1319,7 +1319,7 @@
   font-weight: 700;
   border: 1px solid transparent;
   cursor: pointer;
-  transition: transform 0.15s ease, box-shadow 0.2s ease, filter 0.2s;
+  transition: transform var(--duration-fast) var(--ease-standard), box-shadow var(--duration-base) var(--ease-standard), filter 0.2s;
 
   i { font-size: 14px; }
 
@@ -1651,7 +1651,7 @@
 
       tbody tr {
         background: #fff;
-        transition: all 0.2s ease;
+        transition: background-color var(--duration-base) var(--ease-standard), color var(--duration-base) var(--ease-standard), border-color var(--duration-base) var(--ease-standard), box-shadow var(--duration-base) var(--ease-standard), transform var(--duration-base) var(--ease-standard), opacity var(--duration-base) var(--ease-standard);
         
         &:nth-child(even) {
           background: linear-gradient(135deg, #f8fffe 0%, #f1f8e9 100%);
@@ -1793,7 +1793,7 @@
           display: inline-flex;
           align-items: center;
           gap: 6px;
-          transition: all 0.3s;
+          transition: background-color var(--duration-slow) var(--ease-standard), color var(--duration-slow) var(--ease-standard), border-color var(--duration-slow) var(--ease-standard), box-shadow var(--duration-slow) var(--ease-standard), transform var(--duration-slow) var(--ease-standard), opacity var(--duration-slow) var(--ease-standard);
           box-shadow: 0 2px 6px rgba(255, 107, 53, 0.3);
 
           i {
@@ -1820,7 +1820,7 @@
           gap: 6px;
           padding: 6px 12px;
           border-radius: 6px;
-          transition: all 0.3s;
+          transition: background-color var(--duration-slow) var(--ease-standard), color var(--duration-slow) var(--ease-standard), border-color var(--duration-slow) var(--ease-standard), box-shadow var(--duration-slow) var(--ease-standard), transform var(--duration-slow) var(--ease-standard), opacity var(--duration-slow) var(--ease-standard);
           background: #e3f2fd;
           border: 1px solid #90caf9;
 
@@ -1906,7 +1906,7 @@
         border: 1px solid #dee2e6;
         border-radius: 4px;
         cursor: pointer;
-        transition: all 0.3s;
+        transition: background-color var(--duration-slow) var(--ease-standard), color var(--duration-slow) var(--ease-standard), border-color var(--duration-slow) var(--ease-standard), box-shadow var(--duration-slow) var(--ease-standard), transform var(--duration-slow) var(--ease-standard), opacity var(--duration-slow) var(--ease-standard);
         font-size: 14px;
 
         &:hover {
@@ -1958,7 +1958,7 @@
 
     tbody tr {
       background: #fff;
-      transition: all 0.2s ease;
+      transition: background-color var(--duration-base) var(--ease-standard), color var(--duration-base) var(--ease-standard), border-color var(--duration-base) var(--ease-standard), box-shadow var(--duration-base) var(--ease-standard), transform var(--duration-base) var(--ease-standard), opacity var(--duration-base) var(--ease-standard);
       
       &:nth-child(even) {
         background: linear-gradient(135deg, #f8fffe 0%, #f1f8e9 100%);
@@ -2154,7 +2154,7 @@
   align-items: center;
   justify-content: center;
   z-index: var(--z-modal);
-  animation: fadeIn 0.2s ease-in-out;
+  animation: fadeIn var(--duration-base) var(--ease-standard);
 }
 
 @keyframes fadeIn {
@@ -2175,7 +2175,7 @@
   overflow: hidden;
   display: flex;
   flex-direction: column;
-  animation: slideUp 0.3s ease-out;
+  animation: slideUp var(--duration-slow) var(--ease-standard);
 
   &.detail-popup {
     width: 800px;
@@ -2217,7 +2217,7 @@
   gap: 8px;
   font-weight: 600;
   box-shadow: 0 2px 8px rgba(30, 136, 229, 0.35);
-  transition: transform 0.15s ease, box-shadow 0.2s ease, filter 0.2s;
+  transition: transform var(--duration-fast) var(--ease-standard), box-shadow var(--duration-base) var(--ease-standard), filter 0.2s;
 
   i { font-size: 14px; }
 
@@ -2301,7 +2301,7 @@
     display: flex;
     align-items: center;
     justify-content: center;
-    transition: all 0.3s;
+    transition: background-color var(--duration-slow) var(--ease-standard), color var(--duration-slow) var(--ease-standard), border-color var(--duration-slow) var(--ease-standard), box-shadow var(--duration-slow) var(--ease-standard), transform var(--duration-slow) var(--ease-standard), opacity var(--duration-slow) var(--ease-standard);
 
     &:hover {
       background: rgba(255, 255, 255, 0.3);
@@ -2441,7 +2441,7 @@
       border: 1px solid #ced4da;
       border-radius: 6px;
       font-size: 14px;
-      transition: all 0.3s;
+      transition: background-color var(--duration-slow) var(--ease-standard), color var(--duration-slow) var(--ease-standard), border-color var(--duration-slow) var(--ease-standard), box-shadow var(--duration-slow) var(--ease-standard), transform var(--duration-slow) var(--ease-standard), opacity var(--duration-slow) var(--ease-standard);
 
       &:focus {
         outline: none;
@@ -2481,7 +2481,7 @@
     display: flex;
     align-items: center;
     gap: 8px;
-    transition: all 0.3s;
+    transition: background-color var(--duration-slow) var(--ease-standard), color var(--duration-slow) var(--ease-standard), border-color var(--duration-slow) var(--ease-standard), box-shadow var(--duration-slow) var(--ease-standard), transform var(--duration-slow) var(--ease-standard), opacity var(--duration-slow) var(--ease-standard);
 
     i {
       font-size: 14px;
@@ -2593,7 +2593,7 @@
         border: 2px solid #e5e7eb;
         border-radius: 8px;
         font-size: 14px;
-        transition: all 0.3s ease;
+        transition: background-color var(--duration-slow) var(--ease-standard), color var(--duration-slow) var(--ease-standard), border-color var(--duration-slow) var(--ease-standard), box-shadow var(--duration-slow) var(--ease-standard), transform var(--duration-slow) var(--ease-standard), opacity var(--duration-slow) var(--ease-standard);
         background: #fff;
 
         &:focus {
@@ -2657,7 +2657,7 @@
       align-items: center;
       justify-content: center;
       cursor: pointer;
-      transition: all 0.3s ease;
+      transition: background-color var(--duration-slow) var(--ease-standard), color var(--duration-slow) var(--ease-standard), border-color var(--duration-slow) var(--ease-standard), box-shadow var(--duration-slow) var(--ease-standard), transform var(--duration-slow) var(--ease-standard), opacity var(--duration-slow) var(--ease-standard);
 
       &:hover {
         background: rgba(255, 255, 255, 0.3);
@@ -2683,7 +2683,7 @@
       padding: 12px 24px;
       border-radius: 8px;
       font-weight: 600;
-      transition: all 0.3s ease;
+      transition: background-color var(--duration-slow) var(--ease-standard), color var(--duration-slow) var(--ease-standard), border-color var(--duration-slow) var(--ease-standard), box-shadow var(--duration-slow) var(--ease-standard), transform var(--duration-slow) var(--ease-standard), opacity var(--duration-slow) var(--ease-standard);
       display: flex;
       align-items: center;
       gap: 8px;
@@ -2762,7 +2762,7 @@
         background: white;
         border-radius: 6px;
         cursor: pointer;
-        transition: all 0.2s ease;
+        transition: background-color var(--duration-base) var(--ease-standard), color var(--duration-base) var(--ease-standard), border-color var(--duration-base) var(--ease-standard), box-shadow var(--duration-base) var(--ease-standard), transform var(--duration-base) var(--ease-standard), opacity var(--duration-base) var(--ease-standard);
         color: #495057;
 
         &:hover:not(:disabled) {
@@ -2793,7 +2793,7 @@
         background: white;
         border-radius: 6px;
         cursor: pointer;
-        transition: all 0.2s ease;
+        transition: background-color var(--duration-base) var(--ease-standard), color var(--duration-base) var(--ease-standard), border-color var(--duration-base) var(--ease-standard), box-shadow var(--duration-base) var(--ease-standard), transform var(--duration-base) var(--ease-standard), opacity var(--duration-base) var(--ease-standard);
         color: #495057;
         font-weight: 500;
         min-width: 40px;
@@ -2832,7 +2832,7 @@
       background: white;
       font-size: 0.9rem;
       cursor: pointer;
-      transition: all 0.2s ease;
+      transition: background-color var(--duration-base) var(--ease-standard), color var(--duration-base) var(--ease-standard), border-color var(--duration-base) var(--ease-standard), box-shadow var(--duration-base) var(--ease-standard), transform var(--duration-base) var(--ease-standard), opacity var(--duration-base) var(--ease-standard);
 
       &:hover {
         border-color: #adb5bd;

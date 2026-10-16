@@ -58,7 +58,7 @@
         display: flex;
         align-items: center;
         gap: 6px;
-        transition: all 0.3s ease;
+        transition: background-color var(--duration-slow) var(--ease-standard), color var(--duration-slow) var(--ease-standard), border-color var(--duration-slow) var(--ease-standard), box-shadow var(--duration-slow) var(--ease-standard), transform var(--duration-slow) var(--ease-standard), opacity var(--duration-slow) var(--ease-standard);
         border: none;
         cursor: pointer;
 
@@ -548,7 +548,7 @@
         cursor: pointer;
         font-size: 14px;
         font-weight: 500;
-        transition: all 0.2s;
+        transition: background-color var(--duration-base) var(--ease-standard), color var(--duration-base) var(--ease-standard), border-color var(--duration-base) var(--ease-standard), box-shadow var(--duration-base) var(--ease-standard), transform var(--duration-base) var(--ease-standard), opacity var(--duration-base) var(--ease-standard);
         border: 1px solid #dee2e6;
 
         &:hover {
@@ -626,7 +626,7 @@
           display: flex;
           align-items: center;
           gap: 6px;
-          transition: all 0.3s ease;
+          transition: background-color var(--duration-slow) var(--ease-standard), color var(--duration-slow) var(--ease-standard), border-color var(--duration-slow) var(--ease-standard), box-shadow var(--duration-slow) var(--ease-standard), transform var(--duration-slow) var(--ease-standard), opacity var(--duration-slow) var(--ease-standard);
 
           &.btn-success {
             background: #28a745;
@@ -712,7 +712,7 @@
         display: flex;
         align-items: center;
         gap: 4px;
-        transition: all 0.3s ease;
+        transition: background-color var(--duration-slow) var(--ease-standard), color var(--duration-slow) var(--ease-standard), border-color var(--duration-slow) var(--ease-standard), box-shadow var(--duration-slow) var(--ease-standard), transform var(--duration-slow) var(--ease-standard), opacity var(--duration-slow) var(--ease-standard);
         font-weight: 500;
         min-width: 70px;
         justify-content: center;

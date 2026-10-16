@@ -79,7 +79,7 @@
   color: rgba(255, 255, 255, 0.55);
   text-decoration: none;
   font-size: 12px;
-  transition: color 0.2s ease;
+  transition: color var(--duration-base) var(--ease-standard);
 
   &:hover,
   &.active {
@@ -99,7 +99,7 @@
   background: rgba(255, 255, 255, 0.08);
   color: rgba(255, 255, 255, 0.7);
   cursor: pointer;
-  transition: background 0.2s ease, color 0.2s ease;
+  transition: background var(--duration-base) var(--ease-standard), color var(--duration-base) var(--ease-standard);
 
   &:hover {
     background: rgba(255, 255, 255, 0.15);
@@ -190,7 +190,7 @@
   font-size: 13px;
   font-weight: 600;
   padding: 10px 16px;
-  transition: transform 0.2s ease, opacity 0.2s ease, border-color 0.2s ease;
+  transition: transform var(--duration-base) var(--ease-standard), opacity var(--duration-base) var(--ease-standard), border-color var(--duration-base) var(--ease-standard);
 
   &:hover {
     transform: translateY(-1px);
@@ -298,7 +298,7 @@
   background: var(--surface);
   box-shadow: 0 1px 4px rgba(28, 25, 22, 0.04);
   transition: transform 0.28s cubic-bezier(0.22, 1, 0.36, 1), box-shadow 0.28s ease,
-    border-color 0.2s ease;
+    border-color var(--duration-base) var(--ease-standard);
   animation: fade-up 0.55s cubic-bezier(0.22, 1, 0.36, 1) both;
 
   &.is-clickable {
@@ -400,7 +400,7 @@
   font-size: 12px;
   font-weight: 600;
   cursor: pointer;
-  transition: opacity 0.2s ease, transform 0.2s ease;
+  transition: opacity var(--duration-base) var(--ease-standard), transform var(--duration-base) var(--ease-standard);
 
   &:hover:not(:disabled) {
     transform: translateX(2px);
@@ -481,7 +481,7 @@
   font-size: 12px;
   font-weight: 600;
   white-space: nowrap;
-  transition: opacity 0.2s ease;
+  transition: opacity var(--duration-base) var(--ease-standard);
 
   &:hover {
     opacity: 0.82;

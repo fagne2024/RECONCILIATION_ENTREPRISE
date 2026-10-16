@@ -86,7 +86,7 @@
     font-size: 13px;
     font-weight: 600;
     cursor: pointer;
-    transition: all 0.2s;
+    transition: background-color var(--duration-base) var(--ease-standard), color var(--duration-base) var(--ease-standard), border-color var(--duration-base) var(--ease-standard), box-shadow var(--duration-base) var(--ease-standard), transform var(--duration-base) var(--ease-standard), opacity var(--duration-base) var(--ease-standard);
     letter-spacing: 0.02em;
 
     &:disabled {
@@ -248,7 +248,7 @@
                 cursor: pointer;
                 padding: 4px 8px;
                 border-radius: 6px;
-                transition: background 0.2s ease;
+                transition: background var(--duration-base) var(--ease-standard);
                 display: flex;
                 align-items: center;
                 justify-content: center;
@@ -594,7 +594,7 @@
         padding: 10px 16px;
         font-weight: 600;
         cursor: pointer;
-        transition: all 0.2s ease;
+        transition: background-color var(--duration-base) var(--ease-standard), color var(--duration-base) var(--ease-standard), border-color var(--duration-base) var(--ease-standard), box-shadow var(--duration-base) var(--ease-standard), transform var(--duration-base) var(--ease-standard), opacity var(--duration-base) var(--ease-standard);
 
         &.primary {
             background: #2563eb;
@@ -803,7 +803,7 @@
         padding: 10px 16px;
         font-weight: 600;
         cursor: pointer;
-        transition: all 0.2s ease;
+        transition: background-color var(--duration-base) var(--ease-standard), color var(--duration-base) var(--ease-standard), border-color var(--duration-base) var(--ease-standard), box-shadow var(--duration-base) var(--ease-standard), transform var(--duration-base) var(--ease-standard), opacity var(--duration-base) var(--ease-standard);
 
         &.primary {
             background: #2563eb;

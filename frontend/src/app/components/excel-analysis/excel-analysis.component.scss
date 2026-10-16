@@ -155,7 +155,7 @@
 
           .quality-fill {
             height: 100%;
-            transition: width 0.3s ease;
+            transition: width var(--duration-slow) var(--ease-standard);
           }
         }
 
@@ -226,7 +226,7 @@
         border: 2px solid var(--color-border);
         border-radius: 8px;
         cursor: pointer;
-        transition: all 0.3s ease;
+        transition: background-color var(--duration-slow) var(--ease-standard), color var(--duration-slow) var(--ease-standard), border-color var(--duration-slow) var(--ease-standard), box-shadow var(--duration-slow) var(--ease-standard), transform var(--duration-slow) var(--ease-standard), opacity var(--duration-slow) var(--ease-standard);
 
         &:hover {
           border-color: var(--color-accent);
@@ -474,7 +474,7 @@
             border-radius: 4px;
             cursor: pointer;
             font-size: 14px;
-            transition: background-color 0.3s ease;
+            transition: background-color var(--duration-slow) var(--ease-standard);
 
             &.btn-primary {
               background-color: var(--color-accent);

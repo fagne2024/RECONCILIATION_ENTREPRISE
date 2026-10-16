@@ -154,7 +154,7 @@
   border-radius: 8px;
   border: none;
   cursor: pointer;
-  transition: all 0.2s;
+  transition: background-color var(--duration-base) var(--ease-standard), color var(--duration-base) var(--ease-standard), border-color var(--duration-base) var(--ease-standard), box-shadow var(--duration-base) var(--ease-standard), transform var(--duration-base) var(--ease-standard), opacity var(--duration-base) var(--ease-standard);
 }
 .nav-btn.ghost {
   background: rgba(255, 255, 255, 0.08);
@@ -277,7 +277,7 @@
   cursor: pointer;
   background: var(--violet);
   color: #fff;
-  transition: all 0.2s;
+  transition: background-color var(--duration-base) var(--ease-standard), color var(--duration-base) var(--ease-standard), border-color var(--duration-base) var(--ease-standard), box-shadow var(--duration-base) var(--ease-standard), transform var(--duration-base) var(--ease-standard), opacity var(--duration-base) var(--ease-standard);
   box-shadow: 0 2px 10px rgba(74, 58, 140, 0.3);
   position: relative;
 }
@@ -319,7 +319,7 @@
   cursor: pointer;
   background: var(--bg);
   color: var(--text2);
-  transition: all 0.2s;
+  transition: background-color var(--duration-base) var(--ease-standard), color var(--duration-base) var(--ease-standard), border-color var(--duration-base) var(--ease-standard), box-shadow var(--duration-base) var(--ease-standard), transform var(--duration-base) var(--ease-standard), opacity var(--duration-base) var(--ease-standard);
 }
 .refresh-btn:hover:not(:disabled) {
   border-color: var(--blue-m);
@@ -449,7 +449,7 @@
   cursor: pointer;
   background: var(--navy);
   color: #fff;
-  transition: all 0.2s;
+  transition: background-color var(--duration-base) var(--ease-standard), color var(--duration-base) var(--ease-standard), border-color var(--duration-base) var(--ease-standard), box-shadow var(--duration-base) var(--ease-standard), transform var(--duration-base) var(--ease-standard), opacity var(--duration-base) var(--ease-standard);
 }
 .apply-btn:hover:not(:disabled) {
   background: var(--navy2);
@@ -471,7 +471,7 @@
   cursor: pointer;
   background: var(--surface);
   color: var(--text2);
-  transition: all 0.2s;
+  transition: background-color var(--duration-base) var(--ease-standard), color var(--duration-base) var(--ease-standard), border-color var(--duration-base) var(--ease-standard), box-shadow var(--duration-base) var(--ease-standard), transform var(--duration-base) var(--ease-standard), opacity var(--duration-base) var(--ease-standard);
 }
 .reset-btn:hover:not(:disabled) {
   border-color: var(--blue-m);
@@ -510,7 +510,7 @@
   cursor: pointer;
   background: var(--surface);
   color: var(--text2);
-  transition: all 0.2s;
+  transition: background-color var(--duration-base) var(--ease-standard), color var(--duration-base) var(--ease-standard), border-color var(--duration-base) var(--ease-standard), box-shadow var(--duration-base) var(--ease-standard), transform var(--duration-base) var(--ease-standard), opacity var(--duration-base) var(--ease-standard);
   font-family: 'Sora', sans-serif;
 }
 .voir-plus:hover:not(:disabled) {
@@ -1028,7 +1028,7 @@ td:last-child {
   border-radius: 6px;
   padding: 3px 9px;
   cursor: pointer;
-  transition: all 0.2s;
+  transition: background-color var(--duration-base) var(--ease-standard), color var(--duration-base) var(--ease-standard), border-color var(--duration-base) var(--ease-standard), box-shadow var(--duration-base) var(--ease-standard), transform var(--duration-base) var(--ease-standard), opacity var(--duration-base) var(--ease-standard);
   font-family: 'Sora', sans-serif;
 }
 .uc-detail-btn:hover {

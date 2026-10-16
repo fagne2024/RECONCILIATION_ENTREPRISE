@@ -87,7 +87,7 @@
   font-size: 13px;
   font-weight: 600;
   cursor: pointer;
-  transition: all 0.2s;
+  transition: background-color var(--duration-base) var(--ease-standard), color var(--duration-base) var(--ease-standard), border-color var(--duration-base) var(--ease-standard), box-shadow var(--duration-base) var(--ease-standard), transform var(--duration-base) var(--ease-standard), opacity var(--duration-base) var(--ease-standard);
   letter-spacing: 0.02em;
 
   &:disabled {
@@ -1395,7 +1395,7 @@
 .compte-card,
 .country-card,
 .stat-card {
-  animation: slideInUp 0.3s ease-out;
+  animation: slideInUp var(--duration-slow) var(--ease-standard);
 }
 
 .filters-section,
@@ -1435,7 +1435,7 @@
 
 /* Indicateurs visuels pour les états */
 .compte-card.selected {
-  animation: pulse 0.3s ease-out;
+  animation: pulse var(--duration-slow) var(--ease-standard);
 }
 
 @keyframes pulse {

@@ -217,7 +217,7 @@
 
 .password-toggle {
   color: var(--color-text-muted);
-  transition: all 0.3s ease;
+  transition: background-color var(--duration-slow) var(--ease-standard), color var(--duration-slow) var(--ease-standard), border-color var(--duration-slow) var(--ease-standard), box-shadow var(--duration-slow) var(--ease-standard), transform var(--duration-slow) var(--ease-standard), opacity var(--duration-slow) var(--ease-standard);
   
   &:hover {
     color: var(--color-accent);
@@ -270,7 +270,7 @@ button[mat-raised-button] {
   border-radius: 8px;
   border: none;
   cursor: pointer;
-  transition: all 0.3s ease;
+  transition: background-color var(--duration-slow) var(--ease-standard), color var(--duration-slow) var(--ease-standard), border-color var(--duration-slow) var(--ease-standard), box-shadow var(--duration-slow) var(--ease-standard), transform var(--duration-slow) var(--ease-standard), opacity var(--duration-slow) var(--ease-standard);
   box-shadow: 0 4px 15px color-mix(in srgb, var(--color-accent) 30%, transparent);
   display: flex;
   align-items: center;
@@ -302,7 +302,7 @@ button[mat-raised-button]:disabled {
   font-size: 0.9rem !important;
   padding: 8px 16px !important;
   border-radius: 6px !important;
-  transition: all 0.3s ease !important;
+  transition: background-color var(--duration-slow) var(--ease-standard), color var(--duration-slow) var(--ease-standard), border-color var(--duration-slow) var(--ease-standard), box-shadow var(--duration-slow) var(--ease-standard), transform var(--duration-slow) var(--ease-standard), opacity var(--duration-slow) var(--ease-standard) !important;
   display: flex !important;
   align-items: center !important;
   gap: 6px !important;
@@ -338,7 +338,7 @@ button[mat-raised-button]:disabled {
   padding: 0.5rem;
   background: var(--color-surface-sunken);
   border-radius: 8px;
-  transition: all 0.3s ease;
+  transition: background-color var(--duration-slow) var(--ease-standard), color var(--duration-slow) var(--ease-standard), border-color var(--duration-slow) var(--ease-standard), box-shadow var(--duration-slow) var(--ease-standard), transform var(--duration-slow) var(--ease-standard), opacity var(--duration-slow) var(--ease-standard);
   
   &:hover {
     background: var(--color-hover);
@@ -360,7 +360,7 @@ button[mat-raised-button]:disabled {
     font-weight: 600;
     min-width: 60px;
     display: inline-block;
-    transition: all 0.3s ease;
+    transition: background-color var(--duration-slow) var(--ease-standard), color var(--duration-slow) var(--ease-standard), border-color var(--duration-slow) var(--ease-standard), box-shadow var(--duration-slow) var(--ease-standard), transform var(--duration-slow) var(--ease-standard), opacity var(--duration-slow) var(--ease-standard);
   }
   
   .copy-btn {
@@ -368,7 +368,7 @@ button[mat-raised-button]:disabled {
     width: 32px;
     height: 32px;
     line-height: 32px;
-    transition: all 0.3s ease;
+    transition: background-color var(--duration-slow) var(--ease-standard), color var(--duration-slow) var(--ease-standard), border-color var(--duration-slow) var(--ease-standard), box-shadow var(--duration-slow) var(--ease-standard), transform var(--duration-slow) var(--ease-standard), opacity var(--duration-slow) var(--ease-standard);
     
     mat-icon {
       font-size: 18px;

@@ -87,7 +87,7 @@
     font-size: 13px;
     font-weight: 600;
     cursor: pointer;
-    transition: all 0.2s;
+    transition: background-color var(--duration-base) var(--ease-standard), color var(--duration-base) var(--ease-standard), border-color var(--duration-base) var(--ease-standard), box-shadow var(--duration-base) var(--ease-standard), transform var(--duration-base) var(--ease-standard), opacity var(--duration-base) var(--ease-standard);
     letter-spacing: 0.02em;
 
     &:disabled {
@@ -593,7 +593,7 @@
                     display: flex;
                     align-items: center;
                     gap: 6px;
-                    transition: all 0.3s;
+                    transition: background-color var(--duration-slow) var(--ease-standard), color var(--duration-slow) var(--ease-standard), border-color var(--duration-slow) var(--ease-standard), box-shadow var(--duration-slow) var(--ease-standard), transform var(--duration-slow) var(--ease-standard), opacity var(--duration-slow) var(--ease-standard);
                     font-weight: 500;
 
                     &:disabled {
@@ -788,7 +788,7 @@
                     border: 1px solid #dee2e6;
                     border-radius: 4px;
                     cursor: pointer;
-                    transition: all 0.3s;
+                    transition: background-color var(--duration-slow) var(--ease-standard), color var(--duration-slow) var(--ease-standard), border-color var(--duration-slow) var(--ease-standard), box-shadow var(--duration-slow) var(--ease-standard), transform var(--duration-slow) var(--ease-standard), opacity var(--duration-slow) var(--ease-standard);
 
                     &:hover {
                         background: #f8f9fa;
@@ -947,7 +947,7 @@
         justify-content: center;
         z-index: var(--z-nav);
         backdrop-filter: blur(4px);
-        animation: fadeIn 0.3s ease-out;
+        animation: fadeIn var(--duration-slow) var(--ease-standard);
 
         .modal-container {
             background: white;
@@ -959,7 +959,7 @@
             overflow: hidden;
             display: flex;
             flex-direction: column;
-            animation: slideIn 0.3s ease-out;
+            animation: slideIn var(--duration-slow) var(--ease-standard);
 
             .modal-header {
                 display: flex;
@@ -989,7 +989,7 @@
                     cursor: pointer;
                     padding: 8px;
                     border-radius: 50%;
-                    transition: all 0.3s ease;
+                    transition: background-color var(--duration-slow) var(--ease-standard), color var(--duration-slow) var(--ease-standard), border-color var(--duration-slow) var(--ease-standard), box-shadow var(--duration-slow) var(--ease-standard), transform var(--duration-slow) var(--ease-standard), opacity var(--duration-slow) var(--ease-standard);
                     display: flex;
                     align-items: center;
                     justify-content: center;
@@ -1090,7 +1090,7 @@
                             border: 2px solid #e9ecef;
                             border-radius: 8px;
                             font-size: 16px;
-                            transition: border-color 0.3s ease;
+                            transition: border-color var(--duration-slow) var(--ease-standard);
 
                             &:focus {
                                 outline: none;
@@ -1119,7 +1119,7 @@
                             border: 2px solid #e9ecef;
                             border-radius: 8px;
                             font-size: 16px;
-                            transition: border-color 0.3s ease;
+                            transition: border-color var(--duration-slow) var(--ease-standard);
 
                             &:focus {
                                 outline: none;
@@ -1147,7 +1147,7 @@
                             border-radius: 8px;
                             font-size: 16px;
                             background: white;
-                            transition: border-color 0.3s ease;
+                            transition: border-color var(--duration-slow) var(--ease-standard);
                             appearance: none;
 
                             &:focus {
@@ -1188,7 +1188,7 @@
                                 display: flex;
                                 align-items: center;
                                 justify-content: center;
-                                transition: all 0.3s ease;
+                                transition: background-color var(--duration-slow) var(--ease-standard), color var(--duration-slow) var(--ease-standard), border-color var(--duration-slow) var(--ease-standard), box-shadow var(--duration-slow) var(--ease-standard), transform var(--duration-slow) var(--ease-standard), opacity var(--duration-slow) var(--ease-standard);
 
                                 &:before {
                                     content: '\f00c';
@@ -1197,7 +1197,7 @@
                                     color: white;
                                     font-size: 12px;
                                     opacity: 0;
-                                    transition: opacity 0.3s ease;
+                                    transition: opacity var(--duration-slow) var(--ease-standard);
                                 }
                             }
 
@@ -1231,7 +1231,7 @@
                         border: 2px solid #e9ecef;
                         border-radius: 8px;
                         font-size: 16px;
-                        transition: border-color 0.3s ease;
+                        transition: border-color var(--duration-slow) var(--ease-standard);
 
                         &:focus {
                             outline: none;
@@ -1563,7 +1563,7 @@
                 border: 2px solid #e9ecef;
                 border-radius: 8px;
                 font-size: 16px;
-                transition: border-color 0.3s ease;
+                transition: border-color var(--duration-slow) var(--ease-standard);
                 
                 &:focus {
                     outline: none;
@@ -1579,7 +1579,7 @@
                 border-radius: 8px;
                 font-size: 16px;
                 background: white;
-                transition: border-color 0.3s ease;
+                transition: border-color var(--duration-slow) var(--ease-standard);
                 appearance: none;
                 
                 &:focus {
@@ -1602,7 +1602,7 @@
                     border: 2px solid #e9ecef;
                     border-radius: 8px;
                     font-size: 16px;
-                    transition: border-color 0.3s ease;
+                    transition: border-color var(--duration-slow) var(--ease-standard);
                     
                     &:focus {
                         outline: none;
@@ -1655,7 +1655,7 @@
                         display: flex;
                         align-items: center;
                         justify-content: center;
-                        transition: all 0.3s ease;
+                        transition: background-color var(--duration-slow) var(--ease-standard), color var(--duration-slow) var(--ease-standard), border-color var(--duration-slow) var(--ease-standard), box-shadow var(--duration-slow) var(--ease-standard), transform var(--duration-slow) var(--ease-standard), opacity var(--duration-slow) var(--ease-standard);
                         
                         &:before {
                             content: '\f00c';
@@ -1664,7 +1664,7 @@
                             color: white;
                             font-size: 12px;
                             opacity: 0;
-                            transition: opacity 0.3s ease;
+                            transition: opacity var(--duration-slow) var(--ease-standard);
                         }
                     }
                     

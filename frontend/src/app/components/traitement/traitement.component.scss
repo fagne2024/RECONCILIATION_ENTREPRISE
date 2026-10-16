@@ -85,7 +85,7 @@
   font-size: 13px;
   font-weight: 600;
   cursor: pointer;
-  transition: all 0.2s;
+  transition: background-color var(--duration-base) var(--ease-standard), color var(--duration-base) var(--ease-standard), border-color var(--duration-base) var(--ease-standard), box-shadow var(--duration-base) var(--ease-standard), transform var(--duration-base) var(--ease-standard), opacity var(--duration-base) var(--ease-standard);
   letter-spacing: 0.02em;
 
   &:disabled {
@@ -1354,7 +1354,7 @@
     font-size: 15px;
     font-weight: 600;
     cursor: pointer;
-    transition: transform 0.2s ease, box-shadow 0.2s ease;
+    transition: transform var(--duration-base) var(--ease-standard), box-shadow var(--duration-base) var(--ease-standard);
     margin-top: 8px;
 
     &:disabled {
@@ -1433,7 +1433,7 @@
         height: 100%;
         background: linear-gradient(90deg, var(--color-warning), var(--color-warning));
         border-radius: 12px;
-        transition: width 0.3s ease;
+        transition: width var(--duration-slow) var(--ease-standard);
         box-shadow: 0 2px 4px rgba(255, 152, 0, 0.3);
         position: relative;
         overflow: hidden;
@@ -1610,7 +1610,7 @@
 }
 
 .section-content {
-  animation: fadeIn 0.3s ease-in-out;
+  animation: fadeIn var(--duration-slow) var(--ease-standard);
 }
 
 @keyframes fadeIn {
@@ -2761,7 +2761,7 @@ th {
   border-radius: 3px;
   cursor: pointer;
   font-size: 0.8rem;
-  transition: all 0.2s;
+  transition: background-color var(--duration-base) var(--ease-standard), color var(--duration-base) var(--ease-standard), border-color var(--duration-base) var(--ease-standard), box-shadow var(--duration-base) var(--ease-standard), transform var(--duration-base) var(--ease-standard), opacity var(--duration-base) var(--ease-standard);
   margin: 0;
   min-width: 35px;
 }
@@ -2977,7 +2977,7 @@ th {
   position: relative;
   margin: auto;
   // Animation d'apparition
-  animation: modalFadeIn 0.3s ease-out;
+  animation: modalFadeIn var(--duration-slow) var(--ease-standard);
 }
 
 @keyframes modalFadeIn {
@@ -3031,7 +3031,7 @@ th {
   height: 100%;
   background: linear-gradient(90deg, var(--color-info), var(--color-info));
   border-radius: 6px;
-  transition: width 0.3s ease;
+  transition: width var(--duration-slow) var(--ease-standard);
   position: relative;
 }
 
@@ -3146,7 +3146,7 @@ button:disabled:hover {
   padding: 8px 16px;
   font-size: 0.9rem;
   cursor: pointer;
-  transition: all 0.2s;
+  transition: background-color var(--duration-base) var(--ease-standard), color var(--duration-base) var(--ease-standard), border-color var(--duration-base) var(--ease-standard), box-shadow var(--duration-base) var(--ease-standard), transform var(--duration-base) var(--ease-standard), opacity var(--duration-base) var(--ease-standard);
   
   &.active {
     background: var(--color-success);
@@ -3208,7 +3208,7 @@ button:disabled:hover {
 // Styles pour les en-têtes de colonnes en mode réorganisation
 .column-header {
   position: relative;
-  transition: all 0.2s;
+  transition: background-color var(--duration-base) var(--ease-standard), color var(--duration-base) var(--ease-standard), border-color var(--duration-base) var(--ease-standard), box-shadow var(--duration-base) var(--ease-standard), transform var(--duration-base) var(--ease-standard), opacity var(--duration-base) var(--ease-standard);
   
   &.reorder-mode {
     cursor: grab;
@@ -3268,7 +3268,7 @@ button:disabled:hover {
   display: flex;
   align-items: center;
   justify-content: center;
-  transition: all 0.2s;
+  transition: background-color var(--duration-base) var(--ease-standard), color var(--duration-base) var(--ease-standard), border-color var(--duration-base) var(--ease-standard), box-shadow var(--duration-base) var(--ease-standard), transform var(--duration-base) var(--ease-standard), opacity var(--duration-base) var(--ease-standard);
   
   &:hover {
     background: #5a6268;

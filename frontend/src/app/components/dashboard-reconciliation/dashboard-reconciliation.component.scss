@@ -83,7 +83,7 @@
     background: var(--color-surface);
     color: var(--color-text-muted);
     font-size: 0.9rem;
-    transition: border-color 0.2s ease;
+    transition: border-color var(--duration-base) var(--ease-standard);
     flex: 1;
     
     &:focus {
@@ -111,7 +111,7 @@
     background: var(--color-surface);
     color: var(--color-text-muted);
     font-size: 0.9rem;
-    transition: border-color 0.2s ease;
+    transition: border-color var(--duration-base) var(--ease-standard);
     width: 100%;
     
     &:focus {
@@ -139,7 +139,7 @@
     border-radius: 6px;
     font-size: 0.9rem;
     cursor: pointer;
-    transition: background-color 0.2s ease;
+    transition: background-color var(--duration-base) var(--ease-standard);
     
     &:hover:not(:disabled) {
         background: var(--color-text-muted);
@@ -195,7 +195,7 @@
     font-weight: 500;
     padding: 8px 12px;
     border-radius: 4px;
-    transition: all 0.2s ease;
+    transition: background-color var(--duration-base) var(--ease-standard), color var(--duration-base) var(--ease-standard), border-color var(--duration-base) var(--ease-standard), box-shadow var(--duration-base) var(--ease-standard), transform var(--duration-base) var(--ease-standard), opacity var(--duration-base) var(--ease-standard);
 }
 
 .breadcrumb-link:hover {
@@ -249,7 +249,7 @@
     font-weight: 600;
     font-size: 0.95rem;
     cursor: pointer;
-    transition: all 0.3s ease;
+    transition: background-color var(--duration-slow) var(--ease-standard), color var(--duration-slow) var(--ease-standard), border-color var(--duration-slow) var(--ease-standard), box-shadow var(--duration-slow) var(--ease-standard), transform var(--duration-slow) var(--ease-standard), opacity var(--duration-slow) var(--ease-standard);
     backdrop-filter: blur(10px);
     white-space: nowrap;
 }
@@ -328,7 +328,7 @@
     font-size: 0.95rem;
     font-weight: 600;
     cursor: pointer;
-    transition: all 0.2s ease;
+    transition: background-color var(--duration-base) var(--ease-standard), color var(--duration-base) var(--ease-standard), border-color var(--duration-base) var(--ease-standard), box-shadow var(--duration-base) var(--ease-standard), transform var(--duration-base) var(--ease-standard), opacity var(--duration-base) var(--ease-standard);
     border: 2px solid rgba(255, 255, 255, 0.8);
     color: var(--color-nav-text);
     background: rgba(255, 255, 255, 0.15);
@@ -382,7 +382,7 @@
     background: transparent;
     color: var(--color-nav-text);
     cursor: pointer;
-    transition: all 0.2s ease;
+    transition: background-color var(--duration-base) var(--ease-standard), color var(--duration-base) var(--ease-standard), border-color var(--duration-base) var(--ease-standard), box-shadow var(--duration-base) var(--ease-standard), transform var(--duration-base) var(--ease-standard), opacity var(--duration-base) var(--ease-standard);
     font-weight: 600;
     font-size: 0.9rem;
 
@@ -539,7 +539,7 @@
     cursor: pointer;
     font-size: 0.95rem;
     font-weight: 600;
-    transition: all 0.2s ease;
+    transition: background-color var(--duration-base) var(--ease-standard), color var(--duration-base) var(--ease-standard), border-color var(--duration-base) var(--ease-standard), box-shadow var(--duration-base) var(--ease-standard), transform var(--duration-base) var(--ease-standard), opacity var(--duration-base) var(--ease-standard);
     box-shadow: 0 2px 6px rgba(0, 123, 255, 0.15);
 }
 
@@ -552,7 +552,7 @@
 
 .toggle-icon {
     display: inline-block;
-    transition: transform 0.2s ease;
+    transition: transform var(--duration-base) var(--ease-standard);
 }
 
 .toggle-btn.active .toggle-icon {
@@ -664,7 +664,7 @@
     margin: 2px 0;
     border-radius: 20px;
     font-weight: 500;
-    transition: all 0.2s ease;
+    transition: background-color var(--duration-base) var(--ease-standard), color var(--duration-base) var(--ease-standard), border-color var(--duration-base) var(--ease-standard), box-shadow var(--duration-base) var(--ease-standard), transform var(--duration-base) var(--ease-standard), opacity var(--duration-base) var(--ease-standard);
     min-height: 40px;
     min-width: 180px; // Largeur encore augmentée pour éviter le chevauchement
     
@@ -866,7 +866,7 @@
     cursor: pointer;
     font-size: 1rem;
     font-weight: 500;
-    transition: all 0.2s ease;
+    transition: background-color var(--duration-base) var(--ease-standard), color var(--duration-base) var(--ease-standard), border-color var(--duration-base) var(--ease-standard), box-shadow var(--duration-base) var(--ease-standard), transform var(--duration-base) var(--ease-standard), opacity var(--duration-base) var(--ease-standard);
 }
 
 .retry-btn:hover {
@@ -920,7 +920,7 @@
     cursor: pointer;
     font-size: 1rem;
     font-weight: 500;
-    transition: all 0.3s ease;
+    transition: background-color var(--duration-slow) var(--ease-standard), color var(--duration-slow) var(--ease-standard), border-color var(--duration-slow) var(--ease-standard), box-shadow var(--duration-slow) var(--ease-standard), transform var(--duration-slow) var(--ease-standard), opacity var(--duration-slow) var(--ease-standard);
     min-width: 120px;
 }
 

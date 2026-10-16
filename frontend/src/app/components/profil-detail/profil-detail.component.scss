@@ -28,7 +28,7 @@
   box-shadow: 0 4px 20px rgba(0,0,0,0.15);
   opacity: 0;
   transform: translateX(100px);
-  transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+  transition: background-color var(--duration-slow) var(--ease-standard), color var(--duration-slow) var(--ease-standard), border-color var(--duration-slow) var(--ease-standard), box-shadow var(--duration-slow) var(--ease-standard), transform var(--duration-slow) var(--ease-standard), opacity var(--duration-slow) var(--ease-standard);
   min-width: 280px;
   max-width: 420px;
 
@@ -246,7 +246,7 @@
     font-weight: 500;
     color: var(--rd-text2);
     cursor: pointer;
-    transition: all 0.2s;
+    transition: background-color var(--duration-base) var(--ease-standard), color var(--duration-base) var(--ease-standard), border-color var(--duration-base) var(--ease-standard), box-shadow var(--duration-base) var(--ease-standard), transform var(--duration-base) var(--ease-standard), opacity var(--duration-base) var(--ease-standard);
 
     i { font-size: 1rem; }
 
@@ -555,7 +555,7 @@
   border: 1px solid var(--rd-border);
   border-radius: var(--rd-r-sm);
   cursor: pointer;
-  transition: all 0.2s;
+  transition: background-color var(--duration-base) var(--ease-standard), color var(--duration-base) var(--ease-standard), border-color var(--duration-base) var(--ease-standard), box-shadow var(--duration-base) var(--ease-standard), transform var(--duration-base) var(--ease-standard), opacity var(--duration-base) var(--ease-standard);
 
   &:hover {
     border-color: var(--rd-blue);
@@ -623,7 +623,7 @@
   border: 2px solid var(--rd-border);
   border-radius: var(--rd-r-sm);
   padding: 1.5rem;
-  transition: all 0.3s ease;
+  transition: background-color var(--duration-slow) var(--ease-standard), color var(--duration-slow) var(--ease-standard), border-color var(--duration-slow) var(--ease-standard), box-shadow var(--duration-slow) var(--ease-standard), transform var(--duration-slow) var(--ease-standard), opacity var(--duration-slow) var(--ease-standard);
 
   &.associated {
     border-color: var(--rd-green-m);
@@ -691,7 +691,7 @@
         display: flex;
         align-items: center;
         justify-content: center;
-        transition: all 0.2s;
+        transition: background-color var(--duration-base) var(--ease-standard), color var(--duration-base) var(--ease-standard), border-color var(--duration-base) var(--ease-standard), box-shadow var(--duration-base) var(--ease-standard), transform var(--duration-base) var(--ease-standard), opacity var(--duration-base) var(--ease-standard);
         color: white;
 
         &::after {
@@ -701,7 +701,7 @@
           font-size: 0.7rem;
           opacity: 0;
           transform: scale(0);
-          transition: all 0.2s;
+          transition: background-color var(--duration-base) var(--ease-standard), color var(--duration-base) var(--ease-standard), border-color var(--duration-base) var(--ease-standard), box-shadow var(--duration-base) var(--ease-standard), transform var(--duration-base) var(--ease-standard), opacity var(--duration-base) var(--ease-standard);
         }
       }
 
@@ -794,7 +794,7 @@
       display: flex;
       align-items: center;
       justify-content: center;
-      transition: all 0.2s;
+      transition: background-color var(--duration-base) var(--ease-standard), color var(--duration-base) var(--ease-standard), border-color var(--duration-base) var(--ease-standard), box-shadow var(--duration-base) var(--ease-standard), transform var(--duration-base) var(--ease-standard), opacity var(--duration-base) var(--ease-standard);
       color: white;
       flex-shrink: 0;
 
@@ -805,7 +805,7 @@
         font-size: 0.65rem;
         opacity: 0;
         transform: scale(0);
-        transition: all 0.2s;
+        transition: background-color var(--duration-base) var(--ease-standard), color var(--duration-base) var(--ease-standard), border-color var(--duration-base) var(--ease-standard), box-shadow var(--duration-base) var(--ease-standard), transform var(--duration-base) var(--ease-standard), opacity var(--duration-base) var(--ease-standard);
       }
     }
 
@@ -837,7 +837,7 @@
     font-weight: 500;
     color: var(--rd-text2);
     cursor: pointer;
-    transition: all 0.2s;
+    transition: background-color var(--duration-base) var(--ease-standard), color var(--duration-base) var(--ease-standard), border-color var(--duration-base) var(--ease-standard), box-shadow var(--duration-base) var(--ease-standard), transform var(--duration-base) var(--ease-standard), opacity var(--duration-base) var(--ease-standard);
 
     &:hover:not(:disabled) { background: var(--rd-blue-l); border-color: var(--rd-blue); color: var(--rd-blue); }
     &:disabled { opacity: 0.5; cursor: not-allowed; }
@@ -915,7 +915,7 @@
   border: 2px solid var(--rd-border);
   border-radius: var(--rd-r-sm);
   cursor: pointer;
-  transition: all 0.2s;
+  transition: background-color var(--duration-base) var(--ease-standard), color var(--duration-base) var(--ease-standard), border-color var(--duration-base) var(--ease-standard), box-shadow var(--duration-base) var(--ease-standard), transform var(--duration-base) var(--ease-standard), opacity var(--duration-base) var(--ease-standard);
 
   &:hover { border-color: var(--rd-blue); }
   
@@ -929,7 +929,7 @@
     display: flex;
     align-items: center;
     justify-content: center;
-    transition: all 0.2s;
+    transition: background-color var(--duration-base) var(--ease-standard), color var(--duration-base) var(--ease-standard), border-color var(--duration-base) var(--ease-standard), box-shadow var(--duration-base) var(--ease-standard), transform var(--duration-base) var(--ease-standard), opacity var(--duration-base) var(--ease-standard);
     color: white;
 
     &::after {
@@ -939,7 +939,7 @@
       font-size: 0.7rem;
       opacity: 0;
       transform: scale(0);
-      transition: all 0.2s;
+      transition: background-color var(--duration-base) var(--ease-standard), color var(--duration-base) var(--ease-standard), border-color var(--duration-base) var(--ease-standard), box-shadow var(--duration-base) var(--ease-standard), transform var(--duration-base) var(--ease-standard), opacity var(--duration-base) var(--ease-standard);
     }
   }
 
@@ -987,7 +987,7 @@
   font-size: 0.9rem;
   font-weight: 500;
   cursor: pointer;
-  transition: all 0.2s;
+  transition: background-color var(--duration-base) var(--ease-standard), color var(--duration-base) var(--ease-standard), border-color var(--duration-base) var(--ease-standard), box-shadow var(--duration-base) var(--ease-standard), transform var(--duration-base) var(--ease-standard), opacity var(--duration-base) var(--ease-standard);
 
   &.btn-primary {
     background: var(--rd-blue);

@@ -18,7 +18,7 @@
         box-shadow: 0 4px 20px rgba(0,0,0,0.15);
         opacity: 0;
         transform: translateX(100px);
-        transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+        transition: background-color var(--duration-slow) var(--ease-standard), color var(--duration-slow) var(--ease-standard), border-color var(--duration-slow) var(--ease-standard), box-shadow var(--duration-slow) var(--ease-standard), transform var(--duration-slow) var(--ease-standard), opacity var(--duration-slow) var(--ease-standard);
         min-width: 280px;
         max-width: 420px;
 
@@ -376,7 +376,7 @@
             border: 1px solid #eef0f3;
             border-radius: 6px;
             cursor: pointer;
-            transition: all 0.2s;
+            transition: background-color var(--duration-base) var(--ease-standard), color var(--duration-base) var(--ease-standard), border-color var(--duration-base) var(--ease-standard), box-shadow var(--duration-base) var(--ease-standard), transform var(--duration-base) var(--ease-standard), opacity var(--duration-base) var(--ease-standard);
             min-width: 180px;
 
             &:hover {
@@ -483,7 +483,7 @@
     font-size: 0.9rem;
     font-weight: 500;
     cursor: pointer;
-    transition: all 0.2s;
+    transition: background-color var(--duration-base) var(--ease-standard), color var(--duration-base) var(--ease-standard), border-color var(--duration-base) var(--ease-standard), box-shadow var(--duration-base) var(--ease-standard), transform var(--duration-base) var(--ease-standard), opacity var(--duration-base) var(--ease-standard);
 
     &.btn-primary {
         background: linear-gradient(135deg, var(--color-info) 0%, var(--color-info) 100%);

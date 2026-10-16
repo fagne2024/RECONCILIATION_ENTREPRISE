@@ -46,7 +46,7 @@
   border-radius: 4px;
   cursor: pointer;
   font-size: 14px;
-  transition: all 0.3s ease;
+  transition: background-color var(--duration-slow) var(--ease-standard), color var(--duration-slow) var(--ease-standard), border-color var(--duration-slow) var(--ease-standard), box-shadow var(--duration-slow) var(--ease-standard), transform var(--duration-slow) var(--ease-standard), opacity var(--duration-slow) var(--ease-standard);
   
   &:hover {
     background-color: #1976D2;
@@ -72,7 +72,7 @@
   border-radius: 4px;
   cursor: pointer;
   font-size: 14px;
-  transition: all 0.3s ease;
+  transition: background-color var(--duration-slow) var(--ease-standard), color var(--duration-slow) var(--ease-standard), border-color var(--duration-slow) var(--ease-standard), box-shadow var(--duration-slow) var(--ease-standard), transform var(--duration-slow) var(--ease-standard), opacity var(--duration-slow) var(--ease-standard);
   
   &:hover:not(:disabled) {
     background-color: #45a049;
@@ -128,7 +128,7 @@
 .export-progress-fill {
   height: 100%;
   background: linear-gradient(90deg, #4CAF50, #45a049);
-  transition: width 0.3s ease;
+  transition: width var(--duration-slow) var(--ease-standard);
   border-radius: 12px;
 }
 
@@ -257,7 +257,7 @@
     color: #495057;
     border-radius: 6px;
     cursor: pointer;
-    transition: all 0.3s ease;
+    transition: background-color var(--duration-slow) var(--ease-standard), color var(--duration-slow) var(--ease-standard), border-color var(--duration-slow) var(--ease-standard), box-shadow var(--duration-slow) var(--ease-standard), transform var(--duration-slow) var(--ease-standard), opacity var(--duration-slow) var(--ease-standard);
     display: flex;
     align-items: center;
     gap: 5px;
@@ -284,7 +284,7 @@
       color: #495057;
       border-radius: 6px;
       cursor: pointer;
-      transition: all 0.3s ease;
+      transition: background-color var(--duration-slow) var(--ease-standard), color var(--duration-slow) var(--ease-standard), border-color var(--duration-slow) var(--ease-standard), box-shadow var(--duration-slow) var(--ease-standard), transform var(--duration-slow) var(--ease-standard), opacity var(--duration-slow) var(--ease-standard);
       min-width: 40px;
       text-align: center;
 
@@ -335,7 +335,7 @@
 .progress {
   height: 100%;
   background: linear-gradient(90deg, var(--theme-info, #3498db), var(--theme-info-dark, #2980b9));
-  transition: width 0.3s ease;
+  transition: width var(--duration-slow) var(--ease-standard);
 }
 
 // Sélecteur de colonnes
@@ -505,7 +505,7 @@
   border-radius: 4px;
   cursor: pointer;
   font-size: 12px;
-  transition: all 0.3s ease;
+  transition: background-color var(--duration-slow) var(--ease-standard), color var(--duration-slow) var(--ease-standard), border-color var(--duration-slow) var(--ease-standard), box-shadow var(--duration-slow) var(--ease-standard), transform var(--duration-slow) var(--ease-standard), opacity var(--duration-slow) var(--ease-standard);
   
   &:hover:not(:disabled) {
     background-color: #45a049;

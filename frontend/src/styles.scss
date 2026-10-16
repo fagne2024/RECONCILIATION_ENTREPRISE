@@ -140,7 +140,7 @@ app-root {
     letter-spacing: 0.04em;
     line-height: 1.4;
     cursor: pointer;
-    transition: background 0.15s ease, color 0.15s ease;
+    transition: background var(--duration-fast) var(--ease-standard), color var(--duration-fast) var(--ease-standard);
 
     &:hover {
       color: var(--color-nav-text);

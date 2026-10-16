@@ -86,7 +86,7 @@
   font-size: 13px;
   font-weight: 600;
   cursor: pointer;
-  transition: all 0.2s;
+  transition: background-color var(--duration-base) var(--ease-standard), color var(--duration-base) var(--ease-standard), border-color var(--duration-base) var(--ease-standard), box-shadow var(--duration-base) var(--ease-standard), transform var(--duration-base) var(--ease-standard), opacity var(--duration-base) var(--ease-standard);
   letter-spacing: 0.02em;
 }
 
@@ -984,7 +984,7 @@ select[multiple] option:hover:not(:checked) {
 }
 
 select[multiple] option:checked {
-  animation: selectionHighlight 0.3s ease-out;
+  animation: selectionHighlight var(--duration-slow) var(--ease-standard);
 }
 
 /* Styles pour les listes déroulantes avec focus */
@@ -1046,7 +1046,7 @@ select[multiple] + .selection-indicator {
 
 /* Animation pour les clés sélectionnées */
 .selection-group select:focus option:checked {
-  animation: highlight-selected 0.3s ease-in-out;
+  animation: highlight-selected var(--duration-slow) var(--ease-standard);
 }
 
 @keyframes highlight-selected {
@@ -1111,7 +1111,7 @@ select[multiple] + .selection-indicator {
   border: 2px solid transparent;
   border-radius: 4px;
   pointer-events: none;
-  transition: border-color 0.2s ease;
+  transition: border-color var(--duration-base) var(--ease-standard);
 }
 
 .selection-group:has(select:focus)::before {
@@ -1850,7 +1850,7 @@ textarea.form-control {
   border: 1px solid var(--color-border);
   border-radius: 4px;
   font-size: 14px;
-  transition: border-color 0.2s ease;
+  transition: border-color var(--duration-base) var(--ease-standard);
 }
 
 .filter-group .form-control:focus {
@@ -2706,7 +2706,7 @@ textarea.form-control {
   text-decoration: none;
   font-size: 12.5px;
   font-weight: 600;
-  transition: all 0.15s;
+  transition: background-color var(--duration-base) var(--ease-standard), color var(--duration-base) var(--ease-standard), border-color var(--duration-base) var(--ease-standard), box-shadow var(--duration-base) var(--ease-standard), transform var(--duration-base) var(--ease-standard), opacity var(--duration-base) var(--ease-standard);
 }
 
 .po-nav a:hover {
@@ -2864,7 +2864,7 @@ textarea.form-control {
   display: grid;
   place-items: center;
   opacity: 0.6;
-  transition: all 0.15s;
+  transition: background-color var(--duration-base) var(--ease-standard), color var(--duration-base) var(--ease-standard), border-color var(--duration-base) var(--ease-standard), box-shadow var(--duration-base) var(--ease-standard), transform var(--duration-base) var(--ease-standard), opacity var(--duration-base) var(--ease-standard);
 }
 
 .po-ib i {

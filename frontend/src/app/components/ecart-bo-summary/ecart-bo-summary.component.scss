@@ -85,7 +85,7 @@
   font-size: 13px;
   font-weight: 600;
   cursor: pointer;
-  transition: all 0.2s;
+  transition: background-color var(--duration-base) var(--ease-standard), color var(--duration-base) var(--ease-standard), border-color var(--duration-base) var(--ease-standard), box-shadow var(--duration-base) var(--ease-standard), transform var(--duration-base) var(--ease-standard), opacity var(--duration-base) var(--ease-standard);
   letter-spacing: 0.02em;
 
   &:disabled {
@@ -282,7 +282,7 @@
         font-size: 14px;
         font-weight: 500;
         cursor: pointer;
-        transition: all 0.3s ease;
+        transition: background-color var(--duration-slow) var(--ease-standard), color var(--duration-slow) var(--ease-standard), border-color var(--duration-slow) var(--ease-standard), box-shadow var(--duration-slow) var(--ease-standard), transform var(--duration-slow) var(--ease-standard), opacity var(--duration-slow) var(--ease-standard);
         box-shadow: 0 2px 4px rgba(40, 167, 69, 0.2);
 
         &:hover:not(:disabled) {
@@ -310,7 +310,7 @@
         font-size: 14px;
         font-weight: 500;
         cursor: pointer;
-        transition: all 0.3s ease;
+        transition: background-color var(--duration-slow) var(--ease-standard), color var(--duration-slow) var(--ease-standard), border-color var(--duration-slow) var(--ease-standard), box-shadow var(--duration-slow) var(--ease-standard), transform var(--duration-slow) var(--ease-standard), opacity var(--duration-slow) var(--ease-standard);
         box-shadow: 0 2px 4px rgba(0, 123, 255, 0.2);
 
         &:hover {
@@ -333,7 +333,7 @@
         font-size: 14px;
         font-weight: 500;
         cursor: pointer;
-        transition: all 0.3s ease;
+        transition: background-color var(--duration-slow) var(--ease-standard), color var(--duration-slow) var(--ease-standard), border-color var(--duration-slow) var(--ease-standard), box-shadow var(--duration-slow) var(--ease-standard), transform var(--duration-slow) var(--ease-standard), opacity var(--duration-slow) var(--ease-standard);
         box-shadow: 0 2px 4px rgba(23, 162, 184, 0.2);
 
         &:hover {
@@ -356,7 +356,7 @@
         font-size: 14px;
         font-weight: 500;
         cursor: pointer;
-        transition: all 0.3s ease;
+        transition: background-color var(--duration-slow) var(--ease-standard), color var(--duration-slow) var(--ease-standard), border-color var(--duration-slow) var(--ease-standard), box-shadow var(--duration-slow) var(--ease-standard), transform var(--duration-slow) var(--ease-standard), opacity var(--duration-slow) var(--ease-standard);
         box-shadow: 0 2px 4px rgba(111, 66, 193, 0.2);
 
         &:hover:not(:disabled) {
@@ -384,7 +384,7 @@
         font-size: 14px;
         font-weight: 500;
         cursor: pointer;
-        transition: all 0.3s ease;
+        transition: background-color var(--duration-slow) var(--ease-standard), color var(--duration-slow) var(--ease-standard), border-color var(--duration-slow) var(--ease-standard), box-shadow var(--duration-slow) var(--ease-standard), transform var(--duration-slow) var(--ease-standard), opacity var(--duration-slow) var(--ease-standard);
         box-shadow: 0 2px 4px rgba(220, 53, 69, 0.2);
 
         &:hover:not(:disabled) {
@@ -758,7 +758,7 @@
                   font-size: 14px;
                   font-weight: 500;
                   cursor: pointer;
-                  transition: all 0.2s ease;
+                  transition: background-color var(--duration-base) var(--ease-standard), color var(--duration-base) var(--ease-standard), border-color var(--duration-base) var(--ease-standard), box-shadow var(--duration-base) var(--ease-standard), transform var(--duration-base) var(--ease-standard), opacity var(--duration-base) var(--ease-standard);
                   margin: 0 3px;
                   display: inline-flex;
                   align-items: center;
@@ -958,7 +958,7 @@
         border-radius: 4px;
         cursor: pointer;
         font-size: 14px;
-        transition: all 0.2s ease;
+        transition: background-color var(--duration-base) var(--ease-standard), color var(--duration-base) var(--ease-standard), border-color var(--duration-base) var(--ease-standard), box-shadow var(--duration-base) var(--ease-standard), transform var(--duration-base) var(--ease-standard), opacity var(--duration-base) var(--ease-standard);
 
         &:hover:not(:disabled) {
           background: var(--color-surface-sunken);
@@ -983,7 +983,7 @@
           cursor: pointer;
           font-size: 14px;
           min-width: 40px;
-          transition: all 0.2s ease;
+          transition: background-color var(--duration-base) var(--ease-standard), color var(--duration-base) var(--ease-standard), border-color var(--duration-base) var(--ease-standard), box-shadow var(--duration-base) var(--ease-standard), transform var(--duration-base) var(--ease-standard), opacity var(--duration-base) var(--ease-standard);
 
           &:hover {
             background: var(--color-surface-sunken);
@@ -1013,7 +1013,7 @@
     align-items: center;
     justify-content: center;
     z-index: var(--z-modal);
-    animation: fadeIn 0.3s ease;
+    animation: fadeIn var(--duration-slow) var(--ease-standard);
   }
 
   .modal-content {
@@ -1024,7 +1024,7 @@
     max-height: 90vh;
     overflow-y: auto;
     box-shadow: 0 8px 32px rgba(0, 0, 0, 0.3);
-    animation: slideUp 0.3s ease;
+    animation: slideUp var(--duration-slow) var(--ease-standard);
   }
 
   @keyframes fadeIn {
@@ -1069,7 +1069,7 @@
       align-items: center;
       justify-content: center;
       border-radius: 50%;
-      transition: all 0.2s ease;
+      transition: background-color var(--duration-base) var(--ease-standard), color var(--duration-base) var(--ease-standard), border-color var(--duration-base) var(--ease-standard), box-shadow var(--duration-base) var(--ease-standard), transform var(--duration-base) var(--ease-standard), opacity var(--duration-base) var(--ease-standard);
 
       &:hover {
         background: var(--color-hover);
@@ -1098,7 +1098,7 @@
         border: 1px solid var(--color-border);
         border-radius: 6px;
         font-size: 14px;
-        transition: border-color 0.2s ease;
+        transition: border-color var(--duration-base) var(--ease-standard);
 
         &:focus {
           outline: none;
@@ -1135,7 +1135,7 @@
       font-size: 14px;
       font-weight: 500;
       cursor: pointer;
-      transition: all 0.2s ease;
+      transition: background-color var(--duration-base) var(--ease-standard), color var(--duration-base) var(--ease-standard), border-color var(--duration-base) var(--ease-standard), box-shadow var(--duration-base) var(--ease-standard), transform var(--duration-base) var(--ease-standard), opacity var(--duration-base) var(--ease-standard);
 
       &:hover {
         background: var(--color-text-primary);
@@ -1151,7 +1151,7 @@
       font-size: 14px;
       font-weight: 500;
       cursor: pointer;
-      transition: all 0.2s ease;
+      transition: background-color var(--duration-base) var(--ease-standard), color var(--duration-base) var(--ease-standard), border-color var(--duration-base) var(--ease-standard), box-shadow var(--duration-base) var(--ease-standard), transform var(--duration-base) var(--ease-standard), opacity var(--duration-base) var(--ease-standard);
 
       &:hover:not(:disabled) {
         background: var(--color-success);
