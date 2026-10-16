@@ -48,7 +48,7 @@
 .status-card:hover {
     border-color: var(--color-info);
     transform: translateY(-2px);
-    box-shadow: 0 8px 25px color-mix(in srgb, var(--color-info) 20%, transparent));
+    box-shadow: 0 8px 25px color-mix(in srgb, var(--color-info) 20%, transparent);
 }
 
 .status-card i {
@@ -505,7 +505,7 @@
 
 .mode-card.assisted-mode:hover {
     border-color: var(--color-info);
-    box-shadow: 0 15px 35px color-mix(in srgb, var(--color-info) 20%, transparent));
+    box-shadow: 0 15px 35px color-mix(in srgb, var(--color-info) 20%, transparent);
 }
 
 .mode-card.magic-mode {
@@ -603,7 +603,7 @@
 .assisted-button:hover {
     background: linear-gradient(135deg, var(--color-info), #1f5f8b);
     transform: translateY(-2px);
-    box-shadow: 0 8px 20px color-mix(in srgb, var(--color-info) 30%, transparent));
+    box-shadow: 0 8px 20px color-mix(in srgb, var(--color-info) 30%, transparent);
 }
 
 .magic-button {
@@ -826,7 +826,7 @@
 .analysis-summary-grid .summary-item:hover {
     border-color: var(--color-info);
     transform: translateY(-2px);
-    box-shadow: 0 6px 20px color-mix(in srgb, var(--color-info) 15%, transparent));
+    box-shadow: 0 6px 20px color-mix(in srgb, var(--color-info) 15%, transparent);
 }
 
 .analysis-summary-grid .summary-item i {
@@ -865,7 +865,7 @@
 .key-card:hover {
     border-color: var(--color-info);
     transform: translateY(-2px);
-    box-shadow: 0 8px 25px color-mix(in srgb, var(--color-info) 15%, transparent));
+    box-shadow: 0 8px 25px color-mix(in srgb, var(--color-info) 15%, transparent);
 }
 
 .key-header {
