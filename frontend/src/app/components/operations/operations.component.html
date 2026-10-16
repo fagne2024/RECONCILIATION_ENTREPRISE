@@ -11,30 +11,30 @@
     </div>
     <div class="nav-spacer"></div>
     <div class="nav-actions">
-      <button type="button" class="nav-btn secondary" (click)="openUploadModal('transaction_cree')" title="{{ 'OPS.Créertrxviafichier' | translate }}">
+      <button type="button" class="ds-btn ds-btn--secondary nav-btn secondary" (click)="openUploadModal('transaction_cree')" title="{{ 'OPS.Créertrxviafichier' | translate }}">
         <i class="fas fa-file-upload"></i> {{ 'OPS.Créertrx' | translate }}
       </button>
-      <button type="button" class="nav-btn secondary" (click)="openUploadModal('annulation_bo')" title="{{ 'OPS.Annulertrxviafichier' | translate }}">
+      <button type="button" class="ds-btn ds-btn--secondary nav-btn secondary" (click)="openUploadModal('annulation_bo')" title="{{ 'OPS.Annulertrxviafichier' | translate }}">
         <i class="fas fa-undo"></i> {{ 'OPS.Annulertrx' | translate }}
       </button>
-      <button type="button" class="nav-btn secondary" (click)="downloadTemplate()" title="{{ 'OPS.Téléchargerlemodèledimport' | translate }}">
+      <button type="button" class="ds-btn ds-btn--secondary nav-btn secondary" (click)="downloadTemplate()" title="{{ 'OPS.Téléchargerlemodèledimport' | translate }}">
         <i class="fas fa-download"></i> {{ 'OPS.Modèle' | translate }}
       </button>
-      <button type="button" class="nav-btn secondary" (click)="openApproClientPopup()" title="{{ 'OPS.Voirappro' | translate }}">
+      <button type="button" class="ds-btn ds-btn--secondary nav-btn secondary" (click)="openApproClientPopup()" title="{{ 'OPS.Voirappro' | translate }}">
         <i class="fas fa-money-bill-wave"></i> {{ 'OPS.Appro' | translate }}
       </button>
-      <button type="button" class="nav-btn secondary" (click)="openCompenseClientPopup()" title="{{ 'OPS.Voircompense' | translate }}">
+      <button type="button" class="ds-btn ds-btn--secondary nav-btn secondary" (click)="openCompenseClientPopup()" title="{{ 'OPS.Voircompense' | translate }}">
         <i class="fas fa-exchange-alt"></i>{{ 'DASH.partnerDiscrepancyRate' | translate }}</button>
-      <button type="button" class="nav-btn secondary" (click)="openNivellementPopup()" title="{{ 'OPS.Voirnivellement' | translate }}">
+      <button type="button" class="ds-btn ds-btn--secondary nav-btn secondary" (click)="openNivellementPopup()" title="{{ 'OPS.Voirnivellement' | translate }}">
         <i class="fas fa-balance-scale"></i> {{ 'OPS.Nivellement' | translate }}
       </button>
-      <button type="button" class="nav-btn secondary" (click)="openRegularisationSoldePopup()" title="{{ 'OPS.Voirrégularisationsolde' | translate }}">
+      <button type="button" class="ds-btn ds-btn--secondary nav-btn secondary" (click)="openRegularisationSoldePopup()" title="{{ 'OPS.Voirrégularisationsolde' | translate }}">
         <i class="fas fa-calculator"></i> {{ 'OPS.Régularisationsolde' | translate }}
       </button>
-      <button type="button" class="nav-btn secondary" (click)="refreshData()" [disabled]="isLoading" title="{{ 'ACT.refreshKeepFilters' | translate }}">
+      <button type="button" class="ds-btn ds-btn--secondary nav-btn secondary" (click)="refreshData()" [disabled]="isLoading" title="{{ 'ACT.refreshKeepFilters' | translate }}">
         <i class="fas" [ngClass]="isLoading ? 'fa-spinner fa-spin' : 'fa-sync-alt'"></i> {{ 'CPT.Actualiser' | translate }}
       </button>
-      <button type="button" class="nav-btn primary" (click)="showAddForm = true" *ngIf="!showAddForm && !showEditForm">
+      <button type="button" class="ds-btn ds-btn--primary nav-btn primary" (click)="showAddForm = true" *ngIf="!showAddForm && !showEditForm">
         <i class="fas fa-plus"></i> {{ 'OPS.Ajouteruneopération' | translate }}
       </button>
     </div>
@@ -50,12 +50,12 @@
       <div class="hero-kpi-strip">
         <div class="hk-strip-item">
           <span class="hk-strip-label">{{ 'TBL.operations' | translate }}</span>
-          <span class="hk-strip-value">{{ totalOperations }}</span>
+          <span class="hk-strip-value ds-num">{{ totalOperations }}</span>
         </div>
         <div class="hk-strip-sep"></div>
         <div class="hk-strip-item">
           <span class="hk-strip-label">{{ 'OPS.Validées' | translate }}</span>
-          <span class="hk-strip-value">{{ operationsValidees }}</span>
+          <span class="hk-strip-value ds-num">{{ operationsValidees }}</span>
         </div>
       </div>
     </div>
@@ -95,12 +95,12 @@
             </div>
             <div class="modal-footer">
                 <div class="modal-actions">
-                    <button type="button" class="btn-secondary" (click)="hideUploadModal()">
+                    <button type="button" class="ds-btn ds-btn--secondary btn-secondary" (click)="hideUploadModal()">
                         <i class="fas fa-times"></i>{{ 'COMMON.actions.close' | translate }}</button>
-                    <button type="button" class="btn-info" (click)="downloadTemplate()" title="{{ 'OPS.Téléchargerlemodèledefichier' | translate }}">
+                    <button type="button" class="ds-btn ds-btn--secondary btn-info" (click)="downloadTemplate()" title="{{ 'OPS.Téléchargerlemodèledefichier' | translate }}">
                         <i class="fas fa-download"></i> {{ 'OPS.Modèle' | translate }}
                     </button>
-                    <button type="button" class="btn-primary" [disabled]="!selectedFile || isUploading" (click)="uploadOperationsFile()">
+                    <button type="button" class="ds-btn ds-btn--primary btn-primary" [disabled]="!selectedFile || isUploading" (click)="uploadOperationsFile()">
                         <i class="fas fa-upload"></i> {{ isUploading ? ('OPS.uploading' | translate) : ('OPS.upload' | translate) }}
                     </button>
                 </div>
@@ -122,7 +122,7 @@
                 <div class="stats-filters">
                     <div class="filter-group">
                         <label>{{ 'LBL.countryLabel' | translate }}</label>
-                        <select [(ngModel)]="selectedPays" (change)="onFilterChange()" class="modern-select">
+                        <select [(ngModel)]="selectedPays" (change)="onFilterChange()" class="ds-select modern-select">
                             <option value="">{{ 'FILT.allCountries' | translate }}</option>
                             <option *ngFor="let pays of paysList" [value]="pays">{{ pays }}</option>
                         </select>
@@ -130,13 +130,13 @@
                     
                     <div class="filter-group">
                         <label>{{ 'CPT.Codepropriétaire' | translate }}</label>
-                        <select [(ngModel)]="selectedCodeProprietaire" (change)="onFilterChange()" class="modern-select">
+                        <select [(ngModel)]="selectedCodeProprietaire" (change)="onFilterChange()" class="ds-select modern-select">
                             <option value="">{{ 'OPS.Touslescodespropriétaires' | translate }}</option>
                             <option *ngFor="let code of codeProprietaireList" [value]="code">{{ code }}</option>
                         </select>
                     </div>
                     
-                    <button class="btn-secondary" (click)="clearStatsFilters()">
+                    <button type="button" class="ds-btn ds-btn--secondary btn-secondary" (click)="clearStatsFilters()">
                         <i class="fas fa-times"></i>{{ 'ACT.clearFilters' | translate }}</button>
                 </div>
             </div>
@@ -168,27 +168,14 @@
                 </div>
             </div>
             
-            <!-- Pagination des cartes de statistiques -->
-            <div *ngIf="totalStatsPages > 1" class="stats-pagination">
-                <button class="btn-pagination" 
-                        [disabled]="currentStatsPage === 1"
-                        (click)="prevStatsPage()">
-                    <i class="fas fa-chevron-left"></i>{{ 'PAG.previous' | translate }}</button>
-                
-                <div class="pagination-indicators">
-                    <span *ngFor="let page of getVisibleStatsPages()" 
-                          class="page-indicator"
-                          [class.active]="currentStatsPage === page"
-                          (click)="goToStatsPage(page)">
-                        {{ page }}
-                    </span>
-                </div>
-                
-                <button class="btn-pagination" 
-                        [disabled]="currentStatsPage === totalStatsPages"
-                        (click)="nextStatsPage()">{{ 'PAG.next' | translate }}<i class="fas fa-chevron-right"></i>
-                </button>
-            </div>
+            <ds-pagination
+                *ngIf="totalStatsPages > 1"
+                [page]="currentStatsPage"
+                [pageCount]="totalStatsPages"
+                [pageSize]="statsCardsPerPage"
+                [itemLabel]="'TBL.lines' | translate"
+                (pageChange)="goToStatsPage($event)">
+            </ds-pagination>
         </div>
     </div>
 
@@ -261,7 +248,7 @@
                             <div class="form-group">
                                 <label>{{ 'OPS.Datedopération' | translate }}</label>
                                 <div class="date-input-wrapper">
-                                    <input type="date" formControlName="dateOperation" [max]="maxDate" class="date-input">
+                                    <input type="date" formControlName="dateOperation" [max]="maxDate" class="ds-input date-input">
                                     <i class="fas fa-calendar-alt date-icon"></i>
                                 </div>
                                 <div *ngIf="addForm.get('dateOperation')?.invalid && addForm.get('dateOperation')?.touched" class="error-message">
@@ -316,13 +303,13 @@
                             <div class="form-group">
                                 <label>{{ 'TBL.bank' | translate }}</label>
                                 <input type="text" formControlName="banque" 
-                                    placeholder="{{ 'OPS.Exmtnorangesystemetc' | translate }}" class="text-input">
+                                    placeholder="{{ 'OPS.Exmtnorangesystemetc' | translate }}" class="ds-input text-input">
                                 <div class="help-text">{{ 'OPS.Vouspouvezsaisirlibrementlenomdelabanque' | translate }}</div>
                             </div>
                             <div class="form-group">
                                 <label>{{ 'OPS.Nomdubordereau' | translate }}</label>
                                 <input type="text" formControlName="nomBordereau" 
-                                    placeholder="{{ 'OPS.Ex19s50zsyf2520500031753' | translate }}" class="text-input">
+                                    placeholder="{{ 'OPS.Ex19s50zsyf2520500031753' | translate }}" class="ds-input text-input">
                             </div>
                         </div>
 
@@ -330,7 +317,7 @@
                             <div class="form-group">
                                 <label>{{ 'TBL.reference' | translate }}</label>
                                 <input type="text" formControlName="reference" 
-                                    placeholder="{{ 'OPS.Exref2024001' | translate }}" class="text-input">
+                                    placeholder="{{ 'OPS.Exref2024001' | translate }}" class="ds-input text-input">
                             </div>
                         </div>
                     </div>
@@ -373,7 +360,7 @@
                                 <label>{{ 'TBL.amountRequired' | translate }}<span class="help-text">{{ 'OPS.Utilisezdesvaleursnégativespourlesajustements' | translate }}</span></label>
                                 <div class="amount-input-wrapper">
                                     <input type="number" formControlName="montant" 
-                                        placeholder="0.00" step="0.01" class="amount-input"
+                                        placeholder="0.00" step="0.01" class="ds-input amount-input"
                                         (input)="onAddMontantChange()">
                                     <span class="currency-symbol">XAF</span>
                                 </div>
@@ -420,9 +407,9 @@
 
             <div class="modal-footer">
                 <div class="modal-actions">
-                    <button type="button" class="btn-secondary" (click)="cancelAdd()">
+                    <button type="button" class="ds-btn ds-btn--secondary btn-secondary" (click)="cancelAdd()">
                         <i class="fas fa-times"></i>{{ 'COMMON.actions.cancel' | translate }}</button>
-                    <button type="submit" class="btn-primary" 
+                    <button type="submit" class="ds-btn ds-btn--primary btn-primary" 
                         [disabled]="!addForm.valid || isAdding"
                         (click)="addOperation()">
                         <i class="fas fa-plus"></i>
@@ -511,7 +498,7 @@
                             <label>{{ 'OPS.Datedopération' | translate }}</label>
                             <div class="date-input-wrapper">
                                 <input type="date" formControlName="dateOperation" 
-                                    [max]="maxDate" class="date-input">
+                                    [max]="maxDate" class="ds-input date-input">
                                 <i class="fas fa-calendar-alt date-icon"></i>
                             </div>
                             <div *ngIf="editForm.get('dateOperation')?.invalid && editForm.get('dateOperation')?.touched" 
@@ -526,7 +513,7 @@
                         <div class="form-group">
                             <label>{{ 'TBL.bank' | translate }}</label>
                             <input type="text" formControlName="banque" 
-                                placeholder="{{ 'OPS.Exmtnorangesystemetc' | translate }}" class="text-input">
+                                placeholder="{{ 'OPS.Exmtnorangesystemetc' | translate }}" class="ds-input text-input">
                             <div class="help-text">{{ 'OPS.Vouspouvezsaisirlibrementlenomdelabanque' | translate }}</div>
                         </div>
                         <div class="form-group">
@@ -550,7 +537,7 @@
                         <div class="form-group full-width">
                             <label>{{ 'OPS.Nomdubordereau' | translate }}</label>
                             <input type="text" formControlName="nomBordereau" 
-                                placeholder="{{ 'OPS.Ex19s50zsyf2520500031753' | translate }}" class="text-input">
+                                placeholder="{{ 'OPS.Ex19s50zsyf2520500031753' | translate }}" class="ds-input text-input">
                         </div>
                     </div>
 
@@ -558,7 +545,7 @@
                         <div class="form-group full-width">
                             <label>{{ 'TBL.reference' | translate }}</label>
                             <input type="text" formControlName="reference" 
-                                placeholder="{{ 'OPS.Exref2024001' | translate }}" class="text-input">
+                                placeholder="{{ 'OPS.Exref2024001' | translate }}" class="ds-input text-input">
                         </div>
                     </div>
                 </div>
@@ -599,7 +586,7 @@
                             <label>{{ 'TBL.amountRequired' | translate }}<span class="help-text">{{ 'OPS.Utilisezdesvaleursnégativespourlesajustements' | translate }}</span></label>
                             <div class="amount-input-wrapper">
                                 <input type="number" formControlName="montant" 
-                                    placeholder="0.00" step="0.01" class="amount-input"
+                                    placeholder="0.00" step="0.01" class="ds-input amount-input"
                                     (input)="onMontantChange()">
                                 <span class="currency-symbol">XAF</span>
                             </div>
@@ -678,12 +665,12 @@
                 <div class="modal-actions">
             <!-- Navigation des étapes -->
             <div class="step-navigation-actions">
-                <button type="button" class="btn-secondary" 
+                <button type="button" class="ds-btn ds-btn--secondary btn-secondary" 
                     (click)="previousEditStep()" 
                     [disabled]="currentEditStep === 1">
                     <i class="fas fa-arrow-left"></i>{{ 'PAG.previous' | translate }}</button>
                         
-                        <button type="button" class="btn-secondary" (click)="cancelEdit()">
+                        <button type="button" class="ds-btn ds-btn--secondary btn-secondary" (click)="cancelEdit()">
                             <i class="fas fa-times"></i>{{ 'COMMON.actions.cancel' | translate }}</button>
                 
                 <div class="step-indicators">
@@ -692,13 +679,13 @@
                     <span class="step-dot" [class.active]="currentEditStep === 3"></span>
                 </div>
 
-                <button type="button" class="btn-primary" 
+                <button type="button" class="ds-btn ds-btn--primary btn-primary" 
                     (click)="nextEditStep()" 
                     [disabled]="!canProceedToNextStep()"
                     *ngIf="currentEditStep < 3">{{ 'PAG.next' | translate }}<i class="fas fa-arrow-right"></i>
                 </button>
                 
-                <button type="submit" class="btn-success" 
+                <button type="submit" class="ds-btn ds-btn--secondary btn-success" 
                             [disabled]="!editForm.valid || currentEditStep !== 3 || isUpdating"
                             (click)="updateOperation()"
                     *ngIf="currentEditStep === 3">
@@ -719,7 +706,7 @@
             <h3>{{ 'LBL.filters' | translate }}</h3>
             <div class="filters-summary" *ngIf="hasActiveFilters()">
                 <span class="active-filters-count">{{ getActiveFiltersCount() }} {{ 'OPS.Filtresactifs' | translate }}</span>
-                <button type="button" class="btn-clear-all" (click)="clearFilters()">
+                <button type="button" class="ds-btn ds-btn--secondary btn-clear-all" (click)="clearFilters()">
                     <i class="fas fa-times"></i> {{ 'OPS.Touteffacer' | translate }}
                 </button>
             </div>
@@ -807,7 +794,7 @@
             <!-- Bouton pour afficher/masquer le filtre de date -->
             <div class="form-field date-filter-toggle-section">
                 <button type="button" 
-                        class="btn-toggle-date-filter" 
+                        class="ds-btn ds-btn--secondary btn-toggle-date-filter" 
                         (click)="showDateFilter = !showDateFilter"
                         [class.active]="showDateFilter || filterForm.get('dateDebut')?.value || filterForm.get('dateFin')?.value">
                     <i class="fas" [ngClass]="showDateFilter ? 'fa-chevron-up' : 'fa-chevron-down'"></i>
@@ -824,7 +811,7 @@
                     <i class="fas fa-calendar-alt"></i>{{ 'LBL.period' | translate }}</label>
                 <div class="date-filter-container">
                     <div class="date-preset-selector">
-                        <select (change)="applyDatePreset($event)" class="date-preset-select">
+                        <select (change)="applyDatePreset($event)" class="ds-select date-preset-select">
                             <option value="">{{ 'OPS.Sélectionnerunepériode' | translate }}</option>
                             <option value="today">{{ 'OPS.Aujourdhui' | translate }}</option>
                             <option value="yesterday">{{ 'OPS.Hier' | translate }}</option>
@@ -848,7 +835,7 @@
                                    formControlName="dateDebut"
                                    (focus)="showDateFilter = true"
                                    (change)="onFilterChange()"
-                                   class="date-input-field">
+                                   class="ds-input date-input-field">
                         </div>
                         <div class="date-input-group">
                             <label for="dateFin">
@@ -858,12 +845,12 @@
                                    formControlName="dateFin"
                                    (focus)="showDateFilter = true"
                                    (change)="onFilterChange()"
-                                   class="date-input-field">
+                                   class="ds-input date-input-field">
                         </div>
                     </div>
                     <div class="date-filter-actions">
                         <button type="button" 
-                                class="btn-show-more" 
+                                class="ds-btn ds-btn--secondary btn-show-more" 
                                 (click)="toggleShowAllData()"
                                 [class.active]="showAllData"
                                 title="{{ showAllData ? ('OPS.showCurrentMonthOnly' | translate) : ('OPS.showAllData' | translate) }}">
@@ -871,7 +858,7 @@
                             {{ showAllData ? ('STA.seeLess' | translate) : ('STA.seeMore' | translate) }}
                         </button>
                         <button type="button" 
-                                class="btn-clear-date" 
+                                class="ds-btn ds-btn--secondary btn-clear-date" 
                                 (click)="clearDateFilter()"
                                 *ngIf="filterForm.get('dateDebut')?.value || filterForm.get('dateFin')?.value"
                                 title="{{ 'OPS.Effacerlefiltrededate' | translate }}">
@@ -881,8 +868,8 @@
                 </div>
             </div>
             <div class="form-actions">
-                <button type="submit" class="btn primary">{{ 'ACT.apply' | translate }}</button>
-                <button type="button" (click)="clearFilters()" class="btn">{{ 'COMMON.actions.reset' | translate }}</button>
+                <button type="submit" class="ds-btn ds-btn--primary btn primary">{{ 'ACT.apply' | translate }}</button>
+                <button type="button" (click)="clearFilters()" class="ds-btn ds-btn--secondary btn">{{ 'COMMON.actions.reset' | translate }}</button>
             </div>
         </form>
     </div>
@@ -910,14 +897,14 @@
                 </div>
             </div>
             <div class="list-actions">
-                <button class="btn-secondary" (click)="refreshData()" title="{{ 'CPT.Actualiser' | translate }}">
+                <button type="button" class="ds-btn ds-btn--secondary btn-secondary" (click)="refreshData()" title="{{ 'CPT.Actualiser' | translate }}">
                     <i class="fas fa-sync-alt"></i>
                 </button>
-                <button class="btn-secondary" (click)="exportOperations()" [disabled]="isExporting" title="{{ 'ACT.importFile' | translate }}">
+                <button type="button" class="ds-btn ds-btn--secondary btn-secondary" (click)="exportOperations()" [disabled]="isExporting" title="{{ 'ACT.importFile' | translate }}">
                     <i class="fas fa-file-excel"></i>
                     {{ isExporting ? ('ACT.exporting' | translate) : ('TBL.excel' | translate) }}
                 </button>
-                <button class="btn-secondary" 
+                <button type="button" class="ds-btn ds-btn--secondary btn-secondary" 
                         [class.active]="isSelectionMode"
                         (click)="toggleSelectionMode()" 
                         title="{{ 'OPS.Modesélectionmultiple' | translate }}">
@@ -942,7 +929,7 @@
             </div>
             <h4>{{ 'MSG.noOperationFound' | translate }}</h4>
             <p>{{ 'OPS.Aucuneopérationnecorrespondauxcritèresderechercheactuels' | translate }}</p>
-            <button class="btn-primary" (click)="clearFilters()">
+            <button type="button" class="ds-btn ds-btn--primary btn-primary" (click)="clearFilters()">
                 <i class="fas fa-times"></i>{{ 'ACT.clearFilters' | translate }}</button>
         </div>
 
@@ -952,7 +939,7 @@
                 <i class="fas fa-info-circle"></i>
                 <span>{{ 'OPS.Modesélectionactivécliquezsurlescasesàcocherpoursélectionnerdesopérationsvouspouvezutiliserlacaseenhautpourtoutsélectionner' | translate }}</span>
             </div>
-            <button class="btn-link" (click)="selectAllOperations()" title="{{ 'ACT.selectAll' | translate }}">
+            <button type="button" class="ds-btn ds-btn--secondary btn-link" (click)="selectAllOperations()" title="{{ 'ACT.selectAll' | translate }}">
                 <i class="fas fa-check-double"></i>{{ 'ACT.selectAll' | translate }}</button>
         </div>
 
@@ -963,36 +950,36 @@
                 <span><strong>{{ selectedOperationsCount }}</strong> {{ 'OPS.Opérationssélectionnées' | translate }}</span>
             </div>
             <div class="selection-actions">
-                <button class="btn-secondary" (click)="selectAllOperations()" title="{{ 'ACT.selectAll' | translate }}" *ngIf="selectedOperationsCount < filteredOperations.length">
+                <button type="button" class="ds-btn ds-btn--secondary btn-secondary" (click)="selectAllOperations()" title="{{ 'ACT.selectAll' | translate }}" *ngIf="selectedOperationsCount < filteredOperations.length">
                     <i class="fas fa-check-double"></i>
                     {{ 'OPS.Toutsélectionner' | translate }}{{ filteredOperations.length }})
                 </button>
-                <button class="btn-secondary" (click)="deselectAllOperations()" title="{{ 'APM.Toutdésélectionner' | translate }}">
+                <button type="button" class="ds-btn ds-btn--secondary btn-secondary" (click)="deselectAllOperations()" title="{{ 'APM.Toutdésélectionner' | translate }}">
                     <i class="fas fa-times"></i>
                     {{ 'OPS.Désélectionnertout' | translate }}
                 </button>
                 <div class="bulk-status-actions">
-                    <select [(ngModel)]="selectedTargetStatut" [disabled]="isBulkUpdatingStatus">
+                    <select class="ds-select" [(ngModel)]="selectedTargetStatut" [disabled]="isBulkUpdatingStatus">
                         <option value="" disabled selected>{{ 'OPS.Choisirunstatut' | translate }}</option>
                         <option *ngFor="let st of statutOperations" [value]="st">{{ st }}</option>
                     </select>
-                    <button class="btn-primary" 
+                    <button type="button" class="ds-btn ds-btn--primary btn-primary" 
                             (click)="bulkChangeSelectedOperationsStatus()"
                             [disabled]="isBulkUpdatingStatus || !selectedTargetStatut"
                             title="{{ 'OPS.Changerlestatutdesopérationssélectionnées' | translate }}">
                         <i class="fas fa-exchange-alt"></i>
                         {{ isBulkUpdatingStatus ? ('OPS.statusChanging' | translate) : ('OPS.changeStatus' | translate) }}
                     </button>
-                    <button class="btn-success" (click)="quickBulkChange('Validée')" [disabled]="isBulkUpdatingStatus || !hasSelectedOperations" title="{{ 'OPS.Validersélection' | translate }}">
+                    <button type="button" class="ds-btn ds-btn--secondary btn-success" (click)="quickBulkChange('Validée')" [disabled]="isBulkUpdatingStatus || !hasSelectedOperations" title="{{ 'OPS.Validersélection' | translate }}">
                         <i class="fas fa-check"></i> {{ 'OPS.Valider' | translate }}
                     </button>
-                    <button class="btn-warning" (click)="quickBulkChange('Rejetée')" [disabled]="isBulkUpdatingStatus || !hasSelectedOperations" title="{{ 'OPS.Rejetersélection' | translate }}">
+                    <button type="button" class="ds-btn ds-btn--secondary btn-warning" (click)="quickBulkChange('Rejetée')" [disabled]="isBulkUpdatingStatus || !hasSelectedOperations" title="{{ 'OPS.Rejetersélection' | translate }}">
                         <i class="fas fa-ban"></i> {{ 'OPS.Rejeter' | translate }}
                     </button>
-                    <button class="btn-danger" (click)="quickBulkCancel()" [disabled]="isBulkUpdatingStatus || !hasSelectedOperations || !hasCancelableOperations" title="{{ 'OPS.Annulercréeradesopérationsdannulation' | translate }}">
+                    <button type="button" class="ds-btn ds-btn--danger btn-danger" (click)="quickBulkCancel()" [disabled]="isBulkUpdatingStatus || !hasSelectedOperations || !hasCancelableOperations" title="{{ 'OPS.Annulercréeradesopérationsdannulation' | translate }}">
                         <i class="fas fa-undo"></i>{{ 'COMMON.actions.cancel' | translate }}</button>
                 </div>
-                <button class="btn-danger btn-lg" 
+                <button type="button" class="ds-btn ds-btn--danger btn-danger btn-lg" 
                         (click)="deleteSelectedOperations()" 
                         [disabled]="isDeletingMultiple"
                         title="{{ 'OPS.Supprimerlesopérationssélectionnées' | translate }}">
@@ -1004,7 +991,7 @@
 
         <!-- Tableau des opérations -->
         <div *ngIf="!isLoading && pagedOperations.length > 0" class="table-container">
-            <table class="operations-table">
+            <table class="ds-table operations-table">
                 <thead>
                     <tr>
                         <th class="selection-column" *ngIf="isSelectionMode">
@@ -1159,18 +1146,18 @@
                         
                         <td class="actions-cell">
                             <div class="action-buttons">
-                                <button class="btn btn-sm btn-primary"
+                                <button type="button" class="ds-btn ds-btn--primary btn btn-sm btn-primary"
                                         *ngIf="(op.statut || '') === 'En attente'"
                                         (click)="validateOperation(op.id!); $event.stopPropagation()"
                                         title="{{ 'OPS.Validerlopération' | translate }}">
                                     <i class="fas fa-check"></i>
                                 </button>
-                                <button class="btn btn-sm btn-success" 
+                                <button type="button" class="ds-btn ds-btn--secondary btn btn-sm btn-success" 
                                         (click)="editOperation(op); $event.stopPropagation()" 
                                         title="{{ 'OPS.Modifierlopération_1' | translate }}">
                                     <i class="fas fa-edit"></i>
                                 </button>
-                                <button class="btn btn-sm" 
+                                <button type="button" class="ds-btn ds-btn--secondary btn btn-sm" 
                                         [class.btn-warning]="canCancelOperation(op)"
                                         [class.btn-secondary]="!canCancelOperation(op)"
                                         [disabled]="!canCancelOperation(op)"
@@ -1178,12 +1165,12 @@
                                         [title]="canCancelOperation(op) ? ('OPS.cancelOperation' | translate) : ('OPS.alreadyCancelled' | translate)">
                                     <i class="fas fa-times"></i>
                                 </button>
-                                <button class="btn btn-sm btn-danger" 
+                                <button type="button" class="ds-btn ds-btn--danger btn btn-sm btn-danger" 
                                         (click)="deleteOperation(op.id!); $event.stopPropagation()" 
                                         title="{{ 'OPS.Supprimerlopération' | translate }}">
                                     <i class="fas fa-trash"></i>
                                 </button>
-                                <button class="btn btn-sm btn-info" 
+                                <button type="button" class="ds-btn ds-btn--secondary btn btn-sm btn-info" 
                                         (click)="viewOperationDetails(op); $event.stopPropagation()" 
                                         title="{{ 'CPT.Voirlesdétails' | translate }}">
                                     <i class="fas fa-eye"></i>
@@ -1195,29 +1182,15 @@
             </table>
         </div>
 
-        <!-- Pagination améliorée -->
-        <div class="pagination" *ngIf="totalPages > 1">
-            <div class="pagination-info">
-                <span>{{ 'CPT.Affichage' | translate }} {{ (currentPage - 1) * pageSize + 1 }} - {{ getMin(currentPage * pageSize, filteredOperations.length) }} {{ 'CPT.Sur' | translate }} {{ filteredOperations.length }}</span>
-            </div>
-            
-            <div class="pagination-controls">
-                <button (click)="prevPage()" [disabled]="currentPage === 1" class="btn-pagination">
-                    <i class="fas fa-chevron-left"></i>{{ 'PAG.previous' | translate }}</button>
-                
-                <div class="pagination-indicators">
-                    <span *ngFor="let page of getVisiblePages()" 
-                          class="page-indicator"
-                          [class.active]="currentPage === page"
-                          (click)="goToPage(page)">
-                        {{ page }}
-                    </span>
-                </div>
-                
-                <button (click)="nextPage()" [disabled]="currentPage === totalPages" class="btn-pagination">{{ 'PAG.next' | translate }}<i class="fas fa-chevron-right"></i>
-                </button>
-            </div>
-        </div>
+        <ds-pagination
+            *ngIf="totalPages > 1"
+            [page]="currentPage"
+            [pageCount]="totalPages"
+            [totalItems]="filteredOperations.length"
+            [pageSize]="pageSize"
+            [itemLabel]="'TBL.lines' | translate"
+            (pageChange)="goToPage($event)">
+        </ds-pagination>
     </div>
 </div> 
 
@@ -1265,7 +1238,7 @@
   }
 </style>
 <div class="operations-resume">
-  <table class="resume-table">
+  <table class="ds-table resume-table">
     <thead>
       <tr>
         <th>{{ 'CPT.Résumé' | translate }}</th>
@@ -1433,11 +1406,11 @@
     </div>
 
     <div class="modal-footer">
-      <button type="button" class="btn btn-secondary" (click)="closeOperationDetailsModal()">
+      <button type="button" class="ds-btn ds-btn--secondary btn btn-secondary" (click)="closeOperationDetailsModal()">
         <i class="fas fa-times"></i>{{ 'COMMON.actions.close' | translate }}</button>
-      <button type="button" class="btn btn-primary" (click)="editOperation(modalSelectedOperation!)" *ngIf="modalSelectedOperation">
+      <button type="button" class="ds-btn ds-btn--primary btn btn-primary" (click)="editOperation(modalSelectedOperation!)" *ngIf="modalSelectedOperation">
         <i class="fas fa-edit"></i>{{ 'ACT.edit' | translate }}</button>
-      <button type="button" class="btn btn-info" (click)="exportOperationDetails(modalSelectedOperation!)" *ngIf="modalSelectedOperation">
+      <button type="button" class="ds-btn ds-btn--secondary btn btn-info" (click)="exportOperationDetails(modalSelectedOperation!)" *ngIf="modalSelectedOperation">
         <i class="fas fa-file-excel"></i> {{ 'COMMON.actions.export' | translate }}
       </button>
     </div>
@@ -1449,7 +1422,7 @@
   <div class="custom-popup-content" (click)="$event.stopPropagation()">
     <div class="popup-header">
       <h3><i class="fas fa-money-bill-wave"></i> {{ 'OPS.Appro' | translate }}</h3>
-      <button class="close-btn" (click)="closeApproClientPopup()">
+      <button type="button" class="close-btn" (click)="closeApproClientPopup()">
         <i class="fas fa-times"></i>
       </button>
     </div>
@@ -1458,7 +1431,7 @@
       <div class="filter-row">
         <div class="filter-field">
           <label>{{ 'TBL.country' | translate }}</label>
-          <select [(ngModel)]="approClientFilters.pays" (change)="applyApproClientFilters()" class="filter-select">
+          <select [(ngModel)]="approClientFilters.pays" (change)="applyApproClientFilters()" class="ds-select filter-select">
             <option value="">{{ 'FILT.all' | translate }}</option>
             <option *ngFor="let pays of paysList" [value]="pays">{{ pays }}</option>
           </select>
@@ -1469,7 +1442,7 @@
                  list="approClientCodeProprietaireList"
                  [(ngModel)]="approClientFilters.codeProprietaire" 
                  (input)="applyApproClientFilters()" 
-                 class="filter-input" 
+                 class="ds-input filter-input" 
                  placeholder="{{ 'OPS.Rechercherousélectionner' | translate }}">
           <datalist id="approClientCodeProprietaireList">
             <option *ngFor="let code of approClientFilteredCodeProprietaireList" [value]="code">{{ code }}</option>
@@ -1477,20 +1450,20 @@
         </div>
         <div class="filter-field">
           <label>{{ 'TBL.service' | translate }}</label>
-          <input type="text" [(ngModel)]="approClientFilters.service" (input)="applyApproClientFilters()" class="filter-input" placeholder="{{ 'ACT.search' | translate }}">
+          <input type="text" [(ngModel)]="approClientFilters.service" (input)="applyApproClientFilters()" class="ds-input filter-input" placeholder="{{ 'ACT.search' | translate }}">
         </div>
       </div>
       <div class="filter-row">
         <div class="filter-field">
           <label>{{ 'OPS.Datedébut' | translate }}</label>
-          <input type="date" [(ngModel)]="approClientFilters.dateDebut" (change)="applyApproClientFilters()" class="filter-input">
+          <input type="date" [(ngModel)]="approClientFilters.dateDebut" (change)="applyApproClientFilters()" class="ds-input filter-input">
         </div>
         <div class="filter-field">
           <label>{{ 'OPS.Datefin' | translate }}</label>
-          <input type="date" [(ngModel)]="approClientFilters.dateFin" (change)="applyApproClientFilters()" class="filter-input">
+          <input type="date" [(ngModel)]="approClientFilters.dateFin" (change)="applyApproClientFilters()" class="ds-input filter-input">
         </div>
         <div class="filter-actions">
-          <button class="btn-export" (click)="exportApproClientOperations()" [disabled]="isExportingApproClient">
+          <button type="button" class="ds-btn ds-btn--secondary btn-export" (click)="exportApproClientOperations()" [disabled]="isExportingApproClient">
             <i class="fas fa-file-excel"></i> {{ isExportingApproClient ? ('ACT.exporting' | translate) : ('ACT.export' | translate) }}
           </button>
         </div>
@@ -1509,7 +1482,7 @@
         </div>
       </div>
       <div class="operations-table-container">
-        <table class="operations-table">
+        <table class="ds-table operations-table">
           <thead>
             <tr>
               <th>{{ 'TBL.date' | translate }}</th>
@@ -1548,13 +1521,13 @@
           <span>{{ approClientOperations.length }} {{ 'OPS.Opérationsautotal' | translate }}</span>
         </div>
         <div class="pagination-controls">
-          <button class="btn-pagination" (click)="prevApproClientPage()" [disabled]="approClientCurrentPage === 1">
+          <button type="button" class="ds-btn ds-btn--secondary btn-pagination" (click)="prevApproClientPage()" [disabled]="approClientCurrentPage === 1">
             <i class="fas fa-chevron-left"></i>{{ 'PAG.previous' | translate }}</button>
           <div class="pagination-indicator">
             <i class="fas fa-list"></i>
             {{ approClientCurrentPage }}/{{ approClientTotalPages }}
           </div>
-          <button class="btn-pagination" (click)="nextApproClientPage()" [disabled]="approClientCurrentPage === approClientTotalPages">{{ 'PAG.next' | translate }}<i class="fas fa-chevron-right"></i>
+          <button type="button" class="ds-btn ds-btn--secondary btn-pagination" (click)="nextApproClientPage()" [disabled]="approClientCurrentPage === approClientTotalPages">{{ 'PAG.next' | translate }}<i class="fas fa-chevron-right"></i>
           </button>
         </div>
       </div>
@@ -1567,7 +1540,7 @@
   <div class="custom-popup-content" (click)="$event.stopPropagation()">
     <div class="popup-header">
         <h3><i class="fas fa-exchange-alt"></i>{{ 'DASH.partnerDiscrepancyRate' | translate }}</h3>
-      <button class="close-btn" (click)="closeCompenseClientPopup()">
+      <button type="button" class="close-btn" (click)="closeCompenseClientPopup()">
         <i class="fas fa-times"></i>
       </button>
     </div>
@@ -1576,7 +1549,7 @@
       <div class="filter-row">
         <div class="filter-field">
           <label>{{ 'TBL.country' | translate }}</label>
-          <select [(ngModel)]="compenseClientFilters.pays" (change)="applyCompenseClientFilters()" class="filter-select">
+          <select [(ngModel)]="compenseClientFilters.pays" (change)="applyCompenseClientFilters()" class="ds-select filter-select">
             <option value="">{{ 'FILT.all' | translate }}</option>
             <option *ngFor="let pays of paysList" [value]="pays">{{ pays }}</option>
           </select>
@@ -1587,7 +1560,7 @@
                  list="compenseClientCodeProprietaireList"
                  [(ngModel)]="compenseClientFilters.codeProprietaire" 
                  (input)="applyCompenseClientFilters()" 
-                 class="filter-input" 
+                 class="ds-input filter-input" 
                  placeholder="{{ 'OPS.Rechercherousélectionner' | translate }}">
           <datalist id="compenseClientCodeProprietaireList">
             <option *ngFor="let code of compenseClientFilteredCodeProprietaireList" [value]="code">{{ code }}</option>
@@ -1595,20 +1568,20 @@
         </div>
         <div class="filter-field">
           <label>{{ 'TBL.service' | translate }}</label>
-          <input type="text" [(ngModel)]="compenseClientFilters.service" (input)="applyCompenseClientFilters()" class="filter-input" placeholder="{{ 'ACT.search' | translate }}">
+          <input type="text" [(ngModel)]="compenseClientFilters.service" (input)="applyCompenseClientFilters()" class="ds-input filter-input" placeholder="{{ 'ACT.search' | translate }}">
         </div>
       </div>
       <div class="filter-row">
         <div class="filter-field">
           <label>{{ 'OPS.Datedébut' | translate }}</label>
-          <input type="date" [(ngModel)]="compenseClientFilters.dateDebut" (change)="applyCompenseClientFilters()" class="filter-input">
+          <input type="date" [(ngModel)]="compenseClientFilters.dateDebut" (change)="applyCompenseClientFilters()" class="ds-input filter-input">
         </div>
         <div class="filter-field">
           <label>{{ 'OPS.Datefin' | translate }}</label>
-          <input type="date" [(ngModel)]="compenseClientFilters.dateFin" (change)="applyCompenseClientFilters()" class="filter-input">
+          <input type="date" [(ngModel)]="compenseClientFilters.dateFin" (change)="applyCompenseClientFilters()" class="ds-input filter-input">
         </div>
         <div class="filter-actions">
-          <button class="btn-export" (click)="exportCompenseClientOperations()" [disabled]="isExportingCompenseClient">
+          <button type="button" class="ds-btn ds-btn--secondary btn-export" (click)="exportCompenseClientOperations()" [disabled]="isExportingCompenseClient">
             <i class="fas fa-file-excel"></i> {{ isExportingCompenseClient ? ('ACT.exporting' | translate) : ('ACT.export' | translate) }}
           </button>
         </div>
@@ -1627,7 +1600,7 @@
         </div>
       </div>
       <div class="operations-table-container">
-        <table class="operations-table">
+        <table class="ds-table operations-table">
           <thead>
             <tr>
               <th>{{ 'TBL.date' | translate }}</th>
@@ -1666,13 +1639,13 @@
           <span>{{ compenseClientOperations.length }} {{ 'OPS.Opérationsautotal' | translate }}</span>
         </div>
         <div class="pagination-controls">
-          <button class="btn-pagination" (click)="prevCompenseClientPage()" [disabled]="compenseClientCurrentPage === 1">
+          <button type="button" class="ds-btn ds-btn--secondary btn-pagination" (click)="prevCompenseClientPage()" [disabled]="compenseClientCurrentPage === 1">
             <i class="fas fa-chevron-left"></i>{{ 'PAG.previous' | translate }}</button>
           <div class="pagination-indicator">
             <i class="fas fa-list"></i>
             {{ compenseClientCurrentPage }}/{{ compenseClientTotalPages }}
           </div>
-          <button class="btn-pagination" (click)="nextCompenseClientPage()" [disabled]="compenseClientCurrentPage === compenseClientTotalPages">{{ 'PAG.next' | translate }}<i class="fas fa-chevron-right"></i>
+          <button type="button" class="ds-btn ds-btn--secondary btn-pagination" (click)="nextCompenseClientPage()" [disabled]="compenseClientCurrentPage === compenseClientTotalPages">{{ 'PAG.next' | translate }}<i class="fas fa-chevron-right"></i>
           </button>
         </div>
       </div>
@@ -1685,7 +1658,7 @@
   <div class="custom-popup-content" (click)="$event.stopPropagation()">
     <div class="popup-header">
       <h3><i class="fas fa-balance-scale"></i> {{ 'OPS.Nivellement' | translate }}</h3>
-      <button class="close-btn" (click)="closeNivellementPopup()">
+      <button type="button" class="close-btn" (click)="closeNivellementPopup()">
         <i class="fas fa-times"></i>
       </button>
     </div>
@@ -1694,7 +1667,7 @@
       <div class="filter-row">
         <div class="filter-field">
           <label>{{ 'TBL.country' | translate }}</label>
-          <select [(ngModel)]="nivellementFilters.pays" (change)="applyNivellementFilters()" class="filter-select">
+          <select [(ngModel)]="nivellementFilters.pays" (change)="applyNivellementFilters()" class="ds-select filter-select">
             <option value="">{{ 'FILT.all' | translate }}</option>
             <option *ngFor="let pays of paysList" [value]="pays">{{ pays }}</option>
           </select>
@@ -1705,7 +1678,7 @@
                  list="nivellementCodeProprietaireList"
                  [(ngModel)]="nivellementFilters.codeProprietaire" 
                  (input)="applyNivellementFilters()" 
-                 class="filter-input" 
+                 class="ds-input filter-input" 
                  placeholder="{{ 'OPS.Rechercherousélectionner' | translate }}">
           <datalist id="nivellementCodeProprietaireList">
             <option *ngFor="let code of nivellementFilteredCodeProprietaireList" [value]="code">{{ code }}</option>
@@ -1713,20 +1686,20 @@
         </div>
         <div class="filter-field">
           <label>{{ 'TBL.service' | translate }}</label>
-          <input type="text" [(ngModel)]="nivellementFilters.service" (input)="applyNivellementFilters()" class="filter-input" placeholder="{{ 'ACT.search' | translate }}">
+          <input type="text" [(ngModel)]="nivellementFilters.service" (input)="applyNivellementFilters()" class="ds-input filter-input" placeholder="{{ 'ACT.search' | translate }}">
         </div>
       </div>
       <div class="filter-row">
         <div class="filter-field">
           <label>{{ 'OPS.Datedébut' | translate }}</label>
-          <input type="date" [(ngModel)]="nivellementFilters.dateDebut" (change)="applyNivellementFilters()" class="filter-input">
+          <input type="date" [(ngModel)]="nivellementFilters.dateDebut" (change)="applyNivellementFilters()" class="ds-input filter-input">
         </div>
         <div class="filter-field">
           <label>{{ 'OPS.Datefin' | translate }}</label>
-          <input type="date" [(ngModel)]="nivellementFilters.dateFin" (change)="applyNivellementFilters()" class="filter-input">
+          <input type="date" [(ngModel)]="nivellementFilters.dateFin" (change)="applyNivellementFilters()" class="ds-input filter-input">
         </div>
         <div class="filter-actions">
-          <button class="btn-export" (click)="exportNivellementOperations()" [disabled]="isExportingNivellement">
+          <button type="button" class="ds-btn ds-btn--secondary btn-export" (click)="exportNivellementOperations()" [disabled]="isExportingNivellement">
             <i class="fas fa-file-excel"></i> {{ isExportingNivellement ? ('ACT.exporting' | translate) : ('ACT.export' | translate) }}
           </button>
         </div>
@@ -1745,7 +1718,7 @@
         </div>
       </div>
       <div class="operations-table-container">
-        <table class="operations-table">
+        <table class="ds-table operations-table">
           <thead>
             <tr>
               <th>{{ 'TBL.date' | translate }}</th>
@@ -1784,13 +1757,13 @@
           <span>{{ nivellementOperations.length }} {{ 'OPS.Opérationsautotal' | translate }}</span>
         </div>
         <div class="pagination-controls">
-          <button class="btn-pagination" (click)="prevNivellementPage()" [disabled]="nivellementCurrentPage === 1">
+          <button type="button" class="ds-btn ds-btn--secondary btn-pagination" (click)="prevNivellementPage()" [disabled]="nivellementCurrentPage === 1">
             <i class="fas fa-chevron-left"></i>{{ 'PAG.previous' | translate }}</button>
           <div class="pagination-indicator">
             <i class="fas fa-list"></i>
             {{ nivellementCurrentPage }}/{{ nivellementTotalPages }}
           </div>
-          <button class="btn-pagination" (click)="nextNivellementPage()" [disabled]="nivellementCurrentPage === nivellementTotalPages">{{ 'PAG.next' | translate }}<i class="fas fa-chevron-right"></i>
+          <button type="button" class="ds-btn ds-btn--secondary btn-pagination" (click)="nextNivellementPage()" [disabled]="nivellementCurrentPage === nivellementTotalPages">{{ 'PAG.next' | translate }}<i class="fas fa-chevron-right"></i>
           </button>
         </div>
       </div>
@@ -1803,7 +1776,7 @@
   <div class="custom-popup-content" (click)="$event.stopPropagation()">
     <div class="popup-header">
       <h3><i class="fas fa-calculator"></i> {{ 'OPS.Régularisationsolde' | translate }}</h3>
-      <button class="close-btn" (click)="closeRegularisationSoldePopup()">
+      <button type="button" class="close-btn" (click)="closeRegularisationSoldePopup()">
         <i class="fas fa-times"></i>
       </button>
     </div>
@@ -1812,34 +1785,34 @@
       <div class="filter-row">
         <div class="filter-field">
           <label>{{ 'TBL.country' | translate }}</label>
-          <select [(ngModel)]="regularisationSoldeFilters.pays" (change)="applyRegularisationSoldeFilters()" class="filter-select">
+          <select [(ngModel)]="regularisationSoldeFilters.pays" (change)="applyRegularisationSoldeFilters()" class="ds-select filter-select">
             <option value="">{{ 'FILT.all' | translate }}</option>
             <option *ngFor="let pays of paysList" [value]="pays">{{ pays }}</option>
           </select>
         </div>
         <div class="filter-field">
           <label>{{ 'TBL.ownerCode' | translate }}</label>
-          <select [(ngModel)]="regularisationSoldeFilters.codeProprietaire" (change)="applyRegularisationSoldeFilters()" class="filter-select">
+          <select [(ngModel)]="regularisationSoldeFilters.codeProprietaire" (change)="applyRegularisationSoldeFilters()" class="ds-select filter-select">
             <option value="">{{ 'FILT.all' | translate }}</option>
             <option *ngFor="let code of codeProprietaireList" [value]="code">{{ code }}</option>
           </select>
         </div>
         <div class="filter-field">
           <label>{{ 'TBL.service' | translate }}</label>
-          <input type="text" [(ngModel)]="regularisationSoldeFilters.service" (input)="applyRegularisationSoldeFilters()" class="filter-input" placeholder="{{ 'ACT.search' | translate }}">
+          <input type="text" [(ngModel)]="regularisationSoldeFilters.service" (input)="applyRegularisationSoldeFilters()" class="ds-input filter-input" placeholder="{{ 'ACT.search' | translate }}">
         </div>
       </div>
       <div class="filter-row">
         <div class="filter-field">
           <label>{{ 'OPS.Datedébut' | translate }}</label>
-          <input type="date" [(ngModel)]="regularisationSoldeFilters.dateDebut" (change)="applyRegularisationSoldeFilters()" class="filter-input">
+          <input type="date" [(ngModel)]="regularisationSoldeFilters.dateDebut" (change)="applyRegularisationSoldeFilters()" class="ds-input filter-input">
         </div>
         <div class="filter-field">
           <label>{{ 'OPS.Datefin' | translate }}</label>
-          <input type="date" [(ngModel)]="regularisationSoldeFilters.dateFin" (change)="applyRegularisationSoldeFilters()" class="filter-input">
+          <input type="date" [(ngModel)]="regularisationSoldeFilters.dateFin" (change)="applyRegularisationSoldeFilters()" class="ds-input filter-input">
         </div>
         <div class="filter-actions">
-          <button class="btn-export" (click)="exportRegularisationSoldeOperations()" [disabled]="isExportingRegularisationSolde">
+          <button type="button" class="ds-btn ds-btn--secondary btn-export" (click)="exportRegularisationSoldeOperations()" [disabled]="isExportingRegularisationSolde">
             <i class="fas fa-file-excel"></i> {{ isExportingRegularisationSolde ? ('ACT.exporting' | translate) : ('ACT.export' | translate) }}
           </button>
         </div>
@@ -1858,7 +1831,7 @@
         </div>
       </div>
       <div class="operations-table-container">
-        <table class="operations-table">
+        <table class="ds-table operations-table">
           <thead>
             <tr>
               <th>{{ 'TBL.date' | translate }}</th>
@@ -1897,13 +1870,13 @@
           <span>{{ regularisationSoldeOperations.length }} {{ 'OPS.Opérationsautotal' | translate }}</span>
         </div>
         <div class="pagination-controls">
-          <button class="btn-pagination" (click)="prevRegularisationSoldePage()" [disabled]="regularisationSoldeCurrentPage === 1">
+          <button type="button" class="ds-btn ds-btn--secondary btn-pagination" (click)="prevRegularisationSoldePage()" [disabled]="regularisationSoldeCurrentPage === 1">
             <i class="fas fa-chevron-left"></i>{{ 'PAG.previous' | translate }}</button>
           <div class="pagination-indicator">
             <i class="fas fa-list"></i>
             {{ regularisationSoldeCurrentPage }}/{{ regularisationSoldeTotalPages }}
           </div>
-          <button class="btn-pagination" (click)="nextRegularisationSoldePage()" [disabled]="regularisationSoldeCurrentPage === regularisationSoldeTotalPages">{{ 'PAG.next' | translate }}<i class="fas fa-chevron-right"></i>
+          <button type="button" class="ds-btn ds-btn--secondary btn-pagination" (click)="nextRegularisationSoldePage()" [disabled]="regularisationSoldeCurrentPage === regularisationSoldeTotalPages">{{ 'PAG.next' | translate }}<i class="fas fa-chevron-right"></i>
           </button>
         </div>
       </div>

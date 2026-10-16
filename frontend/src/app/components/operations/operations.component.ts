@@ -17,11 +17,12 @@ import { MatOptionModule } from '@angular/material/core';
 import { NgxMatSelectSearchModule } from 'ngx-mat-select-search';
 import { normalizeCountryFilterOptions, matchesCountryFilter, countriesMatch } from '../../utils/country-codes.util';
 import { TranslateModule, TranslateService } from '@ngx-translate/core';
+import { DsPaginationComponent } from '../../shared/ui/pagination/ds-pagination.component';
 
 @Component({
     selector: 'app-operations',
     standalone: true,
-    imports: [TranslateModule, CommonModule, FormsModule, ReactiveFormsModule, MatFormFieldModule, MatSelectModule, MatOptionModule, NgxMatSelectSearchModule],
+    imports: [TranslateModule, CommonModule, FormsModule, ReactiveFormsModule, MatFormFieldModule, MatSelectModule, MatOptionModule, NgxMatSelectSearchModule, DsPaginationComponent],
     templateUrl: './operations.component.html',
     styleUrls: ['./operations.component.scss']
 })
