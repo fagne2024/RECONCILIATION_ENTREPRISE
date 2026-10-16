@@ -1,33 +1,31 @@
-@import url('https://fonts.googleapis.com/css2?family=Sora:wght@300;400;500;600&family=Instrument+Serif:ital@0;1&display=swap');
-
 :host {
-  --bg: #f2f0eb;
-  --surface: #fdfcfa;
-  --surface-2: #efeae1;
-  --border: #e6e1d8;
-  --border-strong: #d4cec3;
-  --navy: #1a2535;
-  --text1: #1c1916;
-  --text2: #5a5349;
-  --text3: #9c9388;
+  --bg: var(--color-bg);
+  --surface: var(--color-surface);
+  --surface-2: var(--color-surface-sunken);
+  --border: var(--color-border);
+  --border-strong: var(--color-border-emphasis);
+  --navy: var(--color-nav-bg);
+  --text1: var(--color-text-primary);
+  --text2: var(--color-text-muted);
+  --text3: var(--color-text-muted);
 
-  --blue: #1e4e8c;
-  --blue-l: #e8f0fb;
-  --green: #2a6644;
-  --green-l: #e8f4ee;
-  --amber: #8c4e1a;
-  --amber-l: #fbf0e4;
-  --rose: #7a2848;
-  --rose-l: #fbeaef;
-  --teal: #1a6268;
-  --teal-l: #e4f4f5;
-  --violet: #4a3a8c;
-  --violet-l: #eeeafb;
+  --blue: var(--color-info);
+  --blue-l: var(--color-info-bg);
+  --green: var(--color-success);
+  --green-l: var(--color-success-bg);
+  --amber: var(--color-warning);
+  --amber-l: var(--color-warning-bg);
+  --rose: var(--color-error);
+  --rose-l: var(--color-error-bg);
+  --teal: var(--color-accent);
+  --teal-l: var(--color-accent-soft);
+  --violet: var(--color-duplicate);
+  --violet-l: var(--color-duplicate-bg);
 
-  --r: 18px;
-  --r-sm: 11px;
-  --shadow-soft: 0 1px 8px rgba(28, 25, 22, 0.06);
-  --shadow-card: 0 12px 36px rgba(28, 25, 22, 0.1);
+  --r: var(--radius-xl);
+  --r-sm: var(--radius-lg);
+  --shadow-soft: var(--shadow-sm);
+  --shadow-card: var(--shadow-card);
 }
 
 *,
@@ -40,7 +38,7 @@
   min-height: 100vh;
   background: var(--bg);
   color: var(--text1);
-  font-family: 'Sora', sans-serif;
+  font-family: var(--font-ui);
 }
 
 .topnav {
@@ -60,7 +58,7 @@
   align-items: center;
   gap: 8px;
   color: #fff;
-  font-family: 'Instrument Serif', serif;
+  font-family: var(--font-display);
   font-size: 16px;
 }
 
@@ -143,7 +141,7 @@
 .header-title {
   margin: 0 0 10px;
   color: var(--text1);
-  font-family: 'Instrument Serif', serif;
+  font-family: var(--font-display);
   font-size: 36px;
   font-weight: 400;
   letter-spacing: -0.02em;
@@ -358,7 +356,7 @@
 .card-title {
   margin-bottom: 10px;
   color: var(--text1);
-  font-family: 'Instrument Serif', serif;
+  font-family: var(--font-display);
   font-size: 19px;
   line-height: 1.2;
 }
@@ -505,7 +503,7 @@
   h2 {
     margin: 0;
     font-size: 24px;
-    font-family: 'Instrument Serif', serif;
+    font-family: var(--font-display);
     font-weight: 400;
   }
 

@@ -7,7 +7,7 @@
     <div class="nav-sep"></div>
     <a class="nav-link active" routerLink="/aide">{{ 'LBL.help' | translate }}</a>
     <div class="nav-spacer"></div>
-    <button class="nav-close" type="button" (click)="goHome()" [attr.aria-label]="'AIDE.navAriaCloseHome' | translate">
+    <button class="ds-btn ds-btn--secondary nav-close" type="button" (click)="goHome()" [attr.aria-label]="'AIDE.navAriaCloseHome' | translate">
       <i class="fas fa-times"></i>
     </button>
   </nav>
@@ -20,15 +20,15 @@
     </div>
 
     <div class="header-actions">
-      <button class="header-btn secondary" type="button" (click)="goBack()">
+      <button class="ds-btn ds-btn--secondary header-btn secondary" type="button" (click)="goBack()">
         <i class="fas fa-arrow-left"></i>{{ 'COMMON.actions.back' | translate }}</button>
-      <button class="header-btn" type="button" (click)="goHome()">
+      <button class="ds-btn ds-btn--secondary header-btn" type="button" (click)="goHome()">
         <i class="fas fa-home"></i>{{ 'AIDE.home' | translate }}</button>
     </div>
 
     <div class="search-bar" (click)="focusSearch()">
       <i class="fas fa-search search-icon"></i>
-      <input
+      <input class="ds-input"
         #searchInput
         type="text"
         [(ngModel)]="searchQuery"
@@ -37,7 +37,7 @@
       >
       <button
         *ngIf="searchQuery"
-        class="search-clear"
+        class="ds-btn ds-btn--secondary search-clear"
         type="button"
         (click)="clearSearch(); $event.stopPropagation()"
         [attr.aria-label]="'AIDE.clearSearchAria' | translate">
@@ -81,7 +81,7 @@
               </span>
 
               <button
-                class="card-cta"
+                class="ds-btn ds-btn--secondary card-cta"
                 type="button"
                 [class.disabled]="!option.route"
                 [disabled]="!option.route"
@@ -104,7 +104,7 @@
         </div>
         <h2>{{ 'AIDE.emptyTitle' | translate }}</h2>
         <p>{{ 'AIDE.emptyText' | translate }}</p>
-        <button class="header-btn" type="button" (click)="goToGuide()">{{ 'AIDE.openFullGuide' | translate }}</button>
+        <button class="ds-btn ds-btn--secondary header-btn" type="button" (click)="goToGuide()">{{ 'AIDE.openFullGuide' | translate }}</button>
       </div>
     </ng-template>
 
@@ -116,7 +116,7 @@
         <div class="footer-hint-title">{{ 'AIDE.footerTitle' | translate }}</div>
         <div class="footer-hint-sub">{{ 'AIDE.footerText' | translate }}</div>
       </div>
-      <button class="footer-hint-btn" type="button" (click)="goToGuide()">
+      <button class="ds-btn ds-btn--secondary footer-hint-btn" type="button" (click)="goToGuide()">
         <i class="fas fa-book-open"></i>
         {{ 'AIDE.consultGuide' | translate }}
       </button>
