@@ -13,34 +13,34 @@
     <div class="nav-actions">
       <button
         type="button"
-        class="nav-btn secondary"
+        class="ds-btn ds-btn--secondary nav-btn secondary"
         (click)="refreshStatsData()"
         [disabled]="isLoading"
         title="{{ 'ACT.refreshKeepFilters' | translate }}"
       >
         <i class="fas" [ngClass]="isLoading ? 'fa-spinner fa-spin' : 'fa-sync-alt'"></i> {{ 'STA.refresh' | translate }}
       </button>
-      <button type="button" class="nav-btn secondary" (click)="goBack()">
+      <button type="button" class="ds-btn ds-btn--secondary nav-btn secondary" (click)="goBack()">
         <i class="fas fa-arrow-left"></i>{{ 'COMMON.actions.back' | translate }}</button>
-      <button type="button" class="nav-btn secondary" (click)="startNewReconciliation()" [disabled]="isLoading">
+      <button type="button" class="ds-btn ds-btn--secondary nav-btn secondary" (click)="startNewReconciliation()" [disabled]="isLoading">
         <i class="fas fa-sync"></i> {{ 'STA.newReconciliation' | translate }}
       </button>
-      <button type="button" class="nav-btn secondary" (click)="goToServiceReferences()" [disabled]="isLoading">
+      <button type="button" class="ds-btn ds-btn--secondary nav-btn secondary" (click)="goToServiceReferences()" [disabled]="isLoading">
         <i class="fas fa-book"></i> {{ 'STA.serviceReferences' | translate }}
       </button>
-      <button type="button" class="nav-btn secondary" (click)="openAgencyReportPage()" [disabled]="!getAggregatedStats().length || isLoading">
+      <button type="button" class="ds-btn ds-btn--secondary nav-btn secondary" (click)="openAgencyReportPage()" [disabled]="!getAggregatedStats().length || isLoading">
         <i class="fas fa-chart-bar"></i> {{ 'STA.report' | translate }}
       </button>
-      <button type="button" class="nav-btn secondary" (click)="toggleStatsHistoryScope()" [disabled]="isLoading">
+      <button type="button" class="ds-btn ds-btn--secondary nav-btn secondary" (click)="toggleStatsHistoryScope()" [disabled]="isLoading">
         <i class="fas fa-calendar-alt"></i> {{ (showAllStatsHistory ? 'STA.currentMonth' : 'STA.fullHistory') | translate }}
       </button>
-      <button type="button" class="nav-btn secondary" (click)="exportStatsByWeek()" [disabled]="!getAggregatedStats().length || isLoading" title="{{ 'STA.exportByWeekTitle' | translate }}">
+      <button type="button" class="ds-btn ds-btn--secondary nav-btn secondary" (click)="exportStatsByWeek()" [disabled]="!getAggregatedStats().length || isLoading" title="{{ 'STA.exportByWeekTitle' | translate }}">
         <i class="fas fa-file-excel"></i> {{ 'STA.exportByWeek' | translate }}
       </button>
-      <button type="button" class="nav-btn secondary" (click)="exportStatsByMonth()" [disabled]="!getAggregatedStats().length || isLoading" title="{{ 'STA.exportByMonthTitle' | translate }}">
+      <button type="button" class="ds-btn ds-btn--secondary nav-btn secondary" (click)="exportStatsByMonth()" [disabled]="!getAggregatedStats().length || isLoading" title="{{ 'STA.exportByMonthTitle' | translate }}">
         <i class="fas fa-file-excel"></i> {{ 'STA.exportByMonth' | translate }}
       </button>
-      <button type="button" class="nav-btn primary" (click)="exportStatsComplete()" [disabled]="!getAggregatedStats().length || isLoading" title="{{ 'STA.exportCompleteTitle' | translate }}">
+      <button type="button" class="ds-btn ds-btn--primary nav-btn primary" (click)="exportStatsComplete()" [disabled]="!getAggregatedStats().length || isLoading" title="{{ 'STA.exportCompleteTitle' | translate }}">
         <i class="fas fa-file-excel"></i> {{ 'STA.exportComplete' | translate }}
       </button>
     </div>
@@ -56,17 +56,17 @@
       <div class="hero-kpi-strip">
         <div class="hk-strip-item">
           <span class="hk-strip-label">{{ 'TBL.rows' | translate }}</span>
-          <span class="hk-strip-value">{{ getAggregatedStats().length | number:'1.0-0' }}</span>
+          <span class="hk-strip-value ds-num">{{ getAggregatedStats().length | number:'1.0-0' }}</span>
         </div>
         <div class="hk-strip-sep"></div>
         <div class="hk-strip-item">
           <span class="hk-strip-label">{{ 'TBL.transactions' | translate }}</span>
-          <span class="hk-strip-value">{{ getTotalRecords() | number:'1.0-0' }}</span>
+          <span class="hk-strip-value ds-num">{{ getTotalRecords() | number:'1.0-0' }}</span>
         </div>
         <div class="hk-strip-sep"></div>
         <div class="hk-strip-item">
           <span class="hk-strip-label">{{ 'TBL.totalVolume' | translate }}</span>
-          <span class="hk-strip-value">{{ getTotalVolume() | number:'1.0-0' }}</span>
+          <span class="hk-strip-value ds-num">{{ getTotalVolume() | number:'1.0-0' }}</span>
         </div>
       </div>
     </div>
@@ -123,19 +123,19 @@
                 </div>
                 <div class="filter-group">
                     <label>{{ 'LBL.startDate' | translate }}</label>
-                    <input type="date" formControlName="startDate">
+                    <input class="ds-input" type="date" formControlName="startDate">
                 </div>
                 <div class="filter-group">
                     <label>{{ 'LBL.endDate' | translate }}</label>
-                    <input type="date" formControlName="endDate">
+                    <input class="ds-input" type="date" formControlName="endDate">
                 </div>
                 <div class="filter-group ref-date-group">
                     <label>{{ 'STA.refDateLabel' | translate }}</label>
-                    <input type="date" formControlName="referenceDate" class="ref-date-input">
+                    <input type="date" formControlName="referenceDate" class="ds-input ref-date-input">
                 </div>
                 <div class="filter-group">
                     <label>{{ 'TBL.variation' | translate }}</label>
-                    <select formControlName="variationFilter">
+                    <select class="ds-select" formControlName="variationFilter">
                         <option value="all">{{ 'FILT.allF' | translate }}</option>
 <option value="up">{{ 'STA.varUp' | translate }}</option>
             <option value="dn">{{ 'STA.varDown' | translate }}</option>
@@ -143,7 +143,7 @@
             <option value="na">{{ 'STA.varNew' | translate }}</option>
                     </select>
                 </div>
-                <button type="button" (click)="applyFilters()" class="apply-btn" [disabled]="isLoading">
+                <button type="button" (click)="applyFilters()" class="ds-btn ds-btn--secondary apply-btn" [disabled]="isLoading">
 {{ (isLoading ? 'STA.processing' : 'STA.applyFilters') | translate }}
         </button>
             </form>
@@ -164,33 +164,33 @@
 
             <!-- Boutons d'action déplacés ici -->
             <div class="action-buttons" style="margin-bottom: 10px;">
-                <button class="new-reconciliation-btn" (click)="startNewReconciliation()" [disabled]="isLoading">
+                <button type="button" class="ds-btn ds-btn--secondary new-reconciliation-btn" (click)="startNewReconciliation()" [disabled]="isLoading">
                     🔄 {{ 'STA.newReconciliation' | translate }}
                 </button>
-                <button class="report-btn" (click)="openAgencyReportPage()" [disabled]="!getAggregatedStats().length || isLoading">
+                <button type="button" class="ds-btn ds-btn--secondary report-btn" (click)="openAgencyReportPage()" [disabled]="!getAggregatedStats().length || isLoading">
                     📊 {{ 'STA.report' | translate }}
                 </button>
-                <button class="export-btn" (click)="exportStats()" [disabled]="!getAggregatedStats().length || isLoading">
+                <button type="button" class="ds-btn ds-btn--secondary export-btn" (click)="exportStats()" [disabled]="!getAggregatedStats().length || isLoading">
                     📥 {{ 'STA.exportByDay' | translate }}
                 </button>
-                <button class="export-btn secondary" (click)="exportStatsByWeek()" [disabled]="!getAggregatedStats().length || isLoading">
+                <button type="button" class="ds-btn ds-btn--secondary export-btn secondary" (click)="exportStatsByWeek()" [disabled]="!getAggregatedStats().length || isLoading">
                     📅 {{ 'STA.exportByWeek' | translate }}
                 </button>
-                <button class="export-btn secondary" (click)="exportStatsByMonth()" [disabled]="!getAggregatedStats().length || isLoading">
+                <button type="button" class="ds-btn ds-btn--secondary export-btn secondary" (click)="exportStatsByMonth()" [disabled]="!getAggregatedStats().length || isLoading">
                     📆 {{ 'STA.exportByMonth' | translate }}
                 </button>
-                <button class="export-btn" (click)="exportStatsComplete()" [disabled]="!getAggregatedStats().length || isLoading">
+                <button type="button" class="ds-btn ds-btn--secondary export-btn" (click)="exportStatsComplete()" [disabled]="!getAggregatedStats().length || isLoading">
                     📥 {{ 'STA.exportComplete' | translate }}
                 </button>
-                <button class="export-btn secondary" (click)="goToServiceReferences()" [disabled]="isLoading">
+                <button type="button" class="ds-btn ds-btn--secondary export-btn secondary" (click)="goToServiceReferences()" [disabled]="isLoading">
                     📚 {{ 'STA.serviceReferences' | translate }}
                 </button>
-                <button class="bulk-delete-btn" (click)="deleteSelectedSummaries()" 
+                <button type="button" class="ds-btn ds-btn--secondary bulk-delete-btn" (click)="deleteSelectedSummaries()" 
                         [disabled]="!hasSelectedItems() || isLoading"
                         *ngIf="hasSelectedItems()">
                     🗑️ {{ 'STA.deleteSelected' | translate: { count: getSelectedCount() } }}
                 </button>
-                <button class="clear-selection-btn" (click)="clearSelection()" 
+                <button type="button" class="ds-btn ds-btn--secondary clear-selection-btn" (click)="clearSelection()" 
                         [disabled]="!hasSelectedItems() || isLoading"
                         *ngIf="hasSelectedItems()">
                     ✖️ {{ 'STA.deselectAll' | translate }}
@@ -229,27 +229,27 @@
                 <div class="report-kpi-strip">
                     <div class="report-kpi-card">
                         <span class="report-kpi-label">{{ 'STA.totalVolume' | translate }}</span>
-                        <span class="report-kpi-value">{{ visibleReportSummary.totalVolume | number:'1.0-0' }}</span>
+                        <span class="report-kpi-value ds-num">{{ visibleReportSummary.totalVolume | number:'1.0-0' }}</span>
                         <span class="report-kpi-sub">{{ 'STA.overDays' | translate: { count: reportDateKeys.length } }}</span>
                     </div>
                     <div class="report-kpi-card">
                         <span class="report-kpi-label">{{ 'STA.totalTrxCount' | translate }}</span>
-                        <span class="report-kpi-value">{{ visibleReportSummary.totalCount | number:'1.0-0' }}</span>
+                        <span class="report-kpi-value ds-num">{{ visibleReportSummary.totalCount | number:'1.0-0' }}</span>
                         <span class="report-kpi-sub">{{ 'STA.transactions' | translate }}</span>
                     </div>
                     <div class="report-kpi-card">
                         <span class="report-kpi-label">{{ 'STA.activeAgencies' | translate }}</span>
-                        <span class="report-kpi-value">{{ visibleReportSummary.activeAgencies | number:'1.0-0' }}</span>
+                        <span class="report-kpi-value ds-num">{{ visibleReportSummary.activeAgencies | number:'1.0-0' }}</span>
                         <span class="report-kpi-sub">{{ 'STA.overSelection' | translate }}</span>
                     </div>
                     <div class="report-kpi-card">
                         <span class="report-kpi-label">{{ 'STA.avgVolumePerDay' | translate }}</span>
-                        <span class="report-kpi-value">{{ visibleReportSummary.avgVolumePerDay | number:'1.0-0' }}</span>
+                        <span class="report-kpi-value ds-num">{{ visibleReportSummary.avgVolumePerDay | number:'1.0-0' }}</span>
                         <span class="report-kpi-sub">XOF</span>
                     </div>
                     <div class="report-kpi-card">
                         <span class="report-kpi-label">{{ 'STA.dailyPeak' | translate }}</span>
-                        <span class="report-kpi-value">{{ visibleReportSummary.peakDayVolume | number:'1.0-0' }}</span>
+                        <span class="report-kpi-value ds-num">{{ visibleReportSummary.peakDayVolume | number:'1.0-0' }}</span>
                         <span class="report-kpi-sub">
                             {{ visibleReportSummary.peakDayKey ? formatReportDateLabel(visibleReportSummary.peakDayKey) : ('STA.noData' | translate) }}
                         </span>
@@ -259,7 +259,7 @@
                 <div class="report-toolbar">
                     <div class="report-filter-group">
                         <label>{{ 'TBL.agency' | translate }}</label>
-                        <select [value]="reportSelectedAgency" (change)="onReportAgencyChange($event)">
+                        <select class="ds-select" [value]="reportSelectedAgency" (change)="onReportAgencyChange($event)">
                             <option value="all">{{ 'FILT.allF' | translate }}</option>
                             <option *ngFor="let agency of reportAgencyOptions; trackBy: trackByString" [value]="agency">{{ agency }}</option>
                         </select>
@@ -267,7 +267,7 @@
 
                     <div class="report-filter-group">
                         <label>{{ 'ACT.show' | translate }}</label>
-                        <select [value]="reportMode" (change)="onReportModeChange($event)">
+                        <select class="ds-select" [value]="reportMode" (change)="onReportModeChange($event)">
 <option value="both">{{ 'STA.modeBoth' | translate }}</option>
             <option value="vol">{{ 'STA.modeVolume' | translate }}</option>
             <option value="trx">{{ 'STA.modeTrx' | translate }}</option>
@@ -278,7 +278,7 @@
                         <label>{{ 'STA.search' | translate }}</label>
                         <input
                             type="text"
-                            class="report-search-input"
+                            class="ds-input report-search-input"
                             [value]="reportSearchTerm"
                             (input)="onReportSearchChange($event)"
                             placeholder="{{ 'STA.searchAgency' | translate }}"
@@ -288,10 +288,10 @@
                     <div class="report-toolbar-spacer"></div>
                     <div class="report-chip">{{ 'STA.agencyCount' | translate: { count: visibleReportRows.length } }}</div>
                     <div class="report-export-actions">
-                        <button class="report-export-btn excel" (click)="exportAgencyReportExcel()" [disabled]="!visibleReportRows.length || isLoading">
+                        <button type="button" class="ds-btn ds-btn--secondary report-export-btn excel" (click)="exportAgencyReportExcel()" [disabled]="!visibleReportRows.length || isLoading">
                             <i class="fas fa-file-excel"></i> Excel
                         </button>
-                        <button class="report-export-btn pdf" (click)="exportAgencyReportPdf()" [disabled]="!visibleReportRows.length || isLoading">
+                        <button type="button" class="ds-btn ds-btn--secondary report-export-btn pdf" (click)="exportAgencyReportPdf()" [disabled]="!visibleReportRows.length || isLoading">
                             <i class="fas fa-file-pdf"></i> PDF
                         </button>
                     </div>
@@ -299,7 +299,7 @@
 
                 <div *ngIf="visibleReportRows.length > 0; else noReportRows" class="agency-report-table-card">
                     <div class="agency-report-table-scroll">
-                        <table class="agency-report-table">
+                        <table class="ds-table agency-report-table">
                             <thead>
                                 <tr>
                                     <th class="sticky report-col-index">#</th>
@@ -378,7 +378,7 @@
             </section>
 
             <div class="details-table" [class.details-table-stats-grid]="showVariation">
-                <table>
+                <table class="ds-table">
                     <colgroup *ngIf="showVariation">
                         <col class="tbl-col-check" />
                         <col /><col /><col /><col /><col /><col />
@@ -407,7 +407,7 @@
                                 [style.maxWidth.px]="variationColumnWidthPx">
                                 <div class="var-col-head">
                                     <span class="var-col-title">{{ 'STA.variationTitle' | translate }}</span>
-                                    <button type="button" class="var-col-more" tabindex="-1" aria-hidden="true" title="">
+                                    <button type="button" class="ds-btn ds-btn--secondary var-col-more" tabindex="-1" aria-hidden="true" title="">
                                         <i class="fas fa-ellipsis-v" aria-hidden="true"></i>
                                     </button>
                                 </div>
@@ -458,7 +458,7 @@
                                 </ng-container>
                             </td>
                             <td>
-                                <button class="delete-btn" (click)="deleteSummary(summary)" [disabled]="isLoading" title="{{ 'STA.deleteStat' | translate }}">
+                                <button type="button" class="ds-btn ds-btn--secondary delete-btn" (click)="deleteSummary(summary)" [disabled]="isLoading" title="{{ 'STA.deleteStat' | translate }}">
                                     🗑️
                                 </button>
                             </td>
@@ -468,7 +468,7 @@
                 <div class="pagination-controls">
                     <button
                         type="button"
-                        class="stats-view-more-btn"
+                        class="ds-btn ds-btn--secondary stats-view-more-btn"
                         *ngIf="showAllStatsTableRows || canToggleStatsTableExpand"
                         (click)="toggleShowAllStatsTableRows()"
                         [disabled]="isLoading">
@@ -480,7 +480,7 @@
                     <span class="pagination-rows-hint" *ngIf="showAllStatsTableRows">
                         {{ 'STA.rowsDisplayed' | translate: { count: getAggregatedStats().length } }}
                     </span>
-                    <button (click)="prevStatsPage()" [disabled]="statsPage === 1 || isLoading || showAllStatsTableRows">
+                    <button class="ds-btn ds-btn--secondary" type="button" (click)="prevStatsPage()" [disabled]="statsPage === 1 || isLoading || showAllStatsTableRows">
                         <i class="fas fa-chevron-left"></i>{{ 'PAG.previous' | translate }}</button>
                     
                     <div class="pagination-indicators">
@@ -492,7 +492,7 @@
                         </span>
                     </div>
                     
-                    <button (click)="nextStatsPage()" [disabled]="statsPage === totalPages || isLoading || showAllStatsTableRows">{{ 'PAG.next' | translate }}<i class="fas fa-chevron-right"></i>
+                    <button class="ds-btn ds-btn--secondary" type="button" (click)="nextStatsPage()" [disabled]="statsPage === totalPages || isLoading || showAllStatsTableRows">{{ 'PAG.next' | translate }}<i class="fas fa-chevron-right"></i>
                     </button>
                 </div>
             </div>
