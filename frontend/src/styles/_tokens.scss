@@ -1,0 +1,285 @@
+// Design tokens ReconciliApp.
+// Source unique des valeurs visuelles rÃ©utilisables. Les tokens mÃ©tier
+// (statuts, types d'opÃ©rations) sont strictement visuels : ils ne dÃ©terminent
+// jamais un statut.
+//
+// ThÃ¨mes : `:root` porte le thÃ¨me clair, `[data-theme='dark']` le thÃ¨me sombre.
+// L'attribut est posÃ© sur <html> par le script de `index.html` puis par
+// `ThemeService` (choix manuel persistant ou prÃ©fÃ©rence systÃ¨me).
+
+// ---------------------------------------------------------------------------
+// Couleurs par thÃ¨me
+// ---------------------------------------------------------------------------
+
+@mixin light-colors {
+  color-scheme: light;
+
+  --color-bg: #F2EEE4;
+  --color-surface: #FBF9F4;
+  --color-surface-sunken: #F7F4EC;
+  --color-surface-raised: #FFFFFF;
+  --color-overlay-backdrop: rgba(31, 42, 46, 0.45);
+
+  --color-text-primary: #1F2A2E;
+  // #6B7377 (rÃ©fÃ©rence) ne passe pas 4,5:1 sur le fond.
+  --color-text-muted: #5F676B;
+  --color-text-inverse: #FBF9F4;
+
+  // Bordure dÃ©corative (sÃ©parateurs) ; les limites de contrÃ´les utilisent
+  // `--color-border-strong`, seule Ã  atteindre 3:1.
+  --color-border: #E0DACB;
+  --color-border-emphasis: #CBC3B1;
+  --color-border-strong: #857D6E;
+
+  --color-accent: #1D5C63;
+  --color-accent-hover: #174C52;
+  --color-accent-contrast: #FFFFFF;
+  --color-accent-soft: color-mix(in srgb, var(--color-accent) 12%, var(--color-surface));
+
+  --color-nav-bg: #1D5C63;
+  --color-nav-bg-hover: #174C52;
+  --color-nav-text: #FBF9F4;
+  --color-nav-text-muted: color-mix(in srgb, var(--color-nav-text) 78%, var(--color-nav-bg));
+
+  // Couleurs sÃ©mantiques : `-text` pour le texte et les graphiques,
+  // `-bg` / `-border` dÃ©rivÃ©s pour les surfaces teintÃ©es.
+  --color-success: #356D4C;
+  --color-warning: #855A0E;
+  --color-error: #A5453A;
+  --color-info: #3E5C8A;
+  --color-duplicate: #6A4C8C;
+  --color-neutral: #5F676B;
+
+  --color-type-appro: #2B6E6A;
+  --color-type-compense: #85502A;
+  --color-type-nivellement: #55607A;
+  --color-type-crossborder: #8A3F6E;
+
+  --tint-bg: 14%;
+  --tint-border: 38%;
+
+  --shadow-sm: 0 1px 2px rgba(31, 42, 46, 0.06);
+  --shadow-card: 0 2px 16px rgba(31, 42, 46, 0.07);
+  --shadow-overlay: 0 8px 40px rgba(31, 42, 46, 0.16);
+
+  --color-hover: rgba(31, 42, 46, 0.05);
+  --color-pressed: rgba(31, 42, 46, 0.1);
+}
+
+@mixin dark-colors {
+  color-scheme: dark;
+
+  --color-bg: #161B1D;
+  --color-surface: #1E2527;
+  --color-surface-sunken: #1A2022;
+  --color-surface-raised: #252D30;
+  --color-overlay-backdrop: rgba(0, 0, 0, 0.6);
+
+  --color-text-primary: #ECE8DD;
+  --color-text-muted: #9AA3A6;
+  --color-text-inverse: #161B1D;
+
+  --color-border: #2C3639;
+  --color-border-emphasis: #3A4548;
+  --color-border-strong: #6E7A7E;
+
+  --color-accent: #6FB7BE;
+  --color-accent-hover: #8AC7CD;
+  --color-accent-contrast: #161B1D;
+  --color-accent-soft: color-mix(in srgb, var(--color-accent) 12%, var(--color-surface));
+
+  --color-nav-bg: #12282B;
+  --color-nav-bg-hover: #1A3538;
+  --color-nav-text: #ECE8DD;
+  --color-nav-text-muted: color-mix(in srgb, var(--color-nav-text) 78%, var(--color-nav-bg));
+
+  // Variantes Ã©claircies : les couleurs du thÃ¨me clair tombent sous 3,3:1
+  // sur la surface sombre.
+  --color-success: #7CC39A;
+  --color-warning: #E3B45E;
+  --color-error: #EE8E82;
+  --color-info: #8FB2E8;
+  --color-duplicate: #B79BDD;
+  --color-neutral: #A9B1B4;
+
+  --color-type-appro: #6CC2BA;
+  --color-type-compense: #E0A47A;
+  --color-type-nivellement: #A9B4CF;
+  --color-type-crossborder: #DA94C2;
+
+  --tint-bg: 18%;
+  --tint-border: 45%;
+
+  --shadow-sm: 0 1px 2px rgba(0, 0, 0, 0.4);
+  --shadow-card: 0 2px 16px rgba(0, 0, 0, 0.35);
+  --shadow-overlay: 0 8px 40px rgba(0, 0, 0, 0.55);
+
+  --color-hover: rgba(236, 232, 221, 0.06);
+  --color-pressed: rgba(236, 232, 221, 0.12);
+}
+
+// ---------------------------------------------------------------------------
+// Tokens indÃ©pendants du thÃ¨me
+// ---------------------------------------------------------------------------
+
+@mixin static-tokens {
+  // Typographie
+  --font-ui: 'Sora', system-ui, -apple-system, 'Segoe UI', Roboto, sans-serif;
+  --font-display: 'Instrument Serif', Georgia, 'Times New Roman', serif;
+  --font-mono: ui-monospace, 'Cascadia Code', Consolas, 'Courier New', monospace;
+
+  --text-xs: 0.6875rem;   // 11px
+  --text-sm: 0.75rem;     // 12px
+  --text-md: 0.8125rem;   // 13px
+  --text-base: 0.875rem;  // 14px
+  --text-lg: 1rem;        // 16px
+  --text-xl: 1.25rem;     // 20px
+  --text-2xl: 1.5rem;     // 24px
+  --text-3xl: 2rem;       // 32px
+  --text-display: 2.5rem; // 40px
+
+  --leading-tight: 1.2;
+  --leading-snug: 1.35;
+  --leading-normal: 1.5;
+
+  --weight-regular: 400;
+  --weight-medium: 500;
+  --weight-semibold: 600;
+
+  // Espacements (base 4px)
+  --space-0: 0;
+  --space-1: 0.25rem;
+  --space-2: 0.5rem;
+  --space-3: 0.75rem;
+  --space-4: 1rem;
+  --space-5: 1.25rem;
+  --space-6: 1.5rem;
+  --space-8: 2rem;
+  --space-10: 2.5rem;
+  --space-12: 3rem;
+
+  // Rayons
+  --radius-sm: 6px;
+  --radius-md: 8px;
+  --radius-lg: 12px;
+  --radius-xl: 18px;
+  --radius-full: 999px;
+
+  // ContrÃ´les et icÃ´nes
+  --control-h-sm: 28px;
+  --control-h-md: 36px;
+  --control-h-lg: 44px;
+  --icon-sm: 14px;
+  --icon-md: 16px;
+  --icon-lg: 20px;
+
+  // Bordures et focus
+  --border-width: 1px;
+  --focus-ring-width: 2px;
+  --focus-ring-offset: 2px;
+  --focus-ring-color: var(--color-accent);
+  --opacity-disabled: 0.55;
+
+  // Mouvement
+  --duration-fast: 120ms;
+  --duration-base: 200ms;
+  --duration-slow: 300ms;
+  --ease-standard: cubic-bezier(0.2, 0, 0, 1);
+
+  // Superpositions. L'overlay CDK (mat-select, datepicker) doit rester
+  // au-dessus des modales.
+  --z-base: 0;
+  --z-raised: 1;
+  --z-sticky: 100;
+  --z-nav: 1000;
+  --z-dropdown: 1100;
+  --z-modal: 10000;
+  --z-overlay: 11000;
+  --z-toast: 12000;
+}
+
+// ---------------------------------------------------------------------------
+// Tokens dÃ©rivÃ©s (sÃ©mantique mÃ©tier). DÃ©clarÃ©s aprÃ¨s les couleurs pour que
+// `color-mix()` se rÃ©Ã©value lorsque le thÃ¨me change.
+// ---------------------------------------------------------------------------
+
+@mixin tone($name, $source) {
+  --#{$name}-text: var(--#{$source});
+  --#{$name}-solid: var(--#{$source});
+  --#{$name}-bg: color-mix(in srgb, var(--#{$source}) var(--tint-bg), var(--color-surface));
+  --#{$name}-border: color-mix(in srgb, var(--#{$source}) var(--tint-border), var(--color-surface));
+}
+
+@mixin derived-tokens {
+  @include tone('color-success', 'color-success');
+  @include tone('color-warning', 'color-warning');
+  @include tone('color-error', 'color-error');
+  @include tone('color-info', 'color-info');
+  @include tone('color-duplicate', 'color-duplicate');
+  @include tone('color-neutral', 'color-neutral');
+
+  // Statuts de rÃ©conciliation
+  @include tone('status-matched', 'color-success');          // RapprochÃ©
+  @include tone('status-amount-gap', 'color-warning');       // Ã‰cart de montant
+  @include tone('status-missing-statement', 'color-error');  // Absent du relevÃ©
+  @include tone('status-missing-bo', 'color-info');          // Absent du BO
+  @include tone('status-duplicate', 'color-duplicate');      // Doublon
+
+  // Statuts de traitement
+  @include tone('status-done', 'color-success');             // OK / TraitÃ©
+  @include tone('status-in-progress', 'color-info');         // En cours
+  @include tone('status-pending', 'color-neutral');          // En attente
+  @include tone('status-failed', 'color-error');             // NOK / Erreur
+
+  // Types d'opÃ©rations
+  @include tone('type-appro', 'color-type-appro');
+  @include tone('type-compense', 'color-type-compense');
+  @include tone('type-nivellement', 'color-type-nivellement');
+  @include tone('type-crossborder', 'color-type-crossborder');
+}
+
+// ---------------------------------------------------------------------------
+// Alias de compatibilitÃ© avec les variables `--rd-*` copiÃ©es dans les
+// composants. Ils ne s'appliquent qu'aux pages dont le bloc local a Ã©tÃ© retirÃ©.
+// ---------------------------------------------------------------------------
+
+@mixin rd-aliases {
+  --rd-bg: var(--color-bg);
+  --rd-surface: var(--color-surface);
+  --rd-surface2: color-mix(in srgb, var(--color-surface) 85%, transparent);
+  --rd-border: var(--color-border);
+  --rd-border2: var(--color-border-emphasis);
+  --rd-navy: var(--color-nav-bg);
+  --rd-navy2: var(--color-nav-bg-hover);
+  --rd-text1: var(--color-text-primary);
+  --rd-text2: var(--color-text-muted);
+  --rd-text3: var(--color-text-muted);
+  --rd-green: var(--color-success-text);
+  --rd-green-l: var(--color-success-bg);
+  --rd-green-m: var(--color-success-solid);
+  --rd-amber: var(--color-warning-text);
+  --rd-amber-l: var(--color-warning-bg);
+  --rd-amber-m: var(--color-warning-solid);
+  --rd-blue: var(--color-info-text);
+  --rd-blue-l: var(--color-info-bg);
+  --rd-blue-m: var(--color-info-solid);
+  --rd-red: var(--color-error-text);
+  --rd-red-l: var(--color-error-bg);
+  --rd-red-m: var(--color-error-solid);
+  --rd-r: var(--radius-xl);
+  --rd-r-sm: var(--radius-lg);
+  --rd-shadow: var(--shadow-card);
+  --rd-shadow-lg: var(--shadow-overlay);
+}
+
+:root {
+  @include static-tokens;
+  @include light-colors;
+  @include derived-tokens;
+  @include rd-aliases;
+}
+
+:root[data-theme='dark'] {
+  @include dark-colors;
+  @include derived-tokens;
+}

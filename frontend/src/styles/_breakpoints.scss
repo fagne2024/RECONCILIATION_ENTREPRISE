@@ -1,0 +1,18 @@
+// Points de rupture standard. Les variables CSS ne sont pas utilisables dans
+// les requêtes @media : ces valeurs restent donc en Sass.
+$bp-sm: 480px;
+$bp-md: 768px;
+$bp-lg: 1200px;
+$bp-xl: 1600px;
+
+@mixin down($bp) {
+  @media (max-width: $bp - 0.02px) {
+    @content;
+  }
+}
+
+@mixin up($bp) {
+  @media (min-width: $bp) {
+    @content;
+  }
+}

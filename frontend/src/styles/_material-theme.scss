@@ -1,0 +1,190 @@
+// Thème Angular Material 14 aligné sur les tokens (remplace indigo-pink.css).
+// Material compile ses couleurs en Sass : les valeurs ci-dessous doivent rester
+// synchronisées avec `--color-accent` et `--color-error` de `_tokens.scss`.
+@use '@angular/material' as mat;
+
+$ds-teal-palette: (
+  50: #EDF2F3,
+  100: #D2DEE0,
+  200: #A9C1C4,
+  300: #80A4A8,
+  400: #4F8085,
+  500: #1D5C63,
+  600: #1A5157,
+  700: #16464B,
+  800: #133B3F,
+  900: #0F2E32,
+  A100: #BBCED0,
+  A200: #779DA1,
+  A400: #3F747A,
+  A700: #174A4F,
+  contrast: (
+    50: #1F2A2E,
+    100: #1F2A2E,
+    200: #1F2A2E,
+    300: #1F2A2E,
+    400: #FFFFFF,
+    500: #FFFFFF,
+    600: #FFFFFF,
+    700: #FFFFFF,
+    800: #FFFFFF,
+    900: #FFFFFF,
+    A100: #1F2A2E,
+    A200: #1F2A2E,
+    A400: #FFFFFF,
+    A700: #FFFFFF,
+  ),
+);
+
+$ds-red-palette: (
+  50: #F8F0EF,
+  100: #EDDAD8,
+  200: #DDB8B4,
+  300: #CD9791,
+  400: #B96E65,
+  500: #A5453A,
+  600: #913D33,
+  700: #7D342C,
+  800: #6A2C25,
+  900: #53231D,
+  A100: #E4C7C4,
+  A200: #C98F89,
+  A400: #B36158,
+  A700: #84372E,
+  contrast: (
+    50: #1F2A2E,
+    100: #1F2A2E,
+    200: #1F2A2E,
+    300: #1F2A2E,
+    400: #1F2A2E,
+    500: #FFFFFF,
+    600: #FFFFFF,
+    700: #FFFFFF,
+    800: #FFFFFF,
+    900: #FFFFFF,
+    A100: #1F2A2E,
+    A200: #1F2A2E,
+    A400: #FFFFFF,
+    A700: #FFFFFF,
+  ),
+);
+
+$ds-teal-dark-palette: (
+  50: #F3F9FA,
+  100: #E2F1F2,
+  200: #C8E4E6,
+  300: #AED7DB,
+  400: #8FC7CC,
+  500: #6FB7BE,
+  600: #62A1A7,
+  700: #548B90,
+  800: #47757A,
+  900: #385C5F,
+  A100: #D4E9EC,
+  A200: #A9D4D8,
+  A400: #85C2C8,
+  A700: #599298,
+  contrast: (
+    50: #161B1D,
+    100: #161B1D,
+    200: #161B1D,
+    300: #161B1D,
+    400: #161B1D,
+    500: #161B1D,
+    600: #161B1D,
+    700: #161B1D,
+    800: #FFFFFF,
+    900: #FFFFFF,
+    A100: #161B1D,
+    A200: #161B1D,
+    A400: #161B1D,
+    A700: #161B1D,
+  ),
+);
+
+$ds-red-dark-palette: (
+  50: #FEF6F5,
+  100: #FCE8E6,
+  200: #F9D4D0,
+  300: #F5C0B9,
+  400: #F2A79E,
+  500: #EE8E82,
+  600: #D17D72,
+  700: #B56C63,
+  800: #985B53,
+  900: #774741,
+  A100: #FADDDA,
+  A200: #F5BBB4,
+  A400: #F19F95,
+  A700: #BE7268,
+  contrast: (
+    50: #161B1D,
+    100: #161B1D,
+    200: #161B1D,
+    300: #161B1D,
+    400: #161B1D,
+    500: #161B1D,
+    600: #161B1D,
+    700: #161B1D,
+    800: #FFFFFF,
+    900: #FFFFFF,
+    A100: #161B1D,
+    A200: #161B1D,
+    A400: #161B1D,
+    A700: #161B1D,
+  ),
+);
+
+$ds-typography: mat.define-typography-config(
+  $font-family: "'Sora', system-ui, -apple-system, 'Segoe UI', Roboto, sans-serif",
+);
+
+$ds-light-theme: mat.define-light-theme((
+  color: (
+    primary: mat.define-palette($ds-teal-palette, 500, 300, 700),
+    accent: mat.define-palette($ds-teal-palette, 500, 300, 700),
+    warn: mat.define-palette($ds-red-palette, 500, 300, 700),
+  ),
+));
+
+$ds-dark-theme: mat.define-dark-theme((
+  color: (
+    primary: mat.define-palette($ds-teal-dark-palette, 500, 300, 700),
+    accent: mat.define-palette($ds-teal-dark-palette, 500, 300, 700),
+    warn: mat.define-palette($ds-red-dark-palette, 500, 300, 700),
+  ),
+));
+
+@include mat.core($ds-typography);
+@include mat.all-component-themes($ds-light-theme);
+
+// Seuls les composants Material présents dans les templates reçoivent des
+// couleurs sombres ; en ajouter un ici s'il est introduit dans une page.
+:root[data-theme='dark'] {
+  @include mat.core-color($ds-dark-theme);
+  @include mat.form-field-color($ds-dark-theme);
+  @include mat.input-color($ds-dark-theme);
+  @include mat.select-color($ds-dark-theme);
+  @include mat.autocomplete-color($ds-dark-theme);
+  @include mat.datepicker-color($ds-dark-theme);
+  @include mat.button-color($ds-dark-theme);
+  @include mat.icon-color($ds-dark-theme);
+  @include mat.tooltip-color($ds-dark-theme);
+  @include mat.progress-spinner-color($ds-dark-theme);
+  @include mat.card-color($ds-dark-theme);
+  @include mat.expansion-color($ds-dark-theme);
+
+  // Les surfaces Material sombres par défaut (#303030, #424242) sont
+  // remplacées par celles du design system.
+  .mat-select-panel,
+  .mat-autocomplete-panel,
+  .mat-datepicker-content,
+  .mat-menu-panel,
+  .mat-dialog-container,
+  .mat-card,
+  .mat-expansion-panel,
+  .mat-tooltip {
+    background: var(--color-surface-raised);
+    color: var(--color-text-primary);
+  }
+}

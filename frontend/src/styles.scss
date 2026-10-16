@@ -1,4 +1,8 @@
 /* You can add global styles to this file, and also import other style files */
+@use './styles/tokens';
+@use './styles/material-theme';
+@use './styles/base';
+
 @import url('https://fonts.googleapis.com/css2?family=Roboto:wght@300;400;500;700&display=swap');
 @import './app/styles/dashboard-filters';
 
@@ -45,10 +49,10 @@ html {
 }
 
 body {
-    font-family: 'Roboto', sans-serif;
+    font-family: var(--font-ui);
     line-height: 1.6;
-    color: var(--dark-color);
-    background-color: var(--light-color);
+    color: var(--color-text-primary);
+    background-color: var(--color-bg);
     min-height: 100vh;
     height: 100%;
     overflow-y: auto;
@@ -233,7 +237,7 @@ form, .form-group, .form-section {
     }
 } 
 html, body { height: 100%; }
-body { margin: 0; font-family: Roboto, "Helvetica Neue", sans-serif; }
+body { margin: 0; font-family: var(--font-ui); }
 
 /* Angular CDK (mat-select, menus, dialogs overlay) : défaut ~1000, sinon les panneaux passent derrière
    les modales du dashboard (2000) et le modal graphique (10000). */

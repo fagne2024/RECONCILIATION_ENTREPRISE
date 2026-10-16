@@ -6,6 +6,23 @@
     <base href="/">
     <meta name="viewport" content="width=device-width, initial-scale=1">
     <link rel="icon" type="image/x-icon" href="favicon.ico">
+    <script>
+        // Applique le thème avant le premier rendu ; doit rester aligné sur ThemeService.
+        (function () {
+            var root = document.documentElement;
+            var mode = 'light';
+            try {
+                var stored = localStorage.getItem('reconciliation.theme');
+                if (stored === 'light' || stored === 'dark' || stored === 'system') {
+                    mode = stored;
+                }
+            } catch (e) {}
+            var dark = mode === 'dark' || (mode === 'system' && !!window.matchMedia
+                && window.matchMedia('(prefers-color-scheme: dark)').matches);
+            root.setAttribute('data-theme', dark ? 'dark' : 'light');
+            root.setAttribute('data-theme-mode', mode);
+        })();
+    </script>
     <link href="https://fonts.googleapis.com/icon?family=Material+Icons" rel="stylesheet">
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0-beta3/css/all.min.css">
     <script>
@@ -57,7 +74,6 @@
     <link rel="preconnect" href="https://fonts.gstatic.com">
     <link href="https://fonts.googleapis.com/css2?family=Roboto:wght@300;400;500&display=swap" rel="stylesheet">
     <link href="https://fonts.googleapis.com/css2?family=Sora:wght@300;400;500;600&family=Instrument+Serif:ital@0;1&display=swap" rel="stylesheet">
-    <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&display=swap" rel="stylesheet">
 </head>
 <body class="mat-typography">
     <app-root></app-root>

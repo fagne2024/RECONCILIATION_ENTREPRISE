@@ -34,6 +34,14 @@ const THEME_VAR_NAMES = [
   '--light-color'
 ];
 
+export type ThemeMode = 'light' | 'dark' | 'system';
+
+const THEME_MODE_STORAGE_KEY = 'reconciliation.theme';
+// Doit rester aligné sur le script de `index.html`. Tant que les pages ne sont
+// pas toutes migrées sur les tokens, la préférence système n'est suivie que sur
+// choix explicite : les pages non migrées ne supportent pas le thème sombre.
+const DEFAULT_THEME_MODE: ThemeMode = 'light';
+
 const FALLBACK_THEME: AppTheme = {
   primary: '#667eea',
   primaryDark: '#5a6fd6',
@@ -54,11 +62,47 @@ export class ThemeService {
 
   readonly theme$ = new BehaviorSubject<AppTheme | null>(this.readLocal());
 
+  readonly themeMode$ = new BehaviorSubject<ThemeMode>(readThemeMode());
+
+  private readonly darkSchemeQuery: MediaQueryList | null =
+    typeof window !== 'undefined' && window.matchMedia
+      ? window.matchMedia('(prefers-color-scheme: dark)')
+      : null;
+
   constructor(private http: HttpClient) {
     const current = this.theme$.value;
     if (current) {
       this.applyCssVars(current);
     }
+    this.applyThemeMode(this.themeMode$.value);
+    this.darkSchemeQuery?.addEventListener('change', () => {
+      if (this.themeMode$.value === 'system') {
+        this.applyThemeMode('system');
+      }
+    });
+  }
+
+  /** Choix manuel du thème (persistant). `system` suit `prefers-color-scheme`. */
+  setThemeMode(mode: ThemeMode): void {
+    try {
+      localStorage.setItem(THEME_MODE_STORAGE_KEY, mode);
+    } catch {
+      // stockage indisponible : le choix vaut pour la session en cours
+    }
+    this.applyThemeMode(mode);
+    this.themeMode$.next(mode);
+  }
+
+  /** Thème effectivement affiché, après résolution du mode `system`. */
+  get isDarkTheme(): boolean {
+    return document.documentElement.getAttribute('data-theme') === 'dark';
+  }
+
+  private applyThemeMode(mode: ThemeMode): void {
+    const dark = mode === 'dark' || (mode === 'system' && !!this.darkSchemeQuery?.matches);
+    const root = document.documentElement;
+    root.setAttribute('data-theme', dark ? 'dark' : 'light');
+    root.setAttribute('data-theme-mode', mode);
   }
 
   /**
@@ -172,6 +216,18 @@ export class ThemeService {
       // quota localStorage dépassé : on garde juste l'état en mémoire
     }
   }
+}
+
+function readThemeMode(): ThemeMode {
+  try {
+    const stored = localStorage.getItem(THEME_MODE_STORAGE_KEY);
+    if (stored === 'light' || stored === 'dark' || stored === 'system') {
+      return stored;
+    }
+  } catch {
+    // ignoré
+  }
+  return DEFAULT_THEME_MODE;
 }
 
 /** Construit un thème complet à partir de la palette extraite du logo. */
