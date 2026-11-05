@@ -2,7 +2,6 @@ import { Component, OnInit, ChangeDetectorRef, AfterViewInit, ViewChild } from '
 import { TranslateService } from '@ngx-translate/core';
 import { FormBuilder, FormGroup, FormControl } from '@angular/forms';
 import { MatSelect, MatSelectChange } from '@angular/material/select';
-import { OrangeMoneyUtilsService } from '../../services/orange-money-utils.service';
 import { FieldTypeDetectionService, ColumnAnalysis } from '../../services/field-type-detection.service';
 import { DataProcessingService } from '../../services/data-processing.service';
 import { ExportOptimizationService, ExportProgress } from '../../services/export-optimization.service';
@@ -32,6 +31,7 @@ import * as JSZip from 'jszip';
 import { saveAs } from 'file-saver';
 import { HttpErrorResponse } from '@angular/common/http';
 import { ExcelConversionService } from '../../services/excel-conversion.service';
+import { ConfigurationCalculService } from '../../services/configuration-calcul.service';
 
 @Component({
   selector: 'app-traitement',
@@ -179,13 +179,14 @@ export class TraitementComponent implements OnInit, AfterViewInit {
   formattingRecommendations: any[] = [];
   csvFileToProcess: File | null = null;
 
-  // --- DÉTECTION FICHIERS ORANGE MONEY ---
-  isOrangeMoneyFile: boolean = false;
-  orangeMoneyHeaderRowIndex: number = -1;
-
   // --- DÉTECTION FICHIERS GDJ (LA GABONAISE DES JEUX) ---
   isGdjFile: boolean = false;
   gdjHeaderRowIndex: number = -1;
+
+  // --- FLAG POUR IMPORT DEPUIS PRÉVISUALISATION ---
+  /** Indique si l'import a été confirmé depuis la prévisualisation CSV.
+   *  Si true, les filtres automatiques spécifiques aux modèles (Orange Money, GDJ) ne sont pas appliqués. */
+  private isImportFromPreview: boolean = false;
 
   // --- PAGINATION ET AFFICHAGE ---
   currentPage: number = 1;
@@ -263,6 +264,9 @@ export class TraitementComponent implements OnInit, AfterViewInit {
   sheetSplitZipName: string = '';
   /** Affiché quand la conversion .xls en navigateur échoue, pour proposer la macro Excel. */
   showSheetSplitExcelFallbackHelp: boolean = false;
+  /** Retour visuel après la copie du code VBA. */
+  sheetSplitVbaCopied: boolean = false;
+  private sheetSplitVbaCopyTimeout: any = null;
 
   /** Macro VBA de secours pour séparer les feuilles dans Excel (en-tête 17 colonnes). */
   readonly SHEET_SPLIT_VBA_MACRO = `Sub SeparerFeuillesEnteteComplet()
@@ -271,59 +275,77 @@ export class TraitementComponent implements OnInit, AfterViewInit {
     Dim classeurOriginal As Workbook
     Dim i As Integer
     Dim entetePersonnalise As Variant
-
+    
+    ' Définir l'en-tête personnalisé avec 17 colonnes
     entetePersonnalise = Array("N°", "Date", "Heure", "Référence", "Service", "Paiement", "Statut", "Mode", _
                               "N° de Compte", "Wallet", "N° Pseudo", "N° de Compte", "Wallet", "Débit", "Crédit", _
                               "Compte: 657376636", "Sous-réseau")
-
+    
+    ' Sauvegarder la référence au classeur original
     Set classeurOriginal = ThisWorkbook
     cheminOriginal = classeurOriginal.Path
+    
+    ' Désactiver les alertes pour éviter les interruptions
     Application.DisplayAlerts = False
-
+    
+    ' Traiter chaque feuille une par une
     For i = 1 To classeurOriginal.Worksheets.Count
         Set ws = classeurOriginal.Worksheets(i)
+        
+        ' Copier la feuille (cela crée automatiquement un nouveau classeur)
         ws.Copy
-
+        
         If i > 1 Then
+            ' Insérer une ligne au début pour l'en-tête
             ActiveSheet.Rows("1:1").Insert Shift:=xlDown
+            
+            ' Ajouter l'en-tête personnalisé
             Dim j As Integer
             For j = 0 To UBound(entetePersonnalise)
                 ActiveSheet.Cells(1, j + 1).Value = entetePersonnalise(j)
             Next j
+            
+            ' Formater l'en-tête
             With ActiveSheet.Range("A1:Q1")
                 .Font.Bold = True
-                .Interior.Color = RGB(200, 200, 200)
+                .Interior.Color = RGB(200, 200, 200) ' Gris clair
                 .HorizontalAlignment = xlCenter
             End With
         End If
-
+        
+        ' Ajuster la largeur des colonnes avec des largeurs spécifiques pour 17 colonnes
         With ActiveSheet
-            .Columns("A").ColumnWidth = 8
-            .Columns("B").ColumnWidth = 12
-            .Columns("C").ColumnWidth = 10
-            .Columns("D").ColumnWidth = 15
-            .Columns("E").ColumnWidth = 12
-            .Columns("F").ColumnWidth = 12
-            .Columns("G").ColumnWidth = 10
-            .Columns("H").ColumnWidth = 8
-            .Columns("I").ColumnWidth = 15
-            .Columns("J").ColumnWidth = 10
-            .Columns("K").ColumnWidth = 12
-            .Columns("L").ColumnWidth = 15
-            .Columns("M").ColumnWidth = 10
-            .Columns("N").ColumnWidth = 12
-            .Columns("O").ColumnWidth = 12
-            .Columns("P").ColumnWidth = 20
-            .Columns("Q").ColumnWidth = 15
+            .Columns("A").ColumnWidth = 8   ' N°
+            .Columns("B").ColumnWidth = 12  ' Date
+            .Columns("C").ColumnWidth = 10  ' Heure
+            .Columns("D").ColumnWidth = 15  ' Référence
+            .Columns("E").ColumnWidth = 12  ' Service
+            .Columns("F").ColumnWidth = 12  ' Paiement
+            .Columns("G").ColumnWidth = 10  ' Statut
+            .Columns("H").ColumnWidth = 8   ' Mode
+            .Columns("I").ColumnWidth = 15  ' N° de Compte
+            .Columns("J").ColumnWidth = 10  ' Wallet
+            .Columns("K").ColumnWidth = 12  ' N° Pseudo
+            .Columns("L").ColumnWidth = 15  ' N° de Compte
+            .Columns("M").ColumnWidth = 10  ' Wallet
+            .Columns("N").ColumnWidth = 12  ' Débit
+            .Columns("O").ColumnWidth = 12  ' Crédit
+            .Columns("P").ColumnWidth = 20  ' Compte: 657376636
+            .Columns("Q").ColumnWidth = 15  ' Sous-réseau
         End With
-
+        
+        ' Sauvegarder et fermer le nouveau classeur
         ActiveWorkbook.SaveAs cheminOriginal & "\\" & ws.Name & ".xlsx"
         ActiveWorkbook.Close SaveChanges:=False
+        
+        ' Réactiver le classeur original
         classeurOriginal.Activate
     Next i
-
+    
+    ' Réactiver les alertes
     Application.DisplayAlerts = True
-    MsgBox "Séparation terminée !"
+    
+    MsgBox "Séparation terminée ! La première feuille reste intacte, les autres ont reçu l'en-tête personnalisé avec 17 colonnes."
 End Sub`;
 
   // --- PROPRIÉTÉS POUR TOTAL ENERGIE ---
@@ -348,6 +370,18 @@ End Sub`;
   totalEnergieCompareProgress: string = '';
   totalEnergieCompareSummary: Array<{ station: string; agenceBo: string; count: number }> = []; // Récapitulatif groupé par station avec agence BO
 
+  // --- FUSION MULTI-FICHIERS CSV AVEC EXTRACTION DATE/ID DU NOM ---
+  multiMergeFiles: File[] = []; // Fichiers à fusionner
+  multiMergePrefix: string = 'MOOVGA_'; // Préfixe à retirer du nom (ex: MOOVGA_)
+  multiMergeIdColumnName: string = 'Jour'; // Nom de la colonne d'identifiant
+  multiMergeRecursive: boolean = true; // Recherche récursive (simulée via sélection multiple)
+  multiMergeDelimiter: string = ';'; // Séparateur CSV
+  multiMergeData: any[] = []; // Données fusionnées
+  multiMergeColumns: string[] = []; // Colonnes fusionnées
+  multiMergeIsProcessing: boolean = false;
+  multiMergeProgress: string = '';
+  multiMergeStats: { file: string; id: string; rows: number }[] = []; // Stats par fichier
+
   // --- COMPILATION EN-TÊTES DIFFÉRENTS (2 fichiers avec des en-têtes différents) ---
   compileHeadersFile1: File | null = null; // Fichier 1 : fournit les en-têtes à conserver
   compileHeadersFile2: File | null = null; // Fichier 2 : fournit les données à reporter
@@ -365,12 +399,12 @@ End Sub`;
   constructor(
     private cd: ChangeDetectorRef, 
     private fb: FormBuilder,
-    private orangeMoneyUtilsService: OrangeMoneyUtilsService,
     private fieldTypeDetectionService: FieldTypeDetectionService,
     public dataProcessingService: DataProcessingService,
     private exportOptimizationService: ExportOptimizationService,
     private excelConversionService: ExcelConversionService,
-    private translate: TranslateService
+    private translate: TranslateService,
+    private configurationCalculService: ConfigurationCalculService
   ) {}
 
   private t(key: string, params?: any): string {
@@ -422,9 +456,7 @@ End Sub`;
         this.selectedFiles.push(file);
         
         // Si c'est un fichier CSV/TSV, déclencher la prévisualisation
-        if (file.name.toLowerCase().endsWith('.csv') ||
-            file.name.toLowerCase().endsWith('.tsv') ||
-            file.name.toLowerCase().endsWith('.txt')) {
+        if (this.isCsvTextExtension(file.name)) {
           this.previewCsvFile(file);
         }
       }
@@ -523,26 +555,31 @@ End Sub`;
             this.processingMessage = this.t('TRT.msg.memoryOptimization');
             await this.optimizeMemoryUsage();
           }
-          if (fileName.endsWith('.csv') || fileName.endsWith('.txt') || fileName.endsWith('.tsv')) {
+          if (this.isCsvTextExtension(fileName)) {
             await this.readCsvFileOptimized(file);
-          } else if (fileName.endsWith('.xls') || fileName.endsWith('.xlsx')) {
+          } else if (this.isExcelExtension(fileName)) {
             // Pour les très gros fichiers Excel, utiliser une méthode alternative
-            const fileSizeMB = file.size / (1024 * 1024);
-            const isOrangeMoneyFile = this.orangeMoneyUtilsService.isOrangeMoneyFile(fileName);
-            
-            if (fileSizeMB > 100) {
-              if (isOrangeMoneyFile) {
-                this.processingMessage = `Fichier Orange Money volumineux détecté (${fileSizeMB.toFixed(1)} MB). 
-                Traitement des 100,000 premières lignes pour optimiser les performances.`;
-                await this.readOrangeMoneyLargeFile(file);
-              } else {
-                await this.readExcelFileAlternative(file);
-              }
+            const fileSizeMBNum = file.size / (1024 * 1024);
+            if (fileSizeMBNum > 100) {
+              await this.readExcelFileAlternative(file);
             } else {
               await this.readExcelFileOptimized(file);
             }
+          } else if (this.isAcceptedFile(fileName)) {
+            // Extension autorisée mais non gérée explicitement : tenter lecture Excel si extension Excel connue, sinon CSV
+            if (this.isExcelExtension(fileName)) {
+              const fileSizeMBNum = file.size / (1024 * 1024);
+              if (fileSizeMBNum > 100) {
+                await this.readExcelFileAlternative(file);
+              } else {
+                await this.readExcelFileOptimized(file);
+              }
+            } else {
+              await this.readCsvFileOptimized(file);
+            }
           } else {
-            this.showError('upload', this.t('TRT.msg.acceptedExtensions'));
+            const formats = this.acceptedFileExtensions.join(', ');
+            this.showError('upload', this.t('TRT.msg.acceptedExtensionsDynamic', { formats }) || this.t('TRT.msg.acceptedExtensions'));
             this.fileProcessStats.push({ name: file.name, rows: 0, status: 'erreur', errorMsg: this.t('TRT.msg.unsupportedFormatShort') });
             continue;
           }
@@ -995,17 +1032,6 @@ End Sub`;
               this.columns = [...correctedHeaders];
               
               
-              // Vérifier si c'est un fichier Orange Money et appliquer le filtre automatique
-              const fileName = this.selectedFiles.length > 0 ? this.selectedFiles[0].name : '';
-              const isOrangeMoneyFile = this.orangeMoneyUtilsService.isOrangeMoneyFile(fileName);
-              
-              if (isOrangeMoneyFile) {
-                // Appliquer le filtre automatique après un délai pour s'assurer que les données sont bien chargées
-                setTimeout(() => {
-                  this.applyAutomaticOrangeMoneyFilter();
-                }, 500);
-              }
-              
               return;
             }
           }
@@ -1070,18 +1096,6 @@ End Sub`;
       // Mettre à jour les propriétés du composant
       this.allColumns = [...correctedHeaders];
       this.columns = [...correctedHeaders];
-      
-      
-      // Vérifier si c'est un fichier Orange Money et appliquer le filtre automatique
-      const fileName = this.selectedFiles.length > 0 ? this.selectedFiles[0].name : '';
-      const isOrangeMoneyFile = this.orangeMoneyUtilsService.isOrangeMoneyFile(fileName);
-      
-      if (isOrangeMoneyFile) {
-        // Appliquer le filtre automatique après un délai pour s'assurer que les données sont bien chargées
-        setTimeout(() => {
-          this.applyAutomaticOrangeMoneyFilter();
-        }, 500);
-      }
       
       // Détection automatique des types de champs
       this.performFieldTypeAnalysis();
@@ -1315,17 +1329,6 @@ End Sub`;
       const newColumns = await this.mergeColumnsOptimized();
       this.allColumns = newColumns;
       
-      
-      // Vérifier si c'est un fichier Orange Money et appliquer le filtre automatique
-      const fileName = file.name;
-      const isOrangeMoneyFile = this.orangeMoneyUtilsService.isOrangeMoneyFile(fileName);
-      
-      if (isOrangeMoneyFile) {
-        setTimeout(() => {
-          this.applyAutomaticOrangeMoneyFilter();
-        }, 500);
-      }
-      
     } catch (error) {
       
       // En cas d'erreur avec un très gros fichier, suggérer des solutions
@@ -1391,115 +1394,6 @@ End Sub`;
       
       
     } catch (error) {
-      throw error;
-    }
-  }
-
-  /**
-   * Méthode spécialisée pour lire les fichiers Orange Money très volumineux
-   * Optimisée pour la structure spécifique des fichiers OM
-   */
-  private async readOrangeMoneyLargeFile(file: File): Promise<void> {
-    const fileSizeMB = file.size / (1024 * 1024);
-    
-    this.processingMessage = `Traitement fichier Orange Money volumineux (${fileSizeMB.toFixed(1)} MB)...`;
-    
-    try {
-      const arrayBuffer = await this.readFileAsArrayBuffer(file);
-      const data = new Uint8Array(arrayBuffer);
-      
-      // Options ultra-restrictives spécialement pour Orange Money
-      const options: XLSX.ParsingOptions = {
-        type: 'array',
-        cellDates: false,
-        cellNF: false,
-        cellText: false,
-        sheetStubs: false,
-        // Limiter encore plus pour Orange Money
-        sheetRows: 100000, // Limiter à 100k lignes
-        // Désactiver tout ce qui n'est pas essentiel
-        bookSheets: false,
-        bookProps: false,
-        bookVBA: false,
-        cellStyles: false,
-        cellHTML: false,
-        cellFormula: false
-      };
-
-      const workbook = XLSX.read(data, options);
-      
-      if (!workbook.Sheets || workbook.SheetNames.length === 0) {
-        throw new Error(this.t('TRT.msg.noAccessibleSheetOm'));
-      }
-
-      // Pour Orange Money, traiter seulement la première feuille
-      const firstSheetName = workbook.SheetNames[0];
-      const worksheet = workbook.Sheets[firstSheetName];
-      
-      if (!worksheet) {
-        throw new Error('Impossible de lire la première feuille Orange Money');
-      }
-
-
-      // Lecture très limitée pour Orange Money
-      const jsonData = XLSX.utils.sheet_to_json(worksheet, { 
-        header: 1,
-        defval: '',
-        raw: true,
-        range: 'A1:Z100000' // Limiter à 100k lignes et 26 colonnes
-      }) as any[][];
-
-      if (!jsonData || jsonData.length === 0) {
-        throw new Error(this.t('TRT.msg.noDataInSheetOm'));
-      }
-
-
-      // Pour Orange Money, utiliser la première ligne comme en-têtes
-      const fallbackHeaders = jsonData[0]?.map((h, idx) => h || `Col${idx + 1}`) || [];
-      const correctedHeaders = this.fixExcelColumnNames(fallbackHeaders);
-      
-      const rows: any[] = [];
-      const maxRows = Math.min(jsonData.length, 100000); // Limiter à 100k lignes max pour Orange Money
-      
-      for (let i = 1; i < maxRows; i++) {
-        const rowData = jsonData[i] as any[];
-        if (!rowData || rowData.length === 0) continue;
-        
-        const row: any = {};
-        correctedHeaders.forEach((header: string, index: number) => {
-          const value = rowData[index];
-          row[header] = value !== undefined && value !== null ? value : '';
-        });
-        rows.push(row);
-      }
-
-      // Ajouter les lignes au composant
-      this.allRows.push(...rows);
-      
-      // Mettre à jour les colonnes
-      const newColumns = await this.mergeColumnsOptimized();
-      this.allColumns = newColumns;
-      
-      
-      // Appliquer automatiquement le filtre Orange Money
-      setTimeout(() => {
-        this.applyAutomaticOrangeMoneyFilter();
-      }, 500);
-      
-    } catch (error) {
-      
-      // En cas d'erreur, suggérer des solutions spécifiques pour Orange Money
-      this.showError('upload', 
-        `Impossible de traiter le fichier Orange Money de ${fileSizeMB.toFixed(1)} MB. 
-        
-        Solutions recommandées pour les fichiers Orange Money :
-        1. Ouvrez le fichier dans Excel et sauvegardez-le au format CSV
-        2. Divisez le fichier en plusieurs parties (par mois par exemple)
-        3. Supprimez les colonnes non nécessaires avant l'upload
-        4. Utilisez un fichier plus récent si possible
-        
-        Les fichiers Orange Money très volumineux peuvent contenir trop de données pour être traités en une seule fois.`);
-      
       throw error;
     }
   }
@@ -1646,52 +1540,6 @@ End Sub`;
   // Méthode pour prévisualiser les données CSV
   async previewCsvData(csvContent: string, delimiter: string): Promise<{ columns: string[], data: any[], hasHeader: boolean }> {
     return new Promise((resolve, reject) => {
-      // Détecter si c'est un fichier Orange Money AVANT le parsing
-      const orangeMoneyDetection = this.detectOrangeMoneyFile(csvContent, delimiter);
-      this.isOrangeMoneyFile = orangeMoneyDetection.isOrangeMoney;
-      this.orangeMoneyHeaderRowIndex = orangeMoneyDetection.headerRowIndex;
-      
-      if (orangeMoneyDetection.isOrangeMoney) {
-        
-        // Parser sans header pour avoir toutes les lignes
-        Papa.parse(csvContent, {
-          header: false,
-          delimiter,
-          skipEmptyLines: true,
-          complete: (results) => {
-            const rawRows = results.data as any[];
-            
-            if (rawRows.length > orangeMoneyDetection.headerRowIndex) {
-              // Utiliser les colonnes détectées
-              const headerRow = orangeMoneyDetection.headerRow;
-              const columns = headerRow.map((col, index) => col || `Col${index + 1}`);
-              
-              // Extraire les données à partir de la ligne après l'en-tête
-              const dataRows = rawRows.slice(orangeMoneyDetection.headerRowIndex + 1, orangeMoneyDetection.headerRowIndex + 11);
-              const data = dataRows.map((row: any[]) => {
-                const obj: any = {};
-                columns.forEach((col, idx) => {
-                  obj[col] = row[idx] || '';
-                });
-                return obj;
-              });
-              
-              
-              // Mettre à jour l'interface avec les colonnes détectées
-              this.updateOrangeMoneyDisplay(columns);
-              
-              resolve({ columns, data, hasHeader: true });
-            } else {
-              resolve({ columns: [], data: [], hasHeader: false });
-            }
-          },
-          error: (error: any) => {
-            reject(error);
-          }
-        });
-        return;
-      }
-
       // Détecter les fichiers GDJ (LA GABONAISE DES JEUX) : préambule de 5 lignes ignoré
       const gdjDetection = this.detectGdjFile(csvContent, delimiter);
       this.isGdjFile = gdjDetection.isGdj;
@@ -1793,90 +1641,13 @@ End Sub`;
           // Détection automatique du séparateur
           this.detectedDelimiter = this.detectCsvDelimiter(csv);
           
-          // Détecter si c'est un fichier Orange Money AVANT la prévisualisation
-          const orangeMoneyDetection = this.detectOrangeMoneyFile(csv, this.detectedDelimiter);
-          this.isOrangeMoneyFile = orangeMoneyDetection.isOrangeMoney;
-          this.orangeMoneyHeaderRowIndex = orangeMoneyDetection.headerRowIndex;
-          
-          
           // Prévisualiser les données
           try {
             const preview = await this.previewCsvData(csv, this.detectedDelimiter);
             this.csvPreviewColumns = preview.columns;
             this.csvPreviewData = preview.data;
             this.showCsvPreview = true;
-            
-            // Si c'est un fichier Orange Money, utiliser les colonnes détectées
-            
-            if (this.isOrangeMoneyFile) {
-              
-              // Utiliser les colonnes détectées au lieu des colonnes de prévisualisation
-              this.updateOrangeMoneyDisplay(orangeMoneyDetection.headerRow);
-            } else {
-            }
-            
           } catch (previewError) {
-          }
-          
-          if (orangeMoneyDetection.isOrangeMoney) {
-            // Traitement spécial pour les fichiers Orange Money
-            
-            // Mettre à jour l'interface immédiatement avec les colonnes détectées
-            this.updateOrangeMoneyDisplay(orangeMoneyDetection.headerRow);
-            
-            Papa.parse(csv, {
-              header: false,
-              delimiter: this.detectedDelimiter,
-              skipEmptyLines: true,
-              complete: async (results) => {
-                try {
-                  const rawRows = results.data as any[];
-                  
-                  if (rawRows.length > orangeMoneyDetection.headerRowIndex) {
-                    const headerRow = orangeMoneyDetection.headerRow;
-                    const dataRows = rawRows.slice(orangeMoneyDetection.headerRowIndex + 1);
-                    const colNames = headerRow.map((v: any, i: number) => v ? v.toString() : 'Col' + (i+1));
-                    
-                    
-                    // Traitement en arrière-plan avec chunks très petits
-                    await this.processDataInBackground(
-                      dataRows,
-                      (chunk) => {
-                        const rowsWithHeader = chunk.map((row: any[]) => {
-                          const obj: any = {};
-                          colNames.forEach((col: string, idx: number) => {
-                            obj[col] = row[idx];
-                          });
-                          return obj;
-                        });
-                        
-                        this.combinedRows.push(...rowsWithHeader);
-                        this.allRows.push(...rowsWithHeader);
-                      },
-                      50, // Chunks très petits pour éviter le blocage
-                      (progress) => {
-                        this.processingMessage = `Traitement Orange Money: ${Math.round(progress)}%`;
-                      }
-                    );
-                    
-                    for (const col of colNames) {
-                      if (!this.columns.includes(col)) this.columns.push(col);
-                      if (!this.allColumns.includes(col)) this.allColumns.push(col);
-                    }
-                    
-                  }
-                  this.cd.detectChanges();
-                  resolve();
-                } catch (error) {
-                  reject(error);
-                }
-              },
-              error: (err) => {
-                this.showError('upload', this.t('TRT.msg.omReadError'));
-                reject(err);
-              }
-            });
-            return;
           }
           
                       // On tente d'abord avec header: true
@@ -2000,10 +1771,6 @@ End Sub`;
   }
 
   updateDisplayedRows() {
-    
-    // Vérification spéciale pour Orange Money
-    if (this.isOrangeMoneyFile) {
-    }
     
     // Si une sélection est appliquée, afficher seulement les colonnes sélectionnées
     if (this.selectionApplied && this.selectedCols.length > 0) {
@@ -2682,6 +2449,7 @@ End Sub`;
     sheetSplit: false,
     totalEnergie: false,
     compileHeaders: false,
+    multiMerge: false,
     preview: false  // Aperçu des données combinées masqué par défaut
   };
 
@@ -3395,6 +3163,475 @@ End Sub`;
     if (input2) input2.value = '';
   }
 
+  // --- FUSION MULTI-FICHIERS CSV AVEC EXTRACTION DATE/ID DU NOM ---
+  onMultiMergeFilesSelected(event: Event) {
+    const input = event.target as HTMLInputElement;
+    if (input.files && input.files.length > 0) {
+      for (let i = 0; i < input.files.length; i++) {
+        const file = input.files[i];
+        if (!this.multiMergeFiles.some(f => f.name === file.name && f.size === file.size)) {
+          this.multiMergeFiles.push(file);
+        }
+      }
+      this.multiMergeProgress = `${this.multiMergeFiles.length} fichier(s) sélectionné(s)`;
+      this.successMsg.multiMerge = '';
+      this.errorMsg.multiMerge = '';
+      input.value = '';
+    }
+  }
+
+  removeMultiMergeFile(index: number) {
+    this.multiMergeFiles.splice(index, 1);
+    this.multiMergeProgress = `${this.multiMergeFiles.length} fichier(s) sélectionné(s)`;
+  }
+
+  resetMultiMergeSelection() {
+    this.multiMergeFiles = [];
+    this.multiMergeData = [];
+    this.multiMergeColumns = [];
+    this.multiMergeStats = [];
+    this.multiMergeProgress = '';
+    this.successMsg.multiMerge = '';
+    this.errorMsg.multiMerge = '';
+    const input = document.getElementById('multiMergeFilesInput') as HTMLInputElement | null;
+    if (input) input.value = '';
+  }
+
+  /**
+   * Sélection de dossier avec recherche récursive de fichiers CSV
+   * Utilise webkitdirectory (supporté par la plupart des navigateurs)
+   */
+  onMultiMergeFolderSelected(event: Event) {
+    const input = event.target as HTMLInputElement;
+    if (input.files && input.files.length > 0) {
+      this.multiMergeProgress = `Analyse du dossier... ${input.files.length} fichier(s) trouvé(s)`;
+      
+      // Filtrer seulement les fichiers CSV correspondants au préfixe
+      const prefix = this.multiMergePrefix || 'MOOVGA_';
+      const csvFiles: File[] = [];
+      
+      for (let i = 0; i < input.files.length; i++) {
+        const file = input.files[i];
+        // Vérifier si c'est un fichier CSV et correspond au pattern
+        const fileName = file.name.toLowerCase();
+        if (fileName.endsWith('.csv') && fileName.startsWith(prefix.toLowerCase()) && !this.isMultiMergeExcluded(file.name)) {
+          // Éviter les doublons
+          if (!this.multiMergeFiles.some(f => f.name === file.name && f.size === file.size && f.lastModified === file.lastModified)) {
+            if (!csvFiles.some(f => f.name === file.name && f.size === file.size && f.lastModified === file.lastModified)) {
+              csvFiles.push(file);
+            }
+          }
+        }
+      }
+      
+      // Ajouter les fichiers trouvés
+      this.multiMergeFiles.push(...csvFiles);
+      this.multiMergeProgress = `${csvFiles.length} fichier(s) CSV correspondant(s) au préfixe "${prefix}" trouvé(s) sur ${input.files.length} fichier(s) total(s)`;
+      this.successMsg.multiMerge = '';
+      this.errorMsg.multiMerge = '';
+      input.value = '';
+    }
+  }
+
+  /**
+   * Sélection de dossier via File System Access API (navigateurs modernes)
+   * Plus performant pour les très gros dossiers
+   */
+  async selectFolderWithFileSystemAPI() {
+    try {
+      // @ts-ignore - File System Access API
+      if (!('showDirectoryPicker' in window)) {
+        this.showError('multiMerge', 'File System Access API non supporté. Utilisez le bouton "Sélectionner un dossier" classique.');
+        return;
+      }
+
+      this.multiMergeProgress = 'Sélection du dossier...';
+      
+      // @ts-ignore
+      const directoryHandle = await (window as any).showDirectoryPicker({
+        mode: 'read'
+      });
+
+      this.multiMergeProgress = 'Analyse récursive du dossier en cours...';
+      
+      const prefix = this.multiMergePrefix || 'MOOVGA_';
+      const csvFiles: File[] = [];
+      let totalFiles = 0;
+
+      // Fonction récursive pour parcourir le dossier
+      const processDirectory = async (dirHandle: any, path: string = '') => {
+        for await (const [name, handle] of dirHandle.entries()) {
+          const fullPath = path ? `${path}/${name}` : name;
+          
+          if (handle.kind === 'file') {
+            totalFiles++;
+            const fileName = name.toLowerCase();
+            if (fileName.endsWith('.csv') && fileName.startsWith(prefix.toLowerCase()) && !this.isMultiMergeExcluded(name)) {
+              try {
+                const file = await handle.getFile();
+                const customFile = new File([file], file.name, { 
+                  type: file.type,
+                  lastModified: file.lastModified 
+                });
+                (customFile as any).webkitRelativePath = fullPath;
+                csvFiles.push(customFile);
+              } catch (e) {
+                console.warn(`Impossible de lire ${fullPath}:`, e);
+              }
+            }
+          } else if (handle.kind === 'directory') {
+            await processDirectory(handle, fullPath);
+          }
+        }
+      };
+
+      await processDirectory(directoryHandle);
+      
+      // Éviter les doublons
+      for (const file of csvFiles) {
+        if (!this.multiMergeFiles.some(f => f.name === file.name && f.size === file.size && f.lastModified === file.lastModified)) {
+          this.multiMergeFiles.push(file);
+        }
+      }
+      
+      this.multiMergeProgress = `${csvFiles.length} fichier(s) CSV correspondant(s) au préfixe "${prefix}" trouvé(s) sur ${totalFiles} fichier(s) total(s)`;
+      this.successMsg.multiMerge = '';
+      this.errorMsg.multiMerge = '';
+      
+    } catch (error: any) {
+      if (error.name === 'AbortError') {
+        return; // Annulation utilisateur
+      }
+      this.showError('multiMerge', `Erreur lors de la sélection du dossier: ${error.message}`);
+    }
+  }
+
+  // --- FUSION MULTI-FICHIERS : traitement, fusion et export ---
+
+  /**
+   * Fichier consolidé exclu de la fusion (équivalent du filtre PowerShell
+   * `Where-Object { $_.Name -ne "MOOVGA_complet.csv" }`).
+   */
+  private readonly multiMergeExcludedFileName = 'moovga_complet.csv';
+
+  private readonly TRAITEMENT_EXTENSIONS_RULE_CODE = 'TRAITEMENT.EXTENSIONS_FICHIERS';
+  private readonly DEFAULT_TRAITEMENT_EXTENSIONS = ['.csv', '.txt', '.tsv', '.xls', '.xlsx'];
+
+  private traitementExtensions: string[] = [...this.DEFAULT_TRAITEMENT_EXTENSIONS];
+
+  get acceptedFileExtensions(): string[] {
+    return this.traitementExtensions && this.traitementExtensions.length > 0
+      ? this.traitementExtensions
+      : [...this.DEFAULT_TRAITEMENT_EXTENSIONS];
+  }
+
+  get acceptedFileAcceptAttr(): string {
+    const extensions = this.acceptedFileExtensions;
+    const mimeTypes = [
+      'text/csv',
+      'text/plain',
+      'text/tab-separated-values',
+      'application/vnd.ms-excel',
+      'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
+      'application/vnd.ms-excel.sheet.macroEnabled.12',
+      'application/vnd.ms-excel.sheet.binary.macroEnabled.12'
+    ];
+    return [...extensions, ...mimeTypes].join(',');
+  }
+
+  private loadTraitementExtensions(): void {
+    try {
+      if (!this.configurationCalculService) {
+        return;
+      }
+      const rule = this.configurationCalculService.getActiveRule(this.TRAITEMENT_EXTENSIONS_RULE_CODE);
+      if (rule && rule.valeurs) {
+        const parsed = this.configurationCalculService.parseValues(rule.valeurs);
+        const normalized = parsed
+          .map(v => (v || '').toString().trim().toLowerCase())
+          .filter(v => v.length > 0)
+          .map(v => (v.startsWith('.') ? v : `.${v}`));
+        if (normalized.length > 0) {
+          this.traitementExtensions = Array.from(new Set(normalized));
+          return;
+        }
+      }
+      const list = this.configurationCalculService.getList(this.TRAITEMENT_EXTENSIONS_RULE_CODE, this.DEFAULT_TRAITEMENT_EXTENSIONS);
+      if (list && list.length > 0) {
+        const normalized = list
+          .map(v => (v || '').toString().trim().toLowerCase())
+          .filter(v => v.length > 0)
+          .map(v => (v.startsWith('.') ? v : `.${v}`));
+        if (normalized.length > 0) {
+          this.traitementExtensions = Array.from(new Set(normalized));
+          return;
+        }
+      }
+      this.traitementExtensions = [...this.DEFAULT_TRAITEMENT_EXTENSIONS];
+    } catch {
+      this.traitementExtensions = [...this.DEFAULT_TRAITEMENT_EXTENSIONS];
+    }
+  }
+
+  private isAcceptedFile(fileName: string): boolean {
+    const lower = (fileName || '').toLowerCase();
+    return this.acceptedFileExtensions.some(ext => lower.endsWith(ext));
+  }
+
+  private isExcelExtension(fileName: string): boolean {
+    const lower = (fileName || '').toLowerCase();
+    return lower.endsWith('.xls') || lower.endsWith('.xlsx') || lower.endsWith('.xlsm') || lower.endsWith('.xlsb') || lower.endsWith('.xlt') || lower.endsWith('.xltx') || lower.endsWith('.xltm');
+  }
+
+  private isCsvTextExtension(fileName: string): boolean {
+    const lower = (fileName || '').toLowerCase();
+    return lower.endsWith('.csv') || lower.endsWith('.txt') || lower.endsWith('.tsv');
+  }
+
+  /**
+   * Total des lignes fusionnées.
+   * Les templates Angular ne supportent pas les fonctions fléchées : l'expression
+   * `multiMergeStats.reduce(...)` doit passer par une méthode du composant.
+   */
+  getMultiMergeTotalRows(): number {
+    return this.multiMergeStats.reduce((sum, stat) => sum + (stat.rows || 0), 0);
+  }
+
+  /**
+   * Extrait l'identifiant du nom de fichier en retirant le préfixe configuré.
+   * Ex: MOOVGA_20260101.csv -> 20260101
+   */
+  private extractMultiMergeId(fileName: string): string {
+    const prefix = this.multiMergePrefix || '';
+    const baseName = fileName.replace(/\.[^.]+$/, '');
+    if (prefix && baseName.toLowerCase().startsWith(prefix.toLowerCase())) {
+      return baseName.slice(prefix.length);
+    }
+    return baseName;
+  }
+
+  /**
+   * Séparateur effectif : la valeur `\t` du <select> est convertie en tabulation.
+   */
+  private getMultiMergeDelimiter(): string {
+    const delimiter = this.multiMergeDelimiter || ';';
+    return delimiter === '\\t' ? '\t' : delimiter;
+  }
+
+  /**
+   * Vrai si le fichier doit être ignoré par la fusion.
+   */
+  private isMultiMergeExcluded(fileName: string): boolean {
+    return fileName.toLowerCase() === this.multiMergeExcludedFileName;
+  }
+
+  /**
+   * Lecture d'un fichier CSV de la fusion (streaming PapaParse, sans charger
+   * tout le fichier en mémoire d'un bloc).
+   */
+  private readMultiMergeFile(file: File): Promise<{ headers: string[]; rows: Record<string, string>[] }> {
+    const delimiter = this.getMultiMergeDelimiter();
+
+    return new Promise((resolve, reject) => {
+      let headers: string[] | null = null;
+      const rows: Record<string, string>[] = [];
+
+      Papa.parse<string[]>(file, {
+        skipEmptyLines: true,
+        delimiter,
+        worker: false,
+        step: (results: Papa.ParseStepResult<string[]>) => {
+          const cells = (results.data as string[]).map(cell => (cell === null || cell === undefined ? '' : String(cell)));
+
+          // Ignore les lignes vides
+          if (!cells.some(cell => cell.trim().length > 0)) {
+            return;
+          }
+
+          // La première ligne non vide est l'en-tête
+          if (!headers) {
+            headers = cells.map((header, index) => header.trim() || `Col${index + 1}`);
+            return;
+          }
+
+          const row: Record<string, string> = {};
+          headers.forEach((header, index) => {
+            row[header] = cells[index] ?? '';
+          });
+          rows.push(row);
+        },
+        complete: () => resolve({ headers: headers || [], rows }),
+        error: (error: Error) => reject(error)
+      });
+    });
+  }
+
+  /**
+   * Fusionne tous les fichiers sélectionnés en un seul jeu de données.
+   * Pour chaque fichier, l'identifiant extrait du nom est ajouté à chaque ligne.
+   */
+  async processMultiMergeFiles() {
+    if (this.multiMergeFiles.length === 0) {
+      this.showError('multiMerge', this.t('TRT.MultiMergeNoFile'));
+      return;
+    }
+
+    this.multiMergeIsProcessing = true;
+    this.multiMergeProgress = this.t('TRT.MultiMergeStart');
+    this.multiMergeStats = [];
+    this.multiMergeData = [];
+    this.multiMergeColumns = [];
+    this.successMsg.multiMerge = '';
+    this.errorMsg.multiMerge = '';
+
+    const idColumn = (this.multiMergeIdColumnName || 'Jour').trim() || 'Jour';
+    const columns: string[] = [idColumn];
+    const knownColumns = new Set<string>([idColumn]);
+    const merged: any[] = [];
+    const stats: { file: string; id: string; rows: number }[] = [];
+
+    this.multiMergeColumns = columns;
+    this.multiMergeData = merged;
+
+    try {
+      // Tri alphabétique (équivalent au `Sort-Object Name` du script PowerShell)
+      const files = [...this.multiMergeFiles].sort((a, b) =>
+        a.name.localeCompare(b.name, undefined, { numeric: true, sensitivity: 'base' })
+      );
+
+      for (let index = 0; index < files.length; index++) {
+        const file = files[index];
+        const id = this.extractMultiMergeId(file.name);
+
+        this.multiMergeProgress = `${this.t('TRT.MultiMergeProcessing')} ${file.name} (${index + 1}/${files.length})`;
+
+        const { headers, rows } = await this.readMultiMergeFile(file);
+
+        // Union ordonnée des colonnes de tous les fichiers
+        headers.forEach(header => {
+          if (!knownColumns.has(header)) {
+            knownColumns.add(header);
+            columns.push(header);
+          }
+        });
+
+        // Ajout de la colonne d'identifiant sur chaque ligne
+        rows.forEach(rawRow => {
+          const row: any = { [idColumn]: id };
+          Object.keys(rawRow).forEach(key => {
+            row[key] = rawRow[key];
+          });
+          row[idColumn] = id;
+          merged.push(row);
+        });
+
+        stats.push({ file: file.name, id, rows: rows.length });
+        this.multiMergeStats = [...stats];
+      }
+
+      this.multiMergeProgress = this.t('TRT.MultiMergeDone', {
+        files: stats.length,
+        rows: merged.length
+      });
+      this.showSuccess('multiMerge', this.multiMergeProgress);
+    } catch (error: any) {
+      this.multiMergeProgress = '';
+      this.showError('multiMerge', `${this.t('TRT.MultiMergeError')} ${error?.message || error}`);
+    } finally {
+      this.multiMergeIsProcessing = false;
+    }
+  }
+
+  /**
+   * Nom de fichier pour les exports de la fusion multi-fichiers.
+   */
+  private buildMultiMergeFileName(extension: 'xlsx' | 'csv'): string {
+    const now = new Date();
+    const pad = (value: number) => String(value).padStart(2, '0');
+    const stamp = `${now.getFullYear()}${pad(now.getMonth() + 1)}${pad(now.getDate())}_${pad(now.getHours())}${pad(now.getMinutes())}${pad(now.getSeconds())}`;
+    return `MOOVGA_FUSION_${stamp}.${extension}`;
+  }
+
+  /**
+   * Export Excel du résultat de la fusion.
+   * Au-delà de 10 000 lignes on passe par l'export chunké (memory-safe) ;
+   * en dessous, l'export rapide suffit.
+   */
+  async exportMultiMergeResult() {
+    if (this.multiMergeData.length === 0) {
+      this.showError('multiMerge', this.t('TRT.MultiMergeNoResult'));
+      return;
+    }
+
+    this.multiMergeIsProcessing = true;
+    this.multiMergeProgress = this.t('TRT.MultiMergeExporting');
+
+    try {
+      const fileName = this.buildMultiMergeFileName('xlsx');
+      const rows = this.multiMergeData;
+      const columns = this.multiMergeColumns;
+
+      if (rows.length > 10000) {
+        await this.exportOptimizationService.exportExcelOptimized(rows, columns, fileName, {
+          chunkSize: rows.length > 100000 ? 5000 : 3000,
+          useWebWorker: true,
+          enableCompression: true,
+          format: 'xlsx',
+          onProgress: (progress: ExportProgress) => {
+            this.multiMergeProgress = progress.message;
+          }
+        });
+      } else {
+        this.exportOptimizationService.exportQuick(rows, columns, fileName, 'xlsx');
+      }
+
+      this.multiMergeProgress = this.t('TRT.MultiMergeExportDone');
+      this.showSuccess('multiMerge', this.t('TRT.MultiMergeExported', { file: fileName }));
+    } catch (error: any) {
+      this.multiMergeProgress = '';
+      this.showError('multiMerge', `${this.t('TRT.MultiMergeError')} ${error?.message || error}`);
+    } finally {
+      this.multiMergeIsProcessing = false;
+    }
+  }
+
+  /**
+   * Export CSV du résultat de la fusion.
+   * Chemin dédié pour les gros volumes (> 50 000 lignes) : écriture par chunks
+   * sans concaténer de méga-chaîne, donc beaucoup plus rapide et moins gourmand.
+   */
+  async exportMultiMergeResultCSV() {
+    if (this.multiMergeData.length === 0) {
+      this.showError('multiMerge', this.t('TRT.MultiMergeNoResult'));
+      return;
+    }
+
+    this.multiMergeIsProcessing = true;
+    this.multiMergeProgress = this.t('TRT.MultiMergeExporting');
+
+    try {
+      const fileName = this.buildMultiMergeFileName('csv');
+      const rows = this.multiMergeData;
+      const columns = this.multiMergeColumns;
+
+      await this.exportOptimizationService.exportCSVOptimized(rows, columns, fileName, {
+        chunkSize: rows.length > 50000 ? 5000 : rows.length > 20000 ? 2000 : 1000,
+        useWebWorker: false,
+        enableCompression: true,
+        onProgress: (progress: ExportProgress) => {
+          this.multiMergeProgress = progress.message;
+        }
+      });
+
+      this.multiMergeProgress = this.t('TRT.MultiMergeExportDone');
+      this.showSuccess('multiMerge', this.t('TRT.MultiMergeExported', { file: fileName }));
+    } catch (error: any) {
+      this.multiMergeProgress = '';
+      this.showError('multiMerge', `${this.t('TRT.MultiMergeError')} ${error?.message || error}`);
+    } finally {
+      this.multiMergeIsProcessing = false;
+    }
+  }
   // --- COMPARAISON BO AGENCE / PARTNER STATION (TOTAL ENERGIE) ---
   async onTotalEnergieCompareFileSelected(event: Event) {
     const input = event.target as HTMLInputElement;
@@ -3660,6 +3897,76 @@ End Sub`;
     if (input) {
       input.value = '';
     }
+  }
+
+  /** Copie la macro VBA dans le presse-papiers (fallback pour les navigateurs non sécurisés). */
+  async copySheetSplitVbaMacro(): Promise<void> {
+    let copied = false;
+
+    try {
+      if (navigator.clipboard && window.isSecureContext) {
+        await navigator.clipboard.writeText(this.SHEET_SPLIT_VBA_MACRO);
+        copied = true;
+      }
+    } catch {
+      copied = false;
+    }
+
+    if (!copied) {
+      copied = this.copyTextToClipboardFallback(this.SHEET_SPLIT_VBA_MACRO);
+    }
+
+    if (!copied) {
+      this.showError('sheetSplit', this.t('TRT.CodeCopieErreur'));
+      return;
+    }
+
+    this.sheetSplitVbaCopied = true;
+    if (this.sheetSplitVbaCopyTimeout) {
+      clearTimeout(this.sheetSplitVbaCopyTimeout);
+    }
+    this.sheetSplitVbaCopyTimeout = setTimeout(() => {
+      this.sheetSplitVbaCopied = false;
+      this.sheetSplitVbaCopyTimeout = null;
+      this.cd.markForCheck();
+    }, 2500);
+    this.cd.markForCheck();
+  }
+
+  private copyTextToClipboardFallback(text: string): boolean {
+    const textarea = document.createElement('textarea');
+    textarea.value = text;
+    textarea.style.position = 'fixed';
+    textarea.style.left = '-9999px';
+    textarea.style.top = '0';
+    textarea.setAttribute('readonly', '');
+    document.body.appendChild(textarea);
+    textarea.select();
+    textarea.setSelectionRange(0, textarea.value.length);
+
+    let copied = false;
+    try {
+      copied = document.execCommand('copy');
+    } finally {
+      document.body.removeChild(textarea);
+    }
+    return copied;
+  }
+
+  /** Télécharge la macro sous forme de module VBA importable dans Excel. */
+  downloadSheetSplitVbaMacro(): void {
+    const content = `Attribute VB_Name = "Module1"\r\n`
+      + this.SHEET_SPLIT_VBA_MACRO.replace(/\r?\n/g, '\r\n');
+
+    // Encodage proche de Windows-1252, attendu par l'éditeur VBA d'Excel.
+    const bytes = new Uint8Array(content.length);
+    for (let i = 0; i < content.length; i++) {
+      const code = content.charCodeAt(i);
+      bytes[i] = code <= 0xff ? code : 0x3f;
+    }
+
+    const blob = new Blob([bytes.buffer as ArrayBuffer], { type: 'application/octet-stream' });
+    saveAs(blob, 'SeparerFeuillesEnteteComplet.bas');
   }
 
   async splitExcelSheets() {
@@ -5133,6 +5440,23 @@ End Sub`;
   }
 
   ngOnInit() {
+    // Charger les extensions configurées
+    this.loadTraitementExtensions();
+    try {
+      this.configurationCalculService.loadRules().subscribe({
+        next: () => {
+          this.loadTraitementExtensions();
+          this.cd.detectChanges();
+        },
+        error: () => {
+          this.loadTraitementExtensions();
+          this.cd.detectChanges();
+        }
+      });
+    } catch {
+      // ignore
+    }
+    
     // Initialiser l'affichage au démarrage
     this.currentPage = 1;
     this.showAllRows = false;
@@ -5496,6 +5820,10 @@ End Sub`;
     }
 
     try {
+      // Activer le flag pour indiquer que l'import vient de la prévisualisation
+      // Cela désactive les filtres automatiques spécifiques aux modèles (Orange Money, GDJ)
+      this.isImportFromPreview = true;
+      
       this.isProcessing = true;
       this.processingMessage = this.t('TRT.msg.csvProcessingConfirmed');
       
@@ -5539,9 +5867,13 @@ End Sub`;
       this.csvFileToProcess = null;
       this.csvPreviewData = [];
       this.csvPreviewColumns = [];
+      // Réinitialiser le flag d'import depuis prévisualisation
+      this.isImportFromPreview = false;
       
     } catch (error) {
       this.isProcessing = false;
+      // Réinitialiser le flag d'import depuis prévisualisation en cas d'erreur
+      this.isImportFromPreview = false;
       this.showError('upload', this.t('TRT.msg.csvProcessingError'));
     }
   }
@@ -5721,157 +6053,12 @@ End Sub`;
     this.detectedDelimiter = ';';
     this.isGdjFile = false;
     this.gdjHeaderRowIndex = -1;
+    // Réinitialiser le flag d'import depuis prévisualisation
+    this.isImportFromPreview = false;
   }
 
   escapeRegExp(string: string): string {
     return string.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
-  }
-
-  /**
-   * Obtient les valeurs spécifiques pour un champ donné, en tenant compte du type de fichier
-   */
-  getFieldValues(fieldName: string): string[] {
-    // Utiliser le nom du premier fichier sélectionné pour détecter le type
-    const fileName = this.selectedFiles.length > 0 ? this.selectedFiles[0].name : '';
-    return this.orangeMoneyUtilsService.getFieldValues(fieldName, fileName);
-  }
-
-  // Méthode pour détecter les fichiers Orange Money et trouver la ligne d'en-tête
-  private detectOrangeMoneyFile(csvContent: string, delimiter: string): { isOrangeMoney: boolean; headerRowIndex: number; headerRow: string[] } {
-    const lines = csvContent.split('\n').filter((line: string) => line.trim());
-    let headerRowIndex = -1;
-    let headerRow: string[] = [];
-
-    // Parcourir les lignes pour trouver la première colonne commençant par "N°"
-    for (let i = 0; i < lines.length; i++) {
-      const line = lines[i];
-      const columns = line.split(delimiter).map((col: string) => col.trim());
-      
-      // Vérifier si la première colonne commence par "N°"
-      if (columns.length > 0 && columns[0].startsWith('N°')) {
-        headerRowIndex = i;
-        headerRow = columns;
-        break;
-      }
-      
-      // Vérifier si "N°" est présent dans n'importe quelle colonne (détection plus flexible)
-      if (columns.some((col: string) => col.startsWith('N°'))) {
-        headerRowIndex = i;
-        headerRow = columns;
-        break;
-      }
-      
-      // Vérifier les patterns Orange Money typiques
-      const orangeMoneyPatterns = [
-        'Orange Money',
-        'Relevé de vos opérations',
-        'Application:',
-        'Réseau:',
-        'Début de Période:',
-        'Fin de Période:',
-        'Type de rapport:',
-        'Généré le:'
-      ];
-      
-      const hasOrangeMoneyPattern = orangeMoneyPatterns.some(pattern => 
-        columns.some((col: string) => col.includes(pattern))
-      );
-      
-      if (hasOrangeMoneyPattern) {
-        // Continuer à chercher la ligne avec "N°"
-      }
-    }
-
-    const isOrangeMoney = headerRowIndex !== -1;
-    
-    if (isOrangeMoney) {
-    } else {
-      // Vérifier si c'est un fichier Orange Money même sans "N°" visible
-      const allContent = csvContent.toLowerCase();
-      if (allContent.includes('orange money') || allContent.includes('relevé de vos opérations')) {
-        // Chercher la première ligne qui ressemble à un en-tête de données
-        for (let i = 0; i < lines.length; i++) {
-          const line = lines[i];
-          const columns = line.split(delimiter).map((col: string) => col.trim());
-          
-          // Chercher des patterns d'en-tête de données
-          const dataHeaderPatterns = [
-            'date', 'heure', 'référence', 'service', 'paiement', 'application', 'statut', 'genere le', 'mode',
-            'agent', 'correspondant', 'montant', 'commissions', 'débit', 'crédit'
-          ];
-          
-          const hasDataHeader = dataHeaderPatterns.some(pattern => 
-            columns.some((col: string) => col.toLowerCase().includes(pattern))
-          );
-          
-          if (hasDataHeader && columns.length >= 5) {
-            headerRowIndex = i;
-            headerRow = columns;
-            break;
-          }
-        }
-      }
-    }
-
-    // Si on n'a pas trouvé d'en-tête mais qu'on a des colonnes génériques, chercher la ligne suivante
-    if (headerRowIndex === -1 && lines.length > 1) {
-      const firstLine = lines[0];
-      const firstColumns = firstLine.split(delimiter).map((col: string) => col.trim());
-      
-      // Vérifier si la première ligne contient des colonnes génériques (Col1, Col2, etc.)
-      const hasGenericColumns = firstColumns.some((col: string) => 
-        col.toLowerCase().startsWith('col') || col.toLowerCase().startsWith('_')
-      );
-      
-      if (hasGenericColumns && lines.length > 1) {
-        // Chercher dans la deuxième ligne et suivantes
-        for (let i = 1; i < lines.length; i++) {
-          const line = lines[i];
-          const columns = line.split(delimiter).map((col: string) => col.trim());
-          
-          // Vérifier si cette ligne contient "N°" ou des en-têtes de données
-          if (columns.some((col: string) => col.startsWith('N°')) || 
-              columns.some((col: string) => col.toLowerCase().includes('date')) ||
-              columns.some((col: string) => col.toLowerCase().includes('heure')) ||
-              columns.some((col: string) => col.toLowerCase().includes('référence'))) {
-            headerRowIndex = i;
-            headerRow = columns;
-            break;
-          }
-        }
-      }
-    }
-
-    // Si toujours pas trouvé, chercher des patterns plus spécifiques
-    if (headerRowIndex === -1) {
-      for (let i = 0; i < lines.length; i++) {
-        const line = lines[i];
-        const columns = line.split(delimiter).map((col: string) => col.trim());
-        
-        // Chercher des patterns très spécifiques à Orange Money
-        const orangeMoneySpecificPatterns = [
-          'opération', 'agent', 'correspondant', 'montant (xaf)', 'commissions (xaf)',
-          'débit', 'crédit', 'compte:', 'sous-réseau'
-        ];
-        
-        const hasSpecificPattern = orangeMoneySpecificPatterns.some(pattern => 
-          columns.some((col: string) => col.toLowerCase().includes(pattern))
-        );
-        
-        if (hasSpecificPattern && columns.length >= 10) {
-          headerRowIndex = i;
-          headerRow = columns;
-          break;
-        }
-      }
-    }
-
-    // Corriger les caractères spéciaux dans les colonnes détectées
-    if (headerRowIndex !== -1) {
-      headerRow = this.fixOrangeMoneyColumnNames(headerRow);
-    }
-
-    return { isOrangeMoney: headerRowIndex !== -1, headerRowIndex, headerRow };
   }
 
   // Méthode pour détecter les fichiers GDJ (LA GABONAISE DES JEUX) et trouver la ligne d'en-tête
@@ -5907,281 +6094,6 @@ End Sub`;
     }
 
     return { isGdj: headerRowIndex !== -1, headerRowIndex, headerRow };
-  }
-
-  // Méthode pour forcer la mise à jour de l'affichage après détection Orange Money
-  private updateOrangeMoneyDisplay(columns: string[]): void {
-    
-    // Vider les anciennes colonnes
-    this.allColumns = [];
-    this.columns = [];
-    this.selectedCols = [];
-    
-    // Mettre à jour avec les nouvelles colonnes
-    this.allColumns = [...columns];
-    this.columns = [...columns];
-    this.selectedCols = [...columns]; // Sélectionner toutes les colonnes par défaut
-    
-    
-    // Forcer la détection des changements
-    this.cd.detectChanges();
-    
-    // Attendre un peu puis forcer à nouveau
-    setTimeout(() => {
-      this.cd.detectChanges();
-      
-      // Appliquer automatiquement le filtre Orange Money complet (filtres + colonnes spécifiques)
-      this.applyAutomaticOrangeMoneyFilter();
-    }, 100);
-  }
-
-  // Méthode pour corriger les caractères spéciaux dans les colonnes Orange Money
-  private fixOrangeMoneyColumnNames(columns: string[]): string[] {
-    return columns.map(col => {
-      if (!col) return col;
-      
-      // Corrections spécifiques pour les caractères corrompus
-      let corrected = col
-        .replace(/Opration/g, 'Opération')
-        .replace(/Rfrence/g, 'Référence')
-        .replace(/N/g, 'N°')
-        .replace(/Tte/g, 'Tête')
-        .replace(/rseau/g, 'réseau')
-        .replace(/Compte :/g, 'Compte:')
-        .replace(/Montant \(XAF\)/g, 'Montant (XAF)')
-        .replace(/Commissions \(XAF\)/g, 'Commissions (XAF)')
-        .replace(/Crdit/g, 'Crédit')
-        .replace(/Dbit/g, 'Débit')
-        .replace(/Sous-rseau/g, 'Sous-réseau');
-      
-      // Suppression des accents pour les colonnes spécifiques
-      corrected = corrected
-        .replace(/Référence/g, 'Reference')
-        .replace(/Débit/g, 'Debit')
-        .replace(/Crédit/g, 'Credit');
-      
-      return corrected;
-    });
-  }
-
-  // Méthode pour appliquer automatiquement le filtre "Succès" sur les fichiers Orange Money
-  private applyAutomaticOrangeMoneyFilter(): void {
-    
-    // Chercher la colonne "Statut" dans les colonnes disponibles
-    const statutColumn = this.allColumns.find(col =>
-      this.orangeMoneyUtilsService.matchesOrangeMoneyStatutColumn(col)
-    );
-    
-    // Chercher la colonne "Type d'opération" ou "Opération" pour filtrer Cash in et Merchant Payment
-    const operationColumn = this.allColumns.find(col => {
-      const colLower = col.toLowerCase();
-      return (colLower.includes('type') && colLower.includes('opération')) ||
-             colLower.includes('opération') ||
-             colLower.includes('operation') ||
-             colLower.includes('transaction') ||
-             colLower.includes('service') ||
-             colLower.includes('type') ||
-             colLower.includes('catégorie') ||
-             colLower.includes('categorie') ||
-             colLower.includes('nature');
-    });
-    
-    let filteredRows = [...this.allRows];
-    
-    // Appliquer le filtre sur le statut "Succès"
-    if (statutColumn && filteredRows.length > 0) {
-      
-      filteredRows = filteredRows.filter(row => {
-        const statutValue = row[statutColumn];
-        return statutValue && statutValue.toString().toLowerCase().includes('succès');
-      });
-      
-    } else {
-    }
-    
-    // Appliquer le filtre sur les types d'opération (Cash in et Merchant Payment)
-    if (operationColumn && filteredRows.length > 0) {
-      
-      const originalCount = filteredRows.length;
-      
-      // Collecter les types d'opération uniques pour le debug
-      const uniqueOperations = new Set();
-      filteredRows.forEach(row => {
-        const operationValue = row[operationColumn];
-        if (operationValue) {
-          uniqueOperations.add(operationValue.toString());
-        }
-      });
-      
-      filteredRows = filteredRows.filter(row => {
-        const operationValue = row[operationColumn];
-        if (!operationValue) return false;
-        
-        const operationLower = operationValue.toString().toLowerCase();
-        const isAccepted = operationLower.includes('cash in') || 
-               operationLower.includes('merchant payment') ||
-               operationLower.includes('paiement marchand') ||
-               operationLower.includes('versement') ||
-               operationLower.includes('deposit') ||
-               operationLower.includes('cash-in') ||
-               operationLower.includes('cashin') ||
-               operationLower.includes('merchant') ||
-               operationLower.includes('marchand') ||
-               operationLower.includes('recharge') ||
-               operationLower.includes('top up') ||
-               operationLower.includes('topup');
-        
-        if (isAccepted) {
-        }
-        
-        return isAccepted;
-      });
-      
-    } else {
-    }
-    
-    // Appliquer le filtre de colonnes spécifique pour Orange Money
-    this.applyOrangeMoneyColumnFilter();
-      
-      // Mettre à jour les données affichées
-    if (filteredRows.length > 0) {
-      this.allRows = [...filteredRows];
-      this.combinedRows = [...filteredRows];
-      this.filterApplied = true;
-      
-      // Mettre à jour l'affichage
-      this.updateDisplayedRows();
-      
-      this.showSuccess('filter', `Filtres automatiques Orange Money appliqués: ${filteredRows.length} lignes (Succès + Cash in/Merchant Payment)`);
-    } else {
-      this.showError('filter', this.t('TRT.msg.noAutoFilterMatch'));
-    }
-    
-    // Concaténation automatique des colonnes Date et Heure pour Orange Money
-    this.applyAutomaticDateHeureConcatenation();
-  }
-
-  // Nouvelle méthode pour appliquer le filtre de colonnes spécifique Orange Money
-  private applyOrangeMoneyColumnFilter(): void {
-    
-    // Définir l'ordre spécifique des colonnes pour Orange Money
-    const orangeMoneyColumnOrder = [
-      'Référence',
-      'Débit', 
-      'Crédit',
-      'N° de Compte',
-      'DATE',
-      'Service',
-      'Paiement',
-      'Statut'
-    ];
-    
-    // Chercher les colonnes correspondantes dans les données disponibles
-    const availableColumns: string[] = [];
-    
-    for (const targetColumn of orangeMoneyColumnOrder) {
-      // Chercher une correspondance exacte ou partielle
-      const foundColumn = this.allColumns.find(col => {
-        const colLower = col.toLowerCase();
-        const targetLower = targetColumn.toLowerCase();
-        
-        // Correspondance exacte
-        if (col === targetColumn) return true;
-        
-        // Correspondance partielle pour les colonnes spécifiques
-        if (targetColumn === 'Référence' && colLower.includes('référence')) return true;
-        if (targetColumn === 'Débit' && colLower.includes('débit')) return true;
-        if (targetColumn === 'Crédit' && colLower.includes('crédit')) return true;
-        if (targetColumn === 'N° de Compte' && (colLower.includes('n°') && colLower.includes('compte'))) return true;
-        if (targetColumn === 'DATE' && colLower.includes('date')) return true;
-        if (targetColumn === 'Service' && colLower.includes('service')) return true;
-        if (targetColumn === 'Paiement' && this.orangeMoneyUtilsService.matchesOrangeMoneyPaiementColumn(col)) return true;
-        if (targetColumn === 'Statut' && this.orangeMoneyUtilsService.matchesOrangeMoneyStatutColumn(col)) return true;
-        
-        return false;
-      });
-      
-      if (foundColumn) {
-        availableColumns.push(foundColumn);
-      } else {
-      }
-    }
-    
-    // Appliquer le filtre de colonnes si des colonnes ont été trouvées
-    if (availableColumns.length > 0) {
-      
-      // Mettre à jour les colonnes affichées
-      this.columns = [...availableColumns];
-      this.selectedCols = [...availableColumns];
-      this.selectionApplied = true;
-      
-      // Mettre à jour l'affichage
-      this.updateDisplayedRows();
-      
-      this.showSuccess('select', `Filtre de colonnes Orange Money appliqué: ${availableColumns.length} colonnes affichées dans l'ordre spécifique`);
-    } else {
-    }
-  }
-
-  // Méthode pour concaténer automatiquement les colonnes Date et Heure pour les fichiers Orange Money
-  private applyAutomaticDateHeureConcatenation(): void {
-    
-    // Chercher les colonnes Date et Heure avec une détection plus flexible
-    const dateColumn = this.allColumns.find(col => {
-      const colLower = col.toLowerCase();
-      return (colLower.includes('date') || colLower.includes('jour')) && 
-             !colLower.includes('heure') && 
-             !colLower.includes('time') &&
-             !colLower.includes('horaire');
-    });
-    
-    const heureColumn = this.allColumns.find(col => {
-      const colLower = col.toLowerCase();
-      return colLower.includes('heure') || 
-             colLower.includes('time') ||
-             colLower.includes('horaire') ||
-             colLower.includes('moment');
-    });
-    
-    if (dateColumn && heureColumn && this.allRows.length > 0) {
-      
-      // Vérifier si la colonne DATE existe déjà
-      const dateColumnExists = this.allColumns.includes('DATE');
-      
-      if (!dateColumnExists) {
-        // Ajouter la nouvelle colonne DATE aux colonnes
-        this.allColumns.push('DATE');
-        this.columns.push('DATE');
-        
-        // Concaténer les données
-        let concatenatedCount = 0;
-        for (const row of this.allRows) {
-          const dateValue = row[dateColumn] || '';
-          const heureValue = row[heureColumn] || '';
-          
-          // Concaténer avec un espace entre Date et Heure
-          const concatenatedValue = `${dateValue} ${heureValue}`.trim();
-          row['DATE'] = concatenatedValue;
-          
-          if (concatenatedValue) {
-            concatenatedCount++;
-          }
-        }
-        
-        // Mettre à jour les données affichées
-        this.combinedRows = [...this.allRows];
-        this.originalRows = [...this.allRows];
-        
-        // Mettre à jour l'affichage
-        this.updateDisplayedRows();
-        
-        this.showSuccess('concat', `Concaténation automatique Orange Money: colonne DATE créée (${dateColumn} + ${heureColumn}) - ${concatenatedCount} valeurs traitées`);
-      } else {
-      }
-    } else {
-      if (!dateColumn) console.log('❌ Colonne Date non trouvée');
-      if (!heureColumn) console.log('❌ Colonne Heure non trouvée');
-    }
   }
 
   /**

@@ -276,6 +276,26 @@ public class PermissionCheckService {
             || "DELETE".equals(method);
     }
 
+    /**
+     * Ecritures du suivi TRX a annuler : elles peuvent etre declenchees depuis
+     * /matches (dont le sous-menu de navigation a ses propres droits), d'ou le
+     * repli sur les permissions du module parent Resultats.
+     */
+    private boolean isSuiviTrxAnnulerWriteRequest(String apiPath, String httpMethod) {
+        if (apiPath == null || httpMethod == null) {
+            return false;
+        }
+        String path = normalizeApiPath(apiPath);
+        if (!path.startsWith("/api/suivi-trx-a-annuler")) {
+            return false;
+        }
+        String method = httpMethod.toUpperCase(Locale.ROOT);
+        return "POST".equals(method)
+            || "PUT".equals(method)
+            || "PATCH".equals(method)
+            || "DELETE".equals(method);
+    }
+
     private boolean checkPermissionAcrossModules(
         String username,
         String apiPath,
@@ -296,8 +316,9 @@ public class PermissionCheckService {
                 if (hasFlexibleModulePermission(username, canonicalOverride, effectivePermission, httpMethod)) {
                     return true;
                 }
-                // Écritures suivi écarts : retomber sur Réconciliation / Résultats (ex. lancer_reconciliation)
-                if (!isEcartBoSummaryWriteRequest(apiPath, httpMethod)) {
+                // Écritures suivi écarts / suivi TRX à annuler : retomber sur Réconciliation / Résultats
+                if (!isEcartBoSummaryWriteRequest(apiPath, httpMethod)
+                    && !isSuiviTrxAnnulerWriteRequest(apiPath, httpMethod)) {
                     return false;
                 }
             }
@@ -586,12 +607,14 @@ public class PermissionCheckService {
         if (apiPath.startsWith("/api/conversion")) return "Modèles";
         if (apiPath.startsWith("/api/renommer")) return "Traitement";
         if (apiPath.startsWith("/api/suivi-ecart")) return "Résultats";
+        if (apiPath.startsWith("/api/suivi-trx-a-annuler")) return "Résultats";
         if (apiPath.startsWith("/api/agency-summary")) return "Dashboard";
         if (apiPath.startsWith("/api/modules")) return "Dashboard";
         if (apiPath.startsWith("/api/pays")) return "Profil";
         if (apiPath.startsWith("/api/oppart")) return "Opérations";
         if (apiPath.startsWith("/api/compte-solde-bo")) return "Comptes";
         if (apiPath.startsWith("/api/compte-solde-cloture")) return "Comptes";
+        if (apiPath.startsWith("/api/certification-solde-resultats")) return "Réconciliation";
         if (apiPath.startsWith("/api/user-profil")) return "Profil";
 
         return null;

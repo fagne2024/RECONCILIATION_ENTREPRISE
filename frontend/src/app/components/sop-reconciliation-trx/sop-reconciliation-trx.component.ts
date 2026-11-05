@@ -2,6 +2,8 @@ import { Component, OnInit, SecurityContext } from '@angular/core';
 import { DomSanitizer, SafeHtml } from '@angular/platform-browser';
 import { Location } from '@angular/common';
 import { Router } from '@angular/router';
+import { Observable, of } from 'rxjs';
+import { map, switchMap } from 'rxjs/operators';
 import { SopDocumentService } from '../../services/sop-document.service';
 import { SopNodeService } from '../../services/sop-node.service';
 import { PopupService } from '../../services/popup.service';
@@ -153,6 +155,16 @@ export class SopReconciliationTrxComponent implements OnInit {
   detailCategory: SOPNode | null = null;
   detailItem: SOPNode | null = null;
 
+  // ── Ajout d'une SOP (branche > catégorie > SOP) ──
+  readonly NEW_CATEGORY = '__new__';
+  showAddSopModal = false;
+  addSopBranchId = '';
+  addSopCategoryId = '';
+  addSopNewCategory = '';
+  addSopLabel = '';
+  addSopError = '';
+  isAddingSop = false;
+
   constructor(
     private sopDocumentService: SopDocumentService,
     private sopNodeService: SopNodeService,
@@ -168,10 +180,38 @@ export class SopReconciliationTrxComponent implements OnInit {
 
   loadStructure(): void {
     this.isLoadingStructure = true;
-    // Pour SOP TRX, on utilise une structure différente
-    // On pourrait charger depuis une API différente ou utiliser la structure par défaut
-    // Pour l'instant, on utilise la structure définie ci-dessus
-    this.isLoadingStructure = false;
+    this.sopNodeService.getStructure(DEFAULT_SOP_STRUCTURE.id).subscribe({
+      next: (response) => {
+        if (response.success && response.structure) {
+          this.sopStructure = this.withDefaultLabelKeys(response.structure as SOPNode, this.defaultNodesById());
+        }
+        this.isLoadingStructure = false;
+      },
+      error: (error) => {
+        console.error('Erreur lors du chargement de la structure SOP TRX:', error);
+        this.isLoadingStructure = false;
+      }
+    });
+  }
+
+  private defaultNodesById(): Map<string, SOPNode> {
+    const map = new Map<string, SOPNode>();
+    const visit = (node: SOPNode) => {
+      map.set(node.id, node);
+      node.children?.forEach(visit);
+    };
+    visit(DEFAULT_SOP_STRUCTURE);
+    return map;
+  }
+
+  /** Un nœud par défaut non renommé garde sa clé i18n (libellé traduit selon la langue). */
+  private withDefaultLabelKeys(node: SOPNode, defaults: Map<string, SOPNode>): SOPNode {
+    const def = defaults.get(node.id);
+    return {
+      ...node,
+      labelKey: def?.labelKey && def.label === node.label ? def.labelKey : undefined,
+      children: node.children?.map(child => this.withDefaultLabelKeys(child, defaults))
+    };
   }
 
   /** Détecte un message d'échec d'extraction, quelle que soit la langue active. */
@@ -251,9 +291,14 @@ export class SopReconciliationTrxComponent implements OnInit {
   }
 
   visibleBranches(): SOPNode[] {
+    const searching = !!this.searchQuery.trim();
     return this.branches().filter(
-      (branch) => this.matchesBranchFilter(branch) && this.visibleCategories(branch).length > 0
+      (branch) => this.matchesBranchFilter(branch) && (!searching || this.visibleCategories(branch).length > 0)
     );
+  }
+
+  isSearching(): boolean {
+    return !!this.searchQuery.trim();
   }
 
   isCategoryOpen(branch: SOPNode, category: SOPNode): boolean {
@@ -872,9 +917,7 @@ export class SopReconciliationTrxComponent implements OnInit {
     }
 
     const newNodeId = this.generateId(newLabel);
-    const parentNodeId = this.parentNodeForAdd.id === 'root-trx' ? undefined : this.parentNodeForAdd.id;
-
-    this.sopNodeService.createNode(newNodeId, newLabel, parentNodeId).subscribe({
+    this.sopNodeService.createNode(newNodeId, newLabel, this.parentNodeForAdd.id).subscribe({
       next: async (response) => {
         if (response.success) {
           this.loadStructure();
@@ -979,6 +1022,107 @@ export class SopReconciliationTrxComponent implements OnInit {
         await this.popupService.showError(I18nService.t('SOP.shared.node.deletedError'), I18nService.t('SOP.shared.popup.deleteError'));
       }
     });
+  }
+
+  openAddSopModal(branch?: SOPNode, category?: SOPNode, event?: Event): void {
+    event?.stopPropagation();
+    const targetBranch = branch ?? this.branches().find((b) => b.id === this.branchFilter) ?? this.branches()[0];
+    this.addSopBranchId = targetBranch?.id ?? '';
+    this.addSopCategoryId = category?.id ?? targetBranch?.children?.[0]?.id ?? this.NEW_CATEGORY;
+    this.addSopNewCategory = '';
+    this.addSopLabel = '';
+    this.addSopError = '';
+    this.isAddingSop = false;
+    this.showAddSopModal = true;
+  }
+
+  closeAddSopModal(): void {
+    if (this.isAddingSop) {
+      return;
+    }
+    this.showAddSopModal = false;
+  }
+
+  addSopCategories(): SOPNode[] {
+    return this.branches().find((b) => b.id === this.addSopBranchId)?.children ?? [];
+  }
+
+  onAddSopBranchChange(): void {
+    this.addSopCategoryId = this.addSopCategories()[0]?.id ?? this.NEW_CATEGORY;
+    this.addSopError = '';
+  }
+
+  canSubmitAddSop(): boolean {
+    const needsNewCategory = this.addSopCategoryId === this.NEW_CATEGORY;
+    return !this.isAddingSop
+      && !!this.addSopBranchId
+      && !!this.addSopLabel.trim()
+      && (!needsNewCategory || !!this.addSopNewCategory.trim());
+  }
+
+  submitAddSop(): void {
+    if (!this.canSubmitAddSop()) {
+      return;
+    }
+    const label = this.addSopLabel.trim();
+    const creatingCategory = this.addSopCategoryId === this.NEW_CATEGORY;
+    const category = creatingCategory ? undefined : this.addSopCategories().find((c) => c.id === this.addSopCategoryId);
+    const sameName = (node: SOPNode) => this.normalizeText(this.labelOf(node)) === this.normalizeText(label);
+    if (category?.children?.some(sameName)) {
+      this.addSopError = I18nService.t('SOP.reconciliationTrx.addSop.duplicate');
+      return;
+    }
+
+    this.isAddingSop = true;
+    this.addSopError = '';
+
+    const categoryId$: Observable<string> = creatingCategory
+      ? this.createChildNode(this.addSopNewCategory.trim(), this.addSopBranchId)
+      : of(this.addSopCategoryId);
+
+    categoryId$.pipe(
+      switchMap((categoryId) => this.createChildNode(label, categoryId).pipe(map((sopId) => ({ categoryId, sopId }))))
+    ).subscribe({
+      next: async ({ categoryId, sopId }) => {
+        this.isAddingSop = false;
+        this.showAddSopModal = false;
+        this.collapsedCategories.delete(`${this.addSopBranchId}||${categoryId}`);
+        if (this.branchFilter && this.branchFilter !== this.addSopBranchId) {
+          this.branchFilter = null;
+        }
+        this.searchQuery = '';
+        this.loadStructure();
+        await this.popupService.showSuccess(
+          I18nService.t('SOP.reconciliationTrx.addSop.createdSuccess', { name: label }),
+          I18nService.t('POPUP.success')
+        );
+        this.popupNode = { id: sopId, label };
+        this.showPopup = true;
+      },
+      error: (error) => {
+        console.error('Erreur lors de la création de la SOP:', error);
+        this.isAddingSop = false;
+        this.addSopError = error?.message && !error?.status
+          ? error.message
+          : I18nService.t('SOP.reconciliationTrx.addSop.createError');
+        if (creatingCategory) {
+          this.loadStructure();
+        }
+      }
+    });
+  }
+
+  /** Crée un nœud sous `parentId` et émet son identifiant ; une réponse `success: false` devient une erreur. */
+  private createChildNode(label: string, parentId: string): Observable<string> {
+    const nodeId = this.generateId(label);
+    return this.sopNodeService.createNode(nodeId, label, parentId).pipe(
+      map((response) => {
+        if (!response.success) {
+          throw new Error(response.error || I18nService.t('SOP.reconciliationTrx.addSop.createError'));
+        }
+        return response.nodeId || nodeId;
+      })
+    );
   }
 
   private generateId(label: string): string {

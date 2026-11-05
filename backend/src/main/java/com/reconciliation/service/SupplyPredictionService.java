@@ -37,6 +37,10 @@ public class SupplyPredictionService {
     @Autowired
     private AgencyThresholdRepository agencyThresholdRepository;
     
+    /** Règles de calcul configurables (Configuration > Calcul) : prioritaire sur les valeurs codées en dur. */
+    @Autowired
+    private CalculationRuleService calculationRuleService;
+    
     private SupplyPredictionConfig config = new SupplyPredictionConfig();
     private static final List<String> ELIGIBLE_CATEGORIES = Arrays.asList("client", "service");
 
@@ -269,7 +273,8 @@ public class SupplyPredictionService {
                     totalCashin += montant;
                 } else if ("FRAIS_TRANSACTION".equals(typeOp)) {
                     totalFraisTransaction += montant;
-                } else if (typeOp.toLowerCase().contains("appro")) {
+                } else if (calculationRuleService.matchesAny(typeOp, "BANQUE.TYPES_APPROVISIONNEMENT",
+                        CalculationRuleService.DEFAULT_TYPES_APPROVISIONNEMENT)) {
                     // Approvisionnements (crédits)
                     supplies.add(montant);
                 }
@@ -466,9 +471,10 @@ public class SupplyPredictionService {
         // Filtrer uniquement les opérations de compensation
         List<Double> balancesAfterCompensations = operations.stream()
             .filter(op -> {
-                String typeOp = op.getTypeOperation() != null ? op.getTypeOperation().toLowerCase() : "";
-                // Identifier les compensations : typeOperation contient "compens" ou "compense"
-                return typeOp.contains("compens") || typeOp.contains("compense");
+                String typeOp = op.getTypeOperation() != null ? op.getTypeOperation() : "";
+                // Identifier les compensations : règle de calcul prioritaire, repli code par défaut
+                return calculationRuleService.matchesAny(typeOp, "BANQUE.TYPES_COMPENSATION",
+                        CalculationRuleService.DEFAULT_TYPES_COMPENSATION);
             })
             .filter(op -> op.getSoldeApres() != null) // Ne garder que celles avec un soldeAprès
             .map(OperationEntity::getSoldeApres)

@@ -24,6 +24,10 @@ public class PredictionService {
     @Autowired
     private OperationRepository operationRepository;
 
+    /** Règles de calcul configurables (Configuration > Calcul) : prioritaire sur les valeurs codées en dur. */
+    @Autowired
+    private CalculationRuleService calculationRuleService;
+
     /**
      * Génère des prédictions pour un type d'opération donné
      */
@@ -481,11 +485,11 @@ public class PredictionService {
         int operationsGenerees = 0;
         
         // Déterminer si c'est une compense (débit) ou un appro (crédit)
-        boolean estCompense = typeOperation != null && 
-            (typeOperation.toLowerCase().contains("compens") || 
-             typeOperation.toLowerCase().contains("compense"));
-        boolean estAppro = typeOperation != null && 
-            typeOperation.toLowerCase().contains("appro");
+        // Classification pilotée par les règles de calcul (repli : valeurs codées en dur).
+        boolean estCompense = calculationRuleService.matchesAny(typeOperation, "BANQUE.TYPES_COMPENSATION",
+                CalculationRuleService.DEFAULT_TYPES_COMPENSATION);
+        boolean estAppro = calculationRuleService.matchesAny(typeOperation, "BANQUE.TYPES_APPROVISIONNEMENT",
+                CalculationRuleService.DEFAULT_TYPES_APPROVISIONNEMENT);
         
         // Simuler l'évolution du solde jour après jour
         while (!dateCourante.isAfter(dateFin) && operationsGenerees < nombreOperationsAttendues) {
@@ -669,21 +673,22 @@ public class PredictionService {
             return 0.0;
         }
         
-        String type = typeOperation.toLowerCase();
-        
         // Opérations de crédit (augmentent le solde)
-        if (type.contains("appro") || type.equals("appro_client") || type.equals("appro_fournisseur")) {
+        // Classification pilotée par les règles de calcul (repli : valeurs codées en dur).
+        if (calculationRuleService.matchesAny(typeOperation, "BANQUE.TYPES_APPROVISIONNEMENT",
+                CalculationRuleService.DEFAULT_TYPES_APPROVISIONNEMENT)) {
             return montant; // Crédit
         }
         
         // Opérations de débit (diminuent le solde)
-        if (type.contains("compens") || type.contains("compense") || 
-            type.equals("compense_client") || type.equals("compense_fournisseur")) {
+        if (calculationRuleService.matchesAny(typeOperation, "BANQUE.TYPES_COMPENSATION",
+                CalculationRuleService.DEFAULT_TYPES_COMPENSATION)) {
             return -montant; // Débit
         }
         
         // Nivellement : le signe du montant détermine l'impact
-        if (type.contains("nivellement")) {
+        if (calculationRuleService.matchesAny(typeOperation, "BANQUE.TYPES_NIVELLEMENT",
+                CalculationRuleService.DEFAULT_TYPES_NIVELLEMENT)) {
             return montant; // Peut être positif ou négatif selon le montant
         }
         

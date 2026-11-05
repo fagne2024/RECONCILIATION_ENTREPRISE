@@ -34,6 +34,9 @@
       <div class="pf-card-head">
         <h2><i class="fas fa-users"></i> {{ 'PLT.acc.sectionTitle' | translate }}</h2>
         <div class="pf-card-actions">
+          <button type="button" class="ds-btn ds-btn--primary btn-rd btn-rd-primary" (click)="openCreate()">
+            <i class="fas fa-user-plus"></i> {{ 'PLT.acc.actionNew' | translate }}
+          </button>
           <button type="button" class="ds-btn ds-btn--secondary btn-rd btn-rd-ghost" (click)="loadComptes()" [disabled]="loading">
             <i class="fas fa-sync-alt"></i> {{ 'PLT.acc.refresh' | translate }}
           </button>
@@ -121,6 +124,48 @@
           </tbody>
         </table>
       </div>
+    </div>
+  </div>
+
+  <!-- Modal Creation -->
+  <div *ngIf="showCreateModal">
+    <div class="pf-modal-backdrop" (click)="closeCreate()"></div>
+    <div class="pf-modal" role="dialog" aria-modal="true">
+      <div class="pf-modal-head">
+        <h3><i class="fas fa-user-plus"></i> {{ 'PLT.acc.createTitle' | translate }}</h3>
+        <button type="button" class="pf-modal-close" (click)="closeCreate()" [attr.aria-label]="'COMMON.actions.close' | translate">&times;</button>
+      </div>
+      <form id="createCompteForm" (ngSubmit)="saveCreate()">
+        <div class="pf-modal-body">
+          <div class="pf-alert pf-alert-info">
+            <i class="fas fa-info-circle"></i>
+            <span>{{ 'PLT.acc.createInfo' | translate }}</span>
+          </div>
+          <div class="pf-field">
+            <label for="nc-entreprise">{{ 'PLT.acc.createEntreprise' | translate }} *</label>
+            <select id="nc-entreprise" class="ds-select pf-input" [(ngModel)]="createForm.entrepriseId" name="createEntreprise" required>
+              <option [ngValue]="null" disabled>{{ 'PLT.acc.createEntreprisePlaceholder' | translate }}</option>
+              <option *ngFor="let e of entreprisesOptions" [ngValue]="e.id">{{ e.code }} — {{ e.nom }}</option>
+            </select>
+          </div>
+          <div class="pf-field">
+            <label for="nc-username">{{ 'PLT.acc.createUsername' | translate }} *</label>
+            <input id="nc-username" type="text" class="ds-input pf-input" [(ngModel)]="createForm.username" name="createUsername" required maxlength="255">
+          </div>
+          <div class="pf-field">
+            <label for="nc-email">{{ 'PLT.acc.createEmail' | translate }} *</label>
+            <input id="nc-email" type="email" class="ds-input pf-input" [(ngModel)]="createForm.email" name="createEmail" required maxlength="255">
+          </div>
+        </div>
+        <div class="pf-modal-foot">
+          <button type="button" class="ds-btn ds-btn--secondary btn-rd btn-rd-ghost" (click)="closeCreate()" [disabled]="submitting">
+            {{ 'COMMON.actions.cancel' | translate }}
+          </button>
+          <button type="submit" class="ds-btn ds-btn--primary btn-rd btn-rd-primary" [disabled]="submitting">
+            <i class="fas fa-check"></i> {{ 'PLT.acc.createSubmit' | translate }}
+          </button>
+        </div>
+      </form>
     </div>
   </div>
 

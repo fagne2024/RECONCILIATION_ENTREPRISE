@@ -70,7 +70,9 @@ const OPPART_EXPORT_HEADERS: SheetHeaderMap = {
   'Client': 'OPL.exportHeaderClient',
   'Type_OP': 'OPL.exportHeaderTypeOp',
   'Montant': 'OPL.exportHeaderAmount',
-  'Date': 'OPL.exportHeaderDate',
+  'Date opération BO': 'OPL.exportHeaderDateBo',
+  'Date opération part': 'OPL.exportHeaderDatePart',
+  'Date demande': 'OPL.exportHeaderDateDemande',
   'ID Transaction': 'OPL.exportHeaderTransactionId',
   'Pays': 'OPL.exportHeaderCountry',
   'Source': 'OPL.exportHeaderSource',
@@ -194,6 +196,8 @@ export class OppartListComponent implements OnInit, OnDestroy {
       typeOp: [''],
       montant: [0, [Validators.required, Validators.min(0)]],
       dateOperation: [''],
+      dateOperationPart: [''],
+      dateDemande: [''],
       idTransaction: [''],
       pays: [''],
       source: [''],
@@ -918,6 +922,8 @@ export class OppartListComponent implements OnInit, OnDestroy {
       typeOp: '',
       montant: 0,
       dateOperation: '',
+      dateOperationPart: '',
+      dateDemande: '',
       idTransaction: '',
       pays: '',
       source: OPPART_SOURCE_MANUEL,
@@ -933,6 +939,8 @@ export class OppartListComponent implements OnInit, OnDestroy {
       typeOp: oppart.typeOp || '',
       montant: oppart.montant || 0,
       dateOperation: this.toDateTimeLocal(oppart.dateOperation),
+      dateOperationPart: this.toDateTimeLocal(oppart.dateOperationPart || ''),
+      dateDemande: this.toDateTimeLocal(oppart.dateDemande || ''),
       idTransaction: oppart.idTransaction || '',
       pays: oppart.pays || '',
       source: oppart.source || '',
@@ -991,13 +999,17 @@ export class OppartListComponent implements OnInit, OnDestroy {
       typeOp: (formValue.typeOp || '').trim(),
       montant: Math.abs(Number(formValue.montant) || 0),
       dateOperation: this.optDateForApi(formValue.dateOperation || ''),
+      dateOperationPart: this.optDateForApi(formValue.dateOperationPart || ''),
+      dateDemande: this.optDateForApi(formValue.dateDemande || ''),
       idTransaction: (formValue.idTransaction || '').trim(),
       pays: (formValue.pays || '').trim(),
       source: (formValue.source || '').trim(),
       statut: formValue.statut === OPPART_STATUT_OK ? OPPART_STATUT_OK : OPPART_STATUT_EN_COURS
     };
-    if (!payload.dateOperation || payload.dateOperation.trim() === '') {
-      delete payload.dateOperation;
+    for (const key of ['dateOperation', 'dateOperationPart', 'dateDemande']) {
+      if (!payload[key] || payload[key].trim() === '') {
+        delete payload[key];
+      }
     }
 
     this.isSaving = true;
@@ -1779,7 +1791,9 @@ export class OppartListComponent implements OnInit, OnDestroy {
       'Client': op.client || '',
       'Type_OP': op.typeOp || '',
       'Montant': op.montant || 0,
-      'Date': op.dateOperation || '',
+      'Date opération BO': op.dateOperation || '',
+      'Date opération part': op.dateOperationPart || '',
+      'Date demande': op.dateDemande || '',
       'ID Transaction': op.idTransaction || '',
       'Pays': op.pays || '',
       'Source': op.source || '',
@@ -1792,8 +1806,9 @@ export class OppartListComponent implements OnInit, OnDestroy {
     const worksheet = XLSX.utils.json_to_sheet(exportData);
     translateSheetHeaders(worksheet, OPPART_EXPORT_HEADERS);
     const columnWidths = [
-      { wch: 8 }, { wch: 22 }, { wch: 14 }, { wch: 14 }, { wch: 20 }, { wch: 22 },
-      { wch: 14 }, { wch: 16 }, { wch: 12 }, { wch: 24 }, { wch: 20 }, { wch: 20 }
+      { wch: 8 }, { wch: 22 }, { wch: 14 }, { wch: 14 }, { wch: 20 },
+      { wch: 20 }, { wch: 20 }, { wch: 22 }, { wch: 14 }, { wch: 16 },
+      { wch: 12 }, { wch: 24 }, { wch: 20 }, { wch: 20 }
     ];
     worksheet['!cols'] = columnWidths;
 

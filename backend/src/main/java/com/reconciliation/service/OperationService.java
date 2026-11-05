@@ -64,6 +64,10 @@ public class OperationService {
     @Autowired
     private PaysFilterService paysFilterService;
     
+    /** Règles de calcul configurables (Configuration > Calcul) : prioritaire sur les valeurs codées en dur. */
+    @Autowired
+    private CalculationRuleService calculationRuleService;
+    
     public List<Operation> getAllOperations() {
         return getAllOperations(null);
     }
@@ -1044,7 +1048,9 @@ public class OperationService {
         if ("transaction_cree".equals(typeOperation)) {
             if (service != null) {
                 String s = service.toLowerCase();
-                if (s.contains("cashin") || s.contains("send") || s.contains("airtime")) {
+                // Services TSOP à signe négatif : règle de calcul prioritaire, repli code par défaut
+                if (calculationRuleService.matchesAny(s, "CERTIF.SERVICES_TSOP_NEGATIFS",
+                        CalculationRuleService.DEFAULT_SERVICES_TSOP_NEGATIFS)) {
                     return -montant;
                 } else if (s.contains("paiement")) {
                     return montant;
@@ -1059,7 +1065,9 @@ public class OperationService {
         if ("tsop".equals(typeOperation) || typeOperation.toUpperCase().contains("TSOP")) {
             if (service != null) {
                 String s = service.toLowerCase();
-                if (s.contains("cashin") || s.contains("send") || s.contains("airtime")) {
+                // Services TSOP à signe négatif : règle de calcul prioritaire, repli code par défaut
+                if (calculationRuleService.matchesAny(s, "CERTIF.SERVICES_TSOP_NEGATIFS",
+                        CalculationRuleService.DEFAULT_SERVICES_TSOP_NEGATIFS)) {
                     return -montant;
                 } else if (s.contains("paiement")) {
                     return montant;

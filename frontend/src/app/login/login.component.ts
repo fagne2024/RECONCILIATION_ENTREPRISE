@@ -10,6 +10,7 @@ import { UserLogService } from '../services/user-log.service';
 import { LogoService } from '../services/logo.service';
 import { ThemeService } from '../services/theme.service';
 import { BrandingContextService } from '../services/branding-context.service';
+import { ConfigurationCalculService } from '../services/configuration-calcul.service';
 
 @Component({
   selector: 'app-login',
@@ -50,7 +51,8 @@ export class LoginComponent implements OnInit {
     private userLogService: UserLogService,
     public logoService: LogoService,
     private themeService: ThemeService,
-    private brandingContext: BrandingContextService
+    private brandingContext: BrandingContextService,
+    private calculService: ConfigurationCalculService
   ) {
     this.loginForm = this.fb.group({
       username: ['', Validators.required],
@@ -121,12 +123,26 @@ export class LoginComponent implements OnInit {
             pays: response.pays
           }, response.username, token);
 
+          // Changement de mot de passe obligatoire (ex. mot de passe provisoire du SUPER_ADMIN)
+          this.appState.setMustChangePassword(response.mustChangePassword === true);
+
           // Appliquer la marque de l'entreprise (ou les défauts pour SUPER_ADMIN)
           this.applyEntrepriseBranding();
+
+          // Charger les règles de calcul (Configuration > Calcul) : elles ne sont
+          // accessibles qu'une fois authentifié. Elles sont prioritaires sur les
+          // valeurs par défaut des moteurs de calcul.
+          this.calculService.loadRules(true).subscribe();
 
           // Récupérer les modules actifs pour l'entreprise courante
           this.loadActiveModules().then(() => {
             this.userLogService.logActivity('connexion', 'Authentification', response.username, 'Connexion réussie');
+
+            // Mot de passe provisoire : l'accès est bloqué tant qu'il n'a pas été changé.
+            if (this.appState.isMustChangePassword()) {
+              this.router.navigateByUrl('/change-password');
+              return;
+            }
 
             // Rediriger vers l'URL demandée si elle est accessible, sinon vers
             // la première page réellement autorisée pour le profil (catalogue navigation).
@@ -335,6 +351,9 @@ export class LoginComponent implements OnInit {
           pays: response.pays
         }, response.username, token);
 
+        // Changement de mot de passe obligatoire (ex. mot de passe provisoire du SUPER_ADMIN)
+        this.appState.setMustChangePassword(response.mustChangePassword === true);
+
         // Appliquer la marque de l'entreprise (ou les défauts pour SUPER_ADMIN)
         this.applyEntrepriseBranding();
 
@@ -342,6 +361,12 @@ export class LoginComponent implements OnInit {
         await this.loadActiveModules();
         
         this.userLogService.logActivity('connexion', 'Authentification', response.username, 'Connexion réussie (2FA)');
+
+        // Mot de passe provisoire : l'accès est bloqué tant qu'il n'a pas été changé.
+        if (this.appState.isMustChangePassword()) {
+          this.router.navigateByUrl('/change-password');
+          return;
+        }
         
         // Après 2FA, appliquer la même logique de redirection sécurisée.
         let returnUrl = this.route.snapshot.queryParams['returnUrl'] as string | undefined;

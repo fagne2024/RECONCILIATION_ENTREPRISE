@@ -120,7 +120,8 @@
 
     <p class="import-hint">
       {{ 'OPL.Formatsacceptéscsvtsvxlsxlsxcolonnesattendues' | translate }}
-      <code>{{ 'TBL.client' | translate }}</code>, <code>Type_OP</code>, <code>{{ 'TBL.amount' | translate }}</code>, <code>{{ 'TBL.date' | translate }}</code>,
+      <code>{{ 'TBL.client' | translate }}</code>, <code>Type_OP</code>, <code>{{ 'TBL.amount' | translate }}</code>, <code>{{ 'OPL.DateopérationBO' | translate }}</code>,
+      <code>{{ 'OPL.DateopérationPart' | translate }}</code>, <code>{{ 'OPL.DateDemande' | translate }}</code>,
       <code>{{ 'TBL.transactionId' | translate }}</code>, <code>{{ 'TBL.country' | translate }}</code>, <code>Source</code>{{ 'OPL.Les4premièressontobligatoireslescolonnes' | translate }} <code>ID</code>, <code>{{ 'TBL.status' | translate }}</code> {{ 'APM.Et' | translate }}
       <code>Token</code> {{ 'OPL.Dunexportsontignoréeschaqueligneimportéeestcrééeenstatutencourssanstoken' | translate }}
     </p>
@@ -195,7 +196,9 @@
               <th>{{ 'TBL.client' | translate }}</th>
               <th>Type_OP</th>
               <th>{{ 'TBL.amount' | translate }}</th>
-              <th>{{ 'TBL.date' | translate }}</th>
+              <th>{{ 'OPL.DateopérationBO' | translate }}</th>
+              <th>{{ 'OPL.DateopérationPart' | translate }}</th>
+              <th>{{ 'OPL.DateDemande' | translate }}</th>
               <th>{{ 'TBL.transactionId' | translate }}</th>
               <th>{{ 'TBL.country' | translate }}</th>
               <th>Source</th>
@@ -211,6 +214,8 @@
               <td>{{ row.typeOp }}</td>
               <td class="cell-num">{{ row.montant }}</td>
               <td>{{ row.date }}</td>
+              <td>{{ row.dateOperationPart || '-' }}</td>
+              <td>{{ row.dateDemande || '-' }}</td>
               <td>{{ row.idTransaction }}</td>
               <td>{{ row.pays }}</td>
               <td>{{ row.source }}</td>
@@ -516,6 +521,8 @@
           <col class="col-typeop">
           <col class="col-montant">
           <col class="col-date">
+          <col class="col-date-part">
+          <col class="col-date-demande">
           <col class="col-idtx">
           <col class="col-pays">
           <col class="col-source">
@@ -532,7 +539,9 @@
             <th>{{ 'TBL.client' | translate }}</th>
             <th>Type_OP</th>
             <th>{{ 'TBL.amount' | translate }}</th>
-            <th>{{ 'OPL.Dateopération' | translate }}</th>
+            <th>{{ 'OPL.DateopérationBO' | translate }}</th>
+            <th>{{ 'OPL.DateopérationPart' | translate }}</th>
+            <th>{{ 'OPL.DateDemande' | translate }}</th>
             <th>{{ 'TBL.transactionId' | translate }}</th>
             <th>{{ 'TBL.country' | translate }}</th>
             <th>Source</th>
@@ -556,6 +565,8 @@
               {{ formatMontant(oppart.montant) }}
             </td>
             <td>{{ formatDate(oppart.dateOperation) }}</td>
+            <td>{{ formatDate(oppart.dateOperationPart || '') }}</td>
+            <td>{{ formatDate(oppart.dateDemande || '') }}</td>
             <td>
               <span class="transaction-id">{{ oppart.idTransaction || '-' }}</span>
             </td>
@@ -594,7 +605,7 @@
             </td>
           </tr>
           <tr *ngIf="pagedOpparts.length === 0">
-            <td [attr.colspan]="isSelectionMode ? 12 : 11" class="no-data-cell">
+            <td [attr.colspan]="isSelectionMode ? 14 : 13" class="no-data-cell">
               {{ 'OPL.Aucuneligneopérationtrouvée' | translate }}
             </td>
           </tr>
@@ -662,13 +673,25 @@
 
         <div class="form-row">
           <div class="form-group">
-            <label>{{ 'OPL.Dateopération_1' | translate }}</label>
+            <label>{{ 'OPL.DateopérationBO_1' | translate }}</label>
             <input type="datetime-local" formControlName="dateOperation" class="form-control">
           </div>
 
           <div class="form-group">
             <label>{{ 'OPS.Pays' | translate }}</label>
             <input type="text" formControlName="pays" class="ds-input form-control" placeholder="{{ 'OPL.Exci' | translate }}">
+          </div>
+        </div>
+
+        <div class="form-row">
+          <div class="form-group">
+            <label>{{ 'OPL.DateopérationPart' | translate }}</label>
+            <input type="datetime-local" formControlName="dateOperationPart" class="form-control">
+          </div>
+
+          <div class="form-group">
+            <label>{{ 'OPL.DateDemande' | translate }}</label>
+            <input type="datetime-local" formControlName="dateDemande" class="form-control">
           </div>
         </div>
 

@@ -1,7 +1,7 @@
 import { Component, OnInit, ViewChild, ElementRef } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { FormsModule, ReactiveFormsModule } from '@angular/forms';
-import { take } from 'rxjs/operators';
+import { switchMap, take } from 'rxjs/operators';
 import {
     DashboardService,
     ReleveManualRangeRow
@@ -206,6 +206,12 @@ export class EtatReconciliationsComponent implements OnInit {
     blockingCommentError: string | null = null;
     blockingCommentTarget: RecoDayCell | null = null;
     blockingCommentRowMeta: { service: string; country: string; env: string } | null = null;
+    /** Commentaire enregistré de la case ouverte (porte l'état de la relance e-mail). */
+    blockingCommentStored: RecoJ1BlockingComment | null = null;
+    mailRecipientsDraft = '';
+    mailCcDraft = '';
+    mailAlertBusy = false;
+    mailAlertMessage: string | null = null;
     // Popup "Vue semaine" (État des réconciliations)
     recoViewModalOpen: boolean = false;
     recoViewWeekStart: string = ''; // Lundi de la semaine affichée (YYYY-MM-DD)
@@ -686,6 +692,10 @@ export class EtatReconciliationsComponent implements OnInit {
             env
         };
         this.blockingCommentDraft = this.getJ1CommentText(day, row);
+        this.blockingCommentStored = this.getJ1CommentForCell(day, row);
+        this.mailRecipientsDraft = (this.blockingCommentStored?.mailRecipients || []).join(', ');
+        this.mailCcDraft = (this.blockingCommentStored?.mailCcRecipients || []).join(', ');
+        this.mailAlertMessage = null;
         this.blockingCommentError = null;
         this.blockingCommentModalOpen = true;
     }
@@ -696,50 +706,174 @@ export class EtatReconciliationsComponent implements OnInit {
         this.blockingCommentRowMeta = null;
         this.blockingCommentDraft = '';
         this.blockingCommentError = null;
+        this.blockingCommentStored = null;
+        this.mailRecipientsDraft = '';
+        this.mailCcDraft = '';
+        this.mailAlertMessage = null;
     }
 
-    saveBlockingComment(): void {
+    get isMailAlertActive(): boolean {
+        return !!this.blockingCommentStored?.mailAlertActive;
+    }
+
+    /** Raison d'arrêt automatique de la relance (statut changé, commentaire absent), si elle n'est plus active. */
+    get mailAlertStoppedLabel(): string {
+        const stored = this.blockingCommentStored;
+        if (!stored || stored.mailAlertActive !== false || !stored.mailStoppedReason) {
+            return '';
+        }
+        switch (stored.mailStoppedReason) {
+            case 'STATUT_CHANGE':
+                return this.t('ETA.mail.stoppedStatusChanged');
+            case 'COMMENTAIRE_ABSENT':
+                return this.t('ETA.mail.stoppedNoComment');
+            default:
+                return this.t('ETA.mail.stoppedManual');
+        }
+    }
+
+    formatMailDateTime(iso?: string | null): string {
+        if (!iso) {
+            return '';
+        }
+        const d = new Date(iso);
+        return isNaN(d.getTime())
+            ? iso
+            : d.toLocaleString(this.translate.currentLang || 'fr', { dateStyle: 'short', timeStyle: 'short' });
+    }
+
+    private buildBlockingCommentPayload(): RecoJ1BlockingComment | null {
         const text = (this.blockingCommentDraft || '').trim();
         if (!text) {
             this.blockingCommentError = this.t('ETA.error.commentRequired');
-            return;
+            return null;
         }
         if (!this.blockingCommentTarget || !this.blockingCommentRowMeta) {
-            return;
+            return null;
         }
         if (!this.blockingCommentRowMeta.country) {
             this.blockingCommentError = this.t('ETA.error.countryRequired');
-            return;
+            return null;
         }
-        const payload: RecoJ1BlockingComment = {
+        return {
             recoDate: this.blockingCommentTarget.date,
             service: this.blockingCommentRowMeta.service,
             country: this.blockingCommentRowMeta.country,
             env: this.blockingCommentRowMeta.env,
             commentText: text
         };
-        this.blockingCommentSaving = true;
+    }
+
+    private storeJ1Comment(saved: RecoJ1BlockingComment): void {
+        const key = this.buildBlockingCommentKey(saved.recoDate, saved.service, saved.country, saved.env);
+        this.j1BlockingComments.set(key, saved);
+        this.reapplyBlockingCommentsToRows();
+        if (this.blockingCommentModalOpen) {
+            this.blockingCommentStored = saved;
+        }
+    }
+
+    hasActiveMailAlert(day: RecoDayCell, row: { service: string; country?: string; label?: string }): boolean {
+        return !!this.getJ1CommentForCell(day, row)?.mailAlertActive;
+    }
+
+    private parseMailRecipients(value: string): string[] {
+        return (value || '')
+            .split(/[,;\s]+/)
+            .map(r => r.trim().toLowerCase())
+            .filter(r => !!r);
+    }
+
+    private sameRecipients(a: string[], b: string[]): boolean {
+        const norm = (list: string[]) => [...new Set(list.map(r => r.trim().toLowerCase()))].sort().join(',');
+        return norm(a) === norm(b);
+    }
+
+    stopBlockingCommentMail(): void {
+        const stored = this.blockingCommentStored;
+        if (!stored) {
+            return;
+        }
+        this.mailAlertBusy = true;
         this.blockingCommentError = null;
+        this.mailAlertMessage = null;
         this.dashboardReconciliationService
-            .saveJ1BlockingComment(payload, this.moduleContext)
+            .stopJ1MailAlert(
+                { recoDate: stored.recoDate, service: stored.service, country: stored.country, env: stored.env },
+                this.moduleContext
+            )
             .pipe(take(1))
             .subscribe({
                 next: (saved) => {
-                    const key = this.buildBlockingCommentKey(
-                        saved.recoDate,
-                        saved.service,
-                        saved.country,
-                        saved.env
-                    );
-                    this.j1BlockingComments.set(key, saved);
-                    this.reapplyBlockingCommentsToRows();
+                    this.storeJ1Comment(saved);
+                    this.mailAlertMessage = this.t('ETA.mail.stoppedManual');
+                    this.mailAlertBusy = false;
+                },
+                error: (err) => {
+                    console.error('Erreur arrêt relance e-mail:', err);
+                    this.blockingCommentError = err?.error?.message || this.t('ETA.mail.stopFailed');
+                    this.mailAlertBusy = false;
+                }
+            });
+    }
+
+    /**
+     * Enregistre le commentaire. Si des destinataires sont renseignés, l'e-mail part aussitôt et la relance
+     * quotidienne s'active ; rien n'est renvoyé si la relance est déjà active avec le même texte et les mêmes destinataires.
+     */
+    saveBlockingComment(): void {
+        const payload = this.buildBlockingCommentPayload();
+        if (!payload) {
+            return;
+        }
+        const recipients = this.parseMailRecipients(this.mailRecipientsDraft);
+        const ccRecipients = this.parseMailRecipients(this.mailCcDraft).filter(r => !recipients.includes(r));
+        if (!recipients.length && ccRecipients.length) {
+            this.blockingCommentError = this.t('ETA.mail.ccWithoutRecipients');
+            return;
+        }
+        const stored = this.blockingCommentStored;
+        const alreadySent = !!stored?.mailAlertActive
+            && (stored.commentText || '').trim() === payload.commentText
+            && this.sameRecipients(stored.mailRecipients || [], recipients)
+            && this.sameRecipients(stored.mailCcRecipients || [], ccRecipients);
+        const sendMail = recipients.length > 0 && !alreadySent;
+        let commentSaved = false;
+
+        this.blockingCommentSaving = true;
+        this.blockingCommentError = null;
+        this.mailAlertMessage = null;
+        this.dashboardReconciliationService
+            .saveJ1BlockingComment(payload, this.moduleContext)
+            .pipe(
+                take(1),
+                switchMap((saved) => {
+                    commentSaved = true;
+                    this.storeJ1Comment(saved);
+                    return sendMail
+                        ? this.dashboardReconciliationService.activateJ1MailAlert(
+                            { recoDate: saved.recoDate, service: saved.service, country: saved.country, env: saved.env, recipients, ccRecipients },
+                            this.moduleContext
+                        )
+                        : of(saved);
+                })
+            )
+            .subscribe({
+                next: (saved) => {
+                    this.storeJ1Comment(saved);
                     this.blockingCommentSaving = false;
+                    if (sendMail && saved.mailLastError) {
+                        this.mailAlertMessage = this.t('ETA.mail.sentPartial', { error: saved.mailLastError });
+                        return;
+                    }
                     this.closeBlockingCommentModal();
                 },
                 error: (err) => {
-                    console.error('Erreur sauvegarde commentaire J+2:', err);
+                    console.error('Erreur sauvegarde commentaire J+2 / envoi e-mail:', err);
                     const apiMessage = err?.error?.message;
-                    this.blockingCommentError = apiMessage || this.t('ETA.error.saveFailed');
+                    this.blockingCommentError = commentSaved
+                        ? this.t('ETA.mail.savedButSendFailed', { error: apiMessage || this.t('ETA.mail.sendFailed') })
+                        : apiMessage || this.t('ETA.error.saveFailed');
                     this.blockingCommentSaving = false;
                 }
             });
@@ -1496,7 +1630,7 @@ export class EtatReconciliationsComponent implements OnInit {
             }
 
             const start = ctx.periodStartStr;
-            const endInclusive = this.addDaysToIsoDate(ctx.periodEndExclusiveStr, -1);
+            const endInclusive = this.topUsersEndInclusive(ctx.periodEndExclusiveStr);
             const opts = {
                 country: this.reconciliationSummaryCountry || undefined,
                 service: this.reconciliationSummaryService || undefined,
@@ -1523,6 +1657,18 @@ export class EtatReconciliationsComponent implements OnInit {
                     this.loadTopUserPhotos(categories, token);
                 });
         });
+    }
+
+    /**
+     * Fin inclusive du classement : les lignes J-1 sont traitées le jour J, donc une
+     * période qui va jusqu'à J-1 est prolongée jusqu'à aujourd'hui inclus. Une période
+     * entièrement passée (ex. semaine passée) garde sa borne.
+     */
+    private topUsersEndInclusive(periodEndExclusiveIso: string): string {
+        const periodEndInclusive = this.addDaysToIsoDate(periodEndExclusiveIso, -1);
+        const todayIso = this.formatLocalYmd(new Date());
+        const reachesReferenceDay = periodEndExclusiveIso >= todayIso;
+        return reachesReferenceDay && periodEndInclusive < todayIso ? todayIso : periodEndInclusive;
     }
 
     /** Période précédente de même longueur (bornes inclusives YYYY-MM-DD). */
@@ -2703,8 +2849,9 @@ export class EtatReconciliationsComponent implements OnInit {
         if ([y, m, d].some(n => isNaN(n))) {
             return false;
         }
+        // Réconciliation faite à J+1 : les dates vendredi/samedi sont traitées le week-end (samedi/dimanche).
         const dow = new Date(y, m - 1, d).getDay();
-        return dow === 0 || dow === 6;
+        return dow === 5 || dow === 6;
     }
 
     isWeekendColumn(day: { date: string }): boolean {

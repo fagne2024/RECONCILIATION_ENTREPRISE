@@ -1,6 +1,7 @@
 import { Component, OnInit, OnDestroy, ChangeDetectorRef } from '@angular/core';
 import { CommonModule, Location } from '@angular/common';
 import { FormsModule } from '@angular/forms';
+import { ActivatedRoute } from '@angular/router';
 import { TranslateModule, TranslateService } from '@ngx-translate/core';
 import { Subject, takeUntil, finalize } from 'rxjs';
 import { PopupService } from '../../services/popup.service';
@@ -86,11 +87,15 @@ export class ConfigurationCalculComponent implements OnInit, OnDestroy {
     private popupService: PopupService,
     private translate: TranslateService,
     private location: Location,
+    private route: ActivatedRoute,
     private cdr: ChangeDetectorRef
   ) {}
 
   ngOnInit(): void {
-    this.moduleFilter = this.moduleOptions[0] || '';
+    const requested = this.route.snapshot.queryParamMap.get('module');
+    this.moduleFilter = (requested && this.moduleOptions.includes(requested))
+      ? requested
+      : (this.moduleOptions[0] || '');
     this.load();
   }
 
@@ -293,8 +298,14 @@ export class ConfigurationCalculComponent implements OnInit, OnDestroy {
     }
   }
 
+  get formulaVariables() {
+    const module = this.form?.module;
+    const forModule = this.variables.filter(v => !module || v.module === module);
+    return forModule.length ? forModule : this.variables;
+  }
+
   addTerm(): void {
-    this.form.terms.push({ signe: '+', coefficient: 1, variable: this.variables[0]?.code || '', absolue: false });
+    this.form.terms.push({ signe: '+', coefficient: 1, variable: this.formulaVariables[0]?.code || '', absolue: false });
   }
 
   removeTerm(index: number): void {
@@ -477,7 +488,7 @@ export class ConfigurationCalculComponent implements OnInit, OnDestroy {
       libelle: '',
       description: '',
       type: 'FORMULE',
-      terms: [{ signe: '+', coefficient: 1, variable: this.variables[0]?.code || '', absolue: false }],
+      terms: [{ signe: '+', coefficient: 1, variable: this.formulaVariables[0]?.code || '', absolue: false }],
       values: [''],
       valeur: null,
       unite: '',

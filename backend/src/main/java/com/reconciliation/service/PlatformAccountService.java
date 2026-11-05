@@ -95,6 +95,68 @@ public class PlatformAccountService {
     }
 
     // ------------------------------------------------------------------
+    // Creation
+    // ------------------------------------------------------------------
+
+    /**
+     * Cree un compte rattache a une entreprise avec le profil administrateur
+     * de celle-ci, un mot de passe temporaire et l'obligation de changer ce
+     * mot de passe a la premiere connexion.
+     *
+     * <p>Le mot de passe en clair est retourne a l'appelant (une seule fois,
+     * pour transmission possible a l'utilisateur) ; l'envoi email est
+     * best-effort et realise par le controleur hors transaction.</p>
+     */
+    @Transactional
+    public ResetOutcome create(String username, String email, Long entrepriseId, String actorUsername) {
+        String newUsername = requireText(username, "Le nom d'utilisateur est requis.");
+        if (newUsername.length() > 255) {
+            throw new IllegalArgumentException("Le nom d'utilisateur est trop long (255 caracteres max).");
+        }
+        if (countByUsername(newUsername) > 0) {
+            throw new DuplicateResourceException("Le nom d'utilisateur '" + newUsername + "' est deja utilise.");
+        }
+
+        String newEmail = requireText(email, "L'adresse email est requise.");
+        if (!EMAIL_PATTERN.matcher(newEmail).matches()) {
+            throw new IllegalArgumentException("L'adresse email est invalide.");
+        }
+        if (countByEmail(newEmail) > 0) {
+            throw new DuplicateResourceException("L'adresse email '" + newEmail + "' est deja utilisee.");
+        }
+
+        if (entrepriseId == null) {
+            throw new IllegalArgumentException("L'entreprise est requise.");
+        }
+        String entrepriseNom = requireEntreprise(entrepriseId);
+
+        Long profilId = resolveOrCreateAdminProfil(entrepriseId, entrepriseNom);
+
+        String tempPassword = generateSecurePassword();
+        em.createNativeQuery(
+                "INSERT INTO `user` (`username`, `password`, `email`, `profil_id`, `enabled`, "
+                    + "`password_change_required`, `failed_login_attempts`, `enabled_2fa`, `secret_2fa`, "
+                    + "`qr_code_scanned`, `account_locked_until`, `entreprise_id`) "
+                    + "VALUES (:u, :p, :e, :pid, 1, 1, 0, 0, NULL, 0, NULL, :eid)")
+            .setParameter("u", newUsername)
+            .setParameter("p", passwordEncoder.encode(tempPassword))
+            .setParameter("e", newEmail)
+            .setParameter("pid", profilId)
+            .setParameter("eid", entrepriseId)
+            .executeUpdate();
+        Long newUserId = ((Number) em.createNativeQuery("SELECT LAST_INSERT_ID()").getSingleResult()).longValue();
+
+        platformAuditService.record(actorUsername, "COMPTE_CREE", "COMPTE",
+            newUserId == null ? null : String.valueOf(newUserId),
+            "username=" + newUsername + "; email=" + newEmail
+                + "; entrepriseId=" + entrepriseId + "; profil=ADMINISTRATEUR");
+        log.info("Compte '{}' cree par '{}' pour l'entreprise id={} (profil administrateur).",
+            newUsername, actorUsername, entrepriseId);
+
+        return new ResetOutcome(newUsername, newEmail, tempPassword);
+    }
+
+    // ------------------------------------------------------------------
     // Modification
     // ------------------------------------------------------------------
 
@@ -291,6 +353,65 @@ public class PlatformAccountService {
             .setParameter("e", email)
             .setParameter("id", excludedId)
             .getSingleResult()).longValue();
+    }
+
+    private long countByEmail(String email) {
+        return ((Number) em.createNativeQuery(
+                "SELECT COUNT(*) FROM `user` WHERE email = :e")
+            .setParameter("e", email)
+            .getSingleResult()).longValue();
+    }
+
+    /**
+     * Verifie que l'entreprise existe et renvoie son nom.
+     */
+    private String requireEntreprise(Long entrepriseId) {
+        List<Object[]> rows = em.createNativeQuery(
+                "SELECT id, nom FROM entreprise WHERE id = :id")
+            .setParameter("id", entrepriseId)
+            .getResultList();
+        if (rows.isEmpty()) {
+            throw new EntityNotFoundException("Entreprise introuvable (id=" + entrepriseId + ").");
+        }
+        return asString(rows.get(0)[1]);
+    }
+
+    /**
+     * Profil administrateur de l'entreprise : existence garantie par la creation
+     * d'entreprise ; a defaut, creation a la demande (meme logique que
+     * {@link PlatformEntrepriseService} : profil ADMINISTRATEUR + copie de tous
+     * les droits du catalogue global). Appele dans la transaction de
+     * {@link #create}.
+     */
+    @SuppressWarnings("unchecked")
+    private Long resolveOrCreateAdminProfil(Long entrepriseId, String entrepriseNom) {
+        List<Object> existing = em.createNativeQuery(
+                "SELECT id FROM profil WHERE entreprise_id = :eid "
+                    + "AND UPPER(nom) IN ('ADMIN', 'ADMINISTRATEUR') ORDER BY id")
+            .setParameter("eid", entrepriseId)
+            .getResultList();
+        if (!existing.isEmpty()) {
+            return ((Number) existing.get(0)).longValue();
+        }
+
+        em.createNativeQuery(
+                "INSERT INTO profil (entreprise_id, nom, description) VALUES (:eid, :nom, :description)")
+            .setParameter("eid", entrepriseId)
+            .setParameter("nom", "ADMINISTRATEUR")
+            .setParameter("description", "Profil administrateur de l'entreprise " + entrepriseNom)
+            .executeUpdate();
+        Long profilId = ((Number) em.createNativeQuery(
+                "SELECT id FROM profil WHERE entreprise_id = :eid AND nom = :nom")
+            .setParameter("eid", entrepriseId)
+            .setParameter("nom", "ADMINISTRATEUR")
+            .getSingleResult()).longValue();
+        em.createNativeQuery(
+                "INSERT INTO profil_permission (entreprise_id, profil_id, module_id, permission_id) "
+                    + "SELECT :eid, :pid, mp.module_id, mp.permission_id FROM module_permission mp")
+            .setParameter("eid", entrepriseId)
+            .setParameter("pid", profilId)
+            .executeUpdate();
+        return profilId;
     }
 
     private long adminCount(Long entrepriseId) {

@@ -121,6 +121,10 @@ private reconciliationProgressSubject = new BehaviorSubject<boolean>(false);
     private userRights: UserRights | null = null;
     private username: string | null = null;
     private token: string | null = null;
+    /** Vrai tant que le backend impose un changement de mot de passe (flag mustChangePassword). */
+    private mustChangePassword = false;
+    /** Garde anti-reentrance du logout (POST /api/auth/logout unique). */
+    private loggingOut = false;
     private normalizedModuleSet = new Set<string>();
 
     // Gestion des fichiers uploadés
@@ -472,6 +476,25 @@ private reconciliationProgressSubject = new BehaviorSubject<boolean>(false);
         localStorage.setItem('userRights', JSON.stringify(this.userRights));
     }
 
+    /**
+     * Définit si l'utilisateur DOIT changer son mot de passe (flag du backend
+     * `mustChangePassword`, ex. mot de passe provisoire du SUPER_ADMIN).
+     * L'AuthGuard bloque l'accès au reste de l'application tant que c'est vrai.
+     */
+    setMustChangePassword(required: boolean): void {
+        this.mustChangePassword = required === true;
+        localStorage.setItem('mustChangePassword', this.mustChangePassword ? '1' : '0');
+    }
+
+    isMustChangePassword(): boolean {
+        return this.mustChangePassword;
+    }
+
+    /** Lève l'obligation de changement (appelé après un changement réussi). */
+    clearMustChangePassword(): void {
+        this.setMustChangePassword(false);
+    }
+
     getUserPaysScope(): UserPaysScope | null {
         return this.userRights?.pays ?? null;
     }
@@ -564,26 +587,37 @@ private reconciliationProgressSubject = new BehaviorSubject<boolean>(false);
                 this.userRights = JSON.parse(rightsStr);
                 this.username = username;
                 this.token = 'cookie';
+                this.mustChangePassword = localStorage.getItem('mustChangePassword') === '1';
                 this.rebuildNormalizedModuleSet();
             } catch (e) {
                 localStorage.removeItem('userRights');
                 localStorage.removeItem('username');
                 localStorage.removeItem('auth_token');
+                localStorage.removeItem('mustChangePassword');
             }
         }
     }
 
     logout() {
+        // Anti-reentrance : logout() peut être rappelé par l'intercepteur (401
+        // reçu sur /api/auth/logout) ; on n'exécute qu'une seule requête.
+        if (this.loggingOut) {
+            return;
+        }
+        this.loggingOut = true;
         this.http.post('/api/auth/logout', {}, { withCredentials: true }).subscribe({
-            error: () => { /* cookie déjà expirée ou backend indisponible */ }
+            complete: () => { this.loggingOut = false; },
+            error: () => { /* cookie déjà expirée ou backend indisponible */ this.loggingOut = false; }
         });
         this.userRights = null;
         this.username = null;
         this.token = null;
+        this.mustChangePassword = false;
         this.normalizedModuleSet.clear();
         localStorage.removeItem('userRights');
         localStorage.removeItem('username');
         localStorage.removeItem('auth_token');
+        localStorage.removeItem('mustChangePassword');
         // La marque (logo + thème) est propre à l'entreprise : on repasse aux
         // valeurs par défaut de l'application pour ne jamais laisser « fuiter »
         // le thème d'une entreprise vers un autre compte (ex. SUPER_ADMIN).

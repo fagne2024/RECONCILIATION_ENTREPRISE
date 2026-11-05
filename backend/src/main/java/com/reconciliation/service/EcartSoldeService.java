@@ -43,6 +43,10 @@ public class EcartSoldeService {
     @Autowired
     private CompteRepository compteRepository;
     
+    /** Règles de calcul configurables (Configuration > Calcul) : prioritaire sur les valeurs codées en dur. */
+    @Autowired
+    private CalculationRuleService calculationRuleService;
+    
     public List<EcartSolde> getAllEcartSoldes() {
         return ecartSoldeRepository.findAllOrderByDateTransactionDesc().stream()
                 .map(this::convertToModel)
@@ -865,11 +869,12 @@ public class EcartSoldeService {
         return entity;
     }
 
-    // Normalise le montant selon le service: si le service contient "cashin", le montant doit être négatif
+    // Normalise le montant selon le service : les services TSOP à signe négatif sont forcés négatifs.
+    // Règle de calcul prioritaire, repli code par défaut (cashin).
     private double normalizeMontantByService(Double montant, String service) {
         double value = montant != null ? montant : 0.0;
-        String s = service != null ? service.toLowerCase() : "";
-        if (s.contains("cashin")) {
+        if (calculationRuleService.matchesAny(service, "CERTIF.SERVICES_TSOP_NEGATIFS",
+                CalculationRuleService.DEFAULT_SERVICES_TSOP_NEGATIFS)) {
             return -Math.abs(value);
         }
         return value;

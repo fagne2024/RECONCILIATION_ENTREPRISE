@@ -10,7 +10,9 @@ import { ReconciliationTabsService } from '../../services/reconciliation-tabs.se
 import { EcartBoSummaryService, EcartBoSummaryPrefill, EcartBoSummaryPendingLine } from '../../services/ecart-bo-summary.service';
 import { ExportOptimizationService, ExportProgress } from '../../services/export-optimization.service';
 import { PopupService } from '../../services/popup.service';
+import { SuiviTrxAnnulerRow, SuiviTrxAnnulerService } from '../../services/suivi-trx-a-annuler.service';
 import { fixGarbledCharacters } from '../../utils/encoding-fixer';
+import { RECONCILIATION_ENV_OPTIONS } from '../../constants/reconciliation-env-options';
 import { TranslateModule, TranslateService } from '@ngx-translate/core';
 import { DsPaginationComponent } from '../../shared/ui';
 import {
@@ -51,6 +53,7 @@ export class MatchesTableComponent implements OnInit, OnDestroy {
   isLoading = false;
   loadProgress = 0;
   private searchIndex: Map<string, Set<number>> = new Map(); // Index de recherche pour performance
+  private matchSearchTextCache: WeakMap<Match, string> = new WeakMap(); // Texte normalisé par match (repli recherche)
   
   // Affichage BO ou Partenaire
   viewMode: 'BO' | 'PARTNER' = 'BO';
@@ -89,6 +92,31 @@ export class MatchesTableComponent implements OnInit, OnDestroy {
   tableScrollMax = 0;
   private readonly TABLE_SCROLL_STEP = 300;
 
+  // Popup Suivi TRX à annuler
+  showSuiviTrxAnnulerPopup = false;
+  suiviTrxSaving = false;
+  suiviTrxMatchKey = '';
+  suiviTrxBoEditable: Record<string, string> = {};
+  suiviTrxPartnerEditable: Record<string, string> = {};
+  suiviTrxBoFields = ['Date', 'Agence', 'Service', 'Montant', 'Token', 'Pays', 'ENV', 'Telephone'];
+  suiviTrxPartnerFields = ['Transaction ID', 'Date', 'Montant', 'ID Annulation', 'Telephone'];
+  readonly envOptions: readonly string[] = RECONCILIATION_ENV_OPTIONS;
+  private readonly suiviTrxBoBaseFields = ['Date', 'Agence', 'Service', 'Montant', 'Token', 'Pays', 'ENV', 'Telephone'];
+  private readonly suiviTrxPartnerBaseFields = ['Transaction ID', 'Date', 'Montant', 'ID Annulation', 'Telephone'];
+  private readonly suiviTrxLabelMap: Record<string, string[]> = {
+    'Date': ['Date', 'date', 'DATE', 'jour', 'Jour', 'JOUR', 'dateTransaction', 'DateTransaction', 'Date Operation', 'Date Opération', 'Date Transaction'],
+    'Agence': ['Agence', 'agence', 'AGENCY', 'Agency', 'Zone', 'zone', 'Agence zone', 'Agence/Zone', 'Agence BO'],
+    'Service': ['Service', 'service', 'SERVICE', 'serv', 'Serv', 'Type Opération', 'Type Operation', 'Type operation', 'type operation', 'Operation', 'Opération', 'Service BO', 'Produit', 'Product'],
+    'Montant': ['Montant', 'montant', 'MONTANT', 'Montant TTC', 'Montant HT', 'amount', 'Amount', 'Mnt', 'mnt', 'Valeur', 'valeur'],
+    'ID': ['ID', 'Id', 'id', 'IDTransaction', 'ID Transaction', 'Reference', 'Référence', 'Ref', 'ref', 'ID BO', 'Numéro', 'Numero', 'N°'],
+    'Pays': ['network_groupe_code', 'Network Groupe Code', 'Pays', 'pays', 'PAYS', 'country', 'Country', 'GRX', 'grx', 'Destination', 'destination', 'Code pays', 'Pays destination'],
+    'ENV': ['ENV', 'Env', 'env', 'Environnement', 'environnement', 'Plateforme', 'plateforme', 'Channel', 'canal'],
+    'Telephone': ['Telephone', 'Téléphone', 'telephone', 'téléphone', 'Tel', 'TEL', 'Phone', 'phone', 'Numéro Téléphone', 'Numero Telephone', 'Numero telephone', 'MSISDN', 'msisdn', 'telephone_number'],
+    'Token': ['Token', 'token', 'TOKEN', 'Jeton', 'jeton'],
+    'Transaction ID': ['Transaction ID', 'TransactionId', 'transactionId', 'ID Transaction', 'IDTransaction', 'Numéro Trans GU', 'Numero Trans GU', 'Trans ID', 'Trace ID', 'RRN', 'ID Transaction Partenaire'],
+    'ID Annulation': ['ID Annulation', 'IDAnnulation', 'Id Annulation', 'Annulation ID', 'ID Annul', 'ID_ANNULATION', 'ID ANNULATION', 'Numero Annulation', 'Numéro Annulation', 'Reference Annulation', 'Référence Annulation']
+  };
+
   constructor(
     private appStateService: AppStateService,
     private reconciliationTabsService: ReconciliationTabsService,
@@ -97,6 +125,7 @@ export class MatchesTableComponent implements OnInit, OnDestroy {
     private exportOptimizationService: ExportOptimizationService,
     private popupService: PopupService,
     private ecartBoSummaryService: EcartBoSummaryService,
+    private suiviTrxAnnulerService: SuiviTrxAnnulerService,
     private el: ElementRef,
     private translate: TranslateService
   ) {}
@@ -408,81 +437,126 @@ export class MatchesTableComponent implements OnInit, OnDestroy {
 
   private applyFilters(): void {
     let filtered = [...this.filteredMatches];
-    
-    // Appliquer la recherche de manière optimisée avec index
-    if (this.searchKey.trim()) {
-      const searchLower = this.searchKey.toLowerCase();
-      const searchTerms = searchLower.split(/\s+/).filter(term => term.length > 2); // Ignorer les mots trop courts
-      
-      if (searchTerms.length > 0 && this.searchIndex.size > 0) {
-        // Utiliser l'index pour une recherche rapide
-        const matchingIndices = new Set<number>();
-        
-        // Pour chaque terme, trouver les indices correspondants
-        searchTerms.forEach(term => {
+
+    const terms = this.parseSearchTerms(this.searchKey);
+    if (terms.length > 0) {
+      // Les termes numériques (montants, téléphones, références) passent par le
+      // repli : l'index ne connaît pas les variantes « 1 000,50 » / « 07 12 34 ».
+      const canUseIndex = this.searchIndex.size > 0 && terms.every(term =>
+        term.normalized.length >= 3 && !/\d/.test(term.normalized)
+      );
+      let indices: Set<number> | null = null;
+
+      if (canUseIndex) {
+        for (const term of terms) {
           const termMatches = new Set<number>();
-          
-          // Chercher dans l'index
-          this.searchIndex.forEach((indices, indexedWord) => {
-            if (indexedWord.includes(term)) {
-              indices.forEach(idx => termMatches.add(idx));
+          this.searchIndex.forEach((termIndices, indexedWord) => {
+            if (indexedWord.includes(term.normalized)) {
+              termIndices.forEach(index => termMatches.add(index));
             }
           });
-          
-          // Si c'est le premier terme, initialiser avec ses résultats
-          if (matchingIndices.size === 0) {
-            termMatches.forEach(idx => matchingIndices.add(idx));
-          } else {
-            // Intersection : garder seulement les indices présents dans les deux sets
-            const intersection = new Set<number>();
-            termMatches.forEach(idx => {
-              if (matchingIndices.has(idx)) {
-                intersection.add(idx);
-              }
-            });
-            matchingIndices.clear();
-            intersection.forEach(idx => matchingIndices.add(idx));
+          indices = indices === null
+            ? termMatches
+            : new Set([...indices].filter(index => termMatches.has(index)));
+          if (indices.size === 0) {
+            break;
           }
-        });
-        
-        // Filtrer selon les indices trouvés
-        if (matchingIndices.size > 0) {
-          filtered = filtered.filter((_, index) => matchingIndices.has(index));
-        } else {
-          // Fallback : recherche classique si l'index ne trouve rien
-          filtered = filtered.filter(match => {
-            const searchableText = [
-              match.key || '',
-              ...Object.values(match.boData || {}),
-              ...Object.values(match.partnerData || {})
-            ].map(val => String(val).toLowerCase()).join(' ');
-            
-            return searchTerms.every(term => searchableText.includes(term));
-          });
         }
-      } else if (searchTerms.length > 0) {
-        // Fallback : recherche classique si pas d'index
-        filtered = filtered.filter(match => {
-          const searchableText = [
-            match.key || '',
-            ...Object.values(match.boData || {}),
-            ...Object.values(match.partnerData || {})
-          ].map(val => String(val).toLowerCase()).join(' ');
-          
-          return searchTerms.every(term => searchableText.includes(term));
-        });
+      }
+
+      if (indices && indices.size > 0) {
+        filtered = filtered.filter((_, index) => indices!.has(index));
+      } else {
+        // Repli (termes courts, montants/téléphones formatés, index sans résultat) :
+        // recherche sur le texte normalisé et compact de chaque ligne.
+        filtered = filtered.filter(match => this.matchSearchTerms(match, terms));
       }
     }
-    
+
     this.displayedMatches = filtered;
     this.totalPages = Math.max(1, Math.ceil(this.displayedMatches.length / this.pageSize));
-    
+
     // Réinitialiser à la première page si nécessaire
     if (this.currentPage > this.totalPages) {
       this.currentPage = 1;
     }
-    
+
     this.cdr.markForCheck();
+  }
+
+  /**
+   * Découpe la saisie en termes (aucune longueur minimale) avec une forme
+   * normalisée et une forme compacte : « 07 12 34 » comme « 071234 »,
+   * « 1 000,50 » comme « 1000,50 ».
+   */
+  private parseSearchTerms(raw: string): Array<{ normalized: string; compact: string }> {
+    return (raw || '')
+      .trim()
+      .split(/\s+/)
+      .map(term => ({
+        normalized: this.normalizeSearchText(term),
+        compact: this.compactSearchText(term)
+      }))
+      .filter(term => term.normalized.length > 0);
+  }
+
+  private matchSearchTerms(match: Match, terms: Array<{ normalized: string; compact: string }>): boolean {
+    const searchable = this.getMatchSearchText(match);
+    return terms.every(term =>
+      searchable.includes(term.normalized) ||
+      (term.compact.length > 1 && searchable.includes(term.compact))
+    );
+  }
+
+  /** Texte de recherche (normalisé + compact) mis en cache par match. */
+  private getMatchSearchText(match: Match): string {
+    const cached = this.matchSearchTextCache.get(match);
+    if (cached !== undefined) {
+      return cached;
+    }
+    const text = this.buildMatchSearchText(match);
+    this.matchSearchTextCache.set(match, text);
+    return text;
+  }
+
+  /** Toutes les valeurs du match : BO, Partenaire et lignes partenaires multiples. */
+  private buildMatchSearchText(match: Match): string {
+    const values: string[] = [];
+    const add = (value: any): void => {
+      if (value === null || value === undefined) {
+        return;
+      }
+      const text = String(value).trim();
+      if (text) {
+        values.push(text);
+      }
+    };
+
+    add(match.key);
+    Object.values(match.boData || {}).forEach(add);
+    Object.values(match.partnerData || {}).forEach(add);
+    (match.partnerDataList || []).forEach(record => {
+      Object.values(record || {}).forEach(add);
+    });
+
+    const normalized = values.map(value => this.normalizeSearchText(value)).join(' ');
+    const compact = values.map(value => this.compactSearchText(value)).filter(Boolean).join(' ');
+    return `${normalized} ${compact}`;
+  }
+
+  /** Minuscules, sans accents, séparateurs remplacés par des espaces. */
+  private normalizeSearchText(value: string): string {
+    return fixGarbledCharacters(value || '')
+      .toLowerCase()
+      .normalize('NFD')
+      .replace(/[\u0300-\u036f]/g, '')
+      .replace(/[^a-z0-9]+/g, ' ')
+      .trim();
+  }
+
+  /** Forme compacte (sans séparateurs) : téléphones, montants, références. */
+  private compactSearchText(value: string): string {
+    return this.normalizeSearchText(value).replace(/\s+/g, '');
   }
 
   getPagedMatches(): Match[] {
@@ -976,6 +1050,175 @@ export class MatchesTableComponent implements OnInit, OnDestroy {
     return '';
   }
 
+  openSuiviTrxAnnuler(match: Match): void {
+    this.openSuiviTrxAnnulerPopup(match);
+  }
+
+  openSuiviTrxAnnulerPopup(match: Match): void {
+    this.suiviTrxMatchKey = match.key || '';
+    this.suiviTrxBoFields = this.buildSuiviFields(match, 'bo', this.suiviTrxBoBaseFields);
+    this.suiviTrxPartnerFields = this.buildSuiviFields(match, 'partner', this.suiviTrxPartnerBaseFields);
+    this.suiviTrxBoEditable = {};
+    this.suiviTrxBoFields.forEach(field => {
+      this.suiviTrxBoEditable[field] = this.getValueFromMatchForSuivi(match, field, 'bo');
+    });
+    // Côté BO, le token par défaut est l'ID de la transaction.
+    if (!(this.suiviTrxBoEditable['Token'] || '').trim()) {
+      this.suiviTrxBoEditable['Token'] = this.getValueFromMatchForSuivi(match, 'ID', 'bo');
+    }
+    this.suiviTrxPartnerEditable = {};
+    this.suiviTrxPartnerFields.forEach(field => {
+      let value = this.getValueFromMatchForSuivi(match, field, 'partner');
+      // Date / Montant / Téléphone : les libellés partenaires varient d'un
+      // fichier à l'autre (voir les modèles) — on détecte la bonne colonne.
+      if (this.isDetectablePartnerField(field)) {
+        value = this.detectPartnerField(match, field) || value;
+      }
+      this.suiviTrxPartnerEditable[field] = value;
+    });
+    this.showSuiviTrxAnnulerPopup = true;
+    this.cdr.markForCheck();
+  }
+
+  get suiviTrxStatut(): string {
+    return (this.suiviTrxPartnerEditable['ID Annulation'] || '').trim() ? 'OK' : 'En cours';
+  }
+
+  /**
+   * Construit la liste complète des champs à afficher dans le popup :
+   * les colonnes métier de référence, puis tous les autres champs réellement
+   * présents dans les données BO / Partenaire du match.
+   */
+  private buildSuiviFields(match: Match, type: 'bo' | 'partner', baseFields: string[]): string[] {
+    const records: Record<string, any>[] = [];
+    if (type === 'bo') {
+      if (match.boData) {
+        records.push(match.boData);
+      }
+    } else {
+      if (match.partnerData) {
+        records.push(match.partnerData);
+      }
+      (match.partnerDataList || []).forEach(p => {
+        if (p) {
+          records.push(p);
+        }
+      });
+    }
+
+    const coveredNorms = new Set<string>();
+    // ID n'est plus affiché côté BO : il est remplacé par Token (prérempli avec ID).
+    const hiddenFields = type === 'bo' ? ['ID'] : [];
+    [...baseFields, ...hiddenFields].forEach(field => {
+      (this.suiviTrxLabelMap[field] || [field]).forEach(synonym => {
+        const norm = this.normalizeColumnName(synonym);
+        if (norm) {
+          coveredNorms.add(norm);
+        }
+      });
+    });
+
+    const seen = new Set<string>(coveredNorms);
+    const extraFields: string[] = [];
+    records.forEach(record => {
+      Object.keys(record || {}).forEach(rawKey => {
+        const label = (fixGarbledCharacters(rawKey) || '').trim();
+        if (!label) {
+          return;
+        }
+        const norm = this.normalizeColumnName(label);
+        if (!norm || seen.has(norm)) {
+          return;
+        }
+        seen.add(norm);
+        extraFields.push(label);
+      });
+    });
+    extraFields.sort((a, b) => a.localeCompare(b, 'fr'));
+
+    return [...baseFields, ...extraFields];
+  }
+
+  closeSuiviTrxAnnulerPopup(): void {
+    this.showSuiviTrxAnnulerPopup = false;
+    this.cdr.markForCheck();
+  }
+
+  saveSuiviTrxAnnuler(): void {
+    if (this.suiviTrxSaving) {
+      return;
+    }
+    const boData: Record<string, any> = {};
+    this.suiviTrxBoFields.forEach(field => {
+      if (this.suiviTrxBoEditable[field] !== undefined) {
+        boData[field] = this.suiviTrxBoEditable[field];
+      }
+    });
+    const partnerData: Record<string, any> = {};
+    this.suiviTrxPartnerFields.forEach(field => {
+      if (this.suiviTrxPartnerEditable[field] !== undefined) {
+        partnerData[field] = this.suiviTrxPartnerEditable[field];
+      }
+    });
+
+    const draftPayload = {
+      source: 'matches',
+      boData: boData,
+      partnerData: partnerData,
+      matchKey: this.suiviTrxMatchKey
+    };
+
+    this.suiviTrxSaving = true;
+    this.cdr.markForCheck();
+
+    this.subscription.add(
+      this.suiviTrxAnnulerService.save(this.buildSuiviTrxRow(boData, partnerData, this.suiviTrxMatchKey)).subscribe({
+        next: () => {
+          this.suiviTrxSaving = false;
+          this.showSuiviTrxAnnulerPopup = false;
+          this.cdr.markForCheck();
+          this.router.navigate(['/suivi-trx-a-annuler']);
+        },
+        error: (error) => {
+          console.error('Erreur lors de l\'enregistrement du suivi TRX à annuler:', error);
+          // Repli local pour ne pas perdre la saisie si l'API est indisponible.
+          try {
+            localStorage.setItem('suiviTrxAnnulerDraft', JSON.stringify(draftPayload));
+          } catch (e) {
+            console.error('Erreur lors de la sauvegarde du draft suivi TRX à annuler:', e);
+          }
+          this.suiviTrxSaving = false;
+          this.showSuiviTrxAnnulerPopup = false;
+          this.cdr.markForCheck();
+          this.popupService.showWarning('Enregistrement en base impossible : la ligne reste provisoire.');
+          this.router.navigate(['/suivi-trx-a-annuler']);
+        }
+      })
+    );
+  }
+
+  /** Convertit la saisie du popup (libellés BO/Partenaire) en ligne persistée. */
+  private buildSuiviTrxRow(boData: Record<string, any>, partnerData: Record<string, any>, matchKey: string): SuiviTrxAnnulerRow {
+    const bo = (field: string): string => (boData[field] ?? '').toString().trim();
+    const partner = (field: string): string => (partnerData[field] ?? '').toString().trim();
+    return {
+      matchKey: matchKey,
+      boDate: bo('Date'),
+      boAgence: bo('Agence'),
+      boService: bo('Service'),
+      boMontant: bo('Montant'),
+      boToken: bo('Token'),
+      boPays: bo('Pays'),
+      boEnv: bo('ENV'),
+      boTelephone: bo('Telephone'),
+      partnerTransactionId: partner('Transaction ID'),
+      partnerDate: partner('Date'),
+      partnerMontant: partner('Montant'),
+      idAnnulation: partner('ID Annulation'),
+      partnerTelephone: partner('Telephone')
+    };
+  }
+
   goBack(): void {
     this.router.navigate(['/results']);
   }
@@ -1005,6 +1248,146 @@ export class MatchesTableComponent implements OnInit, OnDestroy {
         const v = this.getValueByFlexibleKey(record, key);
         if (v) {
           return v;
+        }
+      }
+    }
+    return '';
+  }
+
+  private isDetectablePartnerField(field: string): field is 'Date' | 'Montant' | 'Telephone' {
+    return field === 'Date' || field === 'Montant' || field === 'Telephone';
+  }
+
+  /**
+   * Détecte la date, le montant ou le téléphone d'un partenaire à partir des
+   * autres colonnes du match : les modèles partenaires n'utilisent pas les
+   * mêmes libellés ("Transaction Date & Time", "Horodatage", "Sender Msisdn",
+   * "Numéro de téléphone de contrepartie", clés suffixées `_PARTNER_n`, ...).
+   *
+   * La colonne la plus fiable l'emporte (score), sur partnerData puis sur
+   * chaque enregistrement de partnerDataList.
+   */
+  private detectPartnerField(match: Match, field: 'Date' | 'Montant' | 'Telephone'): string {
+    const records: Record<string, any>[] = [];
+    if (match.partnerData) {
+      records.push(match.partnerData);
+    }
+    (match.partnerDataList || []).forEach(record => {
+      if (record) {
+        records.push(record);
+      }
+    });
+
+    let bestValue = '';
+    let bestScore = 0;
+
+    records.forEach(record => {
+      Object.keys(record || {}).forEach(rawKey => {
+        const rawValue = record[rawKey];
+        if (rawValue === undefined || rawValue === null || String(rawValue).trim() === '') {
+          return;
+        }
+        const normalizedKey = this.normalizeColumnName(rawKey);
+        if (!normalizedKey) {
+          return;
+        }
+        const score = this.partnerFieldScore(field, normalizedKey);
+        if (score > bestScore) {
+          bestScore = score;
+          bestValue = String(rawValue).trim();
+        }
+      });
+    });
+
+    return bestValue;
+  }
+
+  /**
+   * Score de pertinence d'une colonne partenaire pour un champ donné.
+   * 0 = colonne non pertinente ; plus le score est élevé, plus la valeur est fiable.
+   */
+  private partnerFieldScore(field: 'Date' | 'Montant' | 'Telephone', normalizedKey: string): number {
+    switch (field) {
+      case 'Date':
+        if (this.keyMatchesAny(normalizedKey, ['dateannulation', 'datecreation', 'datemodification', 'dateimport'])) {
+          return 0;
+        }
+        if (this.keyMatchesAny(normalizedKey, ['datetransaction', 'transactiondate'])) return 100;
+        if (normalizedKey.includes('horodatage')) return 95;
+        if (this.keyMatchesAny(normalizedKey, ['operdate', 'dateoperation', 'operationdate', 'dateop'])) return 90;
+        if (this.keyMatchesAny(normalizedKey, ['requestdate', 'completiontime', 'initiationtime', 'postingdate'])) return 85;
+        if (normalizedKey === 'date') return 80;
+        if (normalizedKey.includes('date') || normalizedKey.includes('time')) return 60;
+        if (normalizedKey.includes('jour')) return 40;
+        return 0;
+
+      case 'Montant':
+        // Les frais, commissions, taxes et soldes ne sont pas le montant de la transaction.
+        if (this.keyMatchesAny(normalizedKey, ['fee', 'frais', 'commission', 'tax', 'charge', 'balance', 'solde'])) {
+          return 0;
+        }
+        if (this.keyMatchesAny(normalizedKey, ['transactionamount', 'montanttransaction'])) return 100;
+        if (['amount', 'montant', 'mnt', 'valeur'].includes(normalizedKey)) return 95;
+        if (this.keyMatchesAny(normalizedKey, ['amount', 'montant', 'valeur'])) return 85;
+        if (normalizedKey.includes('paidin')) return 75;
+        if (normalizedKey.includes('withdrawn') || normalizedKey.includes('withdrawal')) return 70;
+        if (normalizedKey.includes('total')) return 50;
+        return 0;
+
+      case 'Telephone':
+        if (this.keyMatchesAny(normalizedKey, ['account', 'compte', 'iban', 'wallet', 'transactionid'])) {
+          return 0;
+        }
+        // Émetteur / payeur / initiateur : le client à contacter en priorité.
+        if (this.keyMatchesAny(normalizedKey, [
+          'payermobilenumber', 'sendermsisdn', 'sendermobilenumber', 'senderphone',
+          'payerphone', 'initiatormsisdn', 'initiatormobilenumber', 'initiatorphone'
+        ])) return 100;
+        // Destinataire / bénéficiaire.
+        if (this.keyMatchesAny(normalizedKey, [
+          'receivermsisdn', 'receivermobilenumber', 'receiverphonenumber', 'payeemobilenumber',
+          'payeemsisdn', 'beneficiaryphone', 'beneficiarymobilenumber'
+        ])) return 90;
+        if (this.keyMatchesAny(normalizedKey, ['msisdn', 'mobilenumber', 'phonenumber'])) return 85;
+        if (['telephone', 'phone', 'mobile', 'tel'].includes(normalizedKey)) return 80;
+        if (this.keyMatchesAny(normalizedKey, ['telephone', 'phone', 'gsm'])) return 70;
+        if (normalizedKey.includes('oppositeparty')) return 30;
+        return 0;
+    }
+  }
+
+  private keyMatchesAny(normalizedKey: string, tokens: string[]): boolean {
+    return tokens.some(token => normalizedKey.includes(token));
+  }
+
+  private getValueFromMatchForSuivi(match: Match, label: string, type: 'bo' | 'partner'): string {
+    const sources: Record<string, any>[] = [];
+    if (type === 'bo') {
+      if (match.boData) sources.push(match.boData);
+    } else {
+      if (match.partnerData) sources.push(match.partnerData);
+      if (match.partnerDataList?.length) {
+        match.partnerDataList.forEach(p => { if (p) sources.push(p); });
+      }
+    }
+    const keys = this.suiviTrxLabelMap[label] || [label];
+    const targetNorm = this.normalizeColumnName(label);
+    for (const record of sources) {
+      for (const k of keys) {
+        if (record[k] !== undefined && record[k] !== null && String(record[k]).trim() !== '') {
+          return String(record[k]).trim();
+        }
+      }
+      // Repli sur les clés mal encodées / aux libellés équivalents
+      if (targetNorm) {
+        for (const rawKey of Object.keys(record)) {
+          if (this.normalizeColumnName(rawKey) !== targetNorm) {
+            continue;
+          }
+          const value = record[rawKey];
+          if (value !== undefined && value !== null && String(value).trim() !== '') {
+            return String(value).trim();
+          }
         }
       }
     }

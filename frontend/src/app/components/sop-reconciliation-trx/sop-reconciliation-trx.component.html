@@ -36,6 +36,9 @@
         </button>
       </div>
       <div class="sv-chips sv-bar-actions">
+        <button type="button" class="ds-btn ds-btn--primary sv-btn sv-btn-sm sv-p" (click)="openAddSopModal()">
+          <i class="fas fa-plus"></i> {{ 'SOP.reconciliationTrx.addSop.button' | translate }}
+        </button>
         <button type="button" class="ds-btn ds-btn--secondary sv-btn sv-btn-sm" (click)="expandAll()">{{ 'SOP.shared.expandAll' | translate }}</button>
         <button type="button" class="ds-btn ds-btn--secondary sv-btn sv-btn-sm" (click)="collapseAll()">{{ 'SOP.shared.collapseAll' | translate }}</button>
       </div>
@@ -85,8 +88,14 @@
                   <span class="sv-nm">{{ labelOf(item) }}</span>
                   <i class="fas fa-chevron-right sv-go"></i>
                 </button>
+                <button type="button" class="sv-add-sop" *ngIf="!isSearching()" (click)="openAddSopModal(branch, cat, $event)">
+                  <i class="fas fa-plus"></i> {{ 'SOP.reconciliationTrx.addSop.inline' | translate }}
+                </button>
               </div>
             </div>
+            <button type="button" class="sv-add-sop" *ngIf="!isSearching() && !branch.children?.length" (click)="openAddSopModal(branch, undefined, $event)">
+              <i class="fas fa-plus"></i> {{ 'SOP.reconciliationTrx.addSop.inline' | translate }}
+            </button>
           </div>
         </section>
 
@@ -114,6 +123,66 @@
       <button type="button" class="ds-btn ds-btn--danger sv-btn sv-danger" (click)="deleteDetail($event)"><i class="fas fa-trash"></i> {{ 'ACT.delete' | translate }}</button>
     </div>
   </aside>
+
+  <!-- Modal d'ajout d'une SOP -->
+  <div class="modal-overlay" *ngIf="showAddSopModal" (click)="closeAddSopModal()">
+    <div class="modal-content" (click)="$event.stopPropagation()" role="dialog" aria-modal="true">
+      <div class="modal-header">
+        <h3>{{ 'SOP.reconciliationTrx.addSop.title' | translate }}</h3>
+        <button type="button" class="ds-btn ds-btn--secondary btn-close-modal" (click)="closeAddSopModal()" [disabled]="isAddingSop">
+          <i class="fas fa-times"></i>
+        </button>
+      </div>
+      <div class="modal-body">
+        <p class="upload-description">{{ 'SOP.reconciliationTrx.addSop.description' | translate }}</p>
+
+        <p class="upload-error" *ngIf="!branches().length">
+          <i class="fas fa-info-circle"></i> {{ 'SOP.reconciliationTrx.addSop.noBranch' | translate }}
+        </p>
+
+        <ng-container *ngIf="branches().length">
+          <div class="form-group">
+            <label for="addSopBranch">{{ 'SOP.reconciliationTrx.addSop.branch' | translate }}</label>
+            <select id="addSopBranch" class="form-input" [(ngModel)]="addSopBranchId" (ngModelChange)="onAddSopBranchChange()" [disabled]="isAddingSop">
+              <option *ngFor="let b of branches(); trackBy: trackById" [value]="b.id">{{ labelOf(b) }}</option>
+            </select>
+          </div>
+
+          <div class="form-group">
+            <label for="addSopCategory">{{ 'SOP.reconciliationTrx.addSop.category' | translate }}</label>
+            <select id="addSopCategory" class="form-input" [(ngModel)]="addSopCategoryId" [disabled]="isAddingSop">
+              <option *ngFor="let c of addSopCategories(); trackBy: trackById" [value]="c.id">{{ labelOf(c) }}</option>
+              <option [value]="NEW_CATEGORY">{{ 'SOP.reconciliationTrx.addSop.newCategoryOption' | translate }}</option>
+            </select>
+          </div>
+
+          <div class="form-group" *ngIf="addSopCategoryId === NEW_CATEGORY">
+            <label for="addSopNewCategory">{{ 'SOP.reconciliationTrx.addSop.newCategory' | translate }}</label>
+            <input id="addSopNewCategory" type="text" class="form-input" maxlength="200" [(ngModel)]="addSopNewCategory"
+                   [placeholder]="'SOP.reconciliationTrx.addSop.newCategoryPlaceholder' | translate" [disabled]="isAddingSop">
+          </div>
+
+          <div class="form-group">
+            <label for="addSopLabel">{{ 'SOP.reconciliationTrx.addSop.name' | translate }}</label>
+            <input id="addSopLabel" type="text" class="form-input" maxlength="200" [(ngModel)]="addSopLabel"
+                   [placeholder]="'SOP.reconciliationTrx.addSop.namePlaceholder' | translate" [disabled]="isAddingSop"
+                   (keyup.enter)="submitAddSop()">
+          </div>
+        </ng-container>
+
+        <div class="upload-error" *ngIf="addSopError">
+          <i class="fas fa-exclamation-circle"></i> {{ addSopError }}
+        </div>
+      </div>
+      <div class="modal-footer">
+        <button type="button" class="ds-btn ds-btn--secondary btn btn-secondary" (click)="closeAddSopModal()" [disabled]="isAddingSop">{{ 'COMMON.actions.cancel' | translate }}</button>
+        <button type="button" class="ds-btn ds-btn--primary btn btn-primary" (click)="submitAddSop()" [disabled]="!canSubmitAddSop()">
+          <span *ngIf="!isAddingSop">{{ 'SOP.reconciliationTrx.addSop.submit' | translate }}</span>
+          <span *ngIf="isAddingSop"><i class="fas fa-spinner fa-spin"></i> {{ 'SOP.reconciliationTrx.addSop.inProgress' | translate }}</span>
+        </button>
+      </div>
+    </div>
+  </div>
 
   <!-- Popup pour les options -->
   <div class="popup-overlay" *ngIf="showPopup && popupNode" (click)="closePopup()">

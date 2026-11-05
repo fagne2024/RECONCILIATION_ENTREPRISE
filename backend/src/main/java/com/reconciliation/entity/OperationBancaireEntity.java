@@ -56,6 +56,16 @@ public class OperationBancaireEntity {
     
     @Column(name = "bo")
     private String bo;
+
+    @Column(name = "banque_corrigee")
+    private String banqueCorrigee;
+
+    @Column(name = "demandeur")
+    private String demandeur;
+
+    @Column(name = "valideur")
+    private String valideur;
+
     
     @Column(name = "statut", nullable = false)
     private String statut;
@@ -208,6 +218,31 @@ public class OperationBancaireEntity {
     public void setBo(String bo) {
         this.bo = bo;
     }
+
+    public String getBanqueCorrigee() {
+        return banqueCorrigee;
+    }
+
+    public void setBanqueCorrigee(String banqueCorrigee) {
+        this.banqueCorrigee = banqueCorrigee;
+    }
+
+    public String getDemandeur() {
+        return demandeur;
+    }
+
+    public void setDemandeur(String demandeur) {
+        this.demandeur = demandeur;
+    }
+
+    public String getValideur() {
+        return valideur;
+    }
+
+    public void setValideur(String valideur) {
+        this.valideur = valideur;
+    }
+
     
     public String getStatut() {
         return statut;

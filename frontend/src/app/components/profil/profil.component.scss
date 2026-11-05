@@ -30,7 +30,7 @@
 .nav-brand {
   font-family: var(--font-display);
   font-size: 17px;
-  color: #fff;
+  color: var(--color-nav-text);
   letter-spacing: 0.01em;
   display: flex;
   align-items: center;
@@ -198,7 +198,7 @@
         gap: 10px;
 
         i {
-          color: var(--theme-primary, #667eea);
+          color: var(--color-accent);
         }
       }
 
@@ -249,20 +249,20 @@
 
         &:focus {
           outline: none;
-          border-color: var(--theme-primary, #667eea);
-          box-shadow: 0 0 0 3px rgba(var(--theme-primary-rgb), 0.1);
+          border-color: var(--color-accent);
+          box-shadow: 0 0 0 3px color-mix(in srgb, var(--color-accent) 10%, transparent);
         }
 
         &::placeholder {
-          color: #adb5bd;
+          color: var(--color-text-muted);
         }
       }
     }
 
     .btn-clear-filters {
       padding: 10px 15px;
-      background: #dc3545;
-      color: white;
+      background: var(--color-error);
+      color: var(--color-accent-contrast);
       border: none;
       border-radius: 6px;
       font-size: 14px;
@@ -291,28 +291,22 @@
     align-items: center;
     gap: 0.5rem;
 
-    &.add-btn {
-      background-color: #4CAF50;
-      color: white;
-      &:hover { background-color: #45a049; }
-    }
-
     &.icon-btn {
       background: none;
-      color: #555;
+      color: var(--color-text-muted);
       padding: 0.5rem;
       font-size: 1.2rem;
       &.edit {
-        color: #4CAF50;
-        &:hover { color: #45a049; }
+        color: var(--color-success);
+        &:hover { color: var(--color-success); }
       }
       &.view {
-        color: #2196F3;
-        &:hover { color: #1976D2; }
+        color: var(--color-info);
+        &:hover { color: var(--color-info); }
       }
       &.delete {
-        color: #f44336;
-        &:hover { color: #d32f2f; }
+        color: var(--color-error);
+        &:hover { color: var(--color-error); }
       }
       &:hover {
         transform: scale(1.1);
@@ -327,7 +321,7 @@
 
   .table-container {
     flex: 1;
-    background: #fff;
+    background: var(--color-surface-raised);
     border-radius: 8px;
     box-shadow: 0 4px 6px rgba(0,0,0,0.1);
     min-height: 0;
@@ -344,7 +338,7 @@
 
     i {
       font-size: 2rem;
-      color: var(--theme-primary, #667eea);
+      color: var(--color-accent);
     }
   }
 
@@ -580,7 +574,7 @@
   }
 
   .modal-container {
-    background: white;
+    background: var(--color-surface-raised);
     border-radius: 8px;
     box-shadow: 0 10px 30px rgba(0, 0, 0, 0.3);
     width: 90%;
@@ -688,7 +682,7 @@
       
       .btn-primary {
         background: #2196F3;
-        color: white;
+        color: var(--color-accent-contrast);
         border: none;
         border-radius: 5px;
         padding: 0.75rem 1.5rem;
@@ -769,15 +763,15 @@
 // Styles pour la nouvelle interface des droits
 .profil-droits {
   margin-top: 2rem;
-  background: #fff;
+  background: var(--color-surface-raised);
   border-radius: 8px;
   box-shadow: 0 4px 6px rgba(0,0,0,0.1);
   overflow: hidden;
 
   .droits-header {
     padding: 1.5rem;
-    background: linear-gradient(135deg, var(--theme-primary, #667eea) 0%, var(--theme-accent, #764ba2) 100%);
-    color: white;
+    background: linear-gradient(135deg, var(--color-accent) 0%, var(--color-accent-hover) 100%);
+    color: var(--color-accent-contrast);
 
     h3 {
       margin: 0 0 1rem 0;
@@ -871,7 +865,7 @@
 
         &.active {
           background: #2196F3;
-          color: white;
+          color: var(--color-accent-contrast);
           border-color: #2196F3;
         }
 
@@ -920,7 +914,7 @@
 
           .permission-count {
             background: #2196F3;
-            color: white;
+            color: var(--color-accent-contrast);
             padding: 0.25rem 0.5rem;
             border-radius: 12px;
             font-size: 0.8rem;
@@ -937,7 +931,7 @@
     justify-content: space-between;
     align-items: center;
     padding: 1rem 1.5rem;
-    background: #fff8e1;
+    background: var(--color-warning-bg);
     border: 1px solid #ffd54f;
     border-radius: 8px;
     margin-bottom: 1.5rem;
@@ -979,7 +973,7 @@
       gap: 1.5rem;
 
       .module-card {
-        background: white;
+        background: var(--color-surface-raised);
         border: 2px solid #e9ecef;
         border-radius: 8px;
         padding: 1.5rem;
@@ -1046,7 +1040,7 @@
             align-items: center;
             gap: 0.5rem;
             i {
-              color: var(--theme-primary, #667eea);
+              color: var(--color-accent);
               font-size: 1.2rem;
             }
             p {
@@ -1119,7 +1113,7 @@
                   top: 2px;
                   width: 6px;
                   height: 10px;
-                  border: solid white;
+                  border: solid var(--color-accent-contrast);
                   border-width: 0 2px 2px 0;
                   transform: rotate(45deg);
                   opacity: 0;
@@ -1186,15 +1180,15 @@
 // Styles pour la vue d'ensemble des modules
 .module-selection-section {
   margin-top: 2rem;
-  background: #fff;
+  background: var(--color-surface-raised);
   border-radius: 8px;
   box-shadow: 0 4px 6px rgba(0,0,0,0.1);
   overflow: hidden;
 
   .module-selection-header {
     padding: 1.5rem;
-    background: linear-gradient(135deg, var(--theme-primary, #667eea) 0%, var(--theme-accent, #764ba2) 100%);
-    color: white;
+    background: linear-gradient(135deg, var(--color-accent) 0%, var(--color-accent-hover) 100%);
+    color: var(--color-accent-contrast);
 
     h3 {
       margin: 0 0 1rem 0;
@@ -1244,7 +1238,7 @@
         gap: 1rem;
 
         .module-card {
-          background: white;
+          background: var(--color-surface-raised);
           border: 2px solid #e9ecef;
           border-radius: 8px;
           padding: 1rem;
@@ -1342,7 +1336,7 @@
                   border-radius: 4px;
                   position: relative;
                   transition: background-color var(--duration-slow) var(--ease-standard), color var(--duration-slow) var(--ease-standard), border-color var(--duration-slow) var(--ease-standard), box-shadow var(--duration-slow) var(--ease-standard), transform var(--duration-slow) var(--ease-standard), opacity var(--duration-slow) var(--ease-standard);
-                  background: white;
+                  background: var(--color-surface-raised);
 
                   &:after {
                     content: '';
@@ -1351,7 +1345,7 @@
                     top: 2px;
                     width: 6px;
                     height: 10px;
-                    border: solid white;
+                    border: solid var(--color-accent-contrast);
                     border-width: 0 2px 2px 0;
                     transform: rotate(45deg);
                     opacity: 0;
@@ -1532,7 +1526,7 @@
 
 /* Pagination */
 .pagination-section {
-  background: white;
+  background: var(--color-surface-raised);
   padding: 20px;
   border-radius: 8px;
   box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
@@ -1562,7 +1556,7 @@
         border: 1px solid #dee2e6;
         border-radius: 6px;
         font-size: 14px;
-        background: white;
+        background: var(--color-surface-raised);
         cursor: pointer;
 
         &:focus {
@@ -1576,7 +1570,7 @@
     .pagination-btn {
       padding: 8px 16px;
       border: 1px solid #dee2e6;
-      background-color: white;
+      background-color: var(--color-surface-raised);
       color: #495057;
       border-radius: 6px;
       cursor: pointer;
@@ -1606,7 +1600,7 @@
       .page-btn {
         padding: 8px 12px;
         border: 1px solid #dee2e6;
-        background-color: white;
+        background-color: var(--color-surface-raised);
         color: #495057;
         border-radius: 6px;
         cursor: pointer;
@@ -1622,7 +1616,7 @@
 
         &.active {
           background-color: #007bff;
-          color: white;
+          color: var(--color-accent-contrast);
           border-color: #007bff;
         }
       }
@@ -1659,7 +1653,7 @@
 
 .btn-link-toggle {
   border: 1px solid var(--rd-border);
-  background: #fff;
+  background: var(--color-surface-raised);
   color: var(--rd-text2);
   border-radius: 8px;
   padding: 8px 12px;
@@ -1685,7 +1679,7 @@
 .nav-group-card {
   border: 1px solid var(--rd-border);
   border-radius: 12px;
-  background: #fff;
+  background: var(--color-surface-raised);
   overflow: hidden;
 }
 
@@ -1741,7 +1735,7 @@
 .nav-submenu-card {
   border: 1px solid #ece8e2;
   border-radius: 10px;
-  background: #fff;
+  background: var(--color-surface-raised);
 }
 
 .nav-submenu-head {
@@ -1782,7 +1776,7 @@
 
 .nav-actions-toggle {
   border: 1px solid var(--rd-border);
-  background: #fff;
+  background: var(--color-surface-raised);
   border-radius: 8px;
   padding: 6px 10px;
   font-size: 12px;
@@ -1855,20 +1849,6 @@
 
   i {
     color: var(--rd-green-m);
-  }
-}
-
-.toolbar-card-actions .add-btn {
-  background: var(--rd-green-m);
-  color: #fff;
-  border: none;
-  border-radius: 10px;
-  padding: 10px 18px;
-  font-weight: 600;
-  box-shadow: 0 2px 8px rgba(90, 158, 116, 0.25);
-
-  &:hover {
-    background: var(--rd-green);
   }
 }
 
@@ -1954,12 +1934,12 @@
   display: flex;
   flex-direction: column;
   max-height: calc(100vh - 88px);
-  background: #fff;
+  background: var(--color-surface-raised);
 
   .droits-header {
     padding: 1.25rem 1.35rem;
     background: linear-gradient(135deg, var(--rd-navy) 0%, var(--rd-navy2) 100%);
-    color: #fff;
+    color: var(--color-nav-text);
     flex-shrink: 0;
   }
 
@@ -1989,7 +1969,7 @@
   .droits-close-btn {
     border: none;
     background: rgba(255, 255, 255, 0.12);
-    color: #fff;
+    color: var(--color-nav-text);
     width: 34px;
     height: 34px;
     border-radius: 8px;
@@ -2210,7 +2190,7 @@
 
 .nav-submenu-card--granted {
   border-color: rgba(90, 158, 116, 0.4);
-  background: linear-gradient(90deg, #f7fcf9 0%, #fff 100%);
+  background: linear-gradient(90deg, var(--color-success-bg) 0%, #fff 100%);
 }
 
 .nav-submenu-card--granted .nav-submenu-label {
@@ -2273,7 +2253,7 @@
   border: 1px solid var(--rd-border);
   border-radius: var(--rd-r-sm);
   overflow: hidden;
-  background: #fff;
+  background: var(--color-surface-raised);
 }
 
 .module-selection-toggle {

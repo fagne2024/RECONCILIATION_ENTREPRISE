@@ -15,7 +15,7 @@ import { ReconciliationService } from '../../services/reconciliation.service';
 import { PopupService } from '../../services/popup.service';
 import { PaysService } from '../../services/pays.service';
 import { EcartBoSummaryService, EcartBoSummary } from '../../services/ecart-bo-summary.service';
-import { NiveauxValidationConfigService, NiveauTraitementConfig } from '../../services/niveaux-validation-config.service';
+import { NiveauxValidationConfigService, NiveauTraitementConfig, NiveauxValidationConfig } from '../../services/niveaux-validation-config.service';
 import { ProfilService } from '../../services/profil.service';
 import { Profil } from '../../models/profil.model';
 import {
@@ -90,6 +90,37 @@ export interface ReconciliationReportData {
     comment: string;
     traitement?: string;
     username?: string;
+    /**
+     * Instantané des valeurs d'origine de la ligne Multiagence, conservé uniquement
+     * en mémoire pour rendre idempotent le contrôle des correspondances enregistrées.
+     */
+    __savedCorrespondenceControlBase?: SavedCorrespondenceControlBase;
+    /** Indique que les compteurs affichés ont été réduits par le contrôle des correspondances. */
+    __savedCorrespondenceControlAdjusted?: boolean;
+}
+
+/** Valeurs d'origine d'une ligne Multiagence avant déduction des correspondances enregistrées. */
+interface SavedCorrespondenceControlBase {
+    totalTransactions: number;
+    matches: number;
+    boOnly: number;
+    partnerOnly: number;
+    mismatches: number;
+    matchRate: number;
+    status: string;
+    comment: string;
+    traitement?: string;
+}
+
+/** Synthèse affichée dans l'email « tous les services à OK ». */
+interface AllOkEmailMetrics {
+    totalTransactions: number;
+    matches: number;
+    boOnly: number;
+    partnerOnly: number;
+    mismatches: number;
+    matchRate: number;
+    services: string[];
 }
 
 @Component({
@@ -1184,7 +1215,7 @@ export interface ReconciliationReportData {
                     <button type="button" class="btn btn-export-releve ds-btn ds-btn--secondary ds-btn--sm" (click)="saveReleveManualData(true)" [disabled]="!releveData || isSavingReleveManualData || !hasPendingReleveManualChanges">
                         {{ isSavingReleveManualData ? ('RPT.savingEntries' | translate) : ('💾 ' + ('RPT.saveEntries' | translate)) }}
                     </button>
-                    <button type="button" class="btn btn-validate-releve ds-btn ds-btn--primary ds-btn--sm" (click)="validateReleve()" [disabled]="isReleveValidateButtonDisabled()" [class.btn-validated]="isReleveCdoClosed() || isReleveFullyClosed()" [title]="getReleveActionButtonTitle()">
+                    <button type="button" class="btn btn-validate-releve ds-btn ds-btn--primary ds-btn--sm" (click)="validateReleveWithEmail()" [disabled]="isReleveValidateButtonDisabled()" [class.btn-validated]="isReleveCdoClosed() || isReleveFullyClosed()" [title]="getReleveActionButtonTitle()">
                         {{ getReleveActionButtonLabel() }}
                     </button>
                     <button type="button" class="btn btn-reject-releve ds-btn ds-btn--danger ds-btn--sm" (click)="openRejectReleveModal()" [disabled]="!releveData || isRejectingReleve">
@@ -2796,8 +2827,8 @@ export interface ReconciliationReportData {
             background: var(--color-surface);
             border-radius: 12px;
             box-shadow: 0 8px 24px rgba(0, 0, 0, 0.3);
-            max-width: 900px;
-            width: 90%;
+            max-width: 1200px;
+            width: 95%;
             max-height: 90vh;
             overflow-y: auto;
             display: flex;
@@ -3172,6 +3203,8 @@ export interface ReconciliationReportData {
             border-top: 1px solid var(--color-border);
             display: flex;
             justify-content: flex-end;
+            flex-wrap: wrap;
+            gap: 8px;
             background: var(--color-surface-sunken);
             border-radius: 0 0 12px 12px;
         }
@@ -3620,6 +3653,14 @@ export class ReconciliationReportComponent implements OnInit, OnDestroy {
     currentSource: 'live' | 'db' = 'db';
     private hasSummary = false;
 
+    /**
+     * Contrôle NOK des lignes Multiagence : total des correspondances enregistrées
+     * sur /ecart-bo-summary (plateforme PARTENAIRE), indexé par date + service + pays + ENV.
+     */
+    private savedCorrespondenceControlTotals = new Map<string, number>();
+    private savedCorrespondenceControlLoaded = false;
+    private savedCorrespondenceControlLoading: Promise<void> | null = null;
+
 reportData: ReconciliationReportData[] = [];
     filteredReportData: ReconciliationReportData[] = [];
     kpiScopeData: ReconciliationReportData[] = [];
@@ -3688,6 +3729,15 @@ reportData: ReconciliationReportData[] = [];
     private readonly traitementNiveauGroup = 'Niveau GROUP';
     private readonly defaultOkTraitement = 'Responsable CDO';
 
+    /** Vérification « tous les services à OK » → proposition d'email au responsable réconciliation. */
+    private pendingAllOkCheckItems: ReconciliationReportData[] = [];
+    /** Niveau source de la sauvegarde (ex. « Niveau Support ») par périmètre fonctionnel. */
+    private pendingAllOkSourceLevels = new Map<string, string>();
+    private allOkEmailCheckTimer: ReturnType<typeof setTimeout> | null = null;
+    private allOkEmailCheckInFlight = false;
+    private allOkEmailNoRecipientWarned = new Set<string>();
+    private readonly allOkEmailStoragePrefix = 'reco_all_ok_email_';
+
     // Cache profils pour validation niveaux
     private profilsCache: Map<string, number> = new Map(); // nom -> id
     private profilsLoaded = false;
@@ -3752,6 +3802,466 @@ reportData: ReconciliationReportData[] = [];
         const nextNiveau = this.niveauxValidationConfig.findNextNiveau(paysCode, currentTraitement);
         return nextNiveau?.statutAssocie;
     }
+
+    // --- Notification « tous les services à OK » ---
+
+    /**
+     * Mémorise les lignes dont le statut vient de passer à OK.
+     * La vérification est faite dès que les données à jour sont disponibles.
+     *
+     * @param sourceTraitement Niveau depuis lequel la sauvegarde a été effectuée
+     * (ex. « Niveau Support »). Peut être fourni pour toutes les lignes ou via une map
+     * indexée par {@link buildAllOkSourceKey}.
+     */
+    private armAllOkEmailCheck(
+        items: ReconciliationReportData[],
+        sourceTraitement?: string | Map<string, string>
+    ): void {
+        const okItems = (items || []).filter(item => (item?.status || '').trim().toUpperCase() === 'OK');
+        if (okItems.length === 0) {
+            return;
+        }
+
+        for (const item of okItems) {
+            const key = this.buildAllOkItemKey(item);
+            const sourceKey = this.buildAllOkSourceKey(item);
+            const source = sourceTraitement instanceof Map
+                ? sourceTraitement.get(sourceKey)
+                : sourceTraitement;
+            if (source && source.trim()) {
+                this.pendingAllOkSourceLevels.set(sourceKey, source.trim());
+            }
+            if (!this.pendingAllOkCheckItems.some(existing => this.buildAllOkItemKey(existing) === key)) {
+                this.pendingAllOkCheckItems.push({ ...item });
+            }
+        }
+
+        if (this.allOkEmailCheckTimer) {
+            clearTimeout(this.allOkEmailCheckTimer);
+        }
+        this.allOkEmailCheckTimer = setTimeout(() => {
+            void this.runAllOkEmailCheck();
+        }, 1200);
+    }
+
+    private buildAllOkItemKey(item: ReconciliationReportData): string {
+        return [
+            item.id ?? '',
+            this.formatDateForSearch(item.date),
+            item.agency || '',
+            item.service || '',
+            (item.country || '').trim().toUpperCase(),
+            this.normalizeReleveEnvKey(item.env)
+        ].join('|');
+    }
+
+    /** Clé stable (sans id) pour associer un niveau source à un périmètre de sauvegarde. */
+    private buildAllOkSourceKey(item: ReconciliationReportData): string {
+        return [
+            this.formatDateForSearch(item.date),
+            (item.agency || '').trim().toUpperCase(),
+            (item.service || '').trim().toUpperCase(),
+            (item.country || '').trim().toUpperCase(),
+            this.normalizeReleveEnvKey(item.env)
+        ].join('|');
+    }
+
+    private buildAllOkScopeKey(item: ReconciliationReportData): string {
+        return [
+            this.formatDateForSearch(item.date),
+            (item.country || '').trim().toUpperCase(),
+            this.normalizeReleveEnvKey(item.env)
+        ].join('|');
+    }
+
+    private getAllOkScopeRows(item: ReconciliationReportData): ReconciliationReportData[] {
+        const date = this.formatDateForSearch(item.date);
+        const country = (item.country || '').trim().toUpperCase();
+        const env = this.normalizeReleveEnvKey(item.env);
+        const source = (this.reportData && this.reportData.length > 0)
+            ? this.reportData
+            : (this.filteredReportData || []);
+
+        return source.filter(row =>
+            this.formatDateForSearch(row.date) === date &&
+            (row.country || '').trim().toUpperCase() === country &&
+            this.normalizeReleveEnvKey(row.env) === env &&
+            !this.isPartnerOnlySpecialLine(row)
+        );
+    }
+
+    private buildAllOkSignature(rows: ReconciliationReportData[]): string {
+        return rows
+            .map(row => `${row.id ?? ''}:${(row.agency || '').trim()}:${(row.service || '').trim()}`)
+            .sort()
+            .join('|');
+    }
+
+    private clearAllOkEmailMarker(item: ReconciliationReportData): void {
+        try {
+            localStorage.removeItem(`${this.allOkEmailStoragePrefix}${this.buildAllOkScopeKey(item)}`);
+        } catch {
+            // localStorage indisponible : aucun impact bloquant
+        }
+    }
+
+    private async runAllOkEmailCheck(): Promise<void> {
+        if (this.allOkEmailCheckInFlight || this.pendingAllOkCheckItems.length === 0) {
+            return;
+        }
+
+        if (this.isLoadingDbReport) {
+            // Rechargement en cours : réessayer une fois les données prêtes.
+            if (this.allOkEmailCheckTimer) {
+                clearTimeout(this.allOkEmailCheckTimer);
+            }
+            this.allOkEmailCheckTimer = setTimeout(() => {
+                void this.runAllOkEmailCheck();
+            }, 800);
+            return;
+        }
+
+        const changedItems = this.pendingAllOkCheckItems.splice(0);
+        this.allOkEmailCheckInFlight = true;
+        try {
+            const handledScopes = new Set<string>();
+
+            for (const changed of changedItems) {
+                const scopeKey = this.buildAllOkScopeKey(changed);
+                if (handledScopes.has(scopeKey)) {
+                    continue;
+                }
+                handledScopes.add(scopeKey);
+
+                const sourceKey = this.buildAllOkSourceKey(changed);
+                const sourceTraitement = this.pendingAllOkSourceLevels.get(sourceKey);
+                this.pendingAllOkSourceLevels.delete(sourceKey);
+
+                const scopeRows = this.getAllOkScopeRows(changed);
+                const allOk = scopeRows.length > 0
+                    && scopeRows.every(row => (row.status || '').trim().toUpperCase() === 'OK');
+                if (!allOk) {
+                    continue;
+                }
+
+                const signature = this.buildAllOkSignature(scopeRows);
+                const storageKey = `${this.allOkEmailStoragePrefix}${scopeKey}`;
+                let alreadyHandled = false;
+                try {
+                    alreadyHandled = localStorage.getItem(storageKey) === signature;
+                } catch {
+                    alreadyHandled = false;
+                }
+                if (alreadyHandled) {
+                    continue;
+                }
+
+                const countryCode = (changed.country || 'GNL').trim() || 'GNL';
+                const countryLabel = countryNameFromCode(changed.country) || changed.country || '—';
+                const targetTraitement = (sourceTraitement
+                    || this.getEffectiveTraitementValue(changed)
+                    || this.defaultOkTraitement).trim();
+                const emailConfig = this.resolveAllOkEmailConfig(countryCode, targetTraitement);
+                let destinataires = emailConfig.destinataires;
+                let copie = emailConfig.copie;
+                const automatic = emailConfig.automatic;
+                const niveauLabel = emailConfig.niveauLabel;
+                const metrics = this.computeAllOkEmailMetrics(scopeRows);
+
+                destinataires = destinataires.filter(email => !!email && email.includes('@'));
+                copie = copie.filter(email => !!email && email.includes('@'));
+
+                if (destinataires.length === 0 && copie.length === 0) {
+                    if (!this.allOkEmailNoRecipientWarned.has(scopeKey)) {
+                        this.allOkEmailNoRecipientWarned.add(scopeKey);
+                        await this.popupService.showWarning(
+                            this.translateKey('RPT.allOkEmail.noRecipients', { country: countryLabel, level: niveauLabel }),
+                            this.translateKey('RPT.allOkEmail.noRecipientsTitle')
+                        );
+                    }
+                    continue;
+                }
+
+                let confirmed = automatic;
+                if (!automatic) {
+                    confirmed = await this.popupService.showConfirm(
+                        this.translateKey('RPT.allOkEmail.confirmMessage', {
+                            count: scopeRows.length,
+                            date: this.formatDate(changed.date),
+                            country: countryLabel,
+                            env: this.normalizeReleveEnvKey(changed.env) || '—',
+                            level: niveauLabel,
+                            recipients: [...destinataires, ...copie].join(', '),
+                            transactions: metrics.totalTransactions,
+                            matches: metrics.matches,
+                            matchRate: metrics.matchRate.toFixed(1),
+                            bo: metrics.boOnly,
+                            partner: metrics.partnerOnly,
+                            mismatches: metrics.mismatches
+                        }),
+                        this.translateKey('RPT.allOkEmail.confirmTitle')
+                    );
+                }
+
+                if (!confirmed) {
+                    try {
+                        localStorage.setItem(storageKey, signature);
+                    } catch {
+                        // ignore
+                    }
+                    continue;
+                }
+
+                const sent = await this.sendAllOkEmailNotification(changed, scopeRows, destinataires, copie, niveauLabel, metrics);
+                if (sent) {
+                    try {
+                        localStorage.setItem(storageKey, signature);
+                    } catch {
+                        // ignore
+                    }
+                }
+            }
+        } finally {
+            this.allOkEmailCheckInFlight = false;
+        }
+    }
+
+    /**
+     * Résout les destinataires de la notification « tous services OK » pour le niveau cible.
+     * Priorité au niveau source de la sauvegarde, puis au niveau par défaut (Responsable CDO),
+     * puis à tout niveau configuré du pays, puis à l'ancienne configuration globale du pays, puis au GNL.
+     */
+    private resolveAllOkEmailConfig(countryCode: string, targetTraitement: string): {
+        destinataires: string[];
+        copie: string[];
+        automatic: boolean;
+        niveauLabel: string;
+    } {
+        const normalizedTarget = (targetTraitement || this.defaultOkTraitement || '').trim();
+        const fallbackLevel = (this.defaultOkTraitement || '').trim();
+        const candidateValues = [normalizedTarget, fallbackLevel]
+            .filter((value, index, values) => !!value && values.indexOf(value) === index)
+            .map(value => value.trim().toLowerCase());
+
+        const hasEmails = (niveau?: NiveauTraitementConfig): boolean =>
+            (niveau?.destinatairesEmail?.length || 0) > 0 || (niveau?.copieEmail?.length || 0) > 0;
+
+        const toResult = (niveau: NiveauTraitementConfig) => ({
+            destinataires: niveau.destinatairesEmail || [],
+            copie: niveau.copieEmail || [],
+            automatic: niveau.envoiAutomatiqueEmail === true,
+            niveauLabel: niveau.valeur
+        });
+
+        const configs: NiveauxValidationConfig[] = [];
+        const countryConfig = this.niveauxValidationConfig.getConfigForPaysSync(countryCode);
+        configs.push(countryConfig);
+        if (countryCode !== 'GNL') {
+            const globalConfig = this.niveauxValidationConfig.getConfigForPaysSync('GNL');
+            if (globalConfig !== countryConfig) {
+                configs.push(globalConfig);
+            }
+        }
+
+        // 1) Niveau ciblé (source de la sauvegarde ou niveau par défaut).
+        for (const config of configs) {
+            const niveaux = config.niveauxTraitement || [];
+            for (const value of candidateValues) {
+                const niveau = niveaux.find(n => (n.valeur || '').trim().toLowerCase() === value);
+                if (niveau && hasEmails(niveau)) {
+                    return toResult(niveau);
+                }
+            }
+        }
+
+        // 2) N'importe quel niveau configuré (le plus petit ordre), pour éviter un faux
+        //    « aucun destinataire » lorsque le libellé du niveau a changé.
+        // On cherche d'abord parmi les configs déjà examinées (pays + GNL).
+        for (const config of configs) {
+            const niveau = (config.niveauxTraitement || [])
+                .filter(n => n.actif !== false && hasEmails(n))
+                .sort((a, b) => (a.ordre || 0) - (b.ordre || 0))[0];
+            if (niveau) {
+                return toResult(niveau);
+            }
+        }
+        // Puis on élargit la recherche à **toutes** les configurations stockées
+        // (peu importe le pays sous lequel l'utilisateur a configuré le niveau).
+        // 4a) Essayer de trouver un niveau actif avec emails dans le champ par niveau.
+        const allConfigs = this.niveauxValidationConfig.getAllConfigs();
+        for (const countryCode in allConfigs) {
+            const config = allConfigs[countryCode];
+            const niveau = (config.niveauxTraitement || [])
+                .filter(n => n.actif !== false && hasEmails(n))
+                .sort((a, b) => (a.ordre || 0) - (b.ordre || 0))[0];
+            if (niveau) {
+                return toResult(niveau);
+            }
+        }
+        // 4b) Enfin, vérifier les anciens champs globaux de config (compatibilité avec
+        //     les configurations créées avant l'introduction des niveaux par niveau).
+        //     On parcourt toutes les configs stockées et on regarde si des emails sont
+        //    définis au niveau global de la config (destinatairesEmail / copieEmail).
+        for (const countryCode in allConfigs) {
+            const config = allConfigs[countryCode];
+            if ((config.destinatairesEmail?.length || 0) > 0
+                || (config.copieEmail?.length || 0) > 0) {
+                return {
+                    destinataires: config.destinatairesEmail || [],
+                    copie: config.copieEmail || [],
+                    automatic: config.envoiAutomatiqueEmail === true,
+                    niveauLabel: normalizedTarget || fallbackLevel
+                };
+            }
+        }
+
+        // 3) Compatibilité avec l'ancienne configuration globale par pays.
+        for (const config of configs) {
+            if ((config.destinatairesEmail?.length || 0) > 0 || (config.copieEmail?.length || 0) > 0) {
+                return {
+                    destinataires: config.destinatairesEmail || [],
+                    copie: config.copieEmail || [],
+                    automatic: config.envoiAutomatiqueEmail === true,
+                    niveauLabel: normalizedTarget || fallbackLevel
+                };
+            }
+        }
+
+        return {
+            destinataires: [],
+            copie: [],
+            automatic: false,
+            niveauLabel: normalizedTarget || fallbackLevel
+        };
+    }
+
+    /**
+     * Additionne les indicateurs du périmètre. Les écarts sont remis à zéro lorsque
+     * le statut passe à OK : on les relit donc dans le commentaire (qui est préservé)
+     * pour conserver les valeurs constatées avant validation.
+     */
+    private computeAllOkEmailMetrics(rows: ReconciliationReportData[]): AllOkEmailMetrics {
+        let totalTransactions = 0;
+        let matches = 0;
+        let boOnly = 0;
+        let partnerOnly = 0;
+        let mismatches = 0;
+
+        for (const row of rows) {
+            totalTransactions += this.normalizeNumericValue(row.totalTransactions);
+            const fromComment = this.extractCountsFromComment(row.comment);
+            const rowMatches = this.normalizeNumericValue(row.matches);
+            const rowBoOnly = this.normalizeNumericValue(row.boOnly);
+            const rowPartnerOnly = this.normalizeNumericValue(row.partnerOnly);
+            const rowMismatches = this.normalizeNumericValue(row.mismatches);
+
+            matches += fromComment.matches > 0 ? fromComment.matches : rowMatches;
+            boOnly += fromComment.boOnly > 0 ? fromComment.boOnly : rowBoOnly;
+            partnerOnly += fromComment.partnerOnly > 0 ? fromComment.partnerOnly : rowPartnerOnly;
+            mismatches += fromComment.mismatches > 0 ? fromComment.mismatches : rowMismatches;
+        }
+
+        // Si les correspondances n'ont pas pu être lues, les déduire du total.
+        if (matches === 0 && totalTransactions > 0) {
+            matches = Math.max(0, totalTransactions - boOnly - mismatches);
+        }
+
+        const matchRate = totalTransactions > 0 ? (matches / totalTransactions) * 100 : 0;
+        const services = Array.from(new Set(
+            rows.map(row => (row.service || '').trim()).filter(service => !!service)
+        ));
+
+        return { totalTransactions, matches, boOnly, partnerOnly, mismatches, matchRate, services };
+    }
+
+    private extractCountsFromComment(comment?: string): {
+        matches: number;
+        boOnly: number;
+        partnerOnly: number;
+        mismatches: number;
+    } {
+        if (!comment) {
+            return { matches: 0, boOnly: 0, partnerOnly: 0, mismatches: 0 };
+        }
+        const normalized = comment.normalize('NFD').replace(/[\u0300-\u036f]/g, '');
+        const matchesMatch = normalized.match(/(\d+)\s*correspondances?/i);
+        const boMatch = normalized.match(/(\d+)\s*ecart\(s\)\s*bo/i);
+        const partnerMatch = normalized.match(/(\d+)\s*ecart\(s\)\s*partenaire/i);
+        const mismatchMatch = normalized.match(/(\d+)\s*incoherence\(s\)/i);
+
+        return {
+            matches: matchesMatch ? parseInt(matchesMatch[1], 10) : 0,
+            boOnly: boMatch ? parseInt(boMatch[1], 10) : 0,
+            partnerOnly: partnerMatch ? parseInt(partnerMatch[1], 10) : 0,
+            mismatches: mismatchMatch ? parseInt(mismatchMatch[1], 10) : 0
+        };
+    }
+
+    private buildAllOkEmailDetails(metrics: AllOkEmailMetrics): string {
+        const lines = [
+            `Nombre de transactions : ${metrics.totalTransactions}`,
+            `Correspondances : ${metrics.matches} (${metrics.matchRate.toFixed(1)} %)`,
+            `Écarts BO : ${metrics.boOnly}`,
+            `Écarts partenaire : ${metrics.partnerOnly}`,
+            `Incohérences : ${metrics.mismatches}`
+        ];
+        if (metrics.services.length > 0) {
+            lines.push(`Services concernés (${metrics.services.length}) : ${metrics.services.join(', ')}`);
+        }
+        return lines.join('\n');
+    }
+
+    private async sendAllOkEmailNotification(
+        item: ReconciliationReportData,
+        rows: ReconciliationReportData[],
+        destinataires: string[],
+        copie: string[],
+        niveau: string,
+        metrics: AllOkEmailMetrics
+    ): Promise<boolean> {
+        const services = metrics.services.length > 0
+            ? metrics.services
+            : Array.from(new Set(
+                rows.map(row => (row.service || '').trim()).filter(service => !!service)
+            ));
+        const serviceLabel = services.length === 1
+            ? services[0]
+            : `Tous les services (${services.length})`;
+        const recipientCount = new Set(
+            [...destinataires, ...copie].map(email => email.toLowerCase())
+        ).size;
+        const details = this.buildAllOkEmailDetails(metrics);
+
+        const request = {
+            service: serviceLabel,
+            date: item.date,
+            country: item.country,
+            env: this.normalizeReleveEnvKey(item.env),
+            traitement: niveau || 'Tous services OK',
+            commentaire: `Tous les services sont à OK.\n\n${details}`,
+            destinataires,
+            copie
+        };
+
+        try {
+            await firstValueFrom(
+                this.http.post('/api/reconciliation-report/send-validation-email', request)
+            );
+            await this.popupService.showSuccess(
+                this.translateKey('RPT.allOkEmail.sent', { count: recipientCount }),
+                this.translateKey('RPT.allOkEmail.sentTitle')
+            );
+            return true;
+        } catch (error) {
+            console.warn('Erreur lors de l\'envoi de l\'email « tous services OK »:', error);
+            this.popupService.showError(
+                this.translateKey('RPT.allOkEmail.sendError'),
+                this.translateKey('RPT.allOkEmail.sendErrorTitle')
+            );
+            return false;
+        }
+    }
+
     
     private normalizeTraitementValue(traitement?: string | null): string {
         const value = (traitement || '').trim();
@@ -4088,7 +4598,11 @@ reportData: ReconciliationReportData[] = [];
         this.filterListsDeferred = false;
         this.lastAppliedSummaryKey = '';
         this.allowedCountriesResolved = false;
+        this.savedCorrespondenceControlTotals = new Map<string, number>();
+        this.savedCorrespondenceControlLoaded = false;
+        this.savedCorrespondenceControlLoading = null;
         this.applyMagicContextFromRoute();
+        void this.loadSavedCorrespondenceControlData();
 
         this.route.queryParams.pipe(take(1)).subscribe(params => {
             const country = params['country'];
@@ -4299,6 +4813,7 @@ reportData: ReconciliationReportData[] = [];
      * puis enrichit les listes de filtres en arrière-plan si demandé.
      */
     private refreshReportView(options?: { deferFilterLists?: boolean }): void {
+        this.applySavedCorrespondenceNokControl();
         if (options?.deferFilterLists) {
             this.filterReport();
             if (!this.filterListsDeferred) {
@@ -5798,6 +6313,9 @@ reportData: ReconciliationReportData[] = [];
         // Ligne de synthèse des ÉCARTS BO (agency === 'Multiagence') : ce n'est pas une
         // ligne d'écarts partenaires, ne pas lui appliquer la logique partenaire.
         if ((item as any).__boGapAggregate) return false;
+        // Ligne Multiagence déjà contrôlée : même soldée (compteurs à 0), elle doit rester
+        // identifiable comme ligne spéciale pour ne pas être recalculée comme une ligne d'agence.
+        if (item.__savedCorrespondenceControlBase) return true;
         const agency = (item.agency || '').trim();
         const service = (item.service || '').trim();
         const agencyNorm = agency.toUpperCase();
@@ -7615,6 +8133,10 @@ reportData: ReconciliationReportData[] = [];
 
         // Si on vient du dashboard avec une demande spécifique de relevé, tenter de l'ouvrir
         this.tryOpenReleveFromDashboard();
+
+        if (this.pendingAllOkCheckItems.length > 0) {
+            void this.runAllOkEmailCheck();
+        }
     }
 
     /**
@@ -9142,6 +9664,7 @@ reportData: ReconciliationReportData[] = [];
     }
 
     private applyLoadedReportToView(preserveComments: Map<number, string>): void {
+        this.applySavedCorrespondenceNokControl();
         this.extractUniqueValues();
         this.filterReport();
 
@@ -9156,7 +9679,14 @@ reportData: ReconciliationReportData[] = [];
             }
         });
 
+        // Le commentaire d'origine vient d'être restauré : réappliquer le contrôle pour
+        // garder les compteurs et le commentaire alignés sur les correspondances enregistrées.
+        this.applySavedCorrespondenceNokControl();
         this.updatePagination();
+
+        if (this.pendingAllOkCheckItems.length > 0) {
+            void this.runAllOkEmailCheck();
+        }
     }
 
     private async processDbReportRows(
@@ -9554,7 +10084,7 @@ reportData: ReconciliationReportData[] = [];
         this.loadSavedReportFromDatabase();
     }
 
-    async confirmAndSave(item: ReconciliationReportData) {
+    async confirmAndSave(item: ReconciliationReportData, sourceTraitement?: string) {
         // Contrôle d'unicité sur la clé (date, agence, service, pays)
         const duplicateLocal = this.findDuplicateRowByKey(item);
         if (duplicateLocal) {
@@ -9673,6 +10203,7 @@ reportData: ReconciliationReportData[] = [];
             this.appStateService.notifySummarySaved();
             await this.popupService.showSuccess(this.translateKey('RPT.row.saved'));
             await this.maybeOfferEcartBoSummaryRedirectForRows([item]);
+            this.armAllOkEmailCheck([item], sourceTraitement);
         } catch (err: unknown) {
             const httpErr = err as HttpErrorResponse;
             if (httpErr?.status === 409) {
@@ -9727,7 +10258,7 @@ reportData: ReconciliationReportData[] = [];
         });
     }
 
-    async updateRow(item: ReconciliationReportData) {
+    async updateRow(item: ReconciliationReportData, sourceTraitement?: string) {
         if (!item.id) return;
         const confirmed = await this.popupService.showConfirm(
             this.translateKey('RPT.row.updateConfirmLocal', { id: item.id }),
@@ -9805,6 +10336,7 @@ reportData: ReconciliationReportData[] = [];
             this.notifyResult8RecUpdated();
             await this.popupService.showSuccess(this.translateKey('RPT.row.updated'));
             await this.maybeOfferEcartBoSummaryRedirectForRows([ecartBoRedirectSnapshot]);
+            this.armAllOkEmailCheck([item], sourceTraitement);
             // Mettre à jour localement l'item avec le commentaire préservé
             item.comment = savedComment;
             
@@ -11422,13 +11954,17 @@ reportData: ReconciliationReportData[] = [];
         // Afficher les résultats
         if (successCount > 0) {
             this.notifyResult8RecUpdated();
-            this.popupService.showSuccess(this.translateKey('RPT.bulk.statusChanged', { count: successCount }), this.translateKey('RPT.bulk.statusChangedTitle'));
+            await this.popupService.showSuccess(this.translateKey('RPT.bulk.statusChanged', { count: successCount }), this.translateKey('RPT.bulk.statusChangedTitle'));
         }
         if (errorCount > 0) {
-            this.popupService.showError(this.translateKey('RPT.bulk.statusError', { count: errorCount }), this.translateKey('RPT.bulk.someChangesFailed'));
+            await this.popupService.showError(this.translateKey('RPT.bulk.statusError', { count: errorCount }), this.translateKey('RPT.bulk.someChangesFailed'));
+        }
+
+        // Proposer l'email une fois tous les popups fermés (évite l'empilement de modales).
+        if (successCount > 0) {
+            this.armAllOkEmailCheck(unlockedItems);
         }
     }
-
     async applyBulkTraitementChange(): Promise<void> {
         if (!this.bulkTraitementSelection || this.selectedRows.size === 0) {
             return;
@@ -11689,6 +12225,10 @@ reportData: ReconciliationReportData[] = [];
         if (updated?.traitement !== undefined) {
             item.traitement = updated.traitement;
         }
+
+        if ((item.status || '').trim().toUpperCase() !== 'OK') {
+            this.clearAllOkEmailMarker(item);
+        }
     }
 
     // Méthodes pour l'édition directe du statut (comme pour le traitement)
@@ -11713,6 +12253,7 @@ reportData: ReconciliationReportData[] = [];
         const previousMismatches = item.mismatches;
         const previousMatchRate = item.matchRate;
         const previousTotalTransactions = item.totalTransactions;
+        const previousTraitement = this.normalizeTraitementValue(item.traitement);
         
         // Si le statut est "OK", appliquer la logique spéciale pour OK
         if (item.status === 'OK') {
@@ -11743,12 +12284,12 @@ reportData: ReconciliationReportData[] = [];
 
             // Si c'est une nouvelle ligne (pas d'ID), sauvegarder
             if (!item.id) {
-                this.confirmAndSave(item).then(() => {
+                this.confirmAndSave(item, previousTraitement).then(() => {
                     this.stopEditStatus();
                 });
             } else {
                 // Si c'est une ligne existante, mettre à jour
-                this.updateRow(item).then(() => {
+                this.updateRow(item, previousTraitement).then(() => {
                     this.stopEditStatus();
                 });
             }
@@ -11764,6 +12305,7 @@ reportData: ReconciliationReportData[] = [];
             item.totalTransactions = previousTotalTransactions;
             
             // Pour les autres statuts, comportement normal
+            this.clearAllOkEmailMarker(item);
             if (!item.id) {
                 // Si la ligne n'a pas d'ID, elle n'est pas encore sauvegardée
                 // On peut juste mettre à jour localement
@@ -11817,6 +12359,7 @@ reportData: ReconciliationReportData[] = [];
         if (this.isLoadingDbReport || this.isLoadingMoreDbReport) {
             return;
         }
+        void this.loadSavedCorrespondenceControlData(true);
         if (this.currentSource === 'live') {
             this.loadLiveData();
             return;
@@ -11888,6 +12431,220 @@ reportData: ReconciliationReportData[] = [];
         const code = this.getEcartEnvCodeRaw(ecart);
         const ecartKey = !code || code.toUpperCase() === 'TOTAL' ? 'T-E' : code;
         return ecartKey.toUpperCase() === releveEnvNorm.toUpperCase();
+    }
+
+    /**
+     * Charge les correspondances enregistrées sur /ecart-bo-summary (plateforme PARTENAIRE)
+     * et les agrège par date + service + pays + environnement.
+     */
+    private loadSavedCorrespondenceControlData(force = false): Promise<void> {
+        if (force) {
+            // Un rafraîchissement explicite doit relire les correspondances enregistrées.
+            this.savedCorrespondenceControlLoaded = false;
+        }
+        if (this.savedCorrespondenceControlLoaded) {
+            this.applySavedCorrespondenceNokControl();
+            return Promise.resolve();
+        }
+        if (this.savedCorrespondenceControlLoading) {
+            return this.savedCorrespondenceControlLoading;
+        }
+
+        const request = firstValueFrom(
+            this.ecartBoSummaryService.getEcartBoSummaries({ platform: 'PARTENAIRE' })
+        ).then(rows => {
+            const totals = new Map<string, number>();
+            for (const ecart of rows || []) {
+                if (!this.isPartenairePlatformEcart(ecart)) {
+                    continue;
+                }
+                const date = this.formatDateForSearch(ecart.dateTransaction || '');
+                const service = (ecart.service || '').trim();
+                const count = Number(ecart.nombreTransactions) || 0;
+                if (!date || !service || count <= 0) {
+                    continue;
+                }
+                const key = this.buildSavedCorrespondenceControlKey({
+                    date,
+                    service,
+                    country: ecart.pays,
+                    env: this.getEcartEnvCodeRaw(ecart)
+                });
+                if (!key) {
+                    continue;
+                }
+                totals.set(key, (totals.get(key) || 0) + count);
+            }
+
+            this.savedCorrespondenceControlTotals = totals;
+            this.savedCorrespondenceControlLoaded = true;
+            this.savedCorrespondenceControlLoading = null;
+            this.debugLog(`🔎 Contrôle NOK : ${totals.size} périmètre(s) de correspondances enregistrées chargé(s)`);
+            this.applySavedCorrespondenceNokControl();
+            if (this.reportData?.length) {
+                this.refreshReportView({ deferFilterLists: true });
+            }
+        }).catch((err: unknown) => {
+            this.savedCorrespondenceControlLoaded = true;
+            this.savedCorrespondenceControlLoading = null;
+            this.debugWarn('Impossible de charger les correspondances enregistrées pour le contrôle NOK:', err);
+            // Conserver le dernier état connu (ou l'absence de contrôle) sans bloquer le rapport.
+            this.applySavedCorrespondenceNokControl();
+            if (this.reportData?.length) {
+                this.refreshReportView({ deferFilterLists: true });
+            }
+        });
+
+        this.savedCorrespondenceControlLoading = request;
+        return request;
+    }
+
+    /** Clé de rapprochement : date + service + pays + environnement (normalisés). */
+    private buildSavedCorrespondenceControlKey(source: {
+        date?: string | null;
+        service?: string | null;
+        country?: string | null;
+        env?: string | null;
+    }): string {
+        const date = this.formatDateForSearch(source.date || '');
+        const service = normalizeServiceToken(source.service || '');
+        if (!date || !service) {
+            return '';
+        }
+        const country = this.normalizeSavedCorrespondenceCountry(source.country);
+        const env = this.normalizeReleveEnvKey(source.env).toUpperCase();
+        return [date, service, country, env].join('|');
+    }
+
+    /** Code ISO ou libellé pays → clé pays comparable (GA et Gabon donnent la même clé). */
+    private normalizeSavedCorrespondenceCountry(country?: string | null): string {
+        const raw = (country ?? '').trim();
+        if (!raw) {
+            return '';
+        }
+        const label = countryNameFromCode(raw) || raw;
+        return label
+            .normalize('NFD')
+            .replace(/[\u0300-\u036f]/g, '')
+            .toUpperCase();
+    }
+
+    /**
+     * Contrôle NOK des lignes Multiagence : déduit les correspondances déjà enregistrées
+     * sur /ecart-bo-summary. Le calcul repart toujours de l'instantané d'origine de la ligne,
+     * ce qui rend l'opération idempotente sur les rafraîchissements successifs.
+     */
+    private applySavedCorrespondenceNokControl(): void {
+        if (!this.savedCorrespondenceControlLoaded || !this.reportData?.length) {
+            return;
+        }
+
+        for (const item of this.reportData) {
+            if (!this.isPartnerOnlySpecialLine(item)) {
+                continue;
+            }
+
+            let base = item.__savedCorrespondenceControlBase;
+            if (!base) {
+                base = {
+                    totalTransactions: this.normalizeNumericValue(item.totalTransactions),
+                    matches: this.normalizeNumericValue(item.matches),
+                    boOnly: this.normalizeNumericValue(item.boOnly),
+                    partnerOnly: this.normalizeNumericValue(item.partnerOnly),
+                    mismatches: this.normalizeNumericValue(item.mismatches),
+                    matchRate: this.normalizeNumericValue(item.matchRate),
+                    status: item.status || '',
+                    comment: item.comment || '',
+                    traitement: item.traitement
+                };
+                item.__savedCorrespondenceControlBase = base;
+            }
+
+            // Le contrôle ne s'applique qu'aux lignes NOK d'origine.
+            if ((base.status || '').trim().toUpperCase() !== 'NOK') {
+                continue;
+            }
+
+            const key = this.buildSavedCorrespondenceControlKey({
+                date: item.date,
+                service: item.service,
+                country: item.country,
+                env: item.env
+            });
+            const savedCount = key ? (this.savedCorrespondenceControlTotals.get(key) || 0) : 0;
+            if (savedCount <= 0) {
+                // Aucune correspondance sur ce périmètre : ne pas toucher aux valeurs
+                // courantes, sauf pour annuler une déduction appliquée précédemment.
+                if (item.__savedCorrespondenceControlAdjusted) {
+                    this.restoreSavedCorrespondenceControlBase(item, base);
+                    item.__savedCorrespondenceControlAdjusted = false;
+                }
+                continue;
+            }
+
+            const reportCount = base.partnerOnly > 0 ? base.partnerOnly : base.totalTransactions;
+            if (reportCount <= 0) {
+                continue;
+            }
+
+            if (savedCount > reportCount) {
+                // Le nombre enregistré dépasse la ligne : elle a probablement déjà été
+                // réduite puis sauvegardée. Ne pas déduire une seconde fois.
+                this.debugLog(
+                    `🔎 Contrôle NOK ${item.agency}/${item.service} : ${savedCount} correspondances > ${reportCount} ` +
+                    `(déduction déjà appliquée ?)`
+                );
+                continue;
+            }
+
+            this.restoreSavedCorrespondenceControlBase(item, base);
+
+            const remaining = Math.max(0, reportCount - savedCount);
+            if (remaining === 0) {
+                // Toutes les transactions de la ligne sont couvertes par les correspondances enregistrées.
+                item.totalTransactions = 0;
+                item.matches = 0;
+                item.boOnly = 0;
+                item.partnerOnly = 0;
+                item.mismatches = 0;
+                item.matchRate = 0;
+                item.status = 'OK';
+                item.comment = "PAS D'ECARTS CONSTATES";
+                item.traitement = this.defaultOkTraitement;
+            } else {
+                item.totalTransactions = remaining;
+                item.matches = 0;
+                item.boOnly = 0;
+                item.partnerOnly = remaining;
+                item.mismatches = 0;
+                item.matchRate = 0;
+                item.status = 'NOK';
+                item.comment = this.buildCommentForCounts(0, 0, remaining, 0, remaining);
+                item.traitement = base.traitement || 'Niveau Support';
+            }
+            item.__savedCorrespondenceControlAdjusted = true;
+
+            this.debugLog(
+                `🔎 Contrôle NOK ${item.agency}/${item.service} (${item.date}, ${item.country}, ${item.env || 'T-E'}) : ` +
+                `${reportCount} - ${savedCount} = ${remaining}`
+            );
+        }
+    }
+
+    /** Restaure les valeurs d'origine avant de recalculer le contrôle. */
+    private restoreSavedCorrespondenceControlBase(
+        item: ReconciliationReportData,
+        base: SavedCorrespondenceControlBase
+    ): void {
+        item.totalTransactions = base.totalTransactions;
+        item.matches = base.matches;
+        item.boOnly = base.boOnly;
+        item.partnerOnly = base.partnerOnly;
+        item.mismatches = base.mismatches;
+        item.matchRate = base.matchRate;
+        item.status = base.status;
+        item.comment = base.comment;
+        item.traitement = base.traitement;
     }
 
     /**
@@ -12349,6 +13106,12 @@ reportData: ReconciliationReportData[] = [];
                     this.translateKey('RPT.rejectSuccessMsg', { service: this.releveData!.service })
                 );
                 this.closeRejectReleveModal();
+                
+                // Envoyer l'email en arrière-plan sans bloquer la fermeture
+                const traitement = this.releveData?.traitement || '';
+                if (traitement === 'Responsable CDO' || traitement === 'Niveau GROUP' || traitement === 'Terminé') {
+                    this.sendReleveValidationEmailNotification(traitement, true, this.rejectReleveCommentaire).catch(() => {});
+                }
             } else {
                 this.rejectErrorMessage = response.message || this.translateKey('RPT.rejectErrorMsg');
             }
@@ -13355,6 +14118,164 @@ reportData: ReconciliationReportData[] = [];
     /**
      * Validation Responsable CDO : passe le traitement au niveau suivant configuré.
      */
+    private async sendReleveValidationEmailNotification(traitementOverride?: string, isRejet: boolean = false, rejectCommentaire?: string): Promise<void> {
+        try {
+            if (!this.releveData) {
+                return;
+            }
+            
+            // Convertir le niveau de traitement en libellé d'affichage pour l'email
+            let traitementDisplay = traitementOverride || this.releveData.traitement || '';
+            if (!isRejet) {
+                // Pour validation: afficher le niveau CIBLE de manière lisible
+                if (traitementDisplay === 'Terminé') {
+                    traitementDisplay = 'Réconciliation clôturée';
+                } else if (traitementDisplay === 'Niveau GROUP') {
+                    traitementDisplay = 'Niveau GROUP';
+                } else if (traitementDisplay === 'Responsable CDO') {
+                    traitementDisplay = 'Niveau GROUP'; // Responsable CDO valide vers Niveau GROUP
+                }
+            }
+            
+            // Proposer d'ajouter des destinataires et des personnes en copie
+            const recipients = await this.showEmailRecipientsDialog();
+            if (recipients === null) {
+                // Utilisateur a annulé - on envoie quand même l'email sans destinataires additionnels
+                // (l'utilisateur connecté recevra l'email)
+            }
+            
+            // Pour le rejet, utiliser le commentaire de rejet; pour validation, pas de commentaire par défaut
+            const commentaire = isRejet && rejectCommentaire ? rejectCommentaire : '';
+            
+            const request = {
+                service: this.releveData.service,
+                date: this.releveData.date,
+                country: this.releveData.country,
+                env: this.releveEnv,
+                traitement: isRejet ? 'REJET' : traitementDisplay,
+                commentaire: commentaire,
+                destinataires: recipients?.destinataires || [],
+                copie: recipients?.copie || []
+            };
+            await firstValueFrom(
+                this.http.post('/api/reconciliation-report/send-validation-email', request)
+            );
+        } catch (error) {
+            console.warn('Erreur lors de l\'envoi de l\'email:', error);
+        }
+    }
+
+    private async showEmailRecipientsDialog(): Promise<{ destinataires: string[], copie: string[] } | null> {
+        return new Promise((resolve) => {
+            // Créer un modal simple pour saisir les destinataires
+            const overlay = document.createElement('div');
+            overlay.className = 'email-recipients-overlay';
+            overlay.style.cssText = `
+                position: fixed; top: 0; left: 0; width: 100%; height: 100%;
+                background: rgba(0,0,0,0.5); display: flex; align-items: center; justify-content: center;
+                z-index: 10000; animation: fadeIn 0.2s;
+            `;
+            
+            const modal = document.createElement('div');
+            modal.className = 'email-recipients-modal';
+            modal.style.cssText = `
+                background: var(--color-surface); border-radius: 12px; padding: 24px; width: 90%; max-width: 500px;
+                box-shadow: 0 20px 60px rgba(0,0,0,0.3); animation: slideIn 0.3s;
+            `;
+            
+            modal.innerHTML = `
+                <style>
+                    @keyframes fadeIn { from { opacity: 0; } to { opacity: 1; } }
+                    @keyframes slideIn { from { opacity: 0; transform: translateY(-20px); } to { opacity: 1; transform: translateY(0); } }
+                    .email-recipients-modal h3 { margin: 0 0 16px; color: var(--color-text-primary); }
+                    .email-field { margin-bottom: 16px; }
+                    .email-field label { display: block; margin-bottom: 6px; font-weight: 600; font-size: 13px; color: var(--color-text-secondary); }
+                    .email-field input, .email-field textarea { width: 100%; padding: 10px 12px; border: 1px solid var(--color-border); border-radius: 6px; font-size: 14px; box-sizing: border-box; }
+                    .email-field textarea { min-height: 60px; resize: vertical; }
+                    .email-field small { display: block; margin-top: 4px; color: var(--color-text-muted); font-size: 12px; }
+                    .email-actions { display: flex; justify-content: flex-end; gap: 12px; margin-top: 20px; }
+                    .btn { padding: 10px 20px; border: none; border-radius: 6px; font-weight: 600; cursor: pointer; }
+                    .btn-primary { background: var(--color-primary); color: white; }
+                    .btn-secondary { background: var(--color-surface-sunken); color: var(--color-text-primary); }
+                </style>
+                <h3>📧 Destinataires de l'email</h3>
+                <div class="email-field">
+                    <label>Destinataires (TO)</label>
+                    <input type="text" id="email-to" placeholder="email1@domain.com, email2@domain.com" />
+                    <small>Séparez par des virgules. L'utilisateur connecté est déjà inclus.</small>
+                </div>
+                <div class="email-field">
+                    <label>Copie (CC)</label>
+                    <textarea id="email-cc" placeholder="email1@domain.com, email2@domain.com"></textarea>
+                    <small>Séparez par des virgules.</small>
+                </div>
+                <div class="email-actions">
+                    <button class="btn btn-secondary" id="btn-cancel">Annuler</button>
+                    <button class="btn btn-primary" id="btn-send">Envoyer</button>
+                </div>
+            `;
+            
+            overlay.appendChild(modal);
+            document.body.appendChild(overlay);
+            
+            const cleanup = () => {
+                document.body.removeChild(overlay);
+            };
+            
+            modal.querySelector('#btn-cancel')!.addEventListener('click', () => {
+                cleanup();
+                resolve(null);
+            });
+            
+            modal.querySelector('#btn-send')!.addEventListener('click', () => {
+                const toInput = modal.querySelector('#email-to') as HTMLInputElement;
+                const ccInput = modal.querySelector('#email-cc') as HTMLTextAreaElement;
+                
+                const destinataires = toInput.value.split(',').map(e => e.trim()).filter(e => e && e.includes('@'));
+                const copie = ccInput.value.split(',').map(e => e.trim()).filter(e => e && e.includes('@'));
+                
+                cleanup();
+                resolve({ destinataires, copie });
+            });
+            
+            overlay.addEventListener('click', (e) => {
+                if (e.target === overlay) {
+                    cleanup();
+                    resolve(null);
+                }
+            });
+        });
+    }
+
+    async validateReleveWithEmail(): Promise<void> {
+        if (!this.releveData) {
+            this.popupService.showWarning(this.translateKey('RPT.releve.noData'));
+            return;
+        }
+
+        if (this.isReleveFullyClosed()) {
+            return;
+        }
+
+        const currentTraitement = this.releveData.traitement || 'Niveau Support';
+        if (this.isReleveCdoClosed()) {
+            // Déterminer le niveau suivant avant la validation
+            const paysCode = this.releveData.country || 'GNL';
+            const nextTraitement = this.getNextTraitement(paysCode, currentTraitement) || 'Niveau GROUP';
+            await this.closeReleveAtGroupLevel();
+            // Afficher le niveau CIBLE (après validation)
+            await this.sendReleveValidationEmailNotification(nextTraitement, false);
+            return;
+        }
+
+        // Validation par le Responsable CDO
+        const paysCode = this.releveData.country || 'GNL';
+        const nextTraitement = this.getNextTraitement(paysCode, currentTraitement) || 'Responsable CDO';
+        await this.validateReleveAsCdo();
+        // Afficher le niveau CIBLE (après validation)
+        await this.sendReleveValidationEmailNotification(nextTraitement, false);
+    }
+
     private async validateReleveAsCdo(): Promise<void> {
         if (!this.releveData) {
             return;

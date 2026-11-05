@@ -83,6 +83,13 @@ const routes: Routes = [
     data: { module: 'Réconciliation', permissions: ['consulter'] }
   },
   {
+    // Raccourci « Liste des compenses » : même niveau de page, focale sur la réconciliation des compenses.
+    path: 'certification-solde/compenses',
+    loadComponent: () => import('./components/certification-solde/certification-solde.component').then(m => m.CertificationSoldeComponent),
+    canActivate: [AuthGuard, ModuleAccessGuard],
+    data: { module: 'Réconciliation', permissions: ['consulter'], certificationCompenseMode: true }
+  },
+  {
     path: 'column-selection',
     loadComponent: () => import('./components/column-selection/column-selection.component').then(m => m.ColumnSelectionComponent),
     canActivate: [AuthGuard, ModuleAccessGuard],
@@ -106,12 +113,7 @@ const routes: Routes = [
     canActivate: [AuthGuard, ModuleAccessGuard],
     data: { module: 'Statistiques', permissions: ['consulter'] }
   },
-  {
-    path: 'agency-summary',
-    loadComponent: () => import('./components/stats/agency-summary/agency-summary.component').then(m => m.AgencySummaryComponent),
-    canActivate: [AuthGuard, ModuleAccessGuard],
-    data: { module: 'Statistiques', permissions: ['consulter'] }
-  },
+  { path: 'agency-summary', redirectTo: '/stats', pathMatch: 'full' },
   {
     path: 'results',
     loadComponent: () => import('./components/reconciliation-results/reconciliation-results.component').then(m => m.ReconciliationResultsComponent),
@@ -324,6 +326,13 @@ const routes: Routes = [
   }, // Ancien système gardé pour référence
   { path: 'two-factor-auth', component: TwoFactorAuthComponent, canActivate: [AuthGuard, AdminGuard] },
   { path: 'user-profile', component: UserProfileComponent, canActivate: [AuthGuard] },
+  {
+    // Changement de mot de passe obligatoire (mot de passe provisoire, ex. SUPER_ADMIN) :
+    // l'AuthGuard y redirige tant que le flag mustChangePassword est actif.
+    path: 'change-password',
+    loadComponent: () => import('./components/password-change-required/password-change-required.component').then(m => m.PasswordChangeRequiredComponent),
+    canActivate: [AuthGuard]
+  },
   { path: 'aide', component: AideComponent, canActivate: [AuthGuard] },
   { path: 'sop-operation', component: SopOperationComponent, canActivate: [AuthGuard] },
   { path: 'sop-reconciliation-trx', component: SopReconciliationTrxComponent, canActivate: [AuthGuard] },
@@ -331,6 +340,12 @@ const routes: Routes = [
   {
     path: 'ecart-bo-summary',
     loadComponent: () => import('./components/ecart-bo-summary/ecart-bo-summary.component').then(m => m.EcartBoSummaryComponent),
+    canActivate: [AuthGuard, ModuleAccessGuard],
+    data: { module: 'Résultats', permissions: ['consulter'] }
+  },
+  {
+    path: 'suivi-trx-a-annuler',
+    loadComponent: () => import('./components/suivi-trx-a-annuler/suivi-trx-a-annuler.component').then(m => m.SuiviTrxAAnnulerComponent),
     canActivate: [AuthGuard, ModuleAccessGuard],
     data: { module: 'Résultats', permissions: ['consulter'] }
   },

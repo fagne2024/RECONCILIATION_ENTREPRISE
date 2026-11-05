@@ -52,6 +52,14 @@ import {
 
 import {
 
+  SuiviTrxAnnulerRow,
+
+  SuiviTrxAnnulerService
+
+} from '../../services/suivi-trx-a-annuler.service';
+
+import {
+
   RECONCILIATION_ENV_OPTIONS,
 
   normalizeReconciliationReportEnv
@@ -140,11 +148,10 @@ export class ControleInterneBoPartenaireComponent implements OnInit, OnDestroy {
   /** Vide = tous les services. */
   selectedService = '';
 
-  /** Période héritée du rapport BO vs Partenaire (query params). */
+  /** Filtre intervalle de dates (prioritaire sur année / mois). */
+  dateDebut = '';
 
-  private rapportDateDebut = '';
-
-  private rapportDateFin = '';
+  dateFin = '';
 
 
 
@@ -247,6 +254,8 @@ export class ControleInterneBoPartenaireComponent implements OnInit, OnDestroy {
 
   private fetchSub?: Subscription;
 
+  private suiviSub?: Subscription;
+
   private loadSeq = 0;
 
   private lastFetchKey = '';
@@ -259,6 +268,9 @@ export class ControleInterneBoPartenaireComponent implements OnInit, OnDestroy {
   private ecartAll: EcartBoSummary[] = [];
 
   private manualRows: ReleveManualRangeRow[] = [];
+
+  /** Lignes du suivi utilisées pour déduire les transactions annulées côté partenaire. */
+  private suiviRows: SuiviTrxAnnulerRow[] = [];
 
   private validations = new Map<string, BoPartenaireControleInterneRecord>();
 
@@ -294,6 +306,8 @@ export class ControleInterneBoPartenaireComponent implements OnInit, OnDestroy {
     private controleInterneService: BoPartenaireControleInterneService,
 
     private reportCache: BoPartenaireReportCacheService,
+
+    private suiviTrxService: SuiviTrxAnnulerService,
 
     private popupService: PopupService,
 
@@ -446,13 +460,23 @@ private profilService: ProfilService
 
         this.selectedService = qp['service'] ? String(qp['service']) : '';
 
-        this.rapportDateDebut = qp['dateDebut'] || '';
+        this.dateDebut = qp['dateDebut'] || '';
 
-        this.rapportDateFin = qp['dateFin'] || '';
+        this.dateFin = qp['dateFin'] || '';
 
-        if (this.rapportDateDebut && this.rapportDateFin) {
+        if (this.hasDateRange) {
 
           this.selectedMonth = '';
+
+          const rangeYear = Number(this.dateDebut.substring(0, 4));
+
+          this.ensureYearOption(rangeYear);
+
+          if (rangeYear) {
+
+            this.selectedYear = rangeYear;
+
+          }
 
         }
 
@@ -462,7 +486,7 @@ private profilService: ProfilService
 
           !this.initialDefaultsSynced
 
-          && !this.rapportDateDebut
+          && !this.dateDebut
 
           && (!qp['country'] || !hasMonthParam);
 
@@ -488,9 +512,9 @@ private profilService: ProfilService
 
           month: this.selectedMonth,
 
-          dateDebut: this.rapportDateDebut,
+          dateDebut: this.dateDebut,
 
-          dateFin: this.rapportDateFin
+          dateFin: this.dateFin
 
         });
 
@@ -674,6 +698,8 @@ private profilService: ProfilService
 
     this.fetchSub?.unsubscribe();
 
+    this.suiviSub?.unsubscribe();
+
     this.subs.unsubscribe();
 
   }
@@ -684,13 +710,26 @@ private profilService: ProfilService
 
     const envLabel = this.selectedEnv === 'ALL' ? 'tous ENV' : this.selectedEnv;
 
-    const monthLabel = this.selectedMonthLabel;
-
-    const period = monthLabel ? `${monthLabel} ${this.selectedYear}` : String(this.selectedYear);
+    const period = this.getPeriodLabel();
 
     const cacheHint = this.dataFromRapportCache ? this.translateKey('CIB.subtitle.cacheHint') : '';
 
     return `${this.selectedCountry || '—'} · ${period} · ${envLabel}${cacheHint}`;
+
+  }
+
+  /** Libellé de la période active (intervalle de dates ou mois / année). */
+  private getPeriodLabel(): string {
+
+    if (this.hasDateRange) {
+
+      return `${this.formatFrShort(this.dateDebut)} → ${this.formatFrShort(this.dateFin)}`;
+
+    }
+
+    const monthLabel = this.selectedMonthLabel;
+
+    return monthLabel ? `${monthLabel} ${this.selectedYear}` : String(this.selectedYear);
 
   }
 
@@ -720,17 +759,112 @@ private profilService: ProfilService
 
   appliquerFiltres(): void {
 
-    this.rapportDateDebut = '';
+    if (this.hasDateRange) {
 
-    this.rapportDateFin = '';
+      this.selectedMonth = '';
+
+    }
 
     this.syncQueryParams();
 
   }
 
+  /** Intervalle de dates actif : prioritaire sur les filtres année / mois. */
+  get hasDateRange(): boolean {
+    return !!this.dateDebut && !!this.dateFin;
+  }
+
+  get dateRangeIncomplete(): boolean {
+    return (!this.dateDebut && !!this.dateFin) || (!!this.dateDebut && !this.dateFin);
+  }
+
+  /**
+   * Applique le filtre par intervalle de dates.
+   * Tant que les deux bornes ne sont pas renseignées, le filtre année / mois reste actif.
+   */
+  onDateRangeChange(changed: 'debut' | 'fin' = 'debut'): void {
+
+    if (this.dateDebut && this.dateFin && this.dateDebut > this.dateFin) {
+
+      if (changed === 'debut') {
+
+        this.dateFin = this.dateDebut;
+
+      } else {
+
+        this.dateDebut = this.dateFin;
+
+      }
+
+    }
+
+    if (this.hasDateRange) {
+
+      this.selectedMonth = '';
+
+      const rangeYear = Number(this.dateDebut.substring(0, 4));
+
+      this.ensureYearOption(rangeYear);
+
+      if (rangeYear) {
+
+        this.selectedYear = rangeYear;
+
+      }
+
+    } else if (!this.dateDebut && !this.dateFin) {
+
+      this.applyDefaultMonthForYear();
+
+    }
+
+    this.syncQueryParams();
+
+    this.cdr.markForCheck();
+
+  }
+
+  /** Revient au filtre année / mois en effaçant l'intervalle de dates. */
+  clearDateRange(): void {
+
+    this.dateDebut = '';
+
+    this.dateFin = '';
+
+    this.applyDefaultMonthForYear();
+
+    this.syncQueryParams();
+
+    this.cdr.markForCheck();
+
+  }
+
+  /** Changement d'année ou de mois : sort du mode intervalle de dates. */
+  onYearOrMonthChange(): void {
+
+    this.dateDebut = '';
+
+    this.dateFin = '';
+
+    this.syncQueryParams();
+
+  }
+
+  private ensureYearOption(year: number): void {
+
+    if (!year || Number.isNaN(year) || this.yearOptions.includes(year)) {
+
+      return;
+
+    }
+
+    this.yearOptions = [...this.yearOptions, year].sort((a, b) => b - a);
+
+  }
+
   onServiceFilterChange(): void {
 
-    this.syncQueryParams(false);
+    this.syncQueryParams();
 
     this.rebuildDisplay({ resetPage: true });
 
@@ -772,7 +906,7 @@ private profilService: ProfilService
 
 
 
-  private syncQueryParams(resetRapportDates = true): void {
+  private syncQueryParams(): void {
 
     this.router.navigate([], {
 
@@ -790,9 +924,9 @@ private profilService: ProfilService
 
         service: this.selectedService || null,
 
-        dateDebut: resetRapportDates ? null : this.rapportDateDebut || null,
+        dateDebut: this.hasDateRange ? this.dateDebut : null,
 
-        dateFin: resetRapportDates ? null : this.rapportDateFin || null
+        dateFin: this.hasDateRange ? this.dateFin : null
 
       },
 
@@ -1247,8 +1381,10 @@ private profilService: ProfilService
   private buildExportBaseName(): string {
     const pays = (this.selectedCountry || 'pays').replace(/\s+/g, '-');
     const env = (this.selectedEnv || 'ENV').replace(/\s+/g, '-');
-    const month = this.selectedMonth || 'tous';
-    return `Controle-interne-${pays}-${env}-${this.selectedYear}-${month}`;
+    const period = this.hasDateRange
+      ? `${this.dateDebut}_${this.dateFin}`
+      : `${this.selectedYear}-${this.selectedMonth || 'tous'}`;
+    return `Controle-interne-${pays}-${env}-${period}`;
   }
 
   libelleTauxTotal(taux: number | null): string {
@@ -1457,9 +1593,7 @@ private profilService: ProfilService
 
     const pending = this.monthlyRowsAll.filter((row) => !row.isControleValide);
 
-    const period = this.selectedMonthLabel
-      ? `${this.selectedMonthLabel} ${this.selectedYear}`
-      : String(this.selectedYear);
+    const period = this.getPeriodLabel();
 
     const confirmed = await this.popupService.showConfirm(
 
@@ -1562,9 +1696,7 @@ private profilService: ProfilService
 
     const validated = this.monthlyRowsAll.filter((row) => row.isControleValide);
 
-    const period = this.selectedMonthLabel
-      ? `${this.selectedMonthLabel} ${this.selectedYear}`
-      : String(this.selectedYear);
+    const period = this.getPeriodLabel();
 
     const confirmed = await this.popupService.showConfirm(
 
@@ -1832,7 +1964,26 @@ private profilService: ProfilService
 
         this.loading = false;
 
-        this.rebuildDisplay({ resetPage: true });
+        // Annuler la souscription précédente sur le suivi si existante
+        this.suiviSub?.unsubscribe();
+
+        // Récupérer les lignes de suivi pour les annulations (toujours frais)
+        this.suiviSub = this.suiviTrxService.getAll().subscribe({
+          next: (rows) => {
+            if (seq !== this.loadSeq) {
+              return;
+            }
+            this.suiviRows = Array.isArray(rows) ? rows : [];
+            this.rebuildDisplay({ resetPage: true });
+          },
+          error: () => {
+            if (seq !== this.loadSeq) {
+              return;
+            }
+            this.suiviRows = [];
+            this.rebuildDisplay({ resetPage: true });
+          }
+        });
 
         this.fetchValidations(bounds.startMonth, bounds.endMonth, seq);
 
@@ -1904,15 +2055,17 @@ private profilService: ProfilService
           startMonth: bounds.startMonth,
           endMonth: bounds.endMonth
         })
-        .pipe(catchError(() => of([] as BoPartenaireControleInterneRecord[])))
+        .pipe(catchError(() => of([] as BoPartenaireControleInterneRecord[]))),
+      suivi: this.suiviTrxService.getAll().pipe(catchError(() => of([] as SuiviTrxAnnulerRow[])))
     }).subscribe({
-      next: ({ report, ecarts, validations }) => {
+      next: ({ report, ecarts, validations, suivi }) => {
         if (seq !== this.loadSeq) {
           return;
         }
 
         this.rawReport = this.mapReportRows(report);
         this.ecartAll = Array.isArray(ecarts) ? ecarts : [];
+        this.suiviRows = Array.isArray(suivi) ? suivi : [];
         this.applyValidations(validations);
         this.refreshCountries();
 
@@ -2133,7 +2286,9 @@ private profilService: ProfilService
 
       endDate: bounds.endDate,
 
-      monthFilter
+      monthFilter,
+
+      annulationRows: this.suiviRows
 
     });
 
@@ -2466,6 +2621,24 @@ private profilService: ProfilService
 
 
 
+    if (this.hasDateRange) {
+
+      return {
+
+        startDate: this.dateDebut,
+
+        endDate: this.dateFin,
+
+        startMonth: this.dateDebut.substring(0, 7),
+
+        endMonth: this.dateFin.substring(0, 7)
+
+      };
+
+    }
+
+
+
     if (this.selectedMonth) {
 
       const monthYyyyMm = `${year}-${this.selectedMonth}`;
@@ -2481,28 +2654,6 @@ private profilService: ProfilService
         startMonth: monthYyyyMm,
 
         endMonth: monthYyyyMm
-
-      };
-
-    }
-
-
-
-    if (this.rapportDateDebut && this.rapportDateFin) {
-
-      const startMonth = this.rapportDateDebut.substring(0, 7);
-
-      const endMonth = this.rapportDateFin.substring(0, 7);
-
-      return {
-
-        startDate: this.rapportDateDebut,
-
-        endDate: this.rapportDateFin,
-
-        startMonth,
-
-        endMonth
 
       };
 

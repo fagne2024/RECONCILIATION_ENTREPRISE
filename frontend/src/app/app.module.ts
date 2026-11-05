@@ -28,7 +28,7 @@ import { NgxMatSelectSearchModule } from 'ngx-mat-select-search';
 import { DragDropModule } from '@angular/cdk/drag-drop';
 
 import { AppComponent } from './app.component';
-import { FileUploadComponent } from './components/file-upload/file-upload.component';
+
 import { ReconciliationComponent } from './components/reconciliation/reconciliation.component';
 import { DashboardComponent } from './components/dashboard/dashboard.component';
 import { ComptesComponent } from './components/comptes/comptes.component';
@@ -56,6 +56,7 @@ import { ReconciliationTabsService } from './services/reconciliation-tabs.servic
 import { DashboardReconciliationService } from './services/dashboard-reconciliation.service';
 
 
+import { FileUploadComponent } from './components/file-upload/file-upload.component';
 import { ExcelAnalysisComponent } from './components/excel-analysis/excel-analysis.component';
 import { ModernPopupComponent } from './components/modern-popup/modern-popup.component';
 import { ProgressIndicatorComponent } from './components/progress-indicator/progress-indicator.component';
@@ -91,7 +92,6 @@ registerLocaleData(localeEn, 'en');
 @NgModule({
     declarations: [
         AppComponent,
-        FileUploadComponent,
 
         ReconciliationComponent,
         DashboardComponent,
@@ -150,6 +150,7 @@ registerLocaleData(localeEn, 'en');
         MatTableModule,
         MatPaginatorModule,
         AppRoutingModule,
+        FileUploadComponent,
         MatAutocompleteModule,
         ReactiveFormsModule,
         MatProgressSpinnerModule,

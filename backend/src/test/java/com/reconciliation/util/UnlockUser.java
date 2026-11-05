@@ -6,7 +6,7 @@ import java.sql.PreparedStatement;
 
 public class UnlockUser {
     public static void main(String[] args) throws Exception {
-        String url = "jdbc:mysql://localhost:3306/top20?allowPublicKeyRetrieval=true&useSSL=false&serverTimezone=UTC";
+        String url = "jdbc:mysql://localhost:3306/Reconciliation_app?allowPublicKeyRetrieval=true&useSSL=false&serverTimezone=UTC";
         String username = "root";
         String password = "";
         String target = args.length > 0 ? args[0] : "superadmin";

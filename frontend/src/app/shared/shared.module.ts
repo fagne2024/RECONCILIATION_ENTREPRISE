@@ -24,7 +24,6 @@ import { DragDropModule } from '@angular/cdk/drag-drop';
 import { TranslateModule } from '@ngx-translate/core';
 
 import { ColumnSelectionComponent } from '../components/column-selection/column-selection.component';
-import { AgencySummaryComponent } from '../components/stats/agency-summary/agency-summary.component';
 import { ReconciliationLauncherComponent } from '../components/reconciliation-launcher/reconciliation-launcher.component';
 
 @NgModule({
@@ -54,7 +53,6 @@ import { ReconciliationLauncherComponent } from '../components/reconciliation-la
         NgxMatSelectSearchModule,
         DragDropModule,
         ColumnSelectionComponent,
-        AgencySummaryComponent,
         ReconciliationLauncherComponent
     ],
     exports: [
@@ -83,7 +81,6 @@ import { ReconciliationLauncherComponent } from '../components/reconciliation-la
         DragDropModule,
         TranslateModule,
         ColumnSelectionComponent,
-        AgencySummaryComponent,
         ReconciliationLauncherComponent
     ]
 })

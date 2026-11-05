@@ -11,6 +11,8 @@ import { findNavigationAccessContextByRoute } from '../constants/app-navigation-
 @Injectable()
 export class AuthInterceptor implements HttpInterceptor {
   private permissionPopupOpen = false;
+  /** Anti-reentrance : une seule séquence déconnexion par vague de 401. */
+  private handlingUnauthorized = false;
 
   constructor(
     private appState: AppStateService,
@@ -53,22 +55,12 @@ export class AuthInterceptor implements HttpInterceptor {
     // Gérer les erreurs HTTP (notamment 401 Unauthorized)
     return next.handle(clonedRequest).pipe(
       catchError((error: HttpErrorResponse) => {
-        // Si erreur 401 (Non autorisé), déconnecter l'utilisateur
-        if (error.status === 401) {
-          console.warn('Token invalide ou expiré, déconnexion...');
-          const currentUser = this.appState.getUsername();
-          if (currentUser) {
-            this.userLogService.logActivity('deconnexion', 'Authentification', currentUser, 'Session expirée (401)');
-          }
-          this.appState.logout();
-          
-          // Ne rediriger vers login que si on n'y est pas déjà (évite la boucle infinie)
-          const currentUrl = this.router.url;
-          if (!currentUrl.startsWith('/login')) {
-            this.router.navigate(['/login'], {
-              queryParams: { returnUrl: currentUrl }
-            });
-          }
+        // 401 = session expirée -> déconnecter. SAUF :
+        //  - /api/auth/logout : la déconnexion est déjà en cours ; réagir ici
+        //    provoquerait une BOUCLE INFINIE (logout -> 401 -> logout -> ...).
+        //  - login / verify-2fa : identifiants incorrects, gérés par le composant.
+        if (error.status === 401 && !this.isAuthRequest(req.url)) {
+          this.handleSessionExpired();
         }
 
         if (error.status === 403 && !this.isAuthRequest(req.url)) {
@@ -80,8 +72,41 @@ export class AuthInterceptor implements HttpInterceptor {
     );
   }
 
+  /**
+   * Déconnexion unique en cas de session expirée (protégée contre la réentrance :
+   * plusieurs requêtes 401 simultanées ne déclenchent qu'une seule déconnexion).
+   */
+  private handleSessionExpired(): void {
+    if (this.handlingUnauthorized) {
+      return;
+    }
+    this.handlingUnauthorized = true;
+
+    console.warn('Token invalide ou expiré, déconnexion...');
+    const currentUser = this.appState.getUsername();
+    if (currentUser) {
+      this.userLogService.logActivity('deconnexion', 'Authentification', currentUser, 'Session expirée (401)');
+    }
+    this.appState.logout();
+
+    // Ne rediriger vers login que si on n'y est pas déjà (évite la boucle infinie)
+    const currentUrl = this.router.url;
+    if (!currentUrl.startsWith('/login')) {
+      this.router.navigate(['/login'], {
+        queryParams: { returnUrl: currentUrl }
+      });
+    }
+
+    // Réarmement différé : une future expiration de session doit rester gérée.
+    setTimeout(() => {
+      this.handlingUnauthorized = false;
+    }, 1000);
+  }
+
   private isAuthRequest(url: string): boolean {
-    return url.includes('/api/auth/login') || url.includes('/api/auth/verify-2fa');
+    return url.includes('/api/auth/login')
+      || url.includes('/api/auth/verify-2fa')
+      || url.includes('/api/auth/logout');
   }
 
   private isSameModuleName(left: string, right: string): boolean {

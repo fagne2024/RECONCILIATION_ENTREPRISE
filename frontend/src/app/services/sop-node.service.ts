@@ -34,8 +34,9 @@ export class SopNodeService {
 
   constructor(private http: HttpClient) {}
 
-  getStructure(): Observable<SopStructureResponse> {
-    return this.http.get<SopStructureResponse>(`${this.apiUrl}/structure`);
+  getStructure(rootId?: string): Observable<SopStructureResponse> {
+    const params = rootId ? new HttpParams().set('rootId', rootId) : undefined;
+    return this.http.get<SopStructureResponse>(`${this.apiUrl}/structure`, { params });
   }
 
   getGuideStructure(): Observable<SopStructureResponse> {

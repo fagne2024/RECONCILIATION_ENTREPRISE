@@ -18,6 +18,7 @@ import { Subscription, firstValueFrom } from 'rxjs';
 import { PopupService } from '../../services/popup.service';
 import { CompteService } from '../../services/compte.service';
 import { OperationService } from '../../services/operation.service';
+import { ConfigurationCalculService } from '../../services/configuration-calcul.service';
 import { OperationCreateRequest } from '../../models/operation.model';
 import { fixGarbledCharacters } from '../../utils/encoding-fixer';
 import { extractRecordAmount } from '../../utils/record-amount.util';
@@ -4109,6 +4110,7 @@ export class ReconciliationResultsComponent implements OnInit, OnDestroy {
         private reconciliationTabsService: ReconciliationTabsService,
         private compteService: CompteService,
         private operationService: OperationService,
+        private calculService: ConfigurationCalculService,
         private translate: TranslateService
     ) {}
 
@@ -9855,16 +9857,22 @@ private async downloadExcelFile(workbooks: ExcelJS.Workbook[], fileName: string)
     isPartnerRecordEligible(record: Record<string, string>): boolean {
         const rawType = this.getFromRecord(record, ['Type Opération', 'typeOperation', 'type_operation']);
         const t = this.normalizeType(rawType);
-        return ['compens','appro','nivel','regularis'].some(p => t.includes(p));
+        // Mots-clés de classification : règles de calcul (Configuration > Calcul) prioritaires.
+        return this.calculService.matchesAny(t, 'BANQUE.TYPES_COMPENSATION', ['compens'])
+            || this.calculService.matchesAny(t, 'BANQUE.TYPES_APPROVISIONNEMENT', ['appro'])
+            || this.calculService.matchesAny(t, 'BANQUE.TYPES_NIVELLEMENT', ['nivel'])
+            || t.includes('regularis');
     }
 
     async createOperationFromPartnerRecord(record: Record<string, string>) {
         try {
             const rawType = this.getFromRecord(record, ['Type Opération', 'typeOperation', 'type_operation']);
             const normalized = this.normalizeType(rawType);
-            const typeOperation = normalized.includes('compens') ? 'Compense_client'
-                                  : normalized.includes('appro') ? 'Appro_client'
-                                  : normalized.includes('nivel') ? 'nivellement'
+            // Classification par mots-clés : règles de calcul (Configuration > Calcul) prioritaires,
+            // code par défaut en repli.
+            const typeOperation = this.calculService.matchesAny(normalized, 'BANQUE.TYPES_COMPENSATION', ['compens']) ? 'Compense_client'
+                                  : this.calculService.matchesAny(normalized, 'BANQUE.TYPES_APPROVISIONNEMENT', ['appro']) ? 'Appro_client'
+                                  : this.calculService.matchesAny(normalized, 'BANQUE.TYPES_NIVELLEMENT', ['nivel']) ? 'nivellement'
                                   : normalized.includes('regularis') ? 'régularisation_solde'
                                   : rawType || 'ajustement';
 

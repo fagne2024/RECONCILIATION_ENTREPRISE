@@ -2,7 +2,9 @@ package com.reconciliation.service;
 
 import com.reconciliation.dto.RecoJ1BlockingCommentDto;
 import com.reconciliation.dto.RecoJ1BlockingCommentSaveRequest;
+import com.reconciliation.entity.RecoBlockingCommentMailAlertEntity;
 import com.reconciliation.entity.RecoJ1BlockingCommentEntity;
+import com.reconciliation.repository.RecoBlockingCommentMailAlertRepository;
 import com.reconciliation.repository.RecoJ1BlockingCommentRepository;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
@@ -11,6 +13,7 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 import java.util.List;
+import java.util.Map;
 import java.util.stream.Collectors;
 
 @Service
@@ -19,6 +22,7 @@ import java.util.stream.Collectors;
 public class RecoJ1BlockingCommentService {
 
     private final RecoJ1BlockingCommentRepository repository;
+    private final RecoBlockingCommentMailAlertRepository mailAlertRepository;
     private final JdbcTemplate jdbcTemplate;
 
     private volatile boolean schemaReady = false;
@@ -64,11 +68,53 @@ public class RecoJ1BlockingCommentService {
     @Transactional(readOnly = true)
     public List<RecoJ1BlockingCommentDto> listBetween(String startDate, String endDate) {
         ensureSchema();
+        Map<String, RecoBlockingCommentMailAlertEntity> alerts = mailAlertRepository
+            .findByRecoDateGreaterThanEqualAndRecoDateLessThanEqual(startDate, endDate)
+            .stream()
+            .collect(Collectors.toMap(
+                a -> scopeKey(a.getRecoDate(), a.getService(), a.getCountry(), a.getEnv()),
+                a -> a,
+                (a, b) -> a
+            ));
         return repository
             .findByRecoDateGreaterThanEqualAndRecoDateLessThanEqual(startDate, endDate)
             .stream()
-            .map(this::toDto)
+            .map(entity -> withMailAlert(
+                toDto(entity),
+                alerts.get(scopeKey(entity.getRecoDate(), entity.getService(), entity.getCountry(), entity.getEnv()))
+            ))
             .collect(Collectors.toList());
+    }
+
+    @Transactional(readOnly = true)
+    public RecoJ1BlockingCommentDto get(String recoDate, String service, String country, String env) {
+        ensureSchema();
+        String c = normalizeCountry(country);
+        String e = normalizeEnvForStorage(env);
+        return repository.findByRecoDateAndServiceAndCountryAndEnv(recoDate, service, c, e)
+            .map(entity -> withMailAlert(
+                toDto(entity),
+                mailAlertRepository.findByRecoDateAndServiceAndCountryAndEnv(recoDate, service, c, e).orElse(null)
+            ))
+            .orElse(null);
+    }
+
+    private static String scopeKey(String recoDate, String service, String country, String env) {
+        return recoDate + "|" + service + "|" + country + "|" + env;
+    }
+
+    private RecoJ1BlockingCommentDto withMailAlert(RecoJ1BlockingCommentDto dto, RecoBlockingCommentMailAlertEntity alert) {
+        if (alert == null) {
+            return dto;
+        }
+        dto.setMailAlertActive(alert.isActive());
+        dto.setMailRecipients(RecoBlockingCommentMailAlertService.splitRecipients(alert.getRecipients()));
+        dto.setMailCcRecipients(RecoBlockingCommentMailAlertService.splitRecipients(alert.getCcRecipients()));
+        dto.setMailLastSentAt(alert.getLastSentAt() != null ? alert.getLastSentAt().toString() : null);
+        dto.setMailSendCount(alert.getSendCount());
+        dto.setMailLastError(alert.getLastError());
+        dto.setMailStoppedReason(alert.getStoppedReason());
+        return dto;
     }
 
     @Transactional
@@ -98,7 +144,11 @@ public class RecoJ1BlockingCommentService {
             entity.setUpdatedBy(username.trim());
         }
 
-        return toDto(repository.save(entity));
+        RecoJ1BlockingCommentEntity saved = repository.save(entity);
+        return withMailAlert(
+            toDto(saved),
+            mailAlertRepository.findByRecoDateAndServiceAndCountryAndEnv(recoDate, service, country, env).orElse(null)
+        );
     }
 
     private static String blankToNull(String value) {

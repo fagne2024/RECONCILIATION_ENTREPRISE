@@ -11,7 +11,12 @@ export interface Oppart {
   client: string;
   typeOp: string;
   montant: number;
+  /** Date d'opération BO. */
   dateOperation: string;
+  /** Date d'opération côté partenaire. */
+  dateOperationPart?: string;
+  /** Date de la demande / initiation. */
+  dateDemande?: string;
   idTransaction: string;
   pays: string;
   source?: string;
@@ -55,7 +60,12 @@ export interface OppartDraftRow {
   client: string;
   typeOp: string;
   montant: number;
+  /** Date d'opération BO. */
   dateOperation: string;
+  /** Date d'opération côté partenaire. */
+  dateOperationPart?: string;
+  /** Date de la demande / initiation. */
+  dateDemande?: string;
   idTransaction: string;
   pays: string;
 }
@@ -63,6 +73,8 @@ export interface OppartDraftRow {
 export interface OppartFilter {
   client?: string;
   typeOp?: string;
+  /** Recherche partielle sur le type d'opération (insensible à la casse). */
+  typeOpContains?: string;
   pays?: string;
   source?: string;
   statut?: string;
@@ -86,7 +98,12 @@ export interface OppartImportPreviewRow {
   client: string;
   typeOp: string;
   montant: string;
+  /** Date d'opération BO. */
   date: string;
+  /** Date d'opération côté partenaire. */
+  dateOperationPart?: string;
+  /** Date de la demande / initiation. */
+  dateDemande?: string;
   idTransaction: string;
   pays: string;
   source: string;

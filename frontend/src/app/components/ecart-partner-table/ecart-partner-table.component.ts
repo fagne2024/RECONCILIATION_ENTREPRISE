@@ -2,7 +2,7 @@ import { Component, OnInit, OnDestroy, ChangeDetectorRef, ChangeDetectionStrateg
 import { Router } from '@angular/router';
 import { Subscription, firstValueFrom } from 'rxjs';
 import { skip } from 'rxjs/operators';
-import { ReconciliationResponse } from '../../models/reconciliation-response.model';
+import { Match, ReconciliationResponse } from '../../models/reconciliation-response.model';
 import { AppStateService } from '../../services/app-state.service';
 import { ExportOptimizationService, ExportProgress, ECART_COMMENT_COLORS } from '../../services/export-optimization.service';
 import { PopupService } from '../../services/popup.service';
@@ -19,7 +19,17 @@ import { partitionEcartRecords, resolveMagicPartitionContext } from '../../utils
 import { SharedModule } from '../../shared/shared.module';
 import { DsPaginationComponent } from '../../shared/ui';
 import { OppartService } from '../../services/oppart.service';
+import { ConfigurationCalculService } from '../../services/configuration-calcul.service';
 import { Oppart } from '../../models/oppart.model';
+import { SuiviTrxAnnulerRow, SuiviTrxAnnulerService } from '../../services/suivi-trx-a-annuler.service';
+import {
+  EMPTY_PARTNER_FIELDS,
+  PartnerFields,
+  extractPartnerFields,
+  normalizePartnerAmount,
+  partnerPhoneKey,
+  normalizePartnerTransactionId
+} from '../../utils/partner-fields.util';
 import { TranslateModule, TranslateService } from '@ngx-translate/core';
 
 /** Ligne éditable de la table de création OPPART. */
@@ -27,7 +37,12 @@ interface OppartDraftRowUI {
   client: string;
   typeOp: string;
   montant: string;
+  /** Date d'opération BO. */
   dateOperation: string;
+  /** Date d'opération côté partenaire. */
+  dateOperationPart: string;
+  /** Date de la demande / initiation. */
+  dateDemande: string;
   idTransaction: string;
   pays: string;
   source: string;
@@ -43,6 +58,20 @@ interface OppartTargetFieldDef {
   defaultValue?: string;
   /** false : ne pas repliquer la 1re colonne du fichier si aucune correspondance. */
   allowFirstColumnFallback?: boolean;
+}
+
+/** ID Annulation retrouvé dans les données existantes, avec sa provenance. */
+interface SuiviIdCandidate {
+  id: string;
+  source: string;
+}
+
+/** Champ existant (ligne partenaire ou BO) dont la valeur peut être utilisée comme ID. */
+interface SuiviIdFieldOption {
+  key: string;
+  label: string;
+  value: string;
+  source: string;
 }
 
 @Component({
@@ -107,12 +136,66 @@ export class EcartPartnerTableComponent implements OnInit, OnDestroy {
   oppartDraftRows: OppartDraftRowUI[] = [];
   isSavingOppart = false;
 
+  // Saisie directe de l'ID Annulation depuis un écart partenaire
+  showSuiviIdPopup = false;
+  suiviIdRecord: Record<string, string> | null = null;
+  suiviIdFields: PartnerFields = { ...EMPTY_PARTNER_FIELDS };
+  suiviIdValue = '';
+  /** IDs Annulation retrouvés automatiquement dans les données existantes. */
+  suiviIdCandidates: SuiviIdCandidate[] = [];
+  /** Champs de la ligne (et du BO correspondant) utilisables comme ID. */
+  suiviIdFieldOptions: SuiviIdFieldOption[] = [];
+  /** Champ sélectionné dans la liste des valeurs existantes. */
+  suiviIdSelectedField = '';
+  isSavingSuiviId = false;
+  /** Préfixe des clés de suivi créées depuis /ecart-partner (évite les collisions avec /matches). */
+  static readonly SUIVI_ECART_PARTNER_PREFIX = 'ecart-partner:';
+  private suiviRows: SuiviTrxAnnulerRow[] = [];
+  private suiviRowsByMatchKey = new Map<string, SuiviTrxAnnulerRow>();
+  private suiviRowsByTransactionId = new Map<string, SuiviTrxAnnulerRow[]>();
+  private suiviRowsByPhoneAmount = new Map<string, SuiviTrxAnnulerRow[]>();
+  private suiviIdIndexLoaded = false;
+  private suiviIdIndexRequested = false;
+  private suiviIdIndexPromise: Promise<void> | null = null;
+
+  /** Index des correspondances de réconciliation pour retrouver un ID ou les champs BO. */
+  private matchIndexBuilt = false;
+  private matchIndexSource: Match[] | null = null;
+  private matchIdsByTransactionId = new Map<string, string[]>();
+  private matchIdsByPhoneAmount = new Map<string, string[]>();
+  private matchIdsByPhone = new Map<string, string[]>();
+  private matchesByTransactionId = new Map<string, Match>();
+  private matchesByPhoneAmount = new Map<string, Match>();
+
   /** Définition des champs cibles OPPART et des colonnes source d'auto-détection. */
   readonly oppartTargetFields: OppartTargetFieldDef[] = [
     { key: 'client', label: 'Client', hint: 'Client / bénéficiaire', keywords: ['client', 'telephone', 'tel', 'beneficiaire', 'beneficiaire', 'expediteur', 'benef', 'nom'] },
     { key: 'typeOp', label: 'Type_OP', hint: 'Type d\'opération / service', keywords: ['type', 'service', 'trans'] },
     { key: 'montant', label: 'Montant', hint: 'Montant / volume', keywords: ['montant', 'amount', 'volume', 'prix'] },
-    { key: 'dateOperation', label: 'Date', hint: 'Date d\'opération', keywords: ['date', 'jour', 'time', 'timestamp'] },
+    {
+      key: 'dateOperation',
+      label: 'Date opération BO',
+      hint: 'Date d\'opération BO (récupérée du BO correspondant ou colonne source)',
+      // Aucune colonne partenaire par défaut : la date BO vient de la
+      // correspondance de réconciliation. L'utilisateur peut néanmoins
+      // sélectionner une colonne ou saisir une valeur manuelle.
+      keywords: [],
+      allowFirstColumnFallback: false
+    },
+    {
+      key: 'dateOperationPart',
+      label: 'Date opération part',
+      hint: 'Date de l\'opération côté partenaire',
+      keywords: ['completiontime', 'transactiondate', 'horodatage', 'operdate', 'dateoperation', 'date'],
+      allowFirstColumnFallback: false
+    },
+    {
+      key: 'dateDemande',
+      label: 'Date demande',
+      hint: 'Date de la demande / initiation',
+      keywords: ['datedemande', 'datedelademande', 'demande', 'requestdate', 'requesttime', 'requestdatetime', 'daterequest', 'initiationtime', 'initiationdate', 'initiationdatetime', 'soumission'],
+      allowFirstColumnFallback: false
+    },
     { key: 'idTransaction', label: 'ID', hint: 'Identifiant de transaction', keywords: ['transgu', 'trans gu', 'numero', 'idop', 'id op', 'idtransaction', 'id'] },
     { key: 'pays', label: 'Pays', hint: 'Pays / réseau', keywords: ['pays', 'country', 'grx', 'groupe', 'reseau', 'network'] },
     {
@@ -128,6 +211,24 @@ export class EcartPartnerTableComponent implements OnInit, OnDestroy {
 
   /** Source appliquée par défaut aux lignes converties depuis les écarts partenaire. */
   static readonly OPPART_SOURCE_ECART_PARTNER = 'ECART_PARTNER';
+
+  /** Valeurs proposées dans la liste déroulante du champ Type_OP. */
+  readonly oppartTypeOpOptions: string[] = [
+    'Compense',
+    'Approvisionnement',
+    'Ajustement',
+    'Régularisation',
+    'Transfert'
+  ];
+
+  /** Options du select Type_OP, en conservant une valeur existante hors liste. */
+  oppartTypeOpSelectOptions(current?: string): string[] {
+    const value = (current || '').trim();
+    if (value && !this.oppartTypeOpOptions.includes(value)) {
+      return [...this.oppartTypeOpOptions, value];
+    }
+    return this.oppartTypeOpOptions;
+  }
   
   // Chargement progressif
   isLoading = false;
@@ -158,7 +259,9 @@ export class EcartPartnerTableComponent implements OnInit, OnDestroy {
     private reconciliationTabsService: ReconciliationTabsService,
     private reconciliationService: ReconciliationService,
     private oppartService: OppartService,
+    private suiviTrxAnnulerService: SuiviTrxAnnulerService,
     private translate: TranslateService,
+    private calculService: ConfigurationCalculService,
     private el: ElementRef
   ) {}
 
@@ -182,6 +285,7 @@ export class EcartPartnerTableComponent implements OnInit, OnDestroy {
 
   ngOnInit(): void {
     this.syncMagicContextFromAppState();
+    this.loadSuiviIdIndex();
 
     this.subscription.add(
       this.appStateService.getReconciliationResults().subscribe((response: ReconciliationResponse | null) => {
@@ -587,6 +691,494 @@ export class EcartPartnerTableComponent implements OnInit, OnDestroy {
     return parts.length > 0 ? parts.join('|') : JSON.stringify(record);
   }
 
+  // ---------------------------------------------------------------------------
+  // Saisie directe de l'ID Annulation (Suivi TRX à annuler)
+  // ---------------------------------------------------------------------------
+
+  /**
+   * Charge les lignes de suivi déjà enregistrées pour préremplir l'ID
+   * Annulation et savoir si la transaction est déjà suivie.
+   */
+  private loadSuiviIdIndex(): void {
+    if (this.suiviIdIndexRequested) {
+      return;
+    }
+    this.suiviIdIndexRequested = true;
+    this.suiviIdIndexPromise = firstValueFrom(this.suiviTrxAnnulerService.getAll('/ecart-partner'))
+      .then((rows) => {
+        this.suiviIdIndexLoaded = true;
+        this.indexSuiviRows(rows || []);
+        // Le popup a pu être ouvert avant la fin du chargement : on complète
+        // l'ID existant sans écraser une saisie en cours.
+        if (this.showSuiviIdPopup && this.suiviIdRecord) {
+          this.suiviIdCandidates = this.buildSuiviIdCandidates(this.suiviIdRecord);
+          this.suiviIdFieldOptions = this.buildSuiviIdFieldOptions(this.suiviIdRecord);
+          if (!this.suiviIdValue.trim()) {
+            const existing = this.getSuiviRowForRecord(this.suiviIdRecord);
+            const foundId = (existing?.idAnnulation || '').trim()
+              || (this.suiviIdCandidates.length === 1 ? this.suiviIdCandidates[0].id : '');
+            if (foundId) {
+              this.suiviIdValue = foundId;
+            }
+          }
+        }
+        this.cdr.markForCheck();
+      })
+      .catch((error) => {
+        // L'utilisateur peut ne pas avoir le sous-menu Suivi : la saisie reste possible,
+        // l'API fera le contrôle de droits au moment de l'enregistrement.
+        console.warn('Préchargement des IDs d\'annulation indisponible:', error);
+      });
+  }
+
+  /** Attend la fin du préchargement pour ne pas créer de doublon. */
+  private async ensureSuiviIdIndexLoaded(): Promise<void> {
+    this.loadSuiviIdIndex();
+    if (this.suiviIdIndexPromise) {
+      await this.suiviIdIndexPromise;
+    }
+  }
+
+  private indexSuiviRows(rows: SuiviTrxAnnulerRow[]): void {
+    this.suiviRows = rows || [];
+    this.suiviRowsByMatchKey.clear();
+    this.suiviRowsByTransactionId.clear();
+    this.suiviRowsByPhoneAmount.clear();
+
+    for (const row of this.suiviRows) {
+      const matchKey = (row.matchKey || '').trim();
+      if (matchKey) {
+        this.suiviRowsByMatchKey.set(matchKey, row);
+      }
+
+      const transactionId = normalizePartnerTransactionId(row.partnerTransactionId);
+      if (transactionId) {
+        const list = this.suiviRowsByTransactionId.get(transactionId) || [];
+        list.push(row);
+        this.suiviRowsByTransactionId.set(transactionId, list);
+      }
+
+      const phone = partnerPhoneKey(row.partnerTelephone);
+      const amount = normalizePartnerAmount(row.partnerMontant);
+      if (phone && amount) {
+        const key = `${phone}|${amount}`;
+        const list = this.suiviRowsByPhoneAmount.get(key) || [];
+        list.push(row);
+        this.suiviRowsByPhoneAmount.set(key, list);
+      }
+    }
+  }
+
+  private upsertIndexedSuiviRow(saved: SuiviTrxAnnulerRow): void {
+    const next = this.suiviRows.filter(row => row.id !== saved.id);
+    next.unshift(saved);
+    this.indexSuiviRows(next);
+  }
+
+  /** Clé durable d'une ligne d'écart partenaire dans le suivi. */
+  getEcartPartnerSuiviMatchKey(record: Record<string, string>): string {
+    const fields = extractPartnerFields([record]);
+    const prefix = EcartPartnerTableComponent.SUIVI_ECART_PARTNER_PREFIX;
+    const transactionId = normalizePartnerTransactionId(fields.transactionId);
+    let key: string;
+    if (transactionId) {
+      key = `${prefix}${transactionId}`;
+    } else {
+      const phone = partnerPhoneKey(fields.telephone);
+      const amount = normalizePartnerAmount(fields.montant);
+      const parts = [phone, amount, (fields.date || '').trim()].filter(Boolean);
+      key = parts.length > 0
+        ? `${prefix}${parts.join('|')}`
+        : `${prefix}${this.getPartnerOnlyKey(record)}`;
+    }
+    return key.length > 500 ? key.slice(0, 500) : key;
+  }
+
+  /** Retrouve la ligne de suivi correspondant à un écart partenaire (ID prioritaire, puis téléphone/montant). */
+  getSuiviRowForRecord(record: Record<string, string>): SuiviTrxAnnulerRow | null {
+    if (!record) {
+      return null;
+    }
+    const byKey = this.suiviRowsByMatchKey.get(this.getEcartPartnerSuiviMatchKey(record));
+    if (byKey) {
+      return byKey;
+    }
+
+    const fields = extractPartnerFields([record]);
+    if (fields.transactionId) {
+      const candidates = this.suiviRowsByTransactionId.get(normalizePartnerTransactionId(fields.transactionId));
+      const found = this.pickRowWithAnnulationId(candidates);
+      if (found) {
+        return found;
+      }
+    }
+
+    const phone = partnerPhoneKey(fields.telephone);
+    const amount = normalizePartnerAmount(fields.montant);
+    if (phone && amount) {
+      const candidates = this.suiviRowsByPhoneAmount.get(`${phone}|${amount}`);
+      const found = this.pickRowWithAnnulationId(candidates);
+      if (found) {
+        return found;
+      }
+    }
+    return null;
+  }
+
+  private pickRowWithAnnulationId(rows?: SuiviTrxAnnulerRow[]): SuiviTrxAnnulerRow | null {
+    if (!rows || rows.length === 0) {
+      return null;
+    }
+    return rows.find(row => (row.idAnnulation || '').trim() !== '') || rows[0];
+  }
+
+  // ---------------------------------------------------------------------------
+  // Récupération d'un ID existant (suivi, réconciliation, champs de la ligne)
+  // ---------------------------------------------------------------------------
+
+  /** Construit les index des correspondances pour retrouver IDs et champs BO. */
+  private rebuildMatchIndexes(): void {
+    this.matchIdsByTransactionId.clear();
+    this.matchIdsByPhoneAmount.clear();
+    this.matchIdsByPhone.clear();
+    this.matchesByTransactionId.clear();
+    this.matchesByPhoneAmount.clear();
+    this.matchIndexBuilt = true;
+    this.matchIndexSource = this.response?.matches || [];
+
+    for (const match of this.matchIndexSource) {
+      const records: Record<string, string>[] = [];
+      if (match.partnerData) {
+        records.push(match.partnerData);
+      }
+      for (const record of match.partnerDataList || []) {
+        if (record) {
+          records.push(record);
+        }
+      }
+
+      const fields = extractPartnerFields(records);
+      const transactionId = normalizePartnerTransactionId(fields.transactionId);
+      const phone = partnerPhoneKey(fields.telephone);
+      const amount = normalizePartnerAmount(fields.montant);
+      const phoneAmountKey = phone && amount ? `${phone}|${amount}` : '';
+
+      if (transactionId && !this.matchesByTransactionId.has(transactionId)) {
+        this.matchesByTransactionId.set(transactionId, match);
+      }
+      if (phoneAmountKey && !this.matchesByPhoneAmount.has(phoneAmountKey)) {
+        this.matchesByPhoneAmount.set(phoneAmountKey, match);
+      }
+
+      // Un ID Annulation peut être porté par la ligne partenaire ou par le BO.
+      const idAnnulation = (fields.idAnnulation || '').trim()
+        || (match.boData ? (extractPartnerFields([match.boData]).idAnnulation || '').trim() : '');
+      if (!idAnnulation) {
+        continue;
+      }
+
+      this.addIdToIndex(this.matchIdsByTransactionId, transactionId, idAnnulation);
+      this.addIdToIndex(this.matchIdsByPhoneAmount, phoneAmountKey, idAnnulation);
+      this.addIdToIndex(this.matchIdsByPhone, phone, idAnnulation);
+    }
+  }
+
+  private ensureMatchIndexes(): void {
+    const matches = this.response?.matches || [];
+    if (!this.matchIndexBuilt || this.matchIndexSource !== matches) {
+      this.rebuildMatchIndexes();
+    }
+  }
+
+  private addIdToIndex(index: Map<string, string[]>, key: string, id: string): void {
+    if (!key || !id) {
+      return;
+    }
+    const values = index.get(key) || [];
+    if (!values.includes(id)) {
+      values.push(id);
+    }
+    index.set(key, values);
+  }
+
+  private findMatchedBoForRecord(record: Record<string, string>): Record<string, string> | null {
+    this.ensureMatchIndexes();
+    const fields = extractPartnerFields([record]);
+
+    const transactionId = normalizePartnerTransactionId(fields.transactionId);
+    if (transactionId) {
+      const matched = this.matchesByTransactionId.get(transactionId);
+      if (matched?.boData) {
+        return matched.boData;
+      }
+    }
+
+    const phone = partnerPhoneKey(fields.telephone);
+    const amount = normalizePartnerAmount(fields.montant);
+    if (phone && amount) {
+      const matched = this.matchesByPhoneAmount.get(`${phone}|${amount}`);
+      if (matched?.boData) {
+        return matched.boData;
+      }
+    }
+    return null;
+  }
+
+  /**
+   * Liste les IDs Annulation déjà présents dans les données :
+   * ligne partenaire, suivi persisté, puis correspondances de réconciliation.
+   */
+  private buildSuiviIdCandidates(record: Record<string, string>): SuiviIdCandidate[] {
+    this.ensureMatchIndexes();
+    const fields = extractPartnerFields([record]);
+    const candidates: SuiviIdCandidate[] = [];
+    const seen = new Set<string>();
+
+    const add = (value: string | null | undefined, source: string): void => {
+      const id = (value || '').trim();
+      if (!id || seen.has(id)) {
+        return;
+      }
+      seen.add(id);
+      candidates.push({ id, source });
+    };
+
+    const transactionId = normalizePartnerTransactionId(fields.transactionId);
+    const phone = partnerPhoneKey(fields.telephone);
+    const amount = normalizePartnerAmount(fields.montant);
+
+    add(fields.idAnnulation, 'Ligne partenaire');
+
+    // Lignes de suivi déjà enregistrées (le matchKey de la ligne reste prioritaire).
+    add(this.getSuiviRowForRecord(record)?.idAnnulation, 'Suivi TRX');
+    if (transactionId) {
+      (this.suiviRowsByTransactionId.get(transactionId) || [])
+        .forEach(row => add(row.idAnnulation, 'Suivi TRX'));
+    }
+    if (phone && amount) {
+      (this.suiviRowsByPhoneAmount.get(`${phone}|${amount}`) || [])
+        .forEach(row => add(row.idAnnulation, 'Suivi TRX'));
+    }
+
+    const idsByTransaction = transactionId
+      ? this.matchIdsByTransactionId.get(transactionId) || []
+      : [];
+    const idsByPhoneAmount = phone && amount
+      ? this.matchIdsByPhoneAmount.get(`${phone}|${amount}`) || []
+      : [];
+
+    idsByTransaction.forEach(id => add(id, 'Réconciliation'));
+    idsByPhoneAmount.forEach(id => add(id, 'Réconciliation'));
+
+    // Le téléphone seul n'est utilisé que si les critères plus précis n'ont rien donné.
+    const hasPreciseMatch = idsByTransaction.length > 0 || idsByPhoneAmount.length > 0;
+    if (!hasPreciseMatch && phone) {
+      (this.matchIdsByPhone.get(phone) || []).forEach(id => add(id, 'Réconciliation (téléphone)'));
+    }
+
+    return candidates;
+  }
+
+  /** Champs non vides de la ligne partenaire et du BO correspondant. */
+  private buildSuiviIdFieldOptions(record: Record<string, string>): SuiviIdFieldOption[] {
+    const options: SuiviIdFieldOption[] = [];
+    const seen = new Set<string>();
+
+    const add = (key: string, value: unknown, source: string): void => {
+      const text = value === null || value === undefined ? '' : String(value).trim();
+      if (!text) {
+        return;
+      }
+      const dedupeKey = `${source}|${key}|${text}`;
+      if (seen.has(dedupeKey)) {
+        return;
+      }
+      seen.add(dedupeKey);
+      options.push({ key: `${source}::${key}`, label: key, value: text, source });
+    };
+
+    for (const key of Object.keys(record)) {
+      add(key, record[key], 'Partenaire');
+    }
+
+    const boData = this.findMatchedBoForRecord(record);
+    if (boData) {
+      for (const key of Object.keys(boData)) {
+        add(key, boData[key], 'BO');
+      }
+    }
+
+    return options.sort((a, b) => {
+      const aIdLike = this.isIdLikeField(a.label) ? 0 : 1;
+      const bIdLike = this.isIdLikeField(b.label) ? 0 : 1;
+      if (aIdLike !== bIdLike) {
+        return aIdLike - bIdLike;
+      }
+      if (a.source !== b.source) {
+        return a.source === 'Partenaire' ? -1 : 1;
+      }
+      return a.label.localeCompare(b.label, 'fr', { sensitivity: 'base' });
+    });
+  }
+
+  private isIdLikeField(label: string): boolean {
+    const normalized = label
+      .normalize('NFD')
+      .replace(/[\u0300-\u036f]/g, '')
+      .toLowerCase();
+    return /(^|[^a-z])(id|ref|reference|numero|num|no|token|code|auth|receipt|transaction|txn|trx|gu)([^a-z]|$)/.test(normalized);
+  }
+
+  /** Utilise un ID retrouvé automatiquement. */
+  useSuiviIdCandidate(candidate: SuiviIdCandidate): void {
+    if (!candidate) {
+      return;
+    }
+    this.suiviIdValue = candidate.id;
+    this.cdr.markForCheck();
+  }
+
+  /** Copie la valeur du champ sélectionné dans l'ID Annulation. */
+  useSuiviIdFieldValue(): void {
+    const option = this.suiviIdFieldOptions.find(item => item.key === this.suiviIdSelectedField);
+    if (!option) {
+      return;
+    }
+    this.suiviIdValue = option.value;
+    this.cdr.markForCheck();
+  }
+
+  /** Relance le chargement des lignes de suivi déjà enregistrées. */
+  private reloadSuiviIdIndex(): Promise<void> {
+    this.suiviIdIndexRequested = false;
+    this.suiviIdIndexLoaded = false;
+    this.suiviIdIndexPromise = null;
+    this.loadSuiviIdIndex();
+    return this.suiviIdIndexPromise || Promise.resolve();
+  }
+
+  /** Relance la recherche d'IDs existants (suivi + réconciliation). */
+  async refreshSuiviIdCandidates(): Promise<void> {
+    if (!this.suiviIdRecord) {
+      return;
+    }
+    await this.reloadSuiviIdIndex();
+    if (!this.suiviIdRecord) {
+      return;
+    }
+    this.rebuildMatchIndexes();
+    this.suiviIdCandidates = this.buildSuiviIdCandidates(this.suiviIdRecord);
+    this.suiviIdFieldOptions = this.buildSuiviIdFieldOptions(this.suiviIdRecord);
+    this.suiviIdSelectedField = '';
+    if (!this.suiviIdValue.trim() && this.suiviIdCandidates.length === 1) {
+      this.suiviIdValue = this.suiviIdCandidates[0].id;
+    }
+    this.cdr.markForCheck();
+  }
+
+  shortSuiviIdValue(value: string): string {
+    const text = (value || '').trim();
+    return text.length > 56 ? `${text.slice(0, 53)}…` : text;
+  }
+
+  hasSuiviId(record: Record<string, string>): boolean {
+    const row = this.getSuiviRowForRecord(record);
+    return !!row && (row.idAnnulation || '').trim() !== '';
+  }
+
+  openSuiviIdPopup(record: Record<string, string>): void {
+    this.loadSuiviIdIndex();
+    this.ensureMatchIndexes();
+    const fields = extractPartnerFields([record]);
+    const existing = this.getSuiviRowForRecord(record);
+    this.suiviIdRecord = record;
+    this.suiviIdFields = fields;
+    this.suiviIdCandidates = this.buildSuiviIdCandidates(record);
+    this.suiviIdFieldOptions = this.buildSuiviIdFieldOptions(record);
+    this.suiviIdSelectedField = '';
+
+    const existingId = (existing?.idAnnulation || fields.idAnnulation || '').trim();
+    this.suiviIdValue = existingId
+      || (this.suiviIdCandidates.length === 1 ? this.suiviIdCandidates[0].id : '');
+    this.showSuiviIdPopup = true;
+    this.cdr.markForCheck();
+  }
+
+  closeSuiviIdPopup(): void {
+    if (this.isSavingSuiviId) {
+      return;
+    }
+    this.showSuiviIdPopup = false;
+    this.suiviIdRecord = null;
+    this.suiviIdValue = '';
+    this.suiviIdCandidates = [];
+    this.suiviIdFieldOptions = [];
+    this.suiviIdSelectedField = '';
+    this.cdr.markForCheck();
+  }
+
+  async saveSuiviId(): Promise<void> {
+    const record = this.suiviIdRecord;
+    const idAnnulation = (this.suiviIdValue || '').trim();
+    if (!record) {
+      return;
+    }
+    if (!idAnnulation) {
+      this.popupService.showWarning('Veuillez saisir l\'ID d\'annulation.');
+      return;
+    }
+
+    const fields = this.suiviIdFields;
+
+    this.isSavingSuiviId = true;
+    this.cdr.markForCheck();
+
+    try {
+      // On attend l'index existant pour mettre à jour la bonne ligne (et éviter
+      // un doublon si la ligne a déjà été créée depuis /matches).
+      await this.ensureSuiviIdIndexLoaded();
+      const existing = this.getSuiviRowForRecord(record);
+      const row: SuiviTrxAnnulerRow = {
+        id: existing?.id,
+        matchKey: existing?.matchKey || this.getEcartPartnerSuiviMatchKey(record),
+        boDate: existing?.boDate ?? null,
+        boAgence: existing?.boAgence ?? null,
+        boService: existing?.boService ?? null,
+        boMontant: existing?.boMontant ?? null,
+        boToken: existing?.boToken ?? null,
+        boPays: existing?.boPays ?? null,
+        boEnv: existing?.boEnv ?? null,
+        boTelephone: existing?.boTelephone ?? null,
+        boStatut: existing?.boStatut ?? null,
+        partnerTransactionId: fields.transactionId || existing?.partnerTransactionId || null,
+        partnerDate: fields.date || existing?.partnerDate || null,
+        partnerMontant: fields.montant || existing?.partnerMontant || null,
+        partnerTelephone: fields.telephone || existing?.partnerTelephone || null,
+        statutPart: existing?.statutPart ?? null,
+        idAnnulation
+      };
+
+      const saved = await firstValueFrom(this.suiviTrxAnnulerService.save(row, '/ecart-partner'));
+      this.upsertIndexedSuiviRow(saved);
+      this.showSuiviIdPopup = false;
+      this.suiviIdRecord = null;
+      this.suiviIdValue = '';
+      this.suiviIdCandidates = [];
+      this.suiviIdFieldOptions = [];
+      this.suiviIdSelectedField = '';
+      this.popupService.showSuccess('ID d\'annulation enregistré dans le suivi (statut OK).');
+    } catch (error: any) {
+      console.error('Erreur lors de l\'enregistrement de l\'ID d\'annulation:', error);
+      const detail = error?.error?.message || error?.message || '';
+      this.popupService.showError(
+        'Impossible d\'enregistrer l\'ID d\'annulation.' + (detail ? '\n' + detail : '')
+      );
+    } finally {
+      this.isSavingSuiviId = false;
+      this.cdr.markForCheck();
+    }
+  }
+
   trackByPartnerRow = (index: number, record: Record<string, string>): string => this.getPartnerOnlyKey(record);
 
   trackByIndex = (index: number): number => index;
@@ -748,11 +1340,15 @@ export class EcartPartnerTableComponent implements OnInit, OnDestroy {
       const rawType = this.getFromRecord(record, ['Type', 'type', 'TYPE', 'Type Opération', 'typeOperation', 'type_operation']);
       const normalized = this.normalizeType(rawType);
       // Ordre important : fournisseur avant client pour éviter Compense_fournisseur -> Compense_client
-      let typeOperation = normalized.includes('fournisseur') && normalized.includes('compens') ? 'Compense_fournisseur'
-                            : normalized.includes('fournisseur') && normalized.includes('appro') ? 'Appro_fournisseur'
-                            : normalized.includes('compens') ? 'Compense_client'
-                            : normalized.includes('appro') ? 'Appro_client'
-                            : normalized.includes('nivel') ? 'nivellement'
+      // Classification par mots-clés : règles de calcul (Configuration > Calcul) prioritaires,
+      // code par défaut en repli.
+      const isCompensation = this.calculService.matchesAny(normalized, 'BANQUE.TYPES_COMPENSATION', ['compens']);
+      const isAppro = this.calculService.matchesAny(normalized, 'BANQUE.TYPES_APPROVISIONNEMENT', ['appro']);
+      let typeOperation = normalized.includes('fournisseur') && isCompensation ? 'Compense_fournisseur'
+                            : normalized.includes('fournisseur') && isAppro ? 'Appro_fournisseur'
+                            : isCompensation ? 'Compense_client'
+                            : isAppro ? 'Appro_client'
+                            : this.calculService.matchesAny(normalized, 'BANQUE.TYPES_NIVELLEMENT', ['nivel']) ? 'nivellement'
                             : normalized.includes('regularis') ? 'régularisation_solde'
                             : normalized === 'ajustement' ? 'ajustement'
                             : rawType ? this.mapRawTypeToBackend(rawType) : '';
@@ -988,6 +1584,15 @@ export class EcartPartnerTableComponent implements OnInit, OnDestroy {
     for (const field of this.oppartTargetFields) {
       const matched = sourceColumns.find(col => {
         const n = this.normalizeOppartHeader(col);
+        // La date d'opération partenaire ne doit pas récupérer une date de
+        // demande/initiation ni une date explicitement marquée BO.
+        if (field.key === 'dateOperationPart') {
+          const looksLikeRequest = n.includes('demande') || n.includes('request') || n.includes('initiation') || n.includes('soumission');
+          const looksLikeBoDate = n.includes('bo') && (n.includes('date') || n.includes('operation'));
+          if (looksLikeRequest || looksLikeBoDate) {
+            return false;
+          }
+        }
         return field.keywords.some(kw => n.includes(this.normalizeOppartHeader(kw)));
       });
       const fallback = field.allowFirstColumnFallback === false
@@ -1072,17 +1677,33 @@ export class EcartPartnerTableComponent implements OnInit, OnDestroy {
   /** Construit les lignes éditable de la table de création OPPART depuis les lignes source. */
   private rebuildOppartDraftRows(): void {
     this.oppartDraftRows = this.oppartSourceRecords.map(record => {
+      const partnerDate = this.resolveOppartFieldValue('dateOperationPart', record)
+        || extractPartnerFields([record]).date;
+      const mappedBoDate = this.resolveOppartFieldValue('dateOperation', record);
+      const boDate = this.findMatchedBoDateForRecord(record);
+      const dateOperation = mappedBoDate || boDate || partnerDate;
       const row: OppartDraftRowUI = {
         client: this.resolveOppartFieldValue('client', record),
         typeOp: this.resolveOppartFieldValue('typeOp', record),
         montant: this.resolveOppartFieldValue('montant', record),
-        dateOperation: this.resolveOppartFieldValue('dateOperation', record),
+        dateOperation: this.normalizeOppartDate(dateOperation),
+        dateOperationPart: this.normalizeOppartDate(partnerDate),
+        dateDemande: this.normalizeOppartDate(this.resolveOppartFieldValue('dateDemande', record)),
         idTransaction: this.resolveOppartFieldValue('idTransaction', record),
         pays: this.resolveOppartFieldValue('pays', record),
         source: this.resolveOppartFieldValue('source', record)
       };
       return row;
     });
+  }
+
+  /**
+   * Date d'opération BO d'une ligne partenaire : celle du BO correspondant
+   * dans la réconciliation, si une correspondance existe.
+   */
+  private findMatchedBoDateForRecord(record: Record<string, string>): string {
+    const boData = this.findMatchedBoForRecord(record);
+    return boData ? extractPartnerFields([boData]).date : '';
   }
 
   /** Résout la valeur d'un champ : valeur manuelle si renseignée, sinon colonne source mappée. */
@@ -1193,13 +1814,17 @@ export class EcartPartnerTableComponent implements OnInit, OnDestroy {
         typeOp: (row.typeOp || '').trim(),
         montant: Math.abs(this.parseOppartNumber(row.montant) || 0),
         dateOperation: this.normalizeOppartDate(row.dateOperation),
+        dateOperationPart: this.normalizeOppartDate(row.dateOperationPart),
+        dateDemande: this.normalizeOppartDate(row.dateDemande),
         idTransaction: (row.idTransaction || '').trim(),
         pays: (row.pays || '').trim(),
         // Source freely editable dans le popup, avec repli sur la source par défaut.
         source: (row.source || '').trim() || EcartPartnerTableComponent.OPPART_SOURCE_ECART_PARTNER
       };
-      if (!item.dateOperation || item.dateOperation.trim() === '') {
-        delete item.dateOperation;
+      for (const key of ['dateOperation', 'dateOperationPart', 'dateDemande']) {
+        if (!item[key] || item[key].trim() === '') {
+          delete item[key];
+        }
       }
       return item as Omit<Oppart, 'id'>;
     }).filter(r => r.client !== '' || r.typeOp !== '' || r.idTransaction !== '' || r.pays !== '' || r.montant !== 0);

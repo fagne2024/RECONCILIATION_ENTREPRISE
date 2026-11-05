@@ -72,6 +72,7 @@
   "NAV.certificationSolde": "Certification de solde",
   "NAV.serviceBalance": "Équilibre des services",
   "NAV.accounting": "Comptabilité",
+  "NAV.suiviTrxAnnuler": "Suivi TRX à annuler",
 
   "ROUTE.dashboard": "Tableau de bord",
   "ROUTE.banqueDashboard": "Tableau de bord Banque",
@@ -132,6 +133,7 @@
   "COMMON.actions.retry": "Réessayer",
   "COMMON.actions.loading": "Chargement...",
   "COMMON.actions.search": "Rechercher",
+  "COMMON.actions.searchAllFields": "Rechercher (service, montant, téléphone, token…)",
   "COMMON.actions.delete": "Supprimer",
   "COMMON.actions.edit": "Modifier",
   "COMMON.actions.add": "Ajouter",

@@ -2,8 +2,10 @@ import { I18nService } from './i18n/i18n.service';
 import { Injectable } from '@angular/core';
 import { EcartBoSummary } from './ecart-bo-summary.service';
 import { ReleveManualRangeRow } from './dashboard.service';
+import type { SuiviTrxAnnulerRow } from './suivi-trx-a-annuler.service';
 import { normalizeReconciliationReportEnv } from '../constants/reconciliation-env-options';
 import { countriesMatch } from '../utils/country-codes.util';
+import { parsePartnerAmount } from '../utils/partner-fields.util';
 import {
   resolveTraitementKind,
   statutFromTraitementDisplayLabel,
@@ -46,6 +48,13 @@ export interface RapportDateServiceLine {
   volume: number;
 }
 
+interface AnnulationAdjustment {
+  boNombre: number;
+  boVolume: number;
+  partenaireNombre: number;
+  partenaireVolume: number;
+}
+
 @Injectable({ providedIn: 'root' })
 export class BoPartenaireAggregationService {
   computeMonthlyRows(params: {
@@ -58,9 +67,30 @@ export class BoPartenaireAggregationService {
     endDate: string;
     /** Si renseigné, ne calcule que ce mois (yyyy-MM). */
     monthFilter?: string;
+    /**
+     * Lignes du suivi des transactions à annuler. Seules celles dont le
+     * statut partenaire vaut « Annulée » sont déduites des totaux.
+     */
+    annulationRows?: SuiviTrxAnnulerRow[];
   }): BoPartenaireMonthlyAggregateRow[] {
-    const { rawReport, manualRows, ecartAll, country, envNorm, startDate, endDate, monthFilter } =
-      params;
+    const {
+      rawReport,
+      manualRows,
+      ecartAll,
+      country,
+      envNorm,
+      startDate,
+      endDate,
+      monthFilter,
+      annulationRows
+    } = params;
+    const annulations = this.buildAnnulationAdjustments(
+      annulationRows,
+      country,
+      envNorm,
+      startDate,
+      endDate
+    );
     const filtered = rawReport.filter((row) => {
       if (!countriesMatch(row.country, country)) {
         return false;
@@ -112,12 +142,17 @@ export class BoPartenaireAggregationService {
           country
         );
         const traitement = this.dominantTraitementRawValue(repLines.map((l) => l.traitement));
-        const ecN = agg.boNombre - agg.partenaireNombre - agg.decalageJm1Nombre + agg.decalageJp1Nombre;
-        const ecV = agg.boVolume - agg.partenaireVolume - agg.decalageJm1Volume + agg.decalageJp1Volume;
+        const annulation = annulations.get(this.annulationKey(monthYyyyMm, service));
+        const boNombre = agg.boNombre - (annulation?.boNombre || 0);
+        const boVolume = agg.boVolume - (annulation?.boVolume || 0);
+        const partenaireNombre = agg.partenaireNombre - (annulation?.partenaireNombre || 0);
+        const partenaireVolume = agg.partenaireVolume - (annulation?.partenaireVolume || 0);
+        const ecN = boNombre - partenaireNombre - agg.decalageJm1Nombre + agg.decalageJp1Nombre;
+        const ecV = boVolume - partenaireVolume - agg.decalageJm1Volume + agg.decalageJp1Volume;
         const taux =
-          agg.boVolume !== 0
-            ? (ecV / agg.boVolume) * 100
-            : agg.partenaireVolume !== 0
+          boVolume !== 0
+            ? (ecV / boVolume) * 100
+            : partenaireVolume !== 0
               ? null
               : 0;
         rows.push({
@@ -125,10 +160,10 @@ export class BoPartenaireAggregationService {
           service,
           traitement,
           statutRapport: statutFromTraitementDisplayLabel(traitement),
-          boNombre: agg.boNombre,
-          boVolume: agg.boVolume,
-          partenaireNombre: agg.partenaireNombre,
-          partenaireVolume: agg.partenaireVolume,
+          boNombre,
+          boVolume,
+          partenaireNombre,
+          partenaireVolume,
           ecartNombre: ecN,
           ecartVolume: ecV,
           tauxVolume: taux,
@@ -256,6 +291,105 @@ export class BoPartenaireAggregationService {
     }
     const embedded = v.match(/(\d{5,})/);
     return embedded ? embedded[1] : v;
+  }
+
+  /**
+   * Regroupe les lignes du suivi à déduire par mois et service.
+   *
+   * <p>Le rattachement utilise les informations BO (date BO, pays, ENV, service).
+   * Règles de déduction :
+   * - BO (nombre + volume) : Statut BO = "Annulée" ET Statut Part = "Annulée"
+   * - Partenaire (nombre + volume) : Statut Part = "Annulée"
+   * La date de rattachement est toujours la date BO.</p>
+   */
+  private buildAnnulationAdjustments(
+    rows: SuiviTrxAnnulerRow[] | undefined,
+    country: string,
+    envNorm: string | null,
+    startDate: string,
+    endDate: string
+  ): Map<string, AnnulationAdjustment> {
+    const adjustments = new Map<string, AnnulationAdjustment>();
+    if (!rows?.length || !(country || '').trim()) {
+      return adjustments;
+    }
+
+    for (const row of rows) {
+      const isPartAnnulee = this.isStatutPartAnnulee(row.statutPart);
+      const isBoAnnulee = this.isStatutBoAnnulee(row.boStatut);
+
+      // Partenaire : nécessite Statut Part = "Annulée"
+      // BO : nécessite Statut BO = "Annulée" ET Statut Part = "Annulée"
+      if (!isPartAnnulee) {
+        continue; // rien à déduire si le partenaire n'est pas annulé
+      }
+
+      const service = (row.boService || '').trim();
+      if (!service) {
+        continue;
+      }
+      if (!countriesMatch(row.boPays, country)) {
+        continue;
+      }
+      if (envNorm != null && normalizeReconciliationReportEnv(row.boEnv) !== envNorm) {
+        continue;
+      }
+      const date = this.formatDateForSearch(row.boDate || '');
+      if (!date || !this.isYmdInRangeInclusive(date, startDate, endDate)) {
+        continue;
+      }
+      const month = this.monthFromYmd(date);
+      if (!month) {
+        continue;
+      }
+
+      const key = this.annulationKey(month, service);
+      const adjustment = adjustments.get(key) || {
+        boNombre: 0,
+        boVolume: 0,
+        partenaireNombre: 0,
+        partenaireVolume: 0
+      };
+
+      const boVolume = parsePartnerAmount(row.boMontant) ?? 0;
+      const partenaireVolume = parsePartnerAmount(row.partnerMontant) ?? boVolume;
+
+      // Partenaire : toujours déduit si Statut Part = "Annulée"
+      adjustment.partenaireNombre += 1;
+      adjustment.partenaireVolume += partenaireVolume;
+
+      // BO : déduit seulement si Statut BO = "Annulée" (en plus du Partenaire)
+      if (isBoAnnulee) {
+        adjustment.boNombre += 1;
+        adjustment.boVolume += boVolume;
+      }
+
+      adjustments.set(key, adjustment);
+    }
+
+    return adjustments;
+  }
+
+  private annulationKey(monthYyyyMm: string, service: string): string {
+    return `${monthYyyyMm}|${(service || '').trim().toLowerCase()}`;
+  }
+
+  private isStatutPartAnnulee(value: string | null | undefined): boolean {
+    const normalized = (value || '')
+      .normalize('NFD')
+      .replace(/[\u0300-\u036f]/g, '')
+      .trim()
+      .toLowerCase();
+    return normalized === 'annulee' || normalized === 'annule';
+  }
+
+  private isStatutBoAnnulee(value: string | null | undefined): boolean {
+    const normalized = (value || '')
+      .normalize('NFD')
+      .replace(/[\u0300-\u036f]/g, '')
+      .trim()
+      .toLowerCase();
+    return normalized === 'annulee' || normalized === 'annule';
   }
 
   private compareDateService(a: RapportDateServiceLine, b: RapportDateServiceLine): number {

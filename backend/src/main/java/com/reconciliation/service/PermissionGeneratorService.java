@@ -559,6 +559,7 @@ public class PermissionGeneratorService {
         mapping.put("/api/agency-summary", "Statistiques");
         mapping.put("/api/compte-solde-bo", "Réconciliation");
         mapping.put("/api/compte-solde-cloture", "Réconciliation");
+        mapping.put("/api/certification-solde-resultats", "Réconciliation");
         mapping.put("/api/suivi-ecart", "TSOP");
         mapping.put("/api/frais-transaction", "Frais");
         

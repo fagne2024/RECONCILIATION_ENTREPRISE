@@ -140,11 +140,13 @@ public class OPPARTService {
 
     /** En-têtes du modèle, dans l'ordre. Aligné sur l'export XLSX de l'écran OPPART. */
     private static final String[] TEMPLATE_HEADERS = {
-            "Client", "Type_OP", "Montant", "Date", "ID Transaction", "Pays", "Source"
+            "Client", "Type_OP", "Montant", "Date opération BO", "Date opération part", "Date demande",
+            "ID Transaction", "Pays", "Source"
     };
 
     private static final String[] TEMPLATE_EXAMPLE = {
-            "ORANGE", "COMPENSE_PART", "1500.50", "2026-01-15 10:30:00", "TRX000123", "CI", "MANUEL"
+            "ORANGE", "COMPENSE_PART", "1500.50", "2026-01-15 10:30:00",
+            "2026-01-14 09:15:00", "2026-01-14 09:10:00", "TRX000123", "CI", "MANUEL"
     };
 
     /**
@@ -156,7 +158,9 @@ public class OPPARTService {
             "client", List.of("client", "nomclient", "nomduclient"),
             "typeOp", List.of("typeop", "typeoperation", "typedop", "type"),
             "montant", List.of("montant", "amount", "montantdevise"),
-            "dateOperation", List.of("date", "dateoperation", "dateop", "datecomptable", "datevalue"),
+            "dateOperation", List.of("date", "dateoperation", "dateoperationbo", "dateop", "datecomptable", "datevalue"),
+            "dateOperationPart", List.of("dateoperationpart", "dateoperationpartenaire", "dateoperationpartner", "datepartenaire", "dateoppart", "datepart"),
+            "dateDemande", List.of("datedemande", "datedelademande", "demande", "requestdate", "requesttime", "requestdatetime", "daterequest", "dateinitiation", "initiationdate", "initiationtime", "initiationdatetime", "requesteddate"),
             "idTransaction", List.of("idtransaction", "numtransaction", "numerotransgu", "idtrx", "transactionid"),
             "pays", List.of("pays", "country", "codePays"),
             "source", List.of("source", "origine", "originesource")
@@ -165,14 +169,14 @@ public class OPPARTService {
     /**
      * Récupérer toutes les lignes OPPART avec filtres optionnels.
      */
-  public List<OPPARTEntity> getOPPARTs(String client, String typeOp, String pays, String source,
+  public List<OPPARTEntity> getOPPARTs(String client, String typeOp, String typeOpContains, String pays, String source,
       String statut, String token, String dateDebut, String dateFin) {
     LocalDateTime start = parseDateTime(dateDebut);
     LocalDateTime end = parseDateTime(dateFin);
     if (end != null && isDateOnly(dateFin)) {
       end = end.toLocalDate().atTime(LocalTime.MAX);
     }
-    return oppartRepository.findWithFilters(client, typeOp, pays, source, normalizeStatut(statut),
+    return oppartRepository.findWithFilters(client, typeOp, normalizeToken(typeOpContains), pays, source, normalizeStatut(statut),
     normalizeToken(token), start, end);
     }
 
@@ -767,6 +771,8 @@ public class OPPARTService {
         String idTransaction = valueOf(row, "idTransaction");
         String rawMontant = valueOf(row, "montant");
         LocalDateTime dateOperation = parseImportDate(valueOf(row, "dateOperation"));
+        LocalDateTime dateOperationPart = parseImportDate(valueOf(row, "dateOperationPart"));
+        LocalDateTime dateDemande = parseImportDate(valueOf(row, "dateDemande"));
 
         if (isBlank(client) && isBlank(typeOp) && isBlank(pays) && isBlank(idTransaction) && isBlank(rawMontant)) {
             return null;
@@ -783,6 +789,12 @@ public class OPPARTService {
         }
         if (dateOperation != null) {
             oppart.setDateOperation(dateOperation);
+        }
+        if (dateOperationPart != null) {
+            oppart.setDateOperationPart(dateOperationPart);
+        }
+        if (dateDemande != null) {
+            oppart.setDateDemande(dateDemande);
         }
         return oppart;
     }
@@ -931,7 +943,7 @@ public class OPPARTService {
             errors.add("Ligne " + lineNumber + " : champ obligatoire manquant ou invalide → 'Montant'");
         }
         if (oppart.getDateOperation() == null) {
-            errors.add("Ligne " + lineNumber + " : champ obligatoire manquant ou date illisible → 'Date'");
+            errors.add("Ligne " + lineNumber + " : champ obligatoire manquant ou date illisible → 'Date opération BO'");
         }
     }
 
@@ -1185,10 +1197,128 @@ public class OPPARTService {
         preview.put("montant", oppart == null || oppart.getMontant() == null ? "" : oppart.getMontant().toPlainString());
         preview.put("date", oppart == null || oppart.getDateOperation() == null
                 ? "" : oppart.getDateOperation().format(IMPORT_DATE_FORMATTER));
+        preview.put("dateOperationPart", oppart == null || oppart.getDateOperationPart() == null
+                ? "" : oppart.getDateOperationPart().format(IMPORT_DATE_FORMATTER));
+        preview.put("dateDemande", oppart == null || oppart.getDateDemande() == null
+                ? "" : oppart.getDateDemande().format(IMPORT_DATE_FORMATTER));
         preview.put("idTransaction", oppart == null || oppart.getIdTransaction() == null ? "" : oppart.getIdTransaction());
         preview.put("pays", oppart == null || oppart.getPays() == null ? "" : oppart.getPays());
         preview.put("source", oppart == null || oppart.getSource() == null ? "" : oppart.getSource());
         preview.put("status", hasError ? "ERREUR" : "OK");
         return preview;
+    }
+
+    /**
+     * Lie les lignes de compense par N° Trans GU.
+     * Pour chaque transGu, cherche 1 ligne BO (COMPENSE_BO) et 1 ligne Partenaire (contenant "COMPENSE" ou "PARTNER" dans typeOp).
+     * Lie chaque paire trouvée avec un token généré (statut -> OK).
+     * Retourne un résumé : { success, linkedCount, skipped, details: [...] }
+     */
+    public Map<String, Object> linkCompensesByTransGu(List<String> transGus) {
+        Map<String, Object> result = new HashMap<>();
+        List<Map<String, Object>> details = new ArrayList<>();
+        int linkedCount = 0;
+        int skippedCount = 0;
+
+        if (transGus == null || transGus.isEmpty()) {
+            result.put("success", false);
+            result.put("message", "Aucun N° Trans GU fourni.");
+            return result;
+        }
+
+        // Normaliser les transGus (uppercase, trim)
+        Set<String> normalizedTransGus = new LinkedHashSet<>();
+        for (String t : transGus) {
+            if (t != null && !t.isBlank()) {
+                normalizedTransGus.add(normalizeForKey(t));
+            }
+        }
+
+        // Recherche par lots pour éviter les IN trop gros
+        for (List<String> batch : partitionner(new ArrayList<>(normalizedTransGus), DUP_QUERY_BATCH)) {
+            List<OPPARTEntity> candidates = oppartRepository.findByNormalizedIdTransactions(batch);
+
+            // Grouper par transGu normalisé
+            Map<String, List<OPPARTEntity>> byTransGu = new HashMap<>();
+            for (OPPARTEntity op : candidates) {
+                String key = normalizeForKey(op.getIdTransaction());
+                if (!key.isEmpty()) {
+                    byTransGu.computeIfAbsent(key, k -> new ArrayList<>()).add(op);
+                }
+            }
+
+            // Pour chaque transGu demandé, chercher la paire BO + Partenaire
+            for (String transGu : batch) {
+                List<OPPARTEntity> group = byTransGu.get(transGu);
+                Map<String, Object> detail = new HashMap<>();
+                detail.put("transGu", transGu);
+
+                if (group == null || group.isEmpty()) {
+                    detail.put("status", "NOT_FOUND");
+                    detail.put("message", "Aucune ligne OPPART avec ce N° Trans GU");
+                    skippedCount++;
+                    details.add(detail);
+                    continue;
+                }
+
+                // Séparer BO et Partenaire
+                OPPARTEntity ligneBo = null;
+                OPPARTEntity lignePartner = null;
+
+                for (OPPARTEntity op : group) {
+                    String typeOp = (op.getTypeOp() == null ? "" : op.getTypeOp().toUpperCase());
+                    if (typeOp.contains("BO") && typeOp.contains("COMPENS")) {
+                        ligneBo = op;
+                    } else if (typeOp.contains("COMPENS") || typeOp.contains("PARTNER")) {
+                        // Priorité à la première ligne partenaire trouvée
+                        if (lignePartner == null) {
+                            lignePartner = op;
+                        }
+                    }
+                }
+
+                if (ligneBo == null || lignePartner == null) {
+                    detail.put("status", "INCOMPLETE_PAIR");
+                    detail.put("message", "Paire BO/Partenaire incomplète (BO: " + (ligneBo != null) + ", Partner: " + (lignePartner != null) + ")");
+                    detail.put("foundCount", group.size());
+                    skippedCount++;
+                    details.add(detail);
+                    continue;
+                }
+
+                // Vérifier si déjà liées (même token)
+                if (ligneBo.getToken() != null && ligneBo.getToken().equals(lignePartner.getToken())) {
+                    detail.put("status", "ALREADY_LINKED");
+                    detail.put("token", ligneBo.getToken());
+                    detail.put("message", "Déjà liées");
+                    skippedCount++;
+                    details.add(detail);
+                    continue;
+                }
+
+                // Lier la paire
+                List<Long> ids = List.of(ligneBo.getId(), lignePartner.getId());
+                List<OPPARTEntity> linked = linkOpparts(ids, null); // token auto-généré
+
+                if (linked != null && linked.size() == 2) {
+                    detail.put("status", "LINKED");
+                    detail.put("token", linked.get(0).getToken());
+                    detail.put("ids", List.of(ligneBo.getId(), lignePartner.getId()));
+                    linkedCount++;
+                } else {
+                    detail.put("status", "ERROR");
+                    detail.put("message", "Échec liaison");
+                    skippedCount++;
+                }
+                details.add(detail);
+            }
+        }
+
+        result.put("success", true);
+        result.put("linkedCount", linkedCount);
+        result.put("skippedCount", skippedCount);
+        result.put("totalRequested", normalizedTransGus.size());
+        result.put("details", details);
+        return result;
     }
 }

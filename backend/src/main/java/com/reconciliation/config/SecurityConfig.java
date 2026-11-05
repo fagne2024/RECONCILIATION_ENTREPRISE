@@ -83,6 +83,9 @@ public class SecurityConfig {
                 .requestMatchers("/", "/health", "/error").permitAll()
                 // Authentification (pré-connexion)
                 .requestMatchers(HttpMethod.POST, "/api/auth/login", "/api/auth/verify-2fa").permitAll()
+                // Déconnexion idempotente : purge le cookie quoi qu'il arrive (un 401
+                // ici provoquait une boucle côté client : logout -> 401 -> logout -> ...).
+                .requestMatchers(HttpMethod.POST, "/api/auth/logout").permitAll()
                 // Entreprise d'un identifiant, AVANT connexion (page de connexion) :
                 // ne renvoie que le code d'entreprise (nom inconnu => null).
                 .requestMatchers(HttpMethod.GET, "/api/auth/entreprise").permitAll()

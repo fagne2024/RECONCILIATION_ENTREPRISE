@@ -35,6 +35,24 @@ export interface RecoJ1BlockingComment {
     commentText: string;
     updatedBy?: string;
     updatedAt?: string;
+    /** Relance e-mail quotidienne : absente si jamais activée. */
+    mailAlertActive?: boolean | null;
+    mailRecipients?: string[] | null;
+    mailCcRecipients?: string[] | null;
+    mailLastSentAt?: string | null;
+    mailSendCount?: number | null;
+    mailLastError?: string | null;
+    /** MANUEL | STATUT_CHANGE | COMMENTAIRE_ABSENT */
+    mailStoppedReason?: string | null;
+}
+
+export interface RecoJ1MailAlertRequest {
+    recoDate: string;
+    service: string;
+    country: string;
+    env: string;
+    recipients?: string[];
+    ccRecipients?: string[];
 }
 
 /**
@@ -690,6 +708,19 @@ export class DashboardReconciliationService {
         moduleContext?: string
     ): Observable<RecoJ1BlockingComment> {
         return this.http.put<RecoJ1BlockingComment>('/api/reco-j1-blocking-comments', payload, {
+            headers: this.buildContextHeaders(moduleContext)
+        });
+    }
+
+    /** Envoie l'e-mail immédiatement puis chaque jour tant que le statut de la réconciliation ne change pas. */
+    activateJ1MailAlert(payload: RecoJ1MailAlertRequest, moduleContext?: string): Observable<RecoJ1BlockingComment> {
+        return this.http.put<RecoJ1BlockingComment>('/api/reco-j1-blocking-comments/mail-alert', payload, {
+            headers: this.buildContextHeaders(moduleContext)
+        });
+    }
+
+    stopJ1MailAlert(payload: RecoJ1MailAlertRequest, moduleContext?: string): Observable<RecoJ1BlockingComment> {
+        return this.http.put<RecoJ1BlockingComment>('/api/reco-j1-blocking-comments/mail-alert/stop', payload, {
             headers: this.buildContextHeaders(moduleContext)
         });
     }

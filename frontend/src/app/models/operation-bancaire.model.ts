@@ -13,11 +13,14 @@ export interface OperationBancaire {
     reference?: string;
     idGlpi?: string;
     bo?: string;
+    banqueCorrigee?: string;
     statut: string;
     operationId?: number; // Lien avec l'opération d'origine
     reconStatus?: 'OK' | 'KO';
     impactApplique?: boolean; // Flag pour savoir si l'impact a déjà été appliqué
     traitement?: string;
+    demandeur?: string;
+    valideur?: string;
 }
 
 export interface OperationBancaireCreateRequest {
@@ -34,9 +37,12 @@ export interface OperationBancaireCreateRequest {
     reference?: string;
     idGlpi?: string;
     bo?: string;
+    banqueCorrigee?: string;
     statut: string;
     operationId?: number;
     traitement?: string;
+    demandeur?: string;
+    valideur?: string;
 }
 
 export interface OperationBancaireUpdateRequest {
@@ -53,9 +59,12 @@ export interface OperationBancaireUpdateRequest {
     reference?: string;
     idGlpi?: string;
     bo?: string;
+    banqueCorrigee?: string;
     statut?: string;
     operationId?: number;
     traitement?: string;
+    demandeur?: string;
+    valideur?: string;
 }
 
 export interface OperationBancaireFilter {

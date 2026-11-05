@@ -49,7 +49,10 @@ export class ConfigurationCalculService {
   // Cache / chargement
   // ------------------------------------------------------------------
 
-  /** Charge les règles une seule fois (ou force le rechargement) et alimente le cache. */
+  /**
+   * Charge les règles une seule fois (ou force le rechargement) et alimente le cache.
+   * Les règles chargées sont la source de vérité des moteurs de calcul.
+   */
   loadRules(force = false): Observable<CalculationRule[]> {
     if (!force && (this.loading || this.rulesSubject.value.length > 0)) {
       return this.rules$;
@@ -58,25 +61,29 @@ export class ConfigurationCalculService {
     return this.http.get<CalculationRule[]>(this.apiUrl).pipe(
       tap(rules => this.rulesSubject.next(rules || [])),
       catchError(err => {
-        console.warn('[ConfigurationCalcul] Règles non chargées, repli sur les valeurs par défaut', err);
+        console.warn('[ConfigurationCalcul] Règles non chargées, repli sur les valeurs par défaut du code', err);
         return of(this.rulesSubject.value);
       }),
       finalize(() => { this.loading = false; })
     );
   }
 
+  /**
+   * Règles connues : celles de l'API si elles sont disponibles, sinon le miroir
+   * local des règles par défaut (usage de référence / affichage uniquement).
+   */
   getRules(): CalculationRule[] {
     const cached = this.rulesSubject.value;
     return cached.length > 0 ? cached : DEFAULT_RULES;
   }
 
-  getRule(code: string): CalculationRule | undefined {
-    return this.getRules().find(r => r.code === code);
-  }
-
-  /** Règle active uniquement : une règle désactivée est ignorée (repli sur la valeur par défaut). */
+  /**
+   * Règle ACTIVE issue de l'API.
+   * Une règle absente ou désactivée est ignorée : les moteurs de calcul retombent
+   * alors sur leur valeur par défaut (paramètre `fallback` de chaque appel).
+   */
   getActiveRule(code: string): CalculationRule | undefined {
-    const rule = this.getRule(code);
+    const rule = this.rulesSubject.value.find(r => r.code === code);
     return rule && rule.actif !== false ? rule : undefined;
   }
 
@@ -84,7 +91,10 @@ export class ConfigurationCalculService {
     return !!this.getActiveRule(code);
   }
 
-  /** Liste de valeurs (normalisées : MAJUSCULES, sans accents ni séparateurs) d'une règle LISTE. */
+  /**
+   * Liste de valeurs (normalisées : MAJUSCULES, sans accents ni séparateurs) d'une règle LISTE.
+   * Repli : la liste fournie par le code si aucune règle active n'est configurée.
+   */
   getList(code: string, fallback: string[] = []): string[] {
     const rule = this.getActiveRule(code);
     const raw = rule && rule.valeurs ? this.parseValues(rule.valeurs) : fallback;
@@ -94,6 +104,7 @@ export class ConfigurationCalculService {
   /**
    * Liste de valeurs brutes (MAJUSCULES, accents retirés, séparateurs conservés).
    * À utiliser pour les recherches par sous-chaîne (mots-clés).
+   * Repli : la liste fournie par le code si aucune règle active n'est configurée.
    */
   getListRaw(code: string, fallback: string[] = []): string[] {
     const rule = this.getActiveRule(code);
@@ -103,7 +114,38 @@ export class ConfigurationCalculService {
       .filter(v => v.length > 0);
   }
 
-  /** Valeur numérique d'une règle PARAMETRE. */
+  /**
+   * Vrai si le texte contient l'un des mots-clés de la règle LISTE.
+   * Utilisé pour les classifications par type d'opération / service : la règle
+   * configurée est prioritaire, le code conserve ses mots-clés par défaut.
+   */
+  matchesAny(text: string | null | undefined, code: string, fallback: string[] = []): boolean {
+    if (!text) {
+      return false;
+    }
+    const normalizedText = this.normalizeForMatch(text);
+    if (!normalizedText) {
+      return false;
+    }
+    return this.getListRaw(code, fallback).some(keyword => {
+      const normalizedKeyword = this.normalizeForMatch(keyword);
+      return normalizedKeyword.length > 0 && normalizedText.includes(normalizedKeyword);
+    });
+  }
+
+  /** Normalisation pour la comparaison par sous-chaîne (minuscules, sans accents). */
+  private normalizeForMatch(value: string): string {
+    return (value || '')
+      .toLowerCase()
+      .normalize('NFD')
+      .replace(/[\u0300-\u036f]/g, '')
+      .trim();
+  }
+
+  /**
+   * Valeur numérique d'une règle PARAMETRE.
+   * Repli : la valeur fournie par le code si aucune règle active n'est configurée.
+   */
   getNumber(code: string, fallback: number): number {
     const rule = this.getActiveRule(code);
     if (rule && rule.type === 'PARAMETRE' && rule.valeur != null) {
@@ -112,15 +154,14 @@ export class ConfigurationCalculService {
     return fallback;
   }
 
-  /** Évalue une règle FORMULE avec les variables fournies. */
+  /**
+   * Évalue une règle FORMULE avec les variables fournies.
+   * Repli : la valeur fournie par le code si aucune règle active n'est configurée.
+   */
   evaluate(code: string, variables: Record<string, number>, fallback: number): number {
     const rule = this.getActiveRule(code);
     if (!rule || rule.type !== 'FORMULE' || !rule.expression) {
-      const def = DEFAULT_BY_CODE[code];
-      if (!def || !def.expression) {
-        return fallback;
-      }
-      return this.evaluateTerms(this.parseTerms(def.expression), variables, fallback);
+      return fallback;
     }
     return this.evaluateTerms(this.parseTerms(rule.expression), variables, fallback);
   }
@@ -197,7 +238,12 @@ export class ConfigurationCalculService {
   }
 }
 
-/** Règles par défaut (miroir du seed backend) servant de repli si l'API est indisponible. */
+/**
+ * Miroir local des règles par défaut (seed backend).
+ * Usage de REFERENCE uniquement (affichage) : les calculs utilisent les règles
+ * réellement configurées dans l'API ; en leur absence, ils retombent sur les
+ * valeurs par défaut codées dans chaque moteur de calcul.
+ */
 const DEFAULT_RULES: CalculationRule[] = [
   {
     code: 'CERTIF.ECART_MOUVEMENT', module: 'CERTIFICATION_SOLDE', sousModule: 'ECART_MOUVEMENT',
@@ -239,7 +285,7 @@ const DEFAULT_RULES: CalculationRule[] = [
   {
     code: 'CERTIF.SERVICES_TSOP_NEGATIFS', module: 'CERTIFICATION_SOLDE', sousModule: 'REGULARISATION',
     libelle: 'Services TSOP à signe négatif', type: 'LISTE', actif: true, systeme: true,
-    valeurs: JSON.stringify(['CASHIN', 'AIRTIME'])
+    valeurs: JSON.stringify(['CASHIN', 'AIRTIME', 'SEND'])
   },
   {
     code: 'CERTIF.TOKENS_COMPENSE', module: 'CERTIFICATION_SOLDE', sousModule: 'REGULARISATION',
@@ -321,9 +367,83 @@ const DEFAULT_RULES: CalculationRule[] = [
     code: 'MODELES.TOKENS_USSDPART', module: 'MODELES', sousModule: 'DETECTION_FICHIERS',
     libelle: 'Mots-clés fichier USSDPART', type: 'LISTE', actif: true, systeme: true,
     valeurs: JSON.stringify(['USSDPART'])
+  },
+  {
+    code: 'TRAITEMENT.EXTENSIONS_FICHIERS', module: 'TRAITEMENT', sousModule: 'FORMATS_FICHIERS',
+    libelle: 'Extensions de fichiers acceptées', type: 'LISTE', actif: true, systeme: true,
+    valeurs: JSON.stringify(['.csv', '.txt', '.tsv', '.xls', '.xlsx'])
+  },
+  {
+    code: 'REDEVANCE.CA_BRUT', module: 'REDEVANCE_LOTERIE', sousModule: 'INDICATEURS_BRUTS',
+    libelle: 'Chiffre d\'affaires brut', type: 'FORMULE', actif: true, systeme: true,
+    expression: JSON.stringify([
+      { signe: '+', coefficient: 1, variable: 'TOTAL_MISES', absolue: false },
+      { signe: '-', coefficient: 1, variable: 'TOTAL_BONUS', absolue: false }
+    ])
+  },
+  {
+    code: 'REDEVANCE.PBJ', module: 'REDEVANCE_LOTERIE', sousModule: 'PRODUITS',
+    libelle: 'Produit brut de jeux', type: 'FORMULE', actif: true, systeme: true,
+    expression: JSON.stringify([
+      { signe: '+', coefficient: 0.95, variable: 'PAYIN', absolue: false },
+      { signe: '-', coefficient: 0.95, variable: 'PAYOUT', absolue: false }
+    ])
+  },
+  {
+    code: 'REDEVANCE.REMUNERATION', module: 'REDEVANCE_LOTERIE', sousModule: 'PRODUITS',
+    libelle: 'Rémunération intégrateur', type: 'FORMULE', actif: true, systeme: true,
+    expression: JSON.stringify([
+      { signe: '+', coefficient: 1, variable: 'PAYIN_X_TAUX', absolue: false },
+      { signe: '+', coefficient: 1, variable: 'PAYOUT_X_TAUX', absolue: false }
+    ])
+  },
+  {
+    code: 'REDEVANCE.REVENU', module: 'REDEVANCE_LOTERIE', sousModule: 'PRODUITS',
+    libelle: 'Revenu généré (act. com.)', type: 'FORMULE', actif: true, systeme: true,
+    expression: JSON.stringify([
+      { signe: '+', coefficient: 1, variable: 'PBJ', absolue: false },
+      { signe: '-', coefficient: 1, variable: 'REMUNERATION', absolue: false }
+    ])
+  },
+  {
+    code: 'REDEVANCE.BASE', module: 'REDEVANCE_LOTERIE', sousModule: 'REDEVANCE',
+    libelle: 'Base de calcul de la redevance', type: 'FORMULE', actif: true, systeme: true,
+    expression: JSON.stringify([
+      { signe: '+', coefficient: 1, variable: 'REVENU', absolue: false }
+    ])
+  },
+  {
+    code: 'REDEVANCE.TAXE_JEUX_HASARD_PCT', module: 'REDEVANCE_LOTERIE', sousModule: 'PARAMETRES',
+    libelle: 'Taxe jeux de hasard (défaut)', type: 'PARAMETRE', actif: true, systeme: true, valeur: 5
+  },
+  {
+    code: 'REDEVANCE.RETENUE_GAINS_PCT', module: 'REDEVANCE_LOTERIE', sousModule: 'PARAMETRES',
+    libelle: 'Retenue sur gains (défaut)', type: 'PARAMETRE', actif: true, systeme: true, valeur: 15
+  },
+  {
+    code: 'REDEVANCE.RETENUE_SEUIL', module: 'REDEVANCE_LOTERIE', sousModule: 'PARAMETRES',
+    libelle: 'Seuil retenue sur gains (défaut)', type: 'PARAMETRE', actif: true, systeme: true, valeur: 500000
+  },
+  {
+    code: 'REDEVANCE.TAUX_DEFAUT', module: 'REDEVANCE_LOTERIE', sousModule: 'PARAMETRES',
+    libelle: 'Taux de redevance (défaut)', type: 'PARAMETRE', actif: true, systeme: true, valeur: 50
+  },
+  {
+    code: 'REDEVANCE.TAUX_PAYIN_DEFAUT', module: 'REDEVANCE_LOTERIE', sousModule: 'PARAMETRES',
+    libelle: 'Taux payin (défaut)', type: 'PARAMETRE', actif: true, systeme: true, valeur: 2.5
+  },
+  {
+    code: 'REDEVANCE.TAUX_PAYOUT_DEFAUT', module: 'REDEVANCE_LOTERIE', sousModule: 'PARAMETRES',
+    libelle: 'Taux payout (défaut)', type: 'PARAMETRE', actif: true, systeme: true, valeur: 3
+  },
+  {
+    code: 'REDEVANCE.SERVICES_PAYIN', module: 'REDEVANCE_LOTERIE', sousModule: 'FLUX_TRANSACTION',
+    libelle: 'Services PAYIN', type: 'LISTE', actif: true, systeme: true,
+    valeurs: JSON.stringify(['PAIEMENT'])
+  },
+  {
+    code: 'REDEVANCE.SERVICES_PAYOUT', module: 'REDEVANCE_LOTERIE', sousModule: 'FLUX_TRANSACTION',
+    libelle: 'Services PAYOUT', type: 'LISTE', actif: true, systeme: true,
+    valeurs: JSON.stringify(['CASHIN'])
   }
 ];
-
-const DEFAULT_BY_CODE: Record<string, CalculationRule> = DEFAULT_RULES.reduce(
-  (acc, rule) => { acc[rule.code] = rule; return acc; }, {} as Record<string, CalculationRule>
-);

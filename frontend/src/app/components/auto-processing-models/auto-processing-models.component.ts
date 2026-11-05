@@ -463,6 +463,8 @@ export class AutoProcessingModelsComponent implements OnInit {
         }
       } else if (fileType === 'bo' && this.availableColumnsForTemplate.length === 0) {
         this.loadColumnsForBOType();
+      } else if (fileType === 'operation' && this.availableColumnsForTemplate.length === 0) {
+        this.loadColumnsForOperationType();
       }
     });
 
@@ -490,6 +492,11 @@ export class AutoProcessingModelsComponent implements OnInit {
       
       if (fileType === 'bo') {
         // Réinitialiser les clés de réconciliation pour les fichiers BO
+        this.selectedPartnerKeys = [];
+        this.selectedBOModels = [];
+        this.availableTemplateColumns = [];
+      } else if (fileType === 'operation') {
+        // Réinitialiser pour les fichiers Operation
         this.selectedPartnerKeys = [];
         this.selectedBOModels = [];
         this.availableTemplateColumns = [];
@@ -964,6 +971,29 @@ export class AutoProcessingModelsComponent implements OnInit {
     console.log('🔍 Chargement des colonnes pour le type BO...');
     
     this.loadColumnsFromExcelFiles();
+    
+    // Mettre à jour le formulaire
+    this.modelForm.updateValueAndValidity();
+  }
+
+  private loadColumnsForOperationType(): void {
+    console.log('🔍 Chargement des colonnes pour le type Operation...');
+    
+    const operationFiles = this.availableFiles.filter(f => 
+      f.fileName.toLowerCase().includes('operation') || 
+      f.fileName.toLowerCase().includes('operationbancaire') ||
+      f.fileName.toLowerCase().includes('banque')
+    );
+    
+    if (operationFiles.length > 0) {
+      const firstOperationFile = operationFiles[0];
+      if (firstOperationFile.columns) {
+        this.availableColumnsForTemplate = firstOperationFile.columns;
+      }
+    } else {
+      // Fallback to loading from Excel files
+      this.loadColumnsFromExcelFiles();
+    }
     
     // Mettre à jour le formulaire
     this.modelForm.updateValueAndValidity();

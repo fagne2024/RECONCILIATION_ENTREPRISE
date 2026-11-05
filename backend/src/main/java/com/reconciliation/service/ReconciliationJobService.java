@@ -369,24 +369,4 @@ public class ReconciliationJobService {
         
         return filePath.toString();
     }
-    
-    /**
-     * Nettoie les anciens jobs
-     */
-    @Transactional
-    public void cleanupOldJobs() {
-        LocalDateTime cutoffDate = LocalDateTime.now().minusHours(24);
-        var staleJobs = jobRepository.findStaleJobs(cutoffDate);
-        
-        for (ReconciliationJob job : staleJobs) {
-            resultCache.remove(job.getJobId());
-            ecartsSliceCache.remove(job.getJobId());
-            job.setStatus(ReconciliationJob.JobStatus.FAILED);
-            job.setErrorMessage("Job expiré - nettoyage automatique");
-            job.setCompletedAt(LocalDateTime.now());
-            jobRepository.save(job);
-            
-            log.warn("Job expiré nettoyé: {}", job.getJobId());
-        }
-    }
 }

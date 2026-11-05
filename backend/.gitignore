@@ -51,4 +51,6 @@ Thumbs.db
 ### Environment Variables ###
 .env
 .env.local
-.env.*.local 
+.env.*.local
+.env.dev
+.env.test

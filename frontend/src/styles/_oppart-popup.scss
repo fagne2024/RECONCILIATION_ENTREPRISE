@@ -1,0 +1,246 @@
+// Styles partagés du popup "Création OPPART" / "Suivi TRX à annuler".
+// Définis globalement car utilisés par plusieurs composants (matches-table,
+// suivi-trx-a-annuler, ...). Les composants peuvent surcharger localement.
+
+.oppart-overlay {
+  position: fixed;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  background: rgba(0, 0, 0, 0.55);
+  display: flex;
+  align-items: flex-start;
+  justify-content: center;
+  // Au-dessus des en-têtes collants des pages (qui montent jusqu'à 2147483001).
+  z-index: 2147483600;
+  padding: 40px 20px;
+  backdrop-filter: blur(4px);
+  animation: oppartFadeIn var(--duration-slow) var(--ease-standard);
+  overflow-y: auto;
+}
+
+.oppart-popup {
+  background: var(--color-surface);
+  border-radius: 16px;
+  max-width: 1200px;
+  width: 100%;
+  box-shadow: 0 24px 80px rgba(0, 0, 0, 0.35);
+  animation: oppartPopIn var(--duration-slow) var(--ease-standard);
+  display: flex;
+  flex-direction: column;
+  max-height: calc(100vh - 80px);
+}
+
+.oppart-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 20px 24px;
+  background: linear-gradient(135deg, var(--color-error) 0%, var(--color-error) 100%);
+  color: var(--color-accent-contrast);
+  border-radius: 16px 16px 0 0;
+
+  h3 {
+    margin: 0;
+    color: var(--color-accent-contrast);
+    font-size: 20px;
+  }
+
+  .close-btn {
+    background: rgba(255, 255, 255, 0.2);
+    color: var(--color-accent-contrast);
+    border: none;
+    border-radius: 50%;
+    width: 32px;
+    height: 32px;
+    font-size: 20px;
+    line-height: 1;
+    cursor: pointer;
+    transition: background-color var(--duration-base) var(--ease-standard);
+
+    &:hover {
+      background: rgba(255, 255, 255, 0.35);
+    }
+  }
+}
+
+.oppart-content {
+  padding: 24px;
+  overflow-y: auto;
+  flex: 1;
+}
+
+.oppart-info {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 16px;
+  margin-bottom: 20px;
+  flex-wrap: wrap;
+}
+
+.oppart-count {
+  font-size: 16px;
+  font-weight: 700;
+  color: var(--color-error);
+  background: var(--color-error-bg);
+  padding: 8px 16px;
+  border-radius: 8px;
+}
+
+.oppart-note {
+  font-size: 13px;
+  color: var(--color-text-muted);
+}
+
+.oppart-mapping {
+  background: var(--color-surface-sunken);
+  border: 1px solid var(--color-border);
+  border-radius: 12px;
+  padding: 20px;
+  margin-bottom: 24px;
+}
+
+.mapping-legend {
+  font-size: 14px;
+  font-weight: 600;
+  color: var(--color-text-primary);
+  margin-bottom: 16px;
+}
+
+.mapping-grid {
+  display: grid;
+  grid-template-columns: repeat(2, 1fr);
+  gap: 16px;
+}
+
+.mapping-row {
+  display: flex;
+  align-items: flex-start;
+  gap: 12px;
+}
+
+.mapping-field {
+  flex: 0 0 140px;
+  display: flex;
+  flex-direction: column;
+}
+
+.mapping-label {
+  font-size: 14px;
+  font-weight: 700;
+  color: var(--color-text-primary);
+}
+
+.mapping-control {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.mapping-source-line {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.mapping-manual-input {
+  flex: 1;
+  padding: 9px 12px;
+  border: 1px solid var(--color-border);
+  border-radius: 8px;
+  font-size: 13px;
+  color: var(--color-text-primary);
+  background: var(--color-surface);
+  transition: background-color var(--duration-base) var(--ease-standard), color var(--duration-base) var(--ease-standard), border-color var(--duration-base) var(--ease-standard), box-shadow var(--duration-base) var(--ease-standard);
+
+  &:focus {
+    outline: var(--focus-ring-width) solid var(--focus-ring-color);
+    outline-offset: var(--focus-ring-offset);
+    border-color: var(--color-duplicate);
+    box-shadow: 0 0 0 3px rgba(111, 66, 193, 0.15);
+  }
+}
+
+.oppart-actions {
+  padding: 20px 24px;
+  border-top: 1px solid var(--color-hover);
+  display: flex;
+  justify-content: flex-end;
+  gap: 12px;
+  background: var(--color-surface);
+  border-radius: 0 0 16px 16px;
+
+  .cancel-btn {
+    padding: 12px 24px;
+    background: var(--color-surface-sunken);
+    color: var(--color-text-primary);
+    border: 1px solid var(--color-border);
+    border-radius: 8px;
+    cursor: pointer;
+    font-size: 14px;
+    font-weight: 600;
+    transition: background-color var(--duration-base) var(--ease-standard);
+
+    &:hover {
+      background: var(--color-hover);
+    }
+  }
+}
+
+.save-oppart-btn {
+  padding: 12px 24px;
+  background: var(--color-success-solid);
+  color: var(--color-accent-contrast);
+  border: none;
+  border-radius: 8px;
+  cursor: pointer;
+  font-size: 14px;
+  font-weight: 600;
+  transition: background-color var(--duration-slow) var(--ease-standard), transform var(--duration-slow) var(--ease-standard), box-shadow var(--duration-slow) var(--ease-standard);
+
+  &:hover:not(:disabled) {
+    background: var(--color-success);
+    transform: translateY(-1px);
+    box-shadow: 0 4px 8px rgba(40, 167, 69, 0.3);
+  }
+
+  &:disabled {
+    background: var(--color-border-emphasis);
+    cursor: not-allowed;
+    opacity: 0.6;
+  }
+}
+
+@keyframes oppartFadeIn {
+  from {
+    opacity: 0;
+  }
+  to {
+    opacity: 1;
+  }
+}
+
+@keyframes oppartPopIn {
+  from {
+    opacity: 0;
+    transform: scale(0.92);
+  }
+  to {
+    opacity: 1;
+    transform: scale(1);
+  }
+}
+
+@media (max-width: 900px) {
+  .mapping-grid {
+    grid-template-columns: 1fr;
+  }
+
+  .oppart-info {
+    flex-direction: column;
+    align-items: flex-start;
+  }
+}

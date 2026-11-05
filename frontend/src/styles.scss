@@ -4,6 +4,7 @@
 @use './styles/base';
 @use './styles/components';
 @use './styles/dialog';
+@use './styles/oppart-popup';
 
 @import './app/styles/dashboard-filters';
 
@@ -23,8 +24,8 @@
       color var(--duration-base) var(--ease-standard),
       border-color var(--duration-base) var(--ease-standard);
 
-    /* Marque entreprise : ThemeService n'écrit plus que la sidebar.
-       Par défaut, la navigation suit les tokens du design system. */
+    /* Marque entreprise : ThemeService surcharge ces variables (et les
+       tokens --color-*) quand un design extrait du logo est actif. */
     --theme-primary: var(--color-accent);
     --theme-primary-dark: var(--color-accent-hover);
     --theme-accent: var(--color-accent);
@@ -106,6 +107,25 @@ app-root {
         opacity: 0.6;
         cursor: not-allowed;
     }
+}
+
+/* Material compile ses palettes en Sass (teal mission). Quand un design
+   entreprise est actif, les boutons primary suivent --color-accent. */
+.mat-raised-button.mat-primary,
+.mat-flat-button.mat-primary,
+.mat-unelevated-button.mat-primary,
+.mat-fab.mat-primary,
+.mat-mini-fab.mat-primary {
+  background-color: var(--color-accent);
+  color: var(--color-accent-contrast);
+}
+.mat-stroked-button.mat-primary,
+.mat-button.mat-primary {
+  color: var(--color-accent);
+}
+.mat-progress-spinner circle,
+.mat-spinner circle {
+  stroke: var(--color-accent);
 }
 
 /* Angular CDK (mat-select, menus, dialogs overlay) : défaut ~1000, sinon les panneaux passent derrière

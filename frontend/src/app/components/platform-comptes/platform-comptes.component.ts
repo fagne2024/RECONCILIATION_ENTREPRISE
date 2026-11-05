@@ -22,6 +22,7 @@ interface Compte {
 }
 
 interface EntrepriseOption {
+  id: number;
   code: string;
   nom: string;
 }
@@ -51,6 +52,15 @@ export class PlatformComptesComponent implements OnInit, OnDestroy {
     email: '',
     enabled: true
   };
+
+  /** Liste complete des entreprises (pour le modal de creation). */
+  entreprisesOptions: EntrepriseOption[] = [];
+  showCreateModal = false;
+  createForm: { username: string; email: string; entrepriseId: number | null } = {
+    username: '',
+    email: '',
+    entrepriseId: null
+  };
   submitting = false;
 
   constructor(
@@ -66,6 +76,7 @@ export class PlatformComptesComponent implements OnInit, OnDestroy {
       return;
     }
     this.loadComptes();
+    this.loadEntreprises();
   }
 
   ngOnDestroy(): void {
@@ -81,7 +92,7 @@ export class PlatformComptesComponent implements OnInit, OnDestroy {
     const seen = new Map<string, EntrepriseOption>();
     for (const c of this.comptes) {
       if (!seen.has(c.entrepriseCode)) {
-        seen.set(c.entrepriseCode, { code: c.entrepriseCode, nom: c.entrepriseNom });
+        seen.set(c.entrepriseCode, { id: c.entrepriseId, code: c.entrepriseCode, nom: c.entrepriseNom });
       }
     }
     return Array.from(seen.values()).sort((a, b) => a.code.localeCompare(b.code));
@@ -148,12 +159,91 @@ export class PlatformComptesComponent implements OnInit, OnDestroy {
   }
 
   /**
+   * Entreprises de la plateforme (hors archivees) : necessaire pour rattacher
+   * un nouveau compte a une entreprise sans compter sur les comptes charges.
+   */
+  loadEntreprises(): void {
+    this.http.get<any[]>('/api/platform/entreprises', this.getAuthHeaders())
+      .pipe(
+        takeUntil(this.destroy$),
+        catchError(() => of([]))
+      )
+      .subscribe(response => {
+        this.entreprisesOptions = (response || [])
+          .filter(e => e && e.id != null)
+          .map(e => ({ id: e.id, code: e.code, nom: e.nom }))
+          .sort((a, b) => a.code.localeCompare(b.code));
+      });
+  }
+
+  /**
    * Message d'erreur lisible : le backend renvoie le detail dans
    * `err.error.message` (ex. 409 « email deja utilise ») ; le champ
    * `err.error.error` ne contient que la categorie (« Conflit »).
    */
   private apiMessage(err: any, fallbackKey: string): string {
     return err?.error?.message || err?.error?.error || I18nService.t(fallbackKey);
+  }
+
+  // ------------------------------------------------------------------
+  // Creation
+  // ------------------------------------------------------------------
+
+  openCreate(): void {
+    this.createForm = { username: '', email: '', entrepriseId: null };
+    this.showCreateModal = true;
+  }
+
+  closeCreate(): void {
+    this.showCreateModal = false;
+  }
+
+  saveCreate(): void {
+    const username = this.createForm.username.trim();
+    const email = this.createForm.email.trim();
+    const entrepriseId = this.createForm.entrepriseId;
+    if (!username || !email || entrepriseId == null) {
+      this.popup.showWarning(
+        I18nService.t('PLT.acc.createRequired'),
+        I18nService.t('PLT.acc.missingFieldsTitle')
+      );
+      return;
+    }
+    if (!/^[^@\s]+@[^@\s]+\.[^@\s]+$/.test(email)) {
+      this.popup.showWarning(
+        I18nService.t('PLT.acc.invalidEmail'),
+        I18nService.t('PLT.acc.missingFieldsTitle')
+      );
+      return;
+    }
+
+    this.submitting = true;
+    const payload = { username, email, entrepriseId };
+    this.http.post<any>('/api/platform/accounts', payload, this.getAuthHeaders())
+      .pipe(
+        takeUntil(this.destroy$),
+        catchError(err => {
+          this.submitting = false;
+          const message = this.apiMessage(err, 'PLT.acc.errCreate');
+          this.error = message;
+          this.popup.showError(message);
+          return of(null);
+        })
+      )
+      .subscribe(response => {
+        this.submitting = false;
+        if (response) {
+          // Le mot de passe temporaire n'est renvoye qu'a la creation (si
+          // l'email n'a pas pu etre envoye, c'est la seule occasion de le
+          // transmettre a l'utilisateur) : on l'affiche toujours.
+          const detail = response.temporaryPassword
+            ? ' ' + I18nService.t('PLT.acc.createTempPassword', { password: response.temporaryPassword })
+            : '';
+          this.popup.showSuccess((response.message || I18nService.t('PLT.acc.okCreated')) + detail);
+          this.closeCreate();
+          this.loadComptes();
+        }
+      });
   }
 
   // ------------------------------------------------------------------

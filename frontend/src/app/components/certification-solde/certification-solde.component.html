@@ -11,6 +11,9 @@
     </div>
     <div class="nav-spacer"></div>
     <div class="nav-actions">
+      <button type="button" class="nav-btn secondary" (click)="goToCompenseReconciliation()">
+        <i class="fas fa-list"></i> {{ 'CS.Listedescompenses' | translate }}
+      </button>
       <button type="button" class="nav-btn secondary" (click)="exportToExcel()" [disabled]="!canExport || isExportingExcel || isExportingPdf">
         <i class="fas fa-file-excel"></i> {{ isExportingExcel ? 'Export…' : 'Exporter Excel' }}
       </button>
@@ -19,6 +22,9 @@
       </button>
       <button type="button" class="nav-btn secondary" (click)="startNewCertification()">
         <i class="fas fa-file-upload"></i> {{ 'CS.Nouvellecertification' | translate }}
+      </button>
+      <button type="button" class="nav-btn secondary" (click)="openSavedCertifications()">
+        <i class="fas fa-folder-open"></i> {{ 'CS.saved.button' | translate }}
       </button>
       <button type="button" class="nav-btn primary" (click)="saveCertification()" [disabled]="isSaving || !hasResults">
         <i class="fas fa-save"></i> {{ isSaving ? 'Enregistrement...' : 'Enregistrer' }}
@@ -36,10 +42,16 @@
       <button type="button" class="cta-btn ds-btn ds-btn--primary" (click)="startNewCertification()">
         <i class="fas fa-play-circle"></i> {{ 'CS.Lancerunecertification' | translate }}
       </button>
+      <button type="button" class="link-btn ds-btn ds-btn--ghost ds-btn--sm saved-empty-link" (click)="openSavedCertifications()">
+        <i class="fas fa-folder-open"></i> {{ 'CS.saved.consultExisting' | translate }}
+      </button>
+      <button type="button" class="link-btn ds-btn ds-btn--ghost ds-btn--sm saved-empty-link" (click)="goToCompenseReconciliation()">
+        <i class="fas fa-list"></i> {{ 'CS.Listedescompenses' | translate }}
+      </button>
     </div>
   </div>
 
-  <ng-container *ngIf="directCompenseMode && !hasResults">
+  <ng-container *ngIf="directCompenseMode">
     <div class="page-header direct-page-header">
       <div class="ph-left">
         <div class="ph-eyebrow"><span></span></div>
@@ -123,6 +135,15 @@
               <i class="fas" [ngClass]="isVerifyingCompenses ? 'fa-spinner fa-spin' : 'fa-magnifying-glass'"></i>
               {{ isVerifyingCompenses ? 'Vérification…' : 'Vérifier et charger les lignes OK' }}
             </button>
+            <button
+              type="button"
+              class="oppart-load-btn"
+              (click)="lierCompensesDansOppart()"
+              [disabled]="isLinkingCompenses || compenseListeSource !== 'oppart' || !loadedCompenseLines?.length"
+              title="Lie les lignes BO et Partenaire dans OPPART pour chaque N° Trans GU de la liste (génère token, statut OK)">
+              <i class="fas" [ngClass]="isLinkingCompenses ? 'fa-spinner fa-spin' : 'fa-link'"></i>
+              {{ isLinkingCompenses ? 'Liaison…' : 'Lier les compenses dans OPPART' }}
+            </button>
             <div class="reco-list-meta" *ngIf="compenseListeLoaded || (compenseRecon.loaded && compenseFileSource === 'oppart')">
               <span class="statut-badge" [class.ok]="true">{{ 'CS.OPPART' | translate }} {{ compenseLines.length | number:'1.0-0' }} {{ 'CS.Lignes' | translate }} {{ compenseRecon.amounts.length | number:'1.0-0' }} {{ 'CS.Montants' | translate }}</span>
               <button type="button" class="link-btn ds-btn ds-btn--ghost ds-btn--sm" (click)="resetCompenseListe(); resetCompenseFile()">{{ 'COMMON.actions.reset' | translate }}</button>
@@ -195,7 +216,15 @@
 
         <div class="compense-tables" #directCompenseTables>
           <div class="compense-table-col">
-            <h4><i class="fas fa-table"></i> {{ 'CS.Listedescompenses' | translate }}</h4>
+            <div class="fichier-block-header">
+              <h4><i class="fas fa-table"></i> {{ 'CS.Listedescompenses' | translate }}</h4>
+              <div class="fichier-block-actions" *ngIf="compenseLines.length">
+                <button type="button" class="cta-btn sm ds-btn ds-btn--secondary ds-btn--sm" (click)="exportCompenseListExcel()" [disabled]="isExportingExcel">
+                  <i class="fas fa-file-excel"></i>
+                  {{ isExportingExcel ? 'Export en cours…' : 'Exporter Excel' }}
+                </button>
+              </div>
+            </div>
             <table class="aggregates-table compense-table ds-table" *ngIf="compenseLines.length; else noCompenseDirect">
               <thead>
                 <tr>
@@ -322,7 +351,7 @@
     </div>
   </ng-container>
 
-  <ng-container *ngIf="hasResults && computed">
+  <ng-container *ngIf="hasResults && computed && !directCompenseMode">
     <div class="page-header">
       <div class="ph-left">
         <div class="ph-eyebrow">
@@ -374,7 +403,6 @@
             <input id="numeroCompte" type="text" [(ngModel)]="numeroCompte" placeholder="{{ 'CS.Ex77123456789' | translate }}">
           </div>
         </div>
-
         <div class="form-row two-cols">
           <div class="field">
             <label for="dateCertificationDe">{{ 'CS.Périodedu' | translate }}</label>
@@ -410,6 +438,14 @@
             <small *ngIf="computed.soldeClotureOppart != null" class="hint">
               {{ 'CS.Suggestionoppart' | translate }} {{ formatNumber(computed.soldeClotureOppart) }}
             </small>
+          </div>
+        </div>
+
+        <div class="form-row">
+          <div class="field">
+            <label for="commentaireCertification">{{ 'CS.saved.comment' | translate }}</label>
+            <textarea id="commentaireCertification" rows="2" maxlength="2000" [(ngModel)]="commentaire"
+                      placeholder="{{ 'CS.saved.commentPlaceholder' | translate }}"></textarea>
           </div>
         </div>
 
@@ -689,6 +725,15 @@
             <i class="fas" [ngClass]="isVerifyingCompenses ? 'fa-spinner fa-spin' : 'fa-magnifying-glass'"></i>
             {{ isVerifyingCompenses ? 'Vérification…' : 'Vérifier et charger les lignes OK' }}
           </button>
+          <button
+            type="button"
+            class="oppart-load-btn"
+            (click)="lierCompensesDansOppart()"
+            [disabled]="isLinkingCompenses || compenseListeSource !== 'oppart' || !loadedCompenseLines?.length"
+            title="Lie les lignes BO et Partenaire dans OPPART pour chaque N° Trans GU de la liste (génère token, statut OK)">
+            <i class="fas" [ngClass]="isLinkingCompenses ? 'fa-spinner fa-spin' : 'fa-link'"></i>
+            {{ isLinkingCompenses ? 'Liaison…' : 'Lier les compenses dans OPPART' }}
+          </button>
           <div class="reco-list-meta" *ngIf="compenseListeLoaded || (compenseRecon.loaded && compenseFileSource === 'oppart')">
             <span class="statut-badge ok">{{ 'CS.OPPART' | translate }} {{ compenseLines.length | number:'1.0-0' }} {{ 'CS.Lignes' | translate }} {{ compenseRecon.amounts.length | number:'1.0-0' }} {{ 'CS.Montants' | translate }}</span>
             <button type="button" class="link-btn ds-btn ds-btn--ghost ds-btn--sm" (click)="resetCompenseListe(); resetCompenseFile()">{{ 'CS.Utiliserlalistecalculée' | translate }}</button>
@@ -793,7 +838,7 @@
           </div>
           <div class="summary-item" *ngIf="computed.fraisAttendu != null">
             <span class="text-danger">{{ 'CS.Écartfraisattendufacturé' | translate }}</span>
-            <strong class="text-danger">{{ formatNumber(Math.abs(computed.fraisAttendu) - Math.abs(computed.oppartOperationBreakdown.frais)) }}</strong>
+            <strong class="text-danger">{{ formatNumber(ecartFrais) }}</strong>
           </div>
           <div class="summary-item" *ngFor="let t of computed.oppartOperationBreakdown.otherTypes">
             <span>{{ t.type }}</span>
@@ -852,6 +897,8 @@
         <table class="pdf-kv-table ds-table">
           <tr><td>{{ 'CS.Plage' | translate }}</td><td>{{ formatDateRangeLabel() }}</td></tr>
           <tr><td>{{ 'CS.Numérocompte' | translate }}</td><td>{{ numeroCompte || '—' }}</td></tr>
+          <tr *ngIf="env"><td>{{ 'CS.saved.env' | translate }}</td><td>{{ env }}</td></tr>
+          <tr *ngIf="pays"><td>{{ 'CS.saved.country' | translate }}</td><td>{{ paysLabel(pays) }}</td></tr>
         </table>
       </section>
 
@@ -890,28 +937,97 @@
         </table>
       </section>
 
-      <section class="pdf-export-section" *ngIf="compenseLines.length">
+      <section class="pdf-export-section" *ngIf="compenseLines.length || compenseRecon.loaded">
         <h2>{{ 'CS.Compenseclient' | translate }}</h2>
-        <table class="pdf-data-table">
+
+        <table class="pdf-data-table pdf-detail-table pdf-compense-table" *ngIf="compenseLines.length">
           <thead>
-            <tr><th>{{ 'TBL.agency' | translate }}</th><th>{{ 'CS.Totalmontant' | translate }}</th></tr>
+            <tr class="pdf-subheader-row">
+              <th colspan="4">
+                {{ 'CS.Listedescompenses' | translate }}
+                — {{ compenseListeLoaded ? (compenseListeFileName || 'Fichier') : 'Liste calculée' }}
+              </th>
+            </tr>
+            <tr>
+              <th>{{ 'TBL.agency' | translate }}</th>
+              <th>{{ 'TBL.guTransactionNumber' | translate }}</th>
+              <th>{{ 'TBL.amount' | translate }}</th>
+              <th *ngIf="compenseRecon.loaded">{{ 'TBL.status' | translate }}</th>
+            </tr>
           </thead>
           <tbody>
-            <tr *ngFor="let row of compenseParAgence">
-              <td>{{ row.agence }}</td>
-              <td>{{ row.montant | number:'1.0-0' }}</td>
+            <tr *ngFor="let line of compenseLines; let i = index">
+              <td>{{ line.agence || '—' }}</td>
+              <td>{{ line.numeroTransGu || '—' }}</td>
+              <td class="pdf-amount-cell">{{ line.montant | number:'1.0-0' }}</td>
+              <td *ngIf="compenseRecon.loaded" class="pdf-status-cell"
+                  [class.pdf-status-ok]="isCompenseMontantMatchedAt(i)"
+                  [class.pdf-status-ko]="!isCompenseMontantMatchedAt(i)">
+                {{ isCompenseMontantMatchedAt(i) ? 'OK' : 'KO' }}
+              </td>
             </tr>
           </tbody>
           <tfoot>
-            <tr *ngIf="compenseRecon.loaded">
-              <td><strong>{{ 'TBL.partner' | translate }}</strong></td>
-              <td><strong>{{ formatNumber(compenseRecon.fileTotal) }}</strong></td>
-            </tr>
-            <tr *ngIf="compenseRecon.loaded" class="pdf-ecart-compense">
-              <td><strong>{{ compenseEcartLabel }}</strong></td>
-              <td><strong>{{ formatNumber(compenseFileEcart) }}</strong></td>
+            <tr>
+              <td colspan="2"><strong>{{ 'CS.Totalliste' | translate }}</strong></td>
+              <td class="pdf-amount-cell"><strong>{{ formatNumber(compenseListeAbsTotal) }}</strong></td>
+              <td *ngIf="compenseRecon.loaded"></td>
             </tr>
           </tfoot>
+        </table>
+
+        <table class="pdf-data-table pdf-detail-table pdf-compense-table" *ngIf="compenseRecon.loaded && compensePartnerLines.length">
+          <thead>
+            <tr class="pdf-subheader-row">
+              <th colspan="4">{{ 'TBL.partner' | translate }} — {{ compenseRecon.fileName || 'Fichier des montants' }}</th>
+            </tr>
+            <tr>
+              <th>{{ 'TBL.agency' | translate }}</th>
+              <th>{{ 'TBL.transactionId' | translate }}</th>
+              <th>{{ 'TBL.amount' | translate }}</th>
+              <th>{{ 'TBL.status' | translate }}</th>
+            </tr>
+          </thead>
+          <tbody>
+            <tr *ngFor="let line of compensePartnerLines">
+              <td>{{ line.agence || '—' }}</td>
+              <td>{{ line.idTransaction || '—' }}</td>
+              <td class="pdf-amount-cell">{{ line.montant | number:'1.0-0' }}</td>
+              <td class="pdf-status-cell"
+                  [class.pdf-status-ok]="line.statut"
+                  [class.pdf-status-ko]="!line.statut">
+                {{ line.statut ? 'OK' : 'KO' }}
+              </td>
+            </tr>
+          </tbody>
+          <tfoot>
+            <tr>
+              <td colspan="2"><strong>{{ 'CS.Totalfichiersélectionné' | translate }}</strong></td>
+              <td class="pdf-amount-cell"><strong>{{ formatNumber(compenseFileTotal) }}</strong></td>
+              <td></td>
+            </tr>
+            <tr class="pdf-ecart-compense">
+              <td colspan="2"><strong>{{ compenseEcartLabel }}</strong></td>
+              <td class="pdf-amount-cell"><strong>{{ formatNumber(compenseFileEcart) }}</strong></td>
+              <td></td>
+            </tr>
+          </tfoot>
+        </table>
+
+        <table class="pdf-data-table" *ngIf="compenseRecon.loaded && !compensePartnerLines.length">
+          <thead>
+            <tr><th>{{ 'TBL.partner' | translate }}</th><th>{{ 'CS.Totalmontant' | translate }}</th></tr>
+          </thead>
+          <tbody>
+            <tr>
+              <td>{{ 'CS.Totalfichiersélectionné' | translate }}</td>
+              <td>{{ formatNumber(compenseFileTotal) }}</td>
+            </tr>
+            <tr class="pdf-ecart-compense">
+              <td>{{ compenseEcartLabel }}</td>
+              <td>{{ formatNumber(compenseFileEcart) }}</td>
+            </tr>
+          </tbody>
         </table>
       </section>
 
@@ -993,7 +1109,7 @@
               {{ 'CS.Écartfrais' | translate }}
               <br><small class="derived-formula">Frais attendus − Frais facturés (OPPART)</small>
             </td>
-            <td>{{ formatNumber(Math.abs(computed.fraisAttendu) - Math.abs(computed.oppartOperationBreakdown.frais)) }}</td>
+            <td>{{ formatNumber(ecartFrais) }}</td>
           </tr>
           <tr *ngFor="let t of computed.oppartOperationBreakdown.otherTypes">
             <td>{{ t.type }}</td>
@@ -1034,6 +1150,482 @@
       </section>
     </div>
   </ng-container>
+
+  <!-- Enregistrer : environnement et pays de la certification -->
+  <div class="pdf-preview-overlay" *ngIf="showSaveMetaModal" (click)="closeSaveMetaModal()">
+    <form class="pdf-preview-modal save-meta-modal" (click)="$event.stopPropagation()" (ngSubmit)="confirmSaveMeta()">
+      <div class="pdf-preview-header">
+        <div class="pdf-preview-title">
+          <i class="fas fa-save saved-title-icon"></i>
+          <div>
+            <h3>{{ 'CS.saveMeta.title' | translate }}</h3>
+            <span class="pdf-preview-filename">{{ numeroCompte }} — {{ formatPeriodeFr(dateCertificationDe, dateCertificationAu) }}</span>
+          </div>
+        </div>
+        <button type="button" class="pdf-preview-close" (click)="closeSaveMetaModal()" [attr.aria-label]="'COMMON.actions.close' | translate">
+          <i class="fas fa-times"></i>
+        </button>
+      </div>
+
+      <div class="save-meta-body">
+        <p class="save-meta-info">{{ 'CS.saveMeta.info' | translate }}</p>
+        <div class="field">
+          <label for="saveMetaEnv">{{ 'CS.saved.env' | translate }} *</label>
+          <select id="saveMetaEnv" name="saveMetaEnv" [(ngModel)]="saveMetaEnv" required>
+            <option value="" disabled>{{ 'CS.saveMeta.selectEnv' | translate }}</option>
+            <option *ngFor="let e of envOptions" [value]="e">{{ e }}</option>
+          </select>
+        </div>
+        <div class="field">
+          <label for="saveMetaPays">{{ 'CS.saved.country' | translate }}<ng-container *ngIf="paysOptions.length"> *</ng-container></label>
+          <select id="saveMetaPays" name="saveMetaPays" [(ngModel)]="saveMetaPays" [required]="paysOptions.length > 0">
+            <option value="" disabled>{{ (paysOptions.length ? 'CS.saveMeta.selectCountry' : 'CS.saveMeta.noCountry') | translate }}</option>
+            <option *ngFor="let p of paysOptions" [value]="p.code">{{ p.code }} - {{ p.nom }}</option>
+          </select>
+        </div>
+
+        <button type="button" class="link-btn new-country-btn" (click)="toggleCreatePaysForm('save')">
+          <i class="fas" [ngClass]="paysFormTarget === 'save' ? 'fa-times' : 'fa-plus'"></i>
+          {{ (paysFormTarget === 'save' ? 'COMMON.actions.cancel' : 'CS.saved.newCountry') | translate }}
+        </button>
+        <div class="saved-pays-form" *ngIf="paysFormTarget === 'save'">
+          <input type="text" name="savePaysCode" [(ngModel)]="paysFormCode" maxlength="10"
+                 [placeholder]="'CS.saved.countryCode' | translate" [disabled]="isCreatingPays">
+          <input type="text" name="savePaysNom" [(ngModel)]="paysFormNom" maxlength="100"
+                 [placeholder]="'CS.saved.countryName' | translate" [disabled]="isCreatingPays">
+          <button type="button" class="pdf-preview-btn primary" (click)="createPays()" [disabled]="isCreatingPays">
+            <i class="fas" [ngClass]="isCreatingPays ? 'fa-spinner fa-spin' : 'fa-check'"></i>
+            {{ 'CS.saved.createCountry' | translate }}
+          </button>
+        </div>
+      </div>
+
+      <div class="save-meta-footer">
+        <button type="button" class="pdf-preview-btn secondary" (click)="closeSaveMetaModal()">
+          {{ 'COMMON.actions.cancel' | translate }}
+        </button>
+        <button type="submit" class="pdf-preview-btn primary" [disabled]="!canConfirmSaveMeta || isSaving">
+          <i class="fas fa-save"></i> {{ 'CS.saveMeta.confirm' | translate }}
+        </button>
+      </div>
+    </form>
+  </div>
+
+  <!-- Certifications enregistrées : liste et consultation -->
+  <div class="pdf-preview-overlay" *ngIf="showSavedPanel" (click)="closeSavedPanel()">
+    <div class="pdf-preview-modal saved-modal" (click)="$event.stopPropagation()">
+      <div class="pdf-preview-header">
+        <div class="pdf-preview-title">
+          <i class="fas fa-folder-open saved-title-icon"></i>
+          <div>
+            <h3>{{ 'CS.saved.title' | translate }}</h3>
+            <span class="pdf-preview-filename" *ngIf="!savedResultat">{{ 'CS.saved.subtitle' | translate }}</span>
+            <span class="pdf-preview-filename" *ngIf="savedResultat">
+              {{ savedResultat.numeroCompte }} — {{ formatPeriodeFr(savedResultat.dateDebut, savedResultat.dateFin) }}
+            </span>
+          </div>
+        </div>
+        <button type="button" class="pdf-preview-close" (click)="closeSavedPanel()" [attr.aria-label]="'COMMON.actions.close' | translate">
+          <i class="fas fa-times"></i>
+        </button>
+      </div>
+
+      <div class="pdf-preview-body saved-body">
+        <ng-container *ngIf="!savedResultat">
+          <form class="saved-filters" (ngSubmit)="searchSavedCertifications()">
+            <div class="field">
+              <label for="savedCompte">{{ 'TBL.accountNumber' | translate }}</label>
+              <input id="savedCompte" name="savedCompte" type="text" [(ngModel)]="savedFilter.numeroCompte">
+            </div>
+            <div class="field">
+              <label for="savedEnv">{{ 'CS.saved.env' | translate }}</label>
+              <select id="savedEnv" name="savedEnv" [(ngModel)]="savedFilter.env">
+                <option value="">{{ 'CS.saved.all' | translate }}</option>
+                <option *ngFor="let e of envOptions" [value]="e">{{ e }}</option>
+              </select>
+            </div>
+            <div class="field">
+              <label for="savedPays">{{ 'CS.saved.country' | translate }}</label>
+              <select id="savedPays" name="savedPays" [(ngModel)]="savedFilter.pays">
+                <option value="">{{ 'CS.saved.all' | translate }}</option>
+                <option *ngFor="let p of paysOptions" [value]="p.code">{{ p.code }} - {{ p.nom }}</option>
+              </select>
+            </div>
+            <div class="field">
+              <label for="savedDu">{{ 'CS.Périodedu' | translate }}</label>
+              <input id="savedDu" name="savedDu" type="date" [(ngModel)]="savedFilter.dateDebut">
+            </div>
+            <div class="field">
+              <label for="savedAu">{{ 'CS.Périodeau' | translate }}</label>
+              <input id="savedAu" name="savedAu" type="date" [(ngModel)]="savedFilter.dateFin">
+            </div>
+            <div class="saved-filter-actions">
+              <button type="submit" class="pdf-preview-btn primary" [disabled]="isLoadingSaved">
+                <i class="fas fa-search"></i> {{ 'CS.saved.search' | translate }}
+              </button>
+              <button type="button" class="pdf-preview-btn secondary" (click)="resetSavedFilter()" [disabled]="isLoadingSaved">
+                {{ 'COMMON.actions.reset' | translate }}
+              </button>
+            </div>
+          </form>
+
+          <div class="pdf-preview-loading saved-loading" *ngIf="isLoadingSaved">
+            <i class="fas fa-spinner fa-spin"></i> {{ 'CS.saved.loading' | translate }}
+          </div>
+
+          <p class="saved-empty" *ngIf="!isLoadingSaved && !savedList.length">{{ 'CS.saved.empty' | translate }}</p>
+
+          <div class="saved-table-wrap" *ngIf="!isLoadingSaved && savedList.length">
+          <table class="saved-table">
+            <thead>
+              <tr>
+                <th>{{ 'TBL.accountNumber' | translate }}</th>
+                <th class="center">{{ 'CS.saved.env' | translate }}</th>
+                <th class="center">{{ 'CS.saved.country' | translate }}</th>
+                <th>{{ 'CS.saved.period' | translate }}</th>
+                <th class="num">{{ 'CPT.Soldedouverture_1' | translate }}</th>
+                <th class="num">{{ 'CPT.Soldedeclôture_1' | translate }}</th>
+                <th class="num">{{ 'CS.Écartdecertification' | translate }}</th>
+                <th>{{ 'CS.saved.savedAt' | translate }}</th>
+                <th></th>
+              </tr>
+            </thead>
+            <tbody>
+              <tr *ngFor="let row of savedList">
+                <td>
+                  <strong>{{ row.numeroCompte }}</strong>
+                  <small class="saved-comment" *ngIf="row.commentaire" [title]="row.commentaire">{{ row.commentaire }}</small>
+                </td>
+                <td class="center">
+                  <span class="saved-tag" *ngIf="row.env; else noValue">{{ row.env }}</span>
+                </td>
+                <td class="center">
+                  <span class="saved-tag saved-tag--pays" *ngIf="row.pays; else noValue" [title]="paysLabel(row.pays)">{{ row.pays }}</span>
+                </td>
+                <td class="nowrap">{{ formatPeriodeFr(row.dateDebut, row.dateFin) }}</td>
+                <td class="num">{{ formatNumber(row.soldeOuverture) }}</td>
+                <td class="num">{{ formatNumber(row.soldeCloture) }}</td>
+                <td class="num" [class.saved-ecart-nonzero]="row.ecartCertification != null && row.ecartCertification !== 0">
+                  {{ formatNumber(row.ecartCertification) }}
+                </td>
+                <td class="nowrap">
+                  {{ formatDateTimeFr(row.updatedAt) }}
+                  <small class="saved-by" *ngIf="row.updatedBy">{{ row.updatedBy }}</small>
+                </td>
+                <td>
+                  <div class="saved-actions">
+                    <button type="button" class="pdf-preview-btn primary" (click)="consultSaved(row)">
+                      <i class="fas fa-eye"></i> {{ 'CS.saved.view' | translate }}
+                    </button>
+                    <button type="button" class="pdf-preview-btn secondary" (click)="deleteSaved(row)"
+                            [attr.aria-label]="'CS.saved.delete' | translate" [title]="'CS.saved.delete' | translate">
+                      <i class="fas fa-trash"></i>
+                    </button>
+                  </div>
+                </td>
+              </tr>
+            </tbody>
+          </table>
+          <ng-template #noValue><span class="saved-muted">—</span></ng-template>
+          </div>
+
+          <div class="saved-pagination" *ngIf="!isLoadingSaved && savedTotalElements > 0">
+            <span class="saved-pagination-info">
+              {{ 'CS.saved.range' | translate:{ start: savedRangeStart, end: savedRangeEnd, total: savedTotalElements } }}
+            </span>
+            <label class="saved-pagination-size">
+              {{ 'PAG.rowsPerPage' | translate }}
+              <select name="savedPageSize" [(ngModel)]="savedPageSize" (ngModelChange)="onSavedPageSizeChange()">
+                <option *ngFor="let s of savedPageSizeOptions" [ngValue]="s">{{ s }}</option>
+              </select>
+            </label>
+            <div class="saved-pagination-nav">
+              <button type="button" class="pdf-preview-btn secondary" (click)="goToSavedPage(0)"
+                      [disabled]="savedPage === 0" [title]="'PAG.first' | translate" [attr.aria-label]="'PAG.first' | translate">
+                <i class="fas fa-angle-double-left"></i>
+              </button>
+              <button type="button" class="pdf-preview-btn secondary" (click)="goToSavedPage(savedPage - 1)"
+                      [disabled]="savedPage === 0" [title]="'PAG.previousPage' | translate" [attr.aria-label]="'PAG.previousPage' | translate">
+                <i class="fas fa-angle-left"></i>
+              </button>
+              <span class="saved-pagination-page">{{ 'CS.saved.pageOf' | translate:{ current: savedPage + 1, total: savedTotalPages } }}</span>
+              <button type="button" class="pdf-preview-btn secondary" (click)="goToSavedPage(savedPage + 1)"
+                      [disabled]="savedPage >= savedTotalPages - 1" [title]="'PAG.nextPage' | translate" [attr.aria-label]="'PAG.nextPage' | translate">
+                <i class="fas fa-angle-right"></i>
+              </button>
+              <button type="button" class="pdf-preview-btn secondary" (click)="goToSavedPage(savedTotalPages - 1)"
+                      [disabled]="savedPage >= savedTotalPages - 1" [title]="'PAG.last' | translate" [attr.aria-label]="'PAG.last' | translate">
+                <i class="fas fa-angle-double-right"></i>
+              </button>
+            </div>
+          </div>
+        </ng-container>
+
+        <!-- Pays de la certification consultée : modifiable (hors contenu du PDF) -->
+        <div class="saved-meta-bar" *ngIf="savedResultat as r">
+          <div class="saved-meta-row">
+            <label class="saved-meta-label" for="savedMetaPays">{{ 'CS.saved.editCountry' | translate }}</label>
+            <select id="savedMetaPays" name="savedMetaPays" [(ngModel)]="savedPaysDraft"
+                    [disabled]="isSavingSavedPays || isCreatingPays">
+              <option value="">{{ 'CS.saved.none' | translate }}</option>
+              <option *ngFor="let p of paysOptions" [value]="p.code">{{ p.code }} - {{ p.nom }}</option>
+            </select>
+            <button type="button" class="pdf-preview-btn primary" (click)="saveSavedPays()"
+                    [disabled]="isSavingSavedPays || isCreatingPays || savedPaysDraft === (r.pays || '')">
+              <i class="fas" [ngClass]="isSavingSavedPays ? 'fa-spinner fa-spin' : 'fa-save'"></i>
+              {{ 'COMMON.actions.save' | translate }}
+            </button>
+            <button type="button" class="pdf-preview-btn secondary" (click)="toggleCreatePaysForm('saved')"
+                    [disabled]="isSavingSavedPays">
+              <i class="fas" [ngClass]="paysFormTarget === 'saved' ? 'fa-times' : 'fa-plus'"></i>
+              {{ (paysFormTarget === 'saved' ? 'COMMON.actions.cancel' : 'CS.saved.newCountry') | translate }}
+            </button>
+          </div>
+          <div class="saved-pays-form" *ngIf="paysFormTarget === 'saved'">
+            <input type="text" name="savedPaysCode" [(ngModel)]="paysFormCode" maxlength="10"
+                   [placeholder]="'CS.saved.countryCode' | translate" [disabled]="isCreatingPays">
+            <input type="text" name="savedPaysNom" [(ngModel)]="paysFormNom" maxlength="100"
+                   [placeholder]="'CS.saved.countryName' | translate" [disabled]="isCreatingPays">
+            <button type="button" class="pdf-preview-btn primary" (click)="createPays()" [disabled]="isCreatingPays">
+              <i class="fas" [ngClass]="isCreatingPays ? 'fa-spinner fa-spin' : 'fa-check'"></i>
+              {{ 'CS.saved.createCountry' | translate }}
+            </button>
+          </div>
+        </div>
+
+        <div class="saved-doc" #savedDocContent *ngIf="savedResultat as r">
+          <div class="pdf-export-header">
+            <div class="pdf-export-title">
+              <h1>{{ 'FU.Certificationdesolde' | translate }}</h1>
+              <p>{{ r.titre || reconciliationTitle }}</p>
+              <p class="pdf-export-meta">
+                {{ 'CS.saved.savedOn' | translate }} {{ formatDateTimeFr(r.updatedAt) }}<ng-container *ngIf="r.updatedBy"> — {{ r.updatedBy }}</ng-container>
+              </p>
+            </div>
+            <img [src]="pdfLogoDataUrl || 'assets/point-touch-logo.png'" alt="Point Touch" class="pdf-export-logo">
+          </div>
+
+          <div class="pdf-solde-banner">{{ savedSoldeBanner(r) }}</div>
+
+          <section class="pdf-export-section">
+            <h2>{{ 'CS.Informations' | translate }}</h2>
+            <table class="pdf-kv-table ds-table">
+              <tr><td>{{ 'CS.Plage' | translate }}</td><td>{{ formatPeriodeFr(r.dateDebut, r.dateFin) }} ({{ r.heureOuverture || '00:00:00' }} → {{ r.heureCloture || '23:59:59' }})</td></tr>
+              <tr><td>{{ 'CS.Numérocompte' | translate }}</td><td>{{ r.numeroCompte || '—' }}</td></tr>
+              <tr *ngIf="r.env"><td>{{ 'CS.saved.env' | translate }}</td><td>{{ r.env }}</td></tr>
+              <tr *ngIf="r.pays"><td>{{ 'CS.saved.country' | translate }}</td><td>{{ paysLabel(r.pays) }}</td></tr>
+              <tr *ngIf="r.commentaire"><td>{{ 'CS.saved.comment' | translate }}</td><td>{{ r.commentaire }}</td></tr>
+            </table>
+          </section>
+
+          <section class="pdf-export-section">
+            <h2>{{ 'CPT.Balances' | translate }}</h2>
+            <table class="pdf-kv-table ds-table">
+              <tr><td>{{ 'CPT.Soldedouverture_1' | translate }}</td><td>{{ formatNumber(r.soldeOuverture) }}</td></tr>
+              <tr class="pdf-debit"><td>{{ 'OPS.Totaldébit' | translate }}</td><td>{{ formatNumber(r.totalDebit) }}</td></tr>
+              <tr class="pdf-credit"><td>{{ 'OPS.Totalcrédit' | translate }}</td><td>{{ formatNumber(r.totalCredit) }}</td></tr>
+              <tr class="pdf-cloture"><td>{{ 'CPT.Soldedeclôture_1' | translate }}</td><td>{{ formatNumber(r.soldeCloture) }}</td></tr>
+              <tr><td>{{ 'TBL.variation' | translate }}</td><td>{{ formatNumber(r.variation) }}</td></tr>
+              <tr><td>{{ 'CS.Mouvementnetoppart' | translate }}</td><td>{{ formatNumber(r.mouvementNetOppart) }}</td></tr>
+              <tr class="pdf-frais-attendu" *ngIf="r.fraisAttendu != null"><td>{{ 'CS.Fraisattendu' | translate }}</td><td>{{ formatNumber(r.fraisAttendu) }}</td></tr>
+              <tr class="pdf-highlight"><td>{{ 'CS.Écartmouvement' | translate }}</td><td>{{ formatNumber(r.ecartMouvement) }}</td></tr>
+              <tr class="pdf-highlight" *ngIf="r.soldeClotureTheorique != null"><td>{{ 'CS.Soldedeclôturethéorique' | translate }}</td><td>{{ formatNumber(r.soldeClotureTheorique) }}</td></tr>
+            </table>
+          </section>
+
+          <section class="pdf-export-section" *ngIf="savedDetails?.regularisation?.length">
+            <h2>{{ 'CS.Détailrégularisationtsoptrxsfécartspartenaire' | translate }}</h2>
+            <table class="pdf-data-table pdf-detail-table">
+              <thead>
+                <tr>
+                  <th>{{ 'COMMON.actions.type' | translate }}</th><th>{{ 'COMMON.actions.count' | translate }}</th><th>{{ 'TBL.amount' | translate }}</th><th>{{ 'TBL.fees' | translate }}</th><th>{{ 'CS.Àrégulariser' | translate }}</th>
+                </tr>
+              </thead>
+              <tbody>
+                <tr *ngFor="let row of savedDetails!.regularisation">
+                  <td>{{ row.label }}</td>
+                  <td>{{ row.count | number:'1.0-0' }}</td>
+                  <td>{{ row.volume | number:'1.0-0' }}</td>
+                  <td>{{ row.frais ? (row.frais | number:'1.0-0') : '—' }}</td>
+                  <td><strong>{{ row.montantARegulariser ? (row.montantARegulariser | number:'1.0-0') : '—' }}</strong></td>
+                </tr>
+              </tbody>
+            </table>
+          </section>
+
+          <section class="pdf-export-section" *ngIf="savedDetails?.compense as comp">
+            <h2>{{ 'CS.Compenseclient' | translate }}</h2>
+            <table class="pdf-data-table">
+              <thead>
+                <tr><th>{{ 'TBL.agency' | translate }}</th><th>{{ 'CS.Totalmontant' | translate }}</th></tr>
+              </thead>
+              <tbody>
+                <tr *ngFor="let row of comp.parAgence">
+                  <td>{{ row.agence }}</td>
+                  <td>{{ row.montant | number:'1.0-0' }}</td>
+                </tr>
+              </tbody>
+              <tfoot *ngIf="comp.totalPartenaire != null">
+                <tr>
+                  <td><strong>{{ 'TBL.partner' | translate }}</strong></td>
+                  <td><strong>{{ formatNumber(comp.totalPartenaire) }}</strong></td>
+                </tr>
+                <tr class="pdf-ecart-compense">
+                  <td><strong>{{ comp.ecartLabel }}</strong></td>
+                  <td><strong>{{ formatNumber(comp.ecart) }}</strong></td>
+                </tr>
+              </tfoot>
+            </table>
+          </section>
+
+          <section class="pdf-export-section" *ngIf="savedDetails?.ecartPartenaire as ep">
+            <h2>{{ 'CS.Lignesdécartpartenairehorscompense' | translate }}</h2>
+            <table class="pdf-data-table">
+              <thead>
+                <tr><th>{{ 'TBL.agency' | translate }}</th><th>{{ 'CS.Totalmontant' | translate }}</th></tr>
+              </thead>
+              <tbody>
+                <tr *ngFor="let row of ep.parAgence">
+                  <td>{{ row.agence }}</td>
+                  <td>{{ row.montant | number:'1.0-0' }}</td>
+                </tr>
+              </tbody>
+              <tfoot>
+                <tr>
+                  <td><strong>{{ 'CS.Totalliste' | translate }}</strong></td>
+                  <td><strong>{{ formatNumber(ep.totalListe) }}</strong></td>
+                </tr>
+                <tr *ngIf="ep.totalFichier != null">
+                  <td><strong>{{ 'CS.Totalfichiersélectionné' | translate }}</strong></td>
+                  <td><strong>{{ formatNumber(ep.totalFichier) }}</strong></td>
+                </tr>
+                <tr *ngIf="ep.totalFichier != null" class="pdf-ecart-compense">
+                  <td><strong>{{ ep.ecartLabel }}</strong></td>
+                  <td><strong>{{ formatNumber(ep.ecart) }}</strong></td>
+                </tr>
+              </tfoot>
+            </table>
+            <table class="pdf-data-table pdf-detail-table" *ngIf="ep.lignes.length">
+              <thead>
+                <tr>
+                  <th>{{ 'TBL.guTransactionNumber' | translate }}</th><th>{{ 'TBL.service' | translate }}</th><th>{{ 'TBL.agency' | translate }}</th><th>{{ 'TBL.amount' | translate }}</th><th>{{ 'TBL.status' | translate }}</th>
+                </tr>
+              </thead>
+              <tbody>
+                <tr *ngFor="let line of ep.lignes">
+                  <td>{{ line.numeroTransGu || '—' }}</td>
+                  <td>{{ line.service || '—' }}</td>
+                  <td>{{ line.agence || '—' }}</td>
+                  <td>{{ line.montant | number:'1.0-0' }}</td>
+                  <td>{{ line.statut }}</td>
+                </tr>
+              </tbody>
+              <tfoot>
+                <tr>
+                  <td colspan="3"><strong>{{ 'COMMON.actions.ok' | translate }}</strong></td>
+                  <td>{{ ep.okCount | number:'1.0-0' }}</td>
+                  <td></td>
+                </tr>
+                <tr>
+                  <td colspan="3"><strong>KO</strong></td>
+                  <td>{{ ep.koCount | number:'1.0-0' }}</td>
+                  <td></td>
+                </tr>
+              </tfoot>
+            </table>
+          </section>
+
+          <section class="pdf-export-section">
+            <h2>{{ 'CS.Synthèseréconciliation' | translate }}</h2>
+            <table class="pdf-kv-table ds-table">
+              <tr><td>{{ 'CS.Lignesbotrxbo' | translate }}</td><td>{{ r.nbLignesBo | number:'1.0-0' }}</td></tr>
+              <tr><td>{{ 'CS.Lignespartenaireoppart' | translate }}</td><td>{{ r.nbLignesPartenaire | number:'1.0-0' }}</td></tr>
+              <tr><td>{{ 'TBL.matches' | translate }}</td><td>{{ r.nbCorrespondances | number:'1.0-0' }}</td></tr>
+              <tr *ngIf="r.volumeEcartBo != null"><td>{{ 'CS.Montantécartsbo' | translate }}</td><td>{{ r.volumeEcartBo | number:'1.0-0' }}</td></tr>
+              <tr *ngIf="r.volumeEcartPartenaire != null"><td>{{ 'CS.Montantécartspartenaire' | translate }}</td><td>{{ r.volumeEcartPartenaire | number:'1.0-0' }}</td></tr>
+              <tr class="pdf-ecart-certification"><td>{{ 'CS.Écartdecertification' | translate }}</td><td>{{ formatNumber(r.ecartCertification) }}</td></tr>
+              <ng-container *ngIf="r.fraisFactures != null">
+                <tr class="pdf-kv-subheader">
+                  <td colspan="2">{{ 'CS.Typesdopérations' | translate }}</td>
+                </tr>
+                <tr>
+                  <td>{{ 'CS.Fraisfraistransaction' | translate }}</td>
+                  <td>{{ r.fraisFactures | number:'1.0-0' }}</td>
+                </tr>
+                <tr class="pdf-ecart-frais" *ngIf="r.ecartFrais != null">
+                  <td>
+                    {{ 'CS.Écartfrais' | translate }}
+                    <br><small class="derived-formula">Frais attendus − Frais facturés (OPPART)</small>
+                  </td>
+                  <td>{{ formatNumber(r.ecartFrais) }}</td>
+                </tr>
+                <tr *ngFor="let t of savedDetails?.typesOperations ?? []">
+                  <td>{{ t.type }}</td>
+                  <td>{{ t.volume | number:'1.0-0' }}</td>
+                </tr>
+              </ng-container>
+            </table>
+
+            <table class="pdf-data-table pdf-detail-table" *ngIf="savedDetails?.trxboParService as trx">
+              <thead>
+                <tr class="pdf-subheader-row">
+                  <th colspan="6">{{ 'CS.TRXBOparserviceetclient' | translate }}</th>
+                </tr>
+                <tr>
+                  <th>{{ 'TBL.service' | translate }}</th><th>{{ 'TBL.client' | translate }}</th><th>{{ 'COMMON.actions.count' | translate }}</th><th>{{ 'TBL.volume' | translate }}</th><th>{{ 'TBL.fees' | translate }}</th><th>{{ 'CS.Montantfrais' | translate }}</th>
+                </tr>
+              </thead>
+              <tbody>
+                <tr *ngFor="let s of trx.rows">
+                  <td>{{ s.service }}</td>
+                  <td>{{ s.agence }}</td>
+                  <td>{{ s.count | number:'1.0-0' }}</td>
+                  <td>{{ s.volume | number:'1.0-0' }}</td>
+                  <td>{{ s.frais ? (s.frais | number:'1.0-2') : '-' }}</td>
+                  <td>{{ s.montantFrais ? (s.montantFrais | number:'1.0-0') : '-' }}</td>
+                </tr>
+              </tbody>
+              <tfoot *ngIf="trx.rows.length > 1">
+                <tr class="pdf-service-total">
+                  <td><strong>{{ 'COMMON.actions.total' | translate }}</strong></td>
+                  <td></td>
+                  <td><strong>{{ trx.totalCount | number:'1.0-0' }}</strong></td>
+                  <td><strong>{{ trx.totalVolume | number:'1.0-0' }}</strong></td>
+                  <td></td>
+                  <td><strong>{{ trx.totalMontantFrais | number:'1.0-0' }}</strong></td>
+                </tr>
+              </tfoot>
+            </table>
+          </section>
+        </div>
+      </div>
+
+      <div class="pdf-preview-footer saved-list-footer" *ngIf="!savedResultat">
+        <span class="saved-export-count">{{ savedTotalElements }} {{ savedTotalElements > 1 ? 'certifications' : 'certification' }}</span>
+        <div class="saved-export-actions">
+          <button type="button" class="pdf-preview-btn secondary" (click)="exportSavedListExcel()"
+                  [disabled]="isExportingSavedListExcel || isExportingSavedListPdf || isLoadingSaved || !savedList.length">
+            <i class="fas" [ngClass]="isExportingSavedListExcel ? 'fa-spinner fa-spin' : 'fa-file-excel'"></i>
+            {{ 'CS.saved.exportExcel' | translate }}
+          </button>
+          <button type="button" class="pdf-preview-btn primary" (click)="exportSavedListPdf()"
+                  [disabled]="isExportingSavedListPdf || isExportingSavedListExcel || isLoadingSaved || !savedList.length">
+            <i class="fas" [ngClass]="isExportingSavedListPdf ? 'fa-spinner fa-spin' : 'fa-file-pdf'"></i>
+            {{ isExportingSavedListPdf ? ('CS.saved.exporting' | translate) : ('CS.saved.exportPdf' | translate) }}
+          </button>
+        </div>
+      </div>
+
+      <div class="pdf-preview-footer" *ngIf="savedResultat">
+        <button type="button" class="pdf-preview-btn secondary" (click)="backToSavedList()">
+          <i class="fas fa-arrow-left"></i> {{ 'CS.saved.back' | translate }}
+        </button>
+        <button type="button" class="pdf-preview-btn primary" (click)="exportSavedPdf()" [disabled]="isExportingSavedPdf">
+          <i class="fas fa-file-pdf"></i> {{ isExportingSavedPdf ? ('CS.saved.exporting' | translate) : ('CS.saved.exportPdf' | translate) }}
+        </button>
+      </div>
+    </div>
+  </div>
 
   <!-- Aperçu PDF avant téléchargement -->
   <div class="pdf-preview-overlay" *ngIf="showPdfPreview" (click)="closePdfPreview()">

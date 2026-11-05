@@ -82,6 +82,7 @@ public final class NavigationSubmenuRegistry {
                 "/api/reconciliation/progress",
                 "/api/compte-solde-bo",
                 "/api/compte-solde-cloture",
+                "/api/certification-solde-resultats",
                 "/api/auto-processing"
             ),
             "/certification-solde"
@@ -121,6 +122,13 @@ public final class NavigationSubmenuRegistry {
             List.of("/api/ecart-bo-summary"),
             List.of("/api/ecart-bo-summary"),
             "/ecart-bo-summary"
+        ),
+        new SubmenuAccessDefinition(
+            "Résultats · Suivi TRX à annuler",
+            "Résultats",
+            List.of("/api/suivi-trx-a-annuler"),
+            List.of("/api/suivi-trx-a-annuler"),
+            "/suivi-trx-a-annuler"
         ),
         new SubmenuAccessDefinition(
             "Résultats · Rapport réconciliation",
@@ -183,13 +191,6 @@ public final class NavigationSubmenuRegistry {
             List.of("/api/statistics"),
             List.of("/api/statistics/detailed-metrics", "/api/statistics/dashboard-metrics"),
             "/stats-report-graph"
-        ),
-        new SubmenuAccessDefinition(
-            "Statistiques · Résumé agences",
-            "Statistiques",
-            List.of("/api/statistics", "/api/agency-summary"),
-            List.of("/api/agency-summary"),
-            "/agency-summary"
         ),
 
         new SubmenuAccessDefinition(

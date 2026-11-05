@@ -3,6 +3,7 @@ package com.reconciliation.service;
 import com.reconciliation.entity.PaysEntity;
 import com.reconciliation.entity.ProfilEntity;
 import com.reconciliation.entity.ProfilPaysEntity;
+import com.reconciliation.exception.DuplicateResourceException;
 import com.reconciliation.repository.PaysRepository;
 import com.reconciliation.repository.ProfilPaysRepository;
 import com.reconciliation.repository.ProfilRepository;
@@ -12,10 +13,14 @@ import org.springframework.transaction.annotation.Transactional;
 
 import java.util.ArrayList;
 import java.util.List;
+import java.util.Locale;
 import java.util.Optional;
+import java.util.regex.Pattern;
 
 @Service
 public class PaysService {
+
+    private static final Pattern CODE_PATTERN = Pattern.compile("^[A-Z0-9_-]{2,10}$");
     
     @Autowired
     private PaysRepository paysRepository;
@@ -36,7 +41,22 @@ public class PaysService {
     }
     
     public PaysEntity createPays(PaysEntity pays) {
-        return paysRepository.save(pays);
+        if (pays == null) {
+            throw new IllegalArgumentException("Le pays est requis.");
+        }
+        String code = pays.getCode() == null ? "" : pays.getCode().trim().toUpperCase(Locale.ROOT);
+        String nom = pays.getNom() == null ? "" : pays.getNom().trim();
+        if (!CODE_PATTERN.matcher(code).matches()) {
+            throw new IllegalArgumentException(
+                "Code pays invalide : 2 à 10 caractères (lettres, chiffres, '_' ou '-').");
+        }
+        if (nom.isEmpty() || nom.length() > 100) {
+            throw new IllegalArgumentException("Le nom du pays est requis (100 caractères maximum).");
+        }
+        if (paysRepository.findByCode(code).isPresent()) {
+            throw new DuplicateResourceException("Le pays " + code + " existe déjà.");
+        }
+        return paysRepository.save(new PaysEntity(code, nom));
     }
     
     public PaysEntity updatePays(Long id, PaysEntity pays) {

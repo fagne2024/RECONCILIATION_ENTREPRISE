@@ -1,7 +1,10 @@
 package com.reconciliation.controller;
 
+import com.reconciliation.dto.RecoBlockingCommentMailAlertRequest;
 import com.reconciliation.dto.RecoJ1BlockingCommentDto;
 import com.reconciliation.dto.RecoJ1BlockingCommentSaveRequest;
+import com.reconciliation.entity.RecoBlockingCommentMailAlertEntity;
+import com.reconciliation.service.RecoBlockingCommentMailAlertService;
 import com.reconciliation.service.RecoJ1BlockingCommentService;
 import com.reconciliation.util.RequestContextUtil;
 import lombok.RequiredArgsConstructor;
@@ -29,6 +32,7 @@ import java.util.Map;
 public class RecoJ1BlockingCommentController {
 
     private final RecoJ1BlockingCommentService j1BlockingCommentService;
+    private final RecoBlockingCommentMailAlertService mailAlertService;
 
     @PostConstruct
     void logRegistration() {
@@ -73,6 +77,45 @@ public class RecoJ1BlockingCommentController {
             log.error("PUT j1-blocking-comments: {}", ex.getMessage(), ex);
             return internalError("Erreur lors de l'enregistrement du commentaire J+1.");
         }
+    }
+
+    /** Envoie l'e-mail tout de suite puis active la relance quotidienne (tant que le statut ne change pas). */
+    @PutMapping("/mail-alert")
+    public ResponseEntity<?> activateMailAlert(@RequestBody RecoBlockingCommentMailAlertRequest body) {
+        try {
+            RecoBlockingCommentMailAlertEntity alert = mailAlertService.activate(body, RequestContextUtil.getUsernameFromRequest());
+            return ResponseEntity.ok(commentForAlert(alert));
+        } catch (IllegalArgumentException ex) {
+            return error(HttpStatus.BAD_REQUEST, ex.getMessage());
+        } catch (RecoBlockingCommentMailAlertService.MailAlertSendException ex) {
+            return error(HttpStatus.BAD_GATEWAY, "L'e-mail n'a pas pu être envoyé : " + ex.getMessage());
+        } catch (Exception ex) {
+            log.error("PUT j1-blocking-comments/mail-alert: {}", ex.getMessage(), ex);
+            return internalError("Erreur lors de l'activation de la relance par e-mail.");
+        }
+    }
+
+    @PutMapping("/mail-alert/stop")
+    public ResponseEntity<?> stopMailAlert(@RequestBody RecoBlockingCommentMailAlertRequest body) {
+        try {
+            RecoBlockingCommentMailAlertEntity alert = mailAlertService.stop(body, RequestContextUtil.getUsernameFromRequest());
+            return ResponseEntity.ok(commentForAlert(alert));
+        } catch (IllegalArgumentException ex) {
+            return error(HttpStatus.BAD_REQUEST, ex.getMessage());
+        } catch (Exception ex) {
+            log.error("PUT j1-blocking-comments/mail-alert/stop: {}", ex.getMessage(), ex);
+            return internalError("Erreur lors de l'arrêt de la relance par e-mail.");
+        }
+    }
+
+    private RecoJ1BlockingCommentDto commentForAlert(RecoBlockingCommentMailAlertEntity alert) {
+        return j1BlockingCommentService.get(alert.getRecoDate(), alert.getService(), alert.getCountry(), alert.getEnv());
+    }
+
+    private static ResponseEntity<Map<String, String>> error(HttpStatus status, String message) {
+        Map<String, String> err = new HashMap<>();
+        err.put("message", message);
+        return ResponseEntity.status(status).body(err);
     }
 
     private static ResponseEntity<Map<String, String>> internalError(String message) {

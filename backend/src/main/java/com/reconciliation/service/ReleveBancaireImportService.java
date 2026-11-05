@@ -73,6 +73,7 @@ public class ReleveBancaireImportService {
                 dto.depotTotal = getNumber(row, colIndex.get("depotTotal"));
                 dto.totalRetraits = getNumber(row, colIndex.get("totalRetraits"));
                 dto.numeroSerie = getString(row, colIndex.get("numeroSerie"));
+                dto.banque = getString(row, colIndex.get("banque"));
 
                 boolean allEmpty = (dto.numeroCompte == null || dto.numeroCompte.isBlank()) && dto.libelle == null && dto.debit == null && dto.credit == null;
                 if (!allEmpty) rows.add(dto);
@@ -117,13 +118,15 @@ public class ReleveBancaireImportService {
             e.setDepotTotal(dto.depotTotal);
             e.setTotalRetraits(dto.totalRetraits);
             e.setNumeroSerie(dto.numeroSerie);
+            // Banque du fichier prioritaire ; sinon déduite du compte ci-dessous
+            e.setBanque(dto.banque);
             // Déterminer la banque: codeProprietaire depuis le compte si existant, sinon heuristique nomCompte
             try {
                 if (dto.numeroCompte != null && !dto.numeroCompte.isBlank()) {
                     var compteOpt = compteRepository.findByNumeroCompte(dto.numeroCompte);
                     if (compteOpt.isPresent()) {
                         var compte = compteOpt.get();
-                        if (compte.getCodeProprietaire() != null && !compte.getCodeProprietaire().isBlank()) {
+                        if (e.getBanque() == null && compte.getCodeProprietaire() != null && !compte.getCodeProprietaire().isBlank()) {
                             e.setBanque(compte.getCodeProprietaire());
                             dto.banque = compte.getCodeProprietaire();
                         }
@@ -175,20 +178,7 @@ public class ReleveBancaireImportService {
         } else if (filename.endsWith(".xls")) {
             return new HSSFWorkbook(is);
         } else if (filename.endsWith(".csv")) {
-            // Convert CSV to a Workbook-like structure for reuse
-            List<String> lines = new java.io.BufferedReader(new java.io.InputStreamReader(is)).lines().toList();
-            org.apache.poi.ss.usermodel.Workbook wb = new XSSFWorkbook();
-            org.apache.poi.ss.usermodel.Sheet sheet = wb.createSheet();
-            int r = 0;
-            for (String line : lines) {
-                Row row = sheet.createRow(r++);
-                String[] parts = line.split(",");
-                for (int i = 0; i < parts.length; i++) {
-                    Cell cell = row.createCell(i, CellType.STRING);
-                    cell.setCellValue(parts[i]);
-                }
-            }
-            return wb;
+            return com.reconciliation.util.CsvWorkbookReader.toWorkbook(is);
         } else {
             // Tenter CSV via Apache POI (simple): fallback simple en lisant comme texte
             throw new IllegalArgumentException("Format non supporté: " + filename);
@@ -345,6 +335,9 @@ public class ReleveBancaireImportService {
         
         // NUMÉRO DE SERIE -> Numéro de série (optionnel)
         m.put("numerodeserie", "numeroSerie");
+        m.put("banque", "banque");
+        m.put("banqueappro", "banque");
+        m.put("bo", "banque");
         m.put("numeroserie", "numeroSerie");
         
         return m;
@@ -369,26 +362,43 @@ public class ReleveBancaireImportService {
             if (s == null) return null;
             s = s.trim();
             if (s.isEmpty()) return null;
-            
+
             // Support ECOBANK: Supprimer XAF, XOF et autres devises
             s = s.replaceAll("(?i)(xaf|xof|usd|eur|cfa)\\s*", "");
-            
-            // Supprimer libellés et devises
+
+            // Supprimer libellés et devises, garder chiffres, séparateurs et signe
             s = s.replaceAll("[A-Za-z\\u00C0-\\u017F]", "");
-            // Garder seulement chiffres, séparateurs et signe
+            s = s.replace("\u00A0", "").replace("\u202F", "")
+                    .replace(" ", "").replace("'", "");
             s = s.replaceAll("[^0-9,.-]", "");
             if (s.isEmpty()) return null;
-            // Déterminer séparateur décimal (dernier ',' ou '.')
+
             int lastComma = s.lastIndexOf(',');
             int lastDot = s.lastIndexOf('.');
-            char decimalSep = (lastComma > lastDot) ? ',' : '.';
-            // Retirer tous les séparateurs de milliers (l'autre séparateur)
-            if (decimalSep == ',') {
-                s = s.replace(".", "");
-                s = s.replace(',', '.');
-            } else {
-                s = s.replace(",", "");
+            if (lastComma >= 0 && lastDot >= 0) {
+                if (lastComma > lastDot) {
+                    // 1.234,56 : point = milliers, virgule = décimales
+                    s = s.replace(".", "").replace(',', '.');
+                } else {
+                    // 1,234.56 : virgule = milliers, point = décimales
+                    s = s.replace(",", "");
+                }
+            } else if (lastComma >= 0) {
+                String[] parts = s.split(",");
+                boolean thousands = parts.length > 1;
+                for (int i = 1; i < parts.length; i++) {
+                    if (!parts[i].matches("\\d{3}")) { thousands = false; break; }
+                }
+                s = thousands ? s.replace(",", "") : s.replace(',', '.');
+            } else if (lastDot >= 0) {
+                String[] parts = s.split("\\.");
+                boolean thousands = parts.length > 1;
+                for (int i = 1; i < parts.length; i++) {
+                    if (!parts[i].matches("\\d{3}")) { thousands = false; break; }
+                }
+                if (thousands) s = s.replace(".", "");
             }
+
             // Nettoyer doublons de signes
             s = s.replaceAll("--", "-");
             return s.isBlank() ? null : Double.parseDouble(s);
@@ -401,7 +411,7 @@ public class ReleveBancaireImportService {
         if (c == null) return null;
         try {
             // 1) Vrai format date Excel
-            if (DateUtil.isCellDateFormatted(c)) {
+            if (c.getCellType() == CellType.NUMERIC && DateUtil.isCellDateFormatted(c)) {
                 return c.getLocalDateTimeCellValue().toLocalDate();
             }
             // 2) Valeur numérique Excel (saisie comme nombre, non formatée)
@@ -416,6 +426,10 @@ public class ReleveBancaireImportService {
             if (s == null) return null;
             s = s.trim();
             if (s.isBlank()) return null;
+            // Date ISO suivie éventuellement d'une heure (ex. 2026-11-03 17:33:24.0)
+            if (s.matches("^\\d{4}-\\d{2}-\\d{2}.*")) {
+                return LocalDate.parse(s.substring(0, 10), DateTimeFormatter.ofPattern("yyyy-MM-dd"));
+            }
             // Try multiple patterns (case-insensitive)
             // Normaliser multiples espaces/points au besoin
             s = s.replaceAll("\\s+", " ").replace('.', '-').replace('/', '-');

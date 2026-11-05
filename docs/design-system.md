@@ -16,7 +16,10 @@ Source unique : `frontend/src/styles/_tokens.scss`.
 
 - Thème clair sur `:root`, sombre sur `:root[data-theme='dark']`.
 - Choix persistant via `ThemeService.setThemeMode` (`light` | `dark` | `system`).
-- La marque entreprise (logo, couleurs sidebar) ne pilote **pas** `--color-accent`.
+- Logo + « Appliquer le design » : `ThemeService` surcharge `--color-accent`,
+  `--color-nav-bg`, `--color-bg` (clair) et `--color-info`. Sans design
+  entreprise, la palette mission s’applique. `reset` / suppression du logo
+  retire les surcharges.
 - Alias `--rd-*` : pages dont le bloc `:host { --rd-*: #… }` a été retiré.
 
 Palette mission (clair) : fond `#F2EEE4`, accent `#1D5C63`. Les contrôles
@@ -117,12 +120,12 @@ Migrées vers les tokens globaux (bloc `--rd-*` local retiré, `ds-*` sur
 les contrôles natifs, `type="button"` conservé ou ajouté, Material
 `mat-*` non recouvert) : `auto-processing-models`, `traitement`,
 `sop-reconciliation-trx`, `niveaux-validation-reco`, `predictions`,
-`reconciliation`, `user-2fa-dialog`. `agency-summary` est uniquement un
-`mat-raised-button` (pas de hex ni de `ds-btn`).
+`reconciliation`, `user-2fa-dialog`.
 
 Les topnav marine restent sur `--rd-navy` / `--color-nav-bg`. Les
 couleurs d’identité d’agrégation (`--agg-mode`, `--agg-bo`) sont
-conservées. `ThemeService` ne pilote toujours que la sidebar et le logo.
+conservées. Un design entreprise actif teinte aussi les topnavs
+(`--rd-navy` → `--color-nav-bg`) et le chrome de connexion.
 
 ## I11 — z-index
 

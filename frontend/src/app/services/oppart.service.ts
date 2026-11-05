@@ -17,6 +17,7 @@ export class OppartService {
     if (filter) {
       if (filter.client) params = params.set('client', filter.client);
       if (filter.typeOp) params = params.set('typeOp', filter.typeOp);
+      if (filter.typeOpContains) params = params.set('typeOpContains', filter.typeOpContains);
       if (filter.pays) params = params.set('pays', filter.pays);
       if (filter.source) params = params.set('source', filter.source);
       if (filter.statut) params = params.set('statut', filter.statut);
@@ -109,6 +110,41 @@ export class OppartService {
   /** Délier une ligne : token supprimé, statut remis à EN_COURS. */
   unlinkOppart(id: number): Observable<Oppart> {
     return this.http.post<Oppart>(`${this.apiUrl}/oppart/${id}/unlink`, {});
+  }
+
+  /**
+   * Lie les lignes de compense par N° Trans GU.
+   * Body : { transGus: string[] }
+   * Retourne : { success, linkedCount, skippedCount, totalRequested, details }
+   */
+  linkCompensesByTransGu(transGus: string[]): Observable<{
+    success: boolean;
+    linkedCount: number;
+    skippedCount: number;
+    totalRequested: number;
+    details: Array<{
+      transGu: string;
+      status: string;
+      message?: string;
+      token?: string;
+      ids?: number[];
+      foundCount?: number;
+    }>;
+  }> {
+    return this.http.post<{
+      success: boolean;
+      linkedCount: number;
+      skippedCount: number;
+      totalRequested: number;
+      details: Array<{
+        transGu: string;
+        status: string;
+        message?: string;
+        token?: string;
+        ids?: number[];
+        foundCount?: number;
+      }>;
+    }>(`${this.apiUrl}/oppart/link-compenses`, { transGus });
   }
 
   /** Analyse un fichier sans l'enregistrer : résumé + aperçu pour validation. */

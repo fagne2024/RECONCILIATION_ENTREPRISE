@@ -71,6 +71,7 @@
   "NAV.certificationSolde": "Balance certification",
   "NAV.serviceBalance": "Service balance",
   "NAV.accounting": "Accounting",
+  "NAV.suiviTrxAnnuler": "Follow-up of TRX to cancel",
 
   "ROUTE.dashboard": "Dashboard",
   "ROUTE.banqueDashboard": "Bank Dashboard",
@@ -131,6 +132,7 @@
   "COMMON.actions.retry": "Retry",
   "COMMON.actions.loading": "Loading...",
   "COMMON.actions.search": "Search",
+  "COMMON.actions.searchAllFields": "Search (service, amount, phone, token…)",
   "COMMON.actions.delete": "Delete",
   "COMMON.actions.edit": "Edit",
   "COMMON.actions.add": "Add",

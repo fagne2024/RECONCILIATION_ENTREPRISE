@@ -1,7 +1,7 @@
 import { Component, OnInit, OnDestroy } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
-import { TranslateModule } from '@ngx-translate/core';
+import { TranslateModule, TranslateService } from '@ngx-translate/core';
 import { PaysService } from '../../services/pays.service';
 import { ProfilService } from '../../services/profil.service';
 import { NiveauxValidationConfigService, NiveauTraitementConfig, NiveauxValidationConfig } from '../../services/niveaux-validation-config.service';
@@ -33,9 +33,29 @@ export class NiveauxValidationRecoComponent implements OnInit, OnDestroy {
   // Configuration locale (synchrone pour le formulaire)
   configLocale: NiveauxValidationConfig = { niveauxTraitement: [] };
 
-  nouvelNiveau = { valeur: '', ordre: 0, actif: true, description: '', statutAssocie: '', profilsAutorisesIds: [] as number[] };
+  // Saisie texte des emails (TO / CC) du niveau en cours d'édition
+  niveauEmailsDestinatairesInput = '';
+  niveauEmailsCopieInput = '';
+
+  nouvelNiveau = {
+    valeur: '',
+    ordre: 0,
+    actif: true,
+    description: '',
+    statutAssocie: '',
+    profilsAutorisesIds: [] as number[],
+    destinatairesEmail: [] as string[],
+    copieEmail: [] as string[],
+    envoiAutomatiqueEmail: false
+  };
   editIndex: number | null = null;
   isEditingNiveau = false;
+
+  showAddPaysModal = false;
+  nouveauPays: Pays = { code: '', nom: '' };
+  addPaysError = '';
+  addingPays = false;
+  private readonly codePaysPattern = /^[A-Z0-9_-]{2,10}$/;
 
   toastMessage: string = '';
   toastType: ToastType = 'success';
@@ -44,7 +64,8 @@ export class NiveauxValidationRecoComponent implements OnInit, OnDestroy {
   constructor(
     private paysService: PaysService, 
     private profilService: ProfilService,
-    private configService: NiveauxValidationConfigService
+    private configService: NiveauxValidationConfigService,
+    private translate: TranslateService
   ) {}
 
   ngOnInit(): void {
@@ -57,17 +78,67 @@ export class NiveauxValidationRecoComponent implements OnInit, OnDestroy {
     if (this.toastTimeout) clearTimeout(this.toastTimeout);
   }
 
-  chargerPays(): void {
+  chargerPays(selectCode?: string): void {
     this.paysService.getPays().subscribe({
       next: (pays) => {
         this.paysList = pays;
         if (!this.paysList.find(p => p.code === 'GNL')) {
           this.paysList.unshift({ code: 'GNL', nom: 'GNL (Tous les pays)' });
         }
+        if (selectCode && this.paysList.some(p => p.code === selectCode)) {
+          this.selectedPaysCode = selectCode;
+          this.onPaysChange();
+        }
       },
       error: (err) => {
         console.error('Erreur chargement pays:', err);
         this.paysList = [{ code: 'GNL', nom: 'GNL (Tous les pays)' }];
+      }
+    });
+  }
+
+  // --- Ajout d'un pays ---
+  ouvrirAjoutPays(): void {
+    this.nouveauPays = { code: '', nom: '' };
+    this.addPaysError = '';
+    this.showAddPaysModal = true;
+  }
+
+  fermerAjoutPays(): void {
+    if (this.addingPays) return;
+    this.showAddPaysModal = false;
+  }
+
+  onCodePaysInput(value: string): void {
+    this.nouveauPays.code = (value || '').toUpperCase().replace(/\s+/g, '');
+    this.addPaysError = '';
+  }
+
+  get canAjouterPays(): boolean {
+    return this.codePaysPattern.test(this.nouveauPays.code)
+      && !!this.nouveauPays.nom.trim()
+      && !this.addingPays;
+  }
+
+  ajouterPays(): void {
+    if (!this.canAjouterPays) return;
+    const code = this.nouveauPays.code;
+    if (this.paysList.some(p => p.code.toUpperCase() === code)) {
+      this.addPaysError = this.translate.instant('NIVEAUX.PAYS_EXISTE_DEJA', { code });
+      return;
+    }
+    this.addingPays = true;
+    this.addPaysError = '';
+    this.paysService.createPays({ code, nom: this.nouveauPays.nom.trim() }).subscribe({
+      next: (created) => {
+        this.addingPays = false;
+        this.showAddPaysModal = false;
+        this.showToast(this.translate.instant('NIVEAUX.PAYS_AJOUTE', { code: created.code }));
+        this.chargerPays(created.code);
+      },
+      error: (err) => {
+        this.addingPays = false;
+        this.addPaysError = err?.error?.message || this.translate.instant('NIVEAUX.ERREUR_AJOUT_PAYS');
       }
     });
   }
@@ -86,16 +157,29 @@ export class NiveauxValidationRecoComponent implements OnInit, OnDestroy {
 
   chargerConfigDepuisService(): void {
     // Charger depuis le service (localStorage ou API)
-    this.configLocale = this.configService.getConfigForPaysSync(this.selectedPaysCode);
+    this.configLocale = this.normaliserConfig(this.configService.getConfigForPaysSync(this.selectedPaysCode));
+  }
+
+  private normaliserConfig(config: NiveauxValidationConfig): NiveauxValidationConfig {
+    return {
+      ...config,
+      niveauxTraitement: (config.niveauxTraitement || []).map(niveau => ({
+        ...niveau,
+        profilsAutorisesIds: niveau.profilsAutorisesIds || [],
+        destinatairesEmail: niveau.destinatairesEmail || [],
+        copieEmail: niveau.copieEmail || [],
+        envoiAutomatiqueEmail: niveau.envoiAutomatiqueEmail === true
+      }))
+    };
   }
 
   chargerConfigParDefaut(): void {
     const defaut: NiveauxValidationConfig = {
       niveauxTraitement: [
-        { valeur: 'Niveau Support', ordre: 1, actif: true, description: 'Premier niveau de traitement - Support', statutAssocie: 'EN_COURS_TRAITEMENT', profilsAutorisesIds: [] },
-        { valeur: 'Responsable CDO', ordre: 2, actif: true, description: 'Validation par le Responsable CDO', statutAssocie: 'EN_COURS_VALIDATION', profilsAutorisesIds: [] },
-        { valeur: 'Niveau GROUP', ordre: 3, actif: true, description: 'Validation au niveau GROUP', statutAssocie: 'EN_COURS_CLOTURE', profilsAutorisesIds: [] },
-        { valeur: 'Terminé', ordre: 4, actif: true, description: 'Traitement complètement terminé', statutAssocie: 'TERMINE', profilsAutorisesIds: [] }
+        { valeur: 'Niveau Support', ordre: 1, actif: true, description: 'Premier niveau de traitement - Support', statutAssocie: 'EN_COURS_TRAITEMENT', profilsAutorisesIds: [], destinatairesEmail: [], copieEmail: [], envoiAutomatiqueEmail: false },
+        { valeur: 'Responsable CDO', ordre: 2, actif: true, description: 'Validation par le Responsable CDO', statutAssocie: 'EN_COURS_VALIDATION', profilsAutorisesIds: [], destinatairesEmail: [], copieEmail: [], envoiAutomatiqueEmail: false },
+        { valeur: 'Niveau GROUP', ordre: 3, actif: true, description: 'Validation au niveau GROUP', statutAssocie: 'EN_COURS_CLOTURE', profilsAutorisesIds: [], destinatairesEmail: [], copieEmail: [], envoiAutomatiqueEmail: false },
+        { valeur: 'Terminé', ordre: 4, actif: true, description: 'Traitement complètement terminé', statutAssocie: 'TERMINE', profilsAutorisesIds: [], destinatairesEmail: [], copieEmail: [], envoiAutomatiqueEmail: false }
       ]
     };
     this.configLocale = defaut;
@@ -140,13 +224,37 @@ export class NiveauxValidationRecoComponent implements OnInit, OnDestroy {
     this.showToast(`Configuration sauvée pour ${this.selectedPaysLabel}`);
   }
 
+  /** Normalise une liste d'emails saisie en texte (séparateurs : virgule, point-virgule, espace). */
+  private parseEmails(value: string): string[] {
+    const seen = new Set<string>();
+    return (value || '')
+      .split(/[,;\s]+/)
+      .map(email => email.trim())
+      .filter(email => !!email && email.includes('@'))
+      .filter(email => {
+        const lower = email.toLowerCase();
+        if (seen.has(lower)) return false;
+        seen.add(lower);
+        return true;
+      });
+  }
+
+  /** Reporte les emails saisis dans le formulaire vers le niveau en cours. */
+  private syncNiveauFormEmails(): void {
+    this.nouvelNiveau.destinatairesEmail = this.parseEmails(this.niveauEmailsDestinatairesInput);
+    this.nouvelNiveau.copieEmail = this.parseEmails(this.niveauEmailsCopieInput);
+  }
+
   // --- Niveaux de traitement ---
   sauvegarderNiveau(): void {
     if (!this.nouvelNiveau.valeur.trim()) return;
 
+    this.syncNiveauFormEmails();
     const dataToSave: NiveauTraitementConfig = { 
       ...this.nouvelNiveau, 
-      profilsAutorisesIds: [...this.nouvelNiveau.profilsAutorisesIds] 
+      profilsAutorisesIds: [...this.nouvelNiveau.profilsAutorisesIds],
+      destinatairesEmail: [...(this.nouvelNiveau.destinatairesEmail || [])],
+      copieEmail: [...(this.nouvelNiveau.copieEmail || [])]
     };
     
     if (this.isEditingNiveau && this.editIndex !== null) {
@@ -168,8 +276,13 @@ export class NiveauxValidationRecoComponent implements OnInit, OnDestroy {
       actif: niveau.actif, 
       description: niveau.description, 
       statutAssocie: niveau.statutAssocie, 
-      profilsAutorisesIds: [...niveau.profilsAutorisesIds] 
+      profilsAutorisesIds: [...niveau.profilsAutorisesIds],
+      destinatairesEmail: [...(niveau.destinatairesEmail || [])],
+      copieEmail: [...(niveau.copieEmail || [])],
+      envoiAutomatiqueEmail: niveau.envoiAutomatiqueEmail === true
     };
+    this.niveauEmailsDestinatairesInput = (niveau.destinatairesEmail || []).join(', ');
+    this.niveauEmailsCopieInput = (niveau.copieEmail || []).join(', ');
     this.editIndex = index;
     this.isEditingNiveau = true;
   }
@@ -183,9 +296,31 @@ export class NiveauxValidationRecoComponent implements OnInit, OnDestroy {
   }
 
   resetForm(): void {
-    this.nouvelNiveau = { valeur: '', ordre: this.configLocale.niveauxTraitement.length + 1, actif: true, description: '', statutAssocie: '', profilsAutorisesIds: [] };
+    this.nouvelNiveau = {
+      valeur: '',
+      ordre: this.configLocale.niveauxTraitement.length + 1,
+      actif: true,
+      description: '',
+      statutAssocie: '',
+      profilsAutorisesIds: [],
+      destinatairesEmail: [],
+      copieEmail: [],
+      envoiAutomatiqueEmail: false
+    };
+    this.niveauEmailsDestinatairesInput = '';
+    this.niveauEmailsCopieInput = '';
     this.editIndex = null;
     this.isEditingNiveau = false;
+  }
+
+  /** Indique si un niveau a au moins un email configuré. */
+  hasNiveauEmails(niveau: NiveauTraitementConfig): boolean {
+    return (niveau.destinatairesEmail?.length || 0) > 0 || (niveau.copieEmail?.length || 0) > 0;
+  }
+
+  /** Libellé des emails en copie d'un niveau. */
+  getNiveauCopieLabel(niveau: NiveauTraitementConfig): string {
+    return (niveau.copieEmail || []).join(', ');
   }
 
   toggleProfilAutorise(profilId: number): void {

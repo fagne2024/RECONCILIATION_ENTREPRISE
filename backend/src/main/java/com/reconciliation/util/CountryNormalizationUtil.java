@@ -68,6 +68,15 @@ public final class CountryNormalizationUtil {
         if (lettersOnly.length() == 2) {
             return lettersOnly;
         }
+        for (Map.Entry<String, String> entry : CODE_TO_NAME.entrySet()) {
+            String name = Normalizer.normalize(entry.getValue(), Normalizer.Form.NFD)
+                    .replaceAll("\\p{M}", "")
+                    .toUpperCase(Locale.ROOT)
+                    .replaceAll("[^A-Z0-9]", "");
+            if (name.equals(lettersOnly)) {
+                return entry.getKey();
+            }
+        }
         for (Map.Entry<String, String> entry : KEYWORD_TO_CODE.entrySet()) {
             if (normalizedWithSpaces.contains(entry.getKey())) {
                 return entry.getValue();

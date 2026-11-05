@@ -238,6 +238,14 @@ public interface Result8RecRepository extends JpaRepository<Result8RecEntity, Lo
             @Param("endDate") String endDate
     );
 
+    /** Lignes d'un service pour un jour : la date est stockée en texte, parfois suivie d'une heure. */
+    @Query("SELECT r FROM Result8RecEntity r WHERE r.service = :service AND r.date >= :day AND r.date < :nextDay")
+    List<Result8RecEntity> findByServiceAndDay(
+            @Param("service") String service,
+            @Param("day") String day,
+            @Param("nextDay") String nextDay
+    );
+
     @Query("""
         SELECT DISTINCT r.country, r.service, COALESCE(r.env, '')
         FROM Result8RecEntity r

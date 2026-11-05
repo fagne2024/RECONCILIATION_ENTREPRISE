@@ -1,7 +1,8 @@
-import { Component, OnInit } from '@angular/core';
+import { Component, OnInit, inject } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { FormsModule, ReactiveFormsModule } from '@angular/forms';
 import { Router } from '@angular/router';
+import { firstValueFrom } from 'rxjs';
 import { OperationBancaire } from '../../models/operation-bancaire.model';
 import { OperationBancaireService } from '../../services/operation-bancaire.service';
 import { Compte } from '../../models/compte.model';
@@ -10,12 +11,15 @@ import { OperationService } from '../../services/operation.service';
 import { OperationServiceApi } from '../../services/operation.service';
 import { ReleveBancaireService } from '../../services/releve-bancaire.service';
 import { ReleveBancaireRow } from '../../models/releve-bancaire.model';
+import { SuiviCompenseOp } from '../../models/suivi-compense-op.model';
+import { SuiviCompenseOpService } from '../../services/suivi-compense-op.service';
 import { ExportOptimizationService } from '../../services/export-optimization.service';
 import { PopupService } from '../../services/popup.service';
 import { ConfigurationCalculService } from '../../services/configuration-calcul.service';
 import { countryDisplayLabel, countriesMatch, normalizeCountryFilterOptions } from '../../utils/country-codes.util';
 import { TranslateModule } from '@ngx-translate/core';
 import { DsPaginationComponent } from '../../shared/ui/pagination/ds-pagination.component';
+import { FileUploadComponent } from '../file-upload/file-upload.component';
 
 // Interface locale pour les opérations bancaires avec Date
 interface OperationBancaireDisplay extends Omit<OperationBancaire, 'dateOperation'> {
@@ -41,23 +45,158 @@ interface ReconFilters {
   montantMax: number | null;
 }
 
+/**
+ * Correspondance entre les en-têtes produits par les modèles de traitement automatique
+ * et les en-têtes attendus par l'import des opérations bancaires.
+ */
+const OPERATION_IMPORT_HEADER_ALIASES: Record<string, string> = {
+  pays: 'Pays',
+  codepays: 'Code Pays',
+  mois: 'Mois',
+  dateoperation: 'Date Opération',
+  date: 'Date Opération',
+  agence: 'Agence',
+  typeoperation: 'Type Opération',
+  type: 'Type Opération',
+  nombeneficiaire: 'Nom Bénéficiaire',
+  beneficiaire: 'Nom Bénéficiaire',
+  compteadebiter: 'Compte à débiter',
+  comptedebiter: 'Compte à débiter',
+  numerocompte: 'Compte à débiter',
+  compte: 'Compte à débiter',
+  montant: 'Montant',
+  modepaiement: 'Mode Paiement',
+  reference: 'Référence',
+  ref: 'Référence',
+  numbordereau: 'Référence',
+  numerobordereau: 'Référence',
+  numerotransgu: 'Référence',
+  numerotransactiongu: 'Référence',
+  idglpi: 'ID GLPI',
+  idticket: 'ID GLPI',
+  ticket: 'ID GLPI',
+  banque: 'Banque',
+  banqueappro: 'Banque',
+  bo: 'Banque',
+  codeproprietaire: 'Agence',
+  codeagence: 'Agence',
+  groupedereseau: 'Pays',
+  statut: 'Statut',
+  status: 'Statut',
+  demandeur: 'Demandeur',
+  valideur: 'Valideur',
+  traitement: 'Traitement',
+  banquecorrigee: 'Banque Corrigée'
+};
+
+/**
+ * Correspondance entre les en-têtes produits par les modèles de traitement automatique
+ * et les en-têtes attendus par l'import du relevé bancaire.
+ */
+const RELEVE_IMPORT_HEADER_ALIASES: Record<string, string> = {
+  nomcompte: 'Nom du compte',
+  nomducompte: 'Nom du compte',
+  numerocompte: 'Numéro de compte',
+  numerodecompte: 'Numéro de compte',
+  compte: 'Numéro de compte',
+  datecomptable: 'Date comptable',
+  dateoperation: 'Date comptable',
+  date: 'Date comptable',
+  datevaleur: 'Date valeur',
+  datedevaleur: 'Date valeur',
+  libelle: 'Libellé',
+  narratif: 'Libellé',
+  narration: 'Libellé',
+  intitule: 'Libellé',
+  description: 'Libellé',
+  debit: 'Débit',
+  dbit: 'Débit',
+  debits: 'Débit',
+  credit: 'Crédit',
+  crdit: 'Crédit',
+  credits: 'Crédit',
+  montant: 'Montant',
+  numerochq: 'Chèque',
+  numcheque: 'Chèque',
+  cheque: 'Chèque',
+  numerochque: 'Chèque',
+  numerocheque: 'Chèque',
+  devise: 'Devise',
+  deviseducompte: 'Devise',
+  soldecourant: 'Solde courant',
+  soldedisponibledecloture: 'Solde disponible de clôture',
+  soldedisponiblealouverture: "Solde disponible à l'ouverture",
+  soldecomptabledouverture: "Solde comptable d'ouverture",
+  soldecomptabledecloture: 'Solde comptable de clôture',
+  depototal: 'Dépôt total',
+  depottotal: 'Dépôt total',
+  totalretraits: 'Total des retraits',
+  totaldesretraits: 'Total des retraits',
+  numeroserie: 'Numéro de série',
+  numerodeserie: 'Numéro de série',
+  banque: 'Banque',
+  bankname: 'Banque'
+};
+
+/**
+ * Correspondance entre les en-têtes produits par les modèles de traitement automatique
+ * et les en-têtes du suivi des compenses OP.
+ */
+const SUIVI_COMPENSE_HEADER_ALIASES: Record<string, string> = {
+  date: 'Date',
+  dateoperation: 'Date',
+  datetransaction: 'Date',
+  codeagence: 'Code agence',
+  agence: 'Code agence',
+  codeproprietaire: 'Code agence',
+  banque: 'Banque',
+  bo: 'Banque',
+  banqueappro: 'Banque',
+  comptebancaire: 'Compte bancaire',
+  compte: 'Compte bancaire',
+  numerocompte: 'Compte bancaire',
+  compteadebiter: 'Compte bancaire',
+  montant: 'Montant',
+  modepaiement: 'Mode de paiement',
+  modedepaiement: 'Mode de paiement',
+  reference: 'Référence',
+  ref: 'Référence',
+  referencelibelletransactions: 'Référence',
+  libelletransactions: 'Référence',
+  numbordereau: 'Référence',
+  numerotransgu: 'Référence',
+  idticket: 'ID ticket',
+  ticket: 'ID ticket',
+  ticketid: 'ID ticket',
+  idglpi: 'ID ticket',
+  service: 'Service',
+  reseau: 'Réseau',
+  groupedereseau: 'Réseau'
+};
+
 @Component({
   selector: 'app-banque',
   standalone: true,
-  imports: [TranslateModule, CommonModule, FormsModule, ReactiveFormsModule, DsPaginationComponent],
+  imports: [TranslateModule, CommonModule, FormsModule, ReactiveFormsModule, DsPaginationComponent, FileUploadComponent],
   templateUrl: './banque.component.html',
   styleUrls: ['./banque.component.scss']
 })
 export class BanqueComponent implements OnInit {
   // État d'affichage
   showOperations = false;
-  activeSection: 'home' | 'operations' | 'comptes' | 'rapports' | 'securite' = 'home';
+  activeSection: 'home' | 'operations' | 'comptes' | 'rapports' | 'securite' | 'traitement' | 'suivi-compense' = 'home';
   
   // Contrôle de visibilité des colonnes Actions
   showActionsColumn = false;
   
   // Contrôle de visibilité de la colonne commentaire
   showCommentColumn = false;
+
+  // Traitement Automatique (Opérations)
+  showOpAutoTreatment = false;
+
+  // Traitement Automatique (Relevé)
+  showReleveAutoTreatment = false;
 
   // Création d'opération bancaire
   showCreateOperationPopup = false;
@@ -76,7 +215,8 @@ export class BanqueComponent implements OnInit {
     montant: null as number | null,
     libelle: '',
     devise: 'XAF',
-    commentaire: ''
+    commentaire: '',
+    agence: ''
   };
 
   // Données des opérations
@@ -269,9 +409,61 @@ export class BanqueComponent implements OnInit {
   // Ensemble persistant des clés marquées définitivement comme OK (à ignorer)
   private reconOkKeySet: Set<string> = new Set<string>();
 
+  // Group tokens pour les correspondances groupées
+  // Clé = clé de réconciliation, Valeur = token de groupe (string)
+  private groupTokens: Map<string, string> = new Map<string, string>();
+
   // Compteur des OK définitifs (clé unique, sans doublons)
   get totalOkDefinitifs(): number {
     try { return this.reconOkKeySet ? this.reconOkKeySet.size : 0; } catch { return 0; }
+  }
+
+  // Obtenir le token de groupe pour une clé
+  getGroupToken(key: string | undefined): string | null {
+    if (!key) return null;
+    return this.groupTokens.get(key) || null;
+  }
+
+  // Vérifier si une clé est groupée
+  isGrouped(key: string | undefined): boolean {
+    if (!key) return false;
+    return this.groupTokens.has(key);
+  }
+
+  // Basculer le statut groupé pour une clé
+  toggleGrouped(key: string | undefined): void {
+    if (!key) return;
+    
+    if (this.groupTokens.has(key)) {
+      // Supprimer le groupement
+      this.groupTokens.delete(key);
+    } else {
+      // Créer un nouveau token de groupe
+      const token = `GRP-${Date.now().toString(36)}-${Math.random().toString(36).substring(2, 8)}`;
+      this.groupTokens.set(key, token);
+    }
+  }
+
+  // Obtenir toutes les clés partageant le même token de groupe
+  getGroupMembers(key: string | undefined): string[] {
+    if (!key) return [];
+    const token = this.groupTokens.get(key);
+    if (!token) return [];
+    
+    const members: string[] = [];
+    this.groupTokens.forEach((value, k) => {
+      if (value === token) {
+        members.push(k);
+      }
+    });
+    return members;
+  }
+
+  // Appliquer le même token à plusieurs clés (groupement multiple)
+  setGroupTokenForKeys(keys: string[], token?: string): void {
+    if (!keys.length) return;
+    const groupToken = token || `GRP-${Date.now().toString(36)}-${Math.random().toString(36).substring(2, 8)}`;
+    keys.forEach(k => this.groupTokens.set(k, groupToken));
   }
 
   // Helpers sélection multi (vue opérations)
@@ -880,21 +1072,18 @@ export class BanqueComponent implements OnInit {
 
   // Formulaire d'édition
   editForm: any = {
-    pays: '',
-    codePays: '',
-    mois: '',
     dateOperation: '',
     agence: '',
     typeOperation: '',
-    nomBeneficiaire: '',
-    compteADebiter: '',
     montant: 0,
-    modePaiement: '',
     reference: '',
     idGlpi: '',
     bo: '',
+    banqueCorrigee: '',
     statut: '',
-    traitement: ''
+    traitement: '',
+    demandeur: '',
+    valideur: ''
   };
 
   constructor(
@@ -1391,7 +1580,7 @@ export class BanqueComponent implements OnInit {
     const header = [
       'Pays', 'Code Pays', 'Mois', 'Date Opération', 'Agence', 'Type Opération',
       'Nom du Bénéficiaire', 'Compte', 'Montant', 'Mode de Paiement', 'Référence',
-      'ID TICKET', 'Banque', 'Statut'
+      'ID TICKET', 'Banque', 'Banque Corrigée', 'Statut'
     ];
 
     const aoa: any[] = [];
@@ -1411,6 +1600,7 @@ export class BanqueComponent implements OnInit {
         op.reference || '',
         op.idGlpi || '',
         op.bo || '',
+        op.banqueCorrigee || '',
         op.statut || ''
       ]);
     });
@@ -1624,7 +1814,369 @@ export class BanqueComponent implements OnInit {
     this.showCommentColumn = !this.showCommentColumn;
   }
 
-  // Création d'opération bancaire
+  // Traitement Automatique (Opérations)
+  toggleOpAutoTreatment() {
+    this.showOpAutoTreatment = !this.showOpAutoTreatment;
+  }
+
+  onOpAutoTreatmentProgress(message: string) {
+    console.log('[OP AUTO TREATMENT] Progress:', message);
+  }
+
+  onOpAutoTreatmentResult(event: { rows: Record<string, any>[]; outputName: string; lineCount: number; modelName: string }) {
+    console.log('[OP AUTO TREATMENT] Result:', event);
+    void this.promptLoadTreatedData(event, 'operations');
+  }
+
+  // Traitement Automatique (Relevé)
+  toggleReleveAutoTreatment() {
+    this.showReleveAutoTreatment = !this.showReleveAutoTreatment;
+  }
+
+  onReleveAutoTreatmentProgress(message: string) {
+    console.log('[RELEVE AUTO TREATMENT] Progress:', message);
+  }
+
+  onReleveAutoTreatmentResult(event: { rows: Record<string, any>[]; outputName: string; lineCount: number; modelName: string }) {
+    console.log('[RELEVE AUTO TREATMENT] Result:', event);
+    void this.promptLoadTreatedData(event, 'releve');
+  }
+
+  // Suivi compense OP : traitement automatique (résultat chargé directement dans le suivi)
+  onSuiviCompenseAutoTreatmentProgress(message: string) {
+    console.log('[SUIVI COMPENSE AUTO TREATMENT] Progress:', message);
+  }
+
+  onSuiviCompenseAutoTreatmentResult(event: { rows: Record<string, any>[]; outputName: string; lineCount: number; modelName: string }) {
+    console.log('[SUIVI COMPENSE AUTO TREATMENT] Result:', event);
+    void this.importTreatedSuiviCompense(event);
+  }
+
+  private async importTreatedSuiviCompense(
+    event: { rows: Record<string, any>[]; outputName: string; lineCount: number; modelName: string }
+  ): Promise<void> {
+    const rows = Array.isArray(event?.rows) ? event.rows : [];
+    if (!rows.length) {
+      await this.popupService.showWarning(
+        'Le traitement automatique n’a produit aucune ligne exploitable.',
+        'Suivi compense OP'
+      );
+      return;
+    }
+    try {
+      const file = await this.buildTreatedRowsFile(rows, 'suivi', event.outputName);
+      const res: any = await firstValueFrom(this.suiviCompenseService.upload(file));
+      const saved = Number(res?.saved ?? 0);
+      const totalRead = Number(res?.totalRead ?? rows.length);
+      if (!saved) {
+        await this.popupService.showWarning(
+          `Aucune ligne n’a été enregistrée (${totalRead.toLocaleString('fr-FR')} ligne(s) lue(s)).\n` +
+          'Vérifiez que les colonnes du modèle correspondent au suivi compense OP.',
+          'Suivi compense OP'
+        );
+        return;
+      }
+      await this.popupService.showSuccess(
+        `${saved.toLocaleString('fr-FR')} ligne(s) chargée(s) sur ${totalRead.toLocaleString('fr-FR')} lue(s).`,
+        'Suivi compense OP'
+      );
+      this.loadSuiviCompense();
+    } catch (err: any) {
+      console.error('[SUIVI COMPENSE AUTO TREATMENT] Import failed', err);
+      await this.popupService.showError(
+        `Impossible de charger les données traitées : ${err?.error?.error || err?.message || 'erreur inconnue'}`,
+        'Suivi compense OP'
+      );
+    }
+  }
+
+  // Traitement Automatique unifié (page Banque)
+  openAutoTreatment() {
+    this.activeSection = 'traitement';
+    this.showOperations = false;
+    setTimeout(() => {
+      const el = document.querySelector('.auto-treatment-unified');
+      if (el) {
+        el.scrollIntoView({ behavior: 'smooth', block: 'start' });
+      }
+    }, 0);
+  }
+
+  onBankAutoTreatmentProgress(message: string) {
+    console.log('[BANK AUTO TREATMENT] Progress:', message);
+  }
+
+  onBankAutoTreatmentResult(event: { rows: Record<string, any>[]; outputName: string; lineCount: number; modelName: string }) {
+    console.log('[BANK AUTO TREATMENT] Result:', event);
+    void this.promptLoadTreatedData(event, 'operations');
+  }
+
+  /**
+   * Après le traitement automatique : demande à l'utilisateur où charger les données
+   * (opérations bancaires ou relevé bancaire), puis lance l'import correspondant.
+   */
+  private async promptLoadTreatedData(
+    event: { rows: Record<string, any>[]; outputName: string; lineCount: number; modelName: string },
+    defaultDestination: 'operations' | 'releve'
+  ): Promise<void> {
+    const rows = Array.isArray(event?.rows) ? event.rows : [];
+    if (!rows.length) {
+      await this.popupService.showWarning(
+        'Le traitement automatique n’a produit aucune ligne exploitable.',
+        'Traitement automatique'
+      );
+      return;
+    }
+
+    const operationsLabel = 'Opérations bancaires';
+    const releveLabel = 'Relevé bancaire';
+    const defaultLabel = defaultDestination === 'releve' ? releveLabel : operationsLabel;
+    const lineCount = event.lineCount || rows.length;
+
+    const choice = await this.popupService.showSelectInput(
+      `${lineCount.toLocaleString('fr-FR')} ligne(s) traitée(s) avec le modèle « ${event.modelName} ».\n\n` +
+      'Où souhaitez-vous charger ces données ?',
+      'Charger les données traitées',
+      [operationsLabel, releveLabel],
+      defaultLabel
+    );
+
+    if (!choice) {
+      return;
+    }
+
+    const destination: 'operations' | 'releve' = choice === releveLabel ? 'releve' : 'operations';
+    await this.importTreatedRows(rows, destination, event.outputName);
+  }
+
+  private async importTreatedRows(
+    rows: Record<string, any>[],
+    destination: 'operations' | 'releve',
+    outputName: string
+  ): Promise<void> {
+    try {
+      const file = await this.buildTreatedRowsFile(rows, destination, outputName);
+
+      if (destination === 'operations') {
+        const res: any = await firstValueFrom(this.operationBancaireService.upload(file));
+        const saved = Number(res?.saved ?? 0);
+        const totalRead = Number(res?.totalRead ?? rows.length);
+        const errors = Array.isArray(res?.errors) ? res.errors.length : 0;
+
+        if (!saved) {
+          const errorDetails = Array.isArray(res?.errors) && res.errors.length
+            ? `\n\nDétail :\n${res.errors.slice(0, 5).join('\n')}`
+            : '';
+          const receivedColumns = Object.keys(rows[0] || {});
+          const columnsInfo = receivedColumns.length
+            ? `\n\nColonnes reçues du traitement : ${receivedColumns.join(', ')}`
+            : '';
+          await this.popupService.showWarning(
+            `Aucune opération n’a été enregistrée (${totalRead.toLocaleString('fr-FR')} ligne(s) lue(s)).\n` +
+            'Vérifiez que les colonnes du modèle de traitement correspondent au format d’import des opérations.' +
+            errorDetails + columnsInfo,
+            'Chargement des opérations'
+          );
+          return;
+        }
+
+        await this.popupService.showSuccess(
+          `${saved.toLocaleString('fr-FR')} opération(s) bancaire(s) chargée(s) sur ${totalRead.toLocaleString('fr-FR')} lue(s)` +
+          `${errors ? ` — ${errors} avertissement(s)` : ''}.`,
+          'Opérations chargées'
+        );
+        this.showOperations = true;
+        this.activeSection = 'operations';
+        this.loadOperations();
+        this.loadDashboardStats();
+        return;
+      }
+
+      const res: any = await firstValueFrom(this.releveService.upload(file));
+      const saved = Number(res?.count ?? 0);
+      const totalRead = Number(res?.totalRead ?? rows.length);
+      const duplicates = Number(res?.duplicatesIgnored ?? 0);
+
+      if (!saved) {
+        const unmapped = Array.isArray(res?.unmappedHeaders) && res.unmappedHeaders.length
+          ? `\nColonnes non reconnues : ${res.unmappedHeaders.join(', ')}`
+          : '';
+        await this.popupService.showWarning(
+          `Aucune ligne de relevé n’a été enregistrée (${totalRead.toLocaleString('fr-FR')} ligne(s) lue(s)).` +
+          `${duplicates ? ` ${duplicates} doublon(s) ignoré(s).` : ''}${unmapped}\n` +
+          'Vérifiez que les colonnes du modèle de traitement correspondent au format d’import du relevé.',
+          'Chargement du relevé'
+        );
+        return;
+      }
+
+      await this.popupService.showSuccess(
+        `${saved.toLocaleString('fr-FR')} ligne(s) de relevé chargée(s) sur ${totalRead.toLocaleString('fr-FR')} lue(s)` +
+        `${duplicates ? ` — ${duplicates} doublon(s) ignoré(s)` : ''}.`,
+        'Relevé chargé'
+      );
+      this.showOperations = false;
+      this.activeSection = 'rapports';
+      this.loadLatestReleveBatch();
+    } catch (err: any) {
+      console.error('[BANK AUTO TREATMENT] Import failed', err);
+      await this.popupService.showError(
+        `Impossible de charger les données traitées : ${err?.error?.message || err?.message || 'erreur inconnue'}`,
+        'Chargement des données'
+      );
+    }
+  }
+
+  /**
+   * Construit un fichier Excel (.xlsx) à partir des lignes traitées, avec des en-têtes
+   * normalisés vers le format attendu par l'import (opérations ou relevé).
+   */
+  private async buildTreatedRowsFile(
+    rows: Record<string, any>[],
+    destination: 'operations' | 'releve' | 'suivi',
+    outputName: string
+  ): Promise<File> {
+    const XLSX: any = await import('xlsx');
+    const mappedRows = rows.map(row => this.mapTreatedRowHeaders(row, destination));
+
+    const headers: string[] = [];
+    const seen = new Set<string>();
+    for (const row of mappedRows) {
+      Object.keys(row).forEach(key => {
+        if (key && !seen.has(key)) {
+          seen.add(key);
+          headers.push(key);
+        }
+      });
+    }
+
+    if (!headers.length) {
+      throw new Error('Aucune colonne exploitable dans les données traitées.');
+    }
+
+    const aoa = [
+      headers,
+      ...mappedRows.map(row => headers.map(header => row[header] ?? ''))
+    ];
+
+    const ws = XLSX.utils.aoa_to_sheet(aoa);
+    const wb = XLSX.utils.book_new();
+    XLSX.utils.book_append_sheet(wb, ws, destination === 'releve' ? 'Releve' : destination === 'suivi' ? 'Suivi' : 'Operations');
+    const buffer = XLSX.write(wb, { bookType: 'xlsx', type: 'array' });
+
+    const base = (outputName || 'donnees-traitees').replace(/\.[^.]+$/, '');
+    const suffix = destination === 'releve' ? 'releve' : destination === 'suivi' ? 'suivi-compense' : 'operations';
+    return new File(
+      [buffer],
+      `${base}-${suffix}.xlsx`,
+      { type: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet' }
+    );
+  }
+
+  private mapTreatedRowHeaders(row: Record<string, any>, destination: 'operations' | 'releve' | 'suivi'): Record<string, any> {
+    const aliases = destination === 'releve'
+      ? RELEVE_IMPORT_HEADER_ALIASES
+      : destination === 'suivi'
+        ? SUIVI_COMPENSE_HEADER_ALIASES
+        : OPERATION_IMPORT_HEADER_ALIASES;
+    const mapped: Record<string, any> = {};
+    Object.entries(row || {}).forEach(([key, value]) => {
+      const normalized = this.normalizeTreatedHeader(key);
+      const header = aliases[normalized] || key;
+      if (!header) return;
+      mapped[header] = this.coerceTreatedValue(header, value);
+    });
+    return mapped;
+  }
+
+  private normalizeTreatedHeader(label: string): string {
+    return (label || '')
+      // Le traitement produit parfois « é » sous forme de caractère de remplacement (« op�ration »)
+      .replace(/�/g, 'e')
+      .normalize('NFD')
+      .replace(/[\u0300-\u036f]/g, '')
+      .toLowerCase()
+      .replace(/[^a-z0-9]/g, '');
+  }
+
+  /**
+   * Convertit les valeurs texte du modèle en types exploitables par l'import backend
+   * (notamment les montants formatés « 2,455,108 » ou « 139 474,44 »).
+   */
+  private coerceTreatedValue(header: string, value: any): any {
+    if (value === null || value === undefined || value === '') {
+      return value;
+    }
+
+    const numericHeaders = new Set([
+      'montant',
+      'debit',
+      'credit',
+      'soldecourant',
+      'soldedisponibledecloture',
+      'soldedisponiblealouverture',
+      'soldecomptabledouverture',
+      'soldecomptabledecloture',
+      'depottotal',
+      'totaldesretraits',
+      'totalretraits'
+    ]);
+
+    if (numericHeaders.has(this.normalizeTreatedHeader(header))) {
+      const parsed = this.parseTreatedNumber(value);
+      if (parsed !== null) {
+        return parsed;
+      }
+    }
+
+    return value;
+  }
+
+  private parseTreatedNumber(raw: any): number | null {
+    if (typeof raw === 'number') {
+      return Number.isFinite(raw) ? raw : null;
+    }
+
+    let text = String(raw).trim();
+    if (!text) {
+      return null;
+    }
+
+    // Retire les espaces, espaces insécables, apostrophes et symboles monétaires.
+    text = text
+      .replace(/[\s\u00A0\u202F']/g, '')
+      .replace(/[^0-9.,+\-]/g, '');
+
+    if (!text) {
+      return null;
+    }
+
+    const lastComma = text.lastIndexOf(',');
+    const lastDot = text.lastIndexOf('.');
+
+    if (lastComma !== -1 && lastDot !== -1) {
+      if (lastComma > lastDot) {
+        // Format 1.234,56 : le point sépare les milliers, la virgule les décimales.
+        text = text.replace(/\./g, '').replace(',', '.');
+      } else {
+        // Format 1,234.56 : la virgule sépare les milliers, le point les décimales.
+        text = text.replace(/,/g, '');
+      }
+    } else if (lastComma !== -1) {
+      const parts = text.split(',');
+      const isThousands = parts.length > 1 && parts.slice(1).every(part => /^\d{3}$/.test(part));
+      text = isThousands ? text.replace(/,/g, '') : text.replace(',', '.');
+    } else if (lastDot !== -1) {
+      const parts = text.split('.');
+      const isThousands = parts.length > 1 && parts.slice(1).every(part => /^\d{3}$/.test(part));
+      if (isThousands) {
+        text = text.replace(/\./g, '');
+      }
+    }
+
+    const parsed = Number(text);
+    return Number.isFinite(parsed) ? parsed : null;
+  }
   openCreateOperation() {
     this.showCreateOperationPopup = true;
     // Initialiser le formulaire avec des valeurs par défaut
@@ -1642,12 +2194,37 @@ export class BanqueComponent implements OnInit {
       montant: null,
       libelle: '',
       devise: 'XAF',
-      commentaire: ''
+      commentaire: '',
+      agence: ''
     };
   }
 
   closeCreateOperationPopup() {
     this.showCreateOperationPopup = false;
+  }
+
+  /**
+   * Génère la référence selon le format: YYYYMMDD-AGENCE_PREFIX-AMOUNT
+   * Exemple: 20261102-ONUF6-2455108
+   */
+  generateReference(typeOperation: string, agence: string, dateComptable: string, montant?: number): string {
+    if (!agence || !dateComptable) return '';
+    
+    // Formater la date: YYYYMMDD
+    const date = new Date(dateComptable);
+    const year = date.getFullYear();
+    const month = String(date.getMonth() + 1).padStart(2, '0');
+    const day = String(date.getDate()).padStart(2, '0');
+    const dateStr = `${year}${month}${day}`;
+    
+    // Agence: prendre les 6 premiers caractères
+    const agencePrefix = agence.substring(0, 6);
+    
+    // Montant: sans virgules, sans décimales
+    const amountStr = montant ? Math.abs(montant).toString().replace(/[,.]/g, '') : '';
+    
+    // Format: YYYYMMDD-AGENCE_PREFIX-AMOUNT
+    return `${dateStr}-${agencePrefix}-${amountStr}`;
   }
 
   isCreateOperationFormValid(): boolean {
@@ -1671,6 +2248,14 @@ export class BanqueComponent implements OnInit {
 
     this.creatingOperation = true;
 
+    // Générer la référence selon le type d'opération
+    const reference = this.generateReference(
+      this.createOperationForm.typeOperation,
+      this.createOperationForm.agence,
+      this.createOperationForm.dateComptable,
+      this.createOperationForm.montant
+    );
+
     // Créer l'objet opération bancaire
     const operationData = {
       numeroCompte: this.createOperationForm.numeroCompte,
@@ -1686,7 +2271,8 @@ export class BanqueComponent implements OnInit {
       montant: this.createOperationForm.montant!,
       libelle: this.createOperationForm.libelle,
       devise: this.createOperationForm.devise,
-      commentaire: this.createOperationForm.commentaire || null
+      commentaire: this.createOperationForm.commentaire || null,
+      reference: reference
     };
 
     console.log('💾 Création d\'opération bancaire:', operationData);
@@ -1881,33 +2467,12 @@ export class BanqueComponent implements OnInit {
     // Filtre par pays (extrait automatiquement des 2 dernières lettres de la banque)
     if (this.releveFilterPays && this.releveFilterPays.trim()) {
       const searchTerm = this.releveFilterPays.toLowerCase().trim();
-      const beforePaysFilter = filtered.length;
       
       filtered = filtered.filter((r: any) => {
         // Extraire le code pays des 2 dernières lettres de la banque
         const banqueCode = this.extractCountryCodeFromBank(r.banque);
         const matches = banqueCode && banqueCode.toLowerCase().includes(searchTerm);
-        
-        if (matches) {
-          console.log('[RECON][DEBUG] Pays filter match:', {
-            banque: r.banque,
-            extractedCode: banqueCode,
-            searchTerm: searchTerm,
-            matches: matches
-          });
-        }
-        
         return matches;
-      });
-      
-      console.log('[RECON][DEBUG] Pays filter results:', {
-        searchTerm: searchTerm,
-        beforeFilter: beforePaysFilter,
-        afterFilter: filtered.length,
-        sampleMatches: filtered.slice(0, 3).map(r => ({
-          banque: r.banque,
-          extractedCode: this.extractCountryCodeFromBank(r.banque)
-        }))
       });
     }
     
@@ -1939,22 +2504,6 @@ export class BanqueComponent implements OnInit {
     if (this.releveFilterReconStatus) {
       filtered = filtered.filter(r => this.getReleveReconStatus(r) === this.releveFilterReconStatus);
     }
-    
-    console.log('[RECON][DEBUG] getFilteredRelevesByStatusAndBatch:', {
-      totalReleves: this.releveAllRows?.length || 0,
-      afterBatchFilter: base.length,
-      afterAllFilters: filtered.length,
-      filters: {
-        numeroCompte: this.releveFilterNumeroCompte,
-        banque: this.releveFilterBanque,
-        devise: this.releveFilterDevise,
-        pays: this.releveFilterPays,
-        reconStatus: this.releveFilterReconStatus,
-        dateDebut: this.releveFilterDateDebut,
-        dateFin: this.releveFilterDateFin,
-        dateField: this.releveFilterDateField
-      }
-    });
     
     return filtered;
   }
@@ -2047,6 +2596,116 @@ export class BanqueComponent implements OnInit {
         this.releveMessage = 'Import du relevé bancaire échoué';
         this.totalReleveLignes = 0;
       }
+    });
+  }
+
+  // Suivi compense OP
+  private suiviCompenseService = inject(SuiviCompenseOpService);
+  suiviCompenseRows: SuiviCompenseOp[] = [];
+  suiviCompenseSelectedFile: File | null = null;
+  suiviCompenseUploading = false;
+  suiviCompenseLoading = false;
+  suiviCompenseMessage: string | null = null;
+  suiviCompenseMessageKind: 'info' | 'success' | 'error' = 'info';
+  // Pagination du suivi compense OP
+  suiviCompensePage = 1;
+  suiviCompensePageSize = 10;
+
+  get suiviCompenseTotalPages(): number {
+    const pages = Math.ceil(this.suiviCompenseRows.length / this.suiviCompensePageSize);
+    return pages > 0 ? pages : 1;
+  }
+
+  get pagedSuiviCompenseRows(): SuiviCompenseOp[] {
+    const start = (this.suiviCompensePage - 1) * this.suiviCompensePageSize;
+    return this.suiviCompenseRows.slice(start, start + this.suiviCompensePageSize);
+  }
+
+  goToSuiviCompensePage(page: number) {
+    this.suiviCompensePage = Math.min(Math.max(1, page), this.suiviCompenseTotalPages);
+  }
+
+  onSuiviCompensePageSizeChange(size: number) {
+    this.suiviCompensePageSize = size;
+    this.suiviCompensePage = 1;
+  }
+
+  openSuiviCompense() {
+    this.activeSection = 'suivi-compense';
+    this.showOperations = false;
+    this.loadSuiviCompense();
+  }
+
+  loadSuiviCompense() {
+    this.suiviCompenseLoading = true;
+    this.suiviCompenseService.list().subscribe({
+      next: (rows) => {
+        this.suiviCompenseRows = rows || [];
+        this.suiviCompenseLoading = false;
+        this.goToSuiviCompensePage(this.suiviCompensePage);
+      },
+      error: () => {
+        this.suiviCompenseLoading = false;
+        this.popupService.showError('Impossible de charger le suivi compense OP');
+      }
+    });
+  }
+
+  onSuiviCompenseFileSelected(event: Event) {
+    const input = event.target as HTMLInputElement;
+    this.suiviCompenseSelectedFile = input.files && input.files.length ? input.files[0] : null;
+    if (this.suiviCompenseSelectedFile) {
+      this.suiviCompenseMessageKind = 'info';
+      this.suiviCompenseMessage = `Fichier sélectionné: ${this.suiviCompenseSelectedFile.name}`;
+    }
+  }
+
+  uploadSuiviCompense() {
+    if (!this.suiviCompenseSelectedFile) return;
+    this.suiviCompenseUploading = true;
+    this.suiviCompenseMessageKind = 'info';
+    this.suiviCompenseMessage = 'Import en cours...';
+    this.suiviCompenseService.upload(this.suiviCompenseSelectedFile).subscribe({
+      next: (res) => {
+        this.suiviCompenseUploading = false;
+        this.suiviCompenseMessageKind = 'success';
+        this.suiviCompenseMessage = `Fichier importé (${res.saved} ligne(s) sur ${res.totalRead} lue(s)).`;
+        this.suiviCompenseSelectedFile = null;
+        this.loadSuiviCompense();
+      },
+      error: (err) => {
+        this.suiviCompenseUploading = false;
+        this.suiviCompenseMessageKind = 'error';
+        this.suiviCompenseMessage = err?.error?.error || 'Import du suivi compense OP échoué';
+      }
+    });
+  }
+
+  downloadSuiviCompenseTemplate() {
+    this.suiviCompenseService.downloadTemplate().subscribe({
+      next: (blob) => {
+        const url = window.URL.createObjectURL(blob);
+        const a = document.createElement('a');
+        a.href = url;
+        a.download = 'modele-suivi-compense-op.xlsx';
+        a.click();
+        window.URL.revokeObjectURL(url);
+      },
+      error: () => {
+        this.popupService.showError('Impossible de télécharger le modèle du suivi compense OP');
+      }
+    });
+  }
+
+  deleteSuiviCompense(row: SuiviCompenseOp) {
+    if (!row.id) return;
+    const id = row.id;
+    this.popupService.showConfirmDialog('Supprimer cette ligne du suivi compense OP ?', 'Confirmation').then(confirmed => {
+      if (!confirmed) return;
+      this.suiviCompenseService.delete(id).subscribe({
+        next: () => this.loadSuiviCompense(),
+        error: () => this.popupService.showError('Suppression impossible')
+      });
     });
   }
 
@@ -2353,47 +3012,92 @@ export class BanqueComponent implements OnInit {
 
   // Chargement des données
   loadOperations() {
-    // Charger uniquement les opérations bancaires
+    // Charger les opérations bancaires (table operations_bancaires)
     this.operationBancaireService.getAllOperationsBancaires('BANQUE').subscribe({
       next: (operationsBancaires) => {
         // Convertir les dates string en objets Date
-        this.operations = operationsBancaires.map(op => ({
+        const opsBancaires = operationsBancaires.map(op => ({
           ...op,
           dateOperation: new Date(op.dateOperation),
           source: 'bancaire'
         }));
-        this.filteredOperations = [...this.operations];
-        
-        const rawPays = (this.operations || []).map(o => {
-          if (o.pays && String(o.pays).trim()) {
-            return String(o.pays);
+
+        // Charger aussi les opérations générales (table operations) créées via le formulaire
+        this.operationService.getAllOperations().subscribe({
+          next: (operationsGenerales) => {
+            // Convertir les opérations générales au format OperationBancaireDisplay
+            const opsGenerales = operationsGenerales
+              .filter(op => op.typeOperation && ['VIREMENT', 'RETRAIT', 'DEPOT', 'FRAIS', 'COMMISSION', 'AUTRE', 'APPROVISIONNEMENT', 'COMPENSATION', 'NIVELLEMENT', 'PAIEMENT'].includes(op.typeOperation))
+              .map(op => ({
+                id: op.id,
+                pays: op.pays || '',
+                codePays: '',
+                mois: '',
+                dateOperation: new Date(op.dateOperation),
+                agence: op.service || '',
+                typeOperation: op.typeOperation,
+                nomBeneficiaire: op.nomBordereau || '',
+                compteADebiter: op.codeProprietaire || '',
+                montant: op.montant,
+                modePaiement: '',
+                reference: op.reference || '',
+                idGlpi: '',
+                bo: op.banque || '',
+                statut: op.statut || 'En attente',
+                operationId: op.id,
+                reconStatus: undefined,
+                impactApplique: undefined,
+                traitement: '',
+                demandeur: '',
+                valideur: '',
+                source: 'generale'
+              }));
+
+            // Fusionner les deux sources
+            this.operations = [...opsBancaires, ...opsGenerales];
+            this.filteredOperations = [...this.operations];
+            
+            const rawPays = (this.operations || []).map(o => {
+              if (o.pays && String(o.pays).trim()) {
+                return String(o.pays);
+              }
+              const code = (o as any).codePays ? String((o as any).codePays).toUpperCase().trim() : '';
+              return code || '';
+            });
+            this.paysList = normalizeCountryFilterOptions(rawPays);
+            this.reconPaysOptions = [...this.paysList];
+            if (!this.reconPays && this.reconPaysOptions.length === 1) {
+              this.reconPays = this.reconPaysOptions[0];
+            }
+            if (this.reconPays && !this.reconPaysOptions.some(p => countriesMatch(p, this.reconPays))) {
+              const mapped = countryDisplayLabel(this.reconPays);
+              const match = mapped ? this.reconPaysOptions.find(p => countriesMatch(p, mapped)) : undefined;
+              if (match) {
+                this.reconPays = match;
+              } else if ((this.reconPays || '').trim().length <= 5) {
+                this.reconPays = '';
+              }
+            }
+            if (this.filters.pays) {
+              const match = this.paysList.find(p => countriesMatch(p, this.filters.pays));
+              if (match) {
+                this.filters.pays = match;
+              }
+            }
+            this.updatePagedOperations();
+            this.updateTotalSuspensKO();
+            console.log('Opérations bancaires chargées:', this.operations.length, '(bancaire:', opsBancaires.length, ', generale:', opsGenerales.length + ')');
+          },
+          error: (error) => {
+            console.error('Erreur lors du chargement des opérations générales:', error);
+            // En cas d'erreur, utiliser seulement les opérations bancaires
+            this.operations = opsBancaires;
+            this.filteredOperations = [...this.operations];
+            this.updatePagedOperations();
+            this.updateTotalSuspensKO();
+            console.log('Opérations bancaires chargées (fallback):', this.operations.length);
           }
-          const code = (o as any).codePays ? String((o as any).codePays).toUpperCase().trim() : '';
-          return code || '';
         });
-        this.paysList = normalizeCountryFilterOptions(rawPays);
-        this.reconPaysOptions = [...this.paysList];
-        if (!this.reconPays && this.reconPaysOptions.length === 1) {
-          this.reconPays = this.reconPaysOptions[0];
-        }
-        if (this.reconPays && !this.reconPaysOptions.some(p => countriesMatch(p, this.reconPays))) {
-          const mapped = countryDisplayLabel(this.reconPays);
-          const match = mapped ? this.reconPaysOptions.find(p => countriesMatch(p, mapped)) : undefined;
-          if (match) {
-            this.reconPays = match;
-          } else if ((this.reconPays || '').trim().length <= 5) {
-            this.reconPays = '';
-          }
-        }
-        if (this.filters.pays) {
-          const match = this.paysList.find(p => countriesMatch(p, this.filters.pays));
-          if (match) {
-            this.filters.pays = match;
-          }
-        }
-        this.updatePagedOperations();
-        this.updateTotalSuspensKO();
-        console.log('Opérations bancaires chargées:', this.operations.length);
       },
       error: (error) => {
         console.error('Erreur lors du chargement des opérations bancaires:', error);
@@ -3545,21 +4249,18 @@ export class BanqueComponent implements OnInit {
     this.selectedOperation = operation;
     // Pré-remplir le formulaire
     this.editForm = {
-      pays: operation.pays || '',
-      codePays: operation.codePays || '',
-      mois: operation.mois || '',
       dateOperation: this.formatDateForInput(operation.dateOperation),
       agence: operation.agence || '',
       typeOperation: operation.typeOperation || '',
-      nomBeneficiaire: operation.nomBeneficiaire || '',
-      compteADebiter: operation.compteADebiter || '',
       montant: operation.montant || 0,
-      modePaiement: operation.modePaiement || '',
       reference: operation.reference || '',
       idGlpi: operation.idGlpi || '',
       bo: operation.bo || '',
+      banqueCorrigee: operation.banqueCorrigee || '',
       statut: operation.statut || 'En attente',
-      traitement: operation.traitement || ''
+      traitement: operation.traitement || '',
+      demandeur: operation.demandeur || '',
+      valideur: operation.valideur || ''
     };
     this.showEditPopup = true;
   }
@@ -3573,21 +4274,18 @@ export class BanqueComponent implements OnInit {
     if (!this.selectedOperation || !this.selectedOperation.id) return;
 
     const updateData = {
-      pays: this.editForm.pays,
-      codePays: this.editForm.codePays,
-      mois: this.editForm.mois,
       dateOperation: this.editForm.dateOperation,
       agence: this.editForm.agence,
       typeOperation: this.editForm.typeOperation,
-      nomBeneficiaire: this.editForm.nomBeneficiaire,
-      compteADebiter: this.editForm.compteADebiter,
       montant: this.editForm.montant,
-      modePaiement: this.editForm.modePaiement,
       reference: this.editForm.reference,
       idGlpi: this.editForm.idGlpi,
       bo: this.editForm.bo,
+      banqueCorrigee: this.editForm.banqueCorrigee,
       statut: this.editForm.statut,
-      traitement: this.editForm.traitement
+      traitement: this.editForm.traitement,
+      demandeur: this.editForm.demandeur,
+      valideur: this.editForm.valideur
     };
 
     this.operationBancaireService.updateOperationBancaire(this.selectedOperation.id, updateData).subscribe({
@@ -3654,6 +4352,7 @@ export class BanqueComponent implements OnInit {
         reference: operation.reference,
         idGlpi: operation.idGlpi,
         bo: operation.bo,
+        banqueCorrigee: operation.banqueCorrigee,
         statut: 'Validée' // Changer le statut à "Validée"
       };
 

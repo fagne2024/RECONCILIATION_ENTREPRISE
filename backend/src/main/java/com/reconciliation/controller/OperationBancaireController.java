@@ -215,15 +215,20 @@ public class OperationBancaireController {
             payload.put("errors", res.errors);
             return ResponseEntity.ok(payload);
         } catch (Exception e) {
-            return ResponseEntity.status(HttpStatus.BAD_REQUEST).build();
+            String message = e.getMessage() != null ? e.getMessage() : e.getClass().getSimpleName();
+            System.err.println("❌ Échec de l'import des opérations bancaires : " + message);
+            java.util.Map<String, Object> payload = new java.util.HashMap<>();
+            payload.put("error", message);
+            payload.put("message", "Import des opérations bancaires échoué : " + message);
+            return ResponseEntity.status(HttpStatus.BAD_REQUEST).body(payload);
         }
     }
 
     // Télécharger le modèle Excel à utiliser
     @GetMapping(value = "/template", produces = "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet")
-    public ResponseEntity<byte[]> downloadTemplate() {
+    public ResponseEntity<byte[]> downloadTemplate(@RequestParam(required = false, defaultValue = "operation") String fileType) {
         try {
-            byte[] bytes = importService.generateTemplate();
+            byte[] bytes = importService.generateTemplate(fileType);
             return ResponseEntity.ok()
                     .header(org.springframework.http.HttpHeaders.CONTENT_DISPOSITION, "attachment; filename=modele-operations-bancaires.xlsx")
                     .body(bytes);

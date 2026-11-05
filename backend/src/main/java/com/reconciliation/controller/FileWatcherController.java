@@ -2,15 +2,22 @@ package com.reconciliation.controller;
 
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
+import org.springframework.web.multipart.MultipartFile;
 import lombok.extern.slf4j.Slf4j;
+
+import com.reconciliation.service.EntrepriseWatchFolderService;
+import com.reconciliation.service.CalculationRuleService;
 
 import java.io.*;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.nio.file.Paths;
+import java.nio.file.StandardCopyOption;
 import java.util.ArrayList;
 import java.util.List;
+import java.util.Locale;
 import java.util.Map;
+import java.util.Set;
 import org.apache.poi.ss.usermodel.*;
 import org.apache.poi.xssf.usermodel.XSSFWorkbook;
 import org.apache.poi.hssf.usermodel.HSSFWorkbook;
@@ -23,38 +30,51 @@ import java.util.concurrent.ConcurrentHashMap;
 @CrossOrigin(origins = {"http://localhost:4200", "http://localhost:3000", "http://172.214.108.8:4200"}, allowCredentials = "true")
 public class FileWatcherController {
 
-    private static final String WATCH_FOLDER = "../watch-folder";
-    private static final String PROCESSED_FOLDER = "../watch-folder/processed";
+    /** Extensions de fichiers modeles acceptees (CSV / Excel). */
+    private static final Set<String> ALLOWED_MODEL_EXTENSIONS = Set.of(
+        ".csv", ".xls", ".xlsx", ".xlsm", ".xlsb", ".xlt", ".xltx", ".xltm");
 
     // OPTIMISATION: cache des métadonnées de chaque fichier (colonnes, échantillon,
     // nombre de lignes) invalidé par lastModified/length. Évite de relire chaque
     // fichier (lecture CSV entière + POI) à chaque appel à /available-files.
     private static final ConcurrentHashMap<String, Map<String, Object>> FILE_METADATA_CACHE = new ConcurrentHashMap<>();
 
+    private final EntrepriseWatchFolderService entrepriseWatchFolderService;
+    private final CalculationRuleService calculationRuleService;
+
+    public FileWatcherController(EntrepriseWatchFolderService entrepriseWatchFolderService,
+                                 CalculationRuleService calculationRuleService) {
+        this.entrepriseWatchFolderService = entrepriseWatchFolderService;
+        this.calculationRuleService = calculationRuleService;
+    }
+
+    /**
+     * Vrai si le nom du fichier correspond au type attendu.
+     * Mots-clés pilotés par les règles de calcul (Configuration > Calcul),
+     * repli sur la valeur codée en dur si aucune règle active n'est configurée.
+     */
+    private boolean fileNameMatches(String fileName, String ruleCode, List<String> fallback) {
+        return calculationRuleService.matchesAny(fileName, ruleCode, fallback);
+    }
+
     @GetMapping("/status")
     public ResponseEntity<Map<String, Object>> getStatus() {
         try {
-            Path watchPath = Paths.get(WATCH_FOLDER);
+            Path watchPath = entrepriseWatchFolderService.currentFolder();
             boolean isWatching = Files.exists(watchPath);
             
             int queueLength = 0;
             if (isWatching) {
-                File[] files = watchPath.toFile().listFiles((dir, name) -> 
-                    name.toLowerCase().endsWith(".csv") || 
-                    name.toLowerCase().endsWith(".xlsx") || 
-                    name.toLowerCase().endsWith(".xls") ||
-                    name.toLowerCase().endsWith(".xlsm") ||
-                    name.toLowerCase().endsWith(".xlsb") ||
-                    name.toLowerCase().endsWith(".xlt") ||
-                    name.toLowerCase().endsWith(".xltx") ||
-                    name.toLowerCase().endsWith(".xltm")
+                File[] files = watchPath.toFile().listFiles((dir, name) ->
+                    isAllowedModelFile(name)
                 );
                 queueLength = files != null ? files.length : 0;
                 // Nombre de fichiers trouvés
             }
             
             Map<String, Object> response = Map.of(
-                "watchPath", WATCH_FOLDER,
+                "watchPath", watchPath.toString(),
+                "entrepriseFolder", watchPath.getFileName().toString(),
                 "isProcessing", false,
                 "queueLength", queueLength
             );
@@ -73,44 +93,89 @@ public class FileWatcherController {
     public ResponseEntity<List<Map<String, Object>>> getAvailableFiles() {
         try {
             List<Map<String, Object>> files = new ArrayList<>();
-            Path watchPath = Paths.get(WATCH_FOLDER);
+            Path watchPath = entrepriseWatchFolderService.currentFolder();
             
             if (Files.exists(watchPath)) {
-                // Lister TOUS les fichiers dans le dossier
-                File[] allFiles = watchPath.toFile().listFiles();
-                // Logs de débogage supprimés pour réduire la verbosité
-                
-                File[] fileList = watchPath.toFile().listFiles((dir, name) -> 
-                    name.toLowerCase().endsWith(".csv") || 
-                    name.toLowerCase().endsWith(".xlsx") || 
-                    name.toLowerCase().endsWith(".xls") ||
-                    name.toLowerCase().endsWith(".xlsm") ||
-                    name.toLowerCase().endsWith(".xlsb") ||
-                    name.toLowerCase().endsWith(".xlt") ||
-                    name.toLowerCase().endsWith(".xltx") ||
-                    name.toLowerCase().endsWith(".xltm")
+                File[] fileList = watchPath.toFile().listFiles((dir, name) ->
+                    isAllowedModelFile(name)
                 );
-                
-                // Logs de débogage supprimés pour réduire la verbosité
                 
                 if (fileList != null) {
                     for (File file : fileList) {
                         // Métadonnées mises en cache (helper) : évite de relire le fichier
-                        Map<String, Object> fileInfo = getCachedFileMetadata(file);
-                        files.add(fileInfo);
-
-                        // Fichier traité avec succès
+                        files.add(getCachedFileMetadata(file));
                     }
                 }
             } else {
-                log.warn("Le dossier watch-folder n'existe pas: {}", watchPath.toAbsolutePath());
+                log.warn("Le dossier watch-folder de l'entreprise n'existe pas: {}", watchPath.toAbsolutePath());
             }
             
-            log.info("Nombre de fichiers retournés: {}", files.size());
+            log.info("Nombre de fichiers retournés (dossier {}): {}",
+                watchPath.getFileName(), files.size());
             return ResponseEntity.ok(files);
         } catch (Exception e) {
             log.error("Erreur dans getAvailableFiles(): {}", e.getMessage(), e);
-            return ResponseEntity.badRequest().body(List.of());
+            return ResponseEntity.ok(List.of());
+        }
+    }
+
+    /**
+     * Enregistre un fichier modele (CSV / Excel) dans le dossier watch-folder de
+     * l'entreprise courante. Le fichier est ensuite visible via
+     * {@code /available-files} et selectionnable comme fichier modele.
+     */
+    @PostMapping(value = "/upload", consumes = "multipart/form-data")
+    public ResponseEntity<Map<String, Object>> uploadModelFile(@RequestParam("file") MultipartFile file) {
+        try {
+            if (file == null || file.isEmpty()) {
+                return ResponseEntity.badRequest().body(Map.of(
+                    "success", false,
+                    "error", "Aucun fichier fourni."
+                ));
+            }
+
+            String safeName = sanitizeFileName(file.getOriginalFilename());
+            if (safeName == null) {
+                return ResponseEntity.badRequest().body(Map.of(
+                    "success", false,
+                    "error", "Nom de fichier invalide."
+                ));
+            }
+            if (!isAllowedModelFile(safeName)) {
+                return ResponseEntity.badRequest().body(Map.of(
+                    "success", false,
+                    "error", "Format non pris en charge. Formats acceptés : CSV, XLS, XLSX."
+                ));
+            }
+
+            Path folder = entrepriseWatchFolderService.currentFolder();
+            Path destination = folder.resolve(safeName).normalize();
+            // Garde-fou anti-traversée de chemin.
+            if (!destination.startsWith(folder)) {
+                return ResponseEntity.badRequest().body(Map.of(
+                    "success", false,
+                    "error", "Chemin de fichier invalide."
+                ));
+            }
+
+            try (InputStream in = file.getInputStream()) {
+                Files.copy(in, destination, StandardCopyOption.REPLACE_EXISTING);
+            }
+
+            Map<String, Object> metadata = new java.util.HashMap<>(getCachedFileMetadata(destination.toFile()));
+            metadata.put("success", true);
+            metadata.put("entrepriseFolder", folder.getFileName().toString());
+            metadata.put("message", "Fichier modèle enregistré dans le dossier de l'entreprise.");
+
+            log.info("Fichier modèle '{}' enregistré dans le dossier entreprise '{}'",
+                safeName, folder.getFileName());
+            return ResponseEntity.ok(metadata);
+        } catch (Exception e) {
+            log.error("Erreur dans uploadModelFile(): {}", e.getMessage(), e);
+            return ResponseEntity.badRequest().body(Map.of(
+                "success", false,
+                "error", e.getMessage() != null ? e.getMessage() : "Erreur lors de l'enregistrement du fichier."
+            ));
         }
     }
 
@@ -118,45 +183,33 @@ public class FileWatcherController {
     public ResponseEntity<Map<String, Object>> analyzeFile(@RequestBody Map<String, String> request) {
         try {
             String filePath = request.get("filePath");
-            
-            // Construire le chemin complet en utilisant WATCH_FOLDER
-            Path fullPath;
-            if (filePath.startsWith("watch-folder/")) {
-                // Le chemin contient déjà watch-folder, construire le chemin complet
-                fullPath = Paths.get(WATCH_FOLDER).resolve(filePath.substring("watch-folder/".length()));
-            } else {
-                // C'est juste un nom de fichier, l'ajouter à WATCH_FOLDER
-                fullPath = Paths.get(WATCH_FOLDER).resolve(filePath);
+            if (filePath == null || filePath.isBlank()) {
+                return ResponseEntity.badRequest().body(Map.of("error", "Chemin de fichier manquant."));
             }
-            
-            // Si le chemin relatif ne fonctionne pas, essayer avec le chemin absolu depuis le répertoire de travail
-            if (!fullPath.toFile().exists()) {
-                // Chemin relatif non trouvé, essai avec chemin absolu
-                fullPath = Paths.get(System.getProperty("user.dir")).resolve(WATCH_FOLDER).resolve(filePath.replace("watch-folder/", ""));
+
+            // Le fichier est toujours résolu dans le dossier watch-folder de
+            // l'entreprise courante : on n'accepte que le nom de fichier.
+            String fileName = Paths.get(filePath.replace("\\", "/")).getFileName().toString();
+            Path folder = entrepriseWatchFolderService.currentFolder();
+            Path fullPath = folder.resolve(fileName).normalize();
+
+            // Garde-fou anti-traversée de chemin.
+            if (!fullPath.startsWith(folder)) {
+                return ResponseEntity.badRequest().body(Map.of(
+                    "error", "Chemin de fichier invalide."
+                ));
             }
-            
-            // Si toujours pas trouvé, essayer avec le chemin depuis la racine du projet
-            if (!fullPath.toFile().exists()) {
-                // Chemin absolu non trouvé, essai depuis la racine du projet
-                fullPath = Paths.get(System.getProperty("user.dir")).resolve("..").resolve("watch-folder").resolve(filePath.replace("watch-folder/", ""));
-            }
-            
+
             File file = fullPath.toFile();
-            
-            // Analyse du fichier demandée
-            
             if (!file.exists()) {
                 log.warn("Fichier non trouvé: {}", fullPath.toAbsolutePath());
                 return ResponseEntity.badRequest().body(Map.of(
-                    "error", "Fichier non trouvé: " + filePath
+                    "error", "Fichier non trouvé: " + fileName
                 ));
             }
-            
+
             // Analyser les colonnes et données d'exemple (via le cache de métadonnées)
-            Map<String, Object> analysis = getCachedFileMetadata(file);
-            
-            // Analyse terminée
-            return ResponseEntity.ok(analysis);
+            return ResponseEntity.ok(getCachedFileMetadata(file));
         } catch (Exception e) {
             log.error("Erreur lors de l'analyse du fichier: {}", e.getMessage(), e);
             return ResponseEntity.badRequest().body(Map.of(
@@ -168,12 +221,12 @@ public class FileWatcherController {
     @PostMapping("/start")
     public ResponseEntity<Map<String, Object>> startWatching() {
         try {
-            Path watchPath = Paths.get(WATCH_FOLDER);
+            Path watchPath = entrepriseWatchFolderService.currentFolder();
             if (!Files.exists(watchPath)) {
                 Files.createDirectories(watchPath);
             }
             
-            Path processedPath = Paths.get(PROCESSED_FOLDER);
+            Path processedPath = watchPath.resolve("processed");
             if (!Files.exists(processedPath)) {
                 Files.createDirectories(processedPath);
             }
@@ -188,6 +241,36 @@ public class FileWatcherController {
                 "error", e.getMessage()
             ));
         }
+    }
+
+    // ===== Méthodes utilitaires =====
+
+    /** Vrai si le nom de fichier possede une extension de modele (CSV / Excel) supportee. */
+    private static boolean isAllowedModelFile(String fileName) {
+        if (fileName == null) {
+            return false;
+        }
+        String lower = fileName.toLowerCase(Locale.ROOT);
+        for (String extension : ALLOWED_MODEL_EXTENSIONS) {
+            if (lower.endsWith(extension)) {
+                return true;
+            }
+        }
+        return false;
+    }
+
+    /** Nettoie le nom de fichier (retire les chemins) et refuse les noms vides. */
+    private static String sanitizeFileName(String originalFileName) {
+        if (originalFileName == null) {
+            return null;
+        }
+        String name = Paths.get(originalFileName.replace("\\", "/")).getFileName().toString().trim();
+        // Neutralise les caractères problématiques sans changer l'extension.
+        name = name.replaceAll("[\\r\\n\\t\\u0000]", "_");
+        if (name.isEmpty() || name.equals(".") || name.equals("..")) {
+            return null;
+        }
+        return name;
     }
 
     @PostMapping("/stop")
@@ -677,7 +760,8 @@ public class FileWatcherController {
             }
             
             // Détection spécifique pour les fichiers OPPART
-            if (headers.isEmpty() && file.getName().toLowerCase().contains("oppart")) {
+            if (headers.isEmpty() && fileNameMatches(file.getName(), "MODELES.TOKENS_OPPART",
+                    CalculationRuleService.DEFAULT_TOKENS_OPPART)) {
                 // Détection spécifique OPPART
                 headers = getOPPARTDefaultHeaders();
             }
@@ -930,7 +1014,8 @@ public class FileWatcherController {
             // Recherche des en-têtes
             
             // Détection spécifique pour les fichiers OPPART
-            if (file.getName().toLowerCase().contains("oppart")) {
+            if (fileNameMatches(file.getName(), "MODELES.TOKENS_OPPART",
+                    CalculationRuleService.DEFAULT_TOKENS_OPPART)) {
                 // Détection spécifique OPPART
                 headers = getOPPARTDefaultHeaders();
                 headerRowIndex = 0; // Supposer que les en-têtes sont à la première ligne

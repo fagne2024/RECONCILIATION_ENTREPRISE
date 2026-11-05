@@ -17,6 +17,7 @@ import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
+import java.nio.file.Path;
 import java.security.SecureRandom;
 import java.util.ArrayList;
 import java.util.List;
@@ -55,6 +56,8 @@ public class PlatformEntrepriseService {
     private final ActivationTokenService activationTokenService;
     private final PlatformAuditService platformAuditService;
     private final PasswordEncoder passwordEncoder;
+    private final EntrepriseWatchFolderService entrepriseWatchFolderService;
+    private final CalculationRuleService calculationRuleService;
     private final SecureRandom random = new SecureRandom();
 
     @PersistenceContext
@@ -65,13 +68,17 @@ public class PlatformEntrepriseService {
                                      UserRepository userRepository,
                                      ActivationTokenService activationTokenService,
                                      PlatformAuditService platformAuditService,
-                                     PasswordEncoder passwordEncoder) {
+                                     PasswordEncoder passwordEncoder,
+                                     EntrepriseWatchFolderService entrepriseWatchFolderService,
+                                     CalculationRuleService calculationRuleService) {
         this.entrepriseRepository = entrepriseRepository;
         this.entrepriseModuleRepository = entrepriseModuleRepository;
         this.userRepository = userRepository;
         this.activationTokenService = activationTokenService;
         this.platformAuditService = platformAuditService;
         this.passwordEncoder = passwordEncoder;
+        this.entrepriseWatchFolderService = entrepriseWatchFolderService;
+        this.calculationRuleService = calculationRuleService;
     }
 
     // ------------------------------------------------------------------
@@ -112,6 +119,16 @@ public class PlatformEntrepriseService {
         entreprise.setStatut(EntrepriseStatut.ACTIVE);
         entreprise = entrepriseRepository.saveAndFlush(entreprise);
         Long entrepriseId = entreprise.getId();
+
+        // 1bis. Dossier watch-folder dedie (cloisonnement des fichiers modeles).
+        // Best-effort : un echec du systeme de fichiers ne doit pas annuler la
+        // creation de l'entreprise (le dossier est recree a la demande ensuite).
+        boolean watchFolderReady = createWatchFolder(code);
+
+        // 1ter. Regles de calcul par defaut pour la nouvelle entreprise : sans elles,
+        // la page Configuration > Calcul serait vide et tous les calculs retomberaient
+        // sur les valeurs codees en dur.
+        calculationRuleService.copyDefaultsTo(entrepriseId);
 
         // 2. Profil ADMINISTRATEUR propre a l'entreprise (tenant-scoped -> SQL natif).
         em.createNativeQuery(
@@ -157,7 +174,8 @@ public class PlatformEntrepriseService {
         // 7. Audit (meme transaction : annule avec l'action en cas d'echec).
         platformAuditService.record(actorUsername, "ENTREPRISE_CREEE", "ENTREPRISE",
             String.valueOf(entrepriseId),
-            "code=" + code + "; admin=" + adminUsername + "; droits=" + droits);
+            "code=" + code + "; admin=" + adminUsername + "; droits=" + droits
+                + "; watchFolder=" + (watchFolderReady ? "ok" : "echec"));
 
         log.info("Entreprise '{}' (id={}) creee par '{}' : profil ADMINISTRATEUR, {} droits, 0 module.",
             code, entrepriseId, actorUsername, droits);
@@ -254,6 +272,11 @@ public class PlatformEntrepriseService {
         }
 
         entreprise = entrepriseRepository.save(entreprise);
+        if (changes.indexOf("code=") >= 0) {
+            // Un changement de code implique un nouveau dossier watch-folder
+            // (l'ancien est conserve pour ne pas perdre les fichiers deja deposes).
+            createWatchFolder(entreprise.getCode());
+        }
         platformAuditService.record(actorUsername, "ENTREPRISE_MODIFIEE", "ENTREPRISE",
             String.valueOf(id), changes.toString());
         return entreprise;
@@ -343,6 +366,22 @@ public class PlatformEntrepriseService {
             throw new IllegalArgumentException("Le code de l'entreprise est requis.");
         }
         return raw.trim().toUpperCase();
+    }
+
+    /**
+     * Cree le dossier watch-folder dedie a l'entreprise (cloisonnement des
+     * fichiers modeles). Best-effort : un echec est journalise mais n'annule pas
+     * la transaction (le dossier est recree a la demande lors de l'acces).
+     */
+    private boolean createWatchFolder(String code) {
+        try {
+            Path folder = entrepriseWatchFolderService.ensureFolder(code);
+            log.info("Dossier watch-folder cree pour l'entreprise '{}' : {}", code, folder);
+            return true;
+        } catch (Exception e) {
+            log.warn("Dossier watch-folder non cree pour l'entreprise '{}' : {}", code, e.getMessage());
+            return false;
+        }
     }
 
     private String requireText(String raw, String message) {

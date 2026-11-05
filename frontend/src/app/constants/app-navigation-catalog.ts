@@ -148,6 +148,7 @@ export const APP_NAVIGATION_CATALOG: AppNavigationGroup[] = [
           '/api/reconciliation/progress',
           '/api/compte-solde-bo',
           '/api/compte-solde-cloture',
+          '/api/certification-solde-resultats',
           '/api/auto-processing'
         ],
         icon: 'fa-balance-scale'
@@ -257,6 +258,16 @@ export const APP_NAVIGATION_CATALOG: AppNavigationGroup[] = [
           '/api/reconciliation-report'
         ],
         icon: 'fa-clipboard-check'
+      },
+      {
+        key: 'res-suivi-trx-a-annuler',
+        label: 'Suivi TRX à annuler',
+        labelKey: 'NAV.suiviTrxAnnuler',
+        route: '/suivi-trx-a-annuler',
+        moduleName: 'Résultats',
+        apiPathPrefixes: ['/api/suivi-trx-a-annuler'],
+        actionPathPrefixes: ['/api/suivi-trx-a-annuler'],
+        icon: 'fa-ban'
       }
     ]
   },
@@ -304,16 +315,6 @@ export const APP_NAVIGATION_CATALOG: AppNavigationGroup[] = [
         apiPathPrefixes: ['/api/statistics'],
         actionPathPrefixes: ['/api/statistics/detailed-metrics', '/api/statistics/dashboard-metrics'],
         icon: 'fa-chart-line'
-      },
-      {
-        key: 'stats-agency',
-        label: 'Résumé agences',
-        labelKey: 'NAV.agencySummary',
-        route: '/agency-summary',
-        moduleName: 'Statistiques',
-        apiPathPrefixes: ['/api/statistics', '/api/agency-summary'],
-        actionPathPrefixes: ['/api/agency-summary'],
-        icon: 'fa-building'
       }
     ]
   },

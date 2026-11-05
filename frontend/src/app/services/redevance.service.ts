@@ -25,6 +25,11 @@ export interface RedevanceData {
   tauxRedevancePourcentage: number;
   operateur: string;
   periode: string;
+  formuleCaBrut?: string;
+  formulePbj?: string;
+  formuleRemuneration?: string;
+  formuleRevenu?: string;
+  formuleBase?: string;
 }
 
 export interface RedevanceAgenceParam {

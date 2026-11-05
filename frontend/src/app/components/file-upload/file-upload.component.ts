@@ -1,4 +1,6 @@
 import { Component, EventEmitter, Input, Output, ChangeDetectorRef, NgZone, OnDestroy, OnInit, ViewChild, ElementRef } from '@angular/core';
+import { CommonModule } from '@angular/common';
+import { TranslateModule } from '@ngx-translate/core';
 import { ReconciliationService } from '../../services/reconciliation.service';
 import { AutoProcessingService, AutoProcessingModel, ENV_COLUMN_NAME, ENV_COLUMN_OPTIONS, EnvColumnOption, ProcessingResult, ColumnProcessingRule } from '../../services/auto-processing.service';
 import { PartnerConditionalKeysService } from '../../services/partner-conditional-keys.service';
@@ -45,6 +47,8 @@ import { formatGridCellAsString, isTransactionIdPreserveColumn, isMsisdnPreserve
 
 @Component({
     selector: 'app-file-upload',
+    standalone: true,
+    imports: [CommonModule, TranslateModule],
     templateUrl: './file-upload.component.html',
     styleUrls: ['./file-upload.component.scss']
 })
@@ -62,6 +66,11 @@ export class FileUploadComponent implements OnInit, OnDestroy {
 
     /** Section embarquée sur /traitement : panneau « Traitement Automatique » sans UI de réconciliation. */
     @Input() embedTraitementSection = false;
+    /**
+     * En mode embarqué, supprime le popup de succès interne : le composant parent gère
+     * l'UX (ex. choix de la destination des données traitées).
+     */
+    @Input() suppressEmbedSuccessPopup = false;
     /** Progression du traitement automatique (section embarquée /traitement). */
     @Output() embedTraitementProgress = new EventEmitter<string>();
     /** Résultat du traitement (section embarquée) : lignes traitées prêtes à être rechargées par le parent. */
@@ -1230,7 +1239,7 @@ export class FileUploadComponent implements OnInit, OnDestroy {
                 message += `\n\nNon produit(s) :\n${skipped.join('\n')}`;
             }
             this.resetTraitementPanel();
-            if (!this.traitementViewDestroyed) {
+            if (!this.traitementViewDestroyed && !this.suppressEmbedSuccessPopup) {
                 await this.popupService.showSuccess(message, 'Traitement multiple terminé');
             }
         } catch (error: any) {
@@ -1295,7 +1304,7 @@ export class FileUploadComponent implements OnInit, OnDestroy {
                     lineCount: result.lineCount || 0,
                     modelName: model.name
                 });
-                if (!this.traitementViewDestroyed) {
+                if (!this.traitementViewDestroyed && !this.suppressEmbedSuccessPopup) {
                     await this.popupService.showSuccess(
                         `Fichier traité et téléchargé (${result.outputName}).${duplicateSummary}${preProcessingSuccess}`,
                         'Traitement terminé'

@@ -767,7 +767,12 @@ implements DisposableBean {
             for (Map<String, String> partnerRecord : list) {
                 HashMap<String, String> partnerRecordWithComment = new HashMap<String, String>(partnerRecord);
                 String type = getPartnerType(partnerRecord);
-                boolean isRgfrais = type != null && type.toUpperCase().contains("COMPENSE");
+                // RGFRAIS = frais uniquement : seules les lignes FRAIS_TRANSACTION portent ce
+                // commentaire. Une compensation (Compense_client / Compense_fournisseur) reste
+                // une opération partenaire hors périmètre, avec le commentaire « partenaire seul ».
+                String feesType = trxboOppartConfig.getFeesType();
+                boolean isRgfrais = type != null && feesType != null && !feesType.trim().isEmpty()
+                        && type.toUpperCase().contains(feesType.trim().toUpperCase());
                 partnerRecordWithComment.put("Commentaire",
                         isRgfrais ? trxboOppartConfig.getCommentRgfrais() : trxboOppartConfig.getCommentPartnerOnly());
                 response.getPartnerOnly().add(partnerRecordWithComment);

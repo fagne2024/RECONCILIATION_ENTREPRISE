@@ -43,6 +43,35 @@ public class PlatformAccountController {
         return ResponseEntity.ok(service.list());
     }
 
+    /**
+     * Cree un compte rattache a une entreprise (profil administrateur), avec
+     * mot de passe temporaire et obligation de changement a la premiere
+     * connexion. L'envoi email est best-effort : le mot de passe temporaire
+     * est renvoye une seule fois dans la reponse pour permettre sa
+     * transmission a l'utilisateur quand l'email n'a pas pu etre envoye.
+     */
+    @PostMapping
+    @PreAuthorize("hasRole('SUPER_ADMIN')")
+    public ResponseEntity<Map<String, Object>> create(
+            @RequestBody Map<String, Object> body,
+            Authentication authentication) {
+        String username = body == null ? null : asString(body.get("username"));
+        String email = body == null ? null : asString(body.get("email"));
+        Long entrepriseId = body == null ? null : asLong(body.get("entrepriseId"));
+
+        PlatformAccountService.ResetOutcome outcome =
+            service.create(username, email, entrepriseId, actorOf(authentication));
+        boolean emailSent = sendPasswordEmail(outcome.email(), outcome.username(), outcome.newPassword());
+
+        Map<String, Object> result = new LinkedHashMap<>();
+        result.put("message", emailSent
+            ? "Compte cree avec succes. Le mot de passe temporaire a ete envoye par email."
+            : "Compte cree avec succes. L'email n'a pas pu etre envoye : notez le mot de passe temporaire ci-dessous.");
+        result.put("emailSent", emailSent);
+        result.put("temporaryPassword", outcome.newPassword());
+        return ResponseEntity.ok(result);
+    }
+
     @PutMapping("/{id}")
     @PreAuthorize("hasRole('SUPER_ADMIN')")
     public ResponseEntity<Map<String, Object>> update(
@@ -130,5 +159,19 @@ public class PlatformAccountController {
             return b;
         }
         return Boolean.parseBoolean(value.toString());
+    }
+
+    private static Long asLong(Object value) {
+        if (value == null) {
+            return null;
+        }
+        if (value instanceof Number n) {
+            return n.longValue();
+        }
+        try {
+            return Long.parseLong(value.toString());
+        } catch (NumberFormatException e) {
+            return null;
+        }
     }
 }

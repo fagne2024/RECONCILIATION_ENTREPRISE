@@ -23,6 +23,10 @@
         <i class="fas fa-spinner fa-spin" *ngIf="isExporting"></i>
         {{ isExporting ? 'Export...' : 'Export PDF' }}
       </button>
+      <button type="button" class="ds-btn ds-btn--secondary nav-btn secondary" (click)="goToCalcul()" *ngIf="canEditFormules">
+        <i class="fas fa-calculator"></i>
+        {{ 'NAV.calcul' | translate }}
+      </button>
       <button type="button" class="ds-btn ds-btn--secondary nav-btn secondary" (click)="openParamsModal()" [disabled]="!selectedAgence">
         <i class="fas fa-cog"></i>
         {{ 'RDL.Paramètresagence' | translate }}
@@ -154,7 +158,7 @@
           <div class="hm-divider" *ngIf="selectedAgence"></div>
           <div class="hm-item">
             <div class="hm-label">{{ 'RDL.Formule' | translate }}</div>
-            <div class="hm-value ds-num formula">{{ 'RDL.PBJrém×taux' | translate }}</div>
+            <div class="hm-value ds-num formula">{{ data.formuleBase || ('RDL.PBJrém×taux' | translate) }}</div>
           </div>
         </div>
       </div>
@@ -200,7 +204,7 @@
 
       <div class="grid g3">
         <div class="card" [class.card-zero]="!data.chiffreAffairesBrut">
-          <div class="card-top"><div class="card-formula">{{ 'RDL.Misesbonus' | translate }}</div></div>
+          <div class="card-top"><div class="card-formula">{{ data.formuleCaBrut || ('RDL.Misesbonus' | translate) }}</div></div>
           <div class="card-title">{{ 'RDL.Chiffredaffairesbrut' | translate }}</div>
           <div class="card-value ds-num">{{ formatNum(data.chiffreAffairesBrut) }}</div>
         </div>
@@ -229,20 +233,20 @@
       <div class="grid g32">
         <div class="card" [class.red]="data.produitBrutJeux < 0" [class.card-zero]="!data.produitBrutJeux">
           <div class="card-top">
-            <div class="card-formula">{{ 'RDL.95×payinpayout' | translate }}</div>
+            <div class="card-formula">{{ data.formulePbj || ('RDL.95×payinpayout' | translate) }}</div>
             <div class="card-chip red" *ngIf="data.produitBrutJeux < 0">{{ 'RDL.Négatif' | translate }}</div>
           </div>
           <div class="card-title">{{ 'RDL.Produitbrutdejeux' | translate }}</div>
           <div class="card-value ds-num">{{ formatNum(data.produitBrutJeux) }}</div>
         </div>
         <div class="card blue" [class.card-zero]="!data.remunerationIntegrateur">
-          <div class="card-top"><div class="card-formula">{{ 'RDL.Payin×' | translate }} {{ data.tauxPayin }}{{ 'RDL.Payout×' | translate }} {{ data.tauxPayout }}%)</div></div>
+          <div class="card-top"><div class="card-formula">{{ data.formuleRemuneration || (('RDL.Payin×' | translate) + ' ' + data.tauxPayin + ('RDL.Payout×' | translate) + ' ' + data.tauxPayout + '%') }}</div></div>
           <div class="card-title">{{ 'RDL.Rémunérationintégrateur' | translate }}</div>
           <div class="card-value ds-num">{{ formatNum(data.remunerationIntegrateur) }}</div>
         </div>
         <div class="card featured">
           <div class="card-top">
-            <div class="card-formula">{{ 'RDL.PBJrémintégrateur' | translate }}</div>
+            <div class="card-formula">{{ data.formuleRevenu || ('RDL.PBJrémintégrateur' | translate) }}</div>
             <div class="card-chip amber">{{ 'RDL.Résultatclé' | translate }}</div>
           </div>
           <div class="card-title">{{ 'RDL.Revenugénéréactcom' | translate }}</div>

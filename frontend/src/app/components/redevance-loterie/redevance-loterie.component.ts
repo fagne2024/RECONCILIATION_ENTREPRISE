@@ -5,6 +5,7 @@ import { Router } from '@angular/router';
 import { RedevanceService, RedevanceData, RedevanceAgenceParam } from '../../services/redevance.service';
 import { FluxService, FluxData } from '../../services/flux.service';
 import { AgencySummaryService } from '../../services/agency-summary.service';
+import { AppStateService } from '../../services/app-state.service';
 import ChartDataLabels from 'chartjs-plugin-datalabels';
 import html2canvas from 'html2canvas';
 import { jsPDF } from 'jspdf';
@@ -110,8 +111,13 @@ export class RedevanceLoterieComponent implements OnInit {
     private router: Router,
     private redevanceService: RedevanceService,
     private fluxService: FluxService,
-    private agencySummaryService: AgencySummaryService
+    private agencySummaryService: AgencySummaryService,
+    private appState: AppStateService
   ) {}
+
+  get canEditFormules(): boolean {
+    return this.appState.isAdmin();
+  }
 
   ngOnInit(): void {
     this.loadAgences();
@@ -346,6 +352,10 @@ export class RedevanceLoterieComponent implements OnInit {
 
   goBack(): void {
     this.router.navigate(['/comptes']);
+  }
+
+  goToCalcul(): void {
+    this.router.navigate(['/configuration/calcul'], { queryParams: { module: 'REDEVANCE_LOTERIE' } });
   }
 
   formatNum(n: number): string {

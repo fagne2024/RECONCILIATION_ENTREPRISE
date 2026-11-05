@@ -1,8 +1,8 @@
 import { Component, AfterViewInit, OnDestroy, OnInit, ChangeDetectorRef, ElementRef, ViewChild } from '@angular/core';
 import { DomSanitizer, SafeResourceUrl } from '@angular/platform-browser';
 import { SharedUiModule } from '../../shared/shared-ui.module';
-import { ActivatedRoute, Router } from '@angular/router';
-import { Subscription, firstValueFrom } from 'rxjs';
+import { ActivatedRoute, NavigationEnd, Router } from '@angular/router';
+import { Subscription, firstValueFrom, filter } from 'rxjs';
 import * as ExcelJS from 'exceljs';
 import * as XLSX from 'xlsx';
 import { saveAs } from 'file-saver';
@@ -10,6 +10,10 @@ import html2canvas from 'html2canvas';
 import { jsPDF } from 'jspdf';
 import { AppStateService } from '../../services/app-state.service';
 import {
+  CertificationResultat,
+  CertificationResultatDetails,
+  CertificationResultatFilter,
+  CertificationResultatSummary,
   CertificationSoldeComputed,
   CertificationSoldeService,
   EcartAggregateRow,
@@ -26,7 +30,10 @@ import { CommissionTransaction } from '../../models/commission.model';
 import { OppartService } from '../../services/oppart.service';
 import { ConfigurationCalculService } from '../../services/configuration-calcul.service';
 import { Oppart, OPPART_STATUT_OK, OppartLigneVerificationResult } from '../../models/oppart.model';
-import { TranslateModule } from '@ngx-translate/core';
+import { PaysService } from '../../services/pays.service';
+import { Pays } from '../../models/pays.model';
+import { RECONCILIATION_ENV_OPTIONS } from '../../constants/reconciliation-env-options';
+import { TranslateModule, TranslateService } from '@ngx-translate/core';
 
 /** Ligne cible d'une réconciliation fichier (liste = compense ou écarts partenaire hors compense). */
 interface RecoLine {
@@ -237,6 +244,7 @@ export class CertificationSoldeComponent implements OnInit, AfterViewInit, OnDes
   @ViewChild('pdfExportContent') pdfExportContentRef?: ElementRef<HTMLDivElement>;
   @ViewChild('aggregatesPanel') aggregatesPanelRef?: ElementRef<HTMLDivElement>;
   @ViewChild('directCompenseTables') directCompenseTablesRef?: ElementRef<HTMLDivElement>;
+  @ViewChild('savedDocContent') savedDocContentRef?: ElementRef<HTMLDivElement>;
 
   response: ReconciliationResponse | null = null;
   computed: CertificationSoldeComputed | null = null;
@@ -251,6 +259,23 @@ export class CertificationSoldeComponent implements OnInit, AfterViewInit, OnDes
   readonly Math = Math;
 
   numeroCompte = '';
+  /** Environnement et pays enregistrés avec la certification (facultatifs, servent aux filtres). */
+  env = '';
+  pays = '';
+  readonly envOptions: readonly string[] = RECONCILIATION_ENV_OPTIONS;
+  paysOptions: Pays[] = [];
+  /** Popup « Enregistrer » : saisie de l'environnement et du pays avant la sauvegarde. */
+  showSaveMetaModal = false;
+  saveMetaEnv = '';
+  saveMetaPays = '';
+  /** Création d'un pays depuis le popup de sauvegarde ('save') ou des certifications enregistrées ('saved'). */
+  paysFormTarget: 'save' | 'saved' | null = null;
+  paysFormCode = '';
+  paysFormNom = '';
+  isCreatingPays = false;
+  /** Pays sélectionné dans la fiche d'une certification enregistrée (modifiable). */
+  savedPaysDraft = '';
+  isSavingSavedPays = false;
   dateCertificationDe = '';
   dateCertificationAu = '';
   /** Heures de borne du solde d'ouverture / de clôture (modifiables, sans recalcul). */
@@ -282,6 +307,7 @@ export class CertificationSoldeComponent implements OnInit, AfterViewInit, OnDes
   compenseListeSource: 'file' | 'oppart' | '' = '';
   isLoadingOppartCompenses = false;
   isVerifyingCompenses = false;
+  isLinkingCompenses = false;
   compenseListeFiltered = false;
   verifCompenses: OppartLigneVerificationResult[] = [];
   verifCompensesOk = 0;
@@ -295,9 +321,26 @@ export class CertificationSoldeComponent implements OnInit, AfterViewInit, OnDes
   ecartListeFileName = '';
   private loadedEcartLines: RecoLine[] = [];
 
+  /** Consultation des certifications enregistrées. */
+  showSavedPanel = false;
+  savedFilter: Required<CertificationResultatFilter> = CertificationSoldeComponent.emptySavedFilter();
+  savedList: CertificationResultatSummary[] = [];
+  readonly savedPageSizeOptions = [10, 20, 50];
+  savedPage = 0;
+  savedPageSize = 20;
+  savedTotalElements = 0;
+  savedTotalPages = 0;
+  isLoadingSaved = false;
+  savedResultat: CertificationResultat | null = null;
+  savedDetails: CertificationResultatDetails | null = null;
+  isExportingSavedPdf = false;
+  /** Export de la liste des certifications enregistrées (toutes les pages du filtre courant). */
+  isExportingSavedListPdf = false;
+  isExportingSavedListExcel = false;
   private fraisConfigs: FraisTransaction[] = [];
   private commissionConfigs: CommissionTransaction[] = [];
   private subscription = new Subscription();
+  private routerSubscription = new Subscription();
   private detailSessionLoaded: string | null = null;
   private pdfLogoPromise: Promise<string | null> | null = null;
   private pdfPreviewBlob: Blob | null = null;
@@ -314,16 +357,24 @@ export class CertificationSoldeComponent implements OnInit, AfterViewInit, OnDes
     private sanitizer: DomSanitizer,
     private oppartService: OppartService,
     private calculService: ConfigurationCalculService,
+    private paysService: PaysService,
+    private translate: TranslateService,
     private cdr: ChangeDetectorRef
   ) {}
+
+  private static emptySavedFilter(): Required<CertificationResultatFilter> {
+    return { numeroCompte: '', env: '', pays: '', dateDebut: '', dateFin: '' };
+  }
 
   ngOnInit(): void {
     const today = this.formatDateInput(new Date());
     this.dateCertificationDe = today;
     this.dateCertificationAu = today;
-    this.directCompenseMode = this.route.snapshot.queryParamMap.get('focus') === 'compense';
+    this.directCompenseMode = this.route.snapshot.queryParamMap.get('focus') === 'compense'
+      || this.route.snapshot.data['certificationCompenseMode'] === true;
     this.loadFraisConfigs();
     this.loadCommissionConfigs();
+    this.loadPaysOptions();
     this.calculService.loadRules().subscribe(() => {
       this.recalculateDerived();
       this.cdr.markForCheck();
@@ -335,6 +386,18 @@ export class CertificationSoldeComponent implements OnInit, AfterViewInit, OnDes
         this.refreshComputed();
         void this.loadPaginatedDetailIfNeeded();
       })
+    );
+
+    // Raccourci « Liste des compenses » : suit les navigations affectant le mode
+    // (`?focus=compense` ou route `/certification-solde/compenses`).
+    this.routerSubscription.add(
+      this.router.events
+        .pipe(filter((event) => event instanceof NavigationEnd))
+        .subscribe(() => {
+          this.directCompenseMode = this.route.snapshot.queryParamMap.get('focus') === 'compense'
+            || this.route.snapshot.data['certificationCompenseMode'] === true;
+          this.cdr.markForCheck();
+        })
     );
   }
 
@@ -586,6 +649,7 @@ export class CertificationSoldeComponent implements OnInit, AfterViewInit, OnDes
 
   ngOnDestroy(): void {
     this.subscription.unsubscribe();
+    this.routerSubscription.unsubscribe();
     if (this.pdfPreviewUrl) {
       URL.revokeObjectURL(this.pdfPreviewUrl);
       this.pdfPreviewUrl = null;
@@ -612,9 +676,13 @@ export class CertificationSoldeComponent implements OnInit, AfterViewInit, OnDes
     return this.ecartCertification;
   }
 
-  /** Écart frais : |Frais facturé| − |Frais attendu| (OPPART), négatif si attendu > facturé. */
+  /**
+   * Écart frais : |Frais attendu| − |Frais facturé| (OPPART), négatif si facturé > attendu.
+   * La formule configurée dans Configuration > Calcul est prioritaire ; en son absence
+   * (règle supprimée ou désactivée), le code conserve cette formule par défaut.
+   */
   get ecartFrais(): number | null {
-    if (!this.computed || this.computed.fraisAttendu == null || !this.computed.oppartOperationBreakdown.hasData) {
+    if (!this.computed || this.computed.fraisAttendu == null) {
       return null;
     }
     const facture = this.computed.oppartOperationBreakdown.frais;
@@ -622,7 +690,7 @@ export class CertificationSoldeComponent implements OnInit, AfterViewInit, OnDes
     return this.calculService.evaluate(
       'CERTIF.ECART_FRAIS',
       { FRAIS_FACTURE: facture, FRAIS_ATTENDU: attendu },
-      Math.abs(facture) - Math.abs(attendu)
+      Math.abs(attendu) - Math.abs(facture)
     );
   }
 
@@ -696,6 +764,51 @@ export class CertificationSoldeComponent implements OnInit, AfterViewInit, OnDes
     return Array.from(map.entries())
       .map(([agence, montant]) => ({ agence, montant }))
       .sort((a, b) => a.agence.localeCompare(b.agence));
+  }
+
+  /**
+   * Lignes du fichier des montants (partie partenaire) : code agence, ID Transaction
+   * et montant. Seules les lignes sélectionnées sont reprises, pour que le total du
+   * tableau corresponde au total partenaire affiché.
+   */
+  get compensePartnerLines(): { agence: string; idTransaction: string; montant: number; statut: boolean }[] {
+    if (!this.compenseRecon.loaded) {
+      return [];
+    }
+    const idIndex = this.findExtraColumnIndex(['idtransaction', 'transactionid', 'idtrans']);
+    const agenceIndex = this.findExtraColumnIndex(['agence', 'agency', 'client', 'codeproprietaire']);
+    const lines: { agence: string; idTransaction: string; montant: number; statut: boolean }[] = [];
+    for (let i = 0; i < this.compenseRecon.amounts.length; i++) {
+      if (!this.compenseRecon.selected[i]) {
+        continue;
+      }
+      const extras = this.compenseRecon.extraValues[i] || [];
+      lines.push({
+        agence: agenceIndex != null ? String(extras[agenceIndex] ?? '').trim() : '',
+        idTransaction: idIndex != null ? String(extras[idIndex] ?? '').trim() : '',
+        montant: Math.abs(Number(this.compenseRecon.amounts[i]) || 0),
+        statut: this.compenseRecon.isAmountMatchedAt(i)
+      });
+    }
+    return lines;
+  }
+
+  /** Index de la première colonne supplémentaire dont le libellé correspond (exact puis partiel). */
+  private findExtraColumnIndex(candidates: string[]): number | null {
+    const columns = this.compenseRecon.extraColumns.map(c => this.normalizeHeader(c));
+    for (const candidate of candidates) {
+      const exact = columns.indexOf(candidate);
+      if (exact >= 0) {
+        return exact;
+      }
+    }
+    for (const candidate of candidates) {
+      const partial = columns.findIndex(c => c.includes(candidate));
+      if (partial >= 0) {
+        return partial;
+      }
+    }
+    return null;
   }
 
   get compenseListeAbsTotal(): number {
@@ -986,7 +1099,9 @@ export class CertificationSoldeComponent implements OnInit, AfterViewInit, OnDes
         const rFrais = wsSynth.addRow(['Frais (FRAIS_TRANSACTION)', oppart.frais]);
         rFrais.getCell(2).numFmt = '#,##0';
         if (this.computed.fraisAttendu != null) {
-          const ecartFraisExcel = Math.abs(this.computed.fraisAttendu) - Math.abs(oppart.frais);
+          // Même source que l'écran : la formule configurée dans Configuration > Calcul
+          // est prioritaire, le code conserve sa formule par défaut.
+          const ecartFraisExcel = this.ecartFrais ?? 0;
           const rEcartFrais = wsSynth.addRow(['Écart frais (attendu − facturé)', ecartFraisExcel]);
           rEcartFrais.getCell(2).numFmt = '#,##0';
           rEcartFrais.getCell(1).font = { bold: true, color: { argb: 'FFC0392B' } };
@@ -1037,6 +1152,76 @@ export class CertificationSoldeComponent implements OnInit, AfterViewInit, OnDes
     } catch (e: any) {
       console.error('Erreur export Excel certification:', e);
       await this.popupService.showError(e?.message || 'Erreur lors de l\'export Excel.', 'Erreur d\'export');
+    } finally {
+      this.isExportingExcel = false;
+      this.cdr.markForCheck();
+    }
+  }
+
+  async exportCompenseListExcel(): Promise<void> {
+    if (!this.compenseLines.length) {
+      await this.popupService.showWarning('Aucune ligne dans la liste des compenses à exporter.', 'Export impossible');
+      return;
+    }
+
+    this.isExportingExcel = true;
+    this.cdr.markForCheck();
+    try {
+      const workbook = new ExcelJS.Workbook();
+      workbook.creator = 'ReconciliApp';
+      workbook.created = new Date();
+
+      const wsComp = workbook.addWorksheet('Liste des compenses');
+      this.styleExcelHeaderRow(wsComp.addRow(['Liste des compenses - Compense']));
+      wsComp.mergeCells('A1:E1');
+      wsComp.getCell('A1').font = { bold: true, size: 14, color: { argb: 'FF282E5E' } };
+
+      wsComp.addRow([]);
+      wsComp.addRow([`Total : ${this.formatNumber(this.compenseListeAbsTotal)}`]);
+      wsComp.getRow(wsComp.rowCount).getCell(1).font = { bold: true };
+
+      wsComp.addRow([]);
+      this.styleExcelHeaderRow(wsComp.addRow(['N° Trans GU', 'Date', 'Agence', 'Montant', this.compenseRecon.loaded ? 'Statut' : '']));
+      for (let i = 0; i < this.compenseLines.length; i++) {
+        const line = this.compenseLines[i];
+        const row = this.compenseRecon.loaded
+          ? wsComp.addRow([
+              line.numeroTransGu || '—',
+              line.date || '—',
+              line.agence || '—',
+              line.montant,
+              this.compenseRecon.isMatchedAt(i) ? 'OK' : 'KO'
+            ])
+          : wsComp.addRow([
+              line.numeroTransGu || '—',
+              line.date || '—',
+              line.agence || '—',
+              line.montant
+            ]);
+        row.getCell(4).numFmt = '#,##0';
+      }
+
+      const totalRow = this.compenseRecon.loaded
+        ? wsComp.addRow(['Total liste', '', '', this.compenseListeAbsTotal, ''])
+        : wsComp.addRow(['Total liste', '', '', this.compenseListeAbsTotal]);
+      totalRow.getCell(1).font = { bold: true };
+      totalRow.getCell(4).font = { bold: true };
+      totalRow.getCell(4).numFmt = '#,##0';
+
+      wsComp.getColumn(1).width = 24;
+      wsComp.getColumn(2).width = 18;
+      wsComp.getColumn(3).width = 18;
+      wsComp.getColumn(4).width = 18;
+      wsComp.getColumn(5).width = 12;
+
+      const buffer = await workbook.xlsx.writeBuffer();
+      const ts = new Date().toISOString().replace(/[-:T]/g, '').slice(0, 14);
+      const fileName = `Liste-Compense-${ts}.xlsx`;
+      saveAs(new Blob([buffer]), fileName);
+      await this.popupService.showSuccess(`Le fichier ${fileName} a été téléchargé.`, 'Export Excel');
+    } catch (e: any) {
+      console.error('Erreur export liste des compenses:', e);
+      await this.popupService.showError(e?.message || 'Erreur lors de l\'export.', 'Erreur d\'export');
     } finally {
       this.isExportingExcel = false;
       this.cdr.markForCheck();
@@ -1408,69 +1593,8 @@ export class CertificationSoldeComponent implements OnInit, AfterViewInit, OnDes
     ]);
 
     try {
-      const pdf = new jsPDF({ orientation: 'portrait', unit: 'mm', format: 'a4' });
-      const pdfW = pdf.internal.pageSize.getWidth();
-      const pdfH = pdf.internal.pageSize.getHeight();
-      const marginX = 16;
-      const marginY = 6;
-      const pageW = pdfW - 2 * marginX;
-      const contentPerPage = pdfH - 2 * marginY;
-      const gapBetweenBlocks = 2;
-
-      const blocks: HTMLElement[] = [];
-      const headerEl = element.querySelector<HTMLElement>('.pdf-export-header');
-      const bannerEl = element.querySelector<HTMLElement>('.pdf-solde-banner');
-      if (headerEl) {
-        blocks.push(headerEl);
-      }
-      if (bannerEl) {
-        blocks.push(bannerEl);
-      }
-      blocks.push(...Array.from(element.querySelectorAll<HTMLElement>('.pdf-export-section')));
-
-      const rendered: { canvas: HTMLCanvasElement; heightPx: number; ratio: number }[] = [];
-      for (const block of blocks) {
-        const blockCanvas = await html2canvas(block, {
-          scale: 2,
-          useCORS: true,
-          logging: false,
-          backgroundColor: '#ffffff'
-        });
-        rendered.push({
-          canvas: blockCanvas,
-          heightPx: blockCanvas.height,
-          ratio: pageW / blockCanvas.width
-        });
-      }
-
-      const sumBlockHeightsMm = rendered.reduce((sum, b) => sum + b.heightPx * b.ratio, 0);
-      const minGapsMm = gapBetweenBlocks * Math.max(0, rendered.length - 1);
-      const totalWithMinGaps = sumBlockHeightsMm + minGapsMm;
-      const fitScale = totalWithMinGaps > contentPerPage ? contentPerPage / totalWithMinGaps : 1;
-
-      // Ajuste au contenu réel : espacement fixe entre les blocs, aucun étirement
-      // pour occuper toute la hauteur de la page (le reste reste en bas de page).
-      const gapMm = rendered.length > 1 ? gapBetweenBlocks * fitScale : 0;
-
-      let y = marginY;
-      for (const block of rendered) {
-        const blockHeightMm = block.heightPx * block.ratio * fitScale;
-        const blockWidthMm = pageW * fitScale;
-        const x = marginX + (pageW - blockWidthMm) / 2;
-        pdf.addImage(block.canvas.toDataURL('image/png'), 'PNG', x, y, blockWidthMm, blockHeightMm);
-        y += blockHeightMm + gapMm;
-      }
-
-      const fileName = `${this.buildExportFileBase()}.pdf`;
-      const blob = pdf.output('blob');
-      this.pdfPreviewBlob = blob;
-      this.pdfPreviewFileName = fileName;
-      if (this.pdfPreviewUrl) {
-        URL.revokeObjectURL(this.pdfPreviewUrl);
-      }
-      this.pdfPreviewUrl = URL.createObjectURL(blob);
-      this.showPdfPreview = true;
-      this.cdr.markForCheck();
+      const blob = await this.buildCertificationPdfBlob(element);
+      this.showPdfBlobPreview(blob, `${this.buildExportFileBase()}.pdf`);
     } catch (e: any) {
       console.error('Erreur export PDF certification:', e);
       await this.popupService.showError(e?.message || 'Erreur lors de l\'export PDF.', 'Erreur d\'export');
@@ -1478,6 +1602,78 @@ export class CertificationSoldeComponent implements OnInit, AfterViewInit, OnDes
       this.isExportingPdf = false;
       this.cdr.markForCheck();
     }
+  }
+
+  private showPdfBlobPreview(blob: Blob, fileName: string): void {
+    this.pdfPreviewBlob = blob;
+    this.pdfPreviewFileName = fileName;
+    if (this.pdfPreviewUrl) {
+      URL.revokeObjectURL(this.pdfPreviewUrl);
+    }
+    this.pdfPreviewUrl = URL.createObjectURL(blob);
+    this.showPdfPreview = true;
+    this.cdr.markForCheck();
+  }
+
+  /**
+   * PDF A4 portrait d'un document de certification : en-tête, bandeau et sections
+   * (`.pdf-export-header`, `.pdf-solde-banner`, `.pdf-export-section`) réduits pour tenir sur une page.
+   */
+  private async buildCertificationPdfBlob(element: HTMLElement): Promise<Blob> {
+    const pdf = new jsPDF({ orientation: 'portrait', unit: 'mm', format: 'a4' });
+    const pdfW = pdf.internal.pageSize.getWidth();
+    const pdfH = pdf.internal.pageSize.getHeight();
+    const marginX = 16;
+    const marginY = 6;
+    const pageW = pdfW - 2 * marginX;
+    const contentPerPage = pdfH - 2 * marginY;
+    const gapBetweenBlocks = 2;
+
+    const blocks: HTMLElement[] = [];
+    const headerEl = element.querySelector<HTMLElement>('.pdf-export-header');
+    const bannerEl = element.querySelector<HTMLElement>('.pdf-solde-banner');
+    if (headerEl) {
+      blocks.push(headerEl);
+    }
+    if (bannerEl) {
+      blocks.push(bannerEl);
+    }
+    blocks.push(...Array.from(element.querySelectorAll<HTMLElement>('.pdf-export-section')));
+
+    const rendered: { canvas: HTMLCanvasElement; heightPx: number; ratio: number }[] = [];
+    for (const block of blocks) {
+      const blockCanvas = await html2canvas(block, {
+        scale: 2,
+        useCORS: true,
+        logging: false,
+        backgroundColor: '#ffffff'
+      });
+      rendered.push({
+        canvas: blockCanvas,
+        heightPx: blockCanvas.height,
+        ratio: pageW / blockCanvas.width
+      });
+    }
+
+    const sumBlockHeightsMm = rendered.reduce((sum, b) => sum + b.heightPx * b.ratio, 0);
+    const minGapsMm = gapBetweenBlocks * Math.max(0, rendered.length - 1);
+    const totalWithMinGaps = sumBlockHeightsMm + minGapsMm;
+    const fitScale = totalWithMinGaps > contentPerPage ? contentPerPage / totalWithMinGaps : 1;
+
+    // Ajuste au contenu réel : espacement fixe entre les blocs, aucun étirement
+    // pour occuper toute la hauteur de la page (le reste reste en bas de page).
+    const gapMm = rendered.length > 1 ? gapBetweenBlocks * fitScale : 0;
+
+    let y = marginY;
+    for (const block of rendered) {
+      const blockHeightMm = block.heightPx * block.ratio * fitScale;
+      const blockWidthMm = pageW * fitScale;
+      const x = marginX + (pageW - blockWidthMm) / 2;
+      pdf.addImage(block.canvas.toDataURL('image/png'), 'PNG', x, y, blockWidthMm, blockHeightMm);
+      y += blockHeightMm + gapMm;
+    }
+
+    return pdf.output('blob');
   }
 
   downloadPdfPreview(): void {
@@ -1712,6 +1908,45 @@ export class CertificationSoldeComponent implements OnInit, AfterViewInit, OnDes
       return;
     }
 
+    if (!this.computed) {
+      await this.popupService.showWarning('Aucun résultat de certification à enregistrer.', 'Sauvegarde');
+      return;
+    }
+
+    this.saveMetaEnv = this.env;
+    this.saveMetaPays = this.pays;
+    this.cancelCreatePaysForm();
+    this.showSaveMetaModal = true;
+    this.cdr.markForCheck();
+  }
+
+  get canConfirmSaveMeta(): boolean {
+    return !!this.saveMetaEnv && (!!this.saveMetaPays || !this.paysOptions.length);
+  }
+
+  closeSaveMetaModal(): void {
+    this.showSaveMetaModal = false;
+    this.cancelCreatePaysForm();
+    this.cdr.markForCheck();
+  }
+
+  async confirmSaveMeta(): Promise<void> {
+    if (!this.canConfirmSaveMeta || this.isSaving) {
+      return;
+    }
+    this.env = this.saveMetaEnv;
+    this.pays = this.saveMetaPays;
+    this.showSaveMetaModal = false;
+    await this.persistCertification();
+  }
+
+  private async persistCertification(): Promise<void> {
+    const resultat = this.buildResultatSnapshot();
+    if (!resultat || this.soldeOuverture == null || this.soldeCloture == null) {
+      await this.popupService.showWarning('Aucun résultat de certification à enregistrer.', 'Sauvegarde');
+      return;
+    }
+
     this.isSaving = true;
     try {
       await Promise.all([
@@ -1724,18 +1959,857 @@ export class CertificationSoldeComponent implements OnInit, AfterViewInit, OnDes
           this.numeroCompte.trim(),
           this.dateCertificationAu,
           this.soldeCloture
-        ))
+        )),
+        firstValueFrom(this.certificationService.saveResultat(resultat))
       ]);
-      await this.popupService.showSuccess('Certification de solde enregistrée.', 'Sauvegarde');
+      await this.popupService.showSuccess(
+        'Certification de solde enregistrée. Elle est consultable via « Certifications enregistrées ».',
+        'Sauvegarde'
+      );
     } catch (e: any) {
-      await this.popupService.showError(e?.message || 'Erreur lors de la sauvegarde.', 'Erreur');
+      await this.popupService.showError(e?.error?.message || e?.message || 'Erreur lors de la sauvegarde.', 'Erreur');
     } finally {
       this.isSaving = false;
     }
   }
 
+  /** Instantané du document PDF de certification (chiffres clés + tableaux). */
+  private buildResultatSnapshot(): CertificationResultat | null {
+    const c = this.computed;
+    if (!c) {
+      return null;
+    }
+    const ecartLoaded = this.ecartRecon.loaded;
+    const details: CertificationResultatDetails = {
+      regularisation: this.regularisationAggregates.map(r => ({
+        label: r.label,
+        count: r.count,
+        volume: r.volume,
+        frais: r.frais,
+        montantARegulariser: r.montantARegulariser
+      })),
+      compense: this.compenseLines.length
+        ? {
+            parAgence: this.compenseParAgence,
+            totalPartenaire: this.compenseRecon.loaded ? this.compenseFileTotal : null,
+            ecartLabel: this.compenseRecon.loaded ? this.compenseEcartLabel : null,
+            ecart: this.compenseRecon.loaded ? this.compenseFileEcart : null
+          }
+        : null,
+      ecartPartenaire: this.ecartPartenaireLines.length
+        ? {
+            parAgence: this.ecartParAgence,
+            totalListe: this.ecartListeTotal,
+            totalFichier: ecartLoaded ? this.ecartFileTotal : null,
+            ecartLabel: ecartLoaded ? this.ecartEcartLabel : null,
+            ecart: ecartLoaded ? this.ecartFileEcart : null,
+            lignes: ecartLoaded
+              ? this.ecartPartenaireLines.map((l, i) => ({
+                  numeroTransGu: l.numeroTransGu,
+                  service: l.service,
+                  agence: l.agence,
+                  montant: l.montant,
+                  statut: this.ecartRecon.isMatchedAt(i) ? 'OK' as const : 'KO' as const
+                }))
+              : [],
+            okCount: ecartLoaded ? this.ecartOkCount : null,
+            koCount: ecartLoaded ? this.ecartKoCount : null
+          }
+        : null,
+      typesOperations: c.oppartOperationBreakdown.hasData
+        ? c.oppartOperationBreakdown.otherTypes.map(t => ({ type: t.type, volume: t.volume }))
+        : [],
+      trxboParService: c.trxboServiceBreakdown.hasData
+        ? {
+            rows: c.trxboServiceBreakdown.rows.map(s => ({
+              service: s.service,
+              agence: s.agence,
+              count: s.count,
+              volume: s.volume,
+              frais: s.frais,
+              montantFrais: s.montantFrais
+            })),
+            totalCount: c.trxboServiceBreakdown.totalCount,
+            totalVolume: c.trxboServiceBreakdown.totalVolume,
+            totalMontantFrais: c.trxboServiceBreakdown.totalMontantFrais
+          }
+        : null
+    };
+    const fraisFactures = c.oppartOperationBreakdown.hasData ? c.oppartOperationBreakdown.frais : null;
+
+    return {
+      numeroCompte: this.numeroCompte.trim(),
+      dateDebut: this.dateCertificationDe,
+      dateFin: this.dateCertificationAu,
+      env: this.env || null,
+      pays: this.pays || null,
+      heureOuverture: this.normalizeTime(this.heureOuverture, '00:00:00'),
+      heureCloture: this.normalizeTime(this.heureCloture, '23:59:59'),
+      titre: this.reconciliationTitle,
+      soldeOuverture: this.soldeOuverture,
+      soldeCloture: this.soldeCloture,
+      totalDebit: c.totalDebit,
+      totalCredit: c.totalCredit,
+      variation: this.variation,
+      mouvementNetOppart: c.mouvementNetOppart,
+      fraisAttendu: c.fraisAttendu,
+      fraisFactures,
+      ecartFrais: fraisFactures != null ? this.ecartFrais : null,
+      ecartMouvement: this.ecartCertification,
+      totalRegularisation: c.totalRegularisation,
+      ecartCertification: this.ecartCertificationSynthese,
+      soldeClotureTheorique: this.soldeClotureTheorique,
+      volumeEcartBo: c.volumeEcartBo,
+      volumeEcartPartenaire: c.volumeEcartPartner,
+      nbLignesBo: c.totals.totalBoRecords,
+      nbLignesPartenaire: c.totals.totalPartnerRecords,
+      nbCorrespondances: c.totals.matches,
+      commentaire: this.commentaire?.trim() || null,
+      detailsJson: JSON.stringify(details)
+    };
+  }
+
+  openSavedCertifications(): void {
+    this.showSavedPanel = true;
+    this.savedResultat = null;
+    this.savedDetails = null;
+    this.savedPaysDraft = '';
+    this.cancelCreatePaysForm();
+    if (!this.savedFilter.numeroCompte && this.numeroCompte?.trim()) {
+      this.savedFilter.numeroCompte = this.numeroCompte.trim();
+    }
+    void this.searchSavedCertifications();
+  }
+
+  closeSavedPanel(): void {
+    this.showSavedPanel = false;
+    this.savedResultat = null;
+    this.savedDetails = null;
+    this.savedPaysDraft = '';
+    this.cancelCreatePaysForm();
+    this.cdr.markForCheck();
+  }
+
+  /** Nouvelle recherche : repart de la première page. */
+  searchSavedCertifications(): Promise<void> {
+    this.savedPage = 0;
+    return this.loadSavedCertifications();
+  }
+
+  goToSavedPage(page: number): void {
+    if (page < 0 || page >= this.savedTotalPages || page === this.savedPage || this.isLoadingSaved) {
+      return;
+    }
+    this.savedPage = page;
+    void this.loadSavedCertifications();
+  }
+
+  onSavedPageSizeChange(): void {
+    void this.searchSavedCertifications();
+  }
+
+  get savedRangeStart(): number {
+    return this.savedTotalElements ? this.savedPage * this.savedPageSize + 1 : 0;
+  }
+
+  get savedRangeEnd(): number {
+    return Math.min((this.savedPage + 1) * this.savedPageSize, this.savedTotalElements);
+  }
+
+  paysLabel(code: string | null | undefined): string {
+    if (!code) return '—';
+    const p = this.paysOptions.find(o => o.code === code);
+    return p ? `${p.code} - ${p.nom}` : code;
+  }
+
+  /** Ouvre (ou referme) le formulaire de création d'un pays pour le popup indiqué. */
+  toggleCreatePaysForm(target: 'save' | 'saved'): void {
+    if (this.paysFormTarget === target) {
+      this.cancelCreatePaysForm();
+      return;
+    }
+    this.paysFormTarget = target;
+    this.paysFormCode = '';
+    this.paysFormNom = '';
+    this.cdr.markForCheck();
+  }
+
+  cancelCreatePaysForm(): void {
+    this.paysFormTarget = null;
+    this.paysFormCode = '';
+    this.paysFormNom = '';
+    this.cdr.markForCheck();
+  }
+
+  /** Crée un pays dans le référentiel et le sélectionne dans le popup d'origine. */
+  async createPays(): Promise<void> {
+    if (this.isCreatingPays) {
+      return;
+    }
+    const code = (this.paysFormCode || '').trim().toUpperCase();
+    const nom = (this.paysFormNom || '').trim();
+    if (!code || !nom) {
+      await this.popupService.showWarning(this.translate.instant('CS.saved.countryRequired'), 'Pays');
+      return;
+    }
+    if (this.paysOptions.some(p => (p.code || '').toUpperCase() === code)) {
+      await this.popupService.showWarning(`Le pays ${code} existe déjà.`, 'Pays');
+      return;
+    }
+    const target = this.paysFormTarget;
+    this.isCreatingPays = true;
+    this.cdr.markForCheck();
+    try {
+      const created = await firstValueFrom(this.paysService.createPays({ code, nom }));
+      const pays: Pays = {
+        id: created?.id,
+        code: (created?.code || code).toUpperCase(),
+        nom: created?.nom || nom
+      };
+      this.paysOptions = [...this.paysOptions.filter(p => p.code !== pays.code), pays]
+        .sort((a, b) => a.code.localeCompare(b.code));
+      if (target === 'saved') {
+        this.savedPaysDraft = pays.code;
+      } else {
+        this.saveMetaPays = pays.code;
+      }
+      this.cancelCreatePaysForm();
+      await this.popupService.showSuccess(this.translate.instant('CS.saved.countryCreated'), 'Pays');
+    } catch (e: any) {
+      await this.popupService.showError(
+        e?.error?.message || e?.message || 'Erreur lors de la création du pays.',
+        'Pays'
+      );
+    } finally {
+      this.isCreatingPays = false;
+      this.cdr.markForCheck();
+    }
+  }
+
+  /** Enregistre le pays affecté à la certification consultée. */
+  async saveSavedPays(): Promise<void> {
+    if (!this.savedResultat?.id || this.isSavingSavedPays) {
+      return;
+    }
+    const id = this.savedResultat.id;
+    const pays = (this.savedPaysDraft || '').trim() || null;
+    this.isSavingSavedPays = true;
+    this.cdr.markForCheck();
+    try {
+      const updated = await firstValueFrom(this.certificationService.updateResultatPays(id, pays));
+      if (this.savedResultat?.id === id) {
+        this.savedResultat = { ...this.savedResultat, pays: updated?.pays ?? pays };
+      }
+      this.savedList = this.savedList.map(row => (row.id === id ? { ...row, pays: updated?.pays ?? pays } : row));
+      await this.popupService.showSuccess(this.translate.instant('CS.saved.countrySaved'), 'Pays');
+    } catch (e: any) {
+      await this.popupService.showError(
+        e?.error?.message || e?.message || 'Impossible de mettre à jour le pays.',
+        'Pays'
+      );
+    } finally {
+      this.isSavingSavedPays = false;
+      this.cdr.markForCheck();
+    }
+  }
+
+  private loadPaysOptions(): void {
+    this.subscription.add(
+      this.paysService.getPays().subscribe({
+        next: pays => {
+          this.paysOptions = [...(pays ?? [])].sort((a, b) => a.code.localeCompare(b.code));
+          this.cdr.markForCheck();
+        },
+        error: () => {
+          this.paysOptions = [];
+        }
+      })
+    );
+  }
+
+  async loadSavedCertifications(): Promise<void> {
+    this.isLoadingSaved = true;
+    this.cdr.markForCheck();
+    try {
+      const page = await firstValueFrom(
+        this.certificationService.listResultats(this.savedFilter, this.savedPage, this.savedPageSize)
+      );
+      this.savedList = page?.content ?? [];
+      this.savedTotalElements = page?.totalElements ?? 0;
+      this.savedTotalPages = page?.totalPages ?? 0;
+      // Page devenue vide (ex. dernière ligne supprimée) : on revient à la dernière page existante.
+      if (!this.savedList.length && this.savedPage > 0 && this.savedTotalPages > 0) {
+        this.savedPage = this.savedTotalPages - 1;
+        await this.loadSavedCertifications();
+        return;
+      }
+    } catch (e: any) {
+      this.savedList = [];
+      this.savedTotalElements = 0;
+      this.savedTotalPages = 0;
+      await this.popupService.showError(
+        e?.error?.message || e?.message || 'Impossible de charger les certifications enregistrées.',
+        'Certifications enregistrées'
+      );
+    } finally {
+      this.isLoadingSaved = false;
+      this.cdr.markForCheck();
+    }
+  }
+
+  resetSavedFilter(): void {
+    this.savedFilter = CertificationSoldeComponent.emptySavedFilter();
+    void this.searchSavedCertifications();
+  }
+
+  async consultSaved(row: CertificationResultatSummary): Promise<void> {
+    this.isLoadingSaved = true;
+    this.cdr.markForCheck();
+    try {
+      const resultat = await firstValueFrom(this.certificationService.getResultat(row.id));
+      this.savedDetails = this.parseSavedDetails(resultat.detailsJson);
+      this.savedResultat = resultat;
+      this.savedPaysDraft = resultat.pays || '';
+      this.cancelCreatePaysForm();
+    } catch (e: any) {
+      await this.popupService.showError(
+        e?.error?.message || e?.message || 'Impossible de charger cette certification.',
+        'Certifications enregistrées'
+      );
+    } finally {
+      this.isLoadingSaved = false;
+      this.cdr.markForCheck();
+    }
+  }
+
+  backToSavedList(): void {
+    this.savedResultat = null;
+    this.savedDetails = null;
+    this.savedPaysDraft = '';
+    this.cancelCreatePaysForm();
+    this.cdr.markForCheck();
+  }
+
+  async deleteSaved(row: CertificationResultatSummary): Promise<void> {
+    const periode = this.formatPeriodeFr(row.dateDebut, row.dateFin);
+    const confirmed = await this.popupService.showConfirm(
+      `Supprimer la certification du compte ${row.numeroCompte} (${periode}) ? Cette action est définitive.`,
+      'Supprimer la certification'
+    );
+    if (!confirmed) {
+      return;
+    }
+    try {
+      await firstValueFrom(this.certificationService.deleteResultat(row.id));
+      if (this.savedResultat?.id === row.id) {
+        this.backToSavedList();
+      }
+      await this.loadSavedCertifications();
+    } catch (e: any) {
+      await this.popupService.showError(e?.error?.message || e?.message || 'Erreur lors de la suppression.', 'Erreur');
+    }
+  }
+
+  async exportSavedPdf(): Promise<void> {
+    const element = this.savedDocContentRef?.nativeElement;
+    if (!this.savedResultat || !element || this.isExportingSavedPdf) {
+      return;
+    }
+    this.isExportingSavedPdf = true;
+    this.cdr.markForCheck();
+    try {
+      await this.ensurePdfLogo();
+      this.cdr.detectChanges();
+      const blob = await this.buildCertificationPdfBlob(element);
+      const r = this.savedResultat;
+      const compte = (r.numeroCompte || 'compte').replace(/[^\w-]+/g, '-');
+      const fileName = `Certification-Solde-${compte}-${r.dateDebut.replace(/-/g, '')}-${r.dateFin.replace(/-/g, '')}.pdf`;
+      this.showPdfBlobPreview(blob, fileName);
+    } catch (e: any) {
+      console.error('Erreur export PDF certification enregistrée:', e);
+      await this.popupService.showError(e?.message || 'Erreur lors de l\'export PDF.', 'Erreur d\'export');
+    } finally {
+      this.isExportingSavedPdf = false;
+      this.cdr.markForCheck();
+    }
+  }
+
+  savedSoldeBanner(r: CertificationResultat): string {
+    return this.buildSoldeBanner(r.dateDebut, r.dateFin, r.numeroCompte, r.soldeCloture);
+  }
+
+  /** Exporte la liste des certifications enregistrées (filtre courant, toutes les pages) en PDF. */
+  async exportSavedListPdf(): Promise<void> {
+    if (this.isExportingSavedListPdf) {
+      return;
+    }
+    this.isExportingSavedListPdf = true;
+    this.cdr.markForCheck();
+    try {
+      const rows = await this.fetchAllSavedForExport();
+      if (!rows.length) {
+        await this.popupService.showWarning('Aucune certification à exporter.', 'Export impossible');
+        return;
+      }
+      const pdf = this.buildSavedListPdf(rows);
+      const fileName = `Certifications-enregistrees-${this.buildSavedListTimestamp()}.pdf`;
+      this.showPdfBlobPreview(pdf.output('blob'), fileName);
+    } catch (e: any) {
+      console.error('Erreur export PDF liste des certifications enregistrées:', e);
+      await this.popupService.showError(e?.message || 'Erreur lors de l\'export PDF.', 'Erreur d\'export');
+    } finally {
+      this.isExportingSavedListPdf = false;
+      this.cdr.markForCheck();
+    }
+  }
+
+  /** Exporte la liste des certifications enregistrées (filtre courant, toutes les pages) en Excel. */
+  async exportSavedListExcel(): Promise<void> {
+    if (this.isExportingSavedListExcel) {
+      return;
+    }
+    this.isExportingSavedListExcel = true;
+    this.cdr.markForCheck();
+    try {
+      const rows = await this.fetchAllSavedForExport();
+      if (!rows.length) {
+        await this.popupService.showWarning('Aucune certification à exporter.', 'Export impossible');
+        return;
+      }
+
+      const workbook = new ExcelJS.Workbook();
+      workbook.creator = 'ReconciliApp';
+      workbook.created = new Date();
+
+      const ws = workbook.addWorksheet('Certifications');
+      const headers = [
+        'Compte', 'Environnement', 'Pays', 'Période du', 'Période au',
+        'Solde ouverture', 'Solde clôture', 'Écart mouvement', 'Écart certification',
+        'Solde clôture théorique', 'Commentaire', 'Enregistrée le', 'Enregistrée par'
+      ];
+      const colCount = headers.length;
+
+      ws.addRow([`Certifications enregistrées`]);
+      ws.mergeCells(1, 1, 1, colCount);
+      const titleCell = ws.getCell(1, 1);
+      titleCell.font = { bold: true, size: 14, color: { argb: 'FF282E5E' } };
+      titleCell.alignment = { vertical: 'middle', horizontal: 'left' };
+      ws.getRow(1).height = 22;
+
+      ws.addRow([this.buildSavedListExportSubtitle(rows.length)]);
+      ws.mergeCells(2, 1, 2, colCount);
+      const subtitleCell = ws.getCell(2, 1);
+      subtitleCell.font = { italic: true, size: 9, color: { argb: 'FF666666' } };
+
+      ws.addRow([]);
+      const headerRow = ws.addRow(headers);
+      this.styleExcelHeaderRow(headerRow);
+
+      for (const row of rows) {
+        const excelRow = ws.addRow([
+          row.numeroCompte || '—',
+          row.env || '—',
+          row.pays || '—',
+          row.dateDebut ? this.formatDateFr(row.dateDebut) : '—',
+          row.dateFin ? this.formatDateFr(row.dateFin) : '—',
+          row.soldeOuverture,
+          row.soldeCloture,
+          row.ecartMouvement,
+          row.ecartCertification,
+          row.soldeClotureTheorique,
+          row.commentaire || '',
+          this.formatDateTimeFr(row.updatedAt),
+          row.updatedBy || row.createdBy || '—'
+        ]);
+        for (const col of [6, 7, 8, 9, 10]) {
+          excelRow.getCell(col).numFmt = '#,##0';
+        }
+        if (row.ecartCertification != null && row.ecartCertification !== 0) {
+          excelRow.getCell(9).font = { bold: true, color: { argb: 'FFC0392B' } };
+        }
+      }
+
+      const sum = (pick: (r: CertificationResultatSummary) => number | null): number =>
+        rows.reduce((acc, r) => acc + (pick(r) ?? 0), 0);
+      const totalRow = ws.addRow([
+        `TOTAL (${rows.length})`, '', '', '', '',
+        sum(r => r.soldeOuverture),
+        sum(r => r.soldeCloture),
+        sum(r => r.ecartMouvement),
+        sum(r => r.ecartCertification),
+        sum(r => r.soldeClotureTheorique),
+        '', '', ''
+      ]);
+      totalRow.font = { bold: true };
+      totalRow.eachCell(cell => {
+        cell.border = { top: { style: 'thin', color: { argb: 'FF282E5E' } } };
+      });
+      for (const col of [6, 7, 8, 9, 10]) {
+        totalRow.getCell(col).numFmt = '#,##0';
+      }
+
+      ws.columns = [
+        { width: 22 }, { width: 14 }, { width: 10 }, { width: 12 }, { width: 12 },
+        { width: 16 }, { width: 16 }, { width: 16 }, { width: 18 },
+        { width: 20 }, { width: 32 }, { width: 20 }, { width: 18 }
+      ];
+      ws.views = [{ state: 'frozen', ySplit: headerRow.number }];
+      ws.autoFilter = {
+        from: { row: headerRow.number, column: 1 },
+        to: { row: headerRow.number, column: colCount }
+      };
+
+      const buffer = await workbook.xlsx.writeBuffer();
+      const fileName = `Certifications-enregistrees-${this.buildSavedListTimestamp()}.xlsx`;
+      saveAs(new Blob([buffer]), fileName);
+      await this.popupService.showSuccess(
+        `${rows.length} certification(s) exportée(s) dans ${fileName}.`,
+        'Export Excel'
+      );
+    } catch (e: any) {
+      console.error('Erreur export Excel liste des certifications enregistrées:', e);
+      await this.popupService.showError(e?.message || 'Erreur lors de l\'export Excel.', 'Erreur d\'export');
+    } finally {
+      this.isExportingSavedListExcel = false;
+      this.cdr.markForCheck();
+    }
+  }
+
+  /** Charge toutes les lignes correspondant au filtre courant (le backend limite chaque page à 100). */
+  private async fetchAllSavedForExport(): Promise<CertificationResultatSummary[]> {
+    const size = 100;
+    const maxPages = 200;
+    const all: CertificationResultatSummary[] = [];
+    let page = 0;
+    let totalPages = 1;
+    do {
+      const result = await firstValueFrom(
+        this.certificationService.listResultats(this.savedFilter, page, size)
+      );
+      all.push(...(result?.content ?? []));
+      totalPages = result?.totalPages ?? 0;
+      page++;
+    } while (page < totalPages && page < maxPages);
+    return all;
+  }
+
+  /** Résumé des filtres appliqués, affiché en sous-titre des exports. */
+  private buildSavedListExportSubtitle(count: number): string {
+    const f = this.savedFilter;
+    const parts: string[] = [];
+    if (f.numeroCompte?.trim()) {
+      parts.push(`compte ${f.numeroCompte.trim()}`);
+    }
+    if (f.env) {
+      parts.push(`environnement ${f.env}`);
+    }
+    if (f.pays) {
+      parts.push(`pays ${this.paysLabel(f.pays)}`);
+    }
+    if (f.dateDebut || f.dateFin) {
+      const du = f.dateDebut ? this.formatDateFr(f.dateDebut) : '…';
+      const au = f.dateFin ? this.formatDateFr(f.dateFin) : '…';
+      parts.push(`période ${du} → ${au}`);
+    }
+    const filters = parts.length ? `Filtres : ${parts.join(' · ')}` : 'Tous les enregistrements';
+    const plural = count > 1 ? 's' : '';
+    return `${filters} — ${count} certification${plural} — export du ${this.formatExportTimestamp()}`;
+  }
+
+  private buildSavedListTimestamp(): string {
+    return new Date().toISOString().replace(/[-:T]/g, '').slice(0, 14);
+  }
+
+  /**
+   * PDF paysage de la liste des certifications enregistrées : tableau multi-pages,
+   * en-tête répété, cellules multi-lignes (pas de troncature), totaux et pagination.
+   */
+  private buildSavedListPdf(rows: CertificationResultatSummary[]): jsPDF {
+    const pdf = new jsPDF({ orientation: 'landscape', unit: 'mm', format: 'a4' });
+    const pageW = pdf.internal.pageSize.getWidth();
+    const pageH = pdf.internal.pageSize.getHeight();
+    const margin = 12;
+    const contentW = pageW - margin * 2;
+    const pageBottom = pageH - 11;
+
+    const bodyFont = 8;
+    const headerFont = 7.8;
+    const padX = 2.4;
+    const lineH = 4.2;
+    const headerLineH = 3.6;
+
+    const columns: {
+      label: string;
+      weight: number;
+      align: 'left' | 'right';
+      value: (r: CertificationResultatSummary) => string;
+      ecart?: boolean;
+    }[] = [
+      { label: 'Compte', weight: 30, align: 'left', value: r => r.numeroCompte || '—' },
+      { label: 'Env.', weight: 11, align: 'left', value: r => r.env || '—' },
+      { label: 'Pays', weight: 11, align: 'left', value: r => r.pays || '—' },
+      { label: 'Période', weight: 36, align: 'left', value: r => this.formatPeriodeFr(r.dateDebut, r.dateFin) },
+      { label: 'Solde ouverture', weight: 26, align: 'right', value: r => this.formatNumber(r.soldeOuverture) },
+      { label: 'Solde clôture', weight: 26, align: 'right', value: r => this.formatNumber(r.soldeCloture) },
+      { label: 'Écart certification', weight: 26, align: 'right', value: r => this.formatNumber(r.ecartCertification), ecart: true },
+      { label: 'Enregistrée le', weight: 30, align: 'left', value: r => this.formatDateTimeFr(r.updatedAt) },
+      { label: 'Par', weight: 28, align: 'left', value: r => r.updatedBy || r.createdBy || '—' }
+    ];
+    const totalWeight = columns.reduce((s, c) => s + c.weight, 0);
+    const widths = columns.map(c => (c.weight / totalWeight) * contentW);
+
+    const drawTableHeader = (top: number): number => {
+      pdf.setFont('helvetica', 'bold');
+      pdf.setFontSize(headerFont);
+      const lines = columns.map((column, i) =>
+        pdf.splitTextToSize(column.label, widths[i] - padX * 2) as string[]
+      );
+      const maxLines = lines.reduce((max, cellLines) => Math.max(max, cellLines.length), 1);
+      const height = maxLines * headerLineH + 4.8;
+
+      pdf.setFillColor(40, 46, 94);
+      pdf.rect(margin, top, contentW, height, 'F');
+      pdf.setTextColor(255, 255, 255);
+
+      let x = margin;
+      lines.forEach((cellLines, i) => {
+        const offset = (height - cellLines.length * headerLineH) / 2 + 2.7;
+        cellLines.forEach((line, li) => {
+          const tx = columns[i].align === 'right' ? x + widths[i] - padX : x + padX;
+          pdf.text(line, tx, top + offset + li * headerLineH, { align: columns[i].align });
+        });
+        x += widths[i];
+      });
+
+      pdf.setTextColor(35, 35, 40);
+      return top + height;
+    };
+
+    /** Prépare les lignes de chaque cellule : le texte est renvoyé à la ligne, jamais tronqué. */
+    const prepareRow = (row: CertificationResultatSummary): { cells: string[][]; height: number } => {
+      pdf.setFont('helvetica', 'normal');
+      pdf.setFontSize(bodyFont);
+      const cells = columns.map((column, i) => {
+        const raw = this.pdfSafeText(column.value(row)) || '—';
+        return this.wrapPdfText(pdf, raw, widths[i] - padX * 2);
+      });
+      const maxLines = cells.reduce((max, cellLines) => Math.max(max, cellLines.length), 1);
+      return { cells, height: Math.max(7.8, maxLines * lineH + 3.6) };
+    };
+
+    const drawRow = (
+      row: CertificationResultatSummary,
+      prepared: { cells: string[][]; height: number },
+      top: number,
+      index: number
+    ): number => {
+      if (index % 2 === 1) {
+        pdf.setFillColor(246, 246, 250);
+        pdf.rect(margin, top, contentW, prepared.height, 'F');
+      }
+      pdf.setDrawColor(226, 228, 235);
+      pdf.setLineWidth(0.1);
+      pdf.line(margin, top + prepared.height, margin + contentW, top + prepared.height);
+
+      pdf.setFont('helvetica', 'normal');
+      pdf.setFontSize(bodyFont);
+
+      let x = margin;
+      prepared.cells.forEach((cellLines, i) => {
+        const danger = columns[i].ecart && row.ecartCertification != null && row.ecartCertification !== 0;
+        pdf.setTextColor(danger ? 192 : 35, danger ? 57 : 35, danger ? 43 : 40);
+        const offset = (prepared.height - cellLines.length * lineH) / 2 + 2.9;
+        cellLines.forEach((line, li) => {
+          const tx = columns[i].align === 'right' ? x + widths[i] - padX : x + padX;
+          pdf.text(line, tx, top + offset + li * lineH, { align: columns[i].align });
+        });
+        x += widths[i];
+      });
+
+      pdf.setTextColor(35, 35, 40);
+      return top + prepared.height;
+    };
+
+    // Bloc de titre
+    pdf.setFont('helvetica', 'bold');
+    pdf.setFontSize(15);
+    pdf.setTextColor(40, 46, 94);
+    pdf.text('Certifications enregistrées', margin, 15);
+
+    pdf.setFont('helvetica', 'normal');
+    pdf.setFontSize(8);
+    pdf.setTextColor(110, 110, 120);
+    pdf.text(
+      this.fitPdfText(pdf, this.pdfSafeText(this.buildSavedListExportSubtitle(rows.length)), contentW),
+      margin,
+      21
+    );
+    pdf.setDrawColor(210, 212, 220);
+    pdf.setLineWidth(0.2);
+    pdf.line(margin, 24, pageW - margin, 24);
+    pdf.setTextColor(35, 35, 40);
+
+    // Bandeau de synthèse : sa hauteur est réservée dès la dernière ligne du tableau
+    // pour éviter une page ne contenant que le bandeau.
+    const bandH = 10;
+    const bandGap = 4;
+
+    let top = drawTableHeader(27);
+
+    rows.forEach((row, index) => {
+      const prepared = prepareRow(row);
+      const isLast = index === rows.length - 1;
+      const needed = prepared.height + (isLast ? bandGap + bandH : 0);
+      if (top + needed > pageBottom) {
+        pdf.addPage();
+        top = drawTableHeader(12);
+      }
+      top = drawRow(row, prepared, top, index);
+    });
+
+    // Bandeau de synthèse
+    const totalEcart = rows.reduce((acc, r) => acc + (r.ecartCertification ?? 0), 0);
+    let bandTop = top + bandGap;
+    if (bandTop + bandH > pageBottom) {
+      pdf.addPage();
+      bandTop = 14;
+    }
+
+    pdf.setFillColor(232, 235, 246);
+    pdf.rect(margin, bandTop, contentW, bandH, 'F');
+    pdf.setFont('helvetica', 'bold');
+    pdf.setFontSize(9);
+    pdf.setTextColor(40, 46, 94);
+    const label = `Total : ${rows.length} certification${rows.length > 1 ? 's' : ''}`;
+    pdf.text(this.pdfSafeText(label), margin + padX, bandTop + 6.4);
+    pdf.text(
+      this.pdfSafeText(`Écart certification cumulé : ${this.formatNumber(totalEcart)}`),
+      margin + contentW - padX,
+      bandTop + 6.4,
+      { align: 'right' }
+    );
+
+    // Pied de page (numérotation + rappel du titre)
+    const totalPages = pdf.getNumberOfPages();
+    for (let p = 1; p <= totalPages; p++) {
+      pdf.setPage(p);
+      pdf.setFont('helvetica', 'normal');
+      pdf.setFontSize(7);
+      pdf.setTextColor(150, 150, 155);
+      pdf.text(`Page ${p} / ${totalPages}`, pageW - margin, pageH - 6, { align: 'right' });
+      pdf.text(
+        this.pdfSafeText(`Certifications enregistrées — ${new Date().toLocaleDateString('fr-FR')}`),
+        margin,
+        pageH - 6
+      );
+    }
+    pdf.setTextColor(0, 0, 0);
+    return pdf;
+  }
+
+  /**
+   * Normalise un texte pour les polices standard de jsPDF (WinAnsi) :
+   * espaces fines/insécables produites par Intl, signe moins typographique,
+   * flèches (non encodables, elles corrompent toute la chaîne) et caractères hors WinAnsi.
+   */
+  private pdfSafeText(value: string | null | undefined): string {
+    if (!value) {
+      return '';
+    }
+    return value
+      .replace(/[\u202F\u00A0\u2009\u2007]/g, ' ')
+      .replace(/\u2212/g, '-')
+      .replace(/\u2192/g, '->')
+      .replace(/\u2190/g, '<-')
+      .replace(/\u2264/g, '<=')
+      .replace(/\u2265/g, '>=')
+      .replace(
+        /[^\x20-\x7E\xA0-\xFF\u20AC\u201A\u0192\u201E\u2026\u2020\u2021\u02C6\u2030\u0160\u2039\u0152\u017D\u2018\u2019\u201C\u201D\u2022\u2013\u2014\u02DC\u2122\u0161\u203A\u0153\u017E\u0178]/g,
+        '?'
+      )
+      .trim();
+  }
+
+  /** Tronque un texte pour qu'il tienne dans la largeur donnée (police courante du PDF). */
+  private fitPdfText(pdf: jsPDF, text: string, maxWidth: number): string {
+    if (!text) {
+      return '';
+    }
+    if (pdf.getTextWidth(text) <= maxWidth) {
+      return text;
+    }
+    let truncated = text;
+    while (truncated.length > 1 && pdf.getTextWidth(`${truncated}…`) > maxWidth) {
+      truncated = truncated.slice(0, -1);
+    }
+    return `${truncated}…`;
+  }
+
+  /**
+   * Découpe un texte en lignes pour une largeur donnée en privilégiant les séparateurs
+   * naturels (espaces, points, tirets, slashs) avant de couper un mot caractère par
+   * caractère. Évite les coupures du type « yamar.ndao.admini / strateur ».
+   */
+  private wrapPdfText(pdf: jsPDF, text: string, maxWidth: number): string[] {
+    const direct = pdf.splitTextToSize(text, maxWidth) as string[];
+    if (direct.length <= 1) {
+      return direct;
+    }
+
+    const tokens = text.match(/[^\s.\-_/]+[\s.\-_/]*|[.\-_/]+/g) ?? [text];
+    const lines: string[] = [];
+    let current = '';
+
+    for (const token of tokens) {
+      const candidate = current + token;
+      if (!current || pdf.getTextWidth(candidate.trimEnd()) <= maxWidth) {
+        current = candidate;
+      } else {
+        lines.push(current.trimEnd());
+        current = token;
+      }
+    }
+    if (current.trim()) {
+      lines.push(current.trimEnd());
+    }
+
+    // Un jeton plus large que la colonne (ex. un très long numéro de compte) est coupé.
+    return lines.flatMap(line =>
+      pdf.getTextWidth(line) <= maxWidth ? [line] : (pdf.splitTextToSize(line, maxWidth) as string[])
+    );
+  }
+
+  formatPeriodeFr(dateDe: string, dateAu: string): string {
+    if (!dateDe || !dateAu) return '—';
+    return dateDe === dateAu
+      ? this.formatDateFr(dateDe)
+      : `${this.formatDateFr(dateDe)} au ${this.formatDateFr(dateAu)}`;
+  }
+
+  formatDateTimeFr(value: string | null | undefined): string {
+    if (!value) return '—';
+    const d = new Date(value);
+    return Number.isNaN(d.getTime()) ? value : d.toLocaleString('fr-FR');
+  }
+
+  private parseSavedDetails(json: string | null): CertificationResultatDetails | null {
+    if (!json) {
+      return null;
+    }
+    try {
+      return JSON.parse(json) as CertificationResultatDetails;
+    } catch {
+      return null;
+    }
+  }
+
   startNewCertification(): void {
     this.router.navigate(['/certification-solde/upload']);
+  }
+
+  /** Raccourci « Liste des compenses » : ouvre directement la réconciliation des compenses. */
+  goToCompenseReconciliation(): void {
+    this.router.navigate(['/certification-solde'], { queryParams: { focus: 'compense' } });
   }
 
   goToEcartBo(): void {
@@ -1804,9 +2878,13 @@ export class CertificationSoldeComponent implements OnInit, AfterViewInit, OnDes
   }
 
   formatPdfSoldeBanner(): string {
-    if (!this.dateCertificationDe || !this.dateCertificationAu) return '';
-    const [yDe, mDe, dDe] = this.dateCertificationDe.split('-').map(Number);
-    const [yAu, mAu, dAu] = this.dateCertificationAu.split('-').map(Number);
+    return this.buildSoldeBanner(this.dateCertificationDe, this.dateCertificationAu, this.numeroCompte, this.soldeCloture);
+  }
+
+  private buildSoldeBanner(dateDe: string, dateAu: string, numeroCompte: string, soldeCloture: number | null): string {
+    if (!dateDe || !dateAu) return '';
+    const [yDe, mDe, dDe] = dateDe.split('-').map(Number);
+    const [yAu, mAu, dAu] = dateAu.split('-').map(Number);
     const months = [
       'JANVIER', 'FÉVRIER', 'MARS', 'AVRIL', 'MAI', 'JUIN',
       'JUILLET', 'AOÛT', 'SEPTEMBRE', 'OCTOBRE', 'NOVEMBRE', 'DÉCEMBRE'
@@ -1829,11 +2907,11 @@ export class CertificationSoldeComponent implements OnInit, AfterViewInit, OnDes
     } else if (firstDayOfMonth && lastDayOfMonth) {
       label = `SOLDE DU MOIS DE ${months[mDe - 1]} ${yDe}`;
     } else {
-      label = `SOLDE AU ${this.formatDateFr(this.dateCertificationAu)}`;
+      label = `SOLDE AU ${this.formatDateFr(dateAu)}`;
     }
 
-    const compte = this.numeroCompte || '—';
-    const solde = this.formatNumber(this.soldeCloture);
+    const compte = numeroCompte || '—';
+    const solde = this.formatNumber(soldeCloture);
     return `${label} — COMPTE ${compte} — ${solde}`;
   }
 
@@ -1908,12 +2986,67 @@ export class CertificationSoldeComponent implements OnInit, AfterViewInit, OnDes
     }
     this.isLoadingOppartCompenses = true;
     this.cdr.markForCheck();
-    let opparts: Oppart[] = [];
+    let compenses: Oppart[] = [];
+    // Fenêtre de recherche OPPART : la période de certification augmentée du mois
+    // précédent et du mois suivant. Les dates d'opération OPPART et partenaire peuvent
+    // différer d'un mois (ligne créée/saisie plus tard), d'où cette marge.
+    const rechercheDe = this.dateCertificationDe
+      ? (this.firstDayOfMonthOffset(this.dateCertificationDe, -1) || this.dateCertificationDe)
+      : '';
+    const rechercheAu = this.dateCertificationAu
+      ? (this.lastDayOfMonthOffset(this.dateCertificationAu, 1) || this.dateCertificationAu)
+      : '';
+    let dateFilterFrom = rechercheDe;
+    let dateFilterTo = rechercheAu;
+    let horsPeriode = false;
+    /** Compenses trouvées uniquement grâce à la marge (hors période stricte). */
+    let horsCertification = 0;
     try {
-      const filter: any = {};
-      if (this.dateCertificationDe) filter.dateDebut = this.dateCertificationDe;
-      if (this.dateCertificationAu) filter.dateFin = this.dateCertificationAu;
-      opparts = await firstValueFrom(this.oppartService.getOpparts(filter));
+      // Filtrage serveur sur le type : seules les compensations sont transférées.
+      const periode: any = { typeOpContains: 'compens' };
+      if (rechercheDe) periode.dateDebut = rechercheDe;
+      if (rechercheAu) periode.dateFin = rechercheAu;
+      compenses = (await firstValueFrom(this.oppartService.getOpparts(periode)) || [])
+        .filter(op => this.isCompenseOppart(op.typeOp));
+
+      if (!compenses.length) {
+        // Toujours rien malgré la marge : on cherche alors toutes périodes confondues.
+        const toutes = (await firstValueFrom(this.oppartService.getOpparts({ typeOpContains: 'compens' })) || [])
+          .filter(op => this.isCompenseOppart(op.typeOp));
+        if (!toutes.length) {
+          await this.popupService.showWarning(
+            `Aucune ligne de compense dans OPPART pour la période ${this.dateCertificationDe || '—'} → `
+            + `${this.dateCertificationAu || '—'} (marge d'un mois avant/après incluse : `
+            + `${rechercheDe || '—'} → ${rechercheAu || '—'}). Aucune ligne de type COMPENSE dans la table `
+            + 'OPPART, toutes périodes confondues.',
+            'OPPART'
+          );
+          this.cdr.markForCheck();
+          return;
+        }
+        compenses = toutes;
+        horsPeriode = true;
+        const jours = compenses.map(op => this.toIsoDay(op.dateOperation)).filter(d => !!d).sort();
+        // On ne borne le popup que si toutes les lignes ont une date exploitable.
+        dateFilterFrom = jours.length === compenses.length ? (jours[0] || '') : '';
+        dateFilterTo = jours.length === compenses.length ? (jours[jours.length - 1] || '') : '';
+        await this.popupService.showWarning(
+          `Aucune ligne de compense dans OPPART entre le ${rechercheDe || '—'} et le ${rechercheAu || '—'} `
+          + `(période de certification ${this.dateCertificationDe || '—'} → ${this.dateCertificationAu || '—'} `
+          + 'augmentée du mois précédent et du mois suivant). '
+          + `${compenses.length} ligne(s) existent toutefois à d'autres dates `
+          + `(${dateFilterFrom || '—'} → ${dateFilterTo || '—'}) : elles sont proposées ci-dessous.`,
+          'OPPART'
+        );
+      } else {
+        // Compte les compenses trouvées uniquement grâce à la marge avant/après.
+        horsCertification = compenses.filter(op => {
+          const jour = this.toIsoDay(op.dateOperation);
+          return !!jour
+            && ((!!this.dateCertificationDe && jour < this.dateCertificationDe)
+              || (!!this.dateCertificationAu && jour > this.dateCertificationAu));
+        }).length;
+      }
     } catch (e: any) {
       console.error('Erreur chargement compenses depuis OPPART:', e);
       await this.popupService.showError(
@@ -1927,18 +3060,16 @@ export class CertificationSoldeComponent implements OnInit, AfterViewInit, OnDes
     this.isLoadingOppartCompenses = false;
     this.cdr.markForCheck();
 
-    const compenses = (opparts || []).filter(op => this.isCompenseOppart(op.typeOp));
-    if (!compenses.length) {
-      await this.popupService.showWarning(
-        'Aucune ligne de compense trouvée dans OPPART pour la période indiquée.',
-        'OPPART'
-      );
-      return;
-    }
-
     const result = await this.popupService.showSelectableListPopup({
       title: 'Charger depuis OPPART',
-      message: `${compenses.length} compense(s) trouvée(s) dans OPPART pour la période indiquée. Ajustez la période ou filtrez par texte, puis sélectionnez les lignes à charger :`,
+      message: `${compenses.length} compense(s) trouvée(s) dans OPPART`
+        + (horsCertification > 0
+          ? ` dont ${horsCertification} hors de la période de certification (marge d'un mois avant/après)`
+          : '')
+        + (horsPeriode
+          ? ' (toutes périodes)'
+          : ` — recherche du ${rechercheDe || '—'} au ${rechercheAu || '—'}`)
+        + '. Ajustez la période ou filtrez par texte, puis sélectionnez les lignes à charger :',
       columns: ['N° Trans GU', 'Type_OP', 'Client', 'Montant', 'Date'],
       rows: compenses.map(op => ({
         key: String(op.id),
@@ -1951,7 +3082,7 @@ export class CertificationSoldeComponent implements OnInit, AfterViewInit, OnDes
           op.dateOperation ? this.formatDateCell(op.dateOperation) : ''
         ]
       })),
-      dateFilter: { from: this.dateCertificationDe || '', to: this.dateCertificationAu || '' },
+      dateFilter: { from: dateFilterFrom, to: dateFilterTo },
       options: [
         { key: 'liste', label: 'Charger dans la liste des compenses', hint: `${compenses.length} ligne(s) sélectionnée(s) utilisée(s) comme liste`, checked: true },
         { key: 'fichier', label: 'Charger dans la réconciliation fichier (montants)', hint: 'Les montants des lignes sélectionnées servent au matching', checked: true }
@@ -1965,11 +3096,10 @@ export class CertificationSoldeComponent implements OnInit, AfterViewInit, OnDes
     }
 
     const perimeePopup = result.dateFilter || { from: '', to: '' };
-    if (this.periodeElargieHorsCertification(perimeePopup)) {
+    if (!horsPeriode && this.periodeElargieHorsChargement(perimeePopup, rechercheDe, rechercheAu)) {
       await this.popupService.showWarning(
-        'La période choisie dans le popup déborde la période de certification : seules les lignes déjà '
-        + 'chargées dans le popup sont disponibles. Élargissez la période de certification puis rouvrez le popup '
-        + 'pour voir les lignes supplémentaires.',
+        'La période choisie dans le popup déborde la période chargée depuis OPPART (période de certification '
+        + '+ mois précédent et mois suivant) : seules les lignes déjà chargées dans le popup sont disponibles.',
         'Période'
       );
     }
@@ -1987,14 +3117,51 @@ export class CertificationSoldeComponent implements OnInit, AfterViewInit, OnDes
   }
 
   /**
-   * Vrai si la période saisie dans le popup est plus large que la période de
-   * certification qui a servi à charger les lignes du popup.
+   * Vrai si la période saisie dans le popup est plus large que la période réellement
+   * chargée depuis OPPART (période de certification + mois précédent et suivant).
    */
-  private periodeElargieHorsCertification(periode: { from: string; to: string }): boolean {
+  private periodeElargieHorsChargement(
+    periode: { from: string; to: string },
+    borneDe: string,
+    borneAu: string
+  ): boolean {
     const { from, to } = periode || { from: '', to: '' };
-    const avant = this.dateCertificationDe && from && from < this.dateCertificationDe;
-    const apres = this.dateCertificationAu && to && to > this.dateCertificationAu;
+    const avant = borneDe && from && from < borneDe;
+    const apres = borneAu && to && to > borneAu;
     return !!avant || !!apres;
+  }
+
+  /** Premier jour du mois situé `deltaMois` mois après le jour ISO fourni. */
+  private firstDayOfMonthOffset(isoDay: string, deltaMois: number): string {
+    const jour = this.parseIsoDay(isoDay);
+    if (!jour) {
+      return '';
+    }
+    return this.formatIsoDay(new Date(jour.getFullYear(), jour.getMonth() + deltaMois, 1));
+  }
+
+  /** Dernier jour du mois situé `deltaMois` mois après le jour ISO fourni. */
+  private lastDayOfMonthOffset(isoDay: string, deltaMois: number): string {
+    const jour = this.parseIsoDay(isoDay);
+    if (!jour) {
+      return '';
+    }
+    // Jour 0 du mois suivant = dernier jour du mois visé.
+    return this.formatIsoDay(new Date(jour.getFullYear(), jour.getMonth() + deltaMois + 1, 0));
+  }
+
+  /** Parse un jour ISO (yyyy-MM-dd) en date locale, sans décalage de fuseau. */
+  private parseIsoDay(isoDay: string): Date | null {
+    const m = String(isoDay || '').match(/^(\d{4})-(\d{2})-(\d{2})/);
+    if (!m) {
+      return null;
+    }
+    const d = new Date(Number(m[1]), Number(m[2]) - 1, Number(m[3]));
+    return isNaN(d.getTime()) ? null : d;
+  }
+
+  private formatIsoDay(d: Date): string {
+    return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`;
   }
 
   /**
@@ -2058,6 +3225,89 @@ export class CertificationSoldeComponent implements OnInit, AfterViewInit, OnDes
       );
     } finally {
       this.isVerifyingCompenses = false;
+      this.cdr.markForCheck();
+    }
+  }
+
+  /** Lie les compenses dans OPPART : pour chaque N° Trans GU de la liste, lie la ligne BO et la ligne Partenaire. */
+  async lierCompensesDansOppart(): Promise<void> {
+    if (this.isLinkingCompenses) {
+      return;
+    }
+    const lignes = this.loadedCompenseLines || [];
+    if (!lignes.length) {
+      await this.popupService.showWarning(
+        'Aucune liste des compenses chargée depuis OPPART.',
+        'Compenses'
+      );
+      return;
+    }
+    if (this.compenseListeSource !== 'oppart') {
+      await this.popupService.showWarning(
+        'Cette action n\'est disponible que lorsque la liste des compenses a été chargée depuis OPPART.',
+        'Compenses'
+      );
+      return;
+    }
+
+    const transGus = lignes
+      .map(l => (l.numeroTransGu || '').trim())
+      .filter(t => t.length > 0);
+
+    if (!transGus.length) {
+      await this.popupService.showWarning(
+        'Aucun N° Trans GU valide dans la liste des compenses.',
+        'Compenses'
+      );
+      return;
+    }
+
+    const confirmed = await this.popupService.showConfirmDialog(
+      `Lier ${transGus.length} compense(s) dans OPPART ?\n\n` +
+      `Cela va :\n` +
+      `• Retrouver pour chaque N° Trans GU la ligne BO (COMPENSE_BO) et la ligne Partenaire (COMPENSE_PART/*PARTNER*)\n` +
+      `• Les lier par un token commun (statut → OK)\n\n` +
+      `Les lignes déjà liées seront ignorées.`,
+      'Confirmer la liaison des compenses'
+    );
+    if (!confirmed) {
+      return;
+    }
+
+    this.isLinkingCompenses = true;
+    this.cdr.markForCheck();
+
+    try {
+      const result = await firstValueFrom(this.oppartService.linkCompensesByTransGu(transGus));
+      if (!result.success) {
+        await this.popupService.showError(result.details?.[0]?.message || 'Échec de la liaison.', 'OPPART');
+        return;
+      }
+
+      // Afficher le résumé
+      const details = result.details || [];
+      const linked = details.filter(d => d.status === 'LINKED').length;
+      const already = details.filter(d => d.status === 'ALREADY_LINKED').length;
+      const skipped = details.filter(d => d.status === 'INCOMPLETE_PAIR' || d.status === 'NOT_FOUND').length;
+
+      let msg = `✅ ${linked} compense(s) liée(s) avec succès.`;
+      if (already) msg += `\n⏭ ${already} déjà liées (ignorées).`;
+      if (skipped) msg += `\n⚠ ${skipped} ignorées (paire BO/Partenaire introuvable ou incomplète).`;
+
+      await this.popupService.showSuccess(msg, 'OPPART');
+
+      // Recharger la liste depuis OPPART pour voir les statuts OK + tokens
+      // On réouvre le popup de chargement OPPART pour rafraîchir
+      await this.openOppartLoadDialog();
+
+    } catch (e: any) {
+      console.error('Erreur liaison compenses dans OPPART:', e);
+      await this.popupService.showError(
+        e?.message || 'Impossible de lier les compenses dans OPPART.',
+        'OPPART'
+      );
+    } finally {
+      this.isLinkingCompenses = false;
       this.cdr.markForCheck();
     }
   }
@@ -2169,7 +3419,7 @@ export class CertificationSoldeComponent implements OnInit, AfterViewInit, OnDes
         fileName: 'OPPART',
         column: 'Montant OPPART',
         amounts,
-        extraColumns: ['N° Trans GU', 'Type_OP', 'Client', 'Date'],
+        extraColumns: ['ID Transaction', 'Type_OP', 'Client', 'Date'],
         extraValues: extras
       });
       this.compenseFileSource = 'oppart';
@@ -2472,7 +3722,9 @@ export class CertificationSoldeComponent implements OnInit, AfterViewInit, OnDes
     if (!n) {
       return false;
     }
-    return n.includes('type') || n.includes('name') || n.includes('nom') || n.includes('date');
+    return n.includes('type') || n.includes('name') || n.includes('nom') || n.includes('date')
+      || n.includes('agence') || n.includes('agency') || n.includes('client')
+      || n.includes('idtransaction') || n.includes('transactionid') || n.includes('transgu');
   }
 
   /** Formate une cellule date (objet Date Excel ou chaîne) pour affichage jj/mm/aaaa. */

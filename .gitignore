@@ -49,6 +49,7 @@ application-local.properties
 
 # --- Données runtime / volumineuses ---
 watch-folder/
+watch-folder-test/
 backend/uploads/
 backend/logs/
 

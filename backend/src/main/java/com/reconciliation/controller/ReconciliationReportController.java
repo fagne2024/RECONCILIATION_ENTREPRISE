@@ -23,9 +23,11 @@ import java.time.LocalDateTime;
 import java.time.format.DateTimeParseException;
 import java.util.ArrayList;
 import java.util.HashMap;
+import java.util.LinkedHashSet;
 import java.util.List;
 import java.util.Map;
 import java.util.Optional;
+import java.util.Set;
 
 @Slf4j
 @RestController
@@ -382,6 +384,117 @@ public class ReconciliationReportController {
     }
 
     /**
+     * Envoie un email de notification pour la validation d'un relevé
+     * (à partir du niveau Responsable CDO)
+     */
+    @PostMapping("/send-validation-email")
+    public ResponseEntity<Map<String, String>> sendReleveValidationEmail(
+            @RequestBody SendReleveValidationEmailRequest request,
+            HttpServletRequest httpRequest) {
+        try {
+            String username = RequestContextUtil.getUsernameFromRequest();
+            if (username == null || username.isBlank()) {
+                return ResponseEntity.status(401).body(Map.of(
+                    "status", "ERROR",
+                    "message", "Non authentifié"
+                ));
+            }
+
+            log.info("📧 Envoi d'email de validation du relevé - Service: {}, Date: {}, Pays: {}, Env: {}, Traitement: {} par utilisateur: {}",
+                    request.getService(), request.getDate(), request.getCountry(), request.getEnv(), request.getTraitement(), username);
+
+            Optional<UserEntity> userOpt = userRepository.findByUsername(username);
+            if (userOpt.isEmpty() || userOpt.get().getEmail() == null || userOpt.get().getEmail().trim().isEmpty()) {
+                log.warn("Utilisateur non trouvé ou sans email: {}", username);
+            }
+
+            boolean isRejet = "REJET".equalsIgnoreCase(request.getTraitement()) || 
+                             (request.getCommentaire() != null && request.getCommentaire().toUpperCase().contains("REJET"));
+            
+            String emailSubject = isRejet 
+                ? "Rejet de relevé de service - " + (request.getService() != null ? request.getService() : "")
+                : "Validation de relevé de service - " + (request.getService() != null ? request.getService() : "");
+            
+            String actionText = isRejet 
+                ? "La réconciliation du service a été rejetée." 
+                : "La réconciliation du service a été validée.";
+            
+            String emailBody = String.format(
+                "Bonjour,\n\n" +
+                "%s\n\n" +
+                "Détails :\n" +
+                "-------------------\n" +
+                "Service : %s\n" +
+                "Date : %s\n" +
+                "Pays : %s\n" +
+                "Environnement : %s\n" +
+                "Niveau de traitement : %s\n\n" +
+                "%s\n\n" +
+                "Date : %s\n" +
+                "%s par : %s\n\n" +
+                "Cordialement,\n" +
+                "L'équipe de réconciliation",
+                actionText,
+                request.getService() != null ? request.getService() : "-",
+                request.getDate() != null ? request.getDate() : "-",
+                request.getCountry() != null ? request.getCountry() : "-",
+                request.getEnv() != null ? request.getEnv() : "-",
+                request.getTraitement() != null ? request.getTraitement() : "-",
+                request.getCommentaire() != null && !request.getCommentaire().isBlank() ? (isRejet ? "Motif du rejet : " : "Commentaire : ") + request.getCommentaire() : "",
+                LocalDateTime.now().toString().replace('T', ' '),
+                isRejet ? "Rejeté" : "Validé",
+                username
+            );
+
+            try {
+                // Collect all recipients: user + destinataires + copie
+                Set<String> allRecipients = new LinkedHashSet<>();
+                if (userOpt.isPresent() && userOpt.get().getEmail() != null && !userOpt.get().getEmail().trim().isEmpty()) {
+                    allRecipients.add(userOpt.get().getEmail().trim());
+                }
+                if (request.getDestinataires() != null) {
+                    for (String dest : request.getDestinataires()) {
+                        if (dest != null && !dest.isBlank() && dest.contains("@")) {
+                            allRecipients.add(dest.trim());
+                        }
+                    }
+                }
+                if (request.getCopie() != null) {
+                    for (String cc : request.getCopie()) {
+                        if (cc != null && !cc.isBlank() && cc.contains("@")) {
+                            allRecipients.add(cc.trim());
+                        }
+                    }
+                }
+                
+                for (String recipient : allRecipients) {
+                    try {
+                        emailService.sendControleInterneCommentEmail(recipient, emailSubject, emailBody);
+                        log.info("Email {} envoyé à : {}", isRejet ? "de rejet" : "de validation", recipient);
+                    } catch (Exception ex) {
+                        log.warn("Échec envoi email à {}: {}", recipient, ex.getMessage());
+                    }
+                }
+            } catch (Exception e) {
+                log.error("Erreur lors de l'envoi de l'email: {}", e.getMessage(), e);
+            }
+
+            return ResponseEntity.ok(Map.of(
+                "status", "OK",
+                "message", "Email envoyé avec succès",
+                "timestamp", LocalDateTime.now().toString()
+            ));
+        } catch (Exception e) {
+            log.error("❌ Erreur lors de l'envoi de l'email: {}", e.getMessage(), e);
+            return ResponseEntity.status(500).body(Map.of(
+                "status", "ERROR",
+                "message", "Erreur lors de l'envoi de l'email: " + e.getMessage(),
+                "timestamp", LocalDateTime.now().toString()
+            ));
+        }
+    }
+
+    /**
      * Rejette un relevé de service avec un titre et un commentaire
      * Envoie un email à l'utilisateur connecté
      */
@@ -461,6 +574,46 @@ public class ReconciliationReportController {
                 "timestamp", LocalDateTime.now().toString()
             ));
         }
+    }
+
+    /**
+     * Classe de requête pour l'envoi d'email de validation de relevé
+     */
+    public static class SendReleveValidationEmailRequest {
+        private String service;
+        private String date;
+        private String country;
+        private String env;
+        private String traitement;
+        private String commentaire;
+        private java.util.List<String> destinataires;
+        private java.util.List<String> copie;
+
+        public SendReleveValidationEmailRequest() {}
+
+        public String getService() { return service; }
+        public void setService(String service) { this.service = service; }
+
+        public String getDate() { return date; }
+        public void setDate(String date) { this.date = date; }
+
+        public String getCountry() { return country; }
+        public void setCountry(String country) { this.country = country; }
+
+        public String getEnv() { return env; }
+        public void setEnv(String env) { this.env = env; }
+
+        public String getTraitement() { return traitement; }
+        public void setTraitement(String traitement) { this.traitement = traitement; }
+
+        public String getCommentaire() { return commentaire; }
+        public void setCommentaire(String commentaire) { this.commentaire = commentaire; }
+
+        public java.util.List<String> getDestinataires() { return destinataires; }
+        public void setDestinataires(java.util.List<String> destinataires) { this.destinataires = destinataires; }
+
+        public java.util.List<String> getCopie() { return copie; }
+        public void setCopie(java.util.List<String> copie) { this.copie = copie; }
     }
 
     /**

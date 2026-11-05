@@ -1,5 +1,7 @@
 package com.reconciliation.dto;
 
+import java.util.List;
+
 public class RecoJ1BlockingCommentDto {
     private String recoDate;
     private String service;
@@ -8,6 +10,36 @@ public class RecoJ1BlockingCommentDto {
     private String commentText;
     private String updatedBy;
     private String updatedAt;
+
+    /** Relance e-mail quotidienne (null si aucune relance n'a jamais été activée). */
+    private Boolean mailAlertActive;
+    private List<String> mailRecipients;
+    private List<String> mailCcRecipients;
+
+    public List<String> getMailCcRecipients() { return mailCcRecipients; }
+    public void setMailCcRecipients(List<String> mailCcRecipients) { this.mailCcRecipients = mailCcRecipients; }
+    private String mailLastSentAt;
+    private Integer mailSendCount;
+    private String mailLastError;
+    private String mailStoppedReason;
+
+    public Boolean getMailAlertActive() { return mailAlertActive; }
+    public void setMailAlertActive(Boolean mailAlertActive) { this.mailAlertActive = mailAlertActive; }
+
+    public List<String> getMailRecipients() { return mailRecipients; }
+    public void setMailRecipients(List<String> mailRecipients) { this.mailRecipients = mailRecipients; }
+
+    public String getMailLastSentAt() { return mailLastSentAt; }
+    public void setMailLastSentAt(String mailLastSentAt) { this.mailLastSentAt = mailLastSentAt; }
+
+    public Integer getMailSendCount() { return mailSendCount; }
+    public void setMailSendCount(Integer mailSendCount) { this.mailSendCount = mailSendCount; }
+
+    public String getMailLastError() { return mailLastError; }
+    public void setMailLastError(String mailLastError) { this.mailLastError = mailLastError; }
+
+    public String getMailStoppedReason() { return mailStoppedReason; }
+    public void setMailStoppedReason(String mailStoppedReason) { this.mailStoppedReason = mailStoppedReason; }
 
     public String getRecoDate() { return recoDate; }
     public void setRecoDate(String recoDate) { this.recoDate = recoDate; }

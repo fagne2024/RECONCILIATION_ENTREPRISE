@@ -29,6 +29,7 @@ public class OPPARTController {
     public ResponseEntity<List<OPPARTEntity>> getOPPARTs(
             @RequestParam(required = false) String client,
             @RequestParam(required = false) String typeOp,
+            @RequestParam(required = false) String typeOpContains,
             @RequestParam(required = false) String pays,
             @RequestParam(required = false) String source,
             @RequestParam(required = false) String statut,
@@ -36,7 +37,7 @@ public class OPPARTController {
             @RequestParam(required = false) String dateDebut,
             @RequestParam(required = false) String dateFin) {
         try {
-            List<OPPARTEntity> opparts = oppartService.getOPPARTs(client, typeOp, pays, source, statut, token, dateDebut, dateFin);
+            List<OPPARTEntity> opparts = oppartService.getOPPARTs(client, typeOp, typeOpContains, pays, source, statut, token, dateDebut, dateFin);
             return ResponseEntity.ok(opparts);
         } catch (Exception e) {
             return ResponseEntity.internalServerError().build();
@@ -281,6 +282,48 @@ public class OPPARTController {
         } catch (Exception e) {
             return ResponseEntity.internalServerError().build();
         }
+    }
+
+    /**
+     * Lier les lignes de compense par N° Trans GU.
+     * Pour chaque N° Trans GU fourni, retrouve la ligne BO (COMPENSE_BO) et la ligne Partenaire (COMPENSE_PART / *PARTNER)
+     * et les lie via un token commun (statut -> OK).
+     * Body : { "transGus": ["TRX001", "TRX002", ...] }
+     */
+    @PostMapping("/link-compenses")
+    public ResponseEntity<Map<String, Object>> linkCompensesByTransGu(@RequestBody Map<String, Object> request) {
+        try {
+            List<String> transGus = extractTransGus(request);
+            if (transGus == null || transGus.isEmpty()) {
+                return ResponseEntity.badRequest()
+                        .body(Map.of("success", false, "message", "Aucun N° Trans GU fourni."));
+            }
+
+            Map<String, Object> result = oppartService.linkCompensesByTransGu(transGus);
+            return ResponseEntity.ok(result);
+        } catch (Exception e) {
+            return ResponseEntity.internalServerError().build();
+        }
+    }
+
+    private static List<String> extractTransGus(Map<String, Object> request) {
+        if (request == null) {
+            return List.of();
+        }
+        Object raw = request.get("transGus");
+        if (raw instanceof List<?> list) {
+            List<String> transGus = new ArrayList<>();
+            for (Object o : list) {
+                if (o != null) {
+                    String s = String.valueOf(o).trim();
+                    if (!s.isEmpty()) {
+                        transGus.add(s);
+                    }
+                }
+            }
+            return transGus;
+        }
+        return List.of();
     }
 
     private static Long toLong(Object value) {

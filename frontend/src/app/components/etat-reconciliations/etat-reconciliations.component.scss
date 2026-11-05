@@ -835,6 +835,13 @@
     }
   }
 
+  .mail-alert-dot {
+    flex: none;
+    margin-left: 2px;
+    font-size: 10px;
+    color: var(--color-info);
+  }
+
   .info-dot {
     width: 15px;
     height: 15px;
@@ -1298,6 +1305,83 @@
       font: inherit;
       resize: vertical;
       min-height: 96px;
+    }
+
+    .j1-mail {
+      margin-top: 14px;
+      padding: 12px 14px;
+      border: 1px solid var(--border);
+      border-radius: 10px;
+      background: var(--color-surface-sunken);
+
+      .j1-mail-head {
+        display: flex;
+        align-items: center;
+        gap: 8px;
+        font-size: 14px;
+      }
+
+      .j1-mail-badge {
+        margin-left: auto;
+        font-size: 11px;
+        font-weight: 700;
+        padding: 2px 8px;
+        border-radius: 999px;
+
+        &.on {
+          background: var(--color-success-bg);
+          color: var(--color-success-text);
+        }
+      }
+
+      .j1-mail-hint {
+        margin: 6px 0 10px;
+        font-size: 12px;
+        color: var(--muted);
+        line-height: 1.45;
+      }
+
+      .j1-mail-label {
+        display: block;
+        font-size: 12px;
+        font-weight: 600;
+        margin-bottom: 4px;
+
+        &.j1-mail-label--cc {
+          margin-top: 10px;
+        }
+      }
+
+      input {
+        width: 100%;
+        box-sizing: border-box;
+        border: 1px solid var(--border);
+        border-radius: 8px;
+        padding: 8px 10px;
+        font: inherit;
+      }
+
+      .j1-mail-status {
+        margin: 8px 0 0;
+        font-size: 12px;
+        color: var(--muted);
+
+        &.ok {
+          color: var(--color-success-text);
+          font-weight: 600;
+        }
+
+        &.warn {
+          color: var(--color-warning-text);
+        }
+      }
+
+      .j1-mail-actions {
+        margin-top: 10px;
+        display: flex;
+        justify-content: flex-end;
+        gap: 8px;
+      }
     }
 
     .j1-modal-error {

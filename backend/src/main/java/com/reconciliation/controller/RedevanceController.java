@@ -41,10 +41,10 @@ public class RedevanceController {
     public ResponseEntity<RedevanceAgenceParamEntity> saveParams(@RequestBody RedevanceParamRequest request) {
         RedevanceAgenceParamEntity params = new RedevanceAgenceParamEntity();
         params.setAgence(request.getAgence());
-        params.setRetenueSurGainsPourcentage(request.getRetenueSurGainsPourcentage() != null ? request.getRetenueSurGainsPourcentage() : 15.0);
-        params.setRetenueSurGainsSeuil(request.getRetenueSurGainsSeuil() != null ? request.getRetenueSurGainsSeuil() : 500000.0);
-        params.setTaxeJeuxHasardPourcentage(request.getTaxeJeuxHasardPourcentage() != null ? request.getTaxeJeuxHasardPourcentage() : 5.0);
-        params.setTauxRedevancePourcentage(request.getTauxRedevancePourcentage() != null ? request.getTauxRedevancePourcentage() : 50.0);
+        params.setRetenueSurGainsPourcentage(request.getRetenueSurGainsPourcentage() != null ? request.getRetenueSurGainsPourcentage() : redevanceService.defaultRetenueSurGainsPct());
+        params.setRetenueSurGainsSeuil(request.getRetenueSurGainsSeuil() != null ? request.getRetenueSurGainsSeuil() : redevanceService.defaultRetenueSeuil());
+        params.setTaxeJeuxHasardPourcentage(request.getTaxeJeuxHasardPourcentage() != null ? request.getTaxeJeuxHasardPourcentage() : redevanceService.defaultTaxeJeuxHasardPct());
+        params.setTauxRedevancePourcentage(request.getTauxRedevancePourcentage() != null ? request.getTauxRedevancePourcentage() : redevanceService.defaultTauxRedevancePct());
         RedevanceAgenceParamEntity saved = redevanceService.saveParams(params);
         return ResponseEntity.ok(saved);
     }

@@ -15,6 +15,7 @@ import java.util.Map;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertNull;
 import static org.mockito.ArgumentMatchers.anyString;
+import org.mockito.ArgumentMatchers;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.when;
 
@@ -23,6 +24,7 @@ class ConfigurableReconciliationServiceRatioTest {
     private ConfigurableReconciliationService serviceWithRatio(String expectedRatio) {
         AutoProcessingService autoProcessingService = mock(AutoProcessingService.class);
         ColumnProcessingRuleService columnProcessingRuleService = mock(ColumnProcessingRuleService.class);
+        CalculationRuleService calculationRuleService = mock(CalculationRuleService.class);
 
         AutoProcessingModel model = new AutoProcessingModel();
         model.setModelId("mod_oppart");
@@ -42,7 +44,22 @@ class ConfigurableReconciliationServiceRatioTest {
         when(autoProcessingService.getAllModels()).thenReturn(new ArrayList<>(Collections.singletonList(model)));
         when(columnProcessingRuleService.getRulesByModelId(anyString())).thenReturn(new ArrayList<>());
 
-        return new ConfigurableReconciliationService(autoProcessingService, columnProcessingRuleService);
+        // Les règles de calcul pilotent la détection du modèle par nom de fichier.
+        // Le mock reproduit le comportement par défaut du code (repli sur la liste
+        // de mots-clés fournie par l'appelant) quand aucune règle n'est configurée.
+        when(calculationRuleService.matchesAny(anyString(), anyString(), ArgumentMatchers.<List<String>>any()))
+                .thenAnswer(invocation -> {
+                    String text = invocation.getArgument(0);
+                    List<String> keywords = invocation.getArgument(2);
+                    if (text == null || keywords == null) {
+                        return false;
+                    }
+                    String normalized = text.toUpperCase();
+                    return keywords.stream()
+                            .anyMatch(keyword -> keyword != null && normalized.contains(keyword.toUpperCase()));
+                });
+
+        return new ConfigurableReconciliationService(autoProcessingService, columnProcessingRuleService, calculationRuleService);
     }
 
     private ReconciliationRequest oppartRequest() {

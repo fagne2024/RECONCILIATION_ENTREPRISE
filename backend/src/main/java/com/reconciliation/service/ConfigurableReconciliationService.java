@@ -16,6 +16,7 @@ public class ConfigurableReconciliationService {
 
     private final AutoProcessingService autoProcessingService;
     private final ColumnProcessingRuleService columnProcessingRuleService;
+    private final CalculationRuleService calculationRuleService;
     
     // Cache local pour éviter les appels multiples à getAllModels() dans la même requête
     private AutoProcessingModel cachedPartnerModel = null;
@@ -300,7 +301,9 @@ public class ConfigurableReconciliationService {
                     }
                     
                     // OPPART.xls a des colonnes spécifiques
-                    if (templateFile.toLowerCase().contains("oppart")) {
+                    // Mots-clés du nom de fichier pilotés par les règles de calcul (repli code par défaut)
+                    if (calculationRuleService.matchesAny(templateFile, "MODELES.TOKENS_OPPART",
+                            CalculationRuleService.DEFAULT_TOKENS_OPPART)) {
                         // Le fichier réel peut exposer "Type" (et non "Type Opération") et ne pas
                         // porter de colonne "ID Opération" : on accepte les deux formes.
                         boolean hasIdOperation = partnerColumns.stream().anyMatch(col -> col.equalsIgnoreCase("ID Opération") || col.equalsIgnoreCase("ID Operation"));

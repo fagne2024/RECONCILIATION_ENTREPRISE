@@ -20,6 +20,9 @@
     <div class="country-header">
       <label class="country-label">{{ 'NIVEAUX.PAYS_GNL' | translate }}</label>
       <div class="country-actions">
+        <button type="button" class="ds-btn ds-btn--primary btn btn-primary btn-sm" (click)="ouvrirAjoutPays()">
+          <i class="fa fa-plus"></i> {{ 'NIVEAUX.AJOUTER_PAYS' | translate }}
+        </button>
         <button type="button" class="ds-btn ds-btn--secondary btn btn-secondary btn-sm" (click)="sauvegarderPaysActuel()" [disabled]="!configLocale.niveauxTraitement?.length">
           <i class="fa fa-save"></i> {{ 'NIVEAUX.SAUVEGARDER_PAYS' | translate }}
         </button>
@@ -45,6 +48,8 @@
         <i class="fa fa-plus"></i> {{ 'COMMON.NEW' | translate }}
       </button>
     </div>
+
+    <p class="section-intro">{{ 'NIVEAUX.EMAIL_NOTIFICATIONS_PER_LEVEL_HINT' | translate }}</p>
 
     <div class="form-card">
       <form (ngSubmit)="sauvegarderNiveau()">
@@ -80,6 +85,48 @@
         <div class="form-group full-width">
           <label>{{ 'NIVEAUX.DESCRIPTION' | translate }}</label>
           <textarea [(ngModel)]="nouvelNiveau.description" name="niveauDescription" rows="2" class="ds-textarea"></textarea>
+        </div>
+
+        <!-- Notifications email de ce niveau -->
+        <div class="form-row emails-row">
+          <div class="form-group">
+            <label for="niveauEmailsDestinataires">{{ 'NIVEAUX.EMAILS_DESTINATAIRES' | translate }}</label>
+            <input
+              id="niveauEmailsDestinataires"
+              type="text"
+              [(ngModel)]="niveauEmailsDestinatairesInput"
+              name="niveauEmailsDestinataires"
+              class="ds-input"
+              placeholder="responsable.reconciliation@exemple.com, ..."
+            />
+            <small class="field-hint">{{ 'NIVEAUX.NIVEAU_EMAILS_DESTINATAIRES_HINT' | translate }}</small>
+          </div>
+          <div class="form-group">
+            <label for="niveauEmailsCopie">{{ 'NIVEAUX.EMAILS_COPIE' | translate }}</label>
+            <input
+              id="niveauEmailsCopie"
+              type="text"
+              [(ngModel)]="niveauEmailsCopieInput"
+              name="niveauEmailsCopie"
+              class="ds-input"
+              placeholder="copie@exemple.com, ..."
+            />
+            <small class="field-hint">{{ 'NIVEAUX.NIVEAU_EMAILS_COPIE_HINT' | translate }}</small>
+          </div>
+        </div>
+
+        <div class="form-group full-width envoi-auto-group">
+          <div class="checkbox-wrapper">
+            <input
+              type="checkbox"
+              id="niveauEnvoiAutomatique"
+              name="niveauEnvoiAutomatique"
+              [(ngModel)]="nouvelNiveau.envoiAutomatiqueEmail"
+              class="ds-checkbox"
+            />
+            <label for="niveauEnvoiAutomatique">{{ 'NIVEAUX.ENVOI_AUTOMATIQUE' | translate }}</label>
+          </div>
+          <small class="field-hint">{{ 'NIVEAUX.NIVEAU_ENVOI_AUTOMATIQUE_HINT' | translate }}</small>
         </div>
 
         <!-- Profils autorisés pour ce niveau -->
@@ -120,6 +167,7 @@
             <th>{{ 'NIVEAUX.ORDRE' | translate }}</th>
             <th>{{ 'NIVEAUX.STATUT' | translate }}</th>
             <th>{{ 'NIVEAUX.PROFILS_AUTORISES' | translate }}</th>
+            <th>{{ 'NIVEAUX.EMAIL_NOTIFICATIONS' | translate }}</th>
             <th>{{ 'NIVEAUX.DESCRIPTION' | translate }}</th>
             <th class="actions-col">{{ 'COMMON.ACTIONS' | translate }}</th>
           </tr>
@@ -142,6 +190,18 @@
                 <span class="profils-empty-text" *ngIf="niveau.profilsAutorisesIds.length === 0">{{ getProfilsLabel([]) }}</span>
               </span>
             </td>
+            <td class="niveau-emails-cell">
+              <div class="niveau-emails" *ngIf="hasNiveauEmails(niveau); else noNiveauEmails">
+                <span class="email-chip" *ngFor="let email of (niveau.destinatairesEmail || [])">{{ email }}</span>
+                <span class="email-cc" *ngIf="niveau.copieEmail?.length">CC : {{ getNiveauCopieLabel(niveau) }}</span>
+                <span class="auto-email-badge" *ngIf="niveau.envoiAutomatiqueEmail" title="{{ 'NIVEAUX.ENVOI_AUTOMATIQUE' | translate }}">
+                  <i class="fa fa-bolt"></i> {{ 'NIVEAUX.ENVOI_AUTO_BADGE' | translate }}
+                </span>
+              </div>
+              <ng-template #noNiveauEmails>
+                <span class="emails-empty">{{ 'NIVEAUX.AUCUN_EMAIL' | translate }}</span>
+              </ng-template>
+            </td>
             <td>{{ niveau.description }}</td>
             <td class="actions-col">
               <button type="button" class="ds-btn ds-btn--secondary btn-icon btn-edit" (click)="editerNiveau(i)" title="{{ 'COMMON.EDIT' | translate }}">
@@ -159,7 +219,7 @@
             </td>
           </tr>
           <tr *ngIf="niveauxTraitement.length === 0">
-            <td colspan="7" class="empty-row">{{ 'NIVEAUX.AUCUN_NIVEAU' | translate }}</td>
+            <td colspan="8" class="empty-row">{{ 'NIVEAUX.AUCUN_NIVEAU' | translate }}</td>
           </tr>
         </tbody>
       </table>
@@ -245,5 +305,45 @@
     <button type="button" class="ds-btn ds-btn--primary btn btn-primary btn-lg" (click)="sauvegarderTout()">
       <i class="fa fa-save"></i> {{ 'NIVEAUX.SAUVEGARDER_TOUT' | translate }}
     </button>
+  </div>
+
+  <!-- Popup : ajout d'un pays -->
+  <div class="add-pays-overlay" *ngIf="showAddPaysModal" (click)="fermerAjoutPays()">
+    <div class="add-pays-modal" role="dialog" aria-modal="true" aria-labelledby="addPaysTitle" (click)="$event.stopPropagation()">
+      <div class="add-pays-header">
+        <h3 id="addPaysTitle"><i class="fa fa-flag"></i> {{ 'NIVEAUX.AJOUTER_PAYS' | translate }}</h3>
+        <button type="button" class="add-pays-close" (click)="fermerAjoutPays()" [disabled]="addingPays" [attr.aria-label]="'COMMON.CANCEL' | translate">
+          <i class="fa fa-times"></i>
+        </button>
+      </div>
+      <form class="add-pays-body" (ngSubmit)="ajouterPays()">
+        <p class="add-pays-info">{{ 'NIVEAUX.AJOUTER_PAYS_INFO' | translate }}</p>
+        <div class="form-group">
+          <label for="nouveauPaysCode">{{ 'NIVEAUX.CODE_PAYS' | translate }} *</label>
+          <input id="nouveauPaysCode" type="text" class="ds-input" name="nouveauPaysCode" maxlength="10" autocomplete="off"
+                 [ngModel]="nouveauPays.code" (ngModelChange)="onCodePaysInput($event)"
+                 placeholder="{{ 'NIVEAUX.CODE_PAYS_PLACEHOLDER' | translate }}" required>
+          <small class="add-pays-hint">{{ 'NIVEAUX.CODE_PAYS_HINT' | translate }}</small>
+        </div>
+        <div class="form-group">
+          <label for="nouveauPaysNom">{{ 'NIVEAUX.NOM_PAYS' | translate }} *</label>
+          <input id="nouveauPaysNom" type="text" class="ds-input" name="nouveauPaysNom" maxlength="100" autocomplete="off"
+                 [(ngModel)]="nouveauPays.nom" (ngModelChange)="addPaysError = ''"
+                 placeholder="{{ 'NIVEAUX.NOM_PAYS_PLACEHOLDER' | translate }}" required>
+        </div>
+        <div class="add-pays-error" *ngIf="addPaysError">
+          <i class="fa fa-exclamation-circle"></i> {{ addPaysError }}
+        </div>
+        <div class="add-pays-actions">
+          <button type="button" class="ds-btn ds-btn--secondary btn btn-secondary" (click)="fermerAjoutPays()" [disabled]="addingPays">
+            {{ 'COMMON.CANCEL' | translate }}
+          </button>
+          <button type="submit" class="ds-btn ds-btn--primary btn btn-primary" [disabled]="!canAjouterPays">
+            <i class="fa" [class.fa-plus]="!addingPays" [class.fa-spinner]="addingPays" [class.fa-spin]="addingPays"></i>
+            {{ 'COMMON.ADD' | translate }}
+          </button>
+        </div>
+      </form>
+    </div>
   </div>
 </div>

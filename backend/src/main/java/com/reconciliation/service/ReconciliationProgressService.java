@@ -17,10 +17,6 @@ public class ReconciliationProgressService {
         return progressMap.getOrDefault(tenantKey(sessionId), new ReconciliationProgress(0, "En attente", 0, 0));
     }
 
-    public void clearProgress(String sessionId) {
-        progressMap.remove(tenantKey(sessionId));
-    }
-
     public void createJob(String jobId, String message) {
         ReconciliationProgress progress = new ReconciliationProgress(0, message, 0, 0);
         progressMap.put(tenantKey(jobId), progress);

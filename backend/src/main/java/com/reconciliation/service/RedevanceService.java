@@ -32,6 +32,9 @@ public class RedevanceService {
     @Autowired
     private FluxService fluxService;
 
+    @Autowired
+    private CalculationRuleService calculationRuleService;
+
     private static final Map<String, String> COUNTRY_NAME_TO_CODE = new HashMap<>();
     private static final Map<String, List<String>> COUNTRY_CODE_TO_NAMES = new HashMap<>();
     static {
@@ -87,13 +90,15 @@ public class RedevanceService {
             (endDate != null && !endDate.isEmpty()) ? endDate : null
         );
 
+        List<String> payinTokens = calculationRuleService.getList("REDEVANCE.SERVICES_PAYIN", Collections.singletonList("PAIEMENT"));
+        List<String> payoutTokens = calculationRuleService.getList("REDEVANCE.SERVICES_PAYOUT", Collections.singletonList("CASHIN"));
         for (AgencySummaryEntity s : summaries) {
             String svc = (s.getService() != null) ? s.getService().toUpperCase() : "";
             double vol = s.getTotalVolume();
-            if (svc.contains("PAIEMENT")) {
+            if (matchesServiceToken(svc, payinTokens)) {
                 payin += vol;
             }
-            if (svc.contains("CASHIN")) {
+            if (matchesServiceToken(svc, payoutTokens)) {
                 payout += vol;
             }
         }
@@ -117,22 +122,57 @@ public class RedevanceService {
             } catch (Exception ignored) {}
         }
 
-        double chiffreAffairesBrut = totalMises - totalBonus;
         double tauxPayin = getTauxPayin(agence);
         double tauxPayout = getTauxPayout(agence);
         RedevanceAgenceParamEntity params = getParams(agence);
-        double taxeJeuxHasardPct = params != null ? params.getTaxeJeuxHasardPourcentage() : 5.0;
-        double retenueSurGainsPct = params != null ? params.getRetenueSurGainsPourcentage() : 15.0;
-        double retenueSeuil = params != null ? params.getRetenueSurGainsSeuil() : 500000.0;
-        double tauxRedevancePct = params != null ? params.getTauxRedevancePourcentage() : 50.0;
+        double taxeJeuxHasardPct = params != null && params.getTaxeJeuxHasardPourcentage() != null
+            ? params.getTaxeJeuxHasardPourcentage() : defaultTaxeJeuxHasardPct();
+        double retenueSurGainsPct = params != null && params.getRetenueSurGainsPourcentage() != null
+            ? params.getRetenueSurGainsPourcentage() : defaultRetenueSurGainsPct();
+        double retenueSeuil = params != null && params.getRetenueSurGainsSeuil() != null
+            ? params.getRetenueSurGainsSeuil() : defaultRetenueSeuil();
+        double tauxRedevancePct = params != null && params.getTauxRedevancePourcentage() != null
+            ? params.getTauxRedevancePourcentage() : defaultTauxRedevancePct();
+
+        Map<String, Double> vars = new HashMap<>();
+        vars.put("PAYIN", payin);
+        vars.put("PAYOUT", payout);
+        vars.put("TOTAL_MISES", totalMises);
+        vars.put("TOTAL_GAINS", totalGains);
+        vars.put("TOTAL_BONUS", totalBonus);
+        vars.put("TAUX_PAYIN", tauxPayin);
+        vars.put("TAUX_PAYOUT", tauxPayout);
+        vars.put("PAYIN_X_TAUX", payin * (tauxPayin / 100.0));
+        vars.put("PAYOUT_X_TAUX", payout * (tauxPayout / 100.0));
+
+        double chiffreAffairesBrut = calculationRuleService.evaluate(
+            "REDEVANCE.CA_BRUT", vars, totalMises - totalBonus);
+        vars.put("CA_BRUT", chiffreAffairesBrut);
 
         double taxeSurJeuxHasard = chiffreAffairesBrut * (taxeJeuxHasardPct / 100.0);
+        vars.put("TAXE_JEUX_HASARD", taxeSurJeuxHasard);
+        vars.put("TAXE_JEUX_HASARD_TAUX", taxeJeuxHasardPct / 100.0);
+
         double retenueSurGains = useFlux ? retenueSurGainsFromFlux : 0;
-        // Produit Brut de Jeux = 95% × (PAYIN − PAYOUT)
-        double produitBrutJeux = 0.95 * (payin - payout);
-        double remunerationIntegrateur = (payin * (tauxPayin / 100.0)) + (payout * (tauxPayout / 100.0));
-        double revenuGenereActCom = produitBrutJeux - remunerationIntegrateur;
-        double baseCalcul = revenuGenereActCom;
+        vars.put("RETENUE_SUR_GAINS", retenueSurGains);
+
+        double produitBrutJeux = calculationRuleService.evaluate(
+            "REDEVANCE.PBJ", vars, 0.95 * (payin - payout));
+        vars.put("PBJ", produitBrutJeux);
+
+        double remunerationIntegrateur = calculationRuleService.evaluate(
+            "REDEVANCE.REMUNERATION", vars,
+            (payin * (tauxPayin / 100.0)) + (payout * (tauxPayout / 100.0)));
+        vars.put("REMUNERATION", remunerationIntegrateur);
+
+        double revenuGenereActCom = calculationRuleService.evaluate(
+            "REDEVANCE.REVENU", vars, produitBrutJeux - remunerationIntegrateur);
+        vars.put("REVENU", revenuGenereActCom);
+
+        double baseCalcul = calculationRuleService.evaluate(
+            "REDEVANCE.BASE", vars, revenuGenereActCom);
+        vars.put("BASE_CALCUL", baseCalcul);
+
         double redevanceTotale = baseCalcul * (tauxRedevancePct / 100.0);
 
         Map<String, Object> result = new LinkedHashMap<>();
@@ -158,7 +198,36 @@ public class RedevanceService {
         result.put("operateur", agence != null ? agence : "");
         result.put("periode", formatPeriode(startDate, endDate));
         result.put("fluxFromTable", useFlux);
+        result.put("formuleCaBrut", calculationRuleService.formulaPreview("REDEVANCE.CA_BRUT"));
+        result.put("formulePbj", calculationRuleService.formulaPreview("REDEVANCE.PBJ"));
+        result.put("formuleRemuneration", calculationRuleService.formulaPreview("REDEVANCE.REMUNERATION"));
+        result.put("formuleRevenu", calculationRuleService.formulaPreview("REDEVANCE.REVENU"));
+        result.put("formuleBase", calculationRuleService.formulaPreview("REDEVANCE.BASE"));
         return result;
+    }
+
+    public double defaultTaxeJeuxHasardPct() {
+        return calculationRuleService.getNumber("REDEVANCE.TAXE_JEUX_HASARD_PCT", 5.0);
+    }
+
+    public double defaultRetenueSurGainsPct() {
+        return calculationRuleService.getNumber("REDEVANCE.RETENUE_GAINS_PCT", 15.0);
+    }
+
+    public double defaultRetenueSeuil() {
+        return calculationRuleService.getNumber("REDEVANCE.RETENUE_SEUIL", 500000.0);
+    }
+
+    public double defaultTauxRedevancePct() {
+        return calculationRuleService.getNumber("REDEVANCE.TAUX_DEFAUT", 50.0);
+    }
+
+    public double defaultTauxPayin() {
+        return calculationRuleService.getNumber("REDEVANCE.TAUX_PAYIN_DEFAUT", 2.5);
+    }
+
+    public double defaultTauxPayout() {
+        return calculationRuleService.getNumber("REDEVANCE.TAUX_PAYOUT_DEFAUT", 3.0);
     }
 
     /** Résout les pays en noms pour la requête (agency_summary stocke les noms) */
@@ -188,24 +257,40 @@ public class RedevanceService {
         return names;
     }
 
+    private boolean matchesServiceToken(String svc, List<String> tokens) {
+        if (svc == null || svc.isEmpty() || tokens == null) {
+            return false;
+        }
+        for (String token : tokens) {
+            if (token != null && !token.isBlank() && svc.contains(token.trim().toUpperCase())) {
+                return true;
+            }
+        }
+        return false;
+    }
+
     private double getTauxPayin(String agence) {
-        if (agence == null || agence.trim().isEmpty()) return 2.5;
+        double fallback = defaultTauxPayin();
+        if (agence == null || agence.trim().isEmpty()) return fallback;
         List<FraisTransactionEntity> frais = fraisTransactionRepository.findByAgenceAndActifTrueOrderByDateModificationDesc(agence.trim());
+        List<String> payinTokens = calculationRuleService.getList("REDEVANCE.SERVICES_PAYIN", Collections.singletonList("PAIEMENT"));
         List<Double> pcts = frais.stream()
-            .filter(f -> f.getService() != null && f.getService().toUpperCase().contains("PAIEMENT") && "POURCENTAGE".equals(f.getTypeCalcul()) && f.getPourcentage() != null)
+            .filter(f -> f.getService() != null && matchesServiceToken(f.getService().toUpperCase(), payinTokens) && "POURCENTAGE".equals(f.getTypeCalcul()) && f.getPourcentage() != null)
             .map(FraisTransactionEntity::getPourcentage)
             .collect(Collectors.toList());
-        return pcts.isEmpty() ? 2.5 : pcts.stream().mapToDouble(Double::doubleValue).average().orElse(2.5);
+        return pcts.isEmpty() ? fallback : pcts.stream().mapToDouble(Double::doubleValue).average().orElse(fallback);
     }
 
     private double getTauxPayout(String agence) {
-        if (agence == null || agence.trim().isEmpty()) return 3.0;
+        double fallback = defaultTauxPayout();
+        if (agence == null || agence.trim().isEmpty()) return fallback;
         List<FraisTransactionEntity> frais = fraisTransactionRepository.findByAgenceAndActifTrueOrderByDateModificationDesc(agence.trim());
+        List<String> payoutTokens = calculationRuleService.getList("REDEVANCE.SERVICES_PAYOUT", Collections.singletonList("CASHIN"));
         List<Double> pcts = frais.stream()
-            .filter(f -> f.getService() != null && f.getService().toUpperCase().contains("CASHIN") && "POURCENTAGE".equals(f.getTypeCalcul()) && f.getPourcentage() != null)
+            .filter(f -> f.getService() != null && matchesServiceToken(f.getService().toUpperCase(), payoutTokens) && "POURCENTAGE".equals(f.getTypeCalcul()) && f.getPourcentage() != null)
             .map(FraisTransactionEntity::getPourcentage)
             .collect(Collectors.toList());
-        return pcts.isEmpty() ? 3.0 : pcts.stream().mapToDouble(Double::doubleValue).average().orElse(3.0);
+        return pcts.isEmpty() ? fallback : pcts.stream().mapToDouble(Double::doubleValue).average().orElse(fallback);
     }
 
     private RedevanceAgenceParamEntity getParams(String agence) {
@@ -224,6 +309,10 @@ public class RedevanceService {
             .orElseGet(() -> {
                 RedevanceAgenceParamEntity p = new RedevanceAgenceParamEntity();
                 p.setAgence(agence);
+                p.setRetenueSurGainsPourcentage(defaultRetenueSurGainsPct());
+                p.setRetenueSurGainsSeuil(defaultRetenueSeuil());
+                p.setTaxeJeuxHasardPourcentage(defaultTaxeJeuxHasardPct());
+                p.setTauxRedevancePourcentage(defaultTauxRedevancePct());
                 return redevanceAgenceParamRepository.save(p);
             });
     }

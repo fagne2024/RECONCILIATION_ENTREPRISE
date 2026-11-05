@@ -17,7 +17,16 @@ import java.time.Duration;
 @Service
 public class AuthCookieService {
 
+    /** Nom par defaut du cookie de session (inchange en dev/prod). */
     public static final String COOKIE_NAME = "AUTH_TOKEN";
+
+    /**
+     * Nom du cookie, surchargeable par profil. L'environnement de test utilise
+     * un nom distinct (AUTH_TOKEN_TEST) pour ne pas entrer en collision avec le
+     * cookie du dev/prod : les cookies ne sont pas isoles par port sur localhost.
+     */
+    @Value("${app.auth.cookie-name:" + COOKIE_NAME + "}")
+    private String cookieName = COOKIE_NAME;
 
     @Value("${jwt.expiration:14400000}")
     private long expirationMs;
@@ -36,7 +45,7 @@ public class AuthCookieService {
             return null;
         }
         for (Cookie cookie : cookies) {
-            if (COOKIE_NAME.equals(cookie.getName())
+            if (cookieName.equals(cookie.getName())
                     && cookie.getValue() != null
                     && !cookie.getValue().isBlank()) {
                 return cookie.getValue();
@@ -46,7 +55,7 @@ public class AuthCookieService {
     }
 
     private ResponseCookie buildCookie(HttpServletRequest request, String value, long maxAgeMs) {
-        return ResponseCookie.from(COOKIE_NAME, value == null ? "" : value)
+        return ResponseCookie.from(cookieName, value == null ? "" : value)
             .httpOnly(true)
             .secure(request != null && request.isSecure())
             .sameSite("Lax")

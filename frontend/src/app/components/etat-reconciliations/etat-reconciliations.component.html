@@ -356,6 +356,11 @@
                                             (click)="onInfoDotClick(day, row, $event)"
                                             [attr.aria-label]="'ETA.aria.viewComment' | translate"
                                         >!</button>
+                                        <i
+                                            *ngIf="hasActiveMailAlert(day, row)"
+                                            class="fas fa-envelope mail-alert-dot"
+                                            [title]="'ETA.mail.cellTitle' | translate"
+                                        ></i>
                                         <button
                                             *ngIf="!hasCellNoteIndicator(day, row) && hasCellTicketIndicator(day)"
                                             type="button"
@@ -455,10 +460,51 @@
                 [(ngModel)]="blockingCommentDraft"
                 [placeholder]="'ETA.modal.placeholder' | translate"
             ></textarea>
+
+            <div class="j1-mail">
+                <div class="j1-mail-head">
+                    <i class="fas fa-envelope"></i>
+                    <strong>{{ 'ETA.mail.title' | translate }}</strong>
+                    <span class="j1-mail-badge on" *ngIf="isMailAlertActive">{{ 'ETA.mail.active' | translate }}</span>
+                </div>
+                <p class="j1-mail-hint">{{ 'ETA.mail.hint' | translate }}</p>
+                <label class="j1-mail-label" for="j1MailRecipients">{{ 'ETA.mail.recipients' | translate }}</label>
+                <input
+                    id="j1MailRecipients"
+                    type="text"
+                    class="ds-input"
+                    [(ngModel)]="mailRecipientsDraft"
+                    [placeholder]="'ETA.mail.recipientsPlaceholder' | translate"
+                    [disabled]="mailAlertBusy || blockingCommentSaving"
+                />
+                <label class="j1-mail-label j1-mail-label--cc" for="j1MailCc">{{ 'ETA.mail.cc' | translate }}</label>
+                <input
+                    id="j1MailCc"
+                    type="text"
+                    class="ds-input"
+                    [(ngModel)]="mailCcDraft"
+                    [placeholder]="'ETA.mail.recipientsPlaceholder' | translate"
+                    [disabled]="mailAlertBusy || blockingCommentSaving"
+                />
+                <p class="j1-mail-status" *ngIf="isMailAlertActive && blockingCommentStored as stored">
+                    {{ 'ETA.mail.activeInfo' | translate:{ count: stored.mailSendCount || 0, date: formatMailDateTime(stored.mailLastSentAt) } }}
+                </p>
+                <p class="j1-mail-status warn" *ngIf="isMailAlertActive && blockingCommentStored?.mailLastError">
+                    {{ 'ETA.mail.lastError' | translate:{ error: blockingCommentStored?.mailLastError } }}
+                </p>
+                <p class="j1-mail-status" *ngIf="mailAlertStoppedLabel">{{ mailAlertStoppedLabel }}</p>
+                <p class="j1-mail-status ok" *ngIf="mailAlertMessage">{{ mailAlertMessage }}</p>
+                <div class="j1-mail-actions" *ngIf="isMailAlertActive">
+                    <button type="button" class="btn ds-btn ds-btn--secondary" (click)="stopBlockingCommentMail()" [disabled]="mailAlertBusy || blockingCommentSaving">
+                        <i class="fas fa-bell-slash"></i> {{ 'ETA.mail.stop' | translate }}
+                    </button>
+                </div>
+            </div>
+
             <div class="j1-modal-error" *ngIf="blockingCommentError">{{ blockingCommentError }}</div>
             <div class="j1-modal-actions">
-                <button type="button" class="btn ds-btn ds-btn--secondary" (click)="closeBlockingCommentModal()" [disabled]="blockingCommentSaving">{{ 'COMMON.actions.cancel' | translate }}</button>
-                <button type="button" class="btn btn-primary ds-btn ds-btn--primary" (click)="saveBlockingComment()" [disabled]="blockingCommentSaving">
+                <button type="button" class="btn ds-btn ds-btn--secondary" (click)="closeBlockingCommentModal()" [disabled]="blockingCommentSaving || mailAlertBusy">{{ 'COMMON.actions.cancel' | translate }}</button>
+                <button type="button" class="btn btn-primary ds-btn ds-btn--primary" (click)="saveBlockingComment()" [disabled]="blockingCommentSaving || mailAlertBusy">
                     {{ blockingCommentSaving ? ('ETA.modal.saving' | translate) : ('ETA.modal.save' | translate) }}
                 </button>
             </div>

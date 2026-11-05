@@ -177,6 +177,109 @@ export interface CertificationSoldeComputed {
   };
 }
 
+/** Tableaux du PDF de certification conservés avec le résultat enregistré. */
+export interface CertificationResultatDetails {
+  regularisation: { label: string; count: number; volume: number; frais: number; montantARegulariser: number }[];
+  compense: {
+    parAgence: { agence: string; montant: number }[];
+    totalPartenaire: number | null;
+    ecartLabel: string | null;
+    ecart: number | null;
+  } | null;
+  ecartPartenaire: {
+    parAgence: { agence: string; montant: number }[];
+    totalListe: number;
+    totalFichier: number | null;
+    ecartLabel: string | null;
+    ecart: number | null;
+    lignes: { numeroTransGu: string; service: string; agence: string; montant: number; statut: 'OK' | 'KO' }[];
+    okCount: number | null;
+    koCount: number | null;
+  } | null;
+  typesOperations: { type: string; volume: number }[];
+  trxboParService: {
+    rows: { service: string; agence: string; count: number; volume: number; frais: number; montantFrais: number }[];
+    totalCount: number;
+    totalVolume: number;
+    totalMontantFrais: number;
+  } | null;
+}
+
+/** Résultat de certification tel qu'enregistré (chiffres clés du PDF + détails). */
+export interface CertificationResultat {
+  id?: number;
+  numeroCompte: string;
+  dateDebut: string;
+  dateFin: string;
+  env: string | null;
+  pays: string | null;
+  heureOuverture: string | null;
+  heureCloture: string | null;
+  titre: string | null;
+  soldeOuverture: number | null;
+  soldeCloture: number | null;
+  totalDebit: number | null;
+  totalCredit: number | null;
+  variation: number | null;
+  mouvementNetOppart: number | null;
+  fraisAttendu: number | null;
+  fraisFactures: number | null;
+  ecartFrais: number | null;
+  ecartMouvement: number | null;
+  totalRegularisation: number | null;
+  ecartCertification: number | null;
+  soldeClotureTheorique: number | null;
+  volumeEcartBo: number | null;
+  volumeEcartPartenaire: number | null;
+  nbLignesBo: number | null;
+  nbLignesPartenaire: number | null;
+  nbCorrespondances: number | null;
+  commentaire: string | null;
+  detailsJson: string | null;
+  createdBy?: string | null;
+  updatedBy?: string | null;
+  createdAt?: string | null;
+  updatedAt?: string | null;
+}
+
+/** Ligne de la liste des certifications enregistrées. */
+export interface CertificationResultatSummary {
+  id: number;
+  numeroCompte: string;
+  dateDebut: string;
+  dateFin: string;
+  env: string | null;
+  pays: string | null;
+  titre: string | null;
+  soldeOuverture: number | null;
+  soldeCloture: number | null;
+  ecartMouvement: number | null;
+  ecartCertification: number | null;
+  soldeClotureTheorique: number | null;
+  commentaire: string | null;
+  createdBy: string | null;
+  updatedBy: string | null;
+  createdAt: string | null;
+  updatedAt: string | null;
+}
+
+export interface CertificationResultatFilter {
+  numeroCompte?: string;
+  env?: string;
+  pays?: string;
+  dateDebut?: string;
+  dateFin?: string;
+}
+
+/** Page de la liste des certifications enregistrées (numérotation à partir de 0). */
+export interface CertificationResultatPage {
+  content: CertificationResultatSummary[];
+  totalElements: number;
+  totalPages: number;
+  size: number;
+  number: number;
+}
+
 @Injectable({ providedIn: 'root' })
 export class CertificationSoldeService {
   private static readonly OPPART_TYPE_KEYS = [
@@ -201,8 +304,12 @@ export class CertificationSoldeService {
     'VERSEMENTCOMMISSION'
   ];
 
+  /** Type d'opération des lignes alimentant l'agrégat RGFRAIS. */
+  private static readonly FEES_OPERATION_TYPE = 'FRAISTRANSACTION';
+
   private readonly compteSoldeBoUrl = '/api/compte-solde-bo';
   private readonly compteSoldeClotureUrl = '/api/compte-solde-cloture';
+  private readonly resultatsUrl = '/api/certification-solde-resultats';
 
   constructor(private http: HttpClient, private calcul: ConfigurationCalculService) {}
 
@@ -309,9 +416,43 @@ export class CertificationSoldeService {
 
   /** Ligne d'écart partenaire qui est une opération de compensation (Compense_client / Compense_fournisseur, …). */
   private isCompenseDetail(detail: EcartDetailLine): boolean {
-    const haystack = `${detail.typeOperation || ''} ${detail.service || ''}`.toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g, '');
+    return this.isCompenseOperation(detail.typeOperation, detail.service);
+  }
+
+  /** Vrai si le type d'opération (ou le service) désigne une compensation. */
+  private isCompenseOperation(
+    typeOperation: string | null | undefined,
+    service: string | null | undefined
+  ): boolean {
+    const haystack = `${typeOperation || ''} ${service || ''}`.toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g, '');
     const tokens = this.calcul.getListRaw('CERTIF.TOKENS_COMPENSE', ['COMPENS']);
     return tokens.some(token => haystack.includes(token.toLowerCase()));
+  }
+
+  /** Vrai si la ligne partenaire est une compensation (commentaire RGFRAIS ou non). */
+  private isCompenseRecord(record: Record<string, string>): boolean {
+    const typeOperation = this.getTypeValue(record);
+    const service = this.extractField(record, ['Service', 'service', 'Type Opération', 'Type Operation']);
+    return this.isCompenseOperation(typeOperation, service);
+  }
+
+  /**
+   * Vrai si la ligne partenaire est une ligne de frais (RGFRAIS). Le type d'opération doit
+   * être FRAIS_TRANSACTION : un commentaire « RGFRAIS » porté par une autre opération
+   * (compense, impact, …) ne doit jamais alimenter l'agrégat RGFRAIS.
+   */
+  private isRgfraisPartnerRecord(
+    record: Record<string, string>,
+    partnerByComment: Map<string, AggregationTypeDescriptor>,
+    rgfraisTokens: string[]
+  ): boolean {
+    const typeOperation = this.normalizeOperationType(this.getTypeValue(record));
+    if (typeOperation && !typeOperation.includes(CertificationSoldeService.FEES_OPERATION_TYPE)) {
+      return false;
+    }
+    const comment = this.normalizeComment(record);
+    const descriptor = comment ? partnerByComment.get(this.normalizeCaseKey(comment)) : undefined;
+    return descriptor?.partnerMode === 'FRAIS' || this.containsAnyToken(typeOperation, rgfraisTokens);
   }
 
   /**
@@ -422,6 +563,33 @@ export class CertificationSoldeService {
 
   saveSoldeCloture(numeroCompte: string, dateSolde: string, soldeCloture: number): Observable<unknown> {
     return this.http.post(`${this.compteSoldeClotureUrl}/set`, { numeroCompte, dateSolde, soldeCloture });
+  }
+
+  saveResultat(resultat: CertificationResultat): Observable<CertificationResultat> {
+    return this.http.post<CertificationResultat>(this.resultatsUrl, resultat);
+  }
+
+  listResultats(filter: CertificationResultatFilter = {}, page = 0, size = 20): Observable<CertificationResultatPage> {
+    const params: Record<string, string> = { page: String(page), size: String(size) };
+    if (filter.numeroCompte?.trim()) params['numeroCompte'] = filter.numeroCompte.trim();
+    if (filter.env) params['env'] = filter.env;
+    if (filter.pays) params['pays'] = filter.pays;
+    if (filter.dateDebut) params['dateDebut'] = filter.dateDebut;
+    if (filter.dateFin) params['dateFin'] = filter.dateFin;
+    return this.http.get<CertificationResultatPage>(this.resultatsUrl, { params });
+  }
+
+  getResultat(id: number): Observable<CertificationResultat> {
+    return this.http.get<CertificationResultat>(`${this.resultatsUrl}/${id}`);
+  }
+
+  /** Met à jour le pays d'une certification enregistrée (null pour retirer le pays). */
+  updateResultatPays(id: number, pays: string | null): Observable<CertificationResultat> {
+    return this.http.put<CertificationResultat>(`${this.resultatsUrl}/${id}/pays`, { pays });
+  }
+
+  deleteResultat(id: number): Observable<{ success: boolean; message: string }> {
+    return this.http.delete<{ success: boolean; message: string }>(`${this.resultatsUrl}/${id}`);
   }
 
   async loadSoldeOuverture(numeroCompte: string, dateSolde: string): Promise<number | null> {
@@ -535,9 +703,10 @@ export class CertificationSoldeService {
       const service = this.extractField(record, ['Service', 'service']);
       const agence = this.extractField(record, ['Agence', 'agence', 'Code proprietaire']);
       const frais = this.calculateFrais(fraisConfigs, service, agence, montant);
-      // Montant OPPART négatif si le service contient CASHIN ou AIRTIME, sinon positif.
+      // Montant OPPART négatif si le service contient un service TSOP à signe négatif (règle
+      // de calcul prioritaire ; à défaut CASHIN, AIRTIME, SEND), sinon positif.
       const serviceUppercase = (service || '').toUpperCase();
-      const tsopNegativeServices = this.calcul.getListRaw('CERTIF.SERVICES_TSOP_NEGATIFS', ['CASHIN', 'AIRTIME']);
+      const tsopNegativeServices = this.calcul.getListRaw('CERTIF.SERVICES_TSOP_NEGATIFS', ['CASHIN', 'AIRTIME', 'SEND']);
       const montantOppart = tsopNegativeServices.some(s => serviceUppercase.includes(s))
         ? -Math.abs(montant)
         : Math.abs(montant);
@@ -651,7 +820,7 @@ export class CertificationSoldeService {
         idTransaction: this.extractField(record, ['ID Transaction', 'IDTransaction', 'idTransaction']),
         numeroTransGu: this.extractNumeroTransGu(record),
         commentaire: comment || label,
-        typeOperation: this.getTypeValue(record)
+        typeOperation: 'FRAIS_TRANSACTION'
       });
     };
 
@@ -665,10 +834,9 @@ export class CertificationSoldeService {
     // BO ne portent aucun commentaire (choix métier), on les retrouve par numéro GU.
     const rgfraisGuKeysFromPartner = new Set<string>();
     for (const record of response.partnerOnly ?? []) {
-      const comment = this.normalizeComment(record);
-      const typeOp = this.normalizeOperationType(this.getTypeValue(record));
-      const descriptor = comment ? partnerByComment.get(this.normalizeCaseKey(comment)) : undefined;
-      if ((descriptor && descriptor.partnerMode === 'FRAIS') || this.containsAnyToken(typeOp, rgfraisTokens)) {
+      // RGFRAIS = uniquement les lignes FRAIS_TRANSACTION (une compense commentée « RGFRAIS »
+      // ne doit pas être traitée comme des frais).
+      if (this.isRgfraisPartnerRecord(record, partnerByComment, rgfraisTokens)) {
         const guKey = this.normalizeTransGuKey(this.extractNumeroTransGu(record));
         if (guKey) {
           rgfraisGuKeysFromPartner.add(guKey);
@@ -737,7 +905,6 @@ export class CertificationSoldeService {
 
     for (const record of response.partnerOnly ?? []) {
       const comment = this.normalizeComment(record);
-      const typeOp = this.normalizeOperationType(this.getTypeValue(record));
       const guKey = this.normalizeTransGuKey(this.extractNumeroTransGu(record));
       const matched = comment ? partnerByComment.get(this.normalizeCaseKey(comment)) : undefined;
 
@@ -746,7 +913,25 @@ export class CertificationSoldeService {
         continue;
       }
 
-      if ((matched && matched.partnerMode === 'FRAIS') || this.containsAnyToken(typeOp, rgfraisTokens)) {
+      // Une compensation n'alimente jamais RGFRAIS, même si le backend l'a commentée « RGFRAIS » :
+      // elle reste une opération partenaire hors périmètre (listée dans la section Compense).
+      if (this.isCompenseRecord(record)) {
+        this.buildPartnerEcartDetail(
+          record,
+          map,
+          regularisationDetails,
+          this.aggregationPartnerCode(ecartDescriptor),
+          this.aggregationPartnerLabel(ecartDescriptor, comment),
+          regularisationRules,
+          boByTransGu,
+          fraisConfigs,
+          false
+        );
+        continue;
+      }
+
+      // RGFRAIS = toujours une ligne FRAIS_TRANSACTION.
+      if (this.isRgfraisPartnerRecord(record, partnerByComment, rgfraisTokens)) {
         buildPartnerFraisDetail(matched ?? partnerFraisDescriptor ?? undefined, comment, record);
         continue;
       }
@@ -755,7 +940,10 @@ export class CertificationSoldeService {
         continue;
       }
 
-      const descriptor = matched ?? defaultPartnerDescriptor;
+      // Un commentaire « frais » porté par un type non-frais ne doit pas créer d'agrégat RGFRAIS.
+      const descriptor = (matched && matched.partnerMode !== 'FRAIS' && matched.kind !== 'rgfrais'
+        ? matched
+        : undefined) ?? defaultPartnerDescriptor;
       if (!descriptor || descriptor.partnerMode === 'NONE') {
         continue;
       }
@@ -932,7 +1120,8 @@ export class CertificationSoldeService {
     label: string,
     regularisationRules: Map<string, NormalizedRegularisationRule>,
     boByTransGu: Map<string, Record<string, string>>,
-    fraisConfigs: FraisTransaction[]
+    fraisConfigs: FraisTransaction[],
+    applyRegularisationRules = true
   ): void {
     const montant = this.parseAmount(record);
     const service = this.extractField(record, ['Service', 'service', 'Type Opération', 'Type Operation']);
@@ -942,7 +1131,7 @@ export class CertificationSoldeService {
     const numeroTransGu = this.extractNumeroTransGu(record);
     const typeOperation = this.getTypeValue(record);
 
-    const rule = this.findRegularisationRule(regularisationRules, commentaire);
+    const rule = applyRegularisationRules ? this.findRegularisationRule(regularisationRules, commentaire) : null;
     let detailMontant = montant;
     let regularisationExclue = false;
     if (rule && rule.hasOppartComponents) {

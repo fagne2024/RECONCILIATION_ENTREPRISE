@@ -2,7 +2,7 @@
     <div class="header">
         <h1>{{ 'CPT.Gestiondescomptes' | translate }}</h1>
         <div class="actions">
-            <button type="button" (click)="showAddForm = !showAddForm" class="ds-btn ds-btn--secondary btn add-btn">
+            <button type="button" (click)="showAddForm = !showAddForm" class="ds-btn ds-btn--primary btn add-btn">
                 <i class="fas fa-plus"></i> {{ 'CPT.Nouveaucompte' | translate }}
             </button>
             <button type="button" (click)="goToServiceBalance()" class="ds-btn ds-btn--secondary btn service-balance-btn">
@@ -366,7 +366,7 @@
                         </div>
                         <div class="card-ratio">
                             <span>{{ 'CPT.Ratio' | translate }}</span>
-                            <span class="ratio-value" [class.critical]="(item.compte.solde / item.moyenneVolume) < 0.5" [class.warning]="(item.compte.solde / item.moyenneVolume) >= 0.5 && (item.compte.solde / item.moyenneVolume) < 0.8">
+                            <span class="ratio-value" [class.critical]="(item.compte.solde / item.moyenneVolume) < seuilCriticiteMoyen" [class.warning]="(item.compte.solde / item.moyenneVolume) >= seuilCriticiteMoyen && (item.compte.solde / item.moyenneVolume) < seuilCriticiteFaible">
                                 {{ (item.compte.solde / item.moyenneVolume) | number:'1.2-2' }}
                             </span>
                         </div>

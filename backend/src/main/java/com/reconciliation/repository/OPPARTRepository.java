@@ -25,6 +25,7 @@ public interface OPPARTRepository extends JpaRepository<OPPARTEntity, Long> {
     @Query("SELECT o FROM OPPARTEntity o WHERE " +
            "(:client IS NULL OR LOWER(o.client) LIKE LOWER(CONCAT('%', :client, '%'))) AND " +
            "(:typeOp IS NULL OR LOWER(o.typeOp) = LOWER(:typeOp)) AND " +
+           "(:typeOpContains IS NULL OR LOWER(o.typeOp) LIKE LOWER(CONCAT('%', :typeOpContains, '%'))) AND " +
            "(:pays IS NULL OR LOWER(o.pays) = LOWER(:pays)) AND " +
            "(:source IS NULL OR LOWER(o.source) = LOWER(:source)) AND " +
            "(:statut IS NULL OR LOWER(o.statut) = LOWER(:statut)) AND " +
@@ -35,6 +36,7 @@ public interface OPPARTRepository extends JpaRepository<OPPARTEntity, Long> {
     List<OPPARTEntity> findWithFilters(
             @Param("client") String client,
             @Param("typeOp") String typeOp,
+            @Param("typeOpContains") String typeOpContains,
             @Param("pays") String pays,
             @Param("source") String source,
             @Param("statut") String statut,

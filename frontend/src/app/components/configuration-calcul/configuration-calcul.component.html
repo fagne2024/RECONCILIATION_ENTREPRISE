@@ -196,7 +196,7 @@
             <input type="number" class="ds-input term-coef" [(ngModel)]="term.coefficient" step="any" />
             <select class="ds-select term-variable" [(ngModel)]="term.variable">
               <option value="">—</option>
-              <option *ngFor="let v of variables" [value]="v.code">{{ v.label }}</option>
+              <option *ngFor="let v of formulaVariables" [value]="v.code">{{ v.label }}</option>
             </select>
             <label class="term-abs">
               <input type="checkbox" [(ngModel)]="term.absolue" />

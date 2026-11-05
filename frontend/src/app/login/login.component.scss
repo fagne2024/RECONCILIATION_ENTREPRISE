@@ -728,3 +728,13 @@ object-fit: contain;
 .login-button.mat-primary:hover {
   background: var(--color-accent-hover) !important;
 }
+
+/* Version de l'application */
+.login-version {
+  text-align: center;
+  font-size: 0.75rem;
+  color: var(--color-text-muted);
+  margin-top: 0.5rem;
+  font-weight: 500;
+  opacity: 0.7;
+}

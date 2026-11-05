@@ -1,5 +1,7 @@
 package com.reconciliation.service;
 
+import com.fasterxml.jackson.core.type.TypeReference;
+import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.reconciliation.entity.CalculationRuleEntity;
 import com.reconciliation.repository.CalculationRuleRepository;
@@ -10,9 +12,14 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 import org.springframework.web.server.ResponseStatusException;
 
+import java.text.Normalizer;
 import java.util.ArrayList;
 import java.util.Arrays;
+import java.util.Collections;
 import java.util.List;
+import java.util.Locale;
+import java.util.Map;
+import java.util.Optional;
 
 /**
  * Gestion des règles de calcul configurables (sous-module Configuration &gt; Calcul).
@@ -21,6 +28,32 @@ import java.util.List;
 public class CalculationRuleService {
 
     public static final String MODULE_CERTIFICATION_SOLDE = "CERTIFICATION_SOLDE";
+    public static final String MODULE_REDEVANCE_LOTERIE = "REDEVANCE_LOTERIE";
+    public static final String MODULE_TRAITEMENT = "TRAITEMENT";
+
+    // ------------------------------------------------------------------
+    // Repls code par défaut
+    // ------------------------------------------------------------------
+    // Valeurs codées en dur dans les moteurs de calcul : elles ne s'appliquent
+    // QUE si aucune règle active n'est configurée dans Configuration > Calcul.
+    // Toute règle configurée devient prioritaire sur ces valeurs.
+
+    /** Types d'opération bancaire classés en approvisionnement (crédit). */
+    public static final List<String> DEFAULT_TYPES_APPROVISIONNEMENT = List.of("appro");
+    /** Types d'opération bancaire classés en compensation (débit). */
+    public static final List<String> DEFAULT_TYPES_COMPENSATION = List.of("compens", "compense", "compensation");
+    /** Types d'opération bancaire classés en nivellement. */
+    public static final List<String> DEFAULT_TYPES_NIVELLEMENT = List.of("nivellement");
+    /** Services dont le montant TSOP est forcé en négatif. */
+    public static final List<String> DEFAULT_SERVICES_TSOP_NEGATIFS = List.of("cashin", "send", "airtime");
+    /** Mots-clés du nom de fichier identifiant un fichier OPPART. */
+    public static final List<String> DEFAULT_TOKENS_OPPART = List.of("oppart");
+    /** Mots-clés du nom de fichier identifiant un fichier TRXBO. */
+    public static final List<String> DEFAULT_TOKENS_TRXBO = List.of("trxbo");
+    /** Mots-clés du nom de fichier identifiant un fichier USSDPART. */
+    public static final List<String> DEFAULT_TOKENS_USSDPART = List.of("ussdpart");
+    /** Extensions de fichiers reconnues par le module Traitement. */
+    public static final List<String> DEFAULT_EXTENSIONS_FICHIERS = List.of(".csv", ".txt", ".tsv", ".xls", ".xlsx");
 
     @Autowired
     private CalculationRuleRepository repository;
@@ -124,6 +157,33 @@ public class CalculationRuleService {
     }
 
     private void seedDefaultsInternal() {
+        for (CalculationRuleEntity rule : buildDefaultRules()) {
+            if (!repository.existsByCode(rule.getCode())) {
+                repository.save(rule);
+            }
+        }
+    }
+
+    /**
+     * Copie les règles par défaut vers une entreprise (création d'un nouveau tenant).
+     * Sans cela, la page Configuration &gt; Calcul serait vide pour ce tenant et
+     * tous les calculs retomberaient sur les valeurs codées en dur.
+     */
+    @Transactional
+    public void copyDefaultsTo(Long entrepriseId) {
+        if (entrepriseId == null) {
+            return;
+        }
+        com.reconciliation.tenant.TenantContext.runAs(entrepriseId, () -> {
+            for (CalculationRuleEntity rule : buildDefaultRules()) {
+                if (!repository.existsByCode(rule.getCode())) {
+                    repository.save(rule);
+                }
+            }
+        });
+    }
+
+    private List<CalculationRuleEntity> buildDefaultRules() {
         List<CalculationRuleEntity> rules = new ArrayList<>();
 
         // ===== Certification de solde =====
@@ -151,7 +211,7 @@ public class CalculationRuleService {
         rules.add(liste("CERTIF.SERVICES_TSOP_NEGATIFS", MODULE_CERTIFICATION_SOLDE, "REGULARISATION",
                 "Services TSOP à signe négatif",
                 "Lorsque le service contient l'une de ces valeurs, le montant TSOP est forcé en négatif.", 60,
-                Arrays.asList("CASHIN", "AIRTIME")));
+                Arrays.asList("CASHIN", "AIRTIME", "SEND")));
 
         rules.add(liste("CERTIF.TOKENS_COMPENSE", MODULE_CERTIFICATION_SOLDE, "REGULARISATION",
                 "Mots-clés de compensation", "Mots-clés permettant d'identifier une ligne de compensation.", 70,
@@ -217,11 +277,56 @@ public class CalculationRuleService {
         rules.add(liste("MODELES.TOKENS_USSDPART", "MODELES", "DETECTION_FICHIERS", "Mots-clés fichier USSDPART",
                 "Mots-clés du nom de fichier identifiant un fichier USSDPART.", 300, Arrays.asList("USSDPART")));
 
-        for (CalculationRuleEntity rule : rules) {
-            if (!repository.existsByCode(rule.getCode())) {
-                repository.save(rule);
-            }
-        }
+        // ===== Traitement (formats de fichiers) =====
+        rules.add(liste("TRAITEMENT.EXTENSIONS_FICHIERS", MODULE_TRAITEMENT, "FORMATS_FICHIERS",
+                "Extensions de fichiers acceptées",
+                "Extensions (avec le point) reconnues par le module Traitement pour l'import des fichiers.", 310,
+                DEFAULT_EXTENSIONS_FICHIERS));
+
+        // ===== Redevance loterie =====
+        rules.add(formule("REDEVANCE.CA_BRUT", MODULE_REDEVANCE_LOTERIE, "INDICATEURS_BRUTS",
+                "Chiffre d'affaires brut", "Total des mises moins le total des bonus.", 400,
+                terms(term("+", 1, "TOTAL_MISES", false), term("-", 1, "TOTAL_BONUS", false))));
+        rules.add(formule("REDEVANCE.PBJ", MODULE_REDEVANCE_LOTERIE, "PRODUITS",
+                "Produit brut de jeux", "Coefficient × (PAYIN − PAYOUT). Le coefficient 0,95 correspond à 95 %.", 410,
+                terms(term("+", 0.95, "PAYIN", false), term("-", 0.95, "PAYOUT", false))));
+        rules.add(formule("REDEVANCE.REMUNERATION", MODULE_REDEVANCE_LOTERIE, "PRODUITS",
+                "Rémunération intégrateur", "PAYIN × taux payin + PAYOUT × taux payout.", 420,
+                terms(term("+", 1, "PAYIN_X_TAUX", false), term("+", 1, "PAYOUT_X_TAUX", false))));
+        rules.add(formule("REDEVANCE.REVENU", MODULE_REDEVANCE_LOTERIE, "PRODUITS",
+                "Revenu généré (act. com.)", "Produit brut de jeux moins la rémunération intégrateur.", 430,
+                terms(term("+", 1, "PBJ", false), term("-", 1, "REMUNERATION", false))));
+        rules.add(formule("REDEVANCE.BASE", MODULE_REDEVANCE_LOTERIE, "REDEVANCE",
+                "Base de calcul de la redevance", "Par défaut égale au revenu généré. Ajoutez ou retirez des termes au besoin.", 440,
+                terms(term("+", 1, "REVENU", false))));
+        rules.add(parameter("REDEVANCE.TAXE_JEUX_HASARD_PCT", MODULE_REDEVANCE_LOTERIE, "PARAMETRES",
+                "Taxe jeux de hasard (défaut)",
+                "Pourcentage du CA brut (surchargé par les paramètres d'agence s'ils existent).", 450, 5.0));
+        rules.add(parameter("REDEVANCE.RETENUE_GAINS_PCT", MODULE_REDEVANCE_LOTERIE, "PARAMETRES",
+                "Retenue sur gains (défaut)",
+                "Pourcentage de retenue sur les gains (surchargé par les paramètres d'agence).", 460, 15.0));
+        rules.add(parameter("REDEVANCE.RETENUE_SEUIL", MODULE_REDEVANCE_LOTERIE, "PARAMETRES",
+                "Seuil retenue sur gains (défaut)",
+                "Seuil en XOF à partir duquel la retenue s'applique (surchargé par les paramètres d'agence).", 470, 500000.0));
+        rules.add(parameter("REDEVANCE.TAUX_DEFAUT", MODULE_REDEVANCE_LOTERIE, "PARAMETRES",
+                "Taux de redevance (défaut)",
+                "Pourcentage appliqué à la base de calcul (surchargé par les paramètres d'agence).", 480, 50.0));
+        rules.add(parameter("REDEVANCE.TAUX_PAYIN_DEFAUT", MODULE_REDEVANCE_LOTERIE, "PARAMETRES",
+                "Taux payin (défaut)",
+                "Pourcentage de rémunération payin si aucun frais d'agence n'est configuré.", 490, 2.5));
+        rules.add(parameter("REDEVANCE.TAUX_PAYOUT_DEFAUT", MODULE_REDEVANCE_LOTERIE, "PARAMETRES",
+                "Taux payout (défaut)",
+                "Pourcentage de rémunération payout si aucun frais d'agence n'est configuré.", 500, 3.0));
+        rules.add(liste("REDEVANCE.SERVICES_PAYIN", MODULE_REDEVANCE_LOTERIE, "FLUX_TRANSACTION",
+                "Services PAYIN",
+                "Mots-clés de service (agency_summary) agrégés en PAYIN lorsque le flux n'est pas saisi.", 510,
+                Arrays.asList("PAIEMENT")));
+        rules.add(liste("REDEVANCE.SERVICES_PAYOUT", MODULE_REDEVANCE_LOTERIE, "FLUX_TRANSACTION",
+                "Services PAYOUT",
+                "Mots-clés de service (agency_summary) agrégés en PAYOUT lorsque le flux n'est pas saisi.", 520,
+                Arrays.asList("CASHIN")));
+
+        return rules;
     }
 
     // ------------------------------------------------------------------
@@ -295,6 +400,169 @@ public class CalculationRuleService {
         } catch (Exception ex) {
             throw new ResponseStatusException(HttpStatus.INTERNAL_SERVER_ERROR, "Erreur de sérialisation de la règle");
         }
+    }
+
+    @Transactional(readOnly = true)
+    public Optional<CalculationRuleEntity> findActiveByCode(String code) {
+        if (code == null || code.isBlank()) {
+            return Optional.empty();
+        }
+        return repository.findByCode(code).filter(r -> !Boolean.FALSE.equals(r.getActif()));
+    }
+
+    @Transactional(readOnly = true)
+    public double getNumber(String code, double fallback) {
+        return findActiveByCode(code)
+                .filter(r -> "PARAMETRE".equals(r.getType()) && r.getValeur() != null)
+                .map(CalculationRuleEntity::getValeur)
+                .orElse(fallback);
+    }
+
+    /**
+     * Liste de mots-clés d'une règle LISTE, normalisée pour une recherche par sous-chaîne
+     * (MAJUSCULES, sans accents). La règle configurée est prioritaire ; en son absence
+     * (règle supprimée, désactivée ou absente), le repli code est conservé.
+     */
+    @Transactional(readOnly = true)
+    public List<String> getKeywordList(String code, List<String> fallback) {
+        return getList(code, fallback).stream()
+                .map(this::normalizeKeyword)
+                .filter(keyword -> !keyword.isEmpty())
+                .toList();
+    }
+
+    /**
+     * Vrai si le texte contient l'un des mots-clés de la règle LISTE.
+     * Utilisé pour les classifications par type d'opération / service : la règle configurée
+     * dans Configuration &gt; Calcul est prioritaire, le code reste le repli par défaut.
+     */
+    @Transactional(readOnly = true)
+    public boolean matchesAny(String text, String code, List<String> fallback) {
+        if (text == null || text.isBlank()) {
+            return false;
+        }
+        String normalizedText = normalizeKeyword(text);
+        if (normalizedText.isEmpty()) {
+            return false;
+        }
+        for (String keyword : getKeywordList(code, fallback)) {
+            if (normalizedText.contains(keyword)) {
+                return true;
+            }
+        }
+        return false;
+    }
+
+    /** Normalisation d'un mot-clé : MAJUSCULES, sans accents (séparateurs conservés). */
+    private String normalizeKeyword(String value) {
+        if (value == null) {
+            return "";
+        }
+        return Normalizer.normalize(value, Normalizer.Form.NFD)
+                .replaceAll("\\p{M}", "")
+                .toUpperCase(Locale.ROOT)
+                .trim();
+    }
+
+    @Transactional(readOnly = true)
+    public List<String> getList(String code, List<String> fallback) {
+        Optional<CalculationRuleEntity> rule = findActiveByCode(code)
+                .filter(r -> "LISTE".equals(r.getType()) && r.getValeurs() != null && !r.getValeurs().isBlank());
+        if (rule.isEmpty()) {
+            return fallback != null ? fallback : Collections.emptyList();
+        }
+        try {
+            List<String> parsed = objectMapper.readValue(rule.get().getValeurs(), new TypeReference<List<String>>() {});
+            if (parsed == null || parsed.isEmpty()) {
+                return fallback != null ? fallback : Collections.emptyList();
+            }
+            return parsed;
+        } catch (Exception e) {
+            return fallback != null ? fallback : Collections.emptyList();
+        }
+    }
+
+    @Transactional(readOnly = true)
+    public double evaluate(String code, Map<String, Double> variables, double fallback) {
+        Optional<CalculationRuleEntity> rule = findActiveByCode(code)
+                .filter(r -> "FORMULE".equals(r.getType()) && r.getExpression() != null && !r.getExpression().isBlank());
+        if (rule.isEmpty()) {
+            return fallback;
+        }
+        return evaluateExpression(rule.get().getExpression(), variables, fallback);
+    }
+
+    @Transactional(readOnly = true)
+    public String formulaPreview(String code) {
+        Optional<CalculationRuleEntity> rule = findActiveByCode(code)
+                .filter(r -> "FORMULE".equals(r.getType()) && r.getExpression() != null);
+        if (rule.isEmpty()) {
+            return "";
+        }
+        try {
+            JsonNode arr = objectMapper.readTree(rule.get().getExpression());
+            if (!arr.isArray() || arr.isEmpty()) {
+                return "";
+            }
+            StringBuilder sb = new StringBuilder();
+            int i = 0;
+            for (JsonNode t : arr) {
+                String signe = t.path("signe").asText("+");
+                double coef = t.path("coefficient").asDouble(1);
+                String variable = t.path("variable").asText("");
+                boolean absolue = t.path("absolue").asBoolean(false);
+                String abs = absolue ? "|" + variable + "|" : variable;
+                String coefStr = (coef != 1.0) ? (stripTrailingZeros(coef) + "×") : "";
+                String termStr = coefStr + abs;
+                if (i == 0) {
+                    sb.append("-".equals(signe) ? "−" + termStr : termStr);
+                } else {
+                    sb.append("-".equals(signe) ? " − " + termStr : " + " + termStr);
+                }
+                i++;
+            }
+            return sb.toString();
+        } catch (Exception e) {
+            return "";
+        }
+    }
+
+    public double evaluateExpression(String expression, Map<String, Double> variables, double fallback) {
+        try {
+            JsonNode arr = objectMapper.readTree(expression);
+            if (!arr.isArray() || arr.isEmpty()) {
+                return fallback;
+            }
+            double sum = 0;
+            for (JsonNode t : arr) {
+                String signe = t.path("signe").asText("+");
+                double coef = t.path("coefficient").asDouble(1);
+                String variable = t.path("variable").asText("");
+                boolean absolue = t.path("absolue").asBoolean(false);
+                double dir = "-".equals(signe) ? -1 : 1;
+                double value = 0;
+                if (variables != null && variable != null) {
+                    Double v = variables.get(variable);
+                    if (v != null) {
+                        value = v;
+                    }
+                }
+                if (absolue) {
+                    value = Math.abs(value);
+                }
+                sum += dir * coef * value;
+            }
+            return sum;
+        } catch (Exception e) {
+            return fallback;
+        }
+    }
+
+    private static String stripTrailingZeros(double coef) {
+        if (coef == (long) coef) {
+            return String.valueOf((long) coef);
+        }
+        return String.valueOf(coef);
     }
 
     /** Valide le contenu selon le type (JSON bien formé, champs obligatoires). */

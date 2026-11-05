@@ -519,6 +519,8 @@ export class ComptesComponent implements OnInit, OnDestroy {
                         console.log('Compte créé avec succès:', compte);
                         this.allComptes.unshift(compte);
                         this.comptes.unshift(compte);
+                        // Mettre à jour les listes de filtres pour inclure les nouvelles valeurs du compte créé
+                        this.updateFilteredLists();
                         this.updatePagedComptes();
                         this.calculateStats();
                         this.addForm.reset();
@@ -604,6 +606,8 @@ export class ComptesComponent implements OnInit, OnDestroy {
                         if (response.success) {
                             this.allComptes = this.allComptes.filter(c => c.id !== id);
                             this.comptes = this.comptes.filter(c => c.id !== id);
+                            // Mettre à jour les listes de filtres pour retirer les valeurs qui ne sont plus utilisées
+                            this.updateFilteredLists();
                             this.updatePagedComptes();
                             this.calculateStats();
                             this.popupService.showSuccess('Suppression réussie', response.message);
@@ -1303,6 +1307,23 @@ export class ComptesComponent implements OnInit, OnDestroy {
         this.router.navigate(['/predictions']);
     }
 
+    /**
+     * Seuils de criticité (ratio solde / moyenne volume).
+     * Les règles configurées dans Configuration > Calcul sont prioritaires ;
+     * en leur absence, le code conserve ces valeurs par défaut.
+     */
+    get seuilCriticiteTres(): number {
+        return this.calculService.getNumber('COMPTES.SEUIL_CRITICITE_TRES', 0.3);
+    }
+
+    get seuilCriticiteMoyen(): number {
+        return this.calculService.getNumber('COMPTES.SEUIL_CRITICITE_MOYEN', 0.6);
+    }
+
+    get seuilCriticiteFaible(): number {
+        return this.calculService.getNumber('COMPTES.SEUIL_CRITICITE_FAIBLE', 0.8);
+    }
+
     async exportSoldesCritiques() {
         this.isExporting = true;
         try {
@@ -1347,9 +1368,9 @@ export class ComptesComponent implements OnInit, OnDestroy {
                 // Colorer les lignes selon la criticité
                 const ratio = ratioCriticite;
                 let fillColor = 'FFFFFFFF'; // Blanc par défaut
-                const seuilTres = this.calculService.getNumber('COMPTES.SEUIL_CRITICITE_TRES', 0.3);
-                const seuilMoyen = this.calculService.getNumber('COMPTES.SEUIL_CRITICITE_MOYEN', 0.6);
-                const seuilFaible = this.calculService.getNumber('COMPTES.SEUIL_CRITICITE_FAIBLE', 0.8);
+                const seuilTres = this.seuilCriticiteTres;
+                const seuilMoyen = this.seuilCriticiteMoyen;
+                const seuilFaible = this.seuilCriticiteFaible;
 
                 if (ratio < seuilTres) {
                     fillColor = 'FFFFCDD2'; // Rouge clair pour très critique
@@ -1408,6 +1429,8 @@ export class ComptesComponent implements OnInit, OnDestroy {
                         console.log('Compte mis à jour avec succès:', compte);
                         this.allComptes = this.allComptes.map(c => c.id === compte.id ? compte : c);
                         this.comptes = this.comptes.map(c => c.id === compte.id ? compte : c);
+                        // Mettre à jour les listes de filtres au cas où pays/codeProprietaire/categorie/type ont changé
+                        this.updateFilteredLists();
                         this.updatePagedComptes();
                         this.calculateStats();
                         this.showEditForm = false;

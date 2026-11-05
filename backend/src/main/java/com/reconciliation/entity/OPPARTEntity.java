@@ -37,6 +37,16 @@ public class OPPARTEntity {
     @Column(name = "date_operation")
     private LocalDateTime dateOperation;
 
+    /** Date d'opération côté partenaire (la date BO reste dans dateOperation). */
+    @JsonDeserialize(using = FlexibleLocalDateTimeDeserializer.class)
+    @Column(name = "date_operation_part")
+    private LocalDateTime dateOperationPart;
+
+    /** Date de la demande / initiation à l'origine de l'opération. */
+    @JsonDeserialize(using = FlexibleLocalDateTimeDeserializer.class)
+    @Column(name = "date_demande")
+    private LocalDateTime dateDemande;
+
     @Column(name = "id_transaction", length = 100)
     private String idTransaction;
 
@@ -117,6 +127,22 @@ public class OPPARTEntity {
         this.dateOperation = dateOperation;
     }
 
+    public LocalDateTime getDateOperationPart() {
+        return dateOperationPart;
+    }
+
+    public void setDateOperationPart(LocalDateTime dateOperationPart) {
+        this.dateOperationPart = dateOperationPart;
+    }
+
+    public LocalDateTime getDateDemande() {
+        return dateDemande;
+    }
+
+    public void setDateDemande(LocalDateTime dateDemande) {
+        this.dateDemande = dateDemande;
+    }
+
     public String getIdTransaction() {
         return idTransaction;
     }
@@ -191,6 +217,8 @@ public class OPPARTEntity {
                 ", typeOp='" + typeOp + '\'' +
                 ", montant=" + montant +
                 ", dateOperation=" + dateOperation +
+                ", dateOperationPart=" + dateOperationPart +
+                ", dateDemande=" + dateDemande +
                 ", idTransaction='" + idTransaction + '\'' +
                 ", pays='" + pays + '\'' +
                 ", source='" + source + '\'' +

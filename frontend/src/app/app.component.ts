@@ -35,7 +35,6 @@ export class AppComponent implements OnInit {
     '/upload': 'ROUTE.upload',
     '/column-selection': 'ROUTE.columnSelection',
     '/stats': 'ROUTE.stats',
-    '/agency-summary': 'ROUTE.agencySummary',
     '/results': 'ROUTE.results',
     '/matches': 'ROUTE.matches',
     '/ecart-bo': 'ROUTE.ecartBo',

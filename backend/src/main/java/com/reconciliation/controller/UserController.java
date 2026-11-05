@@ -5,6 +5,7 @@ import com.reconciliation.repository.UserRepository;
 import com.reconciliation.entity.ProfilEntity;
 import com.reconciliation.repository.ProfilRepository;
 import com.reconciliation.service.JwtService;
+import com.reconciliation.service.AuthCookieService;
 import com.reconciliation.service.EmailService;
 import com.reconciliation.service.PasswordResetTokenService;
 import com.reconciliation.service.AccountActivationService;
@@ -13,6 +14,9 @@ import com.reconciliation.tenant.TenantContext;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.access.prepost.PreAuthorize;
+import org.springframework.security.core.Authentication;
+import org.springframework.security.core.context.SecurityContextHolder;
+import org.springframework.security.core.userdetails.UserDetails;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.web.bind.annotation.*;
 
@@ -45,6 +49,8 @@ public class UserController {
     private PasswordResetTokenService passwordResetTokenService;
     @Autowired
     private AccountActivationService accountActivationService;
+    @Autowired
+    private AuthCookieService authCookieService;
 
     /** Taille maximale acceptee pour une photo de profil (octets). */
     private static final long MAX_PHOTO_BYTES = 2L * 1024 * 1024;
@@ -435,7 +441,10 @@ public class UserController {
             }
             
             if (!passwordMatches) {
-                return ResponseEntity.status(401).body(Map.of("error", "Mot de passe actuel incorrect"));
+                // 400 et non 401 : l'utilisateur EST authentifie, c'est une
+                // validation metier (un 410 ici declenchait une deconnexion abusive
+                // côté client, interpretee comme "session expiree").
+                return ResponseEntity.badRequest().body(Map.of("error", "Mot de passe actuel incorrect"));
             }
             
             // Hasher et sauvegarder le nouveau mot de passe
@@ -464,7 +473,12 @@ public class UserController {
         }
 
         String emailTrimmed = email.trim();
-        Optional<UserEntity> userOpt = userRepository.findByEmail(emailTrimmed);
+        // Le chargement d'un UserEntity charge aussi son profil (@TenantId, EAGER) :
+        // hors contexte entreprise, le garde repondrait 404. On resout d'abord le
+        // perimetre par projection, puis on charge dedans (donnees du compte).
+        Long entrepriseId = userRepository.findEntrepriseIdByEmail(emailTrimmed).orElse(null);
+        Optional<UserEntity> userOpt = com.reconciliation.tenant.TenantContext.callAs(
+            entrepriseId, () -> userRepository.findByEmail(emailTrimmed));
         if (userOpt.isEmpty()) {
             // Message standard : on ne révèle pas si l'email est connu (anti-énumération).
             return ResponseEntity.ok(Map.of("message", "Si cette adresse email est associée à un compte, un lien de réinitialisation sera envoyé par email."));
@@ -507,7 +521,12 @@ public class UserController {
             return ResponseEntity.status(400).body(Map.of("error", "Lien de réinitialisation invalide, déjà utilisé ou expiré. Veuillez refaire une demande."));
         }
 
-        Optional<UserEntity> userOpt = userRepository.findByUsername(tokenUsername.get());
+        // Meme garde que forgot-password : charger l'utilisateur charge son profil
+        // (@TenantId, EAGER) ; on etablit son perimetre d'entreprise avant le load.
+        String tokenUsernameValue = tokenUsername.get();
+        Long entrepriseId = userRepository.findEntrepriseIdByUsername(tokenUsernameValue).orElse(null);
+        Optional<UserEntity> userOpt = com.reconciliation.tenant.TenantContext.callAs(
+            entrepriseId, () -> userRepository.findByUsername(tokenUsernameValue));
         if (userOpt.isEmpty()) {
             return ResponseEntity.status(400).body(Map.of("error", "Lien de réinitialisation invalide, déjà utilisé ou expiré. Veuillez refaire une demande."));
         }
@@ -637,14 +656,33 @@ public class UserController {
     }
 
     /**
-     * Extrait le username depuis le token JWT dans la requête
+     * Extrait le username authentifie pour la requete courante.
+     * <p>L'application s'authentifie par cookie HttpOnly (AUTH_TOKEN) : lire le
+     * seul header Authorization renvoyait null et faisait echouer en 401 des
+     * endpoints comme le changement de mot de passe, alors que la session etait
+     * pourtant valide.</p>
      */
     private String extractUsernameFromRequest(HttpServletRequest request) {
+        // 1. SecurityContext : source fiable, rempli par JwtAuthenticationFilter
+        //    quel que soit le support du jeton (cookie ou header Bearer).
+        Authentication authentication = SecurityContextHolder.getContext().getAuthentication();
+        if (authentication != null && authentication.getPrincipal() instanceof UserDetails userDetails) {
+            return userDetails.getUsername();
+        }
+        // 2. Header Authorization: Bearer (compatibilité).
         String authHeader = request.getHeader("Authorization");
         if (authHeader != null && authHeader.startsWith("Bearer ")) {
             try {
-                String token = authHeader.substring(7);
-                return jwtService.extractUsername(token);
+                return jwtService.extractUsername(authHeader.substring(7));
+            } catch (Exception e) {
+                return null;
+            }
+        }
+        // 3. Cookie de session HttpOnly.
+        String cookieToken = authCookieService.read(request);
+        if (cookieToken != null) {
+            try {
+                return jwtService.extractUsername(cookieToken);
             } catch (Exception e) {
                 return null;
             }

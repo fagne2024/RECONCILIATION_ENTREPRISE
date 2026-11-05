@@ -193,6 +193,7 @@
       <table class="matches-table ds-table">
         <thead>
           <tr>
+            <th style="width: 160px;">{{ 'COMMON.actions.action' | translate }}</th>
             <th>{{ 'TBL.keyColumn' | translate }}</th>
             <th>{{ 'TBL.status' | translate }}</th>
             <th *ngFor="let col of displayedColumns; trackBy: trackByValue">{{getColumnLabel(col)}}</th>
@@ -200,6 +201,15 @@
         </thead>
         <tbody>
           <tr *ngFor="let match of getPagedMatches(); trackBy: trackByMatch" [class.has-differences]="hasDifferences(match)">
+            <td class="action-cell">
+              <button
+                type="button"
+                (click)="openSuiviTrxAnnuler(match)"
+                class="create-oppart-row-button ds-btn ds-btn--secondary ds-btn--sm"
+                [title]="'Suivi TRX à annuler'">
+                <i class="fas fa-ban"></i> Suivi TRX à annuler
+              </button>
+            </td>
             <td class="key-cell">{{match.key}}</td>
             <td class="status-cell">
               <span class="ds-badge"
@@ -212,7 +222,7 @@
             <td *ngFor="let col of displayedColumns; trackBy: trackByValue">{{getValue(match, col)}}</td>
           </tr>
           <tr *ngIf="getPagedMatches().length === 0">
-            <td [attr.colspan]="displayedColumns.length + 2" class="no-data">
+            <td [attr.colspan]="displayedColumns.length + 3" class="no-data">
               {{ 'MSG.noMatchFound' | translate }}
             </td>
           </tr>
@@ -234,6 +244,87 @@
 
   <!-- Bouton scroll to top -->
   <button type="button" *ngIf="showScrollTopBtn" (click)="scrollToTop()" class="scroll-to-top-btn" [title]="'TBL.backToTop' | translate">↑</button>
+
+  <!-- Popup Suivi TRX à annuler -->
+  <div *ngIf="showSuiviTrxAnnulerPopup" class="oppart-overlay" (click)="closeSuiviTrxAnnulerPopup()">
+    <div class="oppart-popup" style="max-width: 1000px;" (click)="$event.stopPropagation()">
+      <div class="popup-header oppart-header">
+        <h3>Suivi TRX à annuler</h3>
+        <button (click)="closeSuiviTrxAnnulerPopup()" class="close-btn">×</button>
+      </div>
+      <div class="oppart-content">
+        <div class="oppart-info">
+          <span class="oppart-count">Clé: {{ suiviTrxMatchKey }}</span>
+          <span class="oppart-note">Tous les champs BO et Partenaire sont affichés : vérifiez-les avant d'enregistrer. Côté partenaire, la date, le montant et le téléphone sont détectés automatiquement à partir des autres colonnes (libellés variables selon le modèle).</span>
+        </div>
+
+        <div class="oppart-mapping">
+          <div class="mapping-legend">Données BO</div>
+          <div class="mapping-grid">
+            <div class="mapping-row" *ngFor="let field of suiviTrxBoFields">
+              <label class="mapping-field">
+                <span class="mapping-label">{{ field }}</span>
+              </label>
+              <div class="mapping-control">
+                <div class="mapping-source-line">
+                  <ng-container *ngIf="field === 'ENV'; else suiviBoInput">
+                    <select [(ngModel)]="suiviTrxBoEditable[field]" class="mapping-manual-input" style="flex: 1;">
+                      <option value="">--</option>
+                      <option
+                        *ngIf="suiviTrxBoEditable[field] && !envOptions.includes(suiviTrxBoEditable[field])"
+                        [value]="suiviTrxBoEditable[field]">{{ suiviTrxBoEditable[field] }}</option>
+                      <option *ngFor="let env of envOptions" [value]="env">{{ env }}</option>
+                    </select>
+                  </ng-container>
+                  <ng-template #suiviBoInput>
+                    <input type="text" [(ngModel)]="suiviTrxBoEditable[field]" class="mapping-manual-input" style="flex: 1;">
+                  </ng-template>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <div class="oppart-mapping">
+          <div class="mapping-legend">Données Partenaire</div>
+          <div class="mapping-grid">
+            <div class="mapping-row" *ngFor="let field of suiviTrxPartnerFields">
+              <label class="mapping-field">
+                <span class="mapping-label">{{ field }}</span>
+              </label>
+              <div class="mapping-control">
+                <div class="mapping-source-line">
+                  <input type="text" [(ngModel)]="suiviTrxPartnerEditable[field]" class="mapping-manual-input" style="flex: 1;">
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <div class="oppart-mapping">
+          <div class="mapping-legend">Statut</div>
+          <div class="mapping-grid">
+            <div class="mapping-row">
+              <label class="mapping-field">
+                <span class="mapping-label">Statut</span>
+              </label>
+              <div class="mapping-control">
+                <div class="mapping-source-line">
+                  <input type="text" class="mapping-manual-input" [value]="suiviTrxStatut" readonly>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+      <div class="oppart-actions">
+        <button (click)="closeSuiviTrxAnnulerPopup()" class="cancel-btn">Annuler</button>
+        <button (click)="saveSuiviTrxAnnuler()" class="save-oppart-btn" [disabled]="suiviTrxSaving">
+          {{ suiviTrxSaving ? 'Enregistrement…' : 'Enregistrer et ouvrir' }}
+        </button>
+      </div>
+    </div>
+  </div>
 
   <!-- Popup de sélection des colonnes -->
   <div *ngIf="showColumnSelector" class="column-selector-overlay" (click)="closeColumnSelector()">

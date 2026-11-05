@@ -193,7 +193,7 @@
       <table class="ecart-partner-table ds-table">
         <thead>
           <tr>
-            <th style="width: 120px;">{{ 'COMMON.actions.action' | translate }}</th>
+            <th style="width: 220px;">{{ 'COMMON.actions.action' | translate }}</th>
             <th style="width: 40px;">
               <input
                 type="checkbox"
@@ -224,6 +224,14 @@
                 [disabled]="isSavingOppart"
                 [title]="'EPT.createOpartRowTitle' | translate">
                 <i class="fas fa-plus"></i> OPPART
+              </button>
+              <button
+                type="button"
+                (click)="openSuiviIdPopup(record)"
+                class="create-suivi-id-button ds-btn ds-btn--secondary ds-btn--sm"
+                [disabled]="isSavingSuiviId"
+                [title]="hasSuiviId(record) ? 'Modifier ou récupérer l\'ID d\'annulation' : 'Saisir ou récupérer l\'ID d\'annulation'">
+                <i class="fas" [ngClass]="hasSuiviId(record) ? 'fa-check-circle' : 'fa-plus'"></i> ID
               </button>
             </td>
             <td>
@@ -393,21 +401,39 @@
                     <option *ngFor="let col of oppartMappingSourceColumns; trackBy: trackByValue" [value]="col">{{col}}</option>
                   </select>
                 </div>
-                <div class="mapping-source-line">
+                <div class="mapping-source-line" *ngIf="field.key === 'typeOp'; else oppartManualInput">
                   <span class="mapping-source-type">{{ 'OPP.manual' | translate }}</span>
-                  <input
-                    type="text"
+                  <select
                     [(ngModel)]="oppartManualValues[field.key]"
                     (ngModelChange)="onOppartManualValueChange()"
-                    [placeholder]="'OPP.manualValuePlaceholder' | translate"
                     class="mapping-manual-input"
                     [ngClass]="{'is-set': (oppartManualValues[field.key] || '').trim() !== ''}">
+                    <option value="">{{ 'OPP.manualValuePlaceholder' | translate }}</option>
+                    <option *ngFor="let opt of oppartTypeOpSelectOptions(oppartManualValues[field.key]); trackBy: trackByValue" [value]="opt">{{ opt }}</option>
+                  </select>
                   <button
                     *ngIf="(oppartManualValues[field.key] || '').trim() !== ''"
                     (click)="clearOppartManualValue(field.key)"
                     class="mapping-clear-btn"
                     [title]="'OPP.clearManualValue' | translate">✕</button>
                 </div>
+                <ng-template #oppartManualInput>
+                  <div class="mapping-source-line">
+                    <span class="mapping-source-type">{{ 'OPP.manual' | translate }}</span>
+                    <input
+                      type="text"
+                      [(ngModel)]="oppartManualValues[field.key]"
+                      (ngModelChange)="onOppartManualValueChange()"
+                      [placeholder]="'OPP.manualValuePlaceholder' | translate"
+                      class="mapping-manual-input"
+                      [ngClass]="{'is-set': (oppartManualValues[field.key] || '').trim() !== ''}">
+                    <button
+                      *ngIf="(oppartManualValues[field.key] || '').trim() !== ''"
+                      (click)="clearOppartManualValue(field.key)"
+                      class="mapping-clear-btn"
+                      [title]="'OPP.clearManualValue' | translate">✕</button>
+                  </div>
+                </ng-template>
               </div>
             </div>
           </div>
@@ -426,12 +452,22 @@
               <tr *ngFor="let row of oppartDraftRows; let i = index; trackBy: trackByOppartRow">
                 <td class="oppart-pos">{{i + 1}}</td>
                 <td *ngFor="let field of oppartTargetFields; trackBy: trackByOppartField">
-                  <input 
-                    type="text"
+                  <select
+                    *ngIf="field.key === 'typeOp'; else oppartEditInput"
                     [(ngModel)]="row[field.key]"
-                    [placeholder]="fieldLabel(field)"
                     class="oppart-edit-input"
                     [ngClass]="{'oppart-missing': isOppartCellEmpty(row[field.key])}">
+                    <option value=""></option>
+                    <option *ngFor="let opt of oppartTypeOpSelectOptions(row[field.key]); trackBy: trackByValue" [value]="opt">{{ opt }}</option>
+                  </select>
+                  <ng-template #oppartEditInput>
+                    <input 
+                      type="text"
+                      [(ngModel)]="row[field.key]"
+                      [placeholder]="fieldLabel(field)"
+                      class="oppart-edit-input"
+                      [ngClass]="{'oppart-missing': isOppartCellEmpty(row[field.key])}">
+                  </ng-template>
                 </td>
               </tr>
             </tbody>
@@ -446,6 +482,126 @@
           class="save-oppart-btn"
           [disabled]="isSavingOppart || oppartDraftRows.length === 0">
           {{ isSavingOppart ? ('SV.saveInProgress' | translate) : ('OPP.saveOpart' | translate) }}
+        </button>
+      </div>
+    </div>
+  </div>
+  <!-- Popup de saisie directe de l'ID Annulation (Suivi TRX à annuler) -->
+  <div *ngIf="showSuiviIdPopup" class="oppart-overlay suivi-id-overlay" (click)="closeSuiviIdPopup()">
+    <div class="oppart-popup suivi-id-popup" (click)="$event.stopPropagation()">
+      <div class="popup-header oppart-header">
+        <h3>ID Annulation</h3>
+        <button type="button" (click)="closeSuiviIdPopup()" class="close-btn">×</button>
+      </div>
+
+      <div class="oppart-content">
+        <div class="suivi-id-note">
+          L'ID est enregistré dans <strong>Suivi TRX à annuler</strong> avec les informations de cet écart partenaire.
+          Le statut passe automatiquement à <strong>OK</strong>.
+        </div>
+
+        <div class="suivi-id-grid">
+          <label>
+            <span>Transaction ID</span>
+            <input type="text" [value]="suiviIdFields.transactionId || '—'" readonly>
+          </label>
+          <label>
+            <span>Téléphone</span>
+            <input type="text" [value]="suiviIdFields.telephone || '—'" readonly>
+          </label>
+          <label>
+            <span>Montant</span>
+            <input type="text" [value]="suiviIdFields.montant || '—'" readonly>
+          </label>
+          <label>
+            <span>Date</span>
+            <input type="text" [value]="suiviIdFields.date || '—'" readonly>
+          </label>
+        </div>
+
+        <div class="suivi-id-recover" *ngIf="suiviIdCandidates.length > 0 || suiviIdFieldOptions.length > 0">
+          <div class="suivi-id-recover-head">
+            <span class="suivi-id-recover-title">Récupérer un ID existant</span>
+            <button
+              type="button"
+              class="suivi-id-refresh"
+              (click)="refreshSuiviIdCandidates()"
+              [disabled]="isSavingSuiviId"
+              title="Actualiser la recherche dans les données existantes">
+              <i class="fas fa-sync-alt"></i> Actualiser
+            </button>
+          </div>
+
+          <div class="suivi-id-candidates" *ngIf="suiviIdCandidates.length > 0">
+            <span class="suivi-id-recover-label">Trouvé dans les données :</span>
+            <div class="suivi-id-chips">
+              <button
+                type="button"
+                class="suivi-id-chip"
+                *ngFor="let candidate of suiviIdCandidates"
+                (click)="useSuiviIdCandidate(candidate)"
+                [disabled]="isSavingSuiviId"
+                [title]="'Utiliser l\'ID ' + candidate.id + ' (' + candidate.source + ')'">
+                <span class="suivi-id-chip-value">{{ candidate.id }}</span>
+                <span class="suivi-id-chip-source">{{ candidate.source }}</span>
+              </button>
+            </div>
+          </div>
+
+          <div class="suivi-id-picker" *ngIf="suiviIdFieldOptions.length > 0">
+            <label class="suivi-id-recover-label" for="suiviIdFieldSelect">
+              Ou utiliser la valeur d'un champ de la ligne :
+            </label>
+            <div class="suivi-id-picker-row">
+              <select
+                id="suiviIdFieldSelect"
+                [(ngModel)]="suiviIdSelectedField"
+                [disabled]="isSavingSuiviId">
+                <option value="">— Choisir un champ —</option>
+                <option *ngFor="let option of suiviIdFieldOptions" [value]="option.key">
+                  [{{ option.source }}] {{ option.label }} : {{ shortSuiviIdValue(option.value) }}
+                </option>
+              </select>
+              <button
+                type="button"
+                class="suivi-id-use-field"
+                (click)="useSuiviIdFieldValue()"
+                [disabled]="isSavingSuiviId || !suiviIdSelectedField">
+                Utiliser
+              </button>
+            </div>
+          </div>
+        </div>
+
+        <p class="suivi-id-hint" *ngIf="suiviIdCandidates.length === 0 && suiviIdFieldOptions.length === 0">
+          Aucun ID n'a pu être récupéré automatiquement : saisissez-le manuellement ci-dessous.
+        </p>
+
+        <label class="suivi-id-input-row">
+          <span>ID Annulation <em>*</em> <small class="suivi-id-input-hint">(saisie manuelle)</small></span>
+          <input
+            type="text"
+            [(ngModel)]="suiviIdValue"
+            [disabled]="isSavingSuiviId"
+            placeholder="Saisir ou récupérer l'ID d'annulation">
+        </label>
+
+        <p class="suivi-id-hint" *ngIf="suiviIdRecord && hasSuiviId(suiviIdRecord)">
+          Un ID d'annulation existe déjà pour cette transaction : la valeur sera mise à jour.
+        </p>
+        <p class="suivi-id-hint" *ngIf="suiviIdRecord && !suiviIdFields.transactionId && !suiviIdFields.telephone && !suiviIdFields.montant">
+          Aucun téléphone, montant ou Transaction ID détecté : la ligne sera enregistrée avec les informations disponibles.
+        </p>
+      </div>
+
+      <div class="oppart-actions">
+        <button type="button" (click)="closeSuiviIdPopup()" class="cancel-btn" [disabled]="isSavingSuiviId">Annuler</button>
+        <button
+          type="button"
+          (click)="saveSuiviId()"
+          class="save-oppart-btn"
+          [disabled]="isSavingSuiviId || !suiviIdValue.trim()">
+          {{ isSavingSuiviId ? 'Enregistrement…' : 'Enregistrer' }}
         </button>
       </div>
     </div>

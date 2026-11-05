@@ -21,14 +21,15 @@
 
   h1 {
     margin: 0 0 8px;
+    font-family: var(--font-display);
     font-size: 1.75rem;
     font-weight: 600;
-    color: var(--rd-navy);
+    color: var(--color-text-primary);
     display: flex;
     align-items: center;
     gap: 12px;
 
-    i { color: var(--rd-blue); }
+    i { color: var(--color-accent); }
   }
 
   .subtitle {
@@ -40,7 +41,7 @@
 
 /* Card */
 .card {
-  background: white;
+  background: var(--color-surface-raised);
   border: 1px solid var(--rd-border);
   border-radius: var(--rd-r);
   box-shadow: var(--rd-shadow);
@@ -82,7 +83,7 @@
   padding: 20px 16px;
   border: 2px solid var(--rd-border);
   border-radius: var(--rd-r-sm);
-  background: white;
+  background: var(--color-surface-raised);
   color: var(--rd-text1);
   font-size: 0.9rem;
   font-weight: 500;
@@ -101,9 +102,9 @@
   &.active {
     border-color: var(--rd-blue);
     background: var(--rd-blue);
-    color: white;
+    color: var(--color-accent-contrast);
 
-    i { color: white; }
+    i { color: var(--color-accent-contrast); }
   }
 }
 
@@ -236,7 +237,7 @@
     transition: background 0.15s;
 
     &.has-changes {
-      background: #fffef7;
+      background: var(--color-warning-bg);
 
       td:first-child { border-left: 3px solid var(--rd-amber); }
     }
@@ -261,14 +262,14 @@
     border-radius: var(--rd-r-sm);
     font-size: 0.875rem;
     font-family: inherit;
-    background: white;
+    background: var(--color-surface-raised);
     transition: border-color 0.2s, box-shadow 0.2s;
 
     &:focus { outline: none; border-color: var(--rd-blue); box-shadow: 0 0 0 3px var(--rd-blue-l); }
 
     &.modified {
       border-color: var(--rd-amber);
-      background: #fffef7;
+      background: var(--color-warning-bg);
     }
   }
 
@@ -309,8 +310,8 @@
     transition: background-color var(--duration-base) var(--ease-standard), color var(--duration-base) var(--ease-standard), border-color var(--duration-base) var(--ease-standard), box-shadow var(--duration-base) var(--ease-standard), transform var(--duration-base) var(--ease-standard), opacity var(--duration-base) var(--ease-standard);
     font-size: 0.9rem;
 
-    &.btn-save { background: var(--rd-green-l); color: var(--rd-green); &:hover:not(:disabled) { background: var(--rd-green); color: white; } }
-    &.btn-discard { background: var(--rd-amber-l); color: var(--rd-amber); &:hover { background: var(--rd-amber); color: white; } }
+    &.btn-save { background: var(--rd-green-l); color: var(--rd-green); &:hover:not(:disabled) { background: var(--rd-green); color: var(--color-accent-contrast); } }
+    &.btn-discard { background: var(--rd-amber-l); color: var(--rd-amber); &:hover { background: var(--rd-amber); color: var(--color-accent-contrast); } }
 
     &:disabled { opacity: 0.5; cursor: not-allowed; }
   }
@@ -362,7 +363,7 @@
 
   &.btn-primary {
     background: var(--rd-blue);
-    color: white;
+    color: var(--color-accent-contrast);
     &:hover:not(:disabled) { background: var(--rd-navy2); }
     &:disabled { opacity: 0.5; cursor: not-allowed; }
   }
@@ -378,7 +379,7 @@
   &.btn-history {
     background: var(--rd-amber-l);
     color: var(--rd-amber);
-    &:hover:not(:disabled) { background: var(--rd-amber); color: white; }
+    &:hover:not(:disabled) { background: var(--rd-amber); color: var(--color-accent-contrast); }
     &:disabled { opacity: 0.5; cursor: not-allowed; }
   }
 }
@@ -387,7 +388,7 @@
   margin-left: 8px;
   padding: 2px 8px;
   background: var(--rd-amber);
-  color: white;
+  color: var(--color-accent-contrast);
   border-radius: 10px;
   font-size: 0.7rem;
   font-weight: 600;
@@ -443,7 +444,7 @@
       
       &.active {
         background: var(--rd-blue);
-        color: white;
+        color: var(--color-accent-contrast);
       }
     }
   }
@@ -499,7 +500,7 @@
       padding: 6px 12px;
       border: 1px solid var(--rd-border);
       border-radius: var(--rd-r-sm);
-      background: white;
+      background: var(--color-surface-raised);
       font-size: 0.8rem;
       color: var(--rd-text1);
 
@@ -510,7 +511,7 @@
       min-width: 36px;
       height: 36px;
       border: 1px solid var(--rd-border);
-      background: white;
+      background: var(--color-surface-raised);
       border-radius: var(--rd-r-sm);
       font-size: 0.85rem;
       font-weight: 500;
@@ -527,7 +528,7 @@
       &.active {
         background: var(--rd-blue);
         border-color: var(--rd-blue);
-        color: white;
+        color: var(--color-accent-contrast);
       }
     }
   }
@@ -565,7 +566,7 @@
   width: 100%;
   max-width: 500px;
   height: 100%;
-  background: white;
+  background: var(--color-surface-raised);
   display: flex;
   flex-direction: column;
   box-shadow: -4px 0 20px rgba(0, 0, 0, 0.15);
@@ -656,7 +657,7 @@
 }
 
 .history-item {
-  background: white;
+  background: var(--color-surface-raised);
   border: 1px solid var(--rd-border);
   border-radius: var(--rd-r-sm);
   margin-bottom: 12px;

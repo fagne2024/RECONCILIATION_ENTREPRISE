@@ -70,22 +70,20 @@ public class AuthController {
             return ResponseEntity.badRequest().body("Champs manquants");
         }
 
-        Optional<UserEntity> userOpt = userRepository.findByUsername(username);
-        if (userOpt.isEmpty()) {
-            return ResponseEntity.status(401).body(Map.of("error", "Identifiant ou mot de passe incorrect"));
-        }
-
-        UserEntity user = userOpt.get();
-
-        // Etablir le contexte entreprise des l'identification : les lectures
-        // filtrees par @TenantId (profil, droits, pays) doivent viser l'entreprise
-        // de l'utilisateur authentifie. Contexte systematiquement nettoye ensuite.
-        Long loginTenant = user.getEntrepriseId();
+        // Contexte entreprise AVANT tout chargement d'entite : UserEntity charge
+        // son profil (@TenantId, EAGER) et le garde refuse sans contexte.
+        // Projection d'abord, chargement ensuite (meme pattern que
+        // /auth/entreprise, forgot-password et reset-password).
+        Long loginTenant = userRepository.findEntrepriseIdByUsername(username).orElse(null);
         if (loginTenant != null) {
             com.reconciliation.tenant.TenantContext.set(loginTenant);
         }
         try {
-            return finishLogin(user, password, request, response);
+            Optional<UserEntity> userOpt = userRepository.findByUsername(username);
+            if (userOpt.isEmpty()) {
+                return ResponseEntity.status(401).body(Map.of("error", "Identifiant ou mot de passe incorrect"));
+            }
+            return finishLogin(userOpt.get(), password, request, response);
         } finally {
             com.reconciliation.tenant.TenantContext.clear();
         }
@@ -268,17 +266,19 @@ public class AuthController {
         try {
             int totpCode = Integer.parseInt(code);
 
+            // Contexte entreprise AVANT le chargement de UserEntity (profil
+            // EAGER @TenantId : le garde refuse sans contexte) — meme pattern
+            // que le login.
+            Long verifyTenant = userRepository.findEntrepriseIdByUsername(username).orElse(null);
+            if (verifyTenant != null) {
+                com.reconciliation.tenant.TenantContext.set(verifyTenant);
+            }
             Optional<UserEntity> userOpt = userRepository.findByUsername(username);
             if (userOpt.isEmpty() || !userOpt.get().getEnabled()) {
                 return ResponseEntity.status(401).body(Map.of("error", "Code invalide ou 2FA non activé"));
             }
 
             UserEntity user = userOpt.get();
-            // Contexte entreprise pour les lectures filtrees par @TenantId (droits, pays).
-            Long verifyTenant = user.getEntrepriseId();
-            if (verifyTenant != null) {
-                com.reconciliation.tenant.TenantContext.set(verifyTenant);
-            }
             Optional<ResponseEntity<?>> lockedResponse = loginLockService.buildLockedResponse(user);
             if (lockedResponse.isPresent()) {
                 return lockedResponse.get();
@@ -389,10 +389,13 @@ public class AuthController {
         Map<String, Object> response = new HashMap<>();
         String code = null;
         if (username != null && !username.isBlank()) {
-            Optional<EntrepriseEntity> entreprise = userRepository.findByUsername(username.trim())
-                .map(UserEntity::getEntrepriseId)
-                .flatMap(entrepriseRepository::findById);
-            code = entreprise.map(EntrepriseEntity::getCode).orElse(null);
+            // Projection et non findByUsername : charger UserEntity chargerait aussi
+            // son profil (@TenantId, EAGER) sans contexte entreprise (endpoint
+            // public de la page de connexion) et le garde repondrait 404.
+            Long entrepriseId = userRepository.findEntrepriseIdByUsername(username.trim()).orElse(null);
+            if (entrepriseId != null) {
+                code = entrepriseRepository.findById(entrepriseId).map(EntrepriseEntity::getCode).orElse(null);
+            }
         }
         response.put("entrepriseCode", code);
         response.put("entrepriseNom", null);

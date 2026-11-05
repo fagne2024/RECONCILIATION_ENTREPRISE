@@ -816,10 +816,13 @@
       font-weight: 900;
       color: #ffffff !important;
       font-size: 14px;
-      padding: 16px 12px;
+      padding: 12px;
       text-shadow: 0 2px 4px rgba(0, 0, 0, 0.3);
       border: none;
       letter-spacing: 0.5px;
+      position: sticky;
+      top: 0;
+      z-index: 10;
     }
   }
 
@@ -1354,6 +1357,33 @@
 .operations-table {
   .badge.sens-debit { background: #ffebee; color: #c62828; border: 1px solid #ffcdd2; }
   .badge.sens-credit { background: #ecfdf5; color: #065f46; border: 1px solid #a7f3d0; }
+  .badge.badge-grouped { 
+    background: #e8eaf6; 
+    color: #3f51b5; 
+    border: 1px solid #c5cae9; 
+    font-size: 12px; 
+    padding: 2px 8px; 
+    cursor: pointer;
+    transition: all 0.2s ease;
+    
+    &.grouped {
+      background: #c5cae9;
+      color: #1a237e;
+      border-color: #3f51b5;
+    }
+  }
+  
+  .group-token {
+    display: inline-block;
+    margin-left: 6px;
+    padding: 2px 6px;
+    background: #3f51b5;
+    color: white;
+    font-size: 10px;
+    font-family: monospace;
+    border-radius: 4px;
+    font-weight: 600;
+  }
 }
 
 .pagination.small { display: flex; align-items: center; gap: 8px; margin-top: 8px; }

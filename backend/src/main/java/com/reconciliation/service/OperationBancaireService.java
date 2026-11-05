@@ -31,6 +31,10 @@ public class OperationBancaireService {
     
     @Autowired
     private PaysFilterService paysFilterService;
+
+    /** Règles de calcul configurables (Configuration > Calcul) : prioritaire sur les valeurs codées en dur. */
+    @Autowired
+    private CalculationRuleService calculationRuleService;
     
     // Récupérer toutes les opérations bancaires
     public List<OperationBancaire> getAllOperationsBancaires() {
@@ -301,7 +305,11 @@ public class OperationBancaireService {
         entity.setReference(request.getReference());
         entity.setIdGlpi(request.getIdGlpi());
         entity.setBo(request.getBo());
+        entity.setBanqueCorrigee(request.getBanqueCorrigee());
+        entity.setDemandeur(request.getDemandeur());
+        entity.setValideur(request.getValideur());
         entity.setStatut(request.getStatut() != null ? request.getStatut() : "En attente");
+
         entity.setOperationId(request.getOperationId());
         entity.setTraitement(request.getTraitement());
         
@@ -348,6 +356,10 @@ public class OperationBancaireService {
         if (request.getReference() != null) entity.setReference(request.getReference());
         if (request.getIdGlpi() != null) entity.setIdGlpi(request.getIdGlpi());
         if (request.getBo() != null) entity.setBo(request.getBo());
+        if (request.getBanqueCorrigee() != null) entity.setBanqueCorrigee(request.getBanqueCorrigee());
+        if (request.getDemandeur() != null) entity.setDemandeur(request.getDemandeur());
+        if (request.getValideur() != null) entity.setValideur(request.getValideur());
+
         if (request.getStatut() != null) entity.setStatut(request.getStatut());
         if (request.getOperationId() != null) entity.setOperationId(request.getOperationId());
         if (request.getTraitement() != null) entity.setTraitement(request.getTraitement());
@@ -384,12 +396,16 @@ public class OperationBancaireService {
             double montant = ob.getMontant() != null ? ob.getMontant() : 0.0;
 
             double soldeFinal = soldeInitial;
-            String type = ob.getTypeOperation() != null ? ob.getTypeOperation().toLowerCase() : "";
-            if (type.contains("appro")) {
+            String type = ob.getTypeOperation() != null ? ob.getTypeOperation() : "";
+            // Classification pilotée par les règles de calcul (repli : valeurs codées en dur).
+            if (calculationRuleService.matchesAny(type, "BANQUE.TYPES_APPROVISIONNEMENT",
+                    CalculationRuleService.DEFAULT_TYPES_APPROVISIONNEMENT)) {
                 soldeFinal = soldeInitial + montant; // crédit
-            } else if (type.contains("compens") || type.contains("compense") || type.contains("compensation")) {
+            } else if (calculationRuleService.matchesAny(type, "BANQUE.TYPES_COMPENSATION",
+                    CalculationRuleService.DEFAULT_TYPES_COMPENSATION)) {
                 soldeFinal = soldeInitial - montant; // débit
-            } else if (type.contains("nivellement")) {
+            } else if (calculationRuleService.matchesAny(type, "BANQUE.TYPES_NIVELLEMENT",
+                    CalculationRuleService.DEFAULT_TYPES_NIVELLEMENT)) {
                 soldeFinal = soldeInitial + montant; // signe du montant décide
             } else {
                 logger.info("ℹ️ Type '{}' non impactant, pas d'ajustement de solde", ob.getTypeOperation());
@@ -564,7 +580,11 @@ public class OperationBancaireService {
             entity.getStatut(),
             entity.getOperationId()
         );
+        model.setBanqueCorrigee(entity.getBanqueCorrigee());
+        model.setDemandeur(entity.getDemandeur());
+        model.setValideur(entity.getValideur());
         model.setImpactApplique(entity.getImpactApplique());
+
         model.setTraitement(entity.getTraitement());
         return model;
     }

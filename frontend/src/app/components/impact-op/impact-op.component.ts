@@ -12,6 +12,7 @@ import { PopupService } from '../../services/popup.service';
 import * as XLSX from 'xlsx';
 import { TranslateModule } from '@ngx-translate/core';
 import { I18nService } from '../../services/i18n/i18n.service';
+import { ConfigurationCalculService } from '../../services/configuration-calcul.service';
 
 @Component({
   selector: 'app-impact-op',
@@ -85,7 +86,8 @@ export class ImpactOPComponent implements OnInit, OnDestroy {
     private route: ActivatedRoute,
     private popupService: PopupService,
     private compteService: CompteService,
-    private operationService: OperationService
+    private operationService: OperationService,
+    private calculService: ConfigurationCalculService
   ) {
     this.filterForm = this.fb.group({
       codeProprietaire: [''],
@@ -151,8 +153,12 @@ export class ImpactOPComponent implements OnInit, OnDestroy {
     const raw = (impact.typeOperation || '').toString();
     const t = this.normalizeType(raw);
     // Large coverage: compense/compensation, appro/approvisionnement, nivellement, regularisation de solde (with/without accents)
-    const patterns = ['compens', 'appro', 'nivel', 'regularis'];
-    return patterns.some(p => t.includes(p));
+    // Mots-clés de classification : règles de calcul (Configuration > Calcul) prioritaires,
+    // code par défaut en repli.
+    return this.calculService.matchesAny(t, 'BANQUE.TYPES_COMPENSATION', ['compens'])
+      || this.calculService.matchesAny(t, 'BANQUE.TYPES_APPROVISIONNEMENT', ['appro'])
+      || this.calculService.matchesAny(t, 'BANQUE.TYPES_NIVELLEMENT', ['nivel'])
+      || t.includes('regularis');
   }
 
   private normalizeType(input: string): string {

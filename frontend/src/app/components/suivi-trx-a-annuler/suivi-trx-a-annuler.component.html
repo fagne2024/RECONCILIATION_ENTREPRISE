@@ -1,0 +1,358 @@
+<div class="matches-container" (scroll)="onHostScroll($event)">
+  <!-- En-tête avec titre et actions -->
+  <div class="matches-header">
+    <div class="header-left">
+      <button class="back-button" (click)="goBack()" [title]="'COMMON.actions.back' | translate">
+        <i class="fas fa-arrow-left"></i>
+      </button>
+      <h1 class="page-title">{{ 'NAV.suiviTrxAnnuler' | translate }}</h1>
+    </div>
+    <div class="header-actions">
+      <button class="btn btn-add-row" (click)="openManualRowPopup()" [disabled]="isLoading">
+        <i class="fas fa-plus"></i>
+        Ajouter une ligne
+      </button>
+      <button class="btn btn-verify" (click)="runAutoVerification()" [disabled]="verificationInProgress || isLoading">
+        <i class="fas" [ngClass]="verificationInProgress ? 'fa-spinner fa-spin' : 'fa-magic'"></i>
+        {{ verificationInProgress ? 'Vérification…' : 'Vérifier automatiquement' }}
+      </button>
+      <button class="btn btn-template" (click)="downloadTemplate()" [disabled]="isExporting">
+        <i class="fas fa-file-download"></i>
+        Télécharger le modèle
+      </button>
+      <!-- Menu Export -->
+      <div class="export-menu-container">
+        <button class="btn btn-export export-menu-button" (click)="toggleExportMenu($event)" [disabled]="isExporting">
+          <i class="fas" [ngClass]="isExporting ? 'fa-spinner fa-spin' : 'fa-download'"></i>
+          {{ isExporting ? ('COMMON.actions.loading' | translate) : ('COMMON.actions.export' | translate) }}
+          <i class="fas fa-chevron-down" style="margin-left: 5px;"></i>
+        </button>
+        <div class="export-menu-dropdown" *ngIf="showExportMenu">
+          <button class="export-menu-item" (click)="exportResults()">
+            <i class="fas fa-file-excel"></i>
+            <span>{{ 'MSG.exportExcel' | translate }}</span>
+          </button>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Barre de recherche -->
+  <div class="search-bar">
+    <div class="search-input-container">
+      <i class="fas fa-search search-icon"></i>
+      <input 
+        type="text" 
+        class="search-input" 
+        [(ngModel)]="searchKey" 
+        (input)="onSearch()"
+        [placeholder]="'COMMON.actions.searchAllFields' | translate"
+      >
+      <button *ngIf="searchKey" class="clear-search" (click)="searchKey=''; onSearch()">
+        <i class="fas fa-times"></i>
+      </button>
+    </div>
+    <div class="results-info">
+      <span>{{ displayedMatches.length }} {{ 'COMMON.actions.results' | translate | lowercase }}</span>
+    </div>
+  </div>
+
+  <!-- Bilan du rapprochement automatique -->
+  <div class="verification-banner" *ngIf="verificationNotice"
+       [ngClass]="'verification-banner--' + verificationNotice.type">
+    <i class="fas"
+       [ngClass]="verificationNotice.type === 'success' ? 'fa-check-circle' : (verificationNotice.type === 'warning' ? 'fa-exclamation-triangle' : 'fa-info-circle')"></i>
+    <span class="verification-banner-text">{{ verificationNotice.message }}</span>
+    <button type="button" class="verification-banner-close" (click)="dismissVerificationNotice()" title="Fermer">×</button>
+  </div>
+
+  <!-- Indicateur de chargement -->
+  <div class="loading-container" *ngIf="isLoading">
+    <div class="loading-bar-container">
+      <div class="loading-bar" [style.width.%]="loadProgress"></div>
+    </div>
+    <p class="loading-text">{{ 'COMMON.actions.loading' | translate }}... {{ loadProgress }}%</p>
+  </div>
+
+  <!-- Tableau -->
+  <div class="table-container" *ngIf="!isLoading">
+    <div class="table-scroll-wrapper" 
+         #tableWrapper
+         (scroll)="onTableScroll($event)">
+      <table class="matches-table">
+        <thead>
+          <tr class="header-row">
+            <th colspan="9" class="group-header bo-group">BO</th>
+            <th colspan="8" class="group-header partner-group">Partenaire</th>
+          </tr>
+          <tr class="column-headers">
+            <th *ngFor="let col of boDisplayColumns" class="th bo-col">{{ col }}</th>
+            <th *ngFor="let col of partnerDisplayColumns" class="th partner-col">{{ col }}</th>
+            <th class="th partner-col">Action</th>
+          </tr>
+        </thead>
+        <tbody>
+          <tr *ngFor="let match of getPagedMatches(); trackBy: trackByMatch" class="data-row">
+            <td *ngFor="let col of boDisplayColumns" class="td bo-col">
+              <select
+                *ngIf="col === 'Statut BO'; else boText"
+                class="bo-statut-select"
+                [ngModel]="getBoValue(match, col)"
+                (ngModelChange)="onBoStatutChange(match, $event)"
+                [ngClass]="{
+                  'bo-statut-echec': getBoValue(match, col) === 'Echec',
+                  'bo-statut-annulee': getBoValue(match, col) === 'Annulée'
+                }"
+                aria-label="Statut BO">
+                <option value="" disabled hidden>Non renseigné</option>
+                <option value="Echec">Echec</option>
+                <option value="Annulée">Annulée</option>
+              </select>
+              <ng-template #boText>{{ getBoValue(match, col) }}</ng-template>
+            </td>
+            <td *ngFor="let col of partnerDisplayColumns" class="td partner-col"
+                [ngClass]="{
+                  'status-ok': col === 'Statut traitement' && getPartnerValue(match, col) === 'OK',
+                  'status-en-cours': col === 'Statut traitement' && getPartnerValue(match, col) === 'En cours'
+                }">
+              <select
+                *ngIf="col === 'Statut Part'; else partnerText"
+                class="statut-part-select"
+                [ngModel]="getPartnerValue(match, col)"
+                (ngModelChange)="onStatutPartChange(match, $event)"
+                [ngClass]="{
+                  'statut-part-succes': getPartnerValue(match, col) === 'Succès',
+                  'statut-part-annulee': getPartnerValue(match, col) === 'Annulée'
+                }"
+                aria-label="Statut Part">
+                <option value="" disabled hidden>Non renseigné</option>
+                <option value="Succès">Succès</option>
+                <option value="Annulée">Annulée</option>
+              </select>
+              <ng-template #partnerText>{{ getPartnerValue(match, col) }}</ng-template>
+            </td>
+            <td class="td partner-col action-col">
+              <button type="button" class="btn-annulation" (click)="openAnnulationPopup(match)">
+                <i class="fas fa-edit"></i> Saisir ID Annulation
+              </button>
+              <span class="manual-badge" *ngIf="isManualRow(match)" [title]="getManualReason(match)">
+                <i class="fas fa-hand-pointer"></i> Manuel
+              </span>
+              <button type="button" class="btn-delete-row" (click)="deleteRow(match)" title="Supprimer le suivi">
+                <i class="fas fa-trash"></i>
+              </button>
+            </td>
+          </tr>
+        </tbody>
+      </table>
+    </div>
+    
+    <!-- Contrôles de défilement horizontal -->
+    <div class="table-scroll-controls" *ngIf="tableScrollMax > 0">
+      <button class="scroll-btn" (click)="scrollTableLeft()" [disabled]="tableScrollLeft <= 0" title="Défiler vers la gauche">
+        <i class="fas fa-chevron-left"></i>
+      </button>
+      <button class="scroll-btn" (click)="scrollTableRight()" [disabled]="tableScrollLeft >= tableScrollMax - 5" title="Défiler vers la droite">
+        <i class="fas fa-chevron-right"></i>
+      </button>
+    </div>
+  </div>
+
+  <!-- Message si aucun résultat -->
+  <div class="no-results" *ngIf="!isLoading && displayedMatches.length === 0">
+    <i class="fas fa-inbox"></i>
+    <p>Aucun suivi enregistré.</p>
+    <p class="no-results-hint">
+      Utilisez « Ajouter une ligne » pour créer un suivi manuellement, ou depuis la page Correspondances via « Suivi TRX à annuler ».
+    </p>
+  </div>
+
+  <!-- Pagination -->
+  <div class="pagination-container" *ngIf="!isLoading && displayedMatches.length > 0">
+    <ds-pagination
+      [page]="currentPage"
+      [pageCount]="totalPages"
+      [totalItems]="displayedMatches.length"
+      [pageSize]="pageSize"
+      [pageSizes]="[10, 20, 50, 100]"
+      itemLabel="lignes"
+      (pageChange)="goToPage($event)"
+      (pageSizeChange)="onPageSizeChange($event)">
+    </ds-pagination>
+  </div>
+
+  <!-- Bouton retour en haut -->
+  <button class="scroll-top-btn" *ngIf="showScrollTopBtn" (click)="scrollToTop()" title="Retour en haut">
+    <i class="fas fa-arrow-up"></i>
+  </button>
+
+  <!-- Indicateur d'export en cours -->
+  <div class="export-overlay" *ngIf="isExporting">
+    <div class="export-modal">
+      <h3>{{ 'COMMON.actions.export' | translate }} en cours</h3>
+      <div class="export-progress-bar-container">
+        <div class="export-progress-bar" [style.width.%]="exportProgress.percentage"></div>
+      </div>
+      <p class="export-progress-text">{{ exportProgress.percentage }}% - {{ exportProgress.message }}</p>
+    </div>
+  </div>
+
+  <!-- Popup ajout manuel d'une ligne -->
+  <div class="oppart-overlay" *ngIf="showManualRowPopup" (click)="closeManualRowPopup()">
+    <div class="oppart-popup manual-row-popup"
+         role="dialog"
+         aria-modal="true"
+         aria-labelledby="manual-row-title"
+         (click)="$event.stopPropagation()">
+      <div class="popup-header oppart-header">
+        <div class="manual-row-heading">
+          <h3 id="manual-row-title">Ajouter une ligne</h3>
+          <p class="manual-row-subtitle">
+            Renseignez les informations BO et/ou partenaire. Au moins un champ est nécessaire.
+          </p>
+        </div>
+        <button type="button" (click)="closeManualRowPopup()" class="close-btn" [disabled]="isSavingManualRow" aria-label="Fermer">×</button>
+      </div>
+      <div class="oppart-content">
+        <section class="manual-row-section">
+          <h4 class="manual-row-section-title"><i class="fas fa-building"></i> BO</h4>
+          <div class="manual-row-grid">
+            <label class="manual-row-field">
+              <span class="manual-row-label">Date</span>
+              <input type="text" class="mapping-manual-input" [(ngModel)]="manualRowForm.boDate" maxlength="64" placeholder="JJ/MM/AAAA">
+            </label>
+            <label class="manual-row-field">
+              <span class="manual-row-label">Agence</span>
+              <input type="text" class="mapping-manual-input" [(ngModel)]="manualRowForm.boAgence" maxlength="255">
+            </label>
+            <label class="manual-row-field">
+              <span class="manual-row-label">Service</span>
+              <input type="text" class="mapping-manual-input" [(ngModel)]="manualRowForm.boService" maxlength="255">
+            </label>
+            <label class="manual-row-field">
+              <span class="manual-row-label">Montant</span>
+              <input type="text" class="mapping-manual-input" [(ngModel)]="manualRowForm.boMontant" maxlength="128" placeholder="Ex. 1 000,50">
+            </label>
+            <label class="manual-row-field">
+              <span class="manual-row-label">Token</span>
+              <input type="text" class="mapping-manual-input" [(ngModel)]="manualRowForm.boToken" maxlength="255">
+            </label>
+            <label class="manual-row-field">
+              <span class="manual-row-label">Pays</span>
+              <input type="text" class="mapping-manual-input" [(ngModel)]="manualRowForm.boPays" maxlength="128">
+            </label>
+            <label class="manual-row-field">
+              <span class="manual-row-label">ENV</span>
+              <input type="text" class="mapping-manual-input" [(ngModel)]="manualRowForm.boEnv" maxlength="64">
+            </label>
+            <label class="manual-row-field">
+              <span class="manual-row-label">Telephone</span>
+              <input type="text" class="mapping-manual-input" [(ngModel)]="manualRowForm.boTelephone" maxlength="64" placeholder="Ex. 07 00 00 00 00">
+            </label>
+            <label class="manual-row-field">
+              <span class="manual-row-label">Statut BO</span>
+              <select class="mapping-manual-input manual-row-select" [(ngModel)]="manualRowForm.boStatut">
+                <option value="">Non renseigné</option>
+                <option value="Echec">Echec</option>
+                <option value="Annulée">Annulée</option>
+              </select>
+            </label>
+          </div>
+        </section>
+
+        <section class="manual-row-section">
+          <h4 class="manual-row-section-title"><i class="fas fa-handshake"></i> Partenaire</h4>
+          <div class="manual-row-grid">
+            <label class="manual-row-field">
+              <span class="manual-row-label">Transaction ID</span>
+              <input type="text" class="mapping-manual-input" [(ngModel)]="manualRowForm.partnerTransactionId" maxlength="255">
+            </label>
+            <label class="manual-row-field">
+              <span class="manual-row-label">Date</span>
+              <input type="text" class="mapping-manual-input" [(ngModel)]="manualRowForm.partnerDate" maxlength="64" placeholder="JJ/MM/AAAA">
+            </label>
+            <label class="manual-row-field">
+              <span class="manual-row-label">Montant</span>
+              <input type="text" class="mapping-manual-input" [(ngModel)]="manualRowForm.partnerMontant" maxlength="128" placeholder="Ex. 1 000,50">
+            </label>
+            <label class="manual-row-field">
+              <span class="manual-row-label">ID Annulation</span>
+              <input type="text" class="mapping-manual-input" [(ngModel)]="manualRowForm.idAnnulation" maxlength="255">
+            </label>
+            <label class="manual-row-field">
+              <span class="manual-row-label">Telephone</span>
+              <input type="text" class="mapping-manual-input" [(ngModel)]="manualRowForm.partnerTelephone" maxlength="64" placeholder="Ex. 07 00 00 00 00">
+            </label>
+            <label class="manual-row-field">
+              <span class="manual-row-label">Statut Part</span>
+              <select class="mapping-manual-input manual-row-select" [(ngModel)]="manualRowForm.statutPart">
+                <option value="">Non renseigné</option>
+                <option value="Succès">Succès</option>
+                <option value="Annulée">Annulée</option>
+              </select>
+            </label>
+          </div>
+          <div class="manual-row-computed">
+            <span class="manual-row-label">Statut traitement</span>
+            <span class="manual-row-status"
+                  [ngClass]="manualStatutTraitement === 'OK' ? 'manual-row-status-ok' : 'manual-row-status-pending'">
+              {{ manualStatutTraitement }}
+            </span>
+            <span class="manual-row-hint">
+              Calculé automatiquement : OK si un ID Annulation est renseigné, sinon En cours.
+            </span>
+          </div>
+        </section>
+      </div>
+      <div class="oppart-actions">
+        <button type="button" (click)="closeManualRowPopup()" class="cancel-btn" [disabled]="isSavingManualRow">Annuler</button>
+        <button type="button" (click)="saveManualRow()" class="save-oppart-btn" [disabled]="isSavingManualRow">
+          <i class="fas" [ngClass]="isSavingManualRow ? 'fa-spinner fa-spin' : 'fa-plus'"></i>
+          {{ isSavingManualRow ? 'Enregistrement…' : 'Ajouter la ligne' }}
+        </button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Popup saisie ID Annulation -->
+  <div class="oppart-overlay" *ngIf="showAnnulationPopup" (click)="closeAnnulationPopup()">
+    <div class="oppart-popup" style="max-width: 500px;" (click)="$event.stopPropagation()">
+      <div class="popup-header oppart-header">
+        <h3>Saisir ID Annulation</h3>
+        <button (click)="closeAnnulationPopup()" class="close-btn">×</button>
+      </div>
+      <div class="oppart-content">
+        <div class="oppart-info">
+          <span class="oppart-note" *ngIf="!annulationPopupNotice">Saisir l'ID d'annulation pour cette transaction.</span>
+          <span class="annulation-manual-notice" *ngIf="annulationPopupNotice">
+            <i class="fas fa-info-circle"></i> {{ annulationPopupNotice }}
+          </span>
+        </div>
+        <div class="oppart-mapping">
+          <div class="mapping-row">
+            <label class="mapping-field">
+              <span class="mapping-label">ID Annulation</span>
+            </label>
+            <div class="mapping-control">
+              <div class="mapping-source-line">
+                <input
+                  type="text"
+                  [(ngModel)]="annulationIdInput"
+                  placeholder="ID Annulation"
+                  class="mapping-manual-input"
+                  style="flex: 1;"
+                >
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+      <div class="oppart-actions">
+        <button (click)="closeAnnulationPopup()" class="cancel-btn" [disabled]="isSavingAnnulation">Annuler</button>
+        <button (click)="saveAnnulationId()" class="save-oppart-btn" [disabled]="isSavingAnnulation">
+          {{ isSavingAnnulation ? 'Enregistrement…' : 'Enregistrer' }}
+        </button>
+      </div>
+    </div>
+  </div>
+</div>

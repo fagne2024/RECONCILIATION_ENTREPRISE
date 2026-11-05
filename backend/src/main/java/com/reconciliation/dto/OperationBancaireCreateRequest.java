@@ -14,7 +14,11 @@ public class OperationBancaireCreateRequest {
     private String reference;
     private String idGlpi;
     private String bo;
+    private String banqueCorrigee;
+    private String demandeur;
+    private String valideur;
     private String statut;
+
     private Long operationId;
     private String traitement;
     
@@ -125,6 +129,20 @@ public class OperationBancaireCreateRequest {
     public void setBo(String bo) {
         this.bo = bo;
     }
+
+    public String getBanqueCorrigee() {
+        return banqueCorrigee;
+    }
+
+    public void setBanqueCorrigee(String banqueCorrigee) {
+        this.banqueCorrigee = banqueCorrigee;
+    }
+
+    public String getDemandeur() { return demandeur; }
+    public void setDemandeur(String demandeur) { this.demandeur = demandeur; }
+    public String getValideur() { return valideur; }
+    public void setValideur(String valideur) { this.valideur = valideur; }
+
     
     public String getStatut() {
         return statut;

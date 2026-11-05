@@ -1852,6 +1852,30 @@
   font-size: 11px;
 }
 
+.sv-add-sop {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  width: 100%;
+  background: transparent;
+  border: 1px dashed var(--sv-line);
+  border-radius: 8px;
+  padding: 7px 12px;
+  cursor: pointer;
+  font-size: 13px;
+  color: var(--sv-b);
+  text-align: left;
+
+  &:hover {
+    border-color: var(--sv-b);
+    background: var(--sv-card);
+  }
+}
+
+.sv-cats > .sv-add-sop {
+  margin-top: 6px;
+}
+
 .sv-node-actions {
   display: inline-flex;
   align-items: center;

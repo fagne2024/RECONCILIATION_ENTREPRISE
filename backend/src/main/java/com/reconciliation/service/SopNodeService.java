@@ -14,13 +14,63 @@ import java.util.stream.Collectors;
 @Service
 public class SopNodeService {
 
+    /** Racine de l'arbre de la page « SOP Réconciliation TRX » (arbre distinct de la racine « root »). */
+    public static final String TRX_ROOT_ID = "root-trx";
+
     @Autowired
     private SopNodeRepository sopNodeRepository;
 
     /**
-     * Récupère toute la structure SOP sous forme d'arbre
+     * Arbre sous la racine donnée, ou {@code null} si cette racine n'existe pas.
      */
     @Transactional(readOnly = true)
+    public Map<String, Object> getStructure(String rootNodeId) {
+        Optional<SopNodeEntity> root = sopNodeRepository.findByNodeId(rootNodeId);
+        if (root.isEmpty()) {
+            return null;
+        }
+        return buildNodeMap(root.get(), sopNodeRepository.findAll());
+    }
+
+    /** Crée l'arbre SOP TRX par défaut s'il n'existe pas encore pour l'entreprise courante. */
+    @Transactional
+    public void ensureTrxStructure() {
+        if (sopNodeRepository.existsByNodeId(TRX_ROOT_ID)) {
+            return;
+        }
+        log.info("🔧 Initialisation de la structure SOP TRX par défaut");
+        SopNodeEntity root = new SopNodeEntity();
+        root.setNodeId(TRX_ROOT_ID);
+        root.setLabel("Visualisation des SOP");
+        root.setDisplayOrder(0);
+        root = sopNodeRepository.save(root);
+
+        SopNodeEntity backOffice = createChildNode(root, "back-office-trx", "Back Office", 0);
+        SopNodeEntity metier = createChildNode(backOffice, "metier-trx", "Métier", 0);
+        createChildNode(metier, "appro-client-trx", "Appro client", 0);
+        createChildNode(metier, "compense-client-trx", "Compense client", 1);
+        createChildNode(metier, "transfert-uv-trx", "Transfert d'UV", 2);
+        SopNodeEntity classique = createChildNode(backOffice, "classique-trx", "Classique", 1);
+        createChildNode(classique, "appro-client-classique-trx", "Appro client", 0);
+        createChildNode(classique, "compense-client-classique-trx", "Compense client", 1);
+        createChildNode(classique, "transfert-classique-trx", "Transfert", 2);
+
+        SopNodeEntity partenaire = createChildNode(root, "partenaire-trx", "Partenaire", 1);
+        SopNodeEntity operations = createChildNode(partenaire, "operations-partenaire", "Opérations", 0);
+        createChildNode(operations, "depot-partenaire", "Dépôt", 0);
+        createChildNode(operations, "retrait-partenaire", "Retrait", 1);
+        createChildNode(operations, "virement-partenaire", "Virement", 2);
+        SopNodeEntity reconciliation = createChildNode(partenaire, "reconciliation-partenaire", "Réconciliation", 1);
+        createChildNode(reconciliation, "rapprochement-auto", "Rapprochement automatique", 0);
+        createChildNode(reconciliation, "rapprochement-manuel", "Rapprochement manuel", 1);
+        createChildNode(reconciliation, "ecarts-partenaire", "Gestion des écarts", 2);
+        log.info("✅ Structure SOP TRX par défaut initialisée");
+    }
+
+    /**
+     * Récupère toute la structure SOP sous forme d'arbre (crée la structure par défaut si la racine manque)
+     */
+    @Transactional
     public Map<String, Object> getStructure() {
         try {
             log.info("📋 Récupération de la structure SOP...");
@@ -34,8 +84,9 @@ public class SopNodeService {
                 log.error("❌ Erreur lors du chargement des nœuds: {}", e.getMessage(), e);
                 String errorMsg = e.getMessage() != null ? e.getMessage().toLowerCase() : "";
                 // Si la table n'existe pas, initialiser la structure
+                // (le nom de la base peut varier : on teste le nom de table pour rester robuste)
                 if (errorMsg.contains("doesn't exist") || errorMsg.contains("table") || 
-                    errorMsg.contains("unknown table") || errorMsg.contains("table 'top20.sop_node' doesn't exist")) {
+                    errorMsg.contains("unknown table") || errorMsg.contains("sop_node")) {
                     log.info("🔧 Table sop_node n'existe pas, initialisation...");
                     try {
                         initializeDefaultStructure();
@@ -52,8 +103,8 @@ public class SopNodeService {
                 }
             }
             
-            if (allNodes.isEmpty()) {
-                // Si la base est vide, initialiser avec la structure par défaut
+            if (allNodes.stream().noneMatch(node -> "root".equals(node.getNodeId()))) {
+                // Racine absente (la table peut ne contenir que l'arbre SOP TRX) : structure par défaut
                 log.info("🔧 Base de données vide, initialisation de la structure par défaut...");
                 try {
                     initializeDefaultStructure();

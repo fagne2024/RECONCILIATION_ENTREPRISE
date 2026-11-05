@@ -100,6 +100,9 @@
   text-align: center;
   max-width: 520px;
   box-shadow: 0 4px 24px rgba(0, 0, 0, 0.08);
+  display: flex;
+  flex-direction: column;
+  align-items: center;
 
   h2 {
     margin: 16px 0 8px;
@@ -338,11 +341,16 @@
     color: var(--color-text-primary);
   }
 
-  input {
+  input,
+  textarea,
+  select {
     border: 1px solid var(--color-border);
     border-radius: 8px;
     padding: 10px 12px;
     font-size: 0.95rem;
+    font-family: inherit;
+    background: var(--color-surface);
+    color: var(--color-text-primary);
 
     &:focus {
       outline: none;
@@ -1576,6 +1584,41 @@
   }
 }
 
+/* Tableaux de détail compense : colonne agence à largeur automatique. */
+.pdf-compense-table {
+  td:first-child,
+  th:first-child {
+    width: auto;
+  }
+
+  tbody td:first-child {
+    background: transparent;
+    font-weight: 400;
+  }
+}
+
+.pdf-amount-cell {
+  text-align: right !important;
+  font-variant-numeric: tabular-nums;
+}
+
+.pdf-status-cell {
+  text-align: center !important;
+  font-weight: 700;
+}
+
+.pdf-status-ok {
+  color: #1e8449 !important;
+}
+
+.pdf-status-ko {
+  color: #c0392b !important;
+}
+
+.pdf-ecart-compense .pdf-amount-cell {
+  color: #c0392b !important;
+}
+
 .pdf-ecart-certification td {
   background: var(--color-border)af3 !important;
   font-weight: 700;
@@ -1715,6 +1758,26 @@
   border-top: 1px solid #e3e6ea;
 }
 
+/* Pied de la liste des certifications enregistrées : compteur + exports. */
+.saved-list-footer {
+  justify-content: space-between;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 12px;
+
+  .saved-export-count {
+    font-size: 0.85rem;
+    font-weight: 600;
+    color: var(--color-text-secondary, #6b7280);
+  }
+
+  .saved-export-actions {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 10px;
+  }
+}
+
 .pdf-preview-btn {
   border: none;
   border-radius: 8px;
@@ -1742,6 +1805,364 @@
       background: #2e86c1;
     }
   }
+}
+
+/* Certifications enregistrées */
+.saved-empty-link {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  margin-top: 14px;
+}
+
+.saved-modal {
+  max-width: 1360px;
+  height: 92%;
+}
+
+.save-meta-modal {
+  max-width: 480px;
+  height: auto;
+}
+
+.save-meta-body {
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+  padding: 18px 20px 6px;
+
+  .field select {
+    width: 100%;
+    box-sizing: border-box;
+  }
+}
+
+.save-meta-info {
+  margin: 0;
+  padding: 10px 12px;
+  border-radius: 8px;
+  background: var(--color-info-bg);
+  border: 1px solid var(--color-info-border);
+  color: var(--color-text-primary);
+  font-size: 0.85rem;
+}
+
+.save-meta-footer {
+  display: flex;
+  justify-content: flex-end;
+  gap: 8px;
+  padding: 16px 20px 18px;
+
+  .pdf-preview-btn:disabled {
+    opacity: 0.55;
+    cursor: not-allowed;
+  }
+}
+
+.pdf-preview-title i.saved-title-icon {
+  color: var(--color-info-solid);
+}
+
+/* Création d'un pays depuis les popups de sauvegarde / certifications enregistrées. */
+.link-btn.new-country-btn {
+  align-self: flex-start;
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 0;
+  background: none;
+  border: none;
+  color: var(--color-info-solid);
+  font-weight: 600;
+  font-size: 0.85rem;
+  cursor: pointer;
+
+  &:hover {
+    text-decoration: underline;
+  }
+}
+
+.saved-pays-form {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 8px;
+  padding: 10px 12px;
+  border: 1px dashed var(--color-border);
+  border-radius: 8px;
+  background: var(--color-surface);
+
+  input {
+    flex: 1 1 150px;
+    min-width: 120px;
+    padding: 8px 10px;
+    border: 1px solid var(--color-border);
+    border-radius: 6px;
+    font-size: 0.88rem;
+  }
+}
+
+.saved-meta-bar {
+  background: var(--color-surface);
+  border: 1px solid var(--color-border);
+  border-radius: 10px;
+  padding: 12px 14px;
+  margin-bottom: 14px;
+}
+
+.saved-meta-row {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 10px;
+
+  select {
+    min-width: 220px;
+    padding: 8px 10px;
+    border: 1px solid var(--color-border);
+    border-radius: 6px;
+    font-size: 0.88rem;
+  }
+}
+
+.saved-meta-label {
+  font-weight: 600;
+  font-size: 0.85rem;
+  color: var(--color-text-primary);
+}
+
+.saved-meta-bar .saved-pays-form {
+  margin-top: 10px;
+}
+
+.saved-body {
+  overflow: auto;
+  padding: 18px;
+  background: var(--color-bg);
+}
+
+.saved-filters {
+  display: grid;
+  grid-template-columns: minmax(0, 1.4fr) minmax(0, 0.9fr) minmax(0, 1.3fr) minmax(0, 1fr) minmax(0, 1fr) auto;
+  gap: 12px;
+  align-items: end;
+  background: var(--color-surface);
+  border-radius: 10px;
+  padding: 14px;
+  margin-bottom: 14px;
+
+  .field {
+    min-width: 0;
+
+    input,
+    select {
+      width: 100%;
+      min-width: 0;
+      box-sizing: border-box;
+      padding: 8px 10px;
+      font-size: 0.88rem;
+    }
+  }
+}
+
+.saved-filter-actions {
+  display: flex;
+  gap: 8px;
+  white-space: nowrap;
+
+  .pdf-preview-btn {
+    padding: 8px 14px;
+  }
+}
+
+@media (max-width: 1200px) {
+  .saved-filters {
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+  }
+
+  .saved-filter-actions {
+    grid-column: 1 / -1;
+    justify-content: flex-end;
+  }
+}
+
+@media (max-width: 700px) {
+  .saved-filters {
+    grid-template-columns: 1fr;
+  }
+}
+
+.saved-table-wrap {
+  overflow-x: auto;
+  border-radius: 10px;
+  background: var(--color-surface);
+}
+
+.saved-loading {
+  position: static;
+  padding: 24px;
+}
+
+.saved-empty {
+  text-align: center;
+  color: var(--color-text-muted);
+  padding: 32px 0;
+}
+
+.saved-table {
+  width: 100%;
+  min-width: 1080px;
+  border-collapse: collapse;
+  background: var(--color-surface);
+  font-size: 0.86rem;
+
+  tbody tr:hover {
+    background: var(--color-surface-sunken);
+  }
+
+  .center {
+    text-align: center;
+  }
+
+  .nowrap {
+    white-space: nowrap;
+  }
+
+  .saved-tag {
+    display: inline-block;
+    padding: 2px 8px;
+    border-radius: 999px;
+    background: var(--color-info-bg);
+    border: 1px solid var(--color-info-border);
+    color: var(--color-info-solid);
+    font-size: 0.76rem;
+    font-weight: 700;
+    letter-spacing: 0.02em;
+    white-space: nowrap;
+
+    &--pays {
+      background: var(--color-surface-sunken);
+      border-color: var(--color-border);
+      color: var(--color-text-primary);
+      cursor: help;
+    }
+  }
+
+  .saved-muted {
+    color: var(--color-text-muted);
+  }
+
+  th,
+  td {
+    padding: 10px 12px;
+    border-bottom: 1px solid var(--color-border);
+    text-align: left;
+    vertical-align: middle;
+  }
+
+  thead th {
+    background: var(--color-nav-bg);
+    color: var(--color-nav-text);
+    font-weight: 600;
+    white-space: nowrap;
+  }
+
+  .num {
+    text-align: right;
+    font-variant-numeric: tabular-nums;
+    white-space: nowrap;
+  }
+
+  .saved-ecart-nonzero {
+    color: #c0392b;
+    font-weight: 700;
+  }
+
+  .saved-comment,
+  .saved-by {
+    display: block;
+    color: var(--color-text-muted);
+    font-size: 0.76rem;
+    margin-top: 2px;
+  }
+
+  .saved-comment {
+    max-width: 240px;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+  }
+
+  .saved-actions {
+    display: flex;
+    gap: 6px;
+    justify-content: flex-end;
+    white-space: nowrap;
+
+    .pdf-preview-btn {
+      padding: 6px 12px;
+      font-size: 0.82rem;
+    }
+  }
+}
+
+.saved-pagination {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  margin-top: 12px;
+  padding: 10px 14px;
+  background: var(--color-surface);
+  border-radius: 10px;
+  font-size: 0.85rem;
+  color: var(--color-text-muted);
+
+  .saved-pagination-size {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+
+    select {
+      border: 1px solid var(--color-border);
+      border-radius: 6px;
+      padding: 4px 8px;
+      font-family: inherit;
+      background: var(--color-surface);
+      color: var(--color-text-primary);
+    }
+  }
+
+  .saved-pagination-nav {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+
+    .pdf-preview-btn {
+      padding: 6px 10px;
+      font-size: 0.82rem;
+    }
+  }
+
+  .saved-pagination-page {
+    padding: 0 6px;
+    color: var(--color-text-primary);
+    font-weight: 600;
+    white-space: nowrap;
+  }
+}
+
+.saved-doc {
+  width: 794px;
+  max-width: 100%;
+  margin: 0 auto;
+  background: #ffffff;
+  color: #282E5E;
+  font-family: 'Segoe UI', Arial, sans-serif;
+  padding: 14px;
+  box-sizing: border-box;
+  box-shadow: 0 4px 18px rgba(0, 0, 0, 0.12);
 }
 
 .soldes-hors-periode {

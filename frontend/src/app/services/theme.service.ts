@@ -27,7 +27,18 @@ const THEME_VAR_NAMES = [
   '--theme-info-dark-rgb',
   '--theme-sidebar-bg',
   '--theme-sidebar-hover',
-  '--theme-sidebar-active'
+  '--theme-sidebar-active',
+  '--theme-content-bg',
+  '--color-accent',
+  '--color-accent-hover',
+  '--color-accent-contrast',
+  '--color-nav-bg',
+  '--color-nav-bg-hover',
+  '--color-nav-text',
+  '--color-nav-text-muted',
+  '--color-info',
+  '--color-bg',
+  '--color-surface'
 ];
 
 export type ThemeMode = 'light' | 'dark' | 'system';
@@ -99,6 +110,10 @@ export class ThemeService {
     const root = document.documentElement;
     root.setAttribute('data-theme', dark ? 'dark' : 'light');
     root.setAttribute('data-theme-mode', mode);
+    const brand = this.theme$.value;
+    if (brand) {
+      this.applyCssVars(brand);
+    }
   }
 
   /**
@@ -162,6 +177,15 @@ export class ThemeService {
 
   private applyCssVars(theme: AppTheme): void {
     const root = document.documentElement;
+    const dark = root.getAttribute('data-theme') === 'dark';
+    const surface = dark ? '#1E2527' : '#FBF9F4';
+    const accent = ensureContrast(theme.primary, surface, 3.2);
+    const accentHover = mixToward(accent, dark ? '#FFFFFF' : '#000000', 0.18);
+    const accentContrast = relativeLum(accent) < 0.45 ? '#FFFFFF' : '#1F2A2E';
+    const navText = relativeLum(theme.sidebarBg) < 0.45 ? '#FBF9F4' : '#1F2A2E';
+    const navMuted = mixToward(navText, theme.sidebarBg, 0.22);
+    const info = ensureContrast(theme.info, surface, 3);
+
     root.style.setProperty('--theme-primary', theme.primary);
     root.style.setProperty('--theme-primary-dark', theme.primaryDark);
     root.style.setProperty('--theme-primary-rgb', hexToRgb(theme.primary).join(', '));
@@ -171,12 +195,29 @@ export class ThemeService {
     root.style.setProperty('--theme-info-dark', theme.infoDark);
     root.style.setProperty('--theme-info-rgb', hexToRgb(theme.info).join(', '));
     root.style.setProperty('--theme-info-dark-rgb', hexToRgb(theme.infoDark).join(', '));
-    // Marque limitée à la barre latérale (décision D3). Les tokens du
-    // design system (--color-accent, --color-bg, --primary-color…) restent
-    // inchangés pour préserver les contrastes des pages.
     root.style.setProperty('--theme-sidebar-bg', theme.sidebarBg);
     root.style.setProperty('--theme-sidebar-hover', theme.sidebarHover);
     root.style.setProperty('--theme-sidebar-active', theme.sidebarActive);
+    root.style.setProperty('--theme-content-bg', theme.contentBg);
+
+    // Le design extrait du logo pilote les tokens globaux : boutons, topnav,
+    // login, fond de page et Material (via les overrides CSS).
+    root.style.setProperty('--color-accent', accent);
+    root.style.setProperty('--color-accent-hover', accentHover);
+    root.style.setProperty('--color-accent-contrast', accentContrast);
+    root.style.setProperty('--color-nav-bg', theme.sidebarBg);
+    root.style.setProperty('--color-nav-bg-hover', theme.sidebarHover);
+    root.style.setProperty('--color-nav-text', navText);
+    root.style.setProperty('--color-nav-text-muted', navMuted);
+    root.style.setProperty('--color-info', info);
+    if (dark) {
+      root.style.removeProperty('--color-bg');
+      root.style.removeProperty('--color-surface');
+    } else {
+      root.style.setProperty('--color-bg', theme.contentBg);
+      root.style.setProperty('--color-surface', mixToward(theme.contentBg, '#FFFFFF', 0.45));
+    }
+    root.setAttribute('data-brand', 'on');
   }
 
   private clearCssVars(): void {
@@ -184,6 +225,7 @@ export class ThemeService {
     for (const name of THEME_VAR_NAMES) {
       root.style.removeProperty(name);
     }
+    root.removeAttribute('data-brand');
   }
 
   private readLocal(): AppTheme | null {

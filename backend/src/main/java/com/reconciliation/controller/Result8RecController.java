@@ -21,7 +21,6 @@ import org.springframework.web.bind.annotation.*;
 import java.time.Instant;
 import java.time.LocalDate;
 import java.time.LocalDateTime;
-import java.time.temporal.ChronoUnit;
 import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
@@ -35,7 +34,8 @@ import java.util.stream.Collectors;
 @Slf4j
 public class Result8RecController {
 
-    private static final int MAX_ROWS_WITHOUT_COUNTRY = 500;
+    /** Plafond de lignes acceptées sans filtre pays (la protection payload reste active). */
+    private static final int MAX_ROWS_WITHOUT_COUNTRY = 5_000;
     private static final int HARD_MAX_ROWS = 8_000;
 
     private final Result8RecRepository repository;
@@ -124,12 +124,14 @@ public class Result8RecController {
 
         if (countryVariants == null) {
             long rowCount = repository.countForReport(start, end, null, envFilter);
-            boolean singleDay = start != null && start.equals(end);
-            long spanDays = periodSpanDays(start, end);
-            if (!singleDay || spanDays > 1 || rowCount > MAX_ROWS_WITHOUT_COUNTRY) {
+            // Plages multi-jours autorisées (le frontend charge la période en une
+            // seule requête au lieu d'une requête par jour, ce qui déclenchait des
+            // 429 rate limiting). La protection payload est gardée via le plafond
+            // de lignes ; HARD_MAX_ROWS reste le garde-fou ultime sur la réponse.
+            if (rowCount > MAX_ROWS_WITHOUT_COUNTRY) {
                 log.warn(
-                    "Result8Rec refuse sans filtre pays: user={}, periode {}..{} ({} j), {} lignes",
-                    username, start, end, spanDays, rowCount
+                    "Result8Rec refuse sans filtre pays: user={}, periode {}..{}, {} lignes",
+                    username, start, end, rowCount
                 );
                 Map<String, Object> body = new HashMap<>();
                 body.put("error", "country_required");
@@ -221,19 +223,6 @@ public class Result8RecController {
         return "TOTAL".equals(upper) ? "T-E" : upper;
     }
 
-    private static long periodSpanDays(String start, String end) {
-        if (start == null || end == null || start.length() < 10 || end.length() < 10) {
-            return Long.MAX_VALUE;
-        }
-        try {
-            LocalDate s = LocalDate.parse(start.substring(0, 10));
-            LocalDate e = LocalDate.parse(end.substring(0, 10));
-            return Math.max(0, ChronoUnit.DAYS.between(s, e));
-        } catch (Exception ignored) {
-            return Long.MAX_VALUE;
-        }
-    }
-    
     /**
      * Convertit un nom de pays en code pays pour le filtrage
      */

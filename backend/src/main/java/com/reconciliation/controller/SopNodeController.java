@@ -21,7 +21,10 @@ public class SopNodeController {
     private SopNodeService sopNodeService;
 
     @GetMapping("/structure")
-    public ResponseEntity<Map<String, Object>> getStructure() {
+    public ResponseEntity<Map<String, Object>> getStructure(@RequestParam(required = false) String rootId) {
+        if (rootId != null && !rootId.isBlank() && !"root".equals(rootId)) {
+            return getStructureForRoot(rootId.trim());
+        }
         try {
             log.info("📋 Requête GET /api/sop-nodes/structure reçue");
             Map<String, Object> structure = sopNodeService.getStructure();
@@ -48,6 +51,30 @@ public class SopNodeController {
                 error.put("error", "Erreur lors de la récupération de la structure: " + e.getMessage());
                 return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).body(error);
             }
+        }
+    }
+
+    private ResponseEntity<Map<String, Object>> getStructureForRoot(String rootId) {
+        try {
+            if (SopNodeService.TRX_ROOT_ID.equals(rootId)) {
+                sopNodeService.ensureTrxStructure();
+            }
+            Map<String, Object> structure = sopNodeService.getStructure(rootId);
+            Map<String, Object> response = new HashMap<>();
+            if (structure == null) {
+                response.put("success", false);
+                response.put("error", "Racine '" + rootId + "' non trouvée");
+                return ResponseEntity.status(HttpStatus.NOT_FOUND).body(response);
+            }
+            response.put("success", true);
+            response.put("structure", structure);
+            return ResponseEntity.ok(response);
+        } catch (Exception e) {
+            log.error("❌ Erreur lors de la récupération de la structure {}: {}", rootId, e.getMessage(), e);
+            Map<String, Object> error = new HashMap<>();
+            error.put("success", false);
+            error.put("error", "Erreur lors de la récupération de la structure: " + e.getMessage());
+            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).body(error);
         }
     }
 

@@ -1,7 +1,6 @@
 {
     "compileOnSave": false,
     "compilerOptions": {
-        "baseUrl": "./",
         "outDir": "./dist/out-tsc",
         "forceConsistentCasingInFileNames": false,
         "strict": false,
@@ -11,7 +10,6 @@
         "noFallthroughCasesInSwitch": false,
         "sourceMap": false,
         "declaration": false,
-        "downlevelIteration": false,
         "experimentalDecorators": true,
         "emitDecoratorMetadata": true,
         "useDefineForClassFields": false,
@@ -19,7 +17,6 @@
         "importHelpers": true,
         "target": "ES2021",
         "module": "ES2022",
-        "useDefineForClassFields": false,
         "skipLibCheck": true,
         "noImplicitAny": false,
         "noEmitOnError": false,

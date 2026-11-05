@@ -280,7 +280,7 @@ export interface AutoProcessingModel {
   modelId?: string; // ID retourné par le backend
   name: string;
   filePattern: string;
-  fileType: 'bo' | 'partner' | 'both';
+  fileType: 'bo' | 'partner' | 'both' | 'operation';
   autoApply: boolean;
   createdAt?: Date;
   updatedAt?: Date;
@@ -651,19 +651,21 @@ export class AutoProcessingService {
     }
   }
 
-  private detectFileType(fileName: string): 'bo' | 'partner' | 'both' {
+  private detectFileType(fileName: string): 'bo' | 'partner' | 'both' | 'operation' {
     const lowerFileName = fileName.toLowerCase();
     
     if (lowerFileName.includes('bo') || lowerFileName.includes('backoffice')) {
       return 'bo';
     } else if (lowerFileName.includes('partner') || lowerFileName.includes('partenaire')) {
       return 'partner';
-            } else {
+    } else if (lowerFileName.includes('operation') || lowerFileName.includes('operationbancaire')) {
+      return 'operation';
+    } else {
       return 'both';
     }
   }
 
-  private findMatchingModel(fileName: string, fileType: 'bo' | 'partner' | 'both'): AutoProcessingModel | null {
+  private findMatchingModel(fileName: string, fileType: 'bo' | 'partner' | 'both' | 'operation'): AutoProcessingModel | null {
     return this.processingModels.find(model => {
       const matches = this.matchesFilePattern(fileName, model.filePattern);
       const typeOk = model.fileType === fileType || model.fileType === 'both';

@@ -41,16 +41,57 @@
         </label>
         <label>
           <span>{{ 'TBL.year' | translate }}</span>
-          <select class="ds-select" [(ngModel)]="selectedYear" (ngModelChange)="appliquerFiltres()">
+          <select
+            class="ds-select"
+            [(ngModel)]="selectedYear"
+            (ngModelChange)="onYearOrMonthChange()"
+            [disabled]="hasDateRange"
+            [title]="hasDateRange ? ('CIB.filter.dateRangeLocksPeriod' | translate) : ''"
+          >
             <option *ngFor="let y of yearOptions" [value]="y">{{ y }}</option>
           </select>
         </label>
         <label>
           <span>{{ 'TBL.month' | translate }}</span>
-          <select class="ds-select" [(ngModel)]="selectedMonth" (ngModelChange)="appliquerFiltres()">
+          <select
+            class="ds-select"
+            [(ngModel)]="selectedMonth"
+            (ngModelChange)="onYearOrMonthChange()"
+            [disabled]="hasDateRange"
+            [title]="hasDateRange ? ('CIB.filter.dateRangeLocksPeriod' | translate) : ''"
+          >
             <option *ngFor="let m of monthOptions" [value]="m.value">{{ m.label }}</option>
           </select>
         </label>
+        <label class="ci-filter-date">
+          <span>{{ 'CIB.filter.dateFrom' | translate }}</span>
+          <input
+            class="ds-input"
+            type="date"
+            [(ngModel)]="dateDebut"
+            [max]="dateFin || null"
+            (change)="onDateRangeChange('debut')"
+          />
+        </label>
+        <label class="ci-filter-date">
+          <span>{{ 'CIB.filter.dateTo' | translate }}</span>
+          <input
+            class="ds-input"
+            type="date"
+            [(ngModel)]="dateFin"
+            [min]="dateDebut || null"
+            (change)="onDateRangeChange('fin')"
+          />
+        </label>
+        <button
+          type="button"
+          class="ci-date-range-reset"
+          *ngIf="dateDebut || dateFin"
+          (click)="clearDateRange()"
+          [title]="'CIB.filter.clearDateRange' | translate"
+        >
+          <i class="fas fa-times"></i> {{ 'COMMON.actions.reset' | translate }}
+        </button>
         <label>
           <span>ENV</span>
           <select class="ds-select" [(ngModel)]="selectedEnv" (ngModelChange)="appliquerFiltres()">
@@ -65,6 +106,12 @@
           </select>
         </label>
       </div>
+      <p class="ci-date-range-hint" *ngIf="dateRangeIncomplete">
+        <i class="fas fa-info-circle"></i> {{ 'CIB.filter.dateRangeIncomplete' | translate }}
+      </p>
+      <p class="ci-date-range-hint ci-date-range-hint--active" *ngIf="hasDateRange">
+        <i class="fas fa-calendar-check"></i> {{ 'CIB.filter.dateRangeActive' | translate }}
+      </p>
       <p class="ci-perm-hint" *ngIf="!canShowValidationActions && !canShowCommentSection">
         {{ 'CIB.hint.readOnly' | translate }}
       </p>

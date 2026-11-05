@@ -11,6 +11,7 @@ import { OperationService } from '../../services/operation.service';
 import { CompteService } from '../../services/compte.service';
 import { PopupService } from '../../services/popup.service';
 import { ExportOptimizationService } from '../../services/export-optimization.service';
+import { ConfigurationCalculService } from '../../services/configuration-calcul.service';
 import { ImpactOP } from '../../models/impact-op.model';
 import { OperationCreateRequest } from '../../models/operation.model';
 import { fixGarbledCharacters } from '../../utils/encoding-fixer';
@@ -61,6 +62,7 @@ export class EcartPartenaireComponent implements OnInit, OnDestroy {
     private compteService: CompteService,
     private popupService: PopupService,
     private exportOptimizationService: ExportOptimizationService,
+    private calculService: ConfigurationCalculService,
     private cdr: ChangeDetectorRef
   ) {}
 
@@ -512,9 +514,11 @@ export class EcartPartenaireComponent implements OnInit, OnDestroy {
 
       const rawType = this.getFromRecord(record, ['Type Opération', 'typeOperation', 'type_operation']);
       const normalized = this.normalizeType(rawType);
-      const typeOperation = normalized.includes('compens') ? 'Compense_client'
-                            : normalized.includes('appro') ? 'Appro_client'
-                            : normalized.includes('nivel') ? 'nivellement'
+      // Classification par mots-clés : règles de calcul (Configuration > Calcul) prioritaires,
+      // code par défaut en repli.
+      const typeOperation = this.calculService.matchesAny(normalized, 'BANQUE.TYPES_COMPENSATION', ['compens']) ? 'Compense_client'
+                            : this.calculService.matchesAny(normalized, 'BANQUE.TYPES_APPROVISIONNEMENT', ['appro']) ? 'Appro_client'
+                            : this.calculService.matchesAny(normalized, 'BANQUE.TYPES_NIVELLEMENT', ['nivel']) ? 'nivellement'
                             : normalized.includes('regularis') ? 'régularisation_solde'
                             : rawType || 'ajustement';
 

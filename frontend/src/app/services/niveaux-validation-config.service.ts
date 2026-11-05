@@ -2,6 +2,7 @@ import { Injectable } from '@angular/core';
 import { HttpClient } from '@angular/common/http';
 import { Observable, BehaviorSubject, of } from 'rxjs';
 import { map, catchError, tap } from 'rxjs/operators';
+import { countriesMatch } from '../utils/country-codes.util';
 
 export interface NiveauTraitementConfig {
   valeur: string;
@@ -10,10 +11,22 @@ export interface NiveauTraitementConfig {
   description: string;
   statutAssocie: string;
   profilsAutorisesIds: number[];
+  /** Emails destinataires (TO) pour la notification « tous les services à OK » de ce niveau. */
+  destinatairesEmail?: string[];
+  /** Emails en copie (CC) de la notification de ce niveau. */
+  copieEmail?: string[];
+  /** Envoi automatique de l'email pour ce niveau (sans confirmation). */
+  envoiAutomatiqueEmail?: boolean;
 }
 
 export interface NiveauxValidationConfig {
   niveauxTraitement: NiveauTraitementConfig[];
+  /** @deprecated Anciens destinataires globaux (conservés pour compatibilité). */
+  destinatairesEmail?: string[];
+  /** @deprecated Ancienne copie globale (conservée pour compatibilité). */
+  copieEmail?: string[];
+  /** @deprecated Ancien envoi automatique global (conservé pour compatibilité). */
+  envoiAutomatiqueEmail?: boolean;
 }
 
 export interface NiveauxValidationConfigByCountry {
@@ -70,14 +83,38 @@ export class NiveauxValidationConfigService {
   /** Récupère la config pour un pays donné (GNL par défaut) */
   getConfigForPays(paysCode: string = 'GNL'): Observable<NiveauxValidationConfig> {
     return this.config$.pipe(
-      map(config => config[paysCode] || config['GNL'] || { niveauxTraitement: [] })
+      map(configs => {
+        const key = this.resolveConfigKey(configs, paysCode);
+        return (key ? configs[key] : configs['GNL']) || { niveauxTraitement: [] };
+      })
     );
   }
 
   /** Récupère la config synchrone pour un pays (utilisation immédiate) */
   getConfigForPaysSync(paysCode: string = 'GNL'): NiveauxValidationConfig {
-    const config = this.configSubject.value;
-    return config[paysCode] || config['GNL'] || { niveauxTraitement: [] };
+    const configs = this.configSubject.value;
+    const key = this.resolveConfigKey(configs, paysCode);
+    return (key ? configs[key] : configs['GNL']) || { niveauxTraitement: [] };
+  }
+
+  /**
+   * Retrouve la clé de configuration correspondant à un code ou un libellé pays.
+   * Les lignes de rapport utilisent souvent le nom complet (« Gabon ») alors que
+   * la configuration est enregistrée sous le code ISO (« GA »).
+   */
+  private resolveConfigKey(configs: NiveauxValidationConfigByCountry, paysCode: string): string | undefined {
+    const raw = (paysCode || '').trim();
+    if (!raw) {
+      return undefined;
+    }
+    if (configs[raw]) {
+      return raw;
+    }
+    const upper = raw.toUpperCase();
+    if (configs[upper]) {
+      return upper;
+    }
+    return Object.keys(configs).find(key => countriesMatch(key, raw));
   }
 
   /** Met à jour la config pour un pays */
@@ -85,6 +122,11 @@ export class NiveauxValidationConfigService {
     const current = { ...this.configSubject.value };
     current[paysCode] = config;
     this.saveToStorage(current);
+  }
+
+  /** Récupère toutes les configurations de niveaux de validation stockées (pour recherche globale). */
+  getAllConfigs(): any {
+    return this.configSubject.value;
   }
 
   /** Met à jour la config complète */

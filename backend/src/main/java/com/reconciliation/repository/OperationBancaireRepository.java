@@ -87,5 +87,16 @@ public interface OperationBancaireRepository extends JpaRepository<OperationBanc
     // Récupérer les statuts distincts
     @Query("SELECT DISTINCT o.statut FROM OperationBancaireEntity o WHERE o.statut IS NOT NULL ORDER BY o.statut")
     List<String> findDistinctStatuts();
+// Compter les opérations par agence, date et préfixe de référence
+    @Query("SELECT COUNT(o) FROM OperationBancaireEntity o WHERE o.agence = :agence " +
+            "AND CAST(o.dateOperation AS DATE) = :date " +
+            "AND o.reference LIKE :prefix%")
+    long countByAgenceAndDateOperationStartingWithAndReferenceStartingWith(
+            @Param("agence") String agence,
+            @Param("date") String date,
+            @Param("prefix") String prefix);
+    /**
+     * References deja enregistrees commencant par ce prefixe (compteur des references generees).
+     */
+    List<OperationBancaireEntity> findByReferenceStartingWith(String prefix);
 }
-

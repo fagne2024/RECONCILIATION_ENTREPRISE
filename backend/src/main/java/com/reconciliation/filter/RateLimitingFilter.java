@@ -7,6 +7,8 @@ import jakarta.servlet.FilterChain;
 import jakarta.servlet.ServletException;
 import jakarta.servlet.http.HttpServletRequest;
 import jakarta.servlet.http.HttpServletResponse;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.MediaType;
@@ -30,6 +32,8 @@ import java.util.concurrent.TimeUnit;
  */
 @Component
 public class RateLimitingFilter extends OncePerRequestFilter {
+
+    private static final Logger log = LoggerFactory.getLogger(RateLimitingFilter.class);
 
     // Cache pour stocker les compteurs de requêtes par clé (IP ou utilisateur)
     private final Cache<String, RateLimitingRequestCounter> requestCache;
@@ -138,7 +142,7 @@ public class RateLimitingFilter extends OncePerRequestFilter {
         String rateLimitKey = getRateLimitKey(request);
 
         // Vérifier les limites
-        if (!checkRateLimit(rateLimitKey, response)) {
+        if (!checkRateLimit(rateLimitKey, request, response)) {
             return; // La réponse d'erreur a déjà été envoyée
         }
 
@@ -225,7 +229,7 @@ public class RateLimitingFilter extends OncePerRequestFilter {
      * Vérifie si la requête respecte les limites de débit
      * Retourne true si la requête peut continuer, false sinon
      */
-    private boolean checkRateLimit(String key, HttpServletResponse response) throws IOException {
+    private boolean checkRateLimit(String key, HttpServletRequest request, HttpServletResponse response) throws IOException {
         RateLimitingRequestCounter counter = requestCache.get(key, k -> new RateLimitingRequestCounter());
 
         long currentTime = System.currentTimeMillis();
@@ -234,13 +238,19 @@ public class RateLimitingFilter extends OncePerRequestFilter {
         counter.cleanup(currentTime);
 
         // Vérifier la limite par minute
-        if (counter.getRequestsInLastMinute(currentTime) >= requestsPerMinute) {
+        int requestsLastMinute = counter.getRequestsInLastMinute(currentTime);
+        if (requestsLastMinute >= requestsPerMinute) {
+            // Trace exploitable : quelle URI tourne en rafale (diagnostic 429).
+            log.warn("RATE LIMIT [minute] rejette {} {} (cle={}, {} req/min, limite={})",
+                request.getMethod(), request.getRequestURI(), key, requestsLastMinute, requestsPerMinute);
             sendRateLimitError(response, "Trop de requêtes par minute", requestsPerMinute, "minute");
             return false;
         }
 
         // Vérifier la limite par heure
         if (counter.getRequestsInLastHour(currentTime) >= requestsPerHour) {
+            log.warn("RATE LIMIT [heure] rejette {} {} (cle={}, limite={}/h)",
+                request.getMethod(), request.getRequestURI(), key, requestsPerHour);
             sendRateLimitError(response, "Trop de requêtes par heure", requestsPerHour, "heure");
             return false;
         }

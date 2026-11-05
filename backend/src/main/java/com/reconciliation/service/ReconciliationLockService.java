@@ -244,35 +244,5 @@ public class ReconciliationLockService {
             return 0;
         }
     }
-    
-    /**
-     * Libère un verrou par jobId
-     * 
-     * @param jobId Identifiant du job
-     * @return true si le verrou a été libéré, false sinon
-     */
-    @Transactional
-    public boolean releaseLockByJobId(String jobId) {
-        try {
-            Optional<ReconciliationLock> lockOpt = lockRepository.findAll().stream()
-                .filter(lock -> jobId.equals(lock.getJobId()) && !lock.isExpired())
-                .findFirst();
-            
-            if (lockOpt.isPresent()) {
-                ReconciliationLock lock = lockOpt.get();
-                lockRepository.delete(lock);
-                log.info("✅ Verrou libéré par jobId: {}", jobId);
-                return true;
-            } else {
-                log.warn("⚠️ Aucun verrou actif trouvé pour jobId: {}", jobId);
-                return false;
-            }
-            
-        } catch (Exception e) {
-            log.error("❌ Erreur lors de la libération du verrou par jobId: jobId={}, error={}", 
-                jobId, e.getMessage(), e);
-            return false;
-        }
-    }
 }
 

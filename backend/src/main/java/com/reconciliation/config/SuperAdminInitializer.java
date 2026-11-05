@@ -1,6 +1,7 @@
 package com.reconciliation.config;
 
 import com.reconciliation.repository.UserRepository;
+import com.reconciliation.service.EmailService;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Value;
@@ -18,16 +19,17 @@ import org.springframework.stereotype.Component;
  * il administre la plateforme (entreprises, modules) mais n'a AUCUN acces aux
  * donnees metier (decision 9).
  *
- * La creation se fait uniquement via variables d'environnement, jamais via l'API :
+ * Comportement au premier demarrage :
  * <ul>
  *   <li>{@code SUPER_ADMIN_USERNAME} (defaut : {@code superadmin})</li>
- *   <li>{@code SUPER_ADMIN_PASSWORD} (obligatoire pour creer le compte)</li>
- *   <li>{@code SUPER_ADMIN_EMAIL} (optionnel)</li>
+ *   <li>{@code SUPER_ADMIN_PASSWORD} (defaut : {@code passer123}) — mot de passe
+ *       provisoire, le changement est OBLIGATOIRE a la premiere connexion.</li>
+ *   <li>{@code SUPER_ADMIN_EMAIL} (optionnel) : si configure et que le SMTP repond,
+ *       un email d'information est envoye (best-effort, jamais bloquant).</li>
  * </ul>
  *
- * Si le mot de passe n'est pas fourni, l'initialisation est simplement ignoree
- * (le reste de l'application fonctionne normalement). Aucun mot de passe n'est
- * jamais journalise.
+ * Le compte n'est cree qu'une seule fois (idempotence) : un compte plateforme
+ * existant n'est jamais modifie. Le mot de passe n'est jamais journalise.
  */
 @Component
 @Order(50)
@@ -38,11 +40,12 @@ public class SuperAdminInitializer implements ApplicationRunner {
     private final UserRepository userRepository;
     private final JdbcTemplate jdbcTemplate;
     private final PasswordEncoder passwordEncoder;
+    private final EmailService emailService;
 
     @Value("${app.super-admin.username:superadmin}")
     private String superAdminUsername;
 
-    @Value("${app.super-admin.password:}")
+    @Value("${app.super-admin.password:passer123}")
     private String superAdminPassword;
 
     @Value("${app.super-admin.email:}")
@@ -50,20 +53,22 @@ public class SuperAdminInitializer implements ApplicationRunner {
 
     public SuperAdminInitializer(UserRepository userRepository,
                                  JdbcTemplate jdbcTemplate,
-                                 PasswordEncoder passwordEncoder) {
+                                 PasswordEncoder passwordEncoder,
+                                 EmailService emailService) {
         this.userRepository = userRepository;
         this.jdbcTemplate = jdbcTemplate;
         this.passwordEncoder = passwordEncoder;
+        this.emailService = emailService;
     }
 
     @Override
     public void run(ApplicationArguments args) {
-        if (superAdminPassword == null || superAdminPassword.isBlank()) {
-            log.info("SUPER_ADMIN non configure (SUPER_ADMIN_PASSWORD absent) : initialisation ignoree.");
-            return;
-        }
         if (superAdminUsername == null || superAdminUsername.isBlank()) {
             log.warn("SUPER_ADMIN_USERNAME vide : initialisation du compte plateforme ignoree.");
+            return;
+        }
+        if (superAdminPassword == null || superAdminPassword.isBlank()) {
+            log.info("SUPER_ADMIN_PASSWORD absent : initialisation du compte plateforme ignoree.");
             return;
         }
 
@@ -81,7 +86,7 @@ public class SuperAdminInitializer implements ApplicationRunner {
             }
 
             String email = (superAdminEmail == null || superAdminEmail.isBlank()) ? null : superAdminEmail.trim();
-            String encodedPassword = passwordEncoder.encode(superAdminPassword);
+            String encodedPassword = passwordEncoder.encode(superAdminPassword.trim());
 
             jdbcTemplate.update(
                 "INSERT INTO `user` "
@@ -91,8 +96,20 @@ public class SuperAdminInitializer implements ApplicationRunner {
                     + "VALUES (?, ?, ?, NULL, 1, 1, 0, 0, NULL, 0, NULL, NULL)",
                 username, encodedPassword, email);
 
-            log.info("Compte SUPER_ADMIN '{}' initialise (entreprise_id NULL, changement de mot de passe requis).",
-                username);
+            log.info("Compte SUPER_ADMIN '{}' cree (mot de passe provisoire, changement OBLIGATOIRE "
+                + "a la premiere connexion).", username);
+
+            // Email d'information : best-effort, jamais bloquant (le mot de passe par defaut
+            // est connu de l'operateur — aucun risque de compte inaccessible).
+            if (email != null) {
+                try {
+                    emailService.sendPasswordEmail(email, username, superAdminPassword.trim());
+                    log.info("Email d'information envoye a '{}'.", email);
+                } catch (Exception e) {
+                    log.warn("Email d'information non envoye a '{}' (SMTP non configure ou inaccessible) : {}",
+                        email, e.getMessage());
+                }
+            }
         } catch (Exception e) {
             // Ne jamais empecher le demarrage pour ce compte optionnel.
             log.error("Echec de l'initialisation du SUPER_ADMIN '{}' : {}", username, e.getMessage());

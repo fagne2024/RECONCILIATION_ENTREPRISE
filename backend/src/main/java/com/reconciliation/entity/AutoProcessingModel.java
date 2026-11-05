@@ -80,7 +80,8 @@ public class AutoProcessingModel {
     public enum FileType {
         BO("bo"),
         PARTNER("partner"),
-        BOTH("both");
+        BOTH("both"),
+        OPERATION("operation");
         
         private final String value;
         

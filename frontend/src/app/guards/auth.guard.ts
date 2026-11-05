@@ -22,6 +22,14 @@ export class AuthGuard implements CanActivate {
     const username = this.appState.getUsername();
 
     if (isAuthenticated && userRights && username) {
+      // Mot de passe provisoire : l'accès à l'application est bloqué jusqu'au
+      // changement (l'écran /change-password reste accessible, ainsi que /login).
+      if (this.appState.isMustChangePassword()
+          && !state.url.startsWith('/change-password')
+          && !state.url.startsWith('/login')) {
+        this.router.navigate(['/change-password']);
+        return false;
+      }
       // L'utilisateur est connecté avec un token JWT, autoriser l'accès
       return true;
     }
