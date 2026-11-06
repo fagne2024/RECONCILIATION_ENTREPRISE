@@ -198,6 +198,9 @@ export class BanqueComponent implements OnInit {
   // Traitement Automatique (Relevé)
   showReleveAutoTreatment = false;
 
+  // Traitement Automatique (Suivi compense OP)
+  showSuiviCompenseAutoTreatment = false;
+
   // Création d'opération bancaire
   showCreateOperationPopup = false;
   creatingOperation = false;
@@ -1826,6 +1829,11 @@ export class BanqueComponent implements OnInit {
   onOpAutoTreatmentResult(event: { rows: Record<string, any>[]; outputName: string; lineCount: number; modelName: string }) {
     console.log('[OP AUTO TREATMENT] Result:', event);
     void this.promptLoadTreatedData(event, 'operations');
+  }
+
+  // Traitement Automatique (Suivi compense OP) — masqué par défaut
+  toggleSuiviCompenseAutoTreatment() {
+    this.showSuiviCompenseAutoTreatment = !this.showSuiviCompenseAutoTreatment;
   }
 
   // Traitement Automatique (Relevé)
@@ -4027,6 +4035,62 @@ export class BanqueComponent implements OnInit {
       montantMax: null
     };
     this.applyReconFilters();
+  }
+
+  // ---- Pagination unifiée (composant ds-pagination, comme Suivi compense OP) ----
+  get reconCurrentPage(): number {
+    switch (this.reconView) {
+      case 'operation': return this.reconOpPage;
+      case 'releve': return this.reconRevPage;
+      case 'corr_operation': return this.reconCorrOpPage;
+      default: return this.reconCorrRevPage;
+    }
+  }
+
+  get reconCurrentTotalPages(): number {
+    switch (this.reconView) {
+      case 'operation': return this.reconOpTotalPages;
+      case 'releve': return this.reconRevTotalPages;
+      case 'corr_operation': return this.reconCorrOpTotalPages;
+      default: return this.reconCorrRevTotalPages;
+    }
+  }
+
+  get reconCurrentTotalItems(): number {
+    switch (this.reconView) {
+      case 'operation': return this.filteredLeftOps.length;
+      case 'releve': return this.filteredRightReleves.length;
+      case 'corr_operation': return this.filteredMatchedOps.length;
+      default: return this.filteredMatchedReleves.length;
+    }
+  }
+
+  reconSetPageSize(size: number) {
+    this.reconPageSize = size;
+    this.onReconPageSizeChange();
+  }
+
+  releveSetPage(page: number) {
+    this.relevePage = Math.min(Math.max(1, page), this.releveTotalPages);
+  }
+
+  releveSetPageSize(size: number) {
+    this.relevePageSize = size;
+    this.relevePage = 1;
+  }
+
+  comptesGoToPage(page: number) {
+    this.comptesListPage = Math.min(Math.max(1, page), this.comptesListTotalPages);
+  }
+
+  comptesSetPageSize(size: number) {
+    this.comptesListPageSize = size;
+    this.onComptesListPageSizeChange();
+  }
+
+  compteOpsSetPageSize(size: number) {
+    this.compteOpsPageSize = size;
+    this.onCompteOpsPageSizeChange();
   }
 
   onReconPageSizeChange() {

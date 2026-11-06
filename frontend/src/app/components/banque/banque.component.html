@@ -17,6 +17,7 @@
     <div class="ph-banque-left">
       <div class="ph-eyebrow"><span></span>{{ 'TBL.bank' | translate }}</div>
       <h1 class="ph-title-banque">{{ 'BQ.Vuedensembledes' | translate }} <em>{{ 'BQ.Opérationsbancaires' | translate }}</em></h1>
+      <p class="ph-subtitle">{{ 'BQ.Gestiondesopérationsbancairesetdescomptes' | translate }}</p>
     </div>
     <div class="ph-banque-right">
       <div class="hero-kpi-strip">
@@ -40,55 +41,50 @@
 
   <div class="main">
   <div class="banque-container">
-  <div class="banque-header">
-    <h1>{{ 'BQ.Modulebanque' | translate }}</h1>
-    <p class="banque-description">{{ 'BQ.Gestiondesopérationsbancairesetdescomptes' | translate }}</p>
-  </div>
-
   <div class="banque-content">
     <div class="banque-section">
       <h2>{{ 'BQ.Tableaudebordbancaire' | translate }}</h2>
       <div class="banque-stats">
-        <div class="stat-card">
+        <div class="stat-card stat-card--money">
           <div class="stat-icon"><i class="fas fa-coins"></i></div>
           <div class="stat-info">
             <h3>{{ 'BQ.Soldetotal_1' | translate }}</h3>
-            <p class="stat-value">{{ totalSoldeComptes | number:'1.0-0' }} FCFA</p>
+            <p class="stat-value ds-num">{{ totalSoldeComptes | number:'1.0-0' }} <span class="stat-unit">FCFA</span></p>
           </div>
         </div>
         <div class="stat-card">
           <div class="stat-icon"><i class="fas fa-chart-line"></i></div>
           <div class="stat-info">
             <h3>{{ 'BQ.Opérationsbancaires_1' | translate }}</h3>
-            <p class="stat-value">{{ totalOperations }}</p>
+            <p class="stat-value ds-num">{{ totalOperations | number:'1.0-0' }}</p>
           </div>
         </div>
         <div class="stat-card">
-          <div class="stat-icon"><i class="fas fa-university"></i></div>
+          <div class="stat-icon"><i class="fas fa-building-columns"></i></div>
           <div class="stat-info">
             <h3>{{ 'TBL.accounts' | translate }}</h3>
-            <p class="stat-value">{{ totalComptes }}</p>
+            <p class="stat-value ds-num">{{ totalComptes | number:'1.0-0' }}</p>
           </div>
         </div>
-        <div class="stat-card warning">
+        <div class="stat-card stat-card--warning">
           <div class="stat-icon"><i class="fas fa-clock"></i></div>
           <div class="stat-info">
             <h3>{{ 'BQ.Relevébancaire' | translate }}</h3>
-            <p class="stat-value">{{ totalReleveLignes }}</p>
+            <p class="stat-value ds-num">{{ totalReleveLignes | number:'1.0-0' }}</p>
           </div>
         </div>
-        <div class="stat-card danger">
-          <div class="stat-icon">🎫</div>
+        <div class="stat-card stat-card--danger">
+          <div class="stat-icon"><i class="fas fa-ticket"></i></div>
           <div class="stat-info">
             <h3>{{ 'BQ.Ticketsàcréer' | translate }}</h3>
-            <p class="stat-value">{{ totalTicketsACreer }}</p>
+            <p class="stat-value ds-num">{{ totalTicketsACreer | number:'1.0-0' }}</p>
           </div>
         </div>
         <div class="stat-card">
-          <div class="stat-icon">🧩</div>
+          <div class="stat-icon"><i class="fas fa-puzzle-piece"></i></div>
           <div class="stat-info">
             <h3>{{ 'BQ.Suspens' | translate }}</h3>
-            <p class="stat-value">{{ totalSuspens }}</p>
+            <p class="stat-value ds-num">{{ totalSuspens | number:'1.0-0' }}</p>
           </div>
         </div>
       </div>
@@ -97,33 +93,33 @@
     <div class="banque-section">
       <h2>{{ 'BQ.Fonctionnalités' | translate }}</h2>
       <div class="banque-features">
-        <div class="feature-card" (click)="highlightBankAccounts()" (dblclick)="goToComptes()" title="{{ 'BQ.Cliquezpourvoirlescomptesbanqueicidoublecliquezpourouvrirlapagecomptes' | translate }}">
-          <div class="feature-icon">💳</div>
+        <div class="feature-card" role="button" tabindex="0" (click)="highlightBankAccounts()" (dblclick)="goToComptes()" (keydown.enter)="goToComptes()" title="{{ 'BQ.Cliquezpourvoirlescomptesbanqueicidoublecliquezpourouvrirlapagecomptes' | translate }}">
+          <div class="feature-icon"><i class="fas fa-credit-card"></i></div>
           <h3>{{ 'CPT.Gestiondescomptes' | translate }}</h3>
           <p>{{ 'BQ.Créeretgérerlescomptesbancaires' | translate }}</p>
         </div>
-        <div class="feature-card" (click)="showOperationsTable()">
-          <div class="feature-icon">💸</div>
+        <div class="feature-card" role="button" tabindex="0" (click)="showOperationsTable()" (keydown.enter)="showOperationsTable()">
+          <div class="feature-icon"><i class="fas fa-arrow-right-arrow-left"></i></div>
           <h3>{{ 'TBL.operations' | translate }}</h3>
           <p>{{ 'BQ.Effectuerdesvirementsetpaiements' | translate }}</p>
         </div>
-        <div class="feature-card" (click)="openRapports()">
-          <div class="feature-icon"><i class="fas fa-clipboard-list"></i></div>
+        <div class="feature-card" role="button" tabindex="0" (click)="openRapports()" (keydown.enter)="openRapports()">
+          <div class="feature-icon"><i class="fas fa-file-invoice"></i></div>
           <h3>{{ 'BQ.Relevébancaire_1' | translate }}</h3>
           <p>{{ 'BQ.Générerunrelevébancaire' | translate }}</p>
         </div>
-        <div class="feature-card" (click)="openSuiviCompense()">
-          <div class="feature-icon">🧾</div>
+        <div class="feature-card" role="button" tabindex="0" (click)="openSuiviCompense()" (keydown.enter)="openSuiviCompense()">
+          <div class="feature-icon"><i class="fas fa-receipt"></i></div>
           <h3>Suivi compense OP</h3>
           <p>Suivre les compenses OP importées</p>
         </div>
-        <div class="feature-card" (click)="openSecurite()">
-          <div class="feature-icon">🔁</div>
+        <div class="feature-card" role="button" tabindex="0" (click)="openSecurite()" (keydown.enter)="openSecurite()">
+          <div class="feature-icon"><i class="fas fa-link"></i></div>
           <h3>{{ 'BQ.Réconciliationbanque' | translate }}</h3>
           <p>{{ 'BQ.Lancerlaréconciliationbancaire' | translate }}</p>
         </div>
-        <div class="feature-card" (click)="openAutoTreatment()">
-          <div class="feature-icon">🪄</div>
+        <div class="feature-card" role="button" tabindex="0" (click)="openAutoTreatment()" (keydown.enter)="openAutoTreatment()">
+          <div class="feature-icon"><i class="fas fa-wand-magic-sparkles"></i></div>
           <h3>{{ 'BQ.TraitementAutomatiqueUnifie' | translate }}</h3>
           <p>{{ 'BQ.Traiterunfichieretchoisirladestination' | translate }}</p>
         </div>
@@ -169,19 +165,24 @@
       </div>
 
       <div class="auto-treatment-section" style="margin-bottom: 16px;">
-
-        <app-file-upload
-
-          [embedTraitementSection]="true"
-
-          [suppressEmbedSuccessPopup]="true"
-
-          (embedTraitementProgress)="onSuiviCompenseAutoTreatmentProgress($event)"
-
-          (embedTraitementResult)="onSuiviCompenseAutoTreatmentResult($event)">
-
-        </app-file-upload>
-
+        <div class="section-header">
+          <h4>
+            <i class="fas fa-magic"></i>{{ 'TRT.TraitementAutomatique' | translate }}
+            <button type="button" class="ds-btn ds-btn--secondary btn btn-sm btn-outline-info" (click)="toggleSuiviCompenseAutoTreatment()">
+              <i class="fas fa-eye" *ngIf="!showSuiviCompenseAutoTreatment"></i>
+              <i class="fas fa-eye-slash" *ngIf="showSuiviCompenseAutoTreatment"></i>
+              {{ (showSuiviCompenseAutoTreatment ? 'TRT.Hide' : 'TRT.Show') | translate }}
+            </button>
+          </h4>
+        </div>
+        <div *ngIf="showSuiviCompenseAutoTreatment" class="section-content auto-treatment-content">
+          <app-file-upload
+            [embedTraitementSection]="true"
+            [suppressEmbedSuccessPopup]="true"
+            (embedTraitementProgress)="onSuiviCompenseAutoTreatmentProgress($event)"
+            (embedTraitementResult)="onSuiviCompenseAutoTreatmentResult($event)">
+          </app-file-upload>
+        </div>
       </div>
 
       <p *ngIf="suiviCompenseMessage" [class.text-danger]="suiviCompenseMessageKind === 'error'" [class.text-success]="suiviCompenseMessageKind === 'success'">{{ suiviCompenseMessage }}</p>
@@ -393,22 +394,7 @@
           </table>
         </div>
         <div class="pagination small">
-          <div class="btn-group">
-            <button class="ds-btn ds-btn--secondary" type="button" (click)="relevePage = relevePage - 1" [disabled]="relevePage===1"><i class="fas fa-chevron-left"></i></button>
-            <button class="ds-btn ds-btn--secondary" type="button" (click)="relevePage = relevePage + 1" [disabled]="relevePage >= releveTotalPages"><i class="fas fa-chevron-right"></i></button>
-          </div>
-          <span class="muted">{{ 'BQ.Page' | translate }} {{ relevePage }} / {{ releveTotalPages }}</span>
-          <span class="muted" style="margin-left: 16px;">
-            <i class="fas fa-list"></i>
-            {{ filteredReleveRowsForImport.length }} {{ 'BQ.Lignesautotal' | translate }}
-          </span>
-          <select class="ds-select" [(ngModel)]="relevePageSize" (change)="relevePage = 1">
-            <option [value]="5">5</option>
-            <option [value]="10">10</option>
-            <option [value]="20">20</option>
-            <option [value]="50">50</option>
-          </select>
-          <div class="filter-group" style="margin-left: 8px;">
+          <div class="filter-group">
             <label>{{ 'TBL.reconciliationStatus' | translate }}</label>
             <select class="ds-select" [(ngModel)]="releveStatusFilter" (change)="relevePage = 1">
               <option value="">{{ 'FILT.all' | translate }}</option>
@@ -416,6 +402,16 @@
               <option value="KO">KO</option>
             </select>
           </div>
+          <ds-pagination
+            [page]="relevePage"
+            [pageCount]="releveTotalPages"
+            [totalItems]="filteredReleveRowsForImport.length"
+            [pageSize]="relevePageSize"
+            [pageSizes]="[5, 10, 20, 50]"
+            [itemLabel]="'BQ.Lignesautotal' | translate"
+            (pageChange)="releveSetPage($event)"
+            (pageSizeChange)="releveSetPageSize($event)">
+          </ds-pagination>
         </div>
       </div>
     </div>
@@ -765,86 +761,20 @@
           </tbody>
         </table>
 
-        <!-- Pagination améliorée pour la réconciliation -->
-        <div class="pagination-enhanced" *ngIf="reconPays">
-          <!-- Informations de pagination -->
-          <div class="pagination-info">
-            <i class="fas fa-info-circle"></i>
-            <span>{{ getReconPaginationInfo() }}</span>
-          </div>
-          
-          <!-- Navigation de pagination -->
-          <div class="pagination-nav">
-            <div class="btn-group">
-              <!-- Première page -->
-              <button class="ds-btn ds-btn--secondary" type="button" (click)="reconGoToFirstPage()" 
-                      [disabled]="(reconView==='operation' ? reconOpPage===1 : reconView==='releve' ? reconRevPage===1 : reconView==='corr_operation' ? reconCorrOpPage===1 : reconCorrRevPage===1)"
-                      title="{{ 'PAG.first' | translate }}">
-                <i class="fas fa-angle-double-left"></i>
-              </button>
-              
-              <!-- Page précédente -->
-              <button class="ds-btn ds-btn--secondary" type="button" (click)="reconPrevPage()" 
-                      [disabled]="(reconView==='operation' ? reconOpPage===1 : reconView==='releve' ? reconRevPage===1 : reconView==='corr_operation' ? reconCorrOpPage===1 : reconCorrRevPage===1)"
-                      title="{{ 'PAG.previousPage' | translate }}">
-                <i class="fas fa-chevron-left"></i>
-              </button>
-            </div>
-            
-            <!-- Numéros de page -->
-            <div class="page-numbers">
-              <button type="button" *ngFor="let page of getReconPageNumbers()" 
-                      (click)="reconGoToPage(page)"
-                      [disabled]="(reconView==='operation' ? filteredLeftOps.length===0 : reconView==='releve' ? filteredRightReleves.length===0 : reconView==='corr_operation' ? filteredMatchedOps.length===0 : filteredMatchedReleves.length===0)"
-                      [class.active]="page === (reconView==='operation' ? reconOpPage : (reconView==='releve' ? reconRevPage : (reconView==='corr_operation' ? reconCorrOpPage : reconCorrRevPage)))"
-                      class="ds-btn ds-btn--secondary page-number">
-                {{ page }}
-              </button>
-            </div>
-            
-            <div class="btn-group">
-              <!-- Page suivante -->
-              <button class="ds-btn ds-btn--secondary" type="button" (click)="reconNextPage()" 
-                      [disabled]="(reconView==='operation' ? reconOpPage===reconOpTotalPages : (reconView==='releve' ? reconRevPage===reconRevTotalPages : (reconView==='corr_operation' ? reconCorrOpPage===reconCorrOpTotalPages : reconCorrRevPage===reconCorrRevTotalPages)))"
-                      title="{{ 'PAG.nextPage' | translate }}">
-                <i class="fas fa-chevron-right"></i>
-              </button>
-              
-              <!-- Dernière page -->
-              <button class="ds-btn ds-btn--secondary" type="button" (click)="reconGoToLastPage()" 
-                      [disabled]="(reconView==='operation' ? reconOpPage===reconOpTotalPages : (reconView==='releve' ? reconRevPage===reconRevTotalPages : (reconView==='corr_operation' ? reconCorrOpPage===reconCorrOpTotalPages : reconCorrRevPage===reconCorrRevTotalPages)))"
-                      title="{{ 'PAG.last' | translate }}">
-                <i class="fas fa-angle-double-right"></i>
-              </button>
-            </div>
-          </div>
-          
-          <!-- Informations de pagination -->
-          <div class="pagination-info">
-            <i class="fas fa-info-circle"></i>
-            <span *ngIf="reconView==='operation'">{{ filteredLeftOps.length }} {{ 'BQ.Lignesautotal' | translate }}</span>
-            <span *ngIf="reconView==='releve'">{{ filteredRightReleves.length }} {{ 'BQ.Lignesautotal' | translate }}</span>
-            <span *ngIf="reconView==='corr_operation'">{{ filteredMatchedOps.length }} {{ 'BQ.Correspondances' | translate }}</span>
-            <span *ngIf="reconView==='corr_releve'">{{ filteredMatchedReleves.length }} {{ 'BQ.Correspondances' | translate }}</span>
-          </div>
-          
-          <!-- Total correspondances (OK définitifs) -->
-          <div class="pagination-info" *ngIf="totalOkDefinitifs > 0">
-            <i class="fas fa-list-check"></i>
-            <span>{{ 'BQ.Totalcorrespondances' | translate }} {{ totalOkDefinitifs }}</span>
-          </div>
-          
-          <!-- Sélecteur de taille de page -->
-          <div class="page-size-selector">
-            <label>{{ 'ACT.show' | translate }}</label>
-            <select class="ds-select" [(ngModel)]="reconPageSize" (change)="onReconPageSizeChange()">
-              <option [value]="5">{{ 'BQ.5lignes' | translate }}</option>
-              <option [value]="10">{{ 'BQ.10lignes' | translate }}</option>
-              <option [value]="20">{{ 'BQ.20lignes' | translate }}</option>
-              <option [value]="50">{{ 'BQ.50lignes' | translate }}</option>
-              <option [value]="100">{{ 'BQ.100lignes' | translate }}</option>
-            </select>
-          </div>
+        <div class="pagination small" *ngIf="reconPays">
+          <ds-pagination
+            [page]="reconCurrentPage"
+            [pageCount]="reconCurrentTotalPages"
+            [totalItems]="reconCurrentTotalItems"
+            [pageSize]="reconPageSize"
+            [pageSizes]="[5, 10, 20, 50, 100]"
+            [itemLabel]="'BQ.Lignesautotal' | translate"
+            (pageChange)="reconGoToPage($event)"
+            (pageSizeChange)="reconSetPageSize($event)">
+          </ds-pagination>
+          <p class="muted" *ngIf="totalOkDefinitifs > 0">
+            {{ 'BQ.Totalcorrespondances' | translate }} {{ totalOkDefinitifs }}
+          </p>
         </div>
       </div>
       <div *ngIf="!reconDiffRows.length" class="empty-row">
@@ -947,24 +877,16 @@
           </tbody>
         </table>
         <div class="pagination small" *ngIf="comptesBanqueDisplayed.length > 0">
-          <div class="btn-group">
-            <button class="ds-btn ds-btn--secondary" type="button" (click)="comptesListFirstPage()" [disabled]="comptesListPage===1" title="{{ 'PAG.first' | translate }}"><i class="fas fa-angle-double-left"></i></button>
-            <button class="ds-btn ds-btn--secondary" type="button" (click)="comptesListPrevPage()" [disabled]="comptesListPage===1" title="{{ 'PAG.previousPage' | translate }}"><i class="fas fa-chevron-left"></i></button>
-            <button class="ds-btn ds-btn--secondary" type="button" (click)="comptesListNextPage()" [disabled]="comptesListPage>=comptesListTotalPages" title="{{ 'PAG.nextPage' | translate }}"><i class="fas fa-chevron-right"></i></button>
-            <button class="ds-btn ds-btn--secondary" type="button" (click)="comptesListLastPage()" [disabled]="comptesListPage>=comptesListTotalPages" title="{{ 'PAG.last' | translate }}"><i class="fas fa-angle-double-right"></i></button>
-          </div>
-          <span class="muted">
-            {{ 'BQ.Page' | translate }} {{ comptesListPage }} / {{ comptesListTotalPages }} 
-            ({{ comptesListStartIndex }}-{{ comptesListEndIndex }} {{ 'CPT.Sur' | translate }} {{ comptesBanqueDisplayed.length }})
-          </span>
-          <select class="ds-select" [(ngModel)]="comptesListPageSize" (change)="onComptesListPageSizeChange()">
-            <option [value]="5">5</option>
-            <option [value]="7">7</option>
-            <option [value]="10">10</option>
-            <option [value]="20">20</option>
-            <option [value]="50">50</option>
-            <option [value]="100">100</option>
-          </select>
+          <ds-pagination
+            [page]="comptesListPage"
+            [pageCount]="comptesListTotalPages"
+            [totalItems]="comptesBanqueDisplayed.length"
+            [pageSize]="comptesListPageSize"
+            [pageSizes]="[5, 7, 10, 20, 50, 100]"
+            [itemLabel]="'TBL.accounts' | translate"
+            (pageChange)="comptesGoToPage($event)"
+            (pageSizeChange)="comptesSetPageSize($event)">
+          </ds-pagination>
         </div>
       </div>
     </div>
@@ -1049,12 +971,17 @@
             <strong>{{ 'BQ.Soldedeclôture' | translate }}</strong>
             <span class="balance-highlight" style="background:#FFF3CD; padding:4px 8px; border-radius:6px; font-weight:bold;">{{ compteReleveSoldeCloture !== null ? (compteReleveSoldeCloture | number:'1.0-0') : '-' }}</span>
           </div>
-          <div class="pagination" *ngIf="compteOpsTotalPages > 1">
-            <button class="ds-btn ds-btn--secondary" type="button" (click)="compteOpsPrevPage()" [disabled]="compteOpsPage===1"><i class="fas fa-chevron-left"></i>{{ 'PAG.previous' | translate }}</button>
-            <div class="pagination-indicators">
-              <span *ngFor="let page of getCompteOpsVisiblePages()" class="page-indicator" [class.active]="compteOpsPage === page" (click)="compteOpsGoToPage(page)">{{ page }}</span>
-            </div>
-            <button class="ds-btn ds-btn--secondary" type="button" (click)="compteOpsNextPage()" [disabled]="compteOpsPage===compteOpsTotalPages">{{ 'PAG.next' | translate }}<i class="fas fa-chevron-right"></i></button>
+          <div class="pagination small" *ngIf="compteOpsFiltered.length > 0">
+            <ds-pagination
+              [page]="compteOpsPage"
+              [pageCount]="compteOpsTotalPages"
+              [totalItems]="compteOpsFiltered.length"
+              [pageSize]="compteOpsPageSize"
+              [pageSizes]="[10, 20, 50]"
+              [itemLabel]="'TBL.operations' | translate"
+              (pageChange)="compteOpsGoToPage($event)"
+              (pageSizeChange)="compteOpsSetPageSize($event)">
+            </ds-pagination>
           </div>
         </div>
       </div>
