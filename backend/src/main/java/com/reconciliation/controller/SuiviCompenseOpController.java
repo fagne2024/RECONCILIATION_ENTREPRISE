@@ -40,10 +40,12 @@ public class SuiviCompenseOpController {
             for (SuiviCompenseOpEntity e : rows) {
                 e.setSourceFilename(file.getOriginalFilename());
                 e.setUploadedAt(now);
-                e.setDedupKey(com.reconciliation.util.BankingDedupKey.of(
-                        e.getDateOperation(), e.getCodeAgence(), e.getBanque(), e.getCompteBancaire(),
-                        e.getMontant(), e.getModePaiement(), e.getReference(), e.getIdTicket(),
-                        e.getService(), e.getReseau()));
+                // Doublon : la référence ; sans référence, date + agence + montant + banque
+                String ref = e.getReference();
+                e.setDedupKey(ref != null && !ref.isBlank()
+                        ? com.reconciliation.util.BankingDedupKey.of("REF", ref)
+                        : com.reconciliation.util.BankingDedupKey.of("AMT", e.getDateOperation(),
+                                e.getCodeAgence(), e.getMontant(), e.getBanque()));
                 if (candidates.putIfAbsent(e.getDedupKey(), e) != null) {
                     duplicates++;
                 }

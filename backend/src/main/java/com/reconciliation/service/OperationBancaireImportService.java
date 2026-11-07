@@ -108,9 +108,9 @@ public class OperationBancaireImportService {
 
                     String statut = getString(row, idx.get("statut"));
                     e.setStatut((statut == null || statut.isBlank()) ? "En attente" : statut);
-                    // Clé métier (la référence générée n'en fait pas partie)
-                    e.setDedupKey(BankingDedupKey.of(dateOp, agence, typeOperation, montant,
-                            e.getCompteADebiter(), e.getNomBeneficiaire(), e.getIdGlpi(), fileReference));
+                    // Clé de doublon : référence du fichier si elle existe ; sinon agence + date + montant
+                    // (cas des compensations, qui n'ont pas de référence). La référence générée n'en fait pas partie.
+                    e.setDedupKey(operationDedupKey(fileReference, agence, typeOperation, dateOp, montant));
                     candidates.add(e);
                 } catch (Exception ex) {
                     result.errors.add("Ligne " + (r + 1) + ": " + ex.getMessage());
@@ -137,6 +137,20 @@ public class OperationBancaireImportService {
             }
             return result;
         }
+    }
+
+    /**
+     * Clé de doublon d'une opération : la référence du fichier quand elle est renseignée,
+     * sinon agence + type + date + montant (les compensations n'ont pas de référence).
+     * Le fichier d'origine n'entre pas dans la clé : un même mouvement importé depuis un autre fichier reste détecté.
+     */
+    static String operationDedupKey(String fileReference, String agence, String typeOperation,
+                                    LocalDateTime dateOp, Double montant) {
+        if (fileReference != null && !fileReference.isBlank()) {
+            return BankingDedupKey.of("REF", fileReference.trim());
+        }
+        return BankingDedupKey.of("AMT", agence, typeOperation,
+                dateOp == null ? null : dateOp.toLocalDate(), montant);
     }
 
     /**

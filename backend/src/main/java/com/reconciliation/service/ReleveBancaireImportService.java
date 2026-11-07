@@ -163,7 +163,8 @@ public class ReleveBancaireImportService {
         return t;
     }
 
-    private static String buildDedupKey(String numeroCompte, LocalDate dateComptable, LocalDate dateValeur, String libelle, Double montant) {
+    /** Clé de doublon d'une ligne de relevé (partagée par l'import et la saisie manuelle). */
+    public static String buildDedupKey(String numeroCompte, LocalDate dateComptable, LocalDate dateValeur, String libelle, Double montant) {
         String num = safe(numeroCompte);
         String dc = safeDate(dateComptable);
         String dv = safeDate(dateValeur);

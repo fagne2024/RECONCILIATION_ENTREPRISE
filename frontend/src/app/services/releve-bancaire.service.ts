@@ -58,6 +58,11 @@ export class ReleveBancaireService {
     return this.http.get<any>(`${this.apiUrl}/list`, { params, headers: this.buildContextHeaders(moduleContext) });
   }
 
+  /** Saisie manuelle d'une ligne de relevé (409 si la ligne existe déjà). */
+  create(payload: any): Observable<any> {
+    return this.http.post<any>(this.apiUrl, payload);
+  }
+
   update(id: number, payload: Partial<ReleveBancaireRow>): Observable<ReleveBancaireRow> {
     return this.http.put<ReleveBancaireRow>(`${this.apiUrl}/${id}`, payload);
   }

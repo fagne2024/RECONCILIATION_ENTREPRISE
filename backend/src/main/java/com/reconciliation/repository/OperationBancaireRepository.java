@@ -83,6 +83,15 @@ public interface OperationBancaireRepository extends JpaRepository<OperationBanc
     // Récupérer les types d'opération distincts
     @Query("SELECT DISTINCT o.typeOperation FROM OperationBancaireEntity o WHERE o.typeOperation IS NOT NULL ORDER BY o.typeOperation")
     List<String> findDistinctTypesOperation();
+
+    // Banques (colonne bo) distinctes, pour la liste de la colonne « banque corrigée »
+    @Query("SELECT DISTINCT o.bo FROM OperationBancaireEntity o WHERE o.bo IS NOT NULL AND o.bo <> '' ORDER BY o.bo")
+    List<String> findDistinctBo();
+
+    // Banques (colonne bo) distinctes d'un pays donné
+    // Valeurs en majuscules : nom du pays et/ou code pays (pays ou codePays de l'opération)
+    @Query("SELECT DISTINCT o.bo FROM OperationBancaireEntity o WHERE o.bo IS NOT NULL AND o.bo <> '' AND (UPPER(o.pays) IN :values OR UPPER(o.codePays) IN :values) ORDER BY o.bo")
+    List<String> findDistinctBoByPays(@Param("values") java.util.Collection<String> values);
     
     // Récupérer les statuts distincts
     @Query("SELECT DISTINCT o.statut FROM OperationBancaireEntity o WHERE o.statut IS NOT NULL ORDER BY o.statut")

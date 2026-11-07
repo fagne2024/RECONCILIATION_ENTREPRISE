@@ -181,5 +181,10 @@ export class OperationBancaireService {
     getDistinctTypesOperation(): Observable<string[]> {
         return this.http.get<string[]>(`${this.apiUrl}/type-operation/list`);
     }
+
+    // Récupérer les banques (colonne bo) déjà présentes sur les opérations
+    getDistinctBanques(paysValues: string[]): Observable<string[]> {
+        return this.http.get<string[]>(`${this.apiUrl}/bo/list`, { params: { pays: paysValues } });
+    }
 }
 

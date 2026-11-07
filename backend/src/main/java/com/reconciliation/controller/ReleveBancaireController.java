@@ -190,6 +190,41 @@ public class ReleveBancaireController {
         return ResponseEntity.ok(result);
     }
 
+    /**
+     * Saisie manuelle d'une ligne de relevé (formulaire « Créer une opération bancaire »).
+     * Refuse une ligne déjà présente (même clé de doublon que l'import).
+     */
+    @PostMapping
+    public ResponseEntity<?> create(@RequestBody com.reconciliation.entity.ReleveBancaireEntity payload) {
+        if (payload.getNumeroCompte() == null || payload.getNumeroCompte().isBlank()) {
+            return ResponseEntity.badRequest().body("numeroCompte requis");
+        }
+        if (payload.getDateComptable() == null) {
+            return ResponseEntity.badRequest().body("dateComptable requise");
+        }
+        if (payload.getDateValeur() == null) {
+            payload.setDateValeur(payload.getDateComptable());
+        }
+        String key = com.reconciliation.service.ReleveBancaireImportService.buildDedupKey(
+                payload.getNumeroCompte(), payload.getDateComptable(), payload.getDateValeur(),
+                payload.getLibelle(), payload.getMontant());
+        if (!repository.findByDedupKeyIn(java.util.Set.of(key)).isEmpty()) {
+            return ResponseEntity.status(org.springframework.http.HttpStatus.CONFLICT)
+                    .body("Cette ligne de relevé existe déjà (doublon).");
+        }
+        payload.setId(null);
+        payload.setDedupKey(key);
+        payload.setUploadedAt(java.time.LocalDateTime.now());
+        payload.setSourceFilename("saisie manuelle");
+        if (payload.getBatchId() == null || payload.getBatchId().isBlank()) {
+            payload.setBatchId("SAISIE-" + java.util.UUID.randomUUID());
+        }
+        if (payload.getReconStatus() == null || payload.getReconStatus().isBlank()) {
+            payload.setReconStatus("KO");
+        }
+        return ResponseEntity.ok(repository.save(payload));
+    }
+
     @PutMapping("/{id}")
     public ResponseEntity<?> update(@PathVariable("id") Long id, @RequestBody com.reconciliation.entity.ReleveBancaireEntity payload) {
         var opt = repository.findById(id);

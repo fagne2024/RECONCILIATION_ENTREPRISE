@@ -37,6 +37,17 @@ interface FiltresOperation {
   traitement: string;
   dateDebut: string;
   dateFin: string;
+  // Colonnes du tableau des opérations
+  agence?: string;
+  montant?: number | null;
+  reference?: string;
+  idGlpi?: string;
+}
+
+/** Filtre texte « contient », insensible à la casse. */
+function containsFilter(value: string | null | undefined, filter: string | null | undefined): boolean {
+  if (!filter || !filter.trim()) return true;
+  return (value || '').toLowerCase().includes(filter.toLowerCase().trim());
 }
 // Filtres pour les résultats de réconciliation (opérations/relevé)
 interface ReconFilters {
@@ -289,7 +300,21 @@ export class BanqueComponent implements OnInit {
 
   // Listes pour les filtres
   paysList: string[] = ['Côte d\'Ivoire', 'Mali', 'Burkina Faso', 'Sénégal', 'Togo', 'Cameroun'];
-  typesOperation: string[] = ['Compensation Client', 'Approvisionnement', 'Nivellement', 'Virement', 'Paiement', 'Retrait', 'Dépôt'];
+  // Types d'opération : ceux présents dans les opérations chargées (liste dynamique, pas de valeur figée)
+  private typesCacheSource: OperationBancaireDisplay[] | null = null;
+  private typesCacheLength = -1;
+  private typesCache: string[] = [];
+
+  get typesOperation(): string[] {
+    if (this.typesCacheSource !== this.operations || this.typesCacheLength !== this.operations.length) {
+      this.typesCacheSource = this.operations;
+      this.typesCacheLength = this.operations.length;
+      this.typesCache = Array.from(new Set(
+        this.operations.map(op => (op.typeOperation || '').trim()).filter(t => !!t)
+      )).sort((a, b) => a.localeCompare(b, 'fr'));
+    }
+    return this.typesCache;
+  }
   statutsList: string[] = ['Validée', 'En attente', 'Rejetée', 'En cours'];
   modesPaiement: string[] = ['Virement bancaire', 'Chèque', 'Espèces', 'Mobile Money'];
   traitementOptions: string[] = ['Niveau reconciliation', 'Niveau Group', 'Terminé'];
@@ -345,8 +370,17 @@ export class BanqueComponent implements OnInit {
 
   // Réconciliation banque
   reconPays: string = '';
-  reconDate: string = '';
+  // Par défaut : J-1 (hier, date locale), pour tous les pays.
+  reconDate: string = this.yesterdayYmd();
   reconciling = false;
+
+  /** Date d'hier au format YYYY-MM-DD, en heure locale (évite le décalage UTC de minuit). */
+  private yesterdayYmd(): string {
+    const d = new Date();
+    d.setDate(d.getDate() - 1);
+    const pad = (n: number) => String(n).padStart(2, '0');
+    return `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())}`;
+  }
   reconPaysOptions: string[] = [];
   reconView: 'operation' | 'releve' | 'corr_operation' | 'corr_releve' = 'operation';
   // Résultats bruts (incluant BOTH/OPERATION/RELEVE) conservés pour la popup correspondance
@@ -1330,13 +1364,15 @@ export class BanqueComponent implements OnInit {
     });
   }
 
-  // Calcul du nombre de suspens = toutes lignes KO (opérations + relevés)
+  // Calcul du nombre de suspens : une ligne est KO si elle n'est dans aucune correspondance (même règle que la réconciliation)
   private updateTotalSuspensKO() {
     try {
-      // Compter KO côté opérations (tableau principal des opérations)
-      const koOps = (this.operations || []).filter(op => this.getOperationReconStatus(op) === 'KO').length;
-      // Compter KO côté relevés (toutes lignes du batch courant)
-      const koReleves = (this.releveRows || []).filter(r => this.getReleveReconStatus(r) === 'KO').length;
+      const matchedOpIds = new Set((this.matchedOperations || []).map(op => op.id));
+      const matchedReleveIds = new Set((this.matchedReleves || []).map(r => r.id));
+      // Suspens BO : opérations hors correspondance
+      const koOps = (this.operations || []).filter(op => !matchedOpIds.has(op.id)).length;
+      // Suspens relevé : lignes du batch courant hors correspondance
+      const koReleves = (this.releveRows || []).filter(r => !matchedReleveIds.has(r.id)).length;
       this.totalSuspensBO = koOps;
       this.totalSuspensBanque = koReleves;
       this.totalSuspens = koOps + koReleves;
@@ -2300,42 +2336,35 @@ export class BanqueComponent implements OnInit {
       credit: credit || null,
       montant: Math.abs(this.createOperationMontant),
       devise: f.devise,
-      reconStatus: f.reconStatus,
-      // Sens déduit de la colonne renseignée : débit = retrait, crédit = dépôt
-      typeOperation: debit > 0 ? 'RETRAIT' : 'DEPOT',
-      statut: 'En attente'
+      reconStatus: f.reconStatus
     };
 
     console.log('💾 Création d\'opération bancaire:', operationData);
 
-    // Appeler le service pour créer l'opération
-    this.operationService.createOperationFromForm(operationData).subscribe({
-      next: (createdOperation) => {
-        console.log('✅ Opération créée avec succès:', createdOperation);
-        this.popupService.showSuccess('✅ Opération bancaire créée avec succès!');
-        this.closeCreateOperationPopup();
-        
-        // Recharger les données si nécessaire
-        this.loadOperations();
-        this.loadDashboardStats(); // Mettre à jour le compteur de tickets
-        this.creatingOperation = false;
-      },
-      error: (err) => {
-        console.error('❌ Erreur lors de la création de l\'opération:', err);
-        let errorMessage = '❌ Erreur lors de la création de l\'opération';
-        
-        if (err.status === 404) {
-          errorMessage = '❌ Compte introuvable: ' + this.createOperationForm.numeroCompte;
-        } else if (err.status === 400) {
-          errorMessage = '❌ Données invalides: ' + (err.error || 'Vérifiez les informations saisies');
-        } else if (err.error && typeof err.error === 'string') {
-          errorMessage = '❌ ' + err.error;
-        }
-        
-        this.popupService.showError(errorMessage);
-        this.creatingOperation = false;
-      }
+    // Seule écriture : une ligne de relevé (releve_bancaire). Un doublon est refusé.
+    this.releveService.create(operationData).subscribe({
+      next: () => this.onReleveLineCreated(),
+      error: (err) => this.onReleveCreateError(err)
     });
+  }
+
+  private onReleveLineCreated() {
+    this.creatingOperation = false;
+    this.closeCreateOperationPopup();
+    // Afficher la ligne ajoutée : toutes les lignes du relevé, page 1
+    this.releveSelectedBatchId = 'ALL';
+    this.refreshRelevesFromApiWithFilters();
+    this.popupService.showSuccess('✅ Ligne ajoutée au relevé bancaire.');
+  }
+
+  private onReleveCreateError(err: any) {
+    console.error('❌ Erreur lors de la création de la ligne de relevé:', err);
+    const detail = typeof err?.error === 'string' ? err.error : (err?.message || '');
+    const message = err?.status === 409
+      ? '❌ Cette ligne de relevé existe déjà (doublon).'
+      : '❌ Erreur lors de l\'ajout de la ligne au relevé' + (detail ? ' : ' + detail : '');
+    this.popupService.showError(message);
+    this.creatingOperation = false;
   }
 
   goToComptes() {
@@ -2363,12 +2392,13 @@ export class BanqueComponent implements OnInit {
   // ----- Filtres Relevé Bancaire -----
   releveFilterNumeroCompte: string = '';
   releveFilterBanque: string = '';
-  releveFilterDevise: string = '';
-  releveFilterPays: string = '';
   releveFilterReconStatus: '' | 'OK' | 'KO' = '' as any;
   releveFilterDateDebut: string = '';
   releveFilterDateFin: string = '';
   releveFilterDateField: 'comptable' | 'valeur' = 'comptable';
+  // Colonne montant du tableau relevé
+  releveFilterMontantMin: number | null = null;
+  releveFilterMontantMax: number | null = null;
 
   // Méthode pour extraire le code pays des 2 dernières lettres de la banque
   private extractCountryCodeFromBank(banque: string): string {
@@ -2407,10 +2437,10 @@ export class BanqueComponent implements OnInit {
   }
 
   resetReleveFilters() {
+    this.releveFilterMontantMin = null;
+    this.releveFilterMontantMax = null;
     this.releveFilterNumeroCompte = '';
     this.releveFilterBanque = '';
-    this.releveFilterDevise = '';
-    this.releveFilterPays = '';
     this.releveFilterReconStatus = '' as any;
     this.releveFilterDateDebut = '';
     this.releveFilterDateFin = '';
@@ -2424,8 +2454,6 @@ export class BanqueComponent implements OnInit {
     if (this.releveSelectedBatchId && this.releveSelectedBatchId !== 'ALL') add('batchId', this.releveSelectedBatchId);
     add('numeroCompte', this.releveFilterNumeroCompte);
     add('banque', this.releveFilterBanque);
-    add('pays', this.releveFilterPays);
-    add('devise', this.releveFilterDevise);
     add('reconStatus', this.releveFilterReconStatus);
     add('dateDebut', this.releveFilterDateDebut);
     add('dateFin', this.releveFilterDateFin);
@@ -2487,26 +2515,6 @@ export class BanqueComponent implements OnInit {
       );
     }
     
-    // Filtre par devise
-    if (this.releveFilterDevise && this.releveFilterDevise.trim()) {
-      const searchTerm = this.releveFilterDevise.toLowerCase().trim();
-      filtered = filtered.filter((r: any) => 
-        (r.devise || '').toLowerCase().includes(searchTerm)
-      );
-    }
-    
-    // Filtre par pays (extrait automatiquement des 2 dernières lettres de la banque)
-    if (this.releveFilterPays && this.releveFilterPays.trim()) {
-      const searchTerm = this.releveFilterPays.toLowerCase().trim();
-      
-      filtered = filtered.filter((r: any) => {
-        // Extraire le code pays des 2 dernières lettres de la banque
-        const banqueCode = this.extractCountryCodeFromBank(r.banque);
-        const matches = banqueCode && banqueCode.toLowerCase().includes(searchTerm);
-        return matches;
-      });
-    }
-    
     // Filtre par dates
     if (this.releveFilterDateDebut || this.releveFilterDateFin) {
       filtered = filtered.filter((r: any) => {
@@ -2535,7 +2543,13 @@ export class BanqueComponent implements OnInit {
     if (this.releveFilterReconStatus) {
       filtered = filtered.filter(r => this.getReleveReconStatus(r) === this.releveFilterReconStatus);
     }
-    
+
+    // Colonne montant du tableau (valeur absolue)
+    filtered = filtered.filter((r: any) =>
+      (this.releveFilterMontantMin == null || Math.abs(Number(r.montant ?? 0)) >= Number(this.releveFilterMontantMin))
+      && (this.releveFilterMontantMax == null || Math.abs(Number(r.montant ?? 0)) <= Number(this.releveFilterMontantMax))
+    );
+
     return filtered;
   }
 
@@ -2665,14 +2679,67 @@ export class BanqueComponent implements OnInit {
   suiviCompensePage = 1;
   suiviCompensePageSize = 10;
 
+  // Filtres alignés sur les colonnes du tableau du suivi compense OP
+  suiviFilters: {
+    dateDebut: string;
+    dateFin: string;
+    codeAgence: string;
+    banque: string;
+    compteBancaire: string;
+    montant: number | null;
+    modePaiement: string;
+    reference: string;
+    idTicket: string;
+    service: string;
+    reseau: string;
+  } = {
+    dateDebut: '', dateFin: '', codeAgence: '', banque: '', compteBancaire: '', montant: null,
+    modePaiement: '', reference: '', idTicket: '', service: '', reseau: ''
+  };
+
+  get filteredSuiviCompenseRows(): SuiviCompenseOp[] {
+    const f = this.suiviFilters;
+    const debut = f.dateDebut ? new Date(f.dateDebut).getTime() : null;
+    const fin = f.dateFin ? new Date(f.dateFin + 'T23:59:59').getTime() : null;
+    return this.suiviCompenseRows.filter(r => {
+      if (debut !== null || fin !== null) {
+        const t = r.dateOperation ? new Date(r.dateOperation as any).getTime() : NaN;
+        if (isNaN(t)) return false;
+        if (debut !== null && t < debut) return false;
+        if (fin !== null && t > fin) return false;
+      }
+      return containsFilter(r.codeAgence, f.codeAgence)
+        && containsFilter(r.banque, f.banque)
+        && containsFilter(r.compteBancaire, f.compteBancaire)
+        && containsFilter(r.modePaiement, f.modePaiement)
+        && containsFilter(r.reference, f.reference)
+        && containsFilter(r.idTicket, f.idTicket)
+        && containsFilter(r.service, f.service)
+        && containsFilter(r.reseau, f.reseau)
+        && (f.montant == null || Number(r.montant) === Number(f.montant));
+    });
+  }
+
+  onSuiviFilterChange() {
+    this.suiviCompensePage = 1;
+  }
+
+  resetSuiviFilters() {
+    this.suiviFilters = {
+      dateDebut: '', dateFin: '', codeAgence: '', banque: '', compteBancaire: '', montant: null,
+      modePaiement: '', reference: '', idTicket: '', service: '', reseau: ''
+    };
+    this.suiviCompensePage = 1;
+  }
+
   get suiviCompenseTotalPages(): number {
-    const pages = Math.ceil(this.suiviCompenseRows.length / this.suiviCompensePageSize);
+    const pages = Math.ceil(this.filteredSuiviCompenseRows.length / this.suiviCompensePageSize);
     return pages > 0 ? pages : 1;
   }
 
   get pagedSuiviCompenseRows(): SuiviCompenseOp[] {
     const start = (this.suiviCompensePage - 1) * this.suiviCompensePageSize;
-    return this.suiviCompenseRows.slice(start, start + this.suiviCompensePageSize);
+    return this.filteredSuiviCompenseRows.slice(start, start + this.suiviCompensePageSize);
   }
 
   goToSuiviCompensePage(page: number) {
@@ -3135,7 +3202,7 @@ export class BanqueComponent implements OnInit {
     });
   }
 
-  loadOperations() {
+  loadOperations(onLoaded?: () => void) {
     // Charger les opérations bancaires (table operations_bancaires)
     this.operationBancaireService.getAllOperationsBancaires('BANQUE').subscribe({
       next: (operationsBancaires) => {
@@ -3178,7 +3245,10 @@ export class BanqueComponent implements OnInit {
               }));
 
             // Fusionner les deux sources
-            this.operations = [...opsBancaires, ...opsGenerales];
+            // Plus récentes en premier : une opération nouvellement créée apparaît en page 1
+            this.operations = [...opsBancaires, ...opsGenerales].sort(
+              (a, b) => (new Date(b.dateOperation as any).getTime() || 0) - (new Date(a.dateOperation as any).getTime() || 0)
+            );
             this.filteredOperations = [...this.operations];
             
             const rawPays = (this.operations || []).map(o => {
@@ -3211,6 +3281,7 @@ export class BanqueComponent implements OnInit {
             this.updatePagedOperations();
             this.updateTotalSuspensKO();
             console.log('Opérations bancaires chargées:', this.operations.length, '(bancaire:', opsBancaires.length, ', generale:', opsGenerales.length + ')');
+            onLoaded?.();
           },
           error: (error) => {
             console.error('Erreur lors du chargement des opérations générales:', error);
@@ -3220,6 +3291,7 @@ export class BanqueComponent implements OnInit {
             this.updatePagedOperations();
             this.updateTotalSuspensKO();
             console.log('Opérations bancaires chargées (fallback):', this.operations.length);
+            onLoaded?.();
           }
         });
       },
@@ -3229,6 +3301,7 @@ export class BanqueComponent implements OnInit {
         this.filteredOperations = [];
         this.updatePagedOperations();
         this.updateTotalSuspensKO();
+        onLoaded?.();
       }
     });
   }
@@ -3299,7 +3372,13 @@ export class BanqueComponent implements OnInit {
       const matchStatut = !this.filters.statut || operation.statut === this.filters.statut;
       const matchTraitement = !this.filters.traitement || operation.traitement === this.filters.traitement;
       const matchReconStatut = !this.operationsReconStatusFilter || this.getOperationReconStatus(operation) === this.operationsReconStatusFilter;
-      
+      const f = this.filters;
+      const matchColonnes =
+        containsFilter(operation.agence, f.agence) &&
+        containsFilter(operation.reference, f.reference) &&
+        containsFilter(operation.idGlpi, f.idGlpi) &&
+        (f.montant == null || Number(operation.montant) === Number(f.montant));
+
       let matchDate = true;
       if (this.filters.dateDebut) {
         const dateDebut = new Date(this.filters.dateDebut);
@@ -3310,7 +3389,7 @@ export class BanqueComponent implements OnInit {
         matchDate = matchDate && operation.dateOperation <= dateFin;
       }
 
-      return matchPays && matchType && matchStatut && matchTraitement && matchDate && matchReconStatut;
+      return matchPays && matchType && matchStatut && matchTraitement && matchDate && matchReconStatut && matchColonnes;
     });
 
     this.currentPage = 1;
@@ -3324,8 +3403,13 @@ export class BanqueComponent implements OnInit {
       statut: '',
       traitement: '',
       dateDebut: '',
-      dateFin: ''
+      dateFin: '',
+      agence: '',
+      montant: null,
+      reference: '',
+      idGlpi: ''
     };
+    this.operationsReconStatusFilter = '';
     this.filteredOperations = [...this.operations];
     this.currentPage = 1;
     this.updatePagedOperations();
@@ -3792,9 +3876,6 @@ export class BanqueComponent implements OnInit {
       const counts = results.reduce((acc, it) => { acc[it.source] = (acc[it.source] || 0) + 1; return acc; }, {} as any);
       console.log('[RECON][DBG] result counts by source', counts);
     } catch {}
-    // Mettre à jour le tableau de bord selon les statuts KO actuels
-    this.updateTotalSuspensKO();
-
     // Construire les lignes d'écarts: gauche = opérations seules, droite = relevé seul
     const diffs: Array<{ left?: (OperationBancaireDisplay & { key?: string }); right?: (ReleveBancaireRow & { key?: string }) }> = [];
     const allKeysForDiff = new Set<string>([...opMap.keys(), ...revMap.keys()]);
@@ -3847,7 +3928,9 @@ export class BanqueComponent implements OnInit {
     const bothKeys = Array.from(allKeys).filter(k => opMap.has(k) && revMap.has(k));
     this.matchedOperations = bothKeys.map(k => opMap.get(k)!.op);
     this.matchedReleves = bothKeys.map(k => revMap.get(k)!.row);
-    
+    // Tableau de bord : suspens = lignes hors correspondance (KO), après mise à jour des correspondances
+    this.updateTotalSuspensKO();
+
     console.log('[RECON][DEBUG] matched results:', {
       matchedOperations: this.matchedOperations.length,
       matchedReleves: this.matchedReleves.length,
@@ -4429,12 +4512,74 @@ export class BanqueComponent implements OnInit {
     this.selectedOperation = null;
   }
 
+  /** Banques existantes (colonne bo des opérations) proposées pour « Banque corrigée ». */
+  banquesList: string[] = [];
+
+  private banquesRequestPays = '';
+
+  /** Valeurs de filtre d'un pays : son nom et ses codes (les opérations peuvent stocker l'un ou l'autre). */
+  private paysFilterValues(paysName: string): string[] {
+    const name = (paysName || '').trim();
+    if (!name) return [];
+    const codes = Object.entries(this.paysCodeToName)
+      .filter(([, n]) => this.normalizeCountryName(n) === this.normalizeCountryName(name))
+      .map(([code]) => code);
+    return Array.from(new Set([name, ...codes]));
+  }
+
+  /** Recharge les banques du pays choisi ; sans pays, la liste reste vide. */
+  loadBanquesList(paysName: string): void {
+    const values = this.paysFilterValues(paysName);
+    const requested = values.join('|');
+    this.banquesRequestPays = requested;
+    if (!values.length) {
+      this.banquesList = [];
+      return;
+    }
+    this.operationBancaireService.getDistinctBanques(values).subscribe({
+      next: (banques) => {
+        // Ignore une réponse arrivée après un changement de pays.
+        if (this.banquesRequestPays !== requested) return;
+        this.banquesList = Array.isArray(banques) ? banques : [];
+      },
+      error: () => {
+        if (this.banquesRequestPays === requested) this.banquesList = [];
+      }
+    });
+  }
+
+  /** Options du select Type : types des opérations chargées, plus le type courant s'il n'y figure pas. */
+  get editTypeOptions(): string[] {
+    const current = this.editForm?.typeOperation;
+    const list = [...this.typesOperation];
+    if (current && !list.includes(current)) list.unshift(current);
+    return list;
+  }
+
+  /** Nom de pays tel qu'affiché dans le tableau (code résolu en nom), aligné sur la liste du formulaire. */
+  private paysForForm(op: OperationBancaireDisplay): string {
+    const display = this.getPaysDisplay(op);
+    if (!display || display === '-') return '';
+    const norm = this.normalizeCountryName(display);
+    return this.paysList.find(p => this.normalizeCountryName(p) === norm) || display;
+  }
+
+  onEditPaysChange(pays: string): void {
+    this.editForm.pays = pays;
+    this.loadBanquesList(pays);
+  }
+
   editOperation(operation: OperationBancaireDisplay) {
     this.selectedOperation = operation;
+    const pays = this.paysForForm(operation);
+    this.loadBanquesList(pays);
     // Pré-remplir le formulaire
     this.editForm = {
+      pays,
+      codePays: operation.codePays || '',
       dateOperation: this.formatDateForInput(operation.dateOperation),
       agence: operation.agence || '',
+      compteADebiter: operation.compteADebiter || '',
       typeOperation: operation.typeOperation || '',
       montant: operation.montant || 0,
       reference: operation.reference || '',
@@ -4458,8 +4603,11 @@ export class BanqueComponent implements OnInit {
     if (!this.selectedOperation || !this.selectedOperation.id) return;
 
     const updateData = {
+      pays: this.editForm.pays,
+      codePays: this.editForm.codePays,
       dateOperation: this.editForm.dateOperation,
       agence: this.editForm.agence,
+      compteADebiter: this.editForm.compteADebiter,
       typeOperation: this.editForm.typeOperation,
       montant: this.editForm.montant,
       reference: this.editForm.reference,
@@ -4575,15 +4723,17 @@ export class BanqueComponent implements OnInit {
     });
   }
 
-  deleteOperation(id: number) {
-    const operation = this.operations.find(op => op.id === id);
-    const confirmMessage = operation 
-      ? `Êtes-vous sûr de vouloir supprimer cette opération bancaire ?\n\nType: ${operation.typeOperation}\nAgence: ${operation.agence}\nMontant: ${operation.montant} FCFA`
-      : 'Êtes-vous sûr de vouloir supprimer cette opération bancaire ?';
+  deleteOperation(operation: OperationBancaireDisplay) {
+    const id = operation.id;
+    const confirmMessage = `Êtes-vous sûr de vouloir supprimer cette opération bancaire ?\n\nType: ${operation.typeOperation}\nAgence: ${operation.agence}\nMontant: ${operation.montant} FCFA`;
 
     this.popupService.showConfirmDialog(confirmMessage, 'Confirmation de suppression').then(confirmed => {
       if (confirmed) {
-      this.operationBancaireService.deleteOperationBancaire(id).subscribe({
+      // Chaque ligne est supprimée dans sa propre table : les identifiants des deux tables peuvent se confondre.
+      const request$ = operation.source === 'generale'
+        ? this.operationService.deleteOperation(id)
+        : this.operationBancaireService.deleteOperationBancaire(id);
+      request$.subscribe({
         next: (success) => {
           if (success) {
             console.log('Opération bancaire supprimée avec succès');

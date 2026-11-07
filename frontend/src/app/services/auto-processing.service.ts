@@ -679,7 +679,7 @@ export class AutoProcessingService {
    * - Si le pattern contient une extension, on accepte aussi les variantes (.csv, .xls, .xlsx)
    * - Détection par inclusion sans extension (ex: "TRXBO" détecte "TRXBO_202501.xlsx")
    */
-  private matchesFilePattern(fileName: string, pattern: string): boolean {
+  matchesFilePattern(fileName: string, pattern: string): boolean {
     if (!pattern || !fileName) return false;
 
     const lowerName = fileName.toLowerCase();

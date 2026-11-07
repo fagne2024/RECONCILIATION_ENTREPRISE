@@ -187,6 +187,25 @@
 
       <p *ngIf="suiviCompenseMessage" [class.text-danger]="suiviCompenseMessageKind === 'error'" [class.text-success]="suiviCompenseMessageKind === 'success'">{{ suiviCompenseMessage }}</p>
 
+      <!-- Filtres alignés sur les colonnes du tableau -->
+      <div class="filters-bar" *ngIf="suiviCompenseRows.length">
+        <div class="filters-row">
+          <input class="ds-input" type="date" [(ngModel)]="suiviFilters.dateDebut" (change)="onSuiviFilterChange()" title="Date début">
+          <span>→</span>
+          <input class="ds-input" type="date" [(ngModel)]="suiviFilters.dateFin" (change)="onSuiviFilterChange()" title="Date fin">
+          <input class="ds-input" type="text" placeholder="Code agence" [(ngModel)]="suiviFilters.codeAgence" (ngModelChange)="onSuiviFilterChange()">
+          <input class="ds-input" type="text" placeholder="Banque" [(ngModel)]="suiviFilters.banque" (ngModelChange)="onSuiviFilterChange()">
+          <input class="ds-input" type="text" placeholder="Compte bancaire" [(ngModel)]="suiviFilters.compteBancaire" (ngModelChange)="onSuiviFilterChange()">
+          <input class="ds-input" type="number" placeholder="Montant" [(ngModel)]="suiviFilters.montant" (ngModelChange)="onSuiviFilterChange()" style="width:110px;">
+          <input class="ds-input" type="text" placeholder="Mode de paiement" [(ngModel)]="suiviFilters.modePaiement" (ngModelChange)="onSuiviFilterChange()">
+          <input class="ds-input" type="text" placeholder="Référence" [(ngModel)]="suiviFilters.reference" (ngModelChange)="onSuiviFilterChange()">
+          <input class="ds-input" type="text" placeholder="ID ticket" [(ngModel)]="suiviFilters.idTicket" (ngModelChange)="onSuiviFilterChange()">
+          <input class="ds-input" type="text" placeholder="Service" [(ngModel)]="suiviFilters.service" (ngModelChange)="onSuiviFilterChange()">
+          <input class="ds-input" type="text" placeholder="Réseau" [(ngModel)]="suiviFilters.reseau" (ngModelChange)="onSuiviFilterChange()">
+          <button class="ds-btn ds-btn--secondary btn-clear-filters" type="button" (click)="resetSuiviFilters()"><i class="fas fa-times"></i> {{ 'CPT.Effacer' | translate }}</button>
+        </div>
+      </div>
+
       <div class="table-container">
         <table class="ds-table operations-table">
           <thead>
@@ -233,7 +252,7 @@
         <ds-pagination
           [page]="suiviCompensePage"
           [pageCount]="suiviCompenseTotalPages"
-          [totalItems]="suiviCompenseRows.length"
+          [totalItems]="filteredSuiviCompenseRows.length"
           [pageSize]="suiviCompensePageSize"
           [pageSizes]="[10, 20, 50, 100]"
           [itemLabel]="'TBL.lines' | translate"
@@ -260,8 +279,8 @@
           <button type="button" class="ds-btn ds-btn--primary btn-primary" (click)="exportReleveCSV()" [disabled]="!(filteredReleveRowsForImport && filteredReleveRowsForImport.length)" title="{{ 'BQ.Exporterlerelevécsv' | translate }}">
             <i class="fas fa-file-export"></i> {{ 'BQ.Exportcsv' | translate }}
           </button>
-          <button type="button" class="ds-btn ds-btn--secondary btn-success" (click)="openCreateOperation()" title="{{ 'BQ.Créerunenouvelleopérationbancaire' | translate }}">
-            <i class="fas fa-plus"></i> {{ 'BQ.Créeropération' | translate }}
+          <button type="button" class="ds-btn ds-btn--secondary btn-success" (click)="openCreateOperation()" title="Ajouter une ligne au relevé bancaire">
+            <i class="fas fa-plus"></i> Ajouter une ligne
           </button>
           <button type="button" class="ds-btn ds-btn--primary btn-primary" (click)="toggleCommentColumn()" [class.active]="showCommentColumn" title="{{ 'BQ.Affichermasquerlacolonnecommentaire' | translate }}">
             <i class="fas" [class.fa-comment]="!showCommentColumn" [class.fa-comment-slash]="showCommentColumn"></i>
@@ -318,8 +337,8 @@
         <div class="filters-row">
           <input class="ds-input" type="text" placeholder="{{ 'TBL.accountNumber' | translate }}" [(ngModel)]="releveFilterNumeroCompte" (keyup.enter)="applyReleveFilters()">
           <input class="ds-input" type="text" placeholder="{{ 'TBL.bank' | translate }}" [(ngModel)]="releveFilterBanque" (keyup.enter)="applyReleveFilters()">
-          <input class="ds-input" type="text" placeholder="{{ 'TBL.currency' | translate }}" [(ngModel)]="releveFilterDevise" (keyup.enter)="applyReleveFilters()" style="width:90px;">
-          <input class="ds-input" type="text" placeholder="{{ 'BQ.Paysexci' | translate }}" [(ngModel)]="releveFilterPays" (keyup.enter)="applyReleveFilters()" style="width:80px; text-transform: uppercase;">
+          <input class="ds-input" type="number" placeholder="{{ 'TBL.amount' | translate }} min" [(ngModel)]="releveFilterMontantMin" (keyup.enter)="applyReleveFilters()" style="width:110px;">
+          <input class="ds-input" type="number" placeholder="{{ 'TBL.amount' | translate }} max" [(ngModel)]="releveFilterMontantMax" (keyup.enter)="applyReleveFilters()" style="width:110px;">
           <select class="ds-select" [(ngModel)]="releveFilterReconStatus" (change)="applyReleveFilters()">
             <option [ngValue]="''">{{ 'BQ.Statuttous' | translate }}</option>
             <option [ngValue]="'OK'">{{ 'COMMON.actions.ok' | translate }}</option>
@@ -589,6 +608,7 @@
               <th>{{ 'TBL.bank' | translate }}</th>
               <th>{{ 'BQ.BanqueCorrigee' | translate }}</th>
               <th>{{ 'TBL.status' | translate }}</th>
+              <th>{{ 'TBL.reconciliationStatus' | translate }}</th>
             </tr>
           </thead>
           <tbody>
@@ -607,10 +627,12 @@
               <td>{{ op.bo }}</td>
               <td>{{ op.banqueCorrigee || '-' }}</td>
               <td>{{ op.statut }}</td>
+              <!-- Suspens BO : toujours KO -->
+              <td><span class="badge status-ko">KO</span></td>
             </tr>
           </tbody>
         </table>
-        
+
 
         <table class="ds-table operations-table" *ngIf="reconView==='releve'">
           <thead>
@@ -627,6 +649,7 @@
               <th>{{ 'TBL.cheque' | translate }}</th>
               <th>{{ 'TBL.currency' | translate }}</th>
               <th>{{ 'TBL.seriesNumber' | translate }}</th>
+              <th>{{ 'TBL.reconciliationStatus' | translate }}</th>
             </tr>
           </thead>
           <tbody>
@@ -641,6 +664,8 @@
               <td class="right">{{ r.credit !== null && r.credit !== undefined ? (r.credit | number:'1.0-0') : '-' }}</td>
               <td class="right">{{ r.montant !== null && r.montant !== undefined ? (r.montant | number:'1.0-0') : '-' }}</td>
               <td>{{ r.devise || '-' }}</td>
+              <!-- Suspens relevé : toujours KO -->
+              <td><span class="badge status-ko">KO</span></td>
             </tr>
           </tbody>
         </table>
@@ -681,9 +706,8 @@
               <td>{{ op.banqueCorrigee || '-' }}</td>
               <td>{{ op.statut }}</td>
               <td class="right">
-                <span class="badge status-ok" *ngIf="getReconStatusByKey(op.key, 'OK')==='OK'">{{ 'COMMON.actions.ok' | translate }}</span>
-                <span class="badge status-ko" *ngIf="getReconStatusByKey(op.key, 'OK')==='KO'">KO</span>
-                <button type="button" class="btn-icon" (click)="toggleReconStatusByKey(op.key, 'OK')" title="{{ 'BQ.Basculerokko' | translate }}"><i class="fas fa-exchange-alt"></i></button>
+                <!-- Correspondance : toujours OK -->
+                <span class="badge status-ok">{{ 'COMMON.actions.ok' | translate }}</span>
                 <button type="button" class="btn-icon" (click)="markAsOkPermanentByKey(op.key)" title="{{ 'BQ.Marquerdéfinitivementokignorer' | translate }}"><i class="fas fa-check-double"></i></button>
                 <button type="button" class="btn-icon" (click)="unmarkOkByKey(op.key)" title="{{ 'BQ.Annulerokdéfinitif' | translate }}"><i class="fas fa-undo"></i></button>
               </td>
@@ -739,9 +763,8 @@
               <td class="right">{{ r.montant !== null && r.montant !== undefined ? (r.montant | number:'1.0-0') : '-' }}</td>
               <td>{{ r.devise || '-' }}</td>
               <td class="right">
-                <span class="badge status-ok" *ngIf="getReconStatusByKey(r.key, 'OK')==='OK'">{{ 'COMMON.actions.ok' | translate }}</span>
-                <span class="badge status-ko" *ngIf="getReconStatusByKey(r.key, 'OK')==='KO'">KO</span>
-                <button type="button" class="btn-icon" (click)="toggleReconStatusByKey(r.key, 'OK')" title="{{ 'BQ.Basculerokko' | translate }}"><i class="fas fa-exchange-alt"></i></button>
+                <!-- Correspondance : toujours OK -->
+                <span class="badge status-ok">{{ 'COMMON.actions.ok' | translate }}</span>
                 <button type="button" class="btn-icon" (click)="markAsOkPermanentByKey(r.key)" title="{{ 'BQ.Marquerdéfinitivementokignorer' | translate }}"><i class="fas fa-check-double"></i></button>
                 <button type="button" class="btn-icon" (click)="unmarkOkByKey(r.key)" title="{{ 'BQ.Annulerokdéfinitif' | translate }}"><i class="fas fa-undo"></i></button>
               </td>
@@ -1078,6 +1101,22 @@
           </select>
         </div>
         <div class="filter-group">
+          <label>{{ 'TBL.agency' | translate }}</label>
+          <input class="ds-input" type="text" [ngModel]="filters.agence" (ngModelChange)="filters.agence = $event; applyFilters()">
+        </div>
+        <div class="filter-group">
+          <label>{{ 'TBL.amount' | translate }}</label>
+          <input class="ds-input" type="number" [ngModel]="filters.montant" (ngModelChange)="filters.montant = $event; applyFilters()" style="width:110px;">
+        </div>
+        <div class="filter-group">
+          <label>{{ 'TBL.reference' | translate }}</label>
+          <input class="ds-input" type="text" [ngModel]="filters.reference" (ngModelChange)="filters.reference = $event; applyFilters()">
+        </div>
+        <div class="filter-group">
+          <label>{{ 'TBL.ticketId' | translate }}</label>
+          <input class="ds-input" type="text" [ngModel]="filters.idGlpi" (ngModelChange)="filters.idGlpi = $event; applyFilters()">
+        </div>
+        <div class="filter-group">
           <label>{{ 'TBL.status' | translate }}</label>
           <select class="ds-select" [(ngModel)]="filters.statut" (change)="applyFilters()">
             <option value="">{{ 'FILT.allStatuses' | translate }}</option>
@@ -1226,7 +1265,7 @@
                 <button type="button" class="btn-icon btn-success" (click)="validateOperation(operation)" title="{{ 'BQ.Valider' | translate }}" *ngIf="operation.statut !== 'Validée'">
                   <i class="fas fa-check"></i>
                 </button>
-                <button type="button" class="btn-icon btn-danger" (click)="deleteOperation(operation.id)" title="{{ 'ACT.delete' | translate }}">
+                <button type="button" class="btn-icon btn-danger" (click)="deleteOperation(operation)" title="{{ 'ACT.delete' | translate }}">
                   <i class="fas fa-trash"></i>
                 </button>
               </td>
@@ -1476,7 +1515,7 @@
   <div class="modern-popup-overlay" *ngIf="showCreateOperationPopup" (click)="closeCreateOperationPopup()">
     <div class="modern-popup create-operation-popup" (click)="$event.stopPropagation()">
       <div class="popup-header">
-        <h3><i class="fas fa-plus"></i> {{ 'BQ.Créeruneopérationbancaire' | translate }}</h3>
+        <h3><i class="fas fa-plus"></i> Ajouter une ligne de relevé</h3>
         <button type="button" class="ds-btn ds-btn--secondary btn-close" (click)="closeCreateOperationPopup()">
           <i class="fas fa-times"></i>
         </button>
@@ -1574,7 +1613,7 @@
           <div class="form-row">
             <div class="form-group">
               <label><i class="fas fa-globe"></i>{{ 'TBL.countryRequired' | translate }}</label>
-              <select class="ds-select" [(ngModel)]="editForm.pays" name="pays" required>
+              <select class="ds-select" [ngModel]="editForm.pays" (ngModelChange)="onEditPaysChange($event)" name="pays" required>
                 <option value="">{{ 'BQ.Sélectionnezunpays' | translate }}</option>
                 <option *ngFor="let pays of paysList" [value]="pays">{{ pays }}</option>
               </select>
@@ -1598,10 +1637,14 @@
               <input class="ds-input" type="text" [(ngModel)]="editForm.agence" name="agence" required placeholder="{{ 'BQ.Codeagence' | translate }}">
             </div>
             <div class="form-group">
+              <label><i class="fas fa-credit-card"></i>Compte à débiter</label>
+              <input class="ds-input" type="text" [(ngModel)]="editForm.compteADebiter" name="compteADebiter" placeholder="Compte à débiter">
+            </div>
+            <div class="form-group">
               <label><i class="fas fa-tags"></i> {{ 'BQ.Typeopération' | translate }}</label>
               <select class="ds-select" [(ngModel)]="editForm.typeOperation" name="typeOperation" required>
                 <option value="">{{ 'BQ.Sélectionnezuntype' | translate }}</option>
-                <option *ngFor="let type of typesOperation" [value]="type">{{ type }}</option>
+                <option *ngFor="let type of editTypeOptions" [value]="type">{{ type }}</option>
               </select>
             </div>
           </div>
@@ -1639,7 +1682,10 @@
             </div>
             <div class="form-group">
               <label><i class="fas fa-university"></i>{{ 'BQ.BanqueCorrigee' | translate }}</label>
-              <input class="ds-input" type="text" [(ngModel)]="editForm.banqueCorrigee" name="banqueCorrigee" placeholder="{{ 'BQ.BanqueCorrigee' | translate }}">
+              <input class="ds-input" type="text" list="banques-corrigees-list" [(ngModel)]="editForm.banqueCorrigee" name="banqueCorrigee" autocomplete="off" placeholder="{{ 'BQ.BanqueCorrigee' | translate }}">
+              <datalist id="banques-corrigees-list">
+                <option *ngFor="let b of banquesList" [value]="b"></option>
+              </datalist>
             </div>
           </div>
 

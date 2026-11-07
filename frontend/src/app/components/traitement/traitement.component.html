@@ -1183,12 +1183,13 @@
        <div class="row-range-fields">
          <label>
            Modèle
-           <select (change)="onModelSelected($any($event.target).value)">
+           <select (change)="onModelSelectedManually($any($event.target).value)">
              <option value="" [selected]="!selectedModelId">— aucun —</option>
              <option *ngFor="let m of modelList" [value]="modelKey(m)" [selected]="modelKey(m) === selectedModelId">{{ m.name }}</option>
            </select>
          </label>
          <span *ngIf="modelColumnsLoading">Chargement des colonnes du modèle…</span>
+         <span class="row-range-hint" *ngIf="modelDetectionMessage">{{ modelDetectionMessage }}</span>
        </div>
 
        <div *ngIf="selectedModelId && modelColumns.length" class="model-link-table">

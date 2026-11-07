@@ -193,6 +193,13 @@ public class OperationBancaireController {
         return ResponseEntity.ok(types);
     }
 
+    // Récupérer la liste des banques (colonne bo) déjà présentes
+    @GetMapping("/bo/list")
+    public ResponseEntity<List<String>> getDistinctBanques(
+            @RequestParam(value = "pays", required = false) List<String> pays) {
+        return ResponseEntity.ok(operationBancaireService.getDistinctBanques(pays));
+    }
+
     // Mettre à jour le recon_status (OK/KO)
     @PutMapping("/{id}/recon-status")
     public ResponseEntity<?> updateReconStatus(@PathVariable Long id, @RequestParam("status") String status) {

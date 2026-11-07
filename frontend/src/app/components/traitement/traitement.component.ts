@@ -236,6 +236,9 @@ export class TraitementComponent implements OnInit, AfterViewInit {
   /** Colonne du modèle -> colonne du traitement liée ('' = non liée). */
   modelLinks: Record<string, string> = {};
   modelLinkMessage: string = '';
+  /** Vrai si l'utilisateur a choisi le modèle à la main : la détection automatique ne le remplace plus. */
+  modelChosenManually: boolean = false;
+  modelDetectionMessage: string = '';
 
   // --- EN-TÊTES MULTILINGUES (plusieurs fichiers) ---
   /** Fichiers dont les en-têtes sont en plusieurs langues : la langue retenue est imposée. */
@@ -6045,6 +6048,7 @@ End Sub`;
     this.csvPreviewColumns = batch.headers;
     this.csvPreviewData = batch.rows.slice(0, 10);
     this.csvPreviewRowCount = batch.rows.length;
+    this.autoDetectModelFromFiles();
     this.showCsvPreview = true;
   }
 
@@ -6055,6 +6059,40 @@ End Sub`;
     } catch {
       this.modelList = [];
     }
+    this.autoDetectModelFromFiles();
+  }
+
+  /**
+   * Détection automatique : le modèle dont le filePattern correspond au nom d'un fichier chargé
+   * est sélectionné. Un pattern générique « * » n'est retenu qu'en dernier recours.
+   * Sans correspondance, l'utilisateur choisit le modèle dans la liste.
+   */
+  private autoDetectModelFromFiles(): void {
+    if (this.modelChosenManually || !this.modelList.length || !this.selectedFiles.length) {
+      return;
+    }
+    const fileMatches = (m: AutoProcessingModel) =>
+      this.selectedFiles.some(f => this.autoProcessingService.matchesFilePattern(f.name, m.filePattern));
+    const isGeneric = (m: AutoProcessingModel) => (m.filePattern || '').trim() === '*';
+    const found =
+      this.modelList.find(m => !isGeneric(m) && fileMatches(m)) ??
+      this.modelList.find(m => isGeneric(m) && fileMatches(m));
+
+    if (!found) {
+      this.modelDetectionMessage = 'Aucun modèle détecté pour ces fichiers : choisissez-le dans la liste.';
+      return;
+    }
+    this.modelDetectionMessage = `Modèle détecté automatiquement : ${found.name}`;
+    if (this.modelKey(found) !== this.selectedModelId) {
+      void this.onModelSelected(this.modelKey(found));
+    }
+  }
+
+  /** Choix manuel dans la liste : prime sur la détection automatique. */
+  onModelSelectedManually(modelId: string): void {
+    this.modelChosenManually = !!modelId;
+    this.modelDetectionMessage = modelId ? 'Modèle choisi manuellement.' : '';
+    void this.onModelSelected(modelId);
   }
 
   modelKey(model: AutoProcessingModel): string {
@@ -6241,6 +6279,8 @@ End Sub`;
     this.csvRawPreviewLines = [];
     this.csvBatchFiles = [];
     this.csvPreviewRowCount = 0;
+    this.modelChosenManually = false;
+    this.modelDetectionMessage = '';
     this.showCsvPreview = false;
     this.csvPreviewData = [];
     this.csvPreviewColumns = [];

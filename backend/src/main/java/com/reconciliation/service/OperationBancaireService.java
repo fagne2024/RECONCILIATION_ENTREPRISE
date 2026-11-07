@@ -523,6 +523,31 @@ public class OperationBancaireService {
     }
     
     // Récupérer les types d'opération distincts
+    /**
+     * Banques (colonne bo) déjà présentes sur les opérations d'un pays, triées et sans doublon.
+     * Sans pays, aucune banque n'est proposée : la liste ne doit contenir que celles du pays choisi.
+     */
+    public List<String> getDistinctBanques(List<String> paysValues) {
+        List<String> values = paysValues == null ? List.of() : paysValues.stream()
+                .filter(v -> v != null && !v.isBlank())
+                .map(v -> v.trim().toUpperCase(java.util.Locale.ROOT))
+                .distinct()
+                .collect(Collectors.toList());
+        if (values.isEmpty()) {
+            return new ArrayList<>();
+        }
+        try {
+            return operationBancaireRepository.findDistinctBoByPays(values).stream()
+                    .map(String::trim)
+                    .filter(b -> !b.isEmpty())
+                    .distinct()
+                    .collect(Collectors.toList());
+        } catch (Exception e) {
+            logger.error("Erreur dans getDistinctBanques", e);
+            return new ArrayList<>();
+        }
+    }
+
     public List<String> getDistinctTypesOperation() {
         return getDistinctTypesOperation(null);
     }
