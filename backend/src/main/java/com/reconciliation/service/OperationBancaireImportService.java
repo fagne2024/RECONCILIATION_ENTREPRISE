@@ -64,6 +64,11 @@ public class OperationBancaireImportService {
                 try {
                     String pays = getString(row, idx.get("pays"));
                     String codePays = getString(row, idx.get("code_pays"));
+                    if (pays == null || pays.isBlank()) pays = codePays;
+                    if (pays == null || pays.isBlank()) {
+                        // Colonne obligatoire en base : rejet de la ligne seule plutôt que l'échec de tout le lot
+                        throw new IllegalArgumentException("pays manquant");
+                    }
                     String agence = getString(row, idx.get("agence"));
                     String typeOperation = getString(row, idx.get("type_operation"));
                     if (typeOperation == null || typeOperation.isBlank()) {
@@ -71,6 +76,11 @@ public class OperationBancaireImportService {
                         throw new IllegalArgumentException("type d'opération manquant");
                     }
                     Double montant = getDouble(row, idx.get("montant"));
+                    if (montant == null) {
+                        // Colonne obligatoire en base : sans ce contrôle, saveAll échouait pour tout le lot
+                        throw new IllegalArgumentException("montant manquant ou illisible : '"
+                                + Objects.toString(getString(row, idx.get("montant")), "") + "'");
+                    }
 
                     // Si l'agence n'est pas fournie dans le fichier, utiliser une valeur par défaut
                     if (agence == null || agence.isBlank()) {
@@ -78,7 +88,14 @@ public class OperationBancaireImportService {
                     }
 
                     LocalDateTime dateOp = getLocalDateTime(row, idx.get("date_operation"));
-                    if (dateOp == null) dateOp = LocalDateTime.now();
+                    if (dateOp == null) {
+                        String rawDate = getString(row, idx.get("date_operation"));
+                        if (rawDate != null && !rawDate.isBlank()) {
+                            // Date fournie mais illisible : rejeter plutôt que d'enregistrer la date du jour
+                            throw new IllegalArgumentException("date d'opération illisible : '" + rawDate + "'");
+                        }
+                        dateOp = LocalDateTime.now();
+                    }
 
                     // Référence du fichier prioritaire ; sinon générée selon le type
                     String fileReference = getString(row, idx.get("reference"));
@@ -305,10 +322,13 @@ public class OperationBancaireImportService {
         if (row == null || col == null) return null;
         Cell c = row.getCell(col);
         if (c == null) return null;
-        if (c.getCellType() == CellType.STRING) return c.getStringCellValue().trim();
-        if (c.getCellType() == CellType.NUMERIC) return String.valueOf((long)c.getNumericCellValue());
-        if (c.getCellType() == CellType.BOOLEAN) return Boolean.toString(c.getBooleanCellValue());
-        return c.toString().trim();
+        String s;
+        if (c.getCellType() == CellType.STRING) s = c.getStringCellValue().trim();
+        else if (c.getCellType() == CellType.NUMERIC) s = String.valueOf((long) c.getNumericCellValue());
+        else if (c.getCellType() == CellType.BOOLEAN) s = Boolean.toString(c.getBooleanCellValue());
+        else s = c.toString().trim();
+        // Les exports BO écrivent littéralement « null » pour une valeur absente (ex. banque des compensations)
+        return "null".equalsIgnoreCase(s) ? null : s;
     }
 
     private static Double getDouble(Row row, Integer col) {
@@ -316,8 +336,56 @@ public class OperationBancaireImportService {
         Cell c = row.getCell(col);
         if (c == null) return null;
         if (c.getCellType() == CellType.NUMERIC) return c.getNumericCellValue();
-        try { return Double.parseDouble(c.toString().trim().replace(" ", "").replace(" ","")); } catch (Exception e) { return null; }
+        if (c.getCellType() == CellType.FORMULA && c.getCachedFormulaResultType() == CellType.NUMERIC) {
+            return c.getNumericCellValue();
+        }
+        return parseAmount(c.toString());
     }
+
+    /**
+     * Montant saisi en texte. Formats acceptés : {@code 2,000,000} et {@code 2.000.000}
+     * (séparateurs de milliers), {@code 1,234.56} / {@code 1.234,56}, {@code 199,8} ou
+     * {@code 199.8} (décimale), espaces et espaces insécables ignorés.
+     * Une virgule suivie d'exactement 3 chiffres par groupe est un séparateur de milliers.
+     */
+    static Double parseAmount(String raw) {
+        if (raw == null) return null;
+        String s = raw.trim()
+                .replace(" ", "").replace(" ", "").replace(" ", "").replace("'", "");
+        if (s.isEmpty() || "null".equalsIgnoreCase(s)) return null;
+        boolean hasComma = s.indexOf(',') >= 0;
+        boolean hasDot = s.indexOf('.') >= 0;
+        if (hasComma && hasDot) {
+            // Le dernier séparateur rencontré est la décimale
+            if (s.lastIndexOf(',') > s.lastIndexOf('.')) {
+                s = s.replace(".", "").replace(',', '.');
+            } else {
+                s = s.replace(",", "");
+            }
+        } else if (hasComma) {
+            s = s.matches("[-+]?\\d{1,3}(,\\d{3})+") ? s.replace(",", "") : s.replace(',', '.');
+        } else if (hasDot && s.matches("[-+]?\\d{1,3}(\\.\\d{3}){2,}")) {
+            // Plusieurs points groupés par 3 : milliers (un seul point reste une décimale)
+            s = s.replace(".", "");
+        }
+        try {
+            return Double.parseDouble(s);
+        } catch (NumberFormatException e) {
+            return null;
+        }
+    }
+
+    private static final DateTimeFormatter DATE_TIME_SPACE = new java.time.format.DateTimeFormatterBuilder()
+            .appendPattern("yyyy-MM-dd H:mm")
+            .optionalStart().appendPattern(":ss")
+            .optionalStart().appendFraction(java.time.temporal.ChronoField.NANO_OF_SECOND, 1, 9, true).optionalEnd()
+            .optionalEnd()
+            .toFormatter();
+
+    private static final DateTimeFormatter DATE_TIME_FR = new java.time.format.DateTimeFormatterBuilder()
+            .appendPattern("dd/MM/yyyy H:mm")
+            .optionalStart().appendPattern(":ss").optionalEnd()
+            .toFormatter();
 
     private static LocalDateTime getLocalDateTime(Row row, Integer col) {
         if (row == null || col == null) return null;
@@ -344,10 +412,18 @@ public class OperationBancaireImportService {
             if (s.matches("\\d{4}-\\d{2}-\\d{2}T.*")) {
                 return LocalDateTime.parse(s);
             }
+            // yyyy-MM-dd HH:mm[:ss[.S…]] (exports BO, ex. « 2026-11-05 16:46:30.0 »)
+            if (s.matches("\\d{4}-\\d{2}-\\d{2} \\d{1,2}:\\d{2}(:\\d{2}(\\.\\d{1,9})?)?")) {
+                return LocalDateTime.parse(s, DATE_TIME_SPACE);
+            }
             // Try dd/MM/yyyy
             if (s.matches("\\d{2}/\\d{2}/\\d{4}")) {
                 LocalDate ld = LocalDate.parse(s, DateTimeFormatter.ofPattern("dd/MM/yyyy"));
                 return ld.atStartOfDay();
+            }
+            // dd/MM/yyyy HH:mm[:ss]
+            if (s.matches("\\d{2}/\\d{2}/\\d{4} \\d{1,2}:\\d{2}(:\\d{2})?")) {
+                return LocalDateTime.parse(s, DATE_TIME_FR);
             }
         } catch (Exception ignored) { }
         return null;

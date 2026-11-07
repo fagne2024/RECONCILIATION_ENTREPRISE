@@ -3077,3 +3077,265 @@
 .check-badge.is-ok { background: rgba(22, 163, 74, 0.15); color: var(--rd-green-m, #15803d); }
 .check-badge.is-ko { background: rgba(220, 38, 38, 0.15); color: var(--rd-red-m, #b91c1c); }
 .check-popup__foot { display: flex; justify-content: flex-end; gap: 8px; margin-top: 16px; flex-wrap: wrap; }
+
+// =========================
+// Réconciliation - vue « Résultat » (opération ↔ relevé)
+// Style volontairement doux : bandeaux pastel, lignes aérées, badges discrets.
+// =========================
+.recon-result-btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+
+  .recon-result-count {
+    min-width: 20px;
+    padding: 0 6px;
+    border-radius: 999px;
+    background: var(--rd-blue-l);
+    color: var(--rd-blue);
+    font-size: 12px;
+    font-weight: 600;
+    line-height: 20px;
+    text-align: center;
+  }
+}
+
+.modern-popup.recon-result-popup {
+  // Vue large : opération et relevé côte à côte sans défilement horizontal sur écran standard
+  width: 98vw;
+  max-width: 98vw;
+  height: 94vh;
+  max-height: 94vh;
+  background: var(--rd-surface);
+
+  .popup-header {
+    gap: 12px;
+
+    h2 {
+      display: flex;
+      align-items: baseline;
+      gap: 10px;
+    }
+  }
+
+  .rr-context {
+    font-size: 13px;
+    font-weight: 500;
+    color: var(--rd-text2);
+  }
+
+  .rr-header-actions {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    margin-left: auto;
+  }
+
+  .rr-export {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+
+    &--excel i { color: var(--rd-green); }
+    &--pdf i { color: var(--rd-red); }
+  }
+
+  .popup-content {
+    flex: 1 1 auto;
+    min-height: 0;
+    display: flex;
+    flex-direction: column;
+    gap: 16px;
+    overflow: hidden;
+  }
+
+  .rr-table-wrap {
+    flex: 1 1 auto;
+    min-height: 0;
+    overflow: auto;
+  }
+}
+
+.rr-stats {
+  display: grid;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  gap: 12px;
+}
+
+.rr-stat {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  padding: 12px 16px;
+  border: 1px solid var(--rd-border);
+  border-radius: var(--rd-r);
+  background: var(--rd-bg);
+
+  &__value {
+    font-family: var(--font-display);
+    font-size: 22px;
+    font-weight: 600;
+    color: var(--rd-text1);
+  }
+
+  &__label {
+    font-size: 12px;
+    color: var(--rd-text2);
+  }
+
+  &--ref { background: var(--rd-blue-l); border-color: transparent; .rr-stat__value { color: var(--rd-blue); } }
+  &--key { background: var(--rd-green-l); border-color: transparent; .rr-stat__value { color: var(--rd-green); } }
+  &--gap { background: var(--rd-amber-l); border-color: transparent; .rr-stat__value { color: var(--rd-amber); } }
+  &--muted { background: var(--rd-bg); border-color: var(--rd-border); .rr-stat__value { color: var(--rd-text3); } }
+}
+
+.rr-filters {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 12px;
+
+  .filter-group { min-width: 220px; }
+}
+
+.rr-table-wrap {
+  overflow-x: auto;
+  border: 1px solid var(--rd-border);
+  border-radius: var(--rd-r);
+}
+
+.rr-table {
+  width: 100%;
+  border-collapse: separate;
+  border-spacing: 0;
+  font-size: 13px;
+  color: var(--rd-text1);
+
+  th,
+  td {
+    padding: 10px 12px;
+    text-align: left;
+    vertical-align: middle;
+    border-bottom: 1px solid var(--rd-border);
+    white-space: nowrap;
+  }
+
+  // En-tête collant en bloc : les deux lignes (groupes + colonnes) restent visibles sans se chevaucher
+  thead {
+    position: sticky;
+    top: 0;
+    z-index: 1;
+  }
+
+  thead th {
+    font-size: 12px;
+    font-weight: 600;
+    color: var(--rd-text2);
+    background: var(--rd-surface);
+  }
+
+  .rr-group-row th {
+    font-size: 12px;
+    letter-spacing: 0.02em;
+    text-transform: uppercase;
+    border-bottom: none;
+
+    i { margin-right: 6px; }
+  }
+
+  .rr-group--op { background: var(--rd-blue-l); color: var(--rd-blue); border-top-left-radius: var(--rd-r); }
+  .rr-group--rev { background: var(--rd-green-l); color: var(--rd-green); border-top-right-radius: var(--rd-r); }
+  .rr-group--link { background: var(--rd-surface); }
+
+  // Teinte très légère par côté pour distinguer les deux blocs
+  td.rr-op { background: color-mix(in srgb, var(--rd-blue-l) 35%, var(--rd-surface)); }
+  td.rr-rev { background: color-mix(in srgb, var(--rd-green-l) 35%, var(--rd-surface)); }
+
+  tbody tr:hover td { background: var(--rd-bg); }
+  tbody tr:last-child td { border-bottom: none; }
+
+  .rr-num { text-align: right; font-variant-numeric: tabular-nums; }
+  .rr-type { font-size: 12px; color: var(--rd-text2); }
+  .rr-ref { font-family: var(--font-ui); font-weight: 600; }
+  .rr-sub { font-size: 11px; color: var(--rd-text3); }
+
+  .rr-libelle {
+    max-width: 260px;
+    overflow: hidden;
+    text-overflow: ellipsis;
+  }
+
+  // Colonne centrale de liaison
+  th.rr-link,
+  td.rr-link {
+    text-align: center;
+    background: var(--rd-surface);
+    border-left: 1px dashed var(--rd-border);
+    border-right: 1px dashed var(--rd-border);
+  }
+
+  td.rr-link {
+    display: table-cell;
+
+    > * + * { margin-top: 4px; }
+  }
+}
+
+.rr-badge {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  padding: 2px 10px;
+  border-radius: 999px;
+  font-size: 11px;
+  font-weight: 600;
+
+  &--ref { background: var(--rd-blue-l); color: var(--rd-blue); }
+  &--key { background: var(--rd-green-l); color: var(--rd-green); }
+}
+
+.rr-gap {
+  display: block;
+  font-size: 11px;
+  color: var(--rd-amber);
+}
+
+.rr-row--gap td.rr-link { background: var(--rd-amber-l); }
+
+.rr-sens {
+  display: inline-block;
+  margin-left: 6px;
+  padding: 0 6px;
+  border-radius: var(--rd-r-sm);
+  font-size: 10px;
+  color: var(--rd-green);
+  background: var(--rd-green-l);
+
+  &--debit { color: var(--rd-red); background: var(--rd-red-l); }
+}
+
+.rr-empty {
+  padding: 32px 12px !important;
+  text-align: center !important;
+  color: var(--rd-text3);
+}
+
+.rr-footer {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+
+  > .btn-secondary { margin-left: auto; flex: 0 0 auto; }
+
+  // Pagination du design system : occupe la largeur disponible à gauche du bouton Fermer
+  .rr-pagination {
+    flex: 1 1 auto;
+    min-width: 0;
+  }
+}
+
+@media (max-width: 768px) {
+  .modern-popup.recon-result-popup .popup-header { flex-wrap: wrap; }
+  .rr-stats { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+  .rr-filters .filter-group { min-width: 0; flex: 1 1 100%; }
+}

@@ -50,6 +50,17 @@ function containsFilter(value: string | null | undefined, filter: string | null 
   return (value || '').toLowerCase().includes(filter.toLowerCase().trim());
 }
 // Filtres pour les résultats de réconciliation (opérations/relevé)
+/** Paire rapprochée affichée dans la vue « Résultat » de la réconciliation bancaire. */
+interface ReconResultPair {
+  key: string;
+  op: OperationBancaireDisplay;
+  rev: ReleveBancaireRow;
+  /** REFERENCE : référence trouvée dans le libellé ; CLE : date + montant + banque + sens. */
+  matchBy: 'REFERENCE' | 'CLE';
+  /** Montant opération (absolu) − montant relevé ; 0 si identiques. */
+  ecart: number;
+}
+
 interface ReconFilters {
   typeOperation: string;
   statut: string;
@@ -1229,6 +1240,21 @@ export class BanqueComponent implements OnInit {
       const code = this.getReconCountryCode();
       console.log('[RECON][DBG] Country changed', { reconPays: this.reconPays, reconCode: code });
     } catch {}
+    // Le résultat est disponible dès le choix du pays, sans clic sur « Réconcilier »
+    this.autoReconcile();
+  }
+
+  onReconDateChange() {
+    this.autoReconcile();
+  }
+
+  /** Réconciliation silencieuse pour rendre le Résultat immédiatement accessible. */
+  private autoReconcile() {
+    if (!this.reconPays) {
+      this.reconResultPairs = [];
+      return;
+    }
+    this.reconcile(true);
   }
 
   // Comptes de catégorie Banque (section Informations)
@@ -3671,45 +3697,140 @@ export class BanqueComponent implements OnInit {
     return Math.abs(this.getReleveMontant(r));
   }
 
-  private buildKeysWithIndexes<T>(items: T[], getBase: (it: T) => { date: string; montantAbs: number; banque: string; sens: 'debit' | 'credit'; }): Array<T & { key: string; sensIndex: string; }> {
+  /**
+   * Clés de réconciliation date + montant + banque + sens + index.
+   * `reservedKeys` : clés déjà attribuées (paires appariées par référence) que l'index doit sauter,
+   * pour qu'une ligne restante ne prenne pas la clé d'une opération déjà appariée.
+   */
+  private buildKeysWithIndexes<T>(items: T[], getBase: (it: T) => { date: string; montantAbs: number; banque: string; sens: 'debit' | 'credit'; }, reservedKeys?: Set<string>): Array<T & { key: string; sensIndex: string; }> {
     const counters = new Map<string, number>();
     return items.map(it => {
       const base = getBase(it);
       const groupKey = `${base.date}|${base.montantAbs}|${base.banque}|${base.sens}`;
-      const current = (counters.get(groupKey) || 0) + 1;
-      counters.set(groupKey, current);
-      const sensIndex = `${base.sens}${current}`;
       // Construire la clé d'affichage sans séparateurs, sans espaces ni tirets
       const dateNoDash = (base.date || '').replace(/-/g, '');
       const montantDigits = String(base.montantAbs).replace(/\D/g, '');
       const banqueCompact = (base.banque || '').toUpperCase().replace(/[\s-]/g, '');
-      const key = `${dateNoDash}${montantDigits}${banqueCompact}${sensIndex}`;
+      let current = counters.get(groupKey) || 0;
+      let key = '';
+      do {
+        current++;
+        key = `${dateNoDash}${montantDigits}${banqueCompact}${base.sens}${current}`;
+      } while (reservedKeys && reservedKeys.has(key));
+      counters.set(groupKey, current);
+      const sensIndex = `${base.sens}${current}`;
       const augmented: any = Object.assign({}, it as any, { key, sensIndex });
       return augmented;
     });
   }
 
+  /** Référence / libellé comparables : majuscules, sans accents ni séparateurs. */
+  private normalizeReconText(value: unknown): string {
+    return String(value ?? '')
+      .normalize('NFD').replace(/[̀-ͯ]/g, '')
+      .toUpperCase()
+      .replace(/[^A-Z0-9]/g, '');
+  }
+
+  /**
+   * Vrai si le libellé contient la référence entière : une référence finissant par un chiffre
+   * ne doit pas être suivie d'un autre chiffre (« …AP1 » ne correspond pas à « …AP12 »).
+   */
+  private libelleContainsReference(libelleNorm: string, refNorm: string): boolean {
+    let from = 0;
+    while (from <= libelleNorm.length - refNorm.length) {
+      const pos = libelleNorm.indexOf(refNorm, from);
+      if (pos < 0) return false;
+      const next = libelleNorm.charAt(pos + refNorm.length);
+      if (!(/\d$/.test(refNorm) && /\d/.test(next))) return true;
+      from = pos + 1;
+    }
+    return false;
+  }
+
+  /** Longueur minimale (normalisée) d'une référence pour l'appariement par libellé, contre les faux positifs. */
+  private static readonly RECON_REF_MIN_LENGTH = 6;
+
+  /**
+   * Étape 1 de la réconciliation : apparier chaque opération ayant une référence avec une ligne de
+   * relevé dont le libellé contient cette référence. En cas de plusieurs candidats, on préfère
+   * le même montant, puis la même date, puis le même sens. Chaque relevé n'est utilisé qu'une fois.
+   */
+  private matchOperationsByReference(
+    ops: Array<OperationBancaireDisplay & { key: string; sensIndex: string }>,
+    releves: ReleveBancaireRow[]
+  ): Map<OperationBancaireDisplay & { key: string; sensIndex: string }, ReleveBancaireRow> {
+    const result = new Map<OperationBancaireDisplay & { key: string; sensIndex: string }, ReleveBancaireRow>();
+    const revInfos = releves.map(r => {
+      const dateToUse = r.dateValeur ? r.dateValeur : r.dateComptable;
+      const debit = r.debit || 0;
+      return {
+        row: r,
+        libelle: this.normalizeReconText((r as any).libelle),
+        date: this.normalizeDateToYmd(dateToUse as any),
+        montantAbs: debit > 0 ? Math.abs(debit) : Math.abs(r.credit || (r.montant || 0)),
+        sens: (debit > 0 ? 'debit' : 'credit') as 'debit' | 'credit',
+        used: false
+      };
+    }).filter(info => !!info.libelle);
+    if (!revInfos.length) return result;
+
+    for (const op of ops) {
+      const refNorm = this.normalizeReconText((op as any).reference);
+      if (refNorm.length < BanqueComponent.RECON_REF_MIN_LENGTH) continue;
+      const opDate = this.normalizeDateToYmd(op.dateOperation);
+      const opMontant = Math.abs(op.montant || 0);
+      const opSens = this.determineOperationSens(op as OperationBancaireDisplay);
+      let best: typeof revInfos[number] | null = null;
+      let bestScore = -1;
+      for (const info of revInfos) {
+        if (info.used || !this.libelleContainsReference(info.libelle, refNorm)) continue;
+        const score = (Math.abs(info.montantAbs - opMontant) < 0.01 ? 4 : 0)
+          + (info.date === opDate ? 2 : 0)
+          + (info.sens === opSens ? 1 : 0);
+        if (score > bestScore) { best = info; bestScore = score; }
+      }
+      if (best) {
+        best.used = true;
+        result.set(op, best.row);
+      }
+    }
+    return result;
+  }
+
   // =========================
   // Réconciliation - Actions
   // =========================
-  reconcile() {
+  /**
+   * @param silent lancement automatique (choix du pays/de la date, ouverture du Résultat) :
+   *               pas d'avertissement si les données manquent, le résultat est simplement vidé.
+   */
+  reconcile(silent = false) {
     console.log('[RECON][DEBUG] reconcile() called with:', {
       reconPays: this.reconPays,
       reconDate: this.reconDate,
+      silent,
       operationsCount: this.operations?.length || 0,
       relevesCount: this.releveAllRows?.length || 0
     });
-    
+
+    const warn = (msg: string) => {
+      if (silent) {
+        this.reconResultPairs = [];
+      } else {
+        this.popupService.showWarning(msg);
+      }
+    };
     if (!this.reconPays) {
-      this.popupService.showWarning('Veuillez choisir un pays. La date est optionnelle.');
+      warn('Veuillez choisir un pays. La date est optionnelle.');
       return;
     }
     if (!this.operations || !this.operations.length) {
-      this.popupService.showWarning('Aucune opération bancaire disponible.');
+      warn('Aucune opération bancaire disponible.');
       return;
     }
     if (!this.releveRows || !this.releveRows.length) {
-      this.popupService.showWarning('Aucun relevé bancaire importé. Veuillez importer un relevé.');
+      warn('Aucun relevé bancaire importé. Veuillez importer un relevé.');
       return;
     }
 
@@ -3777,12 +3898,15 @@ export class BanqueComponent implements OnInit {
       });
     } catch {}
     const relevéFiltered = sourceReleves.filter(r => {
-      // Faire correspondre par nom pays affiché comme pour le Cameroun
-      const rowDisplayName = this.deriveCountryNameFromBanque(r.banque);
+      // Pays déduit de la banque, sinon du nom de compte (ex. banque « ECOBANK » sans pays,
+      // compte « INTOUCHCM » → Cameroun). Sans ce repli, la ligne était exclue avant tout rapprochement.
+      const rowDisplayName = this.deriveCountryNameFromBanque(r.banque)
+        || this.deriveCountryNameFromBanque((r as any).nomCompte);
       const matchCountry = rowDisplayName
         ? countriesMatch(rowDisplayName, this.reconPays)
         : (() => {
-        const rowCode = this.deriveCountryCodeFromBanque(r.banque);
+        const rowCode = this.deriveCountryCodeFromBanque(r.banque)
+          || this.deriveCountryCodeFromBanque((r as any).nomCompte);
         const expectedCode = reconCode;
         return !expectedCode || rowCode === expectedCode;
       })();
@@ -3800,7 +3924,22 @@ export class BanqueComponent implements OnInit {
         view: this.reconView
       });
     } catch {}
-    const revWithKey = this.buildKeysWithIndexes(relevéFiltered, (r) => {
+    // Étape 1 (prioritaire) : référence de l'opération retrouvée dans le libellé du relevé.
+    // La ligne de relevé appariée reçoit la clé de l'opération, ce qui en fait une correspondance.
+    const refMatches = this.matchOperationsByReference(opsWithKey as any, relevéFiltered);
+    const refMatchedReleves = new Set<ReleveBancaireRow>(refMatches.values());
+    const reservedKeys = new Set<string>();
+    const revRefMatched: Array<ReleveBancaireRow & { key: string; sensIndex: string }> = [];
+    refMatches.forEach((row, op) => {
+      reservedKeys.add(op.key);
+      revRefMatched.push(Object.assign({}, row as any, { key: op.key, sensIndex: op.sensIndex, reconMatchBy: 'REFERENCE' }));
+      (op as any).reconMatchBy = 'REFERENCE';
+    });
+
+    // Étape 2 (logique existante) : date + montant + banque + sens pour les relevés restants,
+    // en sautant les clés déjà prises par les paires de l'étape 1.
+    const revRemaining = relevéFiltered.filter(r => !refMatchedReleves.has(r));
+    const revWithKey = [...revRefMatched, ...this.buildKeysWithIndexes(revRemaining, (r) => {
       const dateToUse = r.dateValeur ? r.dateValeur : r.dateComptable;
       const date = this.normalizeDateToYmd(dateToUse as any);
       const debit = r.debit || 0;
@@ -3809,7 +3948,10 @@ export class BanqueComponent implements OnInit {
       const montantAbs = debit > 0 ? Math.abs(debit) : Math.abs(credit || (r.montant || 0));
       const banque = ((r.banque || '').trim() || '').toUpperCase();
       return { date, montantAbs, banque, sens };
-    });
+    }, reservedKeys)];
+    try {
+      console.log('[RECON][DBG] Appariements par référence/libellé', refMatches.size);
+    } catch {}
 
     const opMap = new Map<string, { op: OperationBancaireDisplay & { key: string; sensIndex: string } }>();
     opsWithKey.forEach(o => opMap.set((o as any).key, { op: o as any }));
@@ -3928,6 +4070,23 @@ export class BanqueComponent implements OnInit {
     const bothKeys = Array.from(allKeys).filter(k => opMap.has(k) && revMap.has(k));
     this.matchedOperations = bothKeys.map(k => opMap.get(k)!.op);
     this.matchedReleves = bothKeys.map(k => revMap.get(k)!.row);
+    // Vue « Résultat » : chaque opération face au relevé qui lui correspond
+    this.reconResultPairs = bothKeys.map(k => {
+      const op = opMap.get(k)!.op;
+      const rev = revMap.get(k)!.row;
+      const ecart = Math.abs(op.montant || 0) - this.getReleveMontantAbs(rev);
+      return {
+        key: k,
+        op,
+        rev,
+        matchBy: (rev as any).reconMatchBy === 'REFERENCE' ? 'REFERENCE' : 'CLE',
+        ecart: Math.abs(ecart) < 0.01 ? 0 : ecart
+      } as ReconResultPair;
+    }).sort((a, b) => {
+      const d = this.normalizeDateToYmd(a.op.dateOperation).localeCompare(this.normalizeDateToYmd(b.op.dateOperation));
+      return d !== 0 ? d : Math.abs(a.op.montant || 0) - Math.abs(b.op.montant || 0);
+    });
+    this.reconResultPage = 1;
     // Tableau de bord : suspens = lignes hors correspondance (KO), après mise à jour des correspondances
     this.updateTotalSuspensKO();
 
@@ -3971,6 +4130,326 @@ export class BanqueComponent implements OnInit {
     this.reconCorrRevPage = 1;
     this.updatePagedReconciliationResults();
   }
+
+  // =========================
+  // Réconciliation - Résultat (opération ↔ relevé côte à côte)
+  // =========================
+  reconResultPairs: ReconResultPair[] = [];
+  showReconResultPopup = false;
+  reconResultSearch = '';
+  reconResultMatchFilter: '' | 'REFERENCE' | 'CLE' = '';
+  reconResultPage = 1;
+  reconResultPageSize = 25;
+
+  exportingReconResult: '' | 'excel' | 'pdf' = '';
+
+  openReconResult() {
+    if (!this.reconPays) {
+      this.popupService.showWarning('Veuillez choisir un pays.');
+      return;
+    }
+    // Toujours recalculer sur les données chargées : pas besoin d'avoir cliqué sur « Réconcilier »
+    this.reconcile(true);
+    this.reconResultPage = 1;
+    this.showReconResultPopup = true;
+  }
+
+  /** Lignes d'export (respectent les filtres du popup) : opération | lien | relevé. */
+  private buildReconResultExportRows(): Array<Array<string | number>> {
+    const fmtDate = (d: unknown) => {
+      const ymd = this.normalizeDateToYmd(d as any);
+      return ymd ? ymd.split('-').reverse().join('/') : '';
+    };
+    return this.filteredReconResultPairs.map(p => [
+      fmtDate(p.op.dateOperation),
+      p.op.typeOperation || '',
+      p.op.agence || '',
+      p.op.reference || '',
+      p.op.bo || '',
+      Number(p.op.montant || 0),
+      p.matchBy === 'REFERENCE' ? 'Référence' : 'Clé',
+      p.ecart || 0,
+      fmtDate(p.rev.dateValeur || p.rev.dateComptable),
+      [p.rev.numeroCompte, p.rev.nomCompte].filter(Boolean).join(' — '),
+      p.rev.banque || '',
+      p.rev.libelle || '',
+      this.getReleveMontantAbs(p.rev),
+      (p.rev.debit || 0) > 0 ? 'Débit' : 'Crédit'
+    ]);
+  }
+
+  private static readonly RECON_RESULT_EXPORT_HEADERS = [
+    'Date', 'Type opération', 'Agence', 'Référence', 'Banque', 'Montant',
+    'Correspondance', 'Écart',
+    'Date valeur', 'Compte', 'Banque', 'Libellé', 'Montant', 'Sens'
+  ];
+
+  private reconResultFileBase(): string {
+    const pays = (this.reconPays || 'pays').normalize('NFD').replace(/[̀-ͯ]/g, '').replace(/[^A-Za-z0-9]+/g, '_');
+    const date = this.reconDate || 'toutes_dates';
+    return `resultat_reconciliation_${pays}_${date}`;
+  }
+
+  async exportReconResultExcel() {
+    if (this.exportingReconResult) return;
+    this.exportingReconResult = 'excel';
+    try {
+      const ExcelJS: any = await import('exceljs');
+      const wb = new (ExcelJS.Workbook || ExcelJS.default.Workbook)();
+      const ws = wb.addWorksheet('Résultat');
+      const headers = BanqueComponent.RECON_RESULT_EXPORT_HEADERS;
+      const opFill = { type: 'pattern', pattern: 'solid', fgColor: { argb: 'FFE8F0FB' } };
+      const linkFill = { type: 'pattern', pattern: 'solid', fgColor: { argb: 'FFF4F5F7' } };
+      const revFill = { type: 'pattern', pattern: 'solid', fgColor: { argb: 'FFE7F5EC' } };
+      const fillFor = (col: number) => col <= 6 ? opFill : (col <= 8 ? linkFill : revFill);
+      const border = { bottom: { style: 'thin', color: { argb: 'FFE3E6EB' } } };
+
+      // Titre + contexte
+      ws.mergeCells(1, 1, 1, headers.length);
+      ws.getCell(1, 1).value = 'Résultat de la réconciliation bancaire';
+      ws.getCell(1, 1).font = { bold: true, size: 14, color: { argb: 'FF1F2A44' } };
+      const s = this.reconResultStats;
+      ws.mergeCells(2, 1, 2, headers.length);
+      ws.getCell(2, 1).value = `Pays : ${this.reconPays} — Date : ${this.reconDate || 'toutes'} — `
+        + `${s.total} correspondance(s) dont ${s.parReference} par référence, ${s.parCle} par clé, ${s.avecEcart} avec écart`;
+      ws.getCell(2, 1).font = { size: 10, color: { argb: 'FF5B6475' } };
+
+      // Bandeaux de groupe
+      ws.mergeCells(4, 1, 4, 6);
+      ws.mergeCells(4, 7, 4, 8);
+      ws.mergeCells(4, 9, 4, 14);
+      ws.getCell(4, 1).value = 'OPÉRATIONS BANCAIRES';
+      ws.getCell(4, 7).value = 'LIEN';
+      ws.getCell(4, 9).value = 'RELEVÉS BANCAIRES';
+      [[1, 'FF2F5DA8'], [7, 'FF5B6475'], [9, 'FF2E7D4F']].forEach(([c, color]) => {
+        const cell = ws.getCell(4, c as number);
+        cell.font = { bold: true, size: 10, color: { argb: color as string } };
+        cell.alignment = { horizontal: 'center' };
+      });
+      for (let c = 1; c <= headers.length; c++) ws.getCell(4, c).fill = fillFor(c);
+
+      const headerRow = ws.getRow(5);
+      headers.forEach((h, i) => {
+        const cell = headerRow.getCell(i + 1);
+        cell.value = h;
+        cell.font = { bold: true, size: 10, color: { argb: 'FF3A4356' } };
+        cell.fill = fillFor(i + 1);
+        cell.border = border;
+      });
+
+      this.buildReconResultExportRows().forEach((values, idx) => {
+        const row = ws.getRow(6 + idx);
+        values.forEach((v, i) => {
+          const cell = row.getCell(i + 1);
+          cell.value = v;
+          cell.border = border;
+          if (i === 5 || i === 7 || i === 12) cell.numFmt = '# ##0;-# ##0';
+          if (i === 7 && v) cell.font = { color: { argb: 'FFB26B00' }, bold: true };
+        });
+      });
+
+      [12, 30, 16, 26, 16, 14, 15, 12, 12, 30, 16, 42, 14, 9].forEach((w, i) => ws.getColumn(i + 1).width = w);
+      ws.views = [{ state: 'frozen', ySplit: 5 }];
+      ws.autoFilter = { from: { row: 5, column: 1 }, to: { row: 5, column: headers.length } };
+
+      const buffer = await wb.xlsx.writeBuffer();
+      this.downloadBlob(new Blob([buffer], { type: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet' }),
+        `${this.reconResultFileBase()}.xlsx`);
+    } catch (e) {
+      console.error('[RECON] export Excel du résultat', e);
+      this.popupService.showWarning('Échec de l\'export Excel.');
+    } finally {
+      this.exportingReconResult = '';
+    }
+  }
+
+  async exportReconResultPdf() {
+    if (this.exportingReconResult) return;
+    this.exportingReconResult = 'pdf';
+    try {
+      const { jsPDF } = await import('jspdf');
+      const pdf = new jsPDF({ orientation: 'landscape', unit: 'mm', format: 'a4' });
+      const pageW = pdf.internal.pageSize.getWidth();
+      const pageH = pdf.internal.pageSize.getHeight();
+      const margin = 10;
+      const headers = BanqueComponent.RECON_RESULT_EXPORT_HEADERS;
+      // Largeurs (mm) : total = pageW - 2 * margin = 277
+      const widths = [16, 30, 20, 28, 18, 20, 18, 14, 16, 27, 18, 33, 19, 0];
+      widths[13] = (pageW - 2 * margin) - widths.slice(0, 13).reduce((a, b) => a + b, 0);
+      const xs = widths.reduce((acc, w, i) => { acc.push(i === 0 ? margin : acc[i - 1] + widths[i - 1]); return acc; }, [] as number[]);
+      const OP: [number, number, number] = [232, 240, 251];
+      const LINK: [number, number, number] = [244, 245, 247];
+      const REV: [number, number, number] = [231, 245, 236];
+      const bandFor = (i: number) => i <= 5 ? OP : (i <= 7 ? LINK : REV);
+      const numeric = new Set([5, 7, 12]);
+      const fmtNum = (v: number) => new Intl.NumberFormat('fr-FR', { maximumFractionDigits: 2 }).format(v).replace(/ | /g, ' ');
+      const rowH = 7;
+      const s = this.reconResultStats;
+
+      const drawHeader = () => {
+        pdf.setFont('helvetica', 'bold');
+        pdf.setFontSize(13);
+        pdf.setTextColor(31, 42, 68);
+        pdf.text('Résultat de la réconciliation bancaire', margin, 14);
+        pdf.setFont('helvetica', 'normal');
+        pdf.setFontSize(8.5);
+        pdf.setTextColor(91, 100, 117);
+        pdf.text(`Pays : ${this.reconPays}   |   Date : ${this.reconDate || 'toutes'}   |   ${s.total} correspondance(s) - `
+          + `${s.parReference} par référence, ${s.parCle} par clé, ${s.avecEcart} avec écart`, margin, 19);
+        // Bandeaux de groupe
+        const groups: Array<[number, number, string, [number, number, number], [number, number, number]]> = [
+          [0, 5, 'OPÉRATIONS BANCAIRES', OP, [47, 93, 168]],
+          [6, 7, 'LIEN', LINK, [91, 100, 117]],
+          [8, 13, 'RELEVÉS BANCAIRES', REV, [46, 125, 79]]
+        ];
+        let y = 24;
+        groups.forEach(([from, to, label, fill, color]) => {
+          const w = xs[to] + widths[to] - xs[from];
+          pdf.setFillColor(...fill);
+          pdf.roundedRect(xs[from] + 0.3, y, w - 0.6, 6, 1.2, 1.2, 'F');
+          pdf.setFont('helvetica', 'bold');
+          pdf.setFontSize(7.5);
+          pdf.setTextColor(...color);
+          pdf.text(label, xs[from] + w / 2, y + 4.1, { align: 'center' });
+        });
+        y += 7;
+        headers.forEach((h, i) => {
+          pdf.setFillColor(...bandFor(i));
+          pdf.rect(xs[i], y, widths[i], rowH, 'F');
+          pdf.setFont('helvetica', 'bold');
+          pdf.setFontSize(7);
+          pdf.setTextColor(58, 67, 86);
+          const tx = numeric.has(i) ? xs[i] + widths[i] - 1.5 : xs[i] + 1.5;
+          pdf.text(h, tx, y + 4.6, { align: numeric.has(i) ? 'right' : 'left' });
+        });
+        return y + rowH;
+      };
+
+      let y = drawHeader();
+      const rows = this.buildReconResultExportRows();
+      if (!rows.length) {
+        pdf.setFont('helvetica', 'italic');
+        pdf.setFontSize(9);
+        pdf.setTextColor(140, 147, 160);
+        pdf.text('Aucune correspondance.', pageW / 2, y + 10, { align: 'center' });
+      }
+      rows.forEach((values, r) => {
+        if (y + rowH > pageH - 12) {
+          pdf.addPage();
+          y = drawHeader();
+        }
+        // Teinte très légère par bloc, une ligne sur deux
+        if (r % 2 === 1) {
+          pdf.setFillColor(250, 251, 252);
+          pdf.rect(margin, y, pageW - 2 * margin, rowH, 'F');
+        }
+        const hasGap = Number(values[7]) !== 0;
+        if (hasGap) {
+          pdf.setFillColor(253, 243, 224);
+          pdf.rect(xs[6], y, widths[6] + widths[7], rowH, 'F');
+        }
+        pdf.setDrawColor(227, 230, 235);
+        pdf.line(margin, y + rowH, pageW - margin, y + rowH);
+        values.forEach((v, i) => {
+          pdf.setFont('helvetica', i === 3 ? 'bold' : 'normal');
+          pdf.setFontSize(7);
+          if (i === 7 && hasGap) pdf.setTextColor(178, 107, 0);
+          else if (i === 6) pdf.setTextColor(v === 'Référence' ? 47 : 46, v === 'Référence' ? 93 : 125, v === 'Référence' ? 168 : 79);
+          else pdf.setTextColor(31, 42, 68);
+          let text = typeof v === 'number' ? (i === 7 && !v ? '' : fmtNum(v)) : String(v ?? '');
+          const maxW = widths[i] - 3;
+          if (pdf.getTextWidth(text) > maxW) {
+            while (text.length > 1 && pdf.getTextWidth(text + '...') > maxW) text = text.slice(0, -1);
+            text += '...';
+          }
+          const tx = numeric.has(i) ? xs[i] + widths[i] - 1.5 : xs[i] + 1.5;
+          pdf.text(text, tx, y + 4.6, { align: numeric.has(i) ? 'right' : 'left' });
+        });
+        y += rowH;
+      });
+
+      // Pied de page
+      const pages = pdf.getNumberOfPages();
+      for (let p = 1; p <= pages; p++) {
+        pdf.setPage(p);
+        pdf.setFont('helvetica', 'normal');
+        pdf.setFontSize(7);
+        pdf.setTextColor(140, 147, 160);
+        pdf.text(`Généré le ${new Date().toLocaleString('fr-FR')}`, margin, pageH - 5);
+        pdf.text(`${p} / ${pages}`, pageW - margin, pageH - 5, { align: 'right' });
+      }
+      pdf.save(`${this.reconResultFileBase()}.pdf`);
+    } catch (e) {
+      console.error('[RECON] export PDF du résultat', e);
+      this.popupService.showWarning('Échec de l\'export PDF.');
+    } finally {
+      this.exportingReconResult = '';
+    }
+  }
+
+  private downloadBlob(blob: Blob, filename: string) {
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = filename;
+    document.body.appendChild(a);
+    a.click();
+    document.body.removeChild(a);
+    setTimeout(() => URL.revokeObjectURL(url), 1000);
+  }
+
+  closeReconResult() {
+    this.showReconResultPopup = false;
+  }
+
+  get filteredReconResultPairs(): ReconResultPair[] {
+    const q = this.normalizeReconText(this.reconResultSearch);
+    return this.reconResultPairs.filter(p => {
+      if (this.reconResultMatchFilter && p.matchBy !== this.reconResultMatchFilter) return false;
+      if (!q) return true;
+      const haystack = this.normalizeReconText([
+        p.op.reference, p.op.agence, p.op.typeOperation, p.op.bo,
+        p.rev.libelle, p.rev.banque, p.rev.numeroCompte, p.rev.nomCompte
+      ].join(' '));
+      return haystack.includes(q);
+    });
+  }
+
+  get reconResultTotalPages(): number {
+    return Math.max(1, Math.ceil(this.filteredReconResultPairs.length / this.reconResultPageSize));
+  }
+
+  get pagedReconResultPairs(): ReconResultPair[] {
+    const page = Math.min(this.reconResultPage, this.reconResultTotalPages);
+    const start = (page - 1) * this.reconResultPageSize;
+    return this.filteredReconResultPairs.slice(start, start + this.reconResultPageSize);
+  }
+
+  get reconResultStats(): { total: number; parReference: number; parCle: number; avecEcart: number } {
+    const pairs = this.reconResultPairs;
+    return {
+      total: pairs.length,
+      parReference: pairs.filter(p => p.matchBy === 'REFERENCE').length,
+      parCle: pairs.filter(p => p.matchBy === 'CLE').length,
+      avecEcart: pairs.filter(p => p.ecart !== 0).length
+    };
+  }
+
+  onReconResultFilterChange() {
+    this.reconResultPage = 1;
+  }
+
+  reconResultSetPage(page: number) {
+    this.reconResultPage = Math.min(Math.max(1, page), this.reconResultTotalPages);
+  }
+
+  reconResultSetPageSize(size: number) {
+    if (!size || size === this.reconResultPageSize) return;
+    this.reconResultPageSize = size;
+    this.reconResultPage = 1;
+  }
+
+  trackByReconPair = (_: number, p: ReconResultPair): string => p.key;
 
   openCorrespondance() {
     if (!this.matchedPairs.length) {

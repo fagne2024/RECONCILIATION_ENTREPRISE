@@ -448,13 +448,19 @@
         </div>
         <div class="filter-group">
           <label>{{ 'TBL.date' | translate }}<span class="muted">{{ 'BQ.Optionnelle' | translate }}</span></label>
-          <input class="ds-input" type="date" [(ngModel)]="reconDate">
+          <input class="ds-input" type="date" [(ngModel)]="reconDate" (change)="onReconDateChange()">
         </div>
         <button type="button" class="ds-btn ds-btn--primary btn-primary" (click)="reconcile()" [disabled]="reconciling || !reconPays">
           <i class="fas fa-link" [class.spin]="reconciling"></i>
           {{ 'BQ.Réconcilier' | translate }}
         </button>
-        
+        <button type="button" class="ds-btn ds-btn--secondary btn-outline recon-result-btn" (click)="openReconResult()"
+                [disabled]="reconciling || !reconPays" title="{{ 'BQ.ReconResultTitle' | translate }}">
+          <i class="fas fa-table-columns"></i>
+          {{ 'BQ.ReconResult' | translate }}
+          <span class="recon-result-count" *ngIf="reconResultPairs.length">{{ reconResultPairs.length }}</span>
+        </button>
+
         <div class="filter-group" style="margin-left:auto;">
           <label>{{ 'LBL.view' | translate }}</label>
           <select class="ds-select" [(ngModel)]="reconView" (change)="updatePagedReconciliationResults()">
@@ -1388,6 +1394,147 @@
   </div>
 
   <!-- Popup Liste OK définitifs -->
+  <!-- Popup Résultat de réconciliation : opération bancaire ↔ relevé bancaire -->
+  <div class="modern-popup-overlay" *ngIf="showReconResultPopup" (click)="closeReconResult()">
+    <div class="modern-popup recon-result-popup" (click)="$event.stopPropagation()" role="dialog" aria-modal="true">
+      <div class="popup-header">
+        <h2>
+          <i class="fas fa-table-columns"></i> {{ 'BQ.ReconResultTitle' | translate }}
+          <span class="rr-context">{{ reconPays }}<ng-container *ngIf="reconDate"> · {{ reconDate | date:'dd/MM/yyyy' }}</ng-container></span>
+        </h2>
+        <div class="rr-header-actions">
+          <button type="button" class="ds-btn ds-btn--secondary btn-outline rr-export rr-export--excel" (click)="exportReconResultExcel()"
+                  [disabled]="!!exportingReconResult || !filteredReconResultPairs.length">
+            <i class="fas" [ngClass]="exportingReconResult==='excel' ? 'fa-spinner spin' : 'fa-file-excel'"></i> {{ 'BQ.ReconResultExportExcel' | translate }}
+          </button>
+          <button type="button" class="ds-btn ds-btn--secondary btn-outline rr-export rr-export--pdf" (click)="exportReconResultPdf()"
+                  [disabled]="!!exportingReconResult || !filteredReconResultPairs.length">
+            <i class="fas" [ngClass]="exportingReconResult==='pdf' ? 'fa-spinner spin' : 'fa-file-pdf'"></i> {{ 'BQ.ReconResultExportPdf' | translate }}
+          </button>
+          <button type="button" class="close-btn" (click)="closeReconResult()" [attr.aria-label]="'COMMON.actions.close' | translate">
+            <i class="fas fa-times"></i>
+          </button>
+        </div>
+      </div>
+
+      <div class="popup-content">
+        <!-- Synthèse -->
+        <div class="rr-stats">
+          <div class="rr-stat">
+            <span class="rr-stat__value">{{ reconResultStats.total }}</span>
+            <span class="rr-stat__label">{{ 'BQ.ReconResultPairs' | translate }}</span>
+          </div>
+          <div class="rr-stat rr-stat--ref">
+            <span class="rr-stat__value">{{ reconResultStats.parReference }}</span>
+            <span class="rr-stat__label">{{ 'BQ.ReconResultByReference' | translate }}</span>
+          </div>
+          <div class="rr-stat rr-stat--key">
+            <span class="rr-stat__value">{{ reconResultStats.parCle }}</span>
+            <span class="rr-stat__label">{{ 'BQ.ReconResultByKey' | translate }}</span>
+          </div>
+          <div class="rr-stat rr-stat--gap" [class.rr-stat--muted]="!reconResultStats.avecEcart">
+            <span class="rr-stat__value">{{ reconResultStats.avecEcart }}</span>
+            <span class="rr-stat__label">{{ 'BQ.ReconResultWithGap' | translate }}</span>
+          </div>
+        </div>
+
+        <!-- Filtres -->
+        <div class="rr-filters">
+          <div class="filter-group">
+            <label>{{ 'BQ.Recherche' | translate }}</label>
+            <input class="ds-input" type="text" [(ngModel)]="reconResultSearch" (input)="onReconResultFilterChange()"
+                   placeholder="{{ 'BQ.ReconResultSearchPlaceholder' | translate }}">
+          </div>
+          <div class="filter-group">
+            <label>{{ 'BQ.ReconResultMatchType' | translate }}</label>
+            <select class="ds-select" [(ngModel)]="reconResultMatchFilter" (change)="onReconResultFilterChange()">
+              <option value="">{{ 'FILT.all' | translate }}</option>
+              <option value="REFERENCE">{{ 'BQ.ReconResultByReference' | translate }}</option>
+              <option value="CLE">{{ 'BQ.ReconResultByKey' | translate }}</option>
+            </select>
+          </div>
+        </div>
+
+        <div class="rr-table-wrap">
+          <table class="rr-table">
+            <thead>
+              <tr class="rr-group-row">
+                <th colspan="6" class="rr-group rr-group--op"><i class="fas fa-building-columns"></i> {{ 'BQ.ReconResultOperations' | translate }}</th>
+                <th class="rr-group rr-group--link" aria-hidden="true"></th>
+                <th colspan="5" class="rr-group rr-group--rev"><i class="fas fa-file-invoice-dollar"></i> {{ 'BQ.ReconResultReleves' | translate }}</th>
+              </tr>
+              <tr>
+                <th class="rr-op">{{ 'TBL.date' | translate }}</th>
+                <th class="rr-op">{{ 'TBL.operationType' | translate }}</th>
+                <th class="rr-op">{{ 'TBL.agency' | translate }}</th>
+                <th class="rr-op">{{ 'TBL.reference' | translate }}</th>
+                <th class="rr-op">{{ 'TBL.bank' | translate }}</th>
+                <th class="rr-op rr-num">{{ 'TBL.amount' | translate }}</th>
+                <th class="rr-link">{{ 'BQ.ReconResultMatch' | translate }}</th>
+                <th class="rr-rev">{{ 'BQ.ReconResultValueDate' | translate }}</th>
+                <th class="rr-rev">{{ 'BQ.ReconResultAccount' | translate }}</th>
+                <th class="rr-rev">{{ 'TBL.bank' | translate }}</th>
+                <th class="rr-rev">{{ 'BQ.ReconResultLabel' | translate }}</th>
+                <th class="rr-rev rr-num">{{ 'TBL.amount' | translate }}</th>
+              </tr>
+            </thead>
+            <tbody>
+              <tr *ngFor="let p of pagedReconResultPairs; trackBy: trackByReconPair" [class.rr-row--gap]="p.ecart !== 0">
+                <td class="rr-op">{{ p.op.dateOperation | date:'dd/MM/yyyy' }}</td>
+                <td class="rr-op rr-type">{{ p.op.typeOperation }}</td>
+                <td class="rr-op">{{ p.op.agence }}</td>
+                <td class="rr-op rr-ref">{{ p.op.reference || '—' }}</td>
+                <td class="rr-op">{{ p.op.bo || '—' }}</td>
+                <td class="rr-op rr-num">{{ p.op.montant | number:'1.0-2':'fr' }}</td>
+                <td class="rr-link">
+                  <span class="rr-badge" [class.rr-badge--ref]="p.matchBy==='REFERENCE'" [class.rr-badge--key]="p.matchBy==='CLE'"
+                        [title]="(p.matchBy==='REFERENCE' ? 'BQ.ReconResultByReferenceHint' : 'BQ.ReconResultByKeyHint') | translate">
+                    <i class="fas" [ngClass]="p.matchBy==='REFERENCE' ? 'fa-hashtag' : 'fa-link'"></i>
+                    {{ (p.matchBy==='REFERENCE' ? 'BQ.ReconResultRef' : 'BQ.ReconResultKey') | translate }}
+                  </span>
+                  <span class="rr-gap" *ngIf="p.ecart !== 0" [title]="'BQ.ReconResultGapHint' | translate">
+                    {{ 'BQ.ReconResultGap' | translate }} {{ p.ecart | number:'1.0-2':'fr' }}
+                  </span>
+                </td>
+                <td class="rr-rev">{{ (p.rev.dateValeur || p.rev.dateComptable) | date:'dd/MM/yyyy' }}</td>
+                <td class="rr-rev">
+                  <div>{{ p.rev.numeroCompte || '—' }}</div>
+                  <div class="rr-sub" *ngIf="p.rev.nomCompte">{{ p.rev.nomCompte }}</div>
+                </td>
+                <td class="rr-rev">{{ p.rev.banque || '—' }}</td>
+                <td class="rr-rev rr-libelle" [title]="p.rev.libelle || ''">{{ p.rev.libelle || '—' }}</td>
+                <td class="rr-rev rr-num">
+                  {{ getReleveMontantAbs(p.rev) | number:'1.0-2':'fr' }}
+                  <span class="rr-sens" [class.rr-sens--debit]="(p.rev.debit || 0) > 0">
+                    {{ (p.rev.debit || 0) > 0 ? ('BQ.ReconResultDebit' | translate) : ('BQ.ReconResultCredit' | translate) }}
+                  </span>
+                </td>
+              </tr>
+              <tr *ngIf="!filteredReconResultPairs.length">
+                <td colspan="12" class="rr-empty">{{ 'BQ.ReconResultEmpty' | translate }}</td>
+              </tr>
+            </tbody>
+          </table>
+        </div>
+      </div>
+
+      <div class="popup-footer rr-footer">
+        <ds-pagination class="rr-pagination"
+          [page]="reconResultPage"
+          [pageCount]="reconResultTotalPages"
+          [totalItems]="filteredReconResultPairs.length"
+          [pageSize]="reconResultPageSize"
+          [pageSizes]="[10, 25, 50, 100]"
+          [itemLabel]="'BQ.ReconResultPairs' | translate"
+          [ariaLabel]="'BQ.ReconResultTitle' | translate"
+          (pageChange)="reconResultSetPage($event)"
+          (pageSizeChange)="reconResultSetPageSize($event)">
+        </ds-pagination>
+        <button type="button" class="ds-btn ds-btn--secondary btn-secondary" (click)="closeReconResult()"><i class="fas fa-times"></i>{{ 'COMMON.actions.close' | translate }}</button>
+      </div>
+    </div>
+  </div>
+
   <div class="modern-popup-overlay" *ngIf="showOkListPopup" (click)="closeOkList()">
     <div class="modern-popup detail-popup" (click)="$event.stopPropagation()">
       <div class="popup-header">

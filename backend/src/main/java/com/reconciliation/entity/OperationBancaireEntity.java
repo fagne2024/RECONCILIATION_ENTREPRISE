@@ -288,11 +288,13 @@ public class OperationBancaireEntity {
     private String dedupKey;
 
     /** Vrai une fois la correspondance validée par le check : la ligne n'est plus proposée. */
-    @Column(name = "check_valide")
-    private Boolean checkValide;
+    // Colonne NOT NULL DEFAULT FALSE (V27) : Hibernate insère la valeur du champ et ignore le DEFAULT,
+    // d'où l'initialisation à false (sinon « Column 'check_valide' cannot be null » à chaque création).
+    @Column(name = "check_valide", nullable = false)
+    private Boolean checkValide = false;
 
     public Boolean getCheckValide() { return checkValide; }
-    public void setCheckValide(Boolean checkValide) { this.checkValide = checkValide; }
+    public void setCheckValide(Boolean checkValide) { this.checkValide = Boolean.TRUE.equals(checkValide); }
 
     public String getDedupKey() { return dedupKey; }
     public void setDedupKey(String dedupKey) { this.dedupKey = dedupKey; }
