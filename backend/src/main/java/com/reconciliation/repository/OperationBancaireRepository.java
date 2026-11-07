@@ -99,4 +99,6 @@ public interface OperationBancaireRepository extends JpaRepository<OperationBanc
      * References deja enregistrees commencant par ce prefixe (compteur des references generees).
      */
     List<OperationBancaireEntity> findByReferenceStartingWith(String prefix);
+
+    List<OperationBancaireEntity> findByDedupKeyIn(java.util.Collection<String> dedupKeys);
 }

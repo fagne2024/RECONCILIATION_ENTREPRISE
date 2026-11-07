@@ -6,13 +6,15 @@ import { FieldTypeDetectionService, ColumnAnalysis } from '../../services/field-
 import { DataProcessingService } from '../../services/data-processing.service';
 import { ExportOptimizationService, ExportProgress } from '../../services/export-optimization.service';
 import { fixGarbledCharacters } from '../../utils/encoding-fixer';
-import { readCsvFileUltraFast } from '../../utils/fast-csv-reader.util';
+import { readCsvFileUltraFast, parseCsvWithHeaderPlan, CsvParsedTable, CsvRowRange } from '../../utils/fast-csv-reader.util';
 import {
   findGdjHeaderLineIndexInCsvLines,
   looksLikeGdjReportPreamble,
   looksLikeGdjTransactionalHeader
 } from '../../utils/model-header-detection.util';
 import { buildConcatenatedValue } from '../../utils/concat.util';
+import { chooseBatchHeaderSet } from '../../utils/bilingual-column.util';
+import { alignRowsToHeaders } from '../../utils/row-column.util';
 import {
   preserveLeadingZeroString,
   finalizeTextPreserveColumnValue,
@@ -23,9 +25,28 @@ import {
   isMsisdnPreserveColumn,
   isLeadingZeroNumericString
 } from '../../utils/text-cell.util';
-import { renameKeyPreservingOrder } from '../../utils/row-column.util';
+import { renameKeyPreservingOrder, normalizeColumnKey } from '../../utils/row-column.util';
+import { resolveCanonicalColumnId } from '../../utils/bilingual-column.util';
+import { AutoProcessingService, AutoProcessingModel } from '../../services/auto-processing.service';
 import * as Papa from 'papaparse';
 import * as XLSX from 'xlsx';
+
+/** Détail d'un fichier CSV du lot : ce qui a été détecté pour lui. */
+interface CsvBatchFileInfo {
+  name: string;
+  delimiter: string;
+  headerLine: number;
+  dataStartLine: number;
+  rowCount: number;
+  headerSource: CsvParsedTable['headerSource'];
+}
+
+/** Lot CSV finalisé : en-têtes et lignes communs, identiques entre aperçu et confirmation. */
+interface CsvBatchResult {
+  headers: string[];
+  rows: Record<string, string>[];
+  files: CsvBatchFileInfo[];
+}
 import * as ExcelJS from 'exceljs';
 import * as JSZip from 'jszip';
 import { saveAs } from 'file-saver';
@@ -187,6 +208,44 @@ export class TraitementComponent implements OnInit, AfterViewInit {
   /** Indique si l'import a été confirmé depuis la prévisualisation CSV.
    *  Si true, les filtres automatiques spécifiques aux modèles (Orange Money, GDJ) ne sont pas appliqués. */
   private isImportFromPreview: boolean = false;
+
+  // --- PARAMÉTRAGE OPTIONNEL DES LIGNES CSV (après chargement) ---
+  /** Paramétrage manuel activé : ligne d'en-tête et première ligne de données (1-based, lignes brutes). */
+  csvRowRangeEnabled: boolean = false;
+  csvHeaderLineInput: number | null = null;
+  csvDataLineInput: number | null = null;
+  csvRowRangeError: string = '';
+  /** Valeurs détectées automatiquement, affichées comme repère. */
+  csvAutoHeaderLine: number | null = null;
+  csvAutoDataLine: number | null = null;
+  /** Premières lignes brutes du fichier, numérotées. */
+  csvRawPreviewLines: { n: number; text: string }[] = [];
+  /** Paramétrage appliqué au traitement ; null = détection automatique. */
+  csvRowRange: CsvRowRange | null = null;
+  /** Détail par fichier du lot affiché dans l'aperçu. */
+  csvBatchFiles: CsvBatchFileInfo[] = [];
+  csvPreviewRowCount: number = 0;
+  private csvRenderSeq: number = 0;
+
+  // --- COMPARAISON DES COLONNES AVEC UN MODÈLE ---
+  modelList: AutoProcessingModel[] = [];
+  selectedModelId: string = '';
+  /** Colonnes cibles du modèle sélectionné. */
+  modelColumns: string[] = [];
+  modelColumnsLoading: boolean = false;
+  /** Colonne du modèle -> colonne du traitement liée ('' = non liée). */
+  modelLinks: Record<string, string> = {};
+  modelLinkMessage: string = '';
+
+  // --- EN-TÊTES MULTILINGUES (plusieurs fichiers) ---
+  /** Fichiers dont les en-têtes sont en plusieurs langues : la langue retenue est imposée. */
+  multiLanguageHeaders: boolean = false;
+  batchHeaderLanguage: 'fr' | 'en' = 'fr';
+
+  /** Nombre de fichiers CSV sélectionnés. */
+  get csvSelectedCount(): number {
+    return this.selectedFiles.filter(f => this.isCsvTextExtension(f.name)).length;
+  }
 
   // --- PAGINATION ET AFFICHAGE ---
   currentPage: number = 1;
@@ -404,7 +463,8 @@ End Sub`;
     private exportOptimizationService: ExportOptimizationService,
     private excelConversionService: ExcelConversionService,
     private translate: TranslateService,
-    private configurationCalculService: ConfigurationCalculService
+    private configurationCalculService: ConfigurationCalculService,
+    private autoProcessingService: AutoProcessingService
   ) {}
 
   private t(key: string, params?: any): string {
@@ -477,13 +537,9 @@ End Sub`;
         // Détection automatique du séparateur
         this.detectedDelimiter = this.detectCsvDelimiter(csv);
         
-        // Prévisualiser les données
-        const preview = await this.previewCsvData(csv, this.detectedDelimiter);
-        this.csvPreviewColumns = preview.columns;
-        this.csvPreviewData = preview.data;
-        this.showCsvPreview = true;
-        
-        
+        // Prévisualiser les données (même calcul que la confirmation)
+        await this.renderCsvPreview();
+
         this.cd.detectChanges();
       } catch (error) {
         this.showError('upload', this.t('TRT.msg.csvPreviewError'));
@@ -602,6 +658,19 @@ End Sub`;
         }
       }
       
+      // Colonnes communes à tous les fichiers : une seule langue (EN ou FR) choisie par le
+      // système, les lignes de chaque fichier étant empilées sous ces colonnes.
+      if (this.allRows.length && this.fileProcessStats.length > 1) {
+        const keySet = new Set<string>();
+        for (const row of this.allRows) {
+          for (const key of Object.keys(row)) {
+            keySet.add(key);
+          }
+        }
+        const batchHeaders = chooseBatchHeaderSet([...keySet]);
+        this.allRows = alignRowsToHeaders(this.allRows as Record<string, string>[], batchHeaders) as any[];
+      }
+
       // Fusion optimisée des colonnes
       this.processingMessage = this.t('TRT.msg.mergeOptimized', { mode: isLargeUpload ? this.t('TRT.msg.mergeModeOptimized') : this.t('TRT.msg.mergeModeUltraFast') });
       this.allColumns = await this.mergeColumnsOptimized();
@@ -5442,6 +5511,7 @@ End Sub`;
   ngOnInit() {
     // Charger les extensions configurées
     this.loadTraitementExtensions();
+    void this.loadModelList();
     try {
       this.configurationCalculService.loadRules().subscribe({
         next: () => {
@@ -5839,21 +5909,32 @@ End Sub`;
       this.showAllRows = false;
       this.displayedRows = [];
       
-      // Traiter le CSV avec le séparateur détecté
-      await this.processCsvContent(this.csvContentToProcess, this.detectedDelimiter);
+      // Même calcul que l'aperçu : le résultat est identique à ce qui a été prévisualisé
+      const csvFiles = this.selectedFiles.filter(f => this.isCsvTextExtension(f.name));
+      const batch = await this.buildCsvBatch(
+        csvFiles.length ? csvFiles : [this.csvFileToProcess as File]
+      );
+      await this.pushCsvBatchRows(batch);
       
-      // Finaliser le traitement
+      // Finaliser le traitement : le résultat reprend l'en-tête et les lignes de l'aperçu.
+      // Les états d'affichage hérités (sélection de colonnes, réorganisation) sont réinitialisés,
+      // sinon le tableau et l'export pourraient garder d'anciennes colonnes.
       this.combinedRows = [...this.allRows];
       this.columns = [...this.allColumns];
       this.originalRows = [...this.allRows];
-      
+      this.selectionApplied = false;
+      this.selectedCols = [...this.allColumns];
+      this.isColumnReorderMode = false;
+      this.reorderedColumns = [...this.allColumns];
+      this.currentPage = 1;
+
       // Optimiser l'affichage pour les gros fichiers
       this.optimizeForLargeFiles();
-      
+
       // Mettre à jour l'affichage
       this.updateDisplayedRows();
       this.updatePagination();
-      
+
       // Masquer la prévisualisation
       this.showCsvPreview = false;
       this.isProcessing = false;
@@ -5878,172 +5959,288 @@ End Sub`;
     }
   }
 
-  // Méthode pour traiter le contenu CSV comme un tableau normal
-  async processCsvContent(csvContent: string, delimiter: string) {
-    return new Promise<void>((resolve, reject) => {
-      // Fichiers GDJ (LA GABONAISE DES JEUX) : ignorer le préambule et lire
-      // les données à partir de la ligne d'en-tête détectée.
-      const gdjDetection = this.detectGdjFile(csvContent, delimiter);
-      this.isGdjFile = gdjDetection.isGdj;
-      this.gdjHeaderRowIndex = gdjDetection.headerRowIndex;
-
-      if (gdjDetection.isGdj) {
-        Papa.parse(csvContent, {
-          header: false,
-          delimiter,
-          skipEmptyLines: true,
-          complete: async (results) => {
-            try {
-              const rawRows = results.data as any[];
-              const colNames = gdjDetection.headerRow.map((v: any, i: number) => v ? v.toString() : 'Col' + (i + 1));
-              const dataRows = rawRows.slice(gdjDetection.headerRowIndex + 1);
-
-              if (dataRows.length > 0) {
-                await this.processDataInBackground(
-                  dataRows,
-                  (chunk) => {
-                    const rowsWithHeader = chunk.map((row: any[]) => {
-                      const obj: any = {};
-                      colNames.forEach((col: string, idx: number) => {
-                        obj[col] = row[idx];
-                      });
-                      return obj;
-                    });
-
-                    this.combinedRows.push(...rowsWithHeader);
-                    this.allRows.push(...rowsWithHeader);
-                  },
-                  50,
-                  (progress) => {
-                    this.processingMessage = `Traitement CSV GDJ: ${Math.round(progress)}%`;
-                  }
-                );
-
-                for (const col of colNames) {
-                  if (!this.columns.includes(col)) this.columns.push(col);
-                  if (!this.allColumns.includes(col)) this.allColumns.push(col);
-                }
-              }
-
-              resolve();
-            } catch (error) {
-              reject(error);
-            }
-          },
-          error: (error: any) => {
-            reject(error);
-          }
-        });
-        return;
-      }
-
-      Papa.parse(csvContent, {
-        header: true,
-        delimiter,
-        skipEmptyLines: true,
-        complete: async (results) => {
-          try {
-            let rows = results.data as any[];
-            
-            // Si les colonnes sont nommées field1, field2... ou qu'il n'y a qu'une seule colonne, on relit sans header
-            const firstRow = rows[0] || {};
-            const allKeys = Object.keys(firstRow);
-            const looksLikeNoHeader = allKeys.length <= 1 || allKeys.some(k => k.toLowerCase().startsWith('field'));
-            
-            if (looksLikeNoHeader) {
-              Papa.parse(csvContent, {
-                header: false,
-                delimiter: delimiter,
-                skipEmptyLines: true,
-                complete: async (res2) => {
-                  try {
-                    const rawRows = res2.data as any[];
-                    
-                    if (rawRows.length > 1) {
-                      const headerRow = rawRows[0];
-                      const dataRows = rawRows.slice(1);
-                      const colNames = headerRow.map((v: any, i: number) => v ? v.toString() : 'Col' + (i+1));
-                      
-                      
-                      // Traitement en arrière-plan avec chunks très petits
-                      await this.processDataInBackground(
-                        dataRows,
-                        (chunk) => {
-                          const rowsWithHeader = chunk.map((row: any[]) => {
-                            const obj: any = {};
-                            colNames.forEach((col: string, idx: number) => {
-                              obj[col] = row[idx];
-                            });
-                            return obj;
-                          });
-                          
-                          this.combinedRows.push(...rowsWithHeader);
-                          this.allRows.push(...rowsWithHeader);
-                        },
-                        50, // Chunks très petits pour éviter le blocage
-                        (progress) => {
-                          this.processingMessage = `Traitement CSV: ${Math.round(progress)}%`;
-                        }
-                      );
-                      
-                      for (const col of colNames) {
-                        if (!this.columns.includes(col)) this.columns.push(col);
-                        if (!this.allColumns.includes(col)) this.allColumns.push(col);
-                      }
-                      
-                    }
-                    resolve();
-                  } catch (error) {
-                    reject(error);
-                  }
-                },
-                error: (error: any) => {
-                  reject(error);
-                }
-              });
-              return;
-            }
-            
-            // Cas normal avec header
-            if (rows.length > 0) {
-              
-              // Traitement en arrière-plan avec chunks très petits
-              await this.processDataInBackground(
-                rows,
-                (chunk) => {
-                  this.combinedRows.push(...chunk);
-                  this.allRows.push(...chunk);
-                },
-                50, // Chunks très petits pour éviter le blocage
-                (progress) => {
-                  this.processingMessage = `Traitement CSV: ${Math.round(progress)}%`;
-                }
-              );
-              
-              // Extraire les colonnes
-              const firstRow = rows[0];
-              
-              for (const key of Object.keys(firstRow)) {
-                if (!this.columns.includes(key)) this.columns.push(key);
-                if (!this.allColumns.includes(key)) this.allColumns.push(key);
-              }
-              
-              
-            }
-            resolve();
-          } catch (error) {
-            reject(error);
-          }
-        },
-        error: (error: any) => {
-          reject(error);
-        }
+  /**
+   * Lit les fichiers CSV avec le même paramétrage (lignes et langue) et renvoie les en-têtes
+   * et les lignes finales. L'aperçu et la confirmation utilisent cette même fonction, donc
+   * le résultat est identique à ce qui a été prévisualisé.
+   */
+  private async buildCsvBatch(files: File[]): Promise<CsvBatchResult> {
+    const parsed: { name: string; table: CsvParsedTable }[] = [];
+    for (const file of files) {
+      const text = await file.text();
+      parsed.push({
+        name: file.name,
+        table: parseCsvWithHeaderPlan(text, { stripAirtelPreamble: true }, this.csvRowRange)
       });
-    });
+    }
+
+    const infos: CsvBatchFileInfo[] = parsed.map(p => ({
+      name: p.name,
+      delimiter: p.table.delimiter,
+      headerLine: p.table.headerLine,
+      dataStartLine: p.table.dataStartLine,
+      rowCount: p.table.rows.length,
+      headerSource: p.table.headerSource
+    }));
+
+    if (parsed.length <= 1) {
+      return { headers: parsed[0]?.table.headers ?? [], rows: parsed[0]?.table.rows ?? [], files: infos };
+    }
+
+    // Plusieurs fichiers : un seul jeu d'en-têtes, langue imposée si la case est cochée.
+    const keySet = new Set<string>();
+    parsed.forEach(p => p.table.headers.forEach(h => keySet.add(h)));
+    const headers = this.multiLanguageHeaders
+      ? chooseBatchHeaderSet([...keySet], this.batchHeaderLanguage)
+      : chooseBatchHeaderSet([...keySet]);
+
+    const rows: Record<string, string>[] = [];
+    for (const p of parsed) {
+      for (const row of alignRowsToHeaders(p.table.rows, headers)) {
+        rows.push(row);
+      }
+    }
+    return { headers, rows, files: infos };
+  }
+
+  /** Ajoute les lignes d'un lot aux données de traitement, par blocs pour ne pas bloquer l'écran. */
+  private async pushCsvBatchRows(batch: CsvBatchResult): Promise<void> {
+    this.allColumns = [...batch.headers];
+    this.columns = [...batch.headers];
+    const chunkSize = 5000;
+    for (let i = 0; i < batch.rows.length; i += chunkSize) {
+      const chunk = batch.rows.slice(i, i + chunkSize) as any[];
+      this.allRows.push(...chunk);
+      this.combinedRows.push(...chunk);
+      const done = Math.min(batch.rows.length, i + chunk.length);
+      this.processingMessage = `Traitement CSV: ${Math.round((done / batch.rows.length) * 100)}%`;
+      await new Promise(resolve => setTimeout(resolve, 0));
+    }
+  }
+
+  /**
+   * Affiche l'aperçu : lot calculé comme à la confirmation, détail par fichier,
+   * lignes brutes numérotées du dernier fichier chargé.
+   */
+  private async renderCsvPreview(): Promise<void> {
+    const seq = ++this.csvRenderSeq;
+    const csvFiles = this.selectedFiles.filter(f => this.isCsvTextExtension(f.name));
+    const batch = await this.buildCsvBatch(
+      csvFiles.length ? csvFiles : (this.csvFileToProcess ? [this.csvFileToProcess] : [])
+    );
+    if (seq !== this.csvRenderSeq) {
+      return; // un aperçu plus récent a été lancé entre-temps
+    }
+
+    const sample = this.csvContentToProcess.slice(0, 200000);
+    const auto = parseCsvWithHeaderPlan(sample, { stripAirtelPreamble: true }, null);
+    this.csvAutoHeaderLine = auto.headerLine;
+    this.csvAutoDataLine = auto.dataStartLine;
+    this.csvRawPreviewLines = sample.split(/\r?\n/).slice(0, 30).map((text, i) => ({ n: i + 1, text }));
+
+    this.csvBatchFiles = batch.files;
+    this.detectedDelimiter = batch.files.length
+      ? batch.files[batch.files.length - 1].delimiter
+      : this.detectedDelimiter;
+    this.csvPreviewColumns = batch.headers;
+    this.csvPreviewData = batch.rows.slice(0, 10);
+    this.csvPreviewRowCount = batch.rows.length;
+    this.showCsvPreview = true;
+  }
+
+  /** Liste des modèles (page Modèles) proposés pour la comparaison. */
+  async loadModelList(): Promise<void> {
+    try {
+      this.modelList = await this.autoProcessingService.getModels();
+    } catch {
+      this.modelList = [];
+    }
+  }
+
+  modelKey(model: AutoProcessingModel): string {
+    return model.modelId || model.id || '';
+  }
+
+  /** Colonnes actuellement affichées : résultat si traité, sinon aperçu. */
+  get comparisonDisplayColumns(): string[] {
+    return this.columns.length ? this.columns : this.csvPreviewColumns;
+  }
+
+  /** Colonnes du traitement qui ne sont liées à aucune colonne du modèle. */
+  get unlinkedDisplayColumns(): string[] {
+    const linked = new Set(Object.values(this.modelLinks).filter(Boolean));
+    return this.comparisonDisplayColumns.filter(c => !linked.has(c));
+  }
+
+  async onModelSelected(modelId: string): Promise<void> {
+    this.selectedModelId = modelId;
+    this.modelLinks = {};
+    this.modelLinkMessage = '';
+    this.modelColumns = [];
+    if (!modelId) {
+      return;
+    }
+    this.modelColumnsLoading = true;
+    try {
+      this.modelColumns = await this.autoProcessingService.getTargetColumns(modelId);
+      this.resetModelLinks();
+    } catch {
+      this.modelLinkMessage = 'Colonnes du modèle indisponibles.';
+    } finally {
+      this.modelColumnsLoading = false;
+      this.cd.detectChanges();
+    }
+  }
+
+  /** Propose les liens : même nom normalisé, ou même concept (ex. Transfer ID / Transaction ID). */
+  resetModelLinks(): void {
+    const displayCols = this.comparisonDisplayColumns;
+    const used = new Set<string>();
+    const links: Record<string, string> = {};
+    for (const modelCol of this.modelColumns) {
+      const modelKey = normalizeColumnKey(modelCol);
+      const modelId = resolveCanonicalColumnId(modelCol);
+      const match = displayCols.find(c =>
+        !used.has(c) &&
+        (normalizeColumnKey(c) === modelKey || (!!modelId && resolveCanonicalColumnId(c) === modelId))
+      );
+      links[modelCol] = match ?? '';
+      if (match) {
+        used.add(match);
+      }
+    }
+    this.modelLinks = links;
+    this.modelLinkMessage = '';
+  }
+
+  /** Une colonne du traitement ne peut être liée qu'à une seule colonne du modèle. */
+  onModelLinkChange(modelCol: string, displayCol: string): void {
+    if (displayCol) {
+      for (const other of Object.keys(this.modelLinks)) {
+        if (other !== modelCol && this.modelLinks[other] === displayCol) {
+          this.modelLinks[other] = '';
+        }
+      }
+    }
+    this.modelLinks[modelCol] = displayCol;
+  }
+
+  /**
+   * Renomme les colonnes liées du traitement avec le nom de la colonne du modèle.
+   * Le tableau de résultat et l'export prennent alors les noms du modèle.
+   */
+  applyModelLinks(): void {
+    if (!this.combinedRows.length) {
+      this.modelLinkMessage = 'Confirmez d\'abord l\'import pour renommer les colonnes du résultat.';
+      return;
+    }
+    // colonne du traitement -> nom de la colonne du modèle
+    const rename = new Map<string, string>();
+    for (const [modelCol, displayCol] of Object.entries(this.modelLinks)) {
+      if (displayCol && !rename.has(displayCol)) {
+        rename.set(displayCol, modelCol);
+      }
+    }
+    if (!rename.size) {
+      this.modelLinkMessage = 'Aucun lien à appliquer.';
+      return;
+    }
+    const unlinked = new Set(this.allColumns.filter(c => !rename.has(c)));
+    const clash = [...rename.values()].find(name => unlinked.has(name));
+    if (clash) {
+      this.modelLinkMessage = `Impossible : « ${clash} » existe déjà dans le traitement sans lien.`;
+      return;
+    }
+
+    const renameKey = (key: string) => rename.get(key) ?? key;
+    const renameRow = (row: any) => {
+      const out: any = {};
+      for (const key of Object.keys(row)) {
+        out[renameKey(key)] = row[key];
+      }
+      return out;
+    };
+    const renameList = (list: string[]) => list.map(renameKey);
+
+    this.allRows = this.allRows.map(renameRow);
+    this.combinedRows = this.combinedRows.map(renameRow);
+    this.originalRows = this.originalRows.map(renameRow);
+    this.allColumns = renameList(this.allColumns);
+    this.columns = renameList(this.columns);
+    this.reorderedColumns = renameList(this.reorderedColumns);
+    this.selectedCols = renameList(this.selectedCols);
+
+    this.updateDisplayedRows();
+    this.updatePagination();
+    this.resetModelLinks();
+    this.modelLinkMessage = `${rename.size} colonne(s) renommée(s) selon le modèle.`;
+  }
+
+  /** Changement de la case « plusieurs langues » ou de la langue : l'aperçu est recalculé. */
+  onBatchLanguageChanged(): void {
+    void this.renderCsvPreview();
+  }
+
+  /** Active ou désactive le paramétrage manuel ; l'activation pré-remplit avec la détection. */
+  toggleCsvRowRange(enabled: boolean): void {
+    this.csvRowRangeEnabled = enabled;
+    this.csvRowRangeError = '';
+    if (enabled) {
+      this.csvHeaderLineInput = this.csvAutoHeaderLine;
+      this.csvDataLineInput = this.csvAutoDataLine;
+    } else {
+      this.resetCsvRowRange();
+    }
+  }
+
+  onCsvRowRangeInput(field: 'header' | 'data', raw: string): void {
+    const n = parseInt(raw, 10);
+    const value = Number.isFinite(n) && n >= 1 ? n : null;
+    if (field === 'header') {
+      this.csvHeaderLineInput = value;
+    } else {
+      this.csvDataLineInput = value;
+    }
+  }
+
+  /** Applique la ligne d'en-tête et la première ligne de données choisies, puis rafraîchit l'aperçu. */
+  applyCsvRowRange(): void {
+    const header = this.csvHeaderLineInput;
+    const data = this.csvDataLineInput;
+    if (header === null || data === null) {
+      this.csvRowRangeError = 'Indiquez la ligne d\'en-tête et la première ligne de données.';
+      return;
+    }
+    if (data <= header) {
+      this.csvRowRangeError = 'La première ligne de données doit être après la ligne d\'en-tête.';
+      return;
+    }
+    this.csvRowRangeError = '';
+    this.csvRowRange = { headerLine: header, dataStartLine: data };
+    this.renderCsvPreview();
+  }
+
+  /** Revient à la détection automatique de l'en-tête et des données. */
+  resetCsvRowRange(): void {
+    this.csvRowRange = null;
+    this.csvHeaderLineInput = null;
+    this.csvDataLineInput = null;
+    this.csvRowRangeError = '';
+    if (this.csvContentToProcess && this.showCsvPreview) {
+      this.renderCsvPreview();
+    }
   }
 
   cancelCsvPreview() {
     // Annuler la prévisualisation et réinitialiser
+    this.csvRowRange = null;
+    this.csvRowRangeEnabled = false;
+    this.csvHeaderLineInput = null;
+    this.csvDataLineInput = null;
+    this.csvRowRangeError = '';
+    this.csvRawPreviewLines = [];
+    this.csvBatchFiles = [];
+    this.csvPreviewRowCount = 0;
     this.showCsvPreview = false;
     this.csvPreviewData = [];
     this.csvPreviewColumns = [];

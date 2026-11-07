@@ -926,14 +926,81 @@
   </div>
   
   <!-- Prévisualisation CSV -->
-  <div *ngIf="showCsvPreview && csvPreviewData.length > 0" class="csv-preview-section">
+  <div *ngIf="showCsvPreview" class="csv-preview-section">
     <h4>{{ 'TRT.📋PrevisualisationDuFichierCSV' | translate }}</h4>
     <div class="preview-info">
       <p><strong>{{ 'TRT.SeparateurDetecte' | translate }}</strong> <code>{{ detectedDelimiter }}</code></p>
       <p><strong>{{ 'TRT.Colonnes2' | translate }}</strong> {{ csvPreviewColumns.length }}</p>
-      <p><strong>{{ 'TRT.Apercu' | translate }}</strong> {{ csvPreviewData.length }} {{ 'TRT.Rows' | translate }}</p>
+      <p><strong>{{ 'TRT.Apercu' | translate }}</strong> {{ csvPreviewRowCount }} {{ 'TRT.Rows' | translate }} (10 premières affichées)</p>
+      <div class="csv-batch-files" *ngIf="csvBatchFiles.length">
+        <p><strong>Fichiers du lot :</strong></p>
+        <div *ngFor="let f of csvBatchFiles" class="csv-batch-file" [class.is-warning]="f.headerSource === 'none'">
+          <strong>{{ f.name }}</strong> — en-tête ligne {{ f.headerLine }}, données à partir de la ligne {{ f.dataStartLine }},
+          {{ f.rowCount }} ligne(s), séparateur <code>{{ f.delimiter === '\t' ? 'tabulation' : f.delimiter }}</code>
+          <span *ngIf="f.headerSource === 'none'" class="row-range-error">
+            En-tête non détecté : la 1re ligne a été prise. Utilisez le paramétrage manuel ci-dessous.
+          </span>
+        </div>
+      </div>
+      <p>
+        <strong>Détection automatique :</strong>
+        en-tête ligne {{ csvAutoHeaderLine ?? '-' }}, données à partir de la ligne {{ csvAutoDataLine ?? '-' }}
+        <span *ngIf="csvRowRange"> — <strong>paramétrage appliqué :</strong> en-tête ligne {{ csvRowRange.headerLine }}, données à partir de la ligne {{ csvRowRange.dataStartLine }}</span>
+      </p>
     </div>
-    
+
+    <!-- Plusieurs fichiers : en-têtes en plusieurs langues -->
+    <div class="row-range-panel" *ngIf="csvSelectedCount > 1">
+      <label class="row-range-toggle">
+        <input type="checkbox" [checked]="multiLanguageHeaders" (change)="multiLanguageHeaders = $any($event.target).checked; onBatchLanguageChanged()" />
+        Les fichiers ont des en-têtes en plusieurs langues
+      </label>
+      <div *ngIf="multiLanguageHeaders" class="row-range-fields">
+        <label>
+          Langue des en-têtes retenue
+          <select (change)="batchHeaderLanguage = $any($event.target).value; onBatchLanguageChanged()">
+            <option value="fr" [selected]="batchHeaderLanguage === 'fr'">Français</option>
+            <option value="en" [selected]="batchHeaderLanguage === 'en'">Anglais</option>
+          </select>
+        </label>
+      </div>
+      <p class="row-range-hint">Sans cette case, la langue est choisie automatiquement (la plus fréquente dans les fichiers).</p>
+    </div>
+
+    <!-- Paramétrage optionnel des lignes -->
+    <div class="row-range-panel">
+      <label class="row-range-toggle">
+        <input type="checkbox" [checked]="csvRowRangeEnabled" (change)="toggleCsvRowRange($any($event.target).checked)" />
+        Paramétrer manuellement l'en-tête et les données (optionnel)
+      </label>
+
+      <div *ngIf="csvRowRangeEnabled" class="row-range-fields">
+        <label>
+          Ligne d'en-tête
+          <input type="number" min="1" [value]="csvHeaderLineInput ?? ''"
+                 (input)="onCsvRowRangeInput('header', $any($event.target).value)" />
+        </label>
+        <label>
+          Première ligne de données
+          <input type="number" min="1" [value]="csvDataLineInput ?? ''"
+                 (input)="onCsvRowRangeInput('data', $any($event.target).value)" />
+        </label>
+        <button type="button" class="ds-btn ds-btn--secondary" (click)="applyCsvRowRange()">Appliquer</button>
+        <button type="button" class="ds-btn ds-btn--secondary" (click)="resetCsvRowRange()">Détection automatique</button>
+        <p *ngIf="csvRowRangeError" class="row-range-error">{{ csvRowRangeError }}</p>
+      </div>
+
+      <p class="row-range-hint" *ngIf="csvRawPreviewLines.length > 0">Lignes brutes de {{ csvFileToProcess?.name }} (dernier fichier chargé)</p>
+      <div class="row-range-lines" *ngIf="csvRawPreviewLines.length > 0">
+        <div class="row-range-line" *ngFor="let line of csvRawPreviewLines"
+             [class.is-header]="line.n === (csvRowRange ? csvRowRange.headerLine : csvAutoHeaderLine)"
+             [class.is-data]="line.n === (csvRowRange ? csvRowRange.dataStartLine : csvAutoDataLine)">
+          <span class="row-range-num">{{ line.n }}</span>
+          <span class="row-range-text">{{ line.text }}</span>
+        </div>
+      </div>
+    </div>
+
     <div class="csv-preview-table">
       <table class="ds-table">
         <thead>
@@ -1109,6 +1176,50 @@
        <div *ngIf="errorMsg.export" class="error-msg">{{ errorMsg.export }}</div>
        <div *ngIf="successMsg.reorder" class="success-msg">{{ successMsg.reorder }}</div>
      </div>
+
+     <!-- Comparaison avec un modèle : colonnes du modèle liées aux colonnes du traitement -->
+     <div class="model-compare-panel" *ngIf="comparisonDisplayColumns.length">
+       <h4>Comparer avec un modèle</h4>
+       <div class="row-range-fields">
+         <label>
+           Modèle
+           <select (change)="onModelSelected($any($event.target).value)">
+             <option value="" [selected]="!selectedModelId">— aucun —</option>
+             <option *ngFor="let m of modelList" [value]="modelKey(m)" [selected]="modelKey(m) === selectedModelId">{{ m.name }}</option>
+           </select>
+         </label>
+         <span *ngIf="modelColumnsLoading">Chargement des colonnes du modèle…</span>
+       </div>
+
+       <div *ngIf="selectedModelId && modelColumns.length" class="model-link-table">
+         <div class="model-link-row model-link-head">
+           <span>Colonne du modèle</span>
+           <span>Colonne du traitement liée</span>
+           <span>État</span>
+         </div>
+         <div class="model-link-row" *ngFor="let m of modelColumns">
+           <span>{{ m }}</span>
+           <select (change)="onModelLinkChange(m, $any($event.target).value)">
+             <option value="" [selected]="!modelLinks[m]">— non liée —</option>
+             <option *ngFor="let d of comparisonDisplayColumns" [value]="d" [selected]="modelLinks[m] === d">{{ d }}</option>
+           </select>
+           <span [class.is-linked]="!!modelLinks[m]">
+             {{ !modelLinks[m] ? 'manquante' : (modelLinks[m] === m ? 'identique' : 'liée (nom différent)') }}
+           </span>
+         </div>
+         <p class="row-range-hint">
+           Colonnes du traitement sans lien :
+           <span *ngFor="let c of unlinkedDisplayColumns" class="model-chip">{{ c }}</span>
+           <span *ngIf="!unlinkedDisplayColumns.length">aucune</span>
+         </p>
+         <div class="row-range-fields">
+           <button type="button" class="ds-btn ds-btn--secondary" (click)="applyModelLinks()">Appliquer les liens (renommer selon le modèle)</button>
+           <button type="button" class="ds-btn ds-btn--secondary" (click)="resetModelLinks()">Réinitialiser les liens</button>
+         </div>
+         <p *ngIf="modelLinkMessage" class="row-range-hint">{{ modelLinkMessage }}</p>
+       </div>
+     </div>
+
      <table class="ds-table">
        <thead>
          <tr>

@@ -1,6 +1,11 @@
 import * as Papa from 'papaparse';
 import { fixGarbledCharacters } from './encoding-fixer';
+import { deduplicateHeaderNames } from './row-column.util';
 import {
+  countFilledCells,
+  isMarkerRow,
+  createPostHeaderRowFilter,
+  detectGenericHeaderRowIndex,
   findHeaderRowIndexInGrid,
   findGdjHeaderLineIndexInCsvLines,
   looksLikeAirtelReportPreamble,
@@ -29,9 +34,22 @@ export interface FastCsvReadOptions {
     yieldFn?: () => Promise<void>;
 }
 
+/** Position de l'en-tête détectée dans un fichier (index parmi les lignes non vides). */
+export interface CsvHeaderPlan {
+    headerIndex: number;
+    /**
+     * specific : modèle, Airtel ou GDJ ; generic : détection générique ;
+     * none : aucun en-tête repéré (la 1re ligne sert d'en-tête).
+     */
+    kind: 'specific' | 'generic' | 'none';
+}
+
+const CANDIDATE_DELIMITERS = [',', ';', '\t', '|', ':'];
+
 const WORKER_THRESHOLD_BYTES = 512 * 1024;
 const YIELD_EVERY_ROWS = 1500;
 const PROGRESS_EVERY_ROWS = 2500;
+const PREVIEW_BYTES = 256 * 1024;
 
 /** Détection de séparateur identique à /traitement (glisser-déposer). */
 export function detectCsvDelimiter(csvContent: string): string {
@@ -123,12 +141,87 @@ function findAirtelCsvHeaderLineIndex(lines: string[]): number | null {
     return null;
 }
 
+/**
+ * Localise l'en-tête d'un CSV à partir de ses premières lignes.
+ * Ordre : modèle attendu, Airtel, GDJ (détections spécifiques), puis détection générique
+ * (première ligne textuelle suivie de données). Les index sont ceux des lignes non vides.
+ */
+export function planCsvHeader(
+    lines: string[],
+    delimiter: string,
+    expectedHeaderColumns: string[] = [],
+    scan = 80
+): CsvHeaderPlan {
+    const previewLines = (lines || [])
+        .filter(line => line.split(delimiter).some(cell => cell.trim()))
+        .slice(0, scan);
+    const rows = previewLines.map(line => line.split(delimiter).map(cell => cell.trim()));
+
+    const modelIndex = expectedHeaderColumns.length
+        ? findHeaderRowIndexInGrid(rows, expectedHeaderColumns, scan)
+        : null;
+    const specificIndex =
+        modelIndex ??
+        findAirtelCsvHeaderLineIndex(previewLines) ??
+        findGdjHeaderLineIndexInCsvLines(previewLines, delimiter);
+    if (specificIndex !== null) {
+        return { headerIndex: specificIndex, kind: 'specific' };
+    }
+
+    const genericIndex = detectGenericHeaderRowIndex(rows, 30);
+    if (genericIndex !== null) {
+        return { headerIndex: genericIndex, kind: 'generic' };
+    }
+
+    return { headerIndex: 0, kind: 'none' };
+}
+
+/**
+ * Choisit le séparateur et l'en-tête. Le séparateur par défaut gagne si son en-tête est
+ * spécifique (modèle, Airtel, GDJ). Sinon, on teste les autres séparateurs et on retient
+ * l'en-tête générique le plus large : un préambule contenant « : » (heures, « Date=… »)
+ * peut faire échouer la détection par défaut alors que la tabulation convient.
+ */
+export function resolveCsvHeaderPlan(
+    lines: string[],
+    defaultDelimiter: string,
+    expectedHeaderColumns: string[] = [],
+    scan = 80
+): { delimiter: string; plan: CsvHeaderPlan } {
+    const defaultPlan = planCsvHeader(lines, defaultDelimiter, expectedHeaderColumns, scan);
+    if (defaultPlan.kind === 'specific') {
+        return { delimiter: defaultDelimiter, plan: defaultPlan };
+    }
+
+    const others = CANDIDATE_DELIMITERS.filter(d => d !== defaultDelimiter);
+    let best: { delimiter: string; plan: CsvHeaderPlan; width: number } | null = null;
+    for (const delimiter of [defaultDelimiter, ...others]) {
+        const plan = delimiter === defaultDelimiter
+            ? defaultPlan
+            : planCsvHeader(lines, delimiter, expectedHeaderColumns, scan);
+        if (plan.kind !== 'generic') {
+            continue;
+        }
+        const nonEmpty = (lines || []).filter(line => line.split(delimiter).some(cell => cell.trim()));
+        const width = countFilledCells(nonEmpty[plan.headerIndex].split(delimiter));
+        // Strictement plus large : à largeur égale, le séparateur par défaut est conservé.
+        if (!best || width > best.width) {
+            best = { delimiter, plan, width };
+        }
+    }
+
+    if (best) {
+        return { delimiter: best.delimiter, plan: best.plan };
+    }
+    return { delimiter: defaultDelimiter, plan: defaultPlan };
+}
+
 /** Évite le coût de fixGarbledCharacters sur les cellules ASCII simples. */
 function maybeFixCell(text: string): string {
     if (!text) {
         return '';
     }
-    if (!/[\u0080-\u00FF]|\uFFFD|ï¿½|Ã.|Â./.test(text)) {
+    if (!/[\u0080-ÿ]|�|ï¿½|Ã.|Â./.test(text)) {
         return text;
     }
     return fixGarbledCharacters(text);
@@ -177,10 +270,38 @@ function finalizeHeaderRow(
 /**
  * Lecture CSV depuis un File — PapaParse sur le fil principal, avec cession
  * régulière (`yieldFn`) pour éviter le blocage de l'UI sur les gros fichiers.
+ * L'en-tête est repéré sur un aperçu du début du fichier (voir planCsvHeader).
  */
-export function readCsvFileUltraFast(
+export async function readCsvFileUltraFast(
     file: File,
     options: FastCsvReadOptions = {}
+): Promise<FastCsvReadResult> {
+    let plan: CsvHeaderPlan | null = null;
+    let delimiter = '';
+    try {
+        const preview = stripBom(await file.slice(0, PREVIEW_BYTES).text());
+        const resolved = resolveCsvHeaderPlan(
+            preview.split(/\r?\n/),
+            detectCsvDelimiter(preview),
+            options.expectedHeaderColumns ?? []
+        );
+        if (resolved.plan.kind === 'generic') {
+            plan = resolved.plan;
+            delimiter = resolved.delimiter;
+        }
+    } catch {
+        // Aperçu illisible : lecture par défaut (comportement historique).
+        plan = null;
+        delimiter = '';
+    }
+    return readCsvFileStreaming(file, options, plan, delimiter);
+}
+
+function readCsvFileStreaming(
+    file: File,
+    options: FastCsvReadOptions,
+    plan: CsvHeaderPlan | null,
+    delimiter: string
 ): Promise<FastCsvReadResult> {
     const isLargeFile = file.size > WORKER_THRESHOLD_BYTES;
 
@@ -204,12 +325,14 @@ export function readCsvFileUltraFast(
         let skippedBeforeHeader = 0;
         let skippedEmpty = 0;
         let processedLines = 0;
+        let rowIndex = -1;
+        let postHeaderFilter: ((cells: unknown[]) => boolean) | null = null;
         const rows: Record<string, string>[] = [];
 
         const parseConfig = {
             skipEmptyLines: true as const,
             encoding: 'UTF-8',
-            delimiter: '',
+            delimiter,
             step: (results: Papa.ParseStepResult<string[]>, parser: Papa.Parser) => {
                 const cells = (results.data as string[]).map(cell => String(cell ?? '').trim());
 
@@ -219,6 +342,18 @@ export function readCsvFileUltraFast(
                     } else {
                         skippedEmpty++;
                     }
+                    return;
+                }
+                rowIndex++;
+
+                // En-tête déjà repéré (détection générique) : lignes avant l'en-tête ignorées.
+                if (plan && !headers) {
+                    if (rowIndex < plan.headerIndex) {
+                        skippedBeforeHeader++;
+                        return;
+                    }
+                    headers = finalizeHeaderRow(cells, options);
+                    headerLineIndex = rowIndex;
                     return;
                 }
 
@@ -276,6 +411,15 @@ export function readCsvFileUltraFast(
                     return;
                 }
 
+                // Lignes après l'en-tête : marqueurs et lignes parasites avant les données écartés.
+                if (!postHeaderFilter) {
+                    postHeaderFilter = createPostHeaderRowFilter(headers.length);
+                }
+                if (!postHeaderFilter(cells)) {
+                    skippedEmpty++;
+                    return;
+                }
+
                 const row: Record<string, string> = {};
                 headers.forEach((header, index) => {
                     row[header] = maybeFixCell(String(cells[index] ?? ''));
@@ -319,18 +463,14 @@ export async function readCsvContentUltraFast(
         text = stripAirtelReportPreambleFromText(text);
     }
 
-    const delimiter = detectCsvDelimiter(text);
-    const previewLines = text.split(/\r?\n/).slice(0, 20);
-    const modelHeaderIdx = options.expectedHeaderColumns?.length
-        ? findHeaderRowIndexInGrid(
-            previewLines.map(line => line.split(delimiter)),
-            options.expectedHeaderColumns,
-            20
-        )
-        : null;
-    const airtelHeaderIdx = modelHeaderIdx ?? findAirtelCsvHeaderLineIndex(previewLines);
-    const gdjHeaderIdx = findGdjHeaderLineIndexInCsvLines(previewLines, delimiter);
-    const skipRows = airtelHeaderIdx !== null ? airtelHeaderIdx : (gdjHeaderIdx !== null ? gdjHeaderIdx : 0);
+    const resolved = resolveCsvHeaderPlan(
+        text.split(/\r?\n/, 400),
+        detectCsvDelimiter(text),
+        options.expectedHeaderColumns ?? [],
+        20
+    );
+    const delimiter = resolved.delimiter;
+    const skipRows = resolved.plan.headerIndex;
 
     const estimatedTotal = Math.max(1, (text.match(/\r?\n/g) || []).length - skipRows - 1);
 
@@ -341,6 +481,7 @@ export async function readCsvContentUltraFast(
         let skippedEmpty = 0;
         let processedLines = 0;
         let rowIndex = -1;
+        let postHeaderFilter: ((cells: unknown[]) => boolean) | null = null;
         const rows: Record<string, string>[] = [];
 
         Papa.parse<string[]>(text, {
@@ -348,17 +489,17 @@ export async function readCsvContentUltraFast(
             delimiter,
             worker: false,
             step: (results, parser) => {
-                rowIndex++;
                 const cells = (results.data as string[]).map(cell => String(cell ?? '').trim());
 
                 if (!cells.some(cell => cell)) {
-                    if (rowIndex < skipRows || !headers) {
+                    if (!headers) {
                         skippedBeforeHeader++;
                     } else {
                         skippedEmpty++;
                     }
                     return;
                 }
+                rowIndex++;
 
                 if (rowIndex < skipRows) {
                     skippedBeforeHeader++;
@@ -375,6 +516,14 @@ export async function readCsvContentUltraFast(
 
                     headers = finalizeHeaderRow(cells, options);
                     headerLineIndex = rowIndex;
+                    return;
+                }
+
+                if (!postHeaderFilter) {
+                    postHeaderFilter = createPostHeaderRowFilter(headers.length);
+                }
+                if (!postHeaderFilter(cells)) {
+                    skippedEmpty++;
                     return;
                 }
 
@@ -405,4 +554,140 @@ export async function readCsvContentUltraFast(
             error: (error: Error) => reject(error)
         });
     });
+}
+
+/* ------------------------------------------------------------------------------------------
+ * Lecture avec paramétrage manuel des lignes (optionnel).
+ * Les numéros sont ceux des lignes brutes du fichier (1-based, lignes vides comprises).
+ * Sans paramétrage, l'en-tête et le début des données sont détectés automatiquement.
+ * ------------------------------------------------------------------------------------------ */
+
+/** Ligne d'en-tête et première ligne de données choisies (1-based, lignes brutes). */
+export interface CsvRowRange {
+    headerLine: number;
+    dataStartLine: number;
+}
+
+export interface CsvParsedTable {
+    headers: string[];
+    rows: Record<string, string>[];
+    delimiter: string;
+    /** Ligne d'en-tête réellement utilisée (1-based). */
+    headerLine: number;
+    /** Première ligne de données réellement utilisée (1-based). */
+    dataStartLine: number;
+    /**
+     * Origine de l'en-tête : paramétrage manuel, détection spécifique (modèle, Airtel, GDJ),
+     * détection générique, ou aucune (la 1re ligne est prise par défaut, à vérifier).
+     */
+    headerSource: 'manual' | 'specific' | 'generic' | 'none';
+}
+
+/** Séparateur qui découpe la ligne donnée en le plus de colonnes (le défaut gagne à égalité). */
+function pickDelimiterForLine(line: string, fallback: string): string {
+    let best = fallback;
+    let bestWidth = (line || '').split(fallback).length;
+    for (const delimiter of CANDIDATE_DELIMITERS) {
+        const width = (line || '').split(delimiter).length;
+        if (delimiter !== fallback && width > bestWidth) {
+            best = delimiter;
+            bestWidth = width;
+        }
+    }
+    return best;
+}
+
+/** Index brut de la n-ième ligne non vide (même critère que planCsvHeader). */
+function rawIndexOfNonEmptyLine(lines: string[], delimiter: string, nonEmptyIndex: number): number {
+    let count = -1;
+    for (let i = 0; i < lines.length; i++) {
+        if (lines[i].split(delimiter).some(cell => cell.trim())) {
+            count++;
+            if (count === nonEmptyIndex) {
+                return i;
+            }
+        }
+    }
+    return 0;
+}
+
+/**
+ * Lit un CSV en mémoire. Avec `rowRange`, l'en-tête et le début des données sont ceux
+ * indiqués par l'utilisateur ; sans, ils sont détectés (modèle, Airtel, GDJ, générique).
+ * Les lignes entièrement vides et les lignes marqueur (ex. « [STARTDATA] ») sont écartées.
+ */
+export function parseCsvWithHeaderPlan(
+    csvContent: string,
+    options: FastCsvReadOptions = {},
+    rowRange: CsvRowRange | null = null
+): CsvParsedTable {
+    let text = stripBom(csvContent || '');
+    if (options.stripAirtelPreamble !== false) {
+        text = stripAirtelReportPreambleFromText(text);
+    }
+    const lines = text.split(/\r?\n/);
+    const defaultDelimiter = detectCsvDelimiter(text);
+
+    let delimiter: string;
+    let headerIdx: number;
+    let dataIdx: number | null = null;
+    let headerSource: CsvParsedTable['headerSource'];
+    if (rowRange) {
+        headerIdx = Math.max(0, Math.floor(rowRange.headerLine) - 1);
+        dataIdx = Math.max(headerIdx + 1, Math.floor(rowRange.dataStartLine) - 1);
+        delimiter = pickDelimiterForLine(lines[headerIdx] ?? '', defaultDelimiter);
+        headerSource = 'manual';
+    } else {
+        const resolved = resolveCsvHeaderPlan(
+            lines.slice(0, 400),
+            defaultDelimiter,
+            options.expectedHeaderColumns ?? [],
+            20
+        );
+        delimiter = resolved.delimiter;
+        headerIdx = rawIndexOfNonEmptyLine(lines, delimiter, resolved.plan.headerIndex);
+        headerSource = resolved.plan.kind;
+    }
+
+    const grid = Papa.parse<string[]>(lines.slice(headerIdx).join('\n'), {
+        delimiter,
+        skipEmptyLines: false
+    }).data;
+    const headerCells = (grid[0] || []).map(cell => String(cell ?? '').trim());
+    const headers = deduplicateHeaderNames(finalizeHeaderRow(headerCells, options));
+
+    const postHeaderFilter = dataIdx === null ? createPostHeaderRowFilter(headers.length) : null;
+    const rows: Record<string, string>[] = [];
+    let firstDataIdx: number | null = null;
+    for (let i = 1; i < grid.length; i++) {
+        const cells = (grid[i] || []).map(cell => String(cell ?? '').trim());
+        if (!cells.some(Boolean)) {
+            continue;
+        }
+        const rawIdx = headerIdx + i;
+        if (dataIdx !== null) {
+            if (rawIdx < dataIdx || isMarkerRow(cells)) {
+                continue;
+            }
+        } else if (!postHeaderFilter!(cells)) {
+            continue;
+        }
+        if (firstDataIdx === null) {
+            firstDataIdx = rawIdx;
+        }
+        const row: Record<string, string> = {};
+        headers.forEach((header, index) => {
+            row[header] = maybeFixCell(cells[index] ?? '');
+        });
+        rows.push(row);
+    }
+
+    return {
+        headers,
+        rows,
+        delimiter,
+        headerLine: headerIdx + 1,
+        dataStartLine: (dataIdx ?? firstDataIdx ?? headerIdx + 1) + 1,
+        headerSource
+    };
 }

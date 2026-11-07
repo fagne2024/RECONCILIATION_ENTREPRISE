@@ -1,6 +1,7 @@
 import { Injectable } from '@angular/core';
 import { HttpClient } from '@angular/common/http';
 import { Observable } from 'rxjs';
+import { postFormWithProgress } from '../utils/upload-with-progress.util';
 import { SuiviCompenseOp, SuiviCompenseOpUploadResponse } from '../models/suivi-compense-op.model';
 
 @Injectable({ providedIn: 'root' })
@@ -11,6 +12,13 @@ export class SuiviCompenseOpService {
 
   list(): Observable<SuiviCompenseOp[]> {
     return this.http.get<SuiviCompenseOp[]>(this.apiUrl);
+  }
+
+  /** Import avec pourcentage d'envoi (pop-up de progression). */
+  uploadWithProgress(file: File, onProgress?: (percent: number) => void): Promise<SuiviCompenseOpUploadResponse> {
+    const form = new FormData();
+    form.append('file', file);
+    return postFormWithProgress<SuiviCompenseOpUploadResponse>(this.http, this.apiUrl + '/upload', form, onProgress);
   }
 
   upload(file: File): Observable<SuiviCompenseOpUploadResponse> {

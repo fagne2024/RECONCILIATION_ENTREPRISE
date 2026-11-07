@@ -9,4 +9,6 @@ import java.util.List;
 @Repository
 public interface SuiviCompenseOpRepository extends JpaRepository<SuiviCompenseOpEntity, Long> {
     List<SuiviCompenseOpEntity> findAllByOrderByDateOperationDescIdDesc();
+
+    List<SuiviCompenseOpEntity> findByDedupKeyIn(java.util.Collection<String> dedupKeys);
 }

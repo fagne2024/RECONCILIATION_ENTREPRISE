@@ -1,5 +1,6 @@
 import { Component, EventEmitter, Input, Output, ChangeDetectorRef, NgZone, OnDestroy, OnInit, ViewChild, ElementRef } from '@angular/core';
 import { CommonModule } from '@angular/common';
+import { FormsModule } from '@angular/forms';
 import { TranslateModule } from '@ngx-translate/core';
 import { ReconciliationService } from '../../services/reconciliation.service';
 import { AutoProcessingService, AutoProcessingModel, ENV_COLUMN_NAME, ENV_COLUMN_OPTIONS, EnvColumnOption, ProcessingResult, ColumnProcessingRule } from '../../services/auto-processing.service';
@@ -16,11 +17,12 @@ import {
   buildFrenchAliasEntries,
   applyFrenchAliasesToRow,
   mergeBilingualColumnsInRows,
+  chooseBatchHeaderSet,
   FrenchAliasEntry,
   getCanonicalFrenchLabel,
   resolveCanonicalColumnId
 } from '../../utils/bilingual-column.util';
-import { resolveColumnKeyInRow, deduplicateHeaderNames } from '../../utils/row-column.util';
+import { resolveColumnKeyInRow, deduplicateHeaderNames, alignRowsToHeaders, filterRealDataRows } from '../../utils/row-column.util';
 import { stripAllWhitespace } from '../../utils/concat.util';
 import { hasCommaSeparatedSearchFilter, matchesCommaSeparatedFilter } from '../../utils/search-filter.util';
 import {
@@ -41,14 +43,14 @@ import { FileWatcherService } from '../../services/file-watcher.service';
 import { ProgressIndicatorService } from '../../services/progress-indicator.service';
 import { ColumnRulesProcessorService } from '../../services/column-rules-processor.service';
 import { readCsvFileUltraFast, readCsvContentUltraFast } from '../../utils/fast-csv-reader.util';
-import { findHeaderLineIndexInCsvLines, findHeaderRowIndexInGrid } from '../../utils/model-header-detection.util';
+import { findHeaderLineIndexInCsvLines, findHeaderRowIndexInGrid, detectGenericHeaderRowIndex, isMarkerCellValue } from '../../utils/model-header-detection.util';
 import { discoverReconciliationKeyColumns } from '../../utils/reconciliation-key.util';
 import { formatGridCellAsString, isTransactionIdPreserveColumn, isMsisdnPreserveColumn } from '../../utils/text-cell.util';
 
 @Component({
     selector: 'app-file-upload',
     standalone: true,
-    imports: [CommonModule, TranslateModule],
+    imports: [CommonModule, FormsModule, TranslateModule],
     templateUrl: './file-upload.component.html',
     styleUrls: ['./file-upload.component.scss']
 })
@@ -1680,6 +1682,20 @@ export class FileUploadComponent implements OnInit, OnDestroy {
     }
 
     /** Fusionne plusieurs fichiers ou feuilles Excel en un seul jeu de lignes. */
+    /** Vrai pendant la lecture des fichiers à compiler : pas d'ajout des libellés FR. */
+    private assistedRawHeaderCompile = false;
+
+    /** Clés distinctes de toutes les lignes, dans l'ordre d'apparition. */
+    private collectRowKeys(rows: Record<string, string>[]): string[] {
+        const seen = new Set<string>();
+        for (const row of rows) {
+            for (const key of Object.keys(row)) {
+                seen.add(key);
+            }
+        }
+        return [...seen];
+    }
+
     private async compileAssistedTreatmentFileRows(
         files: File[],
         expectedHeaderColumns: string[] = []
@@ -1691,31 +1707,49 @@ export class FileUploadComponent implements OnInit, OnDestroy {
         const compiled: Record<string, string>[] = [];
         const loadedNames: string[] = [];
 
-        for (let i = 0; i < files.length; i++) {
-            const file = files[i];
-            const fileSizeMB = (file.size / (1024 * 1024)).toFixed(1);
-            this.setTraitementProgressNoUi(
-                `Fusion ultra-rapide ${i + 1}/${files.length} : ${file.name} (${fileSizeMB} Mo)`
-            );
+        // Lecture sans enrichissement FR : les en-têtes d'origine (EN ou FR) restent visibles.
+        this.assistedRawHeaderCompile = true;
+        try {
+            for (let i = 0; i < files.length; i++) {
+                const file = files[i];
+                const fileSizeMB = (file.size / (1024 * 1024)).toFixed(1);
+                this.setTraitementProgressNoUi(
+                    `Fusion ultra-rapide ${i + 1}/${files.length} : ${file.name} (${fileSizeMB} Mo)`
+                );
 
-            const parsed = await this.readAssistedTreatmentFileRows(file, expectedHeaderColumns);
-            if (parsed.rows.length) {
-                this.appendRowsSafely(compiled, parsed.rows);
-                const headerInfo = parsed.headerLine >= 0
-                    ? `, en-tête ligne ${parsed.headerLine + 1}`
-                    : '';
-                const removedInfo = parsed.removedLines > 0
-                    ? `, ${parsed.removedLines} ligne(s) ignorée(s)`
-                    : '';
-                loadedNames.push(`${file.name} (${parsed.rows.length}${headerInfo}${removedInfo})`);
+                const parsed = await this.readAssistedTreatmentFileRows(file, expectedHeaderColumns);
+                if (parsed.rows.length) {
+                    this.appendRowsSafely(compiled, parsed.rows);
+                    const headerInfo = parsed.headerLine >= 0
+                        ? `, en-tête ligne ${parsed.headerLine + 1}`
+                        : '';
+                    const removedInfo = parsed.removedLines > 0
+                        ? `, ${parsed.removedLines} ligne(s) ignorée(s)`
+                        : '';
+                    loadedNames.push(`${file.name} (${parsed.rows.length}${headerInfo}${removedInfo})`);
+                }
+                if (i < files.length - 1) {
+                    await this.yieldToMainThread(true);
+                }
             }
-            if (i < files.length - 1) {
-                await this.yieldToMainThread(true);
-            }
+        } finally {
+            this.assistedRawHeaderCompile = false;
+        }
+
+        // Un seul jeu de colonnes pour tous les fichiers, les lignes étant empilées dessous :
+        // - modèle défini : colonnes du modèle (dans sa langue) ;
+        // - sinon : le système choisit la langue du lot (EN ou FR).
+        let unified: Record<string, string>[] = compiled;
+        if (compiled.length) {
+            const headers = expectedHeaderColumns.length
+                ? expectedHeaderColumns
+                : chooseBatchHeaderSet(this.collectRowKeys(compiled));
+            // Colonnes fixées (modèle ou lot) ; lignes parasites (titres, marqueurs, pieds) écartées.
+            unified = filterRealDataRows(alignRowsToHeaders(compiled, headers), headers);
         }
 
         return {
-            rows: compiled,
+            rows: unified,
             sourceSummary: loadedNames.join(', '),
             referenceFile: files[0]
         };
@@ -2130,7 +2164,7 @@ export class FileUploadComponent implements OnInit, OnDestroy {
                 continue;
             }
 
-            rows.push(enrichRowWithCanonicalFrenchColumns(row));
+            rows.push(this.assistedRawHeaderCompile ? row : enrichRowWithCanonicalFrenchColumns(row));
         }
 
 
@@ -2504,7 +2538,7 @@ export class FileUploadComponent implements OnInit, OnDestroy {
                     : '';
             }
             if (colCount === 0 || this.isUsefulAssistedTreatmentRow(row, headers)) {
-                rows.push(enrich ? enrichRowWithCanonicalFrenchColumns(row) : row);
+                rows.push(enrich && !this.assistedRawHeaderCompile ? enrichRowWithCanonicalFrenchColumns(row) : row);
             }
         }
         return { rows };
@@ -2552,7 +2586,7 @@ export class FileUploadComponent implements OnInit, OnDestroy {
                 continue;
             }
             if (colCount > 0) {
-                rows.push(enrich ? enrichRowWithCanonicalFrenchColumns(row) : row);
+                rows.push(enrich && !this.assistedRawHeaderCompile ? enrichRowWithCanonicalFrenchColumns(row) : row);
             } else {
                 rows.push(row);
             }
@@ -2778,6 +2812,17 @@ export class FileUploadComponent implements OnInit, OnDestroy {
             };
         }
 
+        // Sans modèle ni rapport connu : première ligne textuelle suivie de données
+        // (les titres, métadonnées et marqueurs situés avant sont ignorés).
+        const genericHeaderIndex = detectGenericHeaderRowIndex(jsonData, 30);
+        if (genericHeaderIndex !== null) {
+            return {
+                headerRowIndex: genericHeaderIndex,
+                headerRow: this.extractAssistedGridRowStrings(jsonData[genericHeaderIndex]),
+                source: 'en-tête détecté (générique)'
+            };
+        }
+
         const generic = this.detectExcelHeadersImproved(jsonData, true);
         return {
             headerRowIndex: generic.headerRowIndex,
@@ -2986,6 +3031,10 @@ export class FileUploadComponent implements OnInit, OnDestroy {
         }
 
         if (nonEmpty === 0) {
+            return false;
+        }
+        // Ligne marqueur isolée (ex. « [STARTDATA] », « Date=… ») : pas une donnée.
+        if (nonEmpty === 1 && joinedParts.length === 1 && isMarkerCellValue(joinedParts[0])) {
             return false;
         }
         if (headerMatches >= headerMatchThreshold) {

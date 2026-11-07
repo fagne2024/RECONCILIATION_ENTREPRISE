@@ -4407,3 +4407,122 @@ button:disabled:hover {
     }
   }
 }
+
+// Paramétrage optionnel des lignes d'en-tête et de données (aperçu CSV)
+.row-range-panel {
+  margin-top: 12px;
+  padding: 12px;
+  border: 1px solid var(--ds-border, #d0d7de);
+  border-radius: 6px;
+}
+
+.row-range-toggle {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  font-weight: 600;
+  cursor: pointer;
+}
+
+.row-range-fields {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: flex-end;
+  gap: 12px;
+  margin: 10px 0;
+
+  label {
+    display: flex;
+    flex-direction: column;
+    gap: 4px;
+    font-size: 0.9em;
+  }
+
+  input[type='number'] {
+    width: 130px;
+    padding: 4px 6px;
+  }
+}
+
+.row-range-error {
+  flex-basis: 100%;
+  margin: 0;
+  color: #b42318;
+}
+
+.row-range-lines {
+  max-height: 260px;
+  overflow: auto;
+  font-family: monospace;
+  font-size: 0.8em;
+  border-top: 1px solid var(--ds-border, #d0d7de);
+  padding-top: 6px;
+}
+
+.row-range-line {
+  display: flex;
+  gap: 10px;
+  white-space: pre;
+  padding: 1px 4px;
+
+  &.is-header {
+    background: rgba(37, 99, 235, 0.15);
+    font-weight: 700;
+  }
+
+  &.is-data {
+    background: rgba(22, 163, 74, 0.15);
+  }
+}
+
+.row-range-num {
+  min-width: 2.5em;
+  text-align: right;
+  opacity: 0.6;
+}
+
+// Comparaison des colonnes avec un modèle
+.model-compare-panel {
+  margin: 12px 0;
+  padding: 12px;
+  border: 1px solid var(--ds-border, #d0d7de);
+  border-radius: 6px;
+}
+
+.model-link-table {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  margin-top: 8px;
+}
+
+.model-link-row {
+  display: grid;
+  grid-template-columns: minmax(160px, 1fr) minmax(200px, 1fr) minmax(120px, auto);
+  gap: 10px;
+  align-items: center;
+  font-size: 0.9em;
+
+  &.model-link-head {
+    font-weight: 700;
+    border-bottom: 1px solid var(--ds-border, #d0d7de);
+    padding-bottom: 4px;
+  }
+
+  select {
+    padding: 4px 6px;
+  }
+
+  .is-linked {
+    color: #15803d;
+  }
+}
+
+.model-chip {
+  display: inline-block;
+  margin: 2px 4px;
+  padding: 1px 8px;
+  border-radius: 10px;
+  background: rgba(37, 99, 235, 0.12);
+  font-size: 0.85em;
+}

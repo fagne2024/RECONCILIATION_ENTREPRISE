@@ -339,6 +339,26 @@ public class ReleveBancaireImportService {
         m.put("banqueappro", "banque");
         m.put("bo", "banque");
         m.put("numeroserie", "numeroSerie");
+
+        // En-têtes anglais (relevés en anglais) : même champs internes que les en-têtes français
+        m.put("accountnumber", "numeroCompte");
+        m.put("accountno", "numeroCompte");
+        m.put("accountname", "nomCompte");
+        m.put("bank", "banque");
+        m.put("bankname", "banque");
+        m.put("accountingdate", "dateComptable");
+        m.put("bookingdate", "dateComptable");
+        m.put("valuedate", "dateValeur");
+        m.put("labelnarration", "libelle");
+        m.put("libellenarration", "libelle");
+        m.put("label", "libelle");
+        m.put("amount", "montant");
+        m.put("currency", "devise");
+        m.put("accountcurrency", "devise");
+        m.put("chequenumber", "numeroCheque");
+        m.put("checknumber", "numeroCheque");
+        m.put("serialnumber", "numeroSerie");
+        m.put("seriesnumber", "numeroSerie");
         
         return m;
     }

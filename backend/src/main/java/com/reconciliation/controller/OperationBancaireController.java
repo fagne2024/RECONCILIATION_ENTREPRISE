@@ -205,6 +205,23 @@ public class OperationBancaireController {
                 .orElse(ResponseEntity.notFound().build());
     }
     // Import Excel/CSV d'opérations bancaires
+    @Autowired
+    private com.reconciliation.service.OperationBancaireCheckService checkService;
+
+    /** Check des opérations d'un type : compensation (suivi compense) ou contrôle relevé. */
+    @GetMapping("/check")
+    public ResponseEntity<com.reconciliation.service.OperationBancaireCheckService.CheckResult> check(@RequestParam("type") String type) {
+        return ResponseEntity.ok(checkService.check(type));
+    }
+
+    /** Validation des seules correspondances de compensation : banque et référence reportées. */
+    @PostMapping("/check/apply")
+    public ResponseEntity<java.util.Map<String, Object>> applyCheck(
+            @RequestBody List<com.reconciliation.service.OperationBancaireCheckService.ApplyItem> items) {
+        int updated = checkService.apply(items);
+        return ResponseEntity.ok(java.util.Map.of("updated", updated));
+    }
+
     @PostMapping(value = "/upload", consumes = {"multipart/form-data"})
     public ResponseEntity<java.util.Map<String, Object>> upload(@RequestParam("file") MultipartFile file) {
         try {

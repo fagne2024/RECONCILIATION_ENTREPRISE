@@ -283,5 +283,17 @@ public class OperationBancaireEntity {
     public void setTraitement(String traitement) {
         this.traitement = traitement;
     }
-}
 
+    @Column(name = "dedup_key")
+    private String dedupKey;
+
+    /** Vrai une fois la correspondance validée par le check : la ligne n'est plus proposée. */
+    @Column(name = "check_valide")
+    private Boolean checkValide;
+
+    public Boolean getCheckValide() { return checkValide; }
+    public void setCheckValide(Boolean checkValide) { this.checkValide = checkValide; }
+
+    public String getDedupKey() { return dedupKey; }
+    public void setDedupKey(String dedupKey) { this.dedupKey = dedupKey; }
+}

@@ -1,12 +1,33 @@
 import { Injectable } from '@angular/core';
 import { HttpClient, HttpHeaders, HttpParams } from '@angular/common/http';
 import { Observable } from 'rxjs';
+import { postFormWithProgress } from '../utils/upload-with-progress.util';
 import { 
     OperationBancaire, 
     OperationBancaireCreateRequest, 
     OperationBancaireUpdateRequest, 
     OperationBancaireFilter 
 } from '../models/operation-bancaire.model';
+
+export interface OperationCheckRow {
+    operationId: number;
+    dateOperation: string;
+    agence: string;
+    montant: number;
+    typeOperation: string;
+    status: 'MATCH' | 'ECART';
+    banque?: string;
+    reference?: string;
+}
+
+export interface OperationCheckResult {
+    type: string;
+    compensation: boolean;
+    total: number;
+    matched: number;
+    gaps: number;
+    rows: OperationCheckRow[];
+}
 
 @Injectable({
     providedIn: 'root'
@@ -74,10 +95,27 @@ export class OperationBancaireService {
     }
 
     // Importer des opérations bancaires depuis un fichier (Excel/CSV)
-    upload(file: File): Observable<{ totalRead: number; saved: number; errors: string[] }>{
+    /** Import avec pourcentage d'envoi (pop-up de progression). */
+  uploadWithProgress(file: File, onProgress?: (percent: number) => void): Promise<{ totalRead: number; saved: number; errors: string[]; duplicatesIgnored?: number }> {
+    const form = new FormData();
+    form.append('file', file);
+    return postFormWithProgress<{ totalRead: number; saved: number; errors: string[]; duplicatesIgnored?: number }>(this.http, this.apiUrl + '/upload', form, onProgress);
+  }
+
+  /** Check d'un type d'opération (compensation : suivi compense ; autres : relevé). */
+  check(type: string): Observable<OperationCheckResult> {
+    return this.http.get<OperationCheckResult>(`${this.apiUrl}/check`, { params: { type } });
+  }
+
+  /** Validation des seules correspondances de compensation : banque et référence reportées. */
+  applyCheck(items: { operationId: number; banque?: string; reference?: string }[]): Observable<{ updated: number }> {
+    return this.http.post<{ updated: number }>(`${this.apiUrl}/check/apply`, items);
+  }
+
+  upload(file: File): Observable<{ totalRead: number; saved: number; errors: string[]; duplicatesIgnored?: number }>{
         const form = new FormData();
         form.append('file', file);
-        return this.http.post<{ totalRead: number; saved: number; errors: string[] }>(`${this.apiUrl}/upload`, form);
+        return this.http.post<{ totalRead: number; saved: number; errors: string[]; duplicatesIgnored?: number }>(`${this.apiUrl}/upload`, form);
     }
 
   updateReconStatus(id: number, status: 'OK' | 'KO'): Observable<any> {

@@ -17,5 +17,6 @@ export interface SuiviCompenseOp {
 export interface SuiviCompenseOpUploadResponse {
   totalRead: number;
   saved: number;
+  duplicatesIgnored?: number;
   error?: string;
 }

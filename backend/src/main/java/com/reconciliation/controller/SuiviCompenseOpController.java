@@ -34,12 +34,39 @@ public class SuiviCompenseOpController {
         try {
             List<SuiviCompenseOpEntity> rows = importService.parse(file);
             LocalDateTime now = LocalDateTime.now();
+            // Doublons : clé métier déjà en base, ou répétée dans le même fichier
+            java.util.Map<String, SuiviCompenseOpEntity> candidates = new java.util.LinkedHashMap<>();
+            int duplicates = 0;
             for (SuiviCompenseOpEntity e : rows) {
                 e.setSourceFilename(file.getOriginalFilename());
                 e.setUploadedAt(now);
+                e.setDedupKey(com.reconciliation.util.BankingDedupKey.of(
+                        e.getDateOperation(), e.getCodeAgence(), e.getBanque(), e.getCompteBancaire(),
+                        e.getMontant(), e.getModePaiement(), e.getReference(), e.getIdTicket(),
+                        e.getService(), e.getReseau()));
+                if (candidates.putIfAbsent(e.getDedupKey(), e) != null) {
+                    duplicates++;
+                }
             }
-            repository.saveAll(rows);
-            return ResponseEntity.ok(Map.of("totalRead", rows.size(), "saved", rows.size()));
+            java.util.Set<String> known = new java.util.HashSet<>();
+            if (!candidates.isEmpty()) {
+                for (SuiviCompenseOpEntity ex : repository.findByDedupKeyIn(candidates.keySet())) {
+                    known.add(ex.getDedupKey());
+                }
+            }
+            List<SuiviCompenseOpEntity> toSave = new java.util.ArrayList<>();
+            for (var entry : candidates.entrySet()) {
+                if (known.contains(entry.getKey())) {
+                    duplicates++;
+                } else {
+                    toSave.add(entry.getValue());
+                }
+            }
+            repository.saveAll(toSave);
+            return ResponseEntity.ok(Map.of(
+                    "totalRead", rows.size(),
+                    "saved", toSave.size(),
+                    "duplicatesIgnored", duplicates));
         } catch (IllegalArgumentException e) {
             return ResponseEntity.badRequest().body(Map.of("error", e.getMessage()));
         } catch (Exception e) {

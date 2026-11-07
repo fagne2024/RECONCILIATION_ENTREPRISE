@@ -83,4 +83,10 @@ public class SuiviCompenseOpEntity {
     public void setSourceFilename(String sourceFilename) { this.sourceFilename = sourceFilename; }
     public LocalDateTime getUploadedAt() { return uploadedAt; }
     public void setUploadedAt(LocalDateTime uploadedAt) { this.uploadedAt = uploadedAt; }
+
+    @Column(name = "dedup_key")
+    private String dedupKey;
+
+    public String getDedupKey() { return dedupKey; }
+    public void setDedupKey(String dedupKey) { this.dedupKey = dedupKey; }
 }

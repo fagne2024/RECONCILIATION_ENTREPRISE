@@ -2,9 +2,10 @@ import { Component, OnInit, inject } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { FormsModule, ReactiveFormsModule } from '@angular/forms';
 import { Router } from '@angular/router';
-import { firstValueFrom } from 'rxjs';
+import { firstValueFrom, from } from 'rxjs';
+import { finalize } from 'rxjs/operators';
 import { OperationBancaire } from '../../models/operation-bancaire.model';
-import { OperationBancaireService } from '../../services/operation-bancaire.service';
+import { OperationBancaireService, OperationCheckResult } from '../../services/operation-bancaire.service';
 import { Compte } from '../../models/compte.model';
 import { CompteService } from '../../services/compte.service';
 import { OperationService } from '../../services/operation.service';
@@ -24,6 +25,8 @@ import { FileUploadComponent } from '../file-upload/file-upload.component';
 // Interface locale pour les opérations bancaires avec Date
 interface OperationBancaireDisplay extends Omit<OperationBancaire, 'dateOperation'> {
   dateOperation: Date;
+  /** Origine de la ligne : 'bancaire' (table opérations bancaires) ou autre. */
+  source?: string;
 }
 
 // Interface pour les filtres
@@ -86,7 +89,30 @@ const OPERATION_IMPORT_HEADER_ALIASES: Record<string, string> = {
   demandeur: 'Demandeur',
   valideur: 'Valideur',
   traitement: 'Traitement',
-  banquecorrigee: 'Banque Corrigée'
+  banquecorrigee: 'Banque Corrigée',
+  // En-têtes anglais
+  country: 'Pays',
+  countrycode: 'Code Pays',
+  agency: 'Agence',
+  operationtype: 'Type Opération',
+  transactiontype: 'Type Opération',
+  amount: 'Montant',
+  operationdate: 'Date Opération',
+  transactiondate: 'Date Opération',
+  month: 'Mois',
+  beneficiary: 'Nom Bénéficiaire',
+  beneficiaryname: 'Nom Bénéficiaire',
+  debitaccount: 'Compte à débiter',
+  accounttodebit: 'Compte à débiter',
+  paymentmode: 'Mode Paiement',
+  paymentmethod: 'Mode Paiement',
+  ticketid: 'ID GLPI',
+  glpiid: 'ID GLPI',
+  correctedbank: 'Banque Corrigée',
+  requester: 'Demandeur',
+  approver: 'Valideur',
+  validator: 'Valideur',
+  processing: 'Traitement',
 };
 
 /**
@@ -135,7 +161,25 @@ const RELEVE_IMPORT_HEADER_ALIASES: Record<string, string> = {
   numeroserie: 'Numéro de série',
   numerodeserie: 'Numéro de série',
   banque: 'Banque',
-  bankname: 'Banque'
+  bankname: 'Banque',
+  // En-têtes anglais
+  accountnumber: 'Numéro de compte',
+  accountno: 'Numéro de compte',
+  accountname: 'Nom du compte',
+  bank: 'Banque',
+  accountingdate: 'Date comptable',
+  bookingdate: 'Date comptable',
+  valuedate: 'Date valeur',
+  labelnarration: 'Libellé',
+  libellenarration: 'Libellé',
+  label: 'Libellé',
+  amount: 'Montant',
+  currency: 'Devise',
+  accountcurrency: 'Devise',
+  chequenumber: 'Chèque',
+  checknumber: 'Chèque',
+  serialnumber: 'Numéro de série',
+  seriesnumber: 'Numéro de série'
 };
 
 /**
@@ -171,7 +215,18 @@ const SUIVI_COMPENSE_HEADER_ALIASES: Record<string, string> = {
   idglpi: 'ID ticket',
   service: 'Service',
   reseau: 'Réseau',
-  groupedereseau: 'Réseau'
+  groupedereseau: 'Réseau',
+  // En-têtes anglais
+  transactiondate: 'Date',
+  agencycode: 'Code agence',
+  agency: 'Code agence',
+  bank: 'Banque',
+  bankaccount: 'Compte bancaire',
+  account: 'Compte bancaire',
+  amount: 'Montant',
+  paymentmode: 'Mode de paiement',
+  paymentmethod: 'Mode de paiement',
+  network: 'Réseau'
 };
 
 @Component({
@@ -210,16 +265,11 @@ export class BanqueComponent implements OnInit {
     banque: '',
     dateComptable: '',
     dateValeur: '',
-    codePays: '',
-    pays: '',
-    mois: '',
-    statut: 'En attente',
-    typeOperation: '',
-    montant: null as number | null,
     libelle: '',
+    debit: null as number | null,
+    credit: null as number | null,
     devise: 'XAF',
-    commentaire: '',
-    agence: ''
+    reconStatus: 'KO' as 'OK' | 'KO'
   };
 
   // Données des opérations
@@ -271,26 +321,6 @@ export class BanqueComponent implements OnInit {
     }
     const code = raw.toUpperCase();
     return this.paysCodeToName[code] || raw;
-  }
-
-  onCodePaysChange() {
-    const codePays = this.createOperationForm.codePays?.trim().toUpperCase();
-    if (!codePays) {
-      this.createOperationForm.pays = '';
-      return;
-    }
-
-    // Remplir automatiquement le pays à partir du code pays
-    this.createOperationForm.pays = this.paysCodeToName[codePays] || '';
-  }
-
-  onDateComptableChange() {
-    // Remplir automatiquement le mois à partir de la date comptable
-    if (this.createOperationForm.dateComptable) {
-      const date = new Date(this.createOperationForm.dateComptable);
-      const mois = date.toLocaleDateString('fr-FR', { month: 'long', year: 'numeric' });
-      this.createOperationForm.mois = mois.charAt(0).toUpperCase() + mois.slice(1);
-    }
   }
 
   // Pagination
@@ -1876,6 +1906,7 @@ export class BanqueComponent implements OnInit {
       const res: any = await firstValueFrom(this.suiviCompenseService.upload(file));
       const saved = Number(res?.saved ?? 0);
       const totalRead = Number(res?.totalRead ?? rows.length);
+      const duplicates = Number(res?.duplicatesIgnored ?? 0);
       if (!saved) {
         await this.popupService.showWarning(
           `Aucune ligne n’a été enregistrée (${totalRead.toLocaleString('fr-FR')} ligne(s) lue(s)).\n` +
@@ -1885,7 +1916,8 @@ export class BanqueComponent implements OnInit {
         return;
       }
       await this.popupService.showSuccess(
-        `${saved.toLocaleString('fr-FR')} ligne(s) chargée(s) sur ${totalRead.toLocaleString('fr-FR')} lue(s).`,
+        `${saved.toLocaleString('fr-FR')} ligne(s) chargée(s) sur ${totalRead.toLocaleString('fr-FR')} lue(s)` +
+        `${duplicates ? ` — ${duplicates} doublon(s) ignoré(s)` : ''}.`,
         'Suivi compense OP'
       );
       this.loadSuiviCompense();
@@ -1969,6 +2001,7 @@ export class BanqueComponent implements OnInit {
         const res: any = await firstValueFrom(this.operationBancaireService.upload(file));
         const saved = Number(res?.saved ?? 0);
         const totalRead = Number(res?.totalRead ?? rows.length);
+        const opbDuplicates = Number(res?.duplicatesIgnored ?? 0);
         const errors = Array.isArray(res?.errors) ? res.errors.length : 0;
 
         if (!saved) {
@@ -1990,7 +2023,8 @@ export class BanqueComponent implements OnInit {
 
         await this.popupService.showSuccess(
           `${saved.toLocaleString('fr-FR')} opération(s) bancaire(s) chargée(s) sur ${totalRead.toLocaleString('fr-FR')} lue(s)` +
-          `${errors ? ` — ${errors} avertissement(s)` : ''}.`,
+          `${errors ? ` — ${errors} avertissement(s)` : ''}` +
+          `${opbDuplicates ? ` — ${opbDuplicates} doublon(s) ignoré(s)` : ''}.`,
           'Opérations chargées'
         );
         this.showOperations = true;
@@ -2187,23 +2221,17 @@ export class BanqueComponent implements OnInit {
   }
   openCreateOperation() {
     this.showCreateOperationPopup = true;
-    // Initialiser le formulaire avec des valeurs par défaut
     this.createOperationForm = {
       numeroCompte: '',
       nomCompte: '',
       banque: '',
       dateComptable: new Date().toISOString().split('T')[0], // Date du jour
       dateValeur: '',
-      codePays: '',
-      pays: '',
-      mois: '',
-      statut: 'En attente',
-      typeOperation: '',
-      montant: null,
       libelle: '',
+      debit: null,
+      credit: null,
       devise: 'XAF',
-      commentaire: '',
-      agence: ''
+      reconStatus: 'KO' as 'OK' | 'KO'
     };
   }
 
@@ -2235,17 +2263,18 @@ export class BanqueComponent implements OnInit {
     return `${dateStr}-${agencePrefix}-${amountStr}`;
   }
 
+  get createOperationMontant(): number {
+    const debit = Number(this.createOperationForm.debit) || 0;
+    const credit = Number(this.createOperationForm.credit) || 0;
+    return credit - debit;
+  }
+
   isCreateOperationFormValid(): boolean {
-    return !!(
-      this.createOperationForm.numeroCompte &&
-      this.createOperationForm.nomCompte &&
-      this.createOperationForm.banque &&
-      this.createOperationForm.dateComptable &&
-      this.createOperationForm.codePays &&
-      this.createOperationForm.typeOperation &&
-      this.createOperationForm.montant !== null &&
-      this.createOperationForm.libelle
-    );
+    const f = this.createOperationForm;
+    const debit = Number(f.debit) || 0;
+    const credit = Number(f.credit) || 0;
+    // Une seule colonne renseignée (Débit ou Crédit), comme dans le relevé
+    return !!(f.numeroCompte && f.dateComptable && f.libelle && ((debit > 0) !== (credit > 0)));
   }
 
   saveCreateOperation() {
@@ -2255,32 +2284,26 @@ export class BanqueComponent implements OnInit {
     }
 
     this.creatingOperation = true;
+    const f = this.createOperationForm;
+    const debit = Number(f.debit) || 0;
+    const credit = Number(f.credit) || 0;
 
-    // Générer la référence selon le type d'opération
-    const reference = this.generateReference(
-      this.createOperationForm.typeOperation,
-      this.createOperationForm.agence,
-      this.createOperationForm.dateComptable,
-      this.createOperationForm.montant
-    );
-
-    // Créer l'objet opération bancaire
+    // Champs alignés sur le tableau du relevé bancaire
     const operationData = {
-      numeroCompte: this.createOperationForm.numeroCompte,
-      nomCompte: this.createOperationForm.nomCompte,
-      banque: this.createOperationForm.banque,
-      dateComptable: this.createOperationForm.dateComptable,
-      dateValeur: this.createOperationForm.dateValeur || this.createOperationForm.dateComptable,
-      codePays: this.createOperationForm.codePays,
-      pays: this.createOperationForm.pays,
-      mois: this.createOperationForm.mois,
-      statut: this.createOperationForm.statut,
-      typeOperation: this.createOperationForm.typeOperation,
-      montant: this.createOperationForm.montant!,
-      libelle: this.createOperationForm.libelle,
-      devise: this.createOperationForm.devise,
-      commentaire: this.createOperationForm.commentaire || null,
-      reference: reference
+      numeroCompte: f.numeroCompte.trim(),
+      nomCompte: f.nomCompte,
+      banque: f.banque,
+      dateComptable: f.dateComptable,
+      dateValeur: f.dateValeur || f.dateComptable,
+      libelle: f.libelle,
+      debit: debit || null,
+      credit: credit || null,
+      montant: Math.abs(this.createOperationMontant),
+      devise: f.devise,
+      reconStatus: f.reconStatus,
+      // Sens déduit de la colonne renseignée : débit = retrait, crédit = dépôt
+      typeOperation: debit > 0 ? 'RETRAIT' : 'DEPOT',
+      statut: 'En attente'
     };
 
     console.log('💾 Création d\'opération bancaire:', operationData);
@@ -2567,6 +2590,26 @@ export class BanqueComponent implements OnInit {
     }
   }
 
+  /** Pop-up de chargement manuel : avancement de l'envoi, traitement, puis notification de fin. */
+  importPopup: { visible: boolean; title: string; phase: 'upload' | 'server' | 'success' | 'error'; percent: number; message: string } =
+    { visible: false, title: '', phase: 'upload', percent: 0, message: '' };
+
+  private openImportPopup(title: string): void {
+    this.importPopup = { visible: true, title, phase: 'upload', percent: 0, message: '' };
+  }
+
+  private onImportUploadProgress(percent: number): void {
+    this.importPopup = { ...this.importPopup, percent, phase: percent >= 100 ? 'server' : 'upload' };
+  }
+
+  private finishImportPopup(message: string, kind: string): void {
+    this.importPopup = { ...this.importPopup, phase: kind === 'error' ? 'error' : 'success', percent: 100, message };
+  }
+
+  closeImportPopup(): void {
+    this.importPopup = { ...this.importPopup, visible: false };
+  }
+
   uploadReleve() {
     if (!this.releveSelectedFile) return;
     this.releveUploading = true;
@@ -2574,7 +2617,10 @@ export class BanqueComponent implements OnInit {
     this.releveRows = [];
     this.releveMessageKind = 'info';
     this.releveMessage = 'Import en cours...';
-    this.releveService.upload(this.releveSelectedFile).subscribe({
+    this.openImportPopup('Import du relevé bancaire');
+    from(this.releveService.uploadWithProgress(this.releveSelectedFile, pct => this.onImportUploadProgress(pct)))
+      .pipe(finalize(() => this.finishImportPopup(this.releveMessage, this.releveMessageKind)))
+      .subscribe({
       next: (res) => {
         this.releveBatchId = res.batchId;
         this.releveRows = (res.rows || []).map(r => ({
@@ -2673,11 +2719,15 @@ export class BanqueComponent implements OnInit {
     this.suiviCompenseUploading = true;
     this.suiviCompenseMessageKind = 'info';
     this.suiviCompenseMessage = 'Import en cours...';
-    this.suiviCompenseService.upload(this.suiviCompenseSelectedFile).subscribe({
+    this.openImportPopup('Import du suivi compense OP');
+    from(this.suiviCompenseService.uploadWithProgress(this.suiviCompenseSelectedFile, pct => this.onImportUploadProgress(pct)))
+      .pipe(finalize(() => this.finishImportPopup(this.suiviCompenseMessage, this.suiviCompenseMessageKind)))
+      .subscribe({
       next: (res) => {
         this.suiviCompenseUploading = false;
         this.suiviCompenseMessageKind = 'success';
-        this.suiviCompenseMessage = `Fichier importé (${res.saved} ligne(s) sur ${res.totalRead} lue(s)).`;
+        const suiviDup = Number(res?.duplicatesIgnored ?? 0);
+        this.suiviCompenseMessage = `Fichier importé (${res.saved} ligne(s) sur ${res.totalRead} lue(s))${suiviDup ? `, ${suiviDup} doublon(s) ignoré(s)` : ''}.`;
         this.suiviCompenseSelectedFile = null;
         this.loadSuiviCompense();
       },
@@ -3019,6 +3069,72 @@ export class BanqueComponent implements OnInit {
   }
 
   // Chargement des données
+  /** Pop-up Check : choix du type, puis résultats (validation seulement pour la compensation). */
+  checkPopup: {
+    visible: boolean;
+    step: 'types' | 'loading' | 'results' | 'error';
+    types: string[];
+    type: string;
+    result: OperationCheckResult | null;
+    applying: boolean;
+    message: string;
+  } = { visible: false, step: 'types', types: [], type: '', result: null, applying: false, message: '' };
+
+  get checkMatchedRows() {
+    return (this.checkPopup.result?.rows ?? []).filter(r => r.status === 'MATCH');
+  }
+
+  openCheckPopup(): void {
+    const types = [...new Set(this.operations
+      .filter(o => o.source === 'bancaire' && o.typeOperation)
+      .map(o => o.typeOperation as string))].sort();
+    this.checkPopup = {
+      visible: true, step: 'types', types, type: '', result: null, applying: false,
+      message: types.length ? '' : 'Aucune opération bancaire à contrôler.'
+    };
+  }
+
+  closeCheckPopup(): void {
+    this.checkPopup = { ...this.checkPopup, visible: false };
+  }
+
+  backToCheckTypes(): void {
+    this.checkPopup = { ...this.checkPopup, step: 'types', result: null, message: '' };
+  }
+
+  runCheck(type: string): void {
+    this.checkPopup = { ...this.checkPopup, step: 'loading', type, result: null, message: '' };
+    this.operationBancaireService.check(type).subscribe({
+      next: (result) => { this.checkPopup = { ...this.checkPopup, step: 'results', result }; },
+      error: () => { this.checkPopup = { ...this.checkPopup, step: 'error', message: 'Le check a échoué.' }; }
+    });
+  }
+
+  validateCheckMatches(): void {
+    const items = this.checkMatchedRows.map(r => ({ operationId: r.operationId, banque: r.banque, reference: r.reference }));
+    if (!items.length) return;
+    this.checkPopup = { ...this.checkPopup, applying: true, message: '' };
+    this.operationBancaireService.applyCheck(items).subscribe({
+      next: (res) => {
+        // Les lignes validées sortent du pop-up : elles ne seront plus proposées.
+        const validatedIds = new Set(items.map(i => i.operationId));
+        const current = this.checkPopup.result;
+        const rows = (current?.rows ?? []).filter(r => !validatedIds.has(r.operationId));
+        const result = current ? {
+          ...current,
+          total: rows.length,
+          matched: rows.filter(r => r.status === 'MATCH').length,
+          gaps: rows.filter(r => r.status !== 'MATCH').length,
+          rows
+        } : null;
+        this.checkPopup = { ...this.checkPopup, applying: false, result,
+          message: `${res.updated} opération(s) validée(s) : banque et référence reportées.` };
+        this.loadOperations();
+      },
+      error: () => { this.checkPopup = { ...this.checkPopup, applying: false, message: 'La validation a échoué.' }; }
+    });
+  }
+
   loadOperations() {
     // Charger les opérations bancaires (table operations_bancaires)
     this.operationBancaireService.getAllOperationsBancaires('BANQUE').subscribe({
@@ -3139,12 +3255,16 @@ export class BanqueComponent implements OnInit {
     this.opbUploading = true;
     this.opbMessageKind = 'info';
     this.opbMessage = 'Import des opérations en cours...';
-    this.operationBancaireService.upload(this.opbSelectedFile).subscribe({
+    this.openImportPopup('Import des opérations bancaires');
+    from(this.operationBancaireService.uploadWithProgress(this.opbSelectedFile, pct => this.onImportUploadProgress(pct)))
+      .pipe(finalize(() => this.finishImportPopup(this.opbMessage, this.opbMessageKind)))
+      .subscribe({
       next: (res) => {
         this.opbUploading = false;
         const errs = (res && Array.isArray(res.errors)) ? res.errors.length : 0;
         this.opbMessageKind = 'success';
-        this.opbMessage = `Import terminé. Lues: ${res.totalRead || 0}, enregistrées: ${res.saved || 0}${errs ? `, erreurs: ${errs}` : ''}`;
+        const opbDup = Number(res?.duplicatesIgnored ?? 0);
+        this.opbMessage = `Import terminé. Lues: ${res.totalRead || 0}, enregistrées: ${res.saved || 0}${opbDup ? `, doublons ignorés: ${opbDup}` : ''}${errs ? `, erreurs: ${errs}` : ''}`;
         this.loadOperations();
       },
       error: () => {

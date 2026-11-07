@@ -36,6 +36,19 @@ export const MERCHANT_REPORT_COLUMNS: BilingualColumnDefinition[] = [
   { id: 'linkedTxId', fr: 'ID de transaction liée', en: 'Linked Transaction ID' }
 ];
 
+/** Alias FR supplémentaires (relevés d'opérations : libellés FR de la banque). */
+export const MERCHANT_REPORT_FR_ALIASES: Record<string, string[]> = {
+  receiptNo: ['Reçu n°', 'Recu n°', 'Reçu no', 'Numéro de reçu'],
+  completionTime: ["Le temps d'achèvement", "Temps d'achèvement", 'Temps de fin'],
+  initiationTime: ["Temps d'initiation", 'Temps initiation'],
+  transactionStatus: ['Etat de la transaction', 'État de la transaction', 'Statut transaction', 'Transfer Status', 'Statut du transfert'],
+  paidIn: ['Payé en', 'Paye en'],
+  reasonType: ['Type de raison'],
+  remarks: ['Remarque', 'Remarques'],
+  details: ['Des détails', 'Détail'],
+  linkedTxId: ['Identifiant des liens de la transaction', 'Identifiant des liens de transaction']
+};
+
 /** Alias Orange Money : en-têtes variables des relevés (ex. « Généré le : », « Application : »). */
 export const ORANGE_MONEY_COLUMN_DEFINITIONS: BilingualColumnDefinition[] = [
   { id: 'omStatut', fr: 'Statut', en: 'Généré le :' },
@@ -46,6 +59,60 @@ const ORANGE_MONEY_EXTRA_ALIASES: Record<string, string[]> = {
   omStatut: ['Généré le', 'Genere le :', 'Genere le', 'Status', 'État', 'Etat', 'State'],
   omPaiement: ['Application', 'Application:', 'Payment', 'Moyen de Paiement', 'Moyen paiement']
 };
+
+/**
+ * Colonnes bancaires (relevé et opérations) : libellé FR du modèle, libellé EN équivalent
+ * et variantes courantes. Un fichier en anglais et un modèle configuré en français
+ * désignent ainsi la même colonne.
+ */
+export const BANKING_COLUMN_DEFINITIONS: Array<BilingualColumnDefinition & { aliases?: string[] }> = [
+  { id: 'bkNumeroCompte', fr: 'Numéro de compte', en: 'Account Number', aliases: ['N° de compte', 'Numero de compte', 'Account No', 'Account No.', 'Compte'] },
+  { id: 'bkNomCompte', fr: 'Nom du compte', en: 'Account Name', aliases: ['Nom du Compte', 'Libellé du compte'] },
+  { id: 'bkBanque', fr: 'Banque', en: 'Bank', aliases: ['Bank Name', 'Nom de la banque', 'Banque appro', 'Bank appro'] },
+  { id: 'bkDateComptable', fr: 'Date comptable', en: 'Accounting Date', aliases: ['Booking Date', 'Date de comptabilisation'] },
+  { id: 'bkDateValeur', fr: 'Date de valeur', en: 'Value Date', aliases: ['Date valeur', 'Date de Valeur'] },
+  { id: 'bkLibelle', fr: 'Libellé / Narration', en: 'Label / Narration', aliases: ['Libellé/Narration', 'Libelle', 'Libellé', 'Narration', 'Narrative', 'Label', 'Description'] },
+  { id: 'bkDebit', fr: 'Débit', en: 'Debit', aliases: ['Debits', 'Débits'] },
+  { id: 'bkCredit', fr: 'Crédit', en: 'Credit', aliases: ['Credits', 'Crédits'] },
+  { id: 'bkMontant', fr: 'Montant', en: 'Amount', aliases: ['Montant opération', 'Transaction Amount'] },
+  { id: 'bkDevise', fr: 'Devise', en: 'Currency', aliases: ['Devise du compte', 'Account Currency'] },
+  { id: 'bkStatutReconciliation', fr: 'Statut Réconciliation', en: 'Reconciliation Status', aliases: ['Statut reconciliation'] },
+  { id: 'bkNumeroCheque', fr: 'Numéro de chèque', en: 'Cheque Number', aliases: ['Numéro de chèque', 'Numero de cheque', 'Chèque', 'Cheque', 'Check Number'] },
+  { id: 'bkNumeroSerie', fr: 'Numéro de série', en: 'Serial Number', aliases: ['Numero de serie', 'Series Number', 'Numéro de serie'] },
+  // Opérations bancaires
+  { id: 'bkDateOperation', fr: 'Date Opération', en: 'Operation Date', aliases: ['Date operation', 'Transaction Date'] },
+  { id: 'bkTypeOperation', fr: 'Type Opération', en: 'Operation Type', aliases: ['Type operation', "Type d'opération", 'Transaction Type'] },
+  // Relevés de transferts mobile money (ex. modèle Airtel GA) : même concept, libellés différents.
+  { id: 'trfId', fr: 'ID du transfert', en: 'Transfer ID', aliases: ['Transaction ID', 'Transaction Id', 'Transaction_ID', 'ID transaction'] },
+  { id: 'trfSender', fr: 'Expéditeur', en: 'Sender', aliases: ['Sender Msisdn', 'Sender MSISDN', 'Sender_msisdn', 'Expediteur'] },
+  { id: 'trfReceiver', fr: 'Destinataire', en: 'Receiver', aliases: ['Receiver Msisdn', 'Receiver MSISDN', 'Receiver_msisdn'] },
+  { id: 'trfDate', fr: 'Date du transfert', en: 'Transfer On', aliases: ['Transaction Date and Time', 'Transaction Date & Time', 'Transfer Date', 'Date et heure de transaction'] },
+  { id: 'bkAgence', fr: 'Agence', en: 'Agency', aliases: ['Code agence', 'Agency Code'] },
+  { id: 'bkCompteADebiter', fr: 'Compte à débiter', en: 'Debit Account', aliases: ['Compte a debiter', 'Account To Debit'] },
+  { id: 'bkNomBeneficiaire', fr: 'Nom Bénéficiaire', en: 'Beneficiary', aliases: ['Beneficiary Name', 'Nom beneficiaire'] },
+  { id: 'bkModePaiement', fr: 'Mode Paiement', en: 'Payment Mode', aliases: ['Mode de paiement', 'Mode de Paiement', 'Payment Method'] },
+  { id: 'bkReference', fr: 'Référence', en: 'Reference', aliases: ['Reference Number'] },
+  { id: 'bkIdGlpi', fr: 'ID GLPI', en: 'Ticket ID', aliases: ['ID Ticket', 'ID ticket', 'GLPI ID'] },
+  { id: 'bkBanqueCorrigee', fr: 'Banque Corrigée', en: 'Corrected Bank', aliases: ['Banque corrigee'] },
+  { id: 'bkPays', fr: 'Pays', en: 'Country', aliases: ['Pays provenance'] },
+  { id: 'bkCodePays', fr: 'Code Pays', en: 'Country Code', aliases: ['Code pays'] },
+  { id: 'bkMois', fr: 'Mois', en: 'Month', aliases: [] },
+  // Colonnes du modèle opérations bancaires (OPBO / OPPART)
+  { id: 'bkSoldeAvant', fr: 'Solde avant', en: 'Balance before', aliases: ['Solde avant'] },
+  { id: 'bkSoldeApres', fr: 'Solde après', en: 'Balance after', aliases: ['Solde aprés', 'Solde apres'] },
+  { id: 'bkIdOperation', fr: 'ID Opération', en: 'ID Operation', aliases: ['ID Opération', 'Id operation'] },
+  { id: 'bkCodeProprietaire', fr: 'Code propriétaire', en: 'Proprietary Code', aliases: ['Code proprietaire'] },
+  { id: 'bkTelephone', fr: 'Téléphone', en: 'Phone', aliases: ['Telephone', 'Phone Number'] },
+  { id: 'bkNumBordereau', fr: 'Num bordereau', en: 'Billnumber', aliases: ['Bill number', 'Bill Number', 'Numéro bordereau', 'Numero bordereau'] },
+  { id: 'bkDateVersement', fr: 'Date de versement', en: 'Date of payment', aliases: ['Date de paiement', 'Payment Date'] },
+  { id: 'bkDemandeur', fr: 'Login demandeur Appro', en: 'Applicant Login Appro', aliases: ['Demandeur', 'Login demandeur', 'Requester', 'Applicant Login'] },
+  { id: 'bkValideur', fr: 'Login valideur Appro', en: 'Login validator Appro', aliases: ['Valideur', 'Login valideur', 'Validator', 'Approver'] },
+  { id: 'bkMotifRejet', fr: 'Motif rejet', en: 'Rejection reason', aliases: ['Motif de rejet'] },
+  { id: 'bkFraisConnexion', fr: 'Frais connexion', en: 'connection fee', aliases: ['Frais de connexion', 'Connection Fee'] },
+  { id: 'bkNumTransGU', fr: 'Numéro Trans GU', en: 'Num Trans GU', aliases: ['Num Trans GU', 'Numero Trans GU'] },
+  { id: 'bkMotifRegularisation', fr: 'Motif régularisation', en: 'Regularization reason', aliases: ['Motif regularisation'] },
+  { id: 'bkGroupeReseau', fr: 'groupe de réseau', en: 'network group', aliases: ['Groupe de réseau', 'Groupe reseau', 'Network group', 'Network Group'] }
+];
 
 /** Champs métier ReconciliApp (écarts BO, TRX, etc.) — alias FR / EN. */
 export const BILINGUAL_COLUMN_ALIASES = {
@@ -105,6 +172,9 @@ function getNormalizedHeaderIndex(): Map<string, BilingualColumnDefinition> {
   for (const def of MERCHANT_REPORT_COLUMNS) {
     register(def.fr, def);
     register(def.en, def);
+    for (const alias of MERCHANT_REPORT_FR_ALIASES[def.id] || []) {
+      register(alias, def);
+    }
     register(def.fr.replace(/'/g, ''), def);
     register(def.en.replace(/\./g, ''), def);
   }
@@ -116,6 +186,15 @@ function getNormalizedHeaderIndex(): Map<string, BilingualColumnDefinition> {
     const extras = ORANGE_MONEY_EXTRA_ALIASES[def.id] || [];
     for (const extra of extras) {
       register(extra, def);
+    }
+  }
+
+  // Colonnes bancaires : enregistrées avant les alias génériques (ex. « Montant » / « Amount »)
+  for (const def of BANKING_COLUMN_DEFINITIONS) {
+    register(def.fr, def);
+    register(def.en, def);
+    for (const alias of def.aliases || []) {
+      register(alias, def);
     }
   }
 
@@ -226,7 +305,11 @@ export function getCanonicalFrenchLabel(columnId: string): string | null {
     return merchantDef.fr;
   }
   const orangeMoneyDef = ORANGE_MONEY_COLUMN_DEFINITIONS.find(d => d.id === columnId);
-  return orangeMoneyDef?.fr ?? null;
+  if (orangeMoneyDef) {
+    return orangeMoneyDef.fr;
+  }
+  const bankingDef = BANKING_COLUMN_DEFINITIONS.find(d => d.id === columnId);
+  return bankingDef?.fr ?? null;
 }
 
 /** Alias Orange Money supplémentaires pour une colonne configurée dans un modèle. */
@@ -488,11 +571,28 @@ function pickPreferredBilingualColumn(
 
 function groupHeadersByCanonicalId(headers: string[]): Map<string, string[]> {
   const groups = new Map<string, string[]>();
+  const rawKeyFor = (key: string) => `__raw__:${normalizeHeaderForMatch(key)}`;
   for (const key of headers) {
-    const id = resolveCanonicalColumnId(key) || `__raw__:${normalizeHeaderForMatch(key)}`;
+    const id = resolveCanonicalColumnId(key) || rawKeyFor(key);
     const group = groups.get(id) || [];
     group.push(key);
     groups.set(id, group);
+  }
+
+  // Un id canonique approximatif (sous-chaîne) ne doit pas fusionner des colonnes
+  // distinctes : « Balance before » et « Balance after » ne sont pas des traductions.
+  // Si plusieurs en-têtes non reconnus exactement partagent un id, on les sépare.
+  const exactIndex = getNormalizedHeaderIndex();
+  for (const [id, keys] of [...groups.entries()]) {
+    if (id.startsWith('__raw__:')) continue;
+    const approximate = keys.filter(k => !exactIndex.get(normalizeHeaderForMatch(k)));
+    const distinctApprox = new Set(approximate.map(k => normalizeHeaderForMatch(k)));
+    if (approximate.length < 2 || distinctApprox.size < 2) continue;
+    groups.set(id, keys.filter(k => !approximate.includes(k)));
+    if (groups.get(id)!.length === 0) groups.delete(id);
+    for (const k of approximate) {
+      groups.set(rawKeyFor(k), [...(groups.get(rawKeyFor(k)) || []), k]);
+    }
   }
   return groups;
 }
@@ -513,10 +613,15 @@ export function dedupeBilingualColumnNames(
     ? [...preferredHeaders, ...columns.filter(col => !preferredHeaders.includes(col))]
     : columns;
 
+  const groupIdByKey = new Map<string, string>();
+  for (const [id, keys] of groups) {
+    for (const k of keys) groupIdByKey.set(k, id);
+  }
+
   const orderedIds: string[] = [];
   const seenIds = new Set<string>();
   for (const col of orderSource) {
-    const id = resolveCanonicalColumnId(col) || `__raw__:${normalizeHeaderForMatch(col)}`;
+    const id = groupIdByKey.get(col) || resolveCanonicalColumnId(col) || `__raw__:${normalizeHeaderForMatch(col)}`;
     if (!seenIds.has(id)) {
       seenIds.add(id);
       orderedIds.push(id);
@@ -595,4 +700,86 @@ export function mergeBilingualColumnsInRows(
   });
 
   return { rows: orderedRows, columns: orderedColumns };
+}
+
+/**
+ * Sans modèle : choisit UNE langue pour le lot (anglais ou français) à partir des
+ * en-têtes d'origine, puis retourne la liste d'en-têtes à garder. Un même concept
+ * n'apparaît qu'une fois, sous son libellé de la langue choisie.
+ */
+export function chooseBatchHeaderSet(keys: string[], forcedLanguage?: 'en' | 'fr'): string[] {
+  const enLabels = new Set<string>();
+  const frLabels = new Set<string>();
+  const defs = [
+    ...MERCHANT_REPORT_COLUMNS,
+    ...ORANGE_MONEY_COLUMN_DEFINITIONS,
+    ...BANKING_COLUMN_DEFINITIONS
+  ];
+  for (const def of defs) {
+    enLabels.add(normalizeHeaderForMatch(def.en));
+    frLabels.add(normalizeHeaderForMatch(def.fr));
+  }
+  const isEn = (k: string) => {
+    const n = normalizeHeaderForMatch(k);
+    return enLabels.has(n) && !frLabels.has(n);
+  };
+  const isFr = (k: string) => {
+    const n = normalizeHeaderForMatch(k);
+    return frLabels.has(n) && !enLabels.has(n);
+  };
+
+  const unique = [...new Set(keys.map(k => (k || '').trim()).filter(Boolean))];
+  const enCount = unique.filter(isEn).length;
+  const frCount = unique.filter(isFr).length;
+  // Langue imposée par l'utilisateur (fichiers multilingues), sinon la plus fréquente.
+  const winner: 'en' | 'fr' = forcedLanguage ?? (enCount > frCount ? 'en' : 'fr');
+
+  const byId = new Map<string, string[]>();
+  const result: string[] = [];
+  for (const key of unique) {
+    const id = resolveCanonicalColumnId(key);
+    if (!id) {
+      result.push(key);
+      continue;
+    }
+    if (!byId.has(id)) {
+      byId.set(id, []);
+      result.push(`\u0000${id}`);
+    }
+    byId.get(id)!.push(key);
+  }
+  return result.map(entry => {
+    if (!entry.startsWith('\u0000')) {
+      return entry;
+    }
+    const candidates = byId.get(entry.slice(1)) || [];
+    const preferred = candidates.find(k => (winner === 'en' ? isEn(k) : isFr(k)));
+    if (preferred) {
+      return preferred;
+    }
+    // Langue imposée absente du fichier pour ce concept : libellé canonique de cette langue.
+    if (forcedLanguage) {
+      const canonical = forcedLanguage === 'fr'
+        ? getCanonicalFrenchLabel(entry.slice(1))
+        : getCanonicalEnglishLabel(entry.slice(1));
+      if (canonical) {
+        return canonical;
+      }
+    }
+    return candidates[0];
+  });
+}
+
+/** Libellé anglais canonique d'une colonne (même référentiel que getCanonicalFrenchLabel). */
+export function getCanonicalEnglishLabel(columnId: string): string | null {
+  const merchantDef = MERCHANT_REPORT_COLUMNS.find(d => d.id === columnId);
+  if (merchantDef) {
+    return merchantDef.en;
+  }
+  const orangeMoneyDef = ORANGE_MONEY_COLUMN_DEFINITIONS.find(d => d.id === columnId);
+  if (orangeMoneyDef) {
+    return orangeMoneyDef.en;
+  }
+  const bankingDef = BANKING_COLUMN_DEFINITIONS.find(d => d.id === columnId);
+  return bankingDef?.en ?? null;
 }

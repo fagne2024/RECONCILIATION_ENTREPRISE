@@ -2,6 +2,7 @@ package com.reconciliation.service;
 
 import com.reconciliation.entity.OperationBancaireEntity;
 import com.reconciliation.repository.OperationBancaireRepository;
+import com.reconciliation.util.BankingDedupKey;
 import com.reconciliation.util.CsvWorkbookReader;
 import org.apache.poi.hssf.usermodel.HSSFWorkbook;
 import org.apache.poi.ss.usermodel.*;
@@ -36,6 +37,8 @@ public class OperationBancaireImportService {
     public static class ImportResult {
         public int totalRead;
         public int saved;
+        /** Lignes ignorées car déjà présentes (base ou plus haut dans le fichier). */
+        public int duplicatesIgnored;
         public List<String> errors = new ArrayList<>();
     }
 
@@ -52,7 +55,7 @@ public class OperationBancaireImportService {
             Map<String, Integer> idx = mapHeaders(header);
             ReferenceSequencer sequencer = new ReferenceSequencer();
 
-            List<OperationBancaireEntity> toSave = new ArrayList<>();
+            List<OperationBancaireEntity> candidates = new ArrayList<>();
             int last = sheet.getLastRowNum();
             for (int r = 1; r <= last; r++) {
                 Row row = sheet.getRow(r);
@@ -78,7 +81,8 @@ public class OperationBancaireImportService {
                     if (dateOp == null) dateOp = LocalDateTime.now();
 
                     // Référence du fichier prioritaire ; sinon générée selon le type
-                    String reference = getString(row, idx.get("reference"));
+                    String fileReference = getString(row, idx.get("reference"));
+                    String reference = fileReference;
                     if (reference == null || reference.isBlank()) {
                         reference = sequencer.generate(typeOperation, agence, dateOp.toLocalDate(), montant);
                     }
@@ -104,9 +108,27 @@ public class OperationBancaireImportService {
 
                     String statut = getString(row, idx.get("statut"));
                     e.setStatut((statut == null || statut.isBlank()) ? "En attente" : statut);
-                    toSave.add(e);
+                    // Clé métier (la référence générée n'en fait pas partie)
+                    e.setDedupKey(BankingDedupKey.of(dateOp, agence, typeOperation, montant,
+                            e.getCompteADebiter(), e.getNomBeneficiaire(), e.getIdGlpi(), fileReference));
+                    candidates.add(e);
                 } catch (Exception ex) {
                     result.errors.add("Ligne " + (r + 1) + ": " + ex.getMessage());
+                }
+            }
+            // Doublons : clés déjà en base ou répétées dans le fichier
+            List<OperationBancaireEntity> toSave = new ArrayList<>();
+            if (!candidates.isEmpty()) {
+                Set<String> keys = new HashSet<>();
+                for (OperationBancaireEntity c : candidates) keys.add(c.getDedupKey());
+                Set<String> known = new HashSet<>();
+                for (OperationBancaireEntity ex : repository.findByDedupKeyIn(keys)) known.add(ex.getDedupKey());
+                for (OperationBancaireEntity c : candidates) {
+                    if (known.add(c.getDedupKey())) {
+                        toSave.add(c);
+                    } else {
+                        result.duplicatesIgnored++;
+                    }
                 }
             }
             if (!toSave.isEmpty()) {
@@ -203,6 +225,36 @@ public class OperationBancaireImportService {
         }
     }
 
+    /** En-têtes anglais (opérations en anglais) → clés internes lues par l'import. */
+    private static final Map<String, String> OPERATION_EN_ALIASES = Map.ofEntries(
+            Map.entry("country", "pays"),
+            Map.entry("country_code", "code_pays"),
+            Map.entry("agency", "agence"),
+            Map.entry("operation_type", "type_operation"),
+            Map.entry("transaction_type", "type_operation"),
+            Map.entry("amount", "montant"),
+            Map.entry("date", "date_operation"),
+            Map.entry("operation_date", "date_operation"),
+            Map.entry("transaction_date", "date_operation"),
+            Map.entry("month", "mois"),
+            Map.entry("beneficiary", "nom_beneficiaire"),
+            Map.entry("beneficiary_name", "nom_beneficiaire"),
+            Map.entry("debit_account", "compte_a_debiter"),
+            Map.entry("account_to_debit", "compte_a_debiter"),
+            Map.entry("payment_mode", "mode_paiement"),
+            Map.entry("payment_method", "mode_paiement"),
+            Map.entry("ticket_id", "id_glpi"),
+            Map.entry("glpi_id", "id_glpi"),
+            Map.entry("bank", "banque"),
+            Map.entry("corrected_bank", "banque_corrigee"),
+            Map.entry("requester", "demandeur"),
+            Map.entry("approver", "valideur"),
+            Map.entry("validator", "valideur"),
+            Map.entry("processing", "traitement"),
+            Map.entry("status", "statut"),
+            Map.entry("reference", "reference")
+    );
+
     private static Map<String, Integer> mapHeaders(Row headerRow) {
         Map<String, Integer> map = new HashMap<>();
         if (headerRow == null) return map;
@@ -217,6 +269,10 @@ public class OperationBancaireImportService {
         if (map.containsKey("type") && !map.containsKey("type_operation")) map.put("type_operation", map.get("type"));
         if (map.containsKey("mode_de_paiement")) map.putIfAbsent("mode_paiement", map.get("mode_de_paiement"));
         if (map.containsKey("id_ticket")) map.putIfAbsent("id_glpi", map.get("id_ticket"));
+        // Détection FR/EN : une colonne anglaise alimente la clé interne correspondante
+        for (Map.Entry<String, String> alias : OPERATION_EN_ALIASES.entrySet()) {
+            if (map.containsKey(alias.getKey())) map.putIfAbsent(alias.getValue(), map.get(alias.getKey()));
+        }
         return map;
     }
 

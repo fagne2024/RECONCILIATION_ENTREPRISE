@@ -333,7 +333,7 @@
           <span>→</span>
           <input class="ds-input" type="date" [(ngModel)]="releveFilterDateFin" (change)="applyReleveFilters()">
           <button class="ds-btn ds-btn--secondary" type="button" (click)="applyReleveFilters()" title="{{ 'ACT.apply' | translate }}"><i class="fas fa-filter"></i></button>
-          <button class="ds-btn ds-btn--secondary" type="button" (click)="resetReleveFilters()" title="{{ 'COMMON.actions.reset' | translate }}"><i class="fas fa-times"></i></button>
+          <button class="ds-btn ds-btn--secondary btn-clear-filters" type="button" (click)="resetReleveFilters()" title="{{ 'CPT.Effacer' | translate }}"><i class="fas fa-times"></i> {{ 'CPT.Effacer' | translate }}</button>
         </div>
       </div>
 
@@ -1011,6 +1011,9 @@
           <button type="button" class="ds-btn ds-btn--primary btn-primary" (click)="downloadOpbTemplate()" title="{{ 'BQ.Téléchargerlemodèle' | translate }}">
             <i class="fas fa-file-excel"></i> {{ 'BQ.Modèle' | translate }}
           </button>
+          <button type="button" class="ds-btn ds-btn--secondary btn-primary" (click)="openCheckPopup()" title="Check des opérations par type">
+            <i class="fas fa-square-check"></i> Check
+          </button>
           <button type="button" class="ds-btn ds-btn--secondary btn-success" (click)="exportOperations()" [disabled]="filteredOperations.length === 0" title="{{ 'BQ.Exporterexcel' | translate }}">
             <i class="fas fa-file-excel"></i> {{ 'COMMON.actions.export' | translate }}
           </button>
@@ -1469,7 +1472,7 @@
     </div>
   </div>
 
-  <!-- Popup Création Opération Bancaire -->
+  <!-- Popup Création Opération Bancaire (mêmes colonnes et ordre que le tableau du relevé) -->
   <div class="modern-popup-overlay" *ngIf="showCreateOperationPopup" (click)="closeCreateOperationPopup()">
     <div class="modern-popup create-operation-popup" (click)="$event.stopPropagation()">
       <div class="popup-header">
@@ -1482,105 +1485,65 @@
         <form class="create-operation-form">
           <div class="form-row">
             <div class="form-group">
-              <label>{{ 'BQ.Numérodecompte' | translate }}</label>
+              <label>{{ 'TBL.accountNumber' | translate }} *</label>
               <input class="ds-input" type="text" [(ngModel)]="createOperationForm.numeroCompte" name="co_numeroCompte" required>
             </div>
             <div class="form-group">
-              <label>{{ 'BQ.Nomducompte' | translate }}</label>
-              <input class="ds-input" type="text" [(ngModel)]="createOperationForm.nomCompte" name="co_nomCompte" required>
+              <label>{{ 'TBL.accountName' | translate }}</label>
+              <input class="ds-input" type="text" [(ngModel)]="createOperationForm.nomCompte" name="co_nomCompte">
             </div>
           </div>
           <div class="form-row">
             <div class="form-group">
-              <label>{{ 'BQ.Banque' | translate }}</label>
-              <input class="ds-input" type="text" [(ngModel)]="createOperationForm.banque" name="co_banque" required>
+              <label>{{ 'TBL.bank' | translate }}</label>
+              <input class="ds-input" type="text" [(ngModel)]="createOperationForm.banque" name="co_banque">
             </div>
             <div class="form-group">
-              <label>{{ 'BQ.Agence' | translate }}</label>
-              <input class="ds-input" type="text" [(ngModel)]="createOperationForm.agence" name="co_agence" required>
+              <label>{{ 'TBL.accountingDate' | translate }} *</label>
+              <input class="ds-input" type="date" [(ngModel)]="createOperationForm.dateComptable" name="co_dateComptable" required>
             </div>
           </div>
           <div class="form-row">
+            <div class="form-group">
+              <label>{{ 'TBL.valueDate' | translate }}</label>
+              <input class="ds-input" type="date" [(ngModel)]="createOperationForm.dateValeur" name="co_dateValeur">
+            </div>
+            <div class="form-group">
+              <label>{{ 'TBL.labelNarration' | translate }} *</label>
+              <input class="ds-input" type="text" [(ngModel)]="createOperationForm.libelle" name="co_libelle" required>
+            </div>
+          </div>
+          <div class="form-row">
+            <div class="form-group">
+              <label>{{ 'TBL.debit' | translate }}</label>
+              <input class="ds-input" type="number" step="0.01" min="0" [(ngModel)]="createOperationForm.debit" name="co_debit">
+            </div>
+            <div class="form-group">
+              <label>{{ 'TBL.credit' | translate }}</label>
+              <input class="ds-input" type="number" step="0.01" min="0" [(ngModel)]="createOperationForm.credit" name="co_credit">
+            </div>
+          </div>
+          <div class="form-row">
+            <div class="form-group">
+              <label>{{ 'TBL.amount' | translate }}</label>
+              <input class="ds-input ds-num" type="text" [value]="createOperationMontant | number:'1.0-2'" name="co_montant" readonly>
+            </div>
             <div class="form-group">
               <label>{{ 'TBL.currency' | translate }}</label>
               <select class="ds-select" [(ngModel)]="createOperationForm.devise" name="co_devise">
                 <option value="XAF">XAF</option>
                 <option value="USD">USD</option>
                 <option value="EUR">EUR</option>
-                <option value="CFA">CFA</option>
               </select>
             </div>
           </div>
           <div class="form-row">
             <div class="form-group">
-              <label>{{ 'BQ.Datecomptable' | translate }}</label>
-              <input class="ds-input" type="date" [(ngModel)]="createOperationForm.dateComptable" name="co_dateComptable" (change)="onDateComptableChange()" required>
-            </div>
-            <div class="form-group">
-              <label>{{ 'TBL.valueDate' | translate }}</label>
-              <input class="ds-input" type="date" [(ngModel)]="createOperationForm.dateValeur" name="co_dateValeur">
-            </div>
-          </div>
-          <div class="form-row">
-            <div class="form-group">
-              <label>{{ 'BQ.Codepays' | translate }}</label>
-              <input class="ds-input" type="text" [(ngModel)]="createOperationForm.codePays" name="co_codePays" (input)="onCodePaysChange()" placeholder="{{ 'BQ.CImlbf' | translate }}" required>
-            </div>
-            <div class="form-group">
-              <label>{{ 'TBL.country' | translate }}</label>
-              <input class="ds-input" type="text" [(ngModel)]="createOperationForm.pays" name="co_pays" readonly>
-            </div>
-          </div>
-          <div class="form-row">
-            <div class="form-group">
-              <label>{{ 'BQ.Typedopération' | translate }}</label>
-              <select class="ds-select" [(ngModel)]="createOperationForm.typeOperation" name="co_typeOperation" required>
-                <option value="">{{ 'BQ.Choisiruntype' | translate }}</option>
-                <option value="VIREMENT">{{ 'BQ.Virement' | translate }}</option>
-                <option value="RETRAIT">{{ 'BQ.Retrait' | translate }}</option>
-                <option value="DEPOT">{{ 'BQ.Dépôt' | translate }}</option>
-                <option value="FRAIS">{{ 'TBL.fees' | translate }}</option>
-                <option value="COMMISSION">{{ 'BQ.Commission' | translate }}</option>
-                <option value="AUTRE">{{ 'BQ.Autre' | translate }}</option>
+              <label>{{ 'TBL.reconciliationStatus' | translate }}</label>
+              <select class="ds-select" [(ngModel)]="createOperationForm.reconStatus" name="co_reconStatus">
+                <option value="OK">{{ 'COMMON.actions.ok' | translate }}</option>
+                <option value="KO">KO</option>
               </select>
-            </div>
-            <div class="form-group">
-              <label>{{ 'TBL.amountRequired' | translate }}</label>
-              <input class="ds-input" type="number" [(ngModel)]="createOperationForm.montant" name="co_montant" step="0.01" required>
-            </div>
-          </div>
-          <div class="form-row">
-            <div class="form-group">
-              <label>{{ 'TBL.status' | translate }}</label>
-              <select class="ds-select" [(ngModel)]="createOperationForm.statut" name="co_statut">
-                <option value="En attente">{{ 'MSG.pending' | translate }}</option>
-                <option value="Validée">{{ 'BQ.Validée' | translate }}</option>
-                <option value="Rejetée">{{ 'BQ.Rejetée' | translate }}</option>
-                <option value="En cours">{{ 'MSG.inProgress' | translate }}</option>
-              </select>
-            </div>
-            <div class="form-group">
-              <label>{{ 'TBL.month' | translate }}</label>
-              <input class="ds-input" type="text" [(ngModel)]="createOperationForm.mois" name="co_mois" placeholder="{{ 'BQ.Octobre2024' | translate }}">
-            </div>
-          </div>
-          <div class="form-row">
-            <div class="form-group" style="grid-column: 1 / -1;">
-              <label>{{ 'BQ.Libellédescription' | translate }}</label>
-              <input class="ds-input" type="text" [(ngModel)]="createOperationForm.libelle" name="co_libelle" required>
-            </div>
-          </div>
-          <div class="form-row">
-            <div class="form-group" style="grid-column: 1 / -1;">
-              <label>{{ 'TBL.comment' | translate }}</label>
-              <textarea 
-                [(ngModel)]="createOperationForm.commentaire" 
-                name="co_commentaire"
-                placeholder="{{ 'BQ.Ajouteruncommentaireoptionnel' | translate }}"
-                rows="3"
-                maxlength="500"
-                class="comment-textarea">
-              </textarea>
             </div>
           </div>
         </form>
@@ -1701,6 +1664,99 @@
   </div>
   </div><!-- .banque-container -->
   </div><!-- .main -->
+  <!-- Pop-up Check des opérations -->
+  <div class="check-popup-backdrop" *ngIf="checkPopup.visible" role="dialog" aria-modal="true">
+    <div class="check-popup">
+      <div class="check-popup__head">
+        <h3>Check des opérations</h3>
+        <button type="button" class="check-popup__close" (click)="closeCheckPopup()" aria-label="Fermer"><i class="fas fa-xmark"></i></button>
+      </div>
+
+      <ng-container *ngIf="checkPopup.step === 'types'">
+        <p>Choisissez le type d'opération à contrôler :</p>
+        <div class="check-types">
+          <button type="button" class="ds-btn ds-btn--secondary" *ngFor="let t of checkPopup.types" (click)="runCheck(t)">{{ t }}</button>
+        </div>
+        <p class="muted" *ngIf="checkPopup.message">{{ checkPopup.message }}</p>
+      </ng-container>
+
+      <div class="check-popup__loading" *ngIf="checkPopup.step === 'loading'">
+        <i class="fas fa-gears fa-spin"></i> Contrôle en cours...
+      </div>
+
+      <p class="text-danger" *ngIf="checkPopup.step === 'error'">{{ checkPopup.message }}</p>
+
+      <ng-container *ngIf="checkPopup.step === 'results' && checkPopup.result as r">
+        <div class="check-summary">
+          <span>Type : <strong>{{ r.type }}</strong></span>
+          <span>Opérations : <strong>{{ r.total }}</strong></span>
+          <span class="check-ok">Correspondances : <strong>{{ r.matched }}</strong></span>
+          <span class="check-ko">Écarts : <strong>{{ r.gaps }}</strong></span>
+        </div>
+        <p class="muted" *ngIf="r.compensation">Contrôle sur le suivi compense OP (date, agence et montant). Seules les correspondances peuvent être validées.</p>
+        <p class="muted" *ngIf="!r.compensation">Contrôle sur le relevé bancaire (date et montant). Pas de validation pour ce type.</p>
+
+        <div class="check-table-wrap">
+          <table class="check-table">
+            <thead>
+              <tr><th>Date</th><th>Agence</th><th>Montant</th><th>Statut</th><th>Banque</th><th>Référence</th></tr>
+            </thead>
+            <tbody>
+              <tr *ngFor="let row of r.rows" [class.check-row-ko]="row.status !== 'MATCH'">
+                <td>{{ row.dateOperation }}</td>
+                <td>{{ row.agence }}</td>
+                <td class="num">{{ row.montant | number:'1.0-2' }}</td>
+                <td>
+                  <span class="check-badge" [class.is-ok]="row.status === 'MATCH'" [class.is-ko]="row.status !== 'MATCH'">
+                    {{ row.status === 'MATCH' ? 'Correspondance' : 'Écart' }}
+                  </span>
+                </td>
+                <td>{{ row.banque || '—' }}</td>
+                <td>{{ row.reference || '—' }}</td>
+              </tr>
+              <tr *ngIf="r.rows.length === 0"><td colspan="6" class="muted">Aucune opération de ce type.</td></tr>
+            </tbody>
+          </table>
+        </div>
+        <p class="import-popup__message" *ngIf="checkPopup.message">{{ checkPopup.message }}</p>
+      </ng-container>
+
+      <div class="check-popup__foot">
+        <button type="button" class="ds-btn ds-btn--secondary" *ngIf="checkPopup.step === 'results' || checkPopup.step === 'error'" (click)="backToCheckTypes()">Autre type</button>
+        <button type="button" class="ds-btn ds-btn--primary" *ngIf="checkPopup.step === 'results' && checkPopup.result?.compensation"
+                [disabled]="checkPopup.applying || checkMatchedRows.length === 0" (click)="validateCheckMatches()">
+          Valider les correspondances ({{ checkMatchedRows.length }})
+        </button>
+        <button type="button" class="ds-btn ds-btn--secondary" (click)="closeCheckPopup()">Fermer</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Pop-up de chargement manuel (avancement puis fin) -->
+  <div class="import-popup-backdrop" *ngIf="importPopup.visible" role="dialog" aria-modal="true">
+    <div class="import-popup">
+      <div class="import-popup__icon" [ngClass]="'is-' + importPopup.phase">
+        <i class="fas" [ngClass]="{
+          'fa-cloud-arrow-up': importPopup.phase === 'upload',
+          'fa-gears fa-spin': importPopup.phase === 'server',
+          'fa-circle-check': importPopup.phase === 'success',
+          'fa-triangle-exclamation': importPopup.phase === 'error'
+        }"></i>
+      </div>
+      <h3>{{ importPopup.title }}</h3>
+      <ng-container *ngIf="importPopup.phase === 'upload' || importPopup.phase === 'server'">
+        <p>{{ importPopup.phase === 'upload' ? 'Envoi du fichier : ' + importPopup.percent + ' %' : 'Traitement des lignes en cours...' }}</p>
+        <div class="import-popup__bar">
+          <div class="import-popup__fill" [class.is-indeterminate]="importPopup.phase === 'server'"
+               [style.width.%]="importPopup.phase === 'server' ? 100 : importPopup.percent"></div>
+        </div>
+      </ng-container>
+      <ng-container *ngIf="importPopup.phase === 'success' || importPopup.phase === 'error'">
+        <p class="import-popup__message">{{ importPopup.message }}</p>
+        <button type="button" class="ds-btn ds-btn--primary" (click)="closeImportPopup()">OK</button>
+      </ng-container>
+    </div>
+  </div>
 </div><!-- .banque-page -->
 
 

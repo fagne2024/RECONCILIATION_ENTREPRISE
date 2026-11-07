@@ -1,6 +1,7 @@
 import { Injectable } from '@angular/core';
 import { HttpClient, HttpHeaders, HttpParams } from '@angular/common/http';
 import { Observable } from 'rxjs';
+import { postFormWithProgress } from '../utils/upload-with-progress.util';
 import { ReleveBancaireRow, ReleveUploadResponse, ReleveListFilter } from '../models/releve-bancaire.model';
 
 @Injectable({ providedIn: 'root' })
@@ -11,6 +12,13 @@ export class ReleveBancaireService {
 
   private buildContextHeaders(moduleContext?: string): HttpHeaders | undefined {
     return moduleContext ? new HttpHeaders({ 'X-Permission-Module': moduleContext }) : undefined;
+  }
+
+  /** Import avec pourcentage d'envoi (pop-up de progression). */
+  uploadWithProgress(file: File, onProgress?: (percent: number) => void): Promise<ReleveUploadResponse> {
+    const form = new FormData();
+    form.append('file', file);
+    return postFormWithProgress<ReleveUploadResponse>(this.http, this.apiUrl + '/upload', form, onProgress);
   }
 
   upload(file: File): Observable<ReleveUploadResponse> {

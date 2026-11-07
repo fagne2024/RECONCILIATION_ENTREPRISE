@@ -41,6 +41,15 @@ import {
 /** Aligné sur COLUMN_RULES_SYNC_THRESHOLD : pas de micro-lots ni yield en dessous. */
 const PREPROCESS_INLINE_THRESHOLD = 20000;
 
+/** Colonnes du fichier opérations bancaires (OPBO / OPPART), en français. */
+const OPERATION_BANCAIRE_TEMPLATE_COLUMNS: string[] = [
+  'ID Opération', 'Type Opération', 'Montant', 'Solde avant', 'Solde après',
+  'Code propriétaire', 'Téléphone', 'Statut', 'ID Transaction', 'Num bordereau',
+  'Date opération', 'Date de versement', 'Banque appro', 'Login demandeur Appro',
+  'Login valideur Appro', 'Motif rejet', 'Frais connexion', 'Numéro Trans GU',
+  'Agent', 'Motif régularisation', 'groupe de réseau'
+];
+
 interface PrecomputedFormatTarget {
   keys: readonly string[];
   action: ModelFormatAction;
@@ -1911,14 +1920,8 @@ export class ModelPreProcessingService {
       ];
     }
 
-    if (key.includes('oppart')) {
-      return [
-        'ID Opération', 'Type Opération', 'Montant', 'Solde avant', 'Solde après',
-        'Code propriétaire', 'Téléphone', 'Statut', 'ID Transaction', 'Num bordereau',
-        'Date opération', 'Date de versement', 'Banque appro', 'Login demandeur Appro',
-        'Login valideur Appro', 'Motif rejet', 'Frais connexion', 'Numéro Trans GU',
-        'Agent', 'Motif régularisation', 'groupe de réseau'
-      ];
+    if (key.includes('oppart') || key.includes('opbo')) {
+      return [...OPERATION_BANCAIRE_TEMPLATE_COLUMNS];
     }
 
     if (key.includes('ussdpart')) {

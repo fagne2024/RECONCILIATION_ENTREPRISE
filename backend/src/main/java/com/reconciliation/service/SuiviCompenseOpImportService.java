@@ -139,15 +139,16 @@ public class SuiviCompenseOpImportService {
     static String fieldFor(String norm) {
         if (norm.isEmpty()) return null;
         if (norm.contains("date")) return "date";
-        if (norm.contains("agence")) return "code_agence";
-        if (norm.contains("banque")) return "banque";
-        if (norm.contains("compte")) return "compte_bancaire";
-        if (norm.contains("montant")) return "montant";
+        if (norm.contains("agence") || norm.contains("agency")) return "code_agence";
+        if (norm.contains("compte") || norm.contains("account")) return "compte_bancaire";
+        if (norm.contains("banque") || norm.contains("bank")) return "banque";
+        if (norm.contains("montant") || norm.contains("amount")) return "montant";
         if (norm.contains("mode") && norm.contains("paiement")) return "mode_paiement";
+        if (norm.contains("payment") && (norm.contains("mode") || norm.contains("method"))) return "mode_paiement";
         if (norm.contains("reference")) return "reference";
         if (norm.contains("ticket")) return "id_ticket";
         if (norm.contains("service")) return "service";
-        if (norm.contains("seau")) return "reseau";
+        if (norm.contains("seau") || norm.contains("network")) return "reseau";
         return null;
     }
 
