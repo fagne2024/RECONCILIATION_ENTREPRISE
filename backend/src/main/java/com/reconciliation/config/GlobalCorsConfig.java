@@ -30,7 +30,7 @@ public class GlobalCorsConfig {
         config.setAllowedOrigins(allowedOrigins);
         config.setAllowedMethods(List.of("GET", "POST", "PUT", "PATCH", "DELETE", "OPTIONS"));
         config.setAllowedHeaders(List.of("*"));
-        config.setExposedHeaders(List.of("Content-Disposition"));
+        config.setExposedHeaders(List.of("Content-Disposition", "X-Nombre-Feuilles"));
         config.setAllowCredentials(true);
         config.setMaxAge(3600L);
 

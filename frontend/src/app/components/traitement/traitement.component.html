@@ -62,6 +62,42 @@
         </div>
       </div>
   
+  <!-- Pop-up de suivi du traitement : progression pendant, résultat (succès / avertissement / erreur) après -->
+  <ng-container #procPopupAnchor></ng-container>
+  <ng-template #procPopupTpl>
+    <div class="proc-popup" role="dialog" aria-modal="true" aria-labelledby="proc-popup-title"
+         [class.proc-popup--success]="processingPopup.status === 'success'"
+         [class.proc-popup--warning]="processingPopup.status === 'warning'"
+         [class.proc-popup--error]="processingPopup.status === 'error'">
+      <h3 id="proc-popup-title">
+        <ng-container [ngSwitch]="processingPopup.status">
+          <span *ngSwitchCase="'running'">Traitement en cours…</span>
+          <span *ngSwitchCase="'success'">✔ Traitement terminé</span>
+          <span *ngSwitchCase="'warning'">⚠ Traitement terminé avec avertissements</span>
+          <span *ngSwitchCase="'error'">✖ Échec du traitement</span>
+        </ng-container>
+      </h3>
+      <div class="proc-bar" role="progressbar" [attr.aria-valuenow]="processingPopup.progress" aria-valuemin="0" aria-valuemax="100">
+        <div class="proc-bar-fill" [style.width.%]="processingPopup.progress"></div>
+      </div>
+      <div class="proc-meta">
+        <span>{{ processingPopup.progress | number:'1.0-0' }} %</span>
+        <span>Durée : {{ processingPopup.elapsed }}</span>
+      </div>
+      <div *ngIf="processingPopup.totalFiles > 0" class="proc-line">
+        Fichier {{ processingPopup.currentFile }} / {{ processingPopup.totalFiles }}
+      </div>
+      <div class="proc-line"><strong>{{ processingPopup.step }}</strong></div>
+      <div *ngIf="processingPopup.message" class="proc-line proc-muted">{{ processingPopup.message }}</div>
+      <div *ngIf="processingPopup.summary" class="proc-summary">{{ processingPopup.summary }}</div>
+      <ul *ngIf="processingPopup.errors.length" class="proc-errors">
+        <li *ngFor="let e of processingPopup.errors">{{ e }}</li>
+      </ul>
+      <div *ngIf="processingPopup.status !== 'running'" class="proc-actions">
+        <button type="button" class="ds-btn ds-btn--primary" (click)="closeProcessingPopup()">Fermer</button>
+      </div>
+    </div>
+  </ng-template>
   <!-- Barre de progression pour les fichiers volumineux -->
   <div *ngIf="dataProcessingService.isProcessing$ | async" class="processing-overlay">
     <div class="processing-container">
@@ -92,7 +128,80 @@
       <p><small>{{ 'TRT.⚡TraitementParLotsPour' | translate }}</small></p>
     </div>
     <div *ngIf="errorMsg.upload" class="error-msg">{{ errorMsg.upload }}</div>
+    <div *ngIf="failedFileStats.length" class="error-msg" role="alert">
+      <div *ngFor="let f of failedFileStats"><strong>{{ f.name }}</strong> : {{ f.errorMsg }}</div>
+    </div>
   </div>
+  <!-- Traitement serveur : aperçu paginé, opérations et suppression du lot -->
+  <section *ngIf="serverLot" class="srv-lot" aria-labelledby="srv-lot-title">
+    <div class="srv-lot-head">
+      <h3 id="srv-lot-title">{{ 'TRT.ApercuDesDonneesCombinees' | translate }} — {{ serverLot.nbLignes | number }} lignes, {{ serverLot.nbFichiers }} fichier(s) <small>(lot n° {{ serverLot.lotId }})</small></h3>
+      <div class="srv-export-actions">
+        <button type="button" class="ds-btn ds-btn--secondary" (click)="exporterServeur('csv')" [disabled]="serverBusy">Exporter CSV</button>
+        <button type="button" class="ds-btn ds-btn--secondary" (click)="exporterServeur('xlsx')" [disabled]="serverBusy">Exporter XLSX</button>
+        <button type="button" class="ds-btn ds-btn--secondary" (click)="nouveauTraitementServeur()" [disabled]="serverBusy">Nouveau traitement</button>
+      </div>
+    </div>
+    <ul class="srv-files">
+      <li *ngFor="let f of serverLot.fichiers">{{ f.nom }} — {{ f.nbLignes | number }} lignes</li>
+    </ul>
+
+    <fieldset class="srv-ops" [disabled]="serverBusy">
+      <legend>Opérations (créent un nouveau lot)</legend>
+      <div class="srv-ops-grid">
+        <label>Filtrer la colonne
+          <select [(ngModel)]="serverOp.filtreColonne">
+            <option value="">— aucune —</option>
+            <option *ngFor="let col of serverColumns" [value]="col">{{ col }}</option>
+          </select>
+        </label>
+        <label>Valeurs retenues (séparées par « ; »)
+          <input type="text" [(ngModel)]="serverOp.filtreValeurs" placeholder="OK;KO" />
+        </label>
+        <label>Dédoublonner sur
+          <select multiple [(ngModel)]="serverOp.dedoublonnerSur">
+            <option *ngFor="let col of serverColumns" [value]="col">{{ col }}</option>
+          </select>
+        </label>
+        <label>Convertir en nombre
+          <select multiple [(ngModel)]="serverOp.colonnesNombre">
+            <option *ngFor="let col of serverColumns" [value]="col">{{ col }}</option>
+          </select>
+        </label>
+        <label>Convertir en date (ISO)
+          <select multiple [(ngModel)]="serverOp.colonnesDate">
+            <option *ngFor="let col of serverColumns" [value]="col">{{ col }}</option>
+          </select>
+        </label>
+        <label>Format de date
+          <input type="text" [(ngModel)]="serverOp.formatDate" />
+        </label>
+      </div>
+      <button type="button" class="ds-btn ds-btn--primary" (click)="appliquerOperationServeur()">Appliquer</button>
+    </fieldset>
+
+    <div class="srv-table-wrap">
+      <table class="srv-table">
+        <thead>
+          <tr>
+            <th>N°</th>
+            <th *ngFor="let col of serverColumns.slice(0, 30)">{{ col }}</th>
+          </tr>
+        </thead>
+        <tbody>
+          <tr *ngFor="let r of serverRows">
+            <td>{{ r.numero }}</td>
+            <td *ngFor="let col of serverColumns.slice(0, 30)">{{ r.valeurs[col] ?? '' }}</td>
+          </tr>
+        </tbody>
+      </table>
+    </div>
+    <div class="srv-pager">
+      <button type="button" class="ds-btn ds-btn--secondary" (click)="pagePrecedenteServeur()" [disabled]="serverPage <= 1">Précédent</button>
+      <span>Page {{ serverPage }} / {{ serverPageCount }}</span>
+      <button type="button" class="ds-btn ds-btn--secondary" (click)="pageSuivanteServeur()" [disabled]="serverPage >= serverPageCount">Suivant</button>
+    </div>
+  </section>
   <div *ngIf="successMsg.upload" class="success-msg" [innerHTML]="successMsg.upload"></div>
 
 <div class="auto-treatment-section">

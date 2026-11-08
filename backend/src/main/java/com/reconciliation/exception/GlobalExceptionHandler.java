@@ -16,6 +16,8 @@ import org.springframework.web.bind.MethodArgumentNotValidException;
 import org.springframework.web.bind.annotation.ControllerAdvice;
 import org.springframework.web.bind.annotation.ExceptionHandler;
 import org.springframework.web.bind.annotation.ResponseStatus;
+import org.springframework.web.multipart.MaxUploadSizeExceededException;
+import org.springframework.web.multipart.MultipartException;
 
 import java.io.IOException;
 import java.net.SocketTimeoutException;
@@ -212,6 +214,73 @@ public class GlobalExceptionHandler {
             request.getRequestURI(),
             rootCauseMessage(ex)
         );
+    }
+
+    /**
+     * Fichier envoyé au-delà de spring.servlet.multipart.max-file-size -> 413 explicite
+     * (sinon remonté en 500 générique alors que la cause est connue).
+     */
+    @ExceptionHandler(MaxUploadSizeExceededException.class)
+    public ResponseEntity<Map<String, String>> handleMaxUploadSizeExceeded(MaxUploadSizeExceededException ex) {
+        log.warn("Upload refusé: taille maximale dépassée ({} octets)", ex.getMaxUploadSize());
+        return payloadTooLarge(ex.getMaxUploadSize());
+    }
+
+    /**
+     * Erreur de lecture multipart : si elle vient d'une limite de taille, on répond 413,
+     * sinon 400 avec un message lisible.
+     */
+    @ExceptionHandler(MultipartException.class)
+    public ResponseEntity<Map<String, String>> handleMultipartException(MultipartException ex) {
+        if (isSizeLimitExceeded(ex)) {
+            log.warn("Upload refusé: limite de taille dépassée — {}", rootCauseMessage(ex));
+            return payloadTooLarge(-1);
+        }
+        log.error("Lecture multipart impossible", ex);
+        Map<String, String> error = new HashMap<>();
+        error.put("error", "Requête invalide");
+        error.put("message", "Impossible de lire le fichier envoyé (" + rootCauseMessage(ex) + "). Vérifiez le fichier et réessayez.");
+        return ResponseEntity.status(HttpStatus.BAD_REQUEST).body(error);
+    }
+
+    /**
+     * Mémoire insuffisante côté serveur pendant le traitement : OutOfMemoryError n'est pas une
+     * Exception, donc elle n'était jamais captée par le handler générique.
+     */
+    @ExceptionHandler(OutOfMemoryError.class)
+    public ResponseEntity<Map<String, String>> handleOutOfMemory(OutOfMemoryError ex) {
+        log.error("Mémoire insuffisante pendant le traitement", ex);
+        Map<String, String> error = new HashMap<>();
+        error.put("error", "Mémoire insuffisante");
+        error.put("message", "Le serveur n'a pas assez de mémoire pour traiter ce volume de données. "
+                + "Découpez les fichiers en plusieurs parties (par exemple par mois) ou réessayez plus tard.");
+        return ResponseEntity.status(HttpStatus.SERVICE_UNAVAILABLE).body(error);
+    }
+
+    private static ResponseEntity<Map<String, String>> payloadTooLarge(long maxBytes) {
+        String limit = maxBytes > 0
+            ? String.format("%.0f Mo", maxBytes / (1024.0 * 1024.0))
+            : "la limite configurée";
+        Map<String, String> error = new HashMap<>();
+        error.put("error", "Fichier trop volumineux");
+        error.put("message", "Le fichier envoyé dépasse la taille maximale autorisée (" + limit + " par fichier). "
+                + "Découpez-le en plusieurs parties ou supprimez les colonnes inutiles avant l'envoi.");
+        return ResponseEntity.status(HttpStatus.PAYLOAD_TOO_LARGE).body(error);
+    }
+
+    private static boolean isSizeLimitExceeded(Throwable ex) {
+        for (Throwable current = ex; current != null; current = current.getCause()) {
+            if (current instanceof MaxUploadSizeExceededException) {
+                return true;
+            }
+            String name = current.getClass().getSimpleName();
+            String message = current.getMessage();
+            if (name.contains("SizeLimit") || name.contains("SizeException")
+                    || (message != null && message.toLowerCase().contains("exceeds its maximum"))) {
+                return true;
+            }
+        }
+        return false;
     }
 
     /**

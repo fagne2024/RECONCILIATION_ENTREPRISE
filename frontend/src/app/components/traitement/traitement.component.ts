@@ -1,9 +1,14 @@
-import { Component, OnInit, ChangeDetectorRef, AfterViewInit, ViewChild } from '@angular/core';
+import { Component, OnInit, ChangeDetectorRef, AfterViewInit, ViewChild, ViewContainerRef, TemplateRef, inject, OnDestroy } from '@angular/core';
+import { Overlay, OverlayRef } from '@angular/cdk/overlay';
+import { TemplatePortal } from '@angular/cdk/portal';
+import { RowCollection } from '../../traitement/row-collection';
 import { TranslateService } from '@ngx-translate/core';
 import { FormBuilder, FormGroup, FormControl } from '@angular/forms';
 import { MatSelect, MatSelectChange } from '@angular/material/select';
 import { FieldTypeDetectionService, ColumnAnalysis } from '../../services/field-type-detection.service';
 import { DataProcessingService } from '../../services/data-processing.service';
+import { TraitementLotService, TraitementLotResume, TraitementLigne, TraitementOperation } from '../../services/traitement-lot.service';
+import { TraitementFeuillesService } from '../../services/traitement-feuilles.service';
 import { ExportOptimizationService, ExportProgress } from '../../services/export-optimization.service';
 import { fixGarbledCharacters } from '../../utils/encoding-fixer';
 import { readCsvFileUltraFast, parseCsvWithHeaderPlan, CsvParsedTable, CsvRowRange } from '../../utils/fast-csv-reader.util';
@@ -54,16 +59,33 @@ import { HttpErrorResponse } from '@angular/common/http';
 import { ExcelConversionService } from '../../services/excel-conversion.service';
 import { ConfigurationCalculService } from '../../services/configuration-calcul.service';
 
+export interface ProcessingPopupState {
+  visible: boolean;
+  status: 'running' | 'success' | 'warning' | 'error';
+  progress: number;
+  step: string;
+  currentFile: number;
+  totalFiles: number;
+  message: string;
+  summary: string;
+  errors: string[];
+  elapsed: string;
+}
+
 @Component({
   selector: 'app-traitement',
   templateUrl: './traitement.component.html',
   styleUrls: ['./traitement.component.scss']
 })
-export class TraitementComponent implements OnInit, AfterViewInit {
+export class TraitementComponent implements OnInit, AfterViewInit, OnDestroy {
   readonly LOCAL_STORAGE_KEY = 'traitement_data';
   readonly LOCAL_STORAGE_COLUMN_ORDER_KEY = 'traitement_column_order';
   selectedFiles: File[] = [];
-  combinedRows: any[] = [];
+  // Lignes stockées de façon compacte (voir traitement/row-collection.ts). Les setters acceptent
+  // un tableau d'objets ou une collection ; les mutations passent par mutateEach / setAt.
+  private _combinedRows = new RowCollection();
+  get combinedRows(): RowCollection { return this._combinedRows; }
+  set combinedRows(value: any) { this._combinedRows = RowCollection.from(value); }
   columns: string[] = [];
   dedupCols: string[] = [];
   formatOptions: any = {
@@ -89,9 +111,13 @@ export class TraitementComponent implements OnInit, AfterViewInit {
   exportTypeValues: string[] = [];
   exportTypeSelected: string[] = [];
   exportTypeFormat: 'csv' | 'xls' | 'xlsx' = 'xlsx';
-  allRows: any[] = [];
+  private _allRows = new RowCollection();
+  get allRows(): RowCollection { return this._allRows; }
+  set allRows(value: any) { this._allRows = RowCollection.from(value); }
   allColumns: string[] = [];
-  originalRows: any[] = []; // Ajout pour garder toutes les données d'origine
+  private _originalRows = new RowCollection(); // Ajout pour garder toutes les données d'origine
+  get originalRows(): RowCollection { return this._originalRows; }
+  set originalRows(value: any) { this._originalRows = RowCollection.from(value); }
   // Ajout d'un flag pour savoir si une sélection a été appliquée
   selectionApplied: boolean = false;
 
@@ -458,8 +484,30 @@ End Sub`;
   compileHeadersIsProcessing: boolean = false;
   compileHeadersProgress: string = '';
 
+  /** Traitement côté serveur (lots en base) : les lignes ne restent pas dans le navigateur. */
+  readonly USE_SERVER_PROCESSING = true;
+  /** Séparation des feuilles faite par le serveur (repasser à false pour l'ancien traitement local). */
+  readonly USE_SERVER_SHEET_SPLIT = true;
+  private traitementFeuillesService = inject(TraitementFeuillesService);
+  readonly SERVER_PAGE_SIZE = 200;
+  serverLot: TraitementLotResume | null = null;
+  serverOriginLotId: number | null = null;
+  serverRows: TraitementLigne[] = [];
+  serverColumns: string[] = [];
+  serverPage = 1;
+  serverBusy = false;
+  serverOp = {
+    filtreColonne: '',
+    filtreValeurs: '',
+    dedoublonnerSur: [] as string[],
+    colonnesNombre: [] as string[],
+    colonnesDate: [] as string[],
+    formatDate: 'yyyy-MM-dd'
+  };
+
   constructor(
-    private cd: ChangeDetectorRef, 
+    private cd: ChangeDetectorRef,
+    private traitementLotService: TraitementLotService,
     private fb: FormBuilder,
     private fieldTypeDetectionService: FieldTypeDetectionService,
     public dataProcessingService: DataProcessingService,
@@ -480,6 +528,143 @@ End Sub`;
   private showError(key: string, msg: string) {
     this.errorMsg[key] = msg;
     setTimeout(() => { this.errorMsg[key] = ''; }, 3000);
+  }
+
+  /**
+   * Découpe les fichiers en lots (« ticks ») selon le volume : un lot ne dépasse pas
+   * `maxBytes` ni `maxFiles` fichiers. Un fichier seul plus gros que `maxBytes` forme son propre lot.
+   */
+  private planFileBatches(files: File[], maxBytes = 150 * 1024 * 1024, maxFiles = 3): File[][] {
+    const batches: File[][] = [];
+    let current: File[] = [];
+    let currentBytes = 0;
+    for (const file of files) {
+      if (current.length > 0 && (current.length >= maxFiles || currentBytes + file.size > maxBytes)) {
+        batches.push(current);
+        current = [];
+        currentBytes = 0;
+      }
+      current.push(file);
+      currentBytes += file.size;
+    }
+    if (current.length > 0) {
+      batches.push(current);
+    }
+    return batches;
+  }
+
+  /** Cède la main à la boucle d'événements entre deux lots (rafraîchissement de l'écran). */
+  private yieldTick(): Promise<void> {
+    return new Promise<void>(resolve => setTimeout(resolve, 0));
+  }
+
+  /** État du pop-up de suivi du traitement (affiché pendant et après processFiles). */
+  processingPopup: ProcessingPopupState = {
+    visible: false, status: 'running', progress: 0, step: '', currentFile: 0,
+    totalFiles: 0, message: '', summary: '', errors: [], elapsed: '0.0 s'
+  };
+  private processingStartedAt = 0;
+
+  // Le pop-up est rattaché à l'overlay CDK (racine du document) : il reste centré et au-dessus de la page,
+  // quels que soient les conteneurs de mise en page parents.
+  private overlay = inject(Overlay);
+  private procPopupRef: OverlayRef | null = null;
+  @ViewChild('procPopupAnchor', { read: ViewContainerRef }) private procPopupAnchor?: ViewContainerRef;
+  @ViewChild('procPopupTpl') private procPopupTpl?: TemplateRef<unknown>;
+
+  private openProcessingPopup(totalFiles: number): void {
+    this.processingStartedAt = Date.now();
+    this.processingPopup = {
+      visible: true, status: 'running', progress: 0, step: 'Préparation du traitement',
+      currentFile: 0, totalFiles, message: '', summary: '', errors: [], elapsed: '0.0 s'
+    };
+    this.afficherPopupOverlay();
+    this.cd.detectChanges();
+  }
+
+  private afficherPopupOverlay(): void {
+    if (this.procPopupRef || !this.procPopupAnchor || !this.procPopupTpl) {
+      return;
+    }
+    this.procPopupRef = this.overlay.create({
+      positionStrategy: this.overlay.position().global().centerHorizontally().centerVertically(),
+      hasBackdrop: false,
+      panelClass: 'proc-popup-pane'
+    });
+    this.procPopupRef.attach(new TemplatePortal(this.procPopupTpl, this.procPopupAnchor));
+  }
+
+  private retirerPopupOverlay(): void {
+    this.procPopupRef?.dispose();
+    this.procPopupRef = null;
+  }
+
+  ngOnDestroy(): void {
+    this.retirerPopupOverlay();
+  }
+
+  private updateProcessingPopup(patch: Partial<ProcessingPopupState>): void {
+    this.processingPopup = {
+      ...this.processingPopup,
+      ...patch,
+      elapsed: `${((Date.now() - this.processingStartedAt) / 1000).toFixed(1)} s`
+    };
+    this.cd.detectChanges();
+  }
+
+  private finishProcessingPopup(status: ProcessingPopupState['status'], summary: string, errors: string[]): void {
+    this.processingPopup = {
+      ...this.processingPopup,
+      status,
+      progress: 100,
+      step: status === 'error' ? 'Traitement interrompu' : 'Traitement terminé',
+      summary,
+      errors,
+      elapsed: `${((Date.now() - this.processingStartedAt) / 1000).toFixed(1)} s`
+    };
+    this.cd.detectChanges();
+  }
+
+  closeProcessingPopup(): void {
+    this.processingPopup = { ...this.processingPopup, visible: false };
+    this.retirerPopupOverlay();
+  }
+
+  /** Fichiers ou étapes en échec, affichés de façon persistante (contrairement à showError). */
+  get failedFileStats(): { name: string; errorMsg?: string }[] {
+    return this.fileProcessStats.filter(s => s.status === 'erreur');
+  }
+
+  /**
+   * Ajoute des lignes sans `push(...rows)` : la syntaxe spread passe chaque élément en argument
+   * et dépasse la limite de la pile d'appels (RangeError) dès quelques dizaines de milliers de lignes.
+   */
+  private appendRows(target: { push: (...items: any[]) => unknown }, rows: any[]): void {
+    for (let i = 0; i < rows.length; i++) {
+      target.push(rows[i]);
+    }
+  }
+
+  /**
+   * Transforme une erreur de traitement en message explicite pour l'utilisateur
+   * (cause, fichier concerné, pistes de résolution) au lieu d'un échec générique.
+   */
+  private describeProcessingError(error: unknown, fileName: string, fileSizeMB: number): string {
+    const raw = error instanceof Error ? error.message : String(error ?? '');
+    const name = (error as any)?.name ?? '';
+    const where = `« ${fileName} » (${fileSizeMB.toFixed(1)} Mo)`;
+    const isMemoryError =
+      error instanceof RangeError ||
+      /Maximum call stack|Invalid (string|array) length|Array buffer allocation|out of memory|allocation failed/i.test(raw);
+    if (isMemoryError) {
+      return `Fichier ${where} trop volumineux pour être assemblé en mémoire par le navigateur. ` +
+        `Solutions : découpez le fichier en plusieurs parties, convertissez-le en CSV ou supprimez les colonnes inutiles avant l'import. ` +
+        `(Détail technique : ${raw || name})`;
+    }
+    if (name === 'NotReadableError') {
+      return `Impossible de lire le fichier ${where} : il a peut-être été modifié ou supprimé depuis sa sélection. Sélectionnez-le à nouveau.`;
+    }
+    return `Fichier ${where} : ${raw || 'erreur inconnue'}`;
   }
 
   triggerFileInput() {
@@ -519,7 +704,9 @@ End Sub`;
         this.selectedFiles.push(file);
         
         // Si c'est un fichier CSV/TSV, déclencher la prévisualisation
-        if (this.isCsvTextExtension(file.name)) {
+        // En mode serveur, pas de prévisualisation côté navigateur : elle analyse tout le fichier
+        // en mémoire, en parallèle de l'envoi, et fait tomber l'onglet sur les gros fichiers.
+        if (!this.USE_SERVER_PROCESSING && this.isCsvTextExtension(file.name)) {
           this.previewCsvFile(file);
         }
       }
@@ -571,6 +758,11 @@ End Sub`;
       return;
     }
     
+    if (this.USE_SERVER_PROCESSING) {
+      await this.processFilesOnServer();
+      return;
+    }
+
     // Vérifier la taille totale des fichiers
     const totalSize = this.selectedFiles.reduce((sum, file) => sum + file.size, 0);
     const totalSizeMB = totalSize / (1024 * 1024);
@@ -579,6 +771,7 @@ End Sub`;
 
     this.isProcessing = true;
     this.processingProgress = 0;
+    this.openProcessingPopup(this.selectedFiles.length);
     this.processingMessage = isLargeUpload ? this.t('TRT.msg.initOptimized') : this.t('TRT.msg.initUltraFast');
     
     this.combinedRows = [];
@@ -599,9 +792,21 @@ End Sub`;
     const startTime = Date.now();
     
     try {
+      // Traitement par lots (« ticks ») : on rend la main au navigateur entre chaque lot
+      // pour ne pas figer l'écran sur de gros volumes.
+      const batches = this.planFileBatches(this.selectedFiles);
+      const batchStarts = new Set<File>(batches.map(b => b[0]));
+      let tick = 0;
       for (const file of this.selectedFiles) {
+        if (batchStarts.has(file)) {
+          tick++;
+          if (tick > 1) {
+            await this.yieldTick();
+          }
+        }
         this.currentFileIndex++;
-        this.processingMessage = `Traitement ${isLargeUpload ? 'optimisé' : 'ultra-rapide'} du fichier ${this.currentFileIndex}/${this.totalFilesToProcess}: ${file.name}`;
+        this.processingMessage = `Traitement ${isLargeUpload ? 'optimisé' : 'ultra-rapide'} du fichier ${this.currentFileIndex}/${this.totalFilesToProcess}: ${file.name} (lot ${tick}/${batches.length})`;
+        this.updateProcessingPopup({ currentFile: this.currentFileIndex, step: `Lecture de ${file.name}`, progress: ((this.currentFileIndex - 1) / this.totalFilesToProcess) * 70, message: '' });
         this.processingProgress = (this.currentFileIndex - 1) / this.totalFilesToProcess * 100;
         
         const fileName = file.name.toLowerCase();
@@ -649,11 +854,17 @@ End Sub`;
           this.fileProcessStats.push({ name: file.name, rows: fileRows, status: 'succès' });
           
         } catch (fileError) {
-          this.fileProcessStats.push({ name: file.name, rows: 0, status: 'erreur', errorMsg: (fileError as any)?.message || this.t('TRT.msg.unknownError') });
+          this.fileProcessStats.push({
+            name: file.name,
+            rows: 0,
+            status: 'erreur',
+            errorMsg: this.describeProcessingError(fileError, file.name, file.size / (1024 * 1024))
+          });
         }
         
         // Mettre à jour la progression
         this.processingProgress = this.currentFileIndex / this.totalFilesToProcess * 100;
+        this.updateProcessingPopup({ progress: (this.currentFileIndex / this.totalFilesToProcess) * 70, message: `${this.allRows.length.toLocaleString()} lignes chargées` });
         
         // Pause pour gros uploads
         if (isLargeUpload && this.currentFileIndex < this.totalFilesToProcess) {
@@ -665,28 +876,34 @@ End Sub`;
       // système, les lignes de chaque fichier étant empilées sous ces colonnes.
       if (this.allRows.length && this.fileProcessStats.length > 1) {
         const keySet = new Set<string>();
-        for (const row of this.allRows) {
+        this.allRows.forEach((row) => {
           for (const key of Object.keys(row)) {
             keySet.add(key);
           }
-        }
+        });
         const batchHeaders = chooseBatchHeaderSet([...keySet]);
-        this.allRows = alignRowsToHeaders(this.allRows as Record<string, string>[], batchHeaders) as any[];
+        this.allRows = alignRowsToHeaders(this.allRows.toArray() as Record<string, string>[], batchHeaders) as any[];
       }
 
       // Fusion optimisée des colonnes
+      this.updateProcessingPopup({ step: 'Alignement et fusion des colonnes', progress: 75, message: `${this.allRows.length.toLocaleString()} lignes` });
+      await this.yieldTick();
       this.processingMessage = this.t('TRT.msg.mergeOptimized', { mode: isLargeUpload ? this.t('TRT.msg.mergeModeOptimized') : this.t('TRT.msg.mergeModeUltraFast') });
       this.allColumns = await this.mergeColumnsOptimized();
       
       // Normalisation optimisée des données
+      this.updateProcessingPopup({ step: 'Normalisation des données', progress: 85, message: '' });
+      await this.yieldTick();
       this.processingMessage = `Normalisation ${isLargeUpload ? 'optimisée' : 'ultra-rapide'} des données...`;
       await this.normalizeDataOptimized();
       
       // Finalisation
+      this.updateProcessingPopup({ step: "Préparation de l'affichage", progress: 95, message: '' });
+      await this.yieldTick();
       this.processingMessage = this.t('TRT.msg.finalizing');
-      this.combinedRows = [...this.allRows];
+      this.combinedRows = this.allRows.clone();
       this.columns = [...this.allColumns];
-      this.originalRows = [...this.allRows];
+      this.originalRows = this.allRows.clone();
       
       // Optimiser l'affichage pour les gros fichiers
       this.optimizeForLargeFiles();
@@ -702,11 +919,240 @@ End Sub`;
       const processingTime = ((Date.now() - startTime) / 1000).toFixed(1);
       
       this.showSuccess('upload', `Traitement ${isLargeUpload ? 'optimisé' : 'ultra-rapide'} terminé ! ${totalProcessed.toLocaleString()} lignes traitées en ${processingTime}s`);
+      const failedStats = this.failedFileStats;
+      const status: ProcessingPopupState['status'] =
+        totalProcessed === 0 ? 'error' : failedStats.length > 0 ? 'warning' : 'success';
+      this.finishProcessingPopup(
+        status,
+        totalProcessed === 0
+          ? "Aucune ligne n'a pu être chargée."
+          : `${totalProcessed.toLocaleString()} lignes traitées en ${processingTime} s (${this.totalFilesToProcess} fichier(s))`,
+        failedStats.map(f => `${f.name} : ${f.errorMsg ?? 'erreur inconnue'}`)
+      );
       
     } catch (error) {
       this.isProcessing = false;
+      const totalMB = totalSize / (1024 * 1024);
+      const detail = this.describeProcessingError(
+        error,
+        this.selectedFiles.map(f => f.name).join(', '),
+        totalMB
+      );
+      console.error('[traitement] Échec du traitement global', error);
+      this.fileProcessStats.push({ name: 'Traitement global', rows: 0, status: 'erreur', errorMsg: detail });
       this.showError('upload', this.t('TRT.msg.ultraFastProcessingError'));
+      this.finishProcessingPopup(
+        'error',
+        "Le traitement a été interrompu. Aucune donnée n'a été affichée.",
+        this.failedFileStats.map(f => `${f.name} : ${f.errorMsg ?? 'erreur inconnue'}`)
+      );
     }
+  }
+
+  // ------------------------------------------------------------------
+  // Traitement serveur (lots)
+  // ------------------------------------------------------------------
+
+  /** Envoie les fichiers au serveur un par un, puis affiche la première page de lignes. */
+  private async processFilesOnServer(): Promise<void> {
+    const files = this.selectedFiles.slice();
+    const debut = Date.now();
+    this.isProcessing = true;
+    this.fileProcessStats = [];
+    this.serverLot = null;
+    this.serverRows = [];
+    this.serverColumns = [];
+    this.serverPage = 1;
+    this.openProcessingPopup(files.length);
+
+    try {
+      const lotId = await this.traitementLotService.creerLot();
+      this.serverOriginLotId = lotId;
+
+      for (let i = 0; i < files.length; i++) {
+        const fichier = files[i];
+        const partDebut = (i / files.length) * 80;
+        const partFichier = 80 / files.length;
+        this.updateProcessingPopup({
+          currentFile: i + 1,
+          step: `Envoi au serveur : ${fichier.name}`,
+          progress: partDebut,
+          message: ''
+        });
+        let dernierPct = -1;
+        try {
+          await this.traitementLotService.ajouterFichier(lotId, fichier, pct => {
+            // Un seul rafraîchissement par pourcentage : les événements d'envoi sont très fréquents.
+            if (pct === dernierPct) {
+              return;
+            }
+            dernierPct = pct;
+            this.updateProcessingPopup({
+              progress: partDebut + (pct / 100) * partFichier,
+              message: `Envoi : ${pct} %`
+            });
+          });
+          this.fileProcessStats.push({ name: fichier.name, rows: 0, status: 'succès' });
+        } catch (err) {
+          this.fileProcessStats.push({ name: fichier.name, rows: 0, status: 'erreur', errorMsg: this.messageErreurServeur(err) });
+        }
+      }
+
+      this.updateProcessingPopup({ step: 'Lecture du résumé du lot', progress: 90, message: '' });
+      const resume = await this.traitementLotService.resume(lotId);
+      if (!resume.nbLignes) {
+        throw new Error("Aucune ligne n'a pu être chargée depuis les fichiers.");
+      }
+      this.appliquerLot(resume);
+      await this.chargerPageServeur(1);
+
+      const echecs = this.failedFileStats;
+      const secondes = ((Date.now() - debut) / 1000).toFixed(1);
+      this.finishProcessingPopup(
+        echecs.length ? 'warning' : 'success',
+        `${resume.nbLignes.toLocaleString()} lignes stockées en ${secondes} s (${resume.nbFichiers} fichier(s))`,
+        echecs.map(f => `${f.name} : ${f.errorMsg ?? 'erreur inconnue'}`)
+      );
+    } catch (err) {
+      const echecs = this.failedFileStats.map(f => `${f.name} : ${f.errorMsg ?? 'erreur inconnue'}`);
+      this.finishProcessingPopup('error', 'Le traitement a été interrompu.', [...echecs, this.messageErreurServeur(err)]);
+    } finally {
+      this.isProcessing = false;
+    }
+  }
+
+  /** Applique un résumé de lot à l'écran (colonnes = union des colonnes des fichiers). */
+  private appliquerLot(resume: TraitementLotResume): void {
+    this.serverLot = resume;
+    const colonnes: string[] = [];
+    for (const fichier of resume.fichiers) {
+      for (const col of fichier.colonnes) {
+        if (!colonnes.includes(col)) {
+          colonnes.push(col);
+        }
+      }
+    }
+    this.serverColumns = colonnes;
+    this.columns = colonnes;
+  }
+
+  /** Charge une page de lignes depuis le serveur (numéros de ligne contigus à partir de 1). */
+  async chargerPageServeur(page: number): Promise<void> {
+    if (!this.serverLot) {
+      return;
+    }
+    const pageMax = this.serverPageCount;
+    const cible = Math.min(Math.max(1, page), pageMax);
+    const apres = (cible - 1) * this.SERVER_PAGE_SIZE;
+    const reponse = await this.traitementLotService.lignes(this.serverLot.lotId, apres, this.SERVER_PAGE_SIZE);
+    this.serverRows = reponse.lignes;
+    this.serverPage = cible;
+    this.cd.detectChanges();
+  }
+
+  get serverPageCount(): number {
+    return this.serverLot ? Math.max(1, Math.ceil(this.serverLot.nbLignes / this.SERVER_PAGE_SIZE)) : 1;
+  }
+
+  async pageSuivanteServeur(): Promise<void> {
+    if (this.serverPage < this.serverPageCount) {
+      await this.chargerPageServeur(this.serverPage + 1);
+    }
+  }
+
+  async pagePrecedenteServeur(): Promise<void> {
+    if (this.serverPage > 1) {
+      await this.chargerPageServeur(this.serverPage - 1);
+    }
+  }
+
+  /** Applique filtres, dédoublonnage et conversions : crée un nouveau lot côté serveur. */
+  async appliquerOperationServeur(): Promise<void> {
+    if (!this.serverLot || this.serverBusy) {
+      return;
+    }
+    const valeurs = this.serverOp.filtreValeurs.split(';').map(v => v.trim()).filter(v => v !== '');
+    const operation: TraitementOperation = {
+      filtres: this.serverOp.filtreColonne && valeurs.length
+        ? [{ colonne: this.serverOp.filtreColonne, valeurs }]
+        : [],
+      dedoublonnerSur: this.serverOp.dedoublonnerSur,
+      colonnesNombre: this.serverOp.colonnesNombre,
+      colonnesDate: this.serverOp.colonnesDate,
+      formatDate: this.serverOp.formatDate
+    };
+    const precedent = this.serverLot.lotId;
+    this.serverBusy = true;
+    try {
+      const res = await this.traitementLotService.operer(precedent, operation);
+      const resume = await this.traitementLotService.resume(res.nouveauLotId);
+      this.appliquerLot(resume);
+      await this.chargerPageServeur(1);
+      // Le lot intermédiaire n'est plus utile ; le lot d'origine est conservé pour recommencer.
+      if (precedent !== this.serverOriginLotId) {
+        await this.traitementLotService.supprimer(precedent).catch(() => undefined);
+      }
+      this.showSuccess('upload',
+        `Opération appliquée : ${res.lignesSorties.toLocaleString()} lignes conservées ` +
+        `(${res.doublonsSupprimes.toLocaleString()} doublons, ${res.lignesFiltrees.toLocaleString()} filtrées).`);
+    } catch (err) {
+      this.showError('upload', this.messageErreurServeur(err));
+    } finally {
+      this.serverBusy = false;
+    }
+  }
+
+  /** Télécharge le lot complet (CSV ou XLSX) : le navigateur ouvre l'URL d'export directement. */
+  exporterServeur(format: 'csv' | 'xlsx'): void {
+    if (!this.serverLot) {
+      return;
+    }
+    const base = (this.exportFileName || '').trim().replace(/\.(csv|xlsx|xls)$/i, '') || 'resultat';
+    const lien = document.createElement('a');
+    lien.href = this.traitementLotService.urlExport(this.serverLot.lotId, format, base);
+    lien.download = `${base}.${format}`;
+    document.body.appendChild(lien);
+    lien.click();
+    lien.remove();
+    this.showSuccess('export', `Téléchargement de ${base}.${format} lancé.`);
+  }
+
+  /** Bouton « Nouveau traitement » de la section serveur : même réinitialisation que l'en-tête. */
+  nouveauTraitementServeur(): void {
+    this.newTraitement();
+  }
+
+  /** Lots serveur en cours : supprimés en arrière-plan, puis état serveur de l'écran vidé. */
+  private reinitialiserEtatServeur(): void {
+    const ids = new Set<number>();
+    if (this.serverOriginLotId) ids.add(this.serverOriginLotId);
+    if (this.serverLot) ids.add(this.serverLot.lotId);
+    for (const id of ids) {
+      void this.traitementLotService.supprimer(id).catch(() => undefined);
+    }
+    this.serverLot = null;
+    this.serverOriginLotId = null;
+    this.serverRows = [];
+    this.serverColumns = [];
+    this.serverPage = 1;
+    this.serverOp = {
+      filtreColonne: '', filtreValeurs: '', dedoublonnerSur: [], colonnesNombre: [], colonnesDate: [], formatDate: 'yyyy-MM-dd'
+    };
+    this.columns = [];
+    this.selectedFiles = [];
+    this.fileProcessStats = [];
+    this.retirerPopupOverlay();
+    this.processingPopup = { ...this.processingPopup, visible: false };
+  }
+
+  private messageErreurServeur(err: unknown): string {
+    if (err instanceof HttpErrorResponse) {
+      const corps = err.error as { message?: string } | null;
+      if (corps?.message) return corps.message;
+      if (err.status === 413) return 'Fichier trop volumineux pour le serveur.';
+      return `Erreur serveur (${err.status || 'réseau'}).`;
+    }
+    return err instanceof Error ? err.message : 'Erreur inconnue.';
   }
 
   // Méthodes optimisées pour le traitement ultra-rapide
@@ -714,14 +1160,20 @@ End Sub`;
     const isLargeFile = file.size > 512 * 1024;
     const parsed = await readCsvFileUltraFast(file, {
       stripAirtelPreamble: true,
+      // Chaque ligne est rangée dans le stockage compact dès qu'elle est lue (pas de tableau
+      // d'objets intermédiaire pour tout le fichier).
+      onRow: (row) => {
+        this.allRows.push(row);
+      },
       onProgress: (processed, total) => {
         if (isLargeFile && processed % 2500 === 0) {
           this.processingProgress = Math.min(95, (processed / total) * 100);
           this.processingMessage = `Traitement CSV: ${processed.toLocaleString()}/${total.toLocaleString()} lignes`;
-          this.cd.detectChanges();
+          this.updateProcessingPopup({ message: `${processed.toLocaleString()} lignes lues (${this.allRows.length.toLocaleString()} stockées)` });
         }
       },
-      yieldFn: () => new Promise(resolve => requestAnimationFrame(() => setTimeout(resolve, 0)))
+      // setTimeout uniquement : requestAnimationFrame ne se déclenche pas dans un onglet en arrière-plan.
+      yieldFn: () => new Promise<void>(resolve => setTimeout(resolve, 0))
     });
 
     for (let i = 0; i < parsed.rows.length; i++) {
@@ -1099,7 +1551,7 @@ End Sub`;
               
               
               // Mettre à jour les propriétés du composant
-              this.allRows.push(...rows);
+              this.appendRows(this.allRows, rows);
               this.allColumns = [...correctedHeaders];
               this.columns = [...correctedHeaders];
               
@@ -1149,7 +1601,7 @@ End Sub`;
         }
         
         // Ajouter le chunk aux données
-        this.allRows.push(...chunkRows);
+        this.appendRows(this.allRows, chunkRows);
         processedRows += chunkRows.length;
         
         // Mettre à jour la progression pour gros fichiers
@@ -1205,7 +1657,7 @@ End Sub`;
       
       // Remplacer les lignes dans le tableau original
       for (let j = 0; j < normalizedChunk.length; j++) {
-        this.allRows[i + j] = normalizedChunk[j];
+        this.allRows.setAt(i + j, normalizedChunk[j]);
       }
     }
   }
@@ -1227,20 +1679,8 @@ End Sub`;
       // Nettoyer les références temporaires
       this.displayedRows = [];
       
-      // Compacter les données si nécessaire
-      if (this.allRows.length > 1000000) {
-        // Créer une copie compacte des données
-        const compactRows = this.allRows.map(row => {
-          const compactRow: any = {};
-          Object.keys(row).forEach(key => {
-            if (row[key] !== undefined && row[key] !== null && row[key] !== '') {
-              compactRow[key] = row[key];
-            }
-          });
-          return compactRow;
-        });
-        this.allRows = compactRows;
-      }
+      // Les lignes sont déjà stockées de façon compacte (RowCollection) : pas de copie en objets
+      // ici, une copie complète doublerait le pic mémoire au moment où il faut le réduire.
       
       // Pause pour permettre au navigateur de libérer la mémoire
       await new Promise(resolve => setTimeout(resolve, 100));
@@ -1395,7 +1835,7 @@ End Sub`;
       }
 
       // Ajouter les lignes au composant
-      this.allRows.push(...rows);
+      this.appendRows(this.allRows, rows);
       
       // Mettre à jour les colonnes
       const newColumns = await this.mergeColumnsOptimized();
@@ -1403,19 +1843,7 @@ End Sub`;
       
     } catch (error) {
       
-      // En cas d'erreur avec un très gros fichier, suggérer des solutions
-      this.showError('upload', 
-        `Impossible de traiter le fichier Excel de ${fileSizeMB.toFixed(1)} MB. 
-        
-        Le fichier est trop volumineux pour être traité par la bibliothèque XLSX.
-        
-        Solutions recommandées :
-        1. Ouvrez le fichier dans Excel et sauvegardez-le au format CSV
-        2. Divisez le fichier en plusieurs parties plus petites (par mois ou par trimestre)
-        3. Supprimez les colonnes non nécessaires avant l'upload
-        4. Utilisez un fichier plus récent si possible
-        
-        Les fichiers Excel > 200 MB nécessitent généralement un traitement spécial.`);
+      // Erreur propagée telle quelle : processFiles la traduit en message explicite (fichier concerné + cause).
       
       throw error;
     }
@@ -1427,47 +1855,11 @@ End Sub`;
    */
   private async readExcelFileStreaming(file: File): Promise<void> {
     const fileSizeMB = file.size / (1024 * 1024);
-    
-    this.processingMessage = `Fichier extrêmement volumineux détecté (${fileSizeMB.toFixed(1)} MB). 
-    Traitement par streaming des 100,000 premières lignes.`;
-    
-    try {
-      // Pour les fichiers > 200MB, on ne peut pas les traiter entièrement
-      // On suggère plutôt des solutions alternatives
-      this.showError('upload', 
-        `Fichier Excel extrêmement volumineux détecté (${fileSizeMB.toFixed(1)} MB).
-        
-        Ce fichier est trop volumineux pour être traité directement par l'application.
-        
-        Solutions recommandées :
-        1. Ouvrez le fichier dans Excel et sauvegardez-le au format CSV
-        2. Divisez le fichier en plusieurs parties (par mois, par trimestre, ou par service)
-        3. Supprimez les colonnes non nécessaires avant l'upload
-        4. Utilisez un fichier plus récent avec moins de données
-        5. Considérez utiliser un outil de traitement par lots
-        
-        Les fichiers Excel > 200 MB nécessitent généralement un prétraitement avant l'upload.`);
-      
-      // Créer des données d'exemple pour montrer la structure attendue
-      const exampleRows = [
-        {
-          'Date': '2025-01-15',
-          'Transaction': 'Exemple de transaction',
-          'Montant': '1000',
-          'Service': 'Orange Money',
-          'Statut': 'Traité'
-        }
-      ];
-      
-      this.allRows.push(...exampleRows);
-      
-      const exampleColumns = ['Date', 'Transaction', 'Montant', 'Service', 'Statut'];
-      this.allColumns = exampleColumns;
-      
-      
-    } catch (error) {
-      throw error;
-    }
+    // Pas de lecture partielle silencieuse : un import tronqué fausserait la réconciliation.
+    throw new Error(
+      `Fichier Excel « ${file.name} » (${fileSizeMB.toFixed(1)} Mo) : au-delà de 200 Mo, il ne peut pas être lu entièrement dans le navigateur. ` +
+      'Ouvrez-le dans Excel, enregistrez-le au format CSV, puis découpez-le en plusieurs parties (par mois, par trimestre ou par service).'
+    );
   }
 
   /**
@@ -1861,7 +2253,7 @@ End Sub`;
       const hasSameRowCount = this.combinedRows.length === this.allRows.length;
       
       if (!hasExistingData || !hasSameRowCount) {
-        this.combinedRows = [...this.allRows];
+        this.combinedRows = this.allRows.clone();
         this.columns = [...this.allColumns];
       } else {
       }
@@ -1901,7 +2293,7 @@ End Sub`;
   updateDisplayedRowsForPage() {
     
     if (this.showAllRows || this.combinedRows.length <= this.maxDisplayedRows) {
-      this.displayedRows = this.combinedRows;
+      this.displayedRows = this.combinedRows.slice();
     } else {
       const startIndex = (this.currentPage - 1) * this.rowsPerPage;
       const endIndex = startIndex + this.rowsPerPage;
@@ -2047,13 +2439,13 @@ End Sub`;
       if (this.dedupCols.length === 0) return;
       const seen = new Set<string>();
       const deduped: any[] = [];
-      for (const row of this.combinedRows) {
+      this.combinedRows.forEach((row) => {
         const key = this.dedupCols.map(col => (row[col] ?? '').toString().trim().toLowerCase()).join('||');
         if (!seen.has(key)) {
           seen.add(key);
           deduped.push(row);
         }
-      }
+      });
       this.combinedRows = deduped;
       this.showSuccess('dedup', this.t('TRT.msg.duplicatesRemoved'));
     } catch (e) {
@@ -2111,9 +2503,9 @@ End Sub`;
   private renameColumnInDataset(sourceColumn: string, newName: string): void {
     const renameRows = (rows: any[]) => rows.map(row => this.renameRowColumnKey(row, sourceColumn, newName));
 
-    this.originalRows = renameRows(this.originalRows);
-    this.allRows = renameRows(this.allRows);
-    this.combinedRows = renameRows(this.combinedRows);
+    this.originalRows = renameRows(this.originalRows.toArray());
+    this.allRows = renameRows(this.allRows.toArray());
+    this.combinedRows = renameRows(this.combinedRows.toArray());
     if (this.filteredRows?.length) {
       this.filteredRows = renameRows(this.filteredRows);
     }
@@ -2211,7 +2603,7 @@ End Sub`;
       if (!this.extractCol || !this.extractType) return;
       // Utilise la clé personnalisée si fournie, sinon nom par défaut
       const newCol = this.extractKey?.trim() ? this.extractKey.trim() : this.getExtractionColName();
-      for (const row of this.combinedRows) {
+      this.combinedRows.mutateEach((row) => {
         const value = row[this.extractCol];
         if (typeof value === 'string') {
           if (this.extractType === 'emailDomain') {
@@ -2229,7 +2621,7 @@ End Sub`;
         } else {
           row[newCol] = '';
         }
-      }
+      });
       // Ajoute la colonne extraite en première position si pas déjà présente
       if (!this.columns.includes(newCol)) {
         this.columns = [newCol, ...this.columns];
@@ -2303,7 +2695,7 @@ End Sub`;
       
       // Vérifier si la colonne existe dans les données
       if (this.allRows.length > 0) {
-        const firstRow = this.allRows[0];
+        const firstRow = this.allRows.at(0);
       }
       
       // Extraire toutes les valeurs uniques de la colonne sélectionnée depuis allRows (données originales)
@@ -2334,8 +2726,8 @@ End Sub`;
       // Si "Tous" est sélectionné, ne pas filtrer (garder toutes les lignes)
       if (this.selectedFilterValues.includes('__TOUS__')) {
         this.filteredRows = [...this.originalRows];
-        this.allRows = [...this.originalRows];
-        this.combinedRows = [...this.originalRows];
+        this.allRows = this.originalRows.clone();
+        this.combinedRows = this.originalRows.clone();
         this.filterApplied = true;
         this.showSuccess('filter', `Aucun filtre appliqué - toutes les lignes conservées (${this.combinedRows.length} lignes).`);
       } else {
@@ -2357,8 +2749,8 @@ End Sub`;
     this.filterValues = [];
     this.filteredFilterValues = [];
     this.filterApplied = false;
-    this.allRows = [...this.originalRows];
-    this.combinedRows = [...this.originalRows];
+    this.allRows = this.originalRows.clone();
+    this.combinedRows = this.originalRows.clone();
     this.updateDisplayedRows();
   }
 
@@ -2409,8 +2801,8 @@ End Sub`;
   applyMultipleFilters() {
     if (this.multipleFilters.length === 0) {
       // Aucun filtre, restaurer toutes les données
-      this.allRows = [...this.originalRows];
-      this.combinedRows = [...this.originalRows];
+      this.allRows = this.originalRows.clone();
+      this.combinedRows = this.originalRows.clone();
       this.filterApplied = false;
       this.updateDisplayedRows();
       return;
@@ -2456,8 +2848,8 @@ End Sub`;
     this.multipleFilters = [];
     this.nextFilterId = 1;
     this.filterApplied = false;
-    this.allRows = [...this.originalRows];
-    this.combinedRows = [...this.originalRows];
+    this.allRows = this.originalRows.clone();
+    this.combinedRows = this.originalRows.clone();
     this.updateDisplayedRows();
     this.showSuccess('filter', this.t('TRT.msg.allFiltersReset'));
   }
@@ -2563,7 +2955,7 @@ End Sub`;
       if (isLargeDataset) {
         // Export optimisé avec Web Worker pour gros volumes
         this.exportOptimizationService.exportCSVOptimized(
-          this.combinedRows,
+          this.combinedRows.toArray(),
           exportColumns,
           finalFileName,
           {
@@ -2589,7 +2981,7 @@ End Sub`;
       } else {
         // Export rapide pour petits volumes
         this.exportOptimizationService.exportQuick(
-          this.combinedRows,
+          this.combinedRows.toArray(),
           exportColumns,
           finalFileName,
           'csv'
@@ -2638,7 +3030,7 @@ End Sub`;
       if (isLargeDataset) {
         // Export optimisé avec Web Worker pour gros volumes
         this.exportOptimizationService.exportExcelOptimized(
-          this.combinedRows,
+          this.combinedRows.toArray(),
           exportColumns,
           finalFileName,
           {
@@ -2664,7 +3056,7 @@ End Sub`;
       } else {
         // Export rapide pour petits volumes
         this.exportOptimizationService.exportQuick(
-          this.combinedRows,
+          this.combinedRows.toArray(),
           exportColumns,
           finalFileName,
           format
@@ -4041,9 +4433,44 @@ End Sub`;
     saveAs(blob, 'SeparerFeuillesEnteteComplet.bas');
   }
 
+  /** Séparation des feuilles par le serveur (zip renvoyé). Met le navigateur à l'écart des gros classeurs. */
+  private async splitExcelSheetsServeur(fichier: File): Promise<void> {
+    this.sheetSplitIsProcessing = true;
+    this.sheetSplitProgress = 'Envoi du classeur au serveur…';
+    this.sheetSplitResults = [];
+    this.sheetSplitZipName = '';
+    this.showSheetSplitExcelFallbackHelp = false;
+    try {
+      const { blob, nombreFeuilles } = await this.traitementFeuillesService.separer(
+        fichier,
+        this.sheetSplitHeaderColumns,
+        this.sheetSplitApplyHeaderFromSecondSheet,
+        this.sheetSplitColumnWidths,
+        pct => {
+          this.sheetSplitProgress = pct < 100
+            ? `Envoi du classeur au serveur : ${pct} %`
+            : 'Envoi terminé, séparation des feuilles par le serveur…';
+        }
+      );
+      const zipName = `${this.getBaseFileName(fichier.name)}_feuilles_sep.zip`;
+      this.sheetSplitZipName = zipName;
+      saveAs(blob, zipName);
+      this.sheetSplitProgress = this.t('TRT.msg.splitDone');
+      this.showSuccess('sheetSplit', `Séparation terminée : ${nombreFeuilles} fichiers générés (${zipName}).`);
+    } catch (error) {
+      this.showError('sheetSplit', this.messageErreurServeur(error));
+    } finally {
+      this.sheetSplitIsProcessing = false;
+    }
+  }
+
   async splitExcelSheets() {
     if (!this.sheetSplitFile) {
       this.showError('sheetSplit', this.t('TRT.msg.selectExcelFile'));
+      return;
+    }
+    if (this.USE_SERVER_SHEET_SPLIT) {
+      await this.splitExcelSheetsServeur(this.sheetSplitFile);
       return;
     }
 
@@ -4358,12 +4785,12 @@ End Sub`;
   convertColumnsToNumber() {
     try {
       for (const col of this.formatOptions.numberColumns) {
-        for (const row of this.combinedRows) {
+        this.combinedRows.mutateEach((row) => {
           if (row[col] !== undefined && row[col] !== null) {
             const num = parseFloat(row[col].toString().replace(/\s/g, '').replace(',', '.'));
             row[col] = isNaN(num) ? row[col] : num;
           }
-        }
+        });
       }
       this.showSuccess('number', this.t('TRT.msg.toNumberSuccess'));
     } catch (e) {
@@ -4374,7 +4801,7 @@ End Sub`;
   convertColumnsToDate() {
     try {
       for (const col of this.formatOptions.dateColumns) {
-        for (const row of this.combinedRows) {
+        this.combinedRows.mutateEach((row) => {
           if (row[col]) {
             let val = row[col].toString();
             if (val.endsWith('.0')) {
@@ -4385,7 +4812,7 @@ End Sub`;
               row[col] = this.formatDate(d, this.formatOptions.dateFormat);
             }
           }
-        }
+        });
       }
       this.showSuccess('date', this.t('TRT.msg.dateFormatSuccess'));
     } catch (e) {
@@ -4433,9 +4860,9 @@ End Sub`;
       return;
     }
     const valuesSet = new Set<string>();
-    for (const row of this.combinedRows) {
+    this.combinedRows.forEach((row) => {
       valuesSet.add(row[this.exportTypeCol] ?? '');
-    }
+    });
     this.exportTypeValues = Array.from(valuesSet);
   }
 
@@ -4515,12 +4942,12 @@ End Sub`;
   convertColumnsToAmount() {
     try {
       for (const col of this.formatOptions.amountColumns) {
-        for (const row of this.combinedRows) {
+        this.combinedRows.mutateEach((row) => {
           if (row[col] !== undefined && row[col] !== null) {
             const num = parseFloat(row[col].toString().replace(/\s/g, '').replace(',', '.'));
             row[col] = isNaN(num) ? row[col] : num;
           }
-        }
+        });
       }
       this.showSuccess('amount', this.t('TRT.msg.toAmountSuccess'));
     } catch (e) {
@@ -4556,8 +4983,8 @@ End Sub`;
       if (this.filterApplied && this.selectedFilterColumn && this.selectedFilterValues && this.selectedFilterValues.length > 0 && this.selectedFilterValues.includes(this.selectedFilterValues[0])) {
         this.applyFilter();
       } else {
-        this.allRows = [...this.originalRows];
-        this.combinedRows = [...this.originalRows];
+        this.allRows = this.originalRows.clone();
+        this.combinedRows = this.originalRows.clone();
         this.updateDisplayedRows();
       }
       this.showSuccess('concat', `Colonne « ${this.concatNewCol} » créée par concaténation.`);
@@ -4727,7 +5154,7 @@ End Sub`;
 
 
       // Traiter les données affichées (combinedRows)
-      this.combinedRows.forEach((row, rowIndex) => {
+      this.combinedRows.mutateEach((row, rowIndex) => {
         this.formatSelections['removeCharacters'].forEach(col => {
           totalCells++;
           if (row[col] !== undefined && row[col] !== null) {
@@ -4752,7 +5179,7 @@ End Sub`;
 
       // Mettre à jour aussi allRows si la sélection n'est pas appliquée
       if (!this.selectionApplied) {
-        this.allRows.forEach((row, rowIndex) => {
+        this.allRows.mutateEach((row, rowIndex) => {
           this.formatSelections['removeCharacters'].forEach(col => {
             if (row[col] !== undefined && row[col] !== null) {
               // Convertir en chaîne si ce n'est pas déjà le cas
@@ -4806,7 +5233,7 @@ End Sub`;
       let totalCells = 0;
       
       // Traiter les données affichées (combinedRows)
-      this.combinedRows.forEach((row, rowIndex) => {
+      this.combinedRows.mutateEach((row, rowIndex) => {
         this.formatSelections['removeSpecialStrings'].forEach(col => {
           totalCells++;
           if (row[col] !== undefined && row[col] !== null) {
@@ -4849,7 +5276,7 @@ End Sub`;
 
       // Mettre à jour aussi allRows si la sélection n'est pas appliquée
       if (!this.selectionApplied) {
-        this.allRows.forEach((row, rowIndex) => {
+        this.allRows.mutateEach((row, rowIndex) => {
           this.formatSelections['removeSpecialStrings'].forEach(col => {
             if (row[col] !== undefined && row[col] !== null) {
               // Convertir en chaîne si ce n'est pas déjà le cas
@@ -4908,7 +5335,7 @@ End Sub`;
       let totalCells = 0;
       
       // Traiter les données affichées (combinedRows)
-      this.combinedRows.forEach((row, rowIndex) => {
+      this.combinedRows.mutateEach((row, rowIndex) => {
         this.formatSelections['removeNumbers'].forEach(col => {
           totalCells++;
           if (row[col] !== undefined && row[col] !== null) {
@@ -4934,7 +5361,7 @@ End Sub`;
 
       // Mettre à jour aussi allRows si la sélection n'est pas appliquée
       if (!this.selectionApplied) {
-        this.allRows.forEach((row, rowIndex) => {
+        this.allRows.mutateEach((row, rowIndex) => {
           this.formatSelections['removeNumbers'].forEach(col => {
             if (row[col] !== undefined && row[col] !== null) {
               // Convertir en chaîne si ce n'est pas déjà le cas
@@ -4976,7 +5403,7 @@ End Sub`;
       let totalCells = 0;
       
       // Traiter les données affichées (combinedRows)
-      this.combinedRows.forEach((row, rowIndex) => {
+      this.combinedRows.mutateEach((row, rowIndex) => {
         this.formatSelections['removeIndicatif'].forEach(col => {
           totalCells++;
           if (row[col] !== undefined && row[col] !== null) {
@@ -5034,7 +5461,7 @@ End Sub`;
 
       // Mettre à jour aussi allRows si la sélection n'est pas appliquée
       if (!this.selectionApplied) {
-        this.allRows.forEach((row, rowIndex) => {
+        this.allRows.mutateEach((row, rowIndex) => {
           this.formatSelections['removeIndicatif'].forEach(col => {
             if (row[col] !== undefined && row[col] !== null) {
               // Convertir en chaîne si ce n'est pas déjà le cas
@@ -5100,7 +5527,7 @@ End Sub`;
       let totalCells = 0;
       
       // Traiter les données affichées (combinedRows)
-      this.combinedRows.forEach((row, rowIndex) => {
+      this.combinedRows.mutateEach((row, rowIndex) => {
         this.formatSelections['removeDecimals'].forEach(col => {
           totalCells++;
           if (row[col] !== undefined && row[col] !== null) {
@@ -5175,7 +5602,7 @@ End Sub`;
 
       // Mettre à jour aussi allRows si la sélection n'est pas appliquée
       if (!this.selectionApplied) {
-        this.allRows.forEach((row, rowIndex) => {
+        this.allRows.mutateEach((row, rowIndex) => {
           this.formatSelections['removeDecimals'].forEach(col => {
             if (row[col] !== undefined && row[col] !== null) {
               // Convertir en chaîne si ce n'est pas déjà le cas
@@ -5268,7 +5695,7 @@ End Sub`;
       
       
       // Traiter les données affichées (combinedRows)
-      this.combinedRows.forEach((row, rowIndex) => {
+      this.combinedRows.mutateEach((row, rowIndex) => {
         this.formatSelections['keepLastDigits'].forEach(col => {
           totalCells++;
           if (row[col] !== undefined && row[col] !== null) {
@@ -5312,7 +5739,7 @@ End Sub`;
 
       // Mettre à jour aussi allRows si la sélection n'est pas appliquée
       if (!this.selectionApplied) {
-        this.allRows.forEach((row, rowIndex) => {
+        this.allRows.mutateEach((row, rowIndex) => {
           this.formatSelections['keepLastDigits'].forEach(col => {
             if (row[col] !== undefined && row[col] !== null) {
               // Convertir en chaîne si ce n'est pas déjà le cas
@@ -5371,7 +5798,7 @@ End Sub`;
       
       
       // Traiter les données affichées (combinedRows)
-      this.combinedRows.forEach((row, rowIndex) => {
+      this.combinedRows.mutateEach((row, rowIndex) => {
         this.formatSelections['removeZeroDecimals'].forEach(col => {
           totalCells++;
           if (row[col] !== undefined && row[col] !== null) {
@@ -5394,7 +5821,7 @@ End Sub`;
 
       // Mettre à jour aussi allRows si la sélection n'est pas appliquée
       if (!this.selectionApplied) {
-        this.allRows.forEach((row, rowIndex) => {
+        this.allRows.mutateEach((row, rowIndex) => {
           this.formatSelections['removeZeroDecimals'].forEach(col => {
             if (row[col] !== undefined && row[col] !== null) {
               // Convertir en chaîne si ce n'est pas déjà le cas
@@ -5436,7 +5863,7 @@ End Sub`;
       
       
       // Traiter les données affichées (combinedRows)
-      this.combinedRows.forEach((row, rowIndex) => {
+      this.combinedRows.mutateEach((row, rowIndex) => {
         this.formatSelections['removeSpaces'].forEach(col => {
           totalCells++;
           if (row[col] !== undefined && row[col] !== null) {
@@ -5472,7 +5899,7 @@ End Sub`;
 
       // Mettre à jour aussi allRows si la sélection n'est pas appliquée
       if (!this.selectionApplied) {
-        this.allRows.forEach((row, rowIndex) => {
+        this.allRows.mutateEach((row, rowIndex) => {
           this.formatSelections['removeSpaces'].forEach(col => {
             if (row[col] !== undefined && row[col] !== null) {
               // Convertir en chaîne si ce n'est pas déjà le cas
@@ -5656,7 +6083,8 @@ End Sub`;
   }
 
   newTraitement() {
-    // Vider toutes les données et supprimer la clé locale
+    // Vider les données serveur (lots, lignes, opérations, popup) puis toutes les données locales
+    this.reinitialiserEtatServeur();
     this.selectedFiles = [];
     this.combinedRows = [];
     this.columns = [];
@@ -5922,9 +6350,9 @@ End Sub`;
       // Finaliser le traitement : le résultat reprend l'en-tête et les lignes de l'aperçu.
       // Les états d'affichage hérités (sélection de colonnes, réorganisation) sont réinitialisés,
       // sinon le tableau et l'export pourraient garder d'anciennes colonnes.
-      this.combinedRows = [...this.allRows];
+      this.combinedRows = this.allRows.clone();
       this.columns = [...this.allColumns];
-      this.originalRows = [...this.allRows];
+      this.originalRows = this.allRows.clone();
       this.selectionApplied = false;
       this.selectedCols = [...this.allColumns];
       this.isColumnReorderMode = false;
@@ -6350,7 +6778,7 @@ End Sub`;
       }
 
       // Analyser toutes les colonnes
-      this.fieldTypeAnalysis = this.fieldTypeDetectionService.analyzeDataset(this.allRows);
+      this.fieldTypeAnalysis = this.fieldTypeDetectionService.analyzeDataset(this.allRows.toArray());
       
       // Générer les recommandations de formatage
       this.formattingRecommendations = this.fieldTypeDetectionService.generateFormattingRecommendations(this.fieldTypeAnalysis);

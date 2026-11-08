@@ -31,6 +31,8 @@ export interface FastCsvReadOptions {
     /** Transforme la ligne d'en-tête complète avant lecture des données. */
     finalizeHeaders?: (headers: string[]) => string[];
     onProgress?: (processed: number, total: number) => void;
+    /** Reçoit chaque ligne au fil de la lecture : évite de garder tout le fichier en objets. */
+    onRow?: (row: Record<string, string>) => void;
     yieldFn?: () => Promise<void>;
 }
 
@@ -424,7 +426,11 @@ function readCsvFileStreaming(
                 headers.forEach((header, index) => {
                     row[header] = maybeFixCell(String(cells[index] ?? ''));
                 });
-                rows.push(row);
+                if (options.onRow) {
+                    options.onRow(row);
+                } else {
+                    rows.push(row);
+                }
                 processedLines++;
 
                 if (processedLines % PROGRESS_EVERY_ROWS === 0) {
@@ -439,7 +445,7 @@ function readCsvFileStreaming(
             complete: () => {
                 options.onProgress?.(processedLines, processedLines || estimatedTotal);
                 resolve({
-                    rows,
+                    rows: options.onRow ? [] : rows,
                     headerLine: headerLineIndex,
                     removedLines: skippedBeforeHeader + skippedEmpty
                 });
