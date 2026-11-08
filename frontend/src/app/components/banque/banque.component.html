@@ -813,7 +813,7 @@
 
     
 
-    <div class="banque-section" *ngIf="!showOperations && activeSection === 'home'">
+    <div class="banque-section comptes-banque-section" *ngIf="!showOperations && activeSection === 'home'">
       <div class="section-header">
         <h2>{{ 'BQ.Comptesdebanque' | translate }}</h2>
         <div class="header-actions">
@@ -836,7 +836,7 @@
         <div class="comptes-toolbar">
           <div class="search-box">
             <i class="fas fa-search"></i>
-            <input class="ds-input" type="text" [(ngModel)]="comptesSearch" placeholder="{{ 'BQ.Recherchercomptecodepaystype' | translate }}">
+            <input class="ds-input" type="text" [(ngModel)]="comptesSearch" (ngModelChange)="comptesListPage = 1" placeholder="{{ 'BQ.Recherchercomptecodepaystype' | translate }}">
           </div>
           <div class="legend">
             <span class="badge badge-banque">{{ 'TBL.bank' | translate }}</span>
@@ -905,18 +905,18 @@
             </tr>
           </tbody>
         </table>
-        <div class="pagination small" *ngIf="comptesBanqueDisplayed.length > 0">
-          <ds-pagination
-            [page]="comptesListPage"
-            [pageCount]="comptesListTotalPages"
-            [totalItems]="comptesBanqueDisplayed.length"
-            [pageSize]="comptesListPageSize"
-            [pageSizes]="[5, 7, 10, 20, 50, 100]"
-            [itemLabel]="'TBL.accounts' | translate"
-            (pageChange)="comptesGoToPage($event)"
-            (pageSizeChange)="comptesSetPageSize($event)">
-          </ds-pagination>
-        </div>
+      </div>
+      <div class="comptes-pagination" *ngIf="!comptesBanqueError && comptesBanqueDisplayed.length > 0">
+        <ds-pagination
+          [page]="comptesListPage"
+          [pageCount]="comptesListTotalPages"
+          [totalItems]="comptesBanqueDisplayed.length"
+          [pageSize]="comptesListPageSize"
+          [pageSizes]="[5, 7, 10, 20, 50, 100]"
+          [itemLabel]="'TBL.accounts' | translate"
+          (pageChange)="comptesGoToPage($event)"
+          (pageSizeChange)="comptesSetPageSize($event)">
+        </ds-pagination>
       </div>
     </div>
   </div>

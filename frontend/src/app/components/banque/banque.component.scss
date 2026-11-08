@@ -215,11 +215,13 @@
 }
 
 .main {
-  padding: 28px 28px 60px;
+  padding: 28px 28px 24px;
   width: 100%;
   flex: 1;
   position: relative;
   box-sizing: border-box;
+  display: flex;
+  flex-direction: column;
 }
 
 // Styles pour la colonne traitement
@@ -278,10 +280,29 @@
 .banque-container {
   padding: 24px;
   width: 100%;
-  height: 100%;
-  min-height: 100vh;
+  flex: 1 0 auto;
   display: flex;
   flex-direction: column;
+  box-sizing: border-box;
+}
+
+// Section "Comptes de Banque" : occupe tout l'espace restant en bas de page
+.comptes-banque-section {
+  flex: 1 0 auto;
+  display: flex;
+  flex-direction: column;
+  min-height: 420px;
+
+  > .table-container.small {
+    flex: 1 1 auto;
+    max-height: none;
+    overflow-y: auto;
+  }
+
+  > .comptes-pagination {
+    margin-top: auto;
+    padding-top: 12px;
+  }
 }
 
 .banque-content {
