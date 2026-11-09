@@ -341,6 +341,12 @@ public class PermissionCheckService {
             modulesToCheck.add(dashboardReadModule);
         }
 
+        // Opérations bancaires : rattachées au module « Opérations » par le chemin, mais gérées
+        // depuis la page Banque (import, modèle, liste) : les droits du module BANQUE s'appliquent aussi.
+        if (normalizeApiPath(apiPath).startsWith("/api/operations-bancaires")) {
+            modulesToCheck.add("BANQUE");
+        }
+
         if (moduleOverride != null && !moduleOverride.isBlank()) {
             modulesToCheck.add(canonicalizeModuleOverride(moduleOverride));
         }
