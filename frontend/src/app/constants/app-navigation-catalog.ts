@@ -422,7 +422,7 @@ export const APP_NAVIGATION_CATALOG: AppNavigationGroup[] = [
         labelKey: 'NAV.bank',
         route: '/banque',
         moduleName: 'BANQUE',
-        apiPathPrefixes: ['/api/banque'],
+        apiPathPrefixes: ['/api/banque', '/api/releve-bancaire', '/api/operations-bancaires'],
         icon: 'fa-university'
       }
     ]

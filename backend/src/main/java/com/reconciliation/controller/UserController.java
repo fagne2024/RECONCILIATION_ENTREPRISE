@@ -535,7 +535,10 @@ public class UserController {
         user.setPassword(passwordEncoder.encode(newPassword));
         // L'utilisateur a choisi lui-même son mot de passe : obligation levée.
         user.setPasswordChangeRequired(false);
-        userRepository.save(user);
+        // save() d'une entite detachee (open-in-view=false) recharge l'utilisateur et son
+        // profil (@TenantId) : sans contexte entreprise, le garde leverait une
+        // TenantAccessException (404 « Ressource introuvable »).
+        com.reconciliation.tenant.TenantContext.callAs(entrepriseId, () -> userRepository.save(user));
         return ResponseEntity.ok(Map.of("message", "Mot de passe réinitialisé avec succès. Vous pouvez vous connecter."));
     }
 

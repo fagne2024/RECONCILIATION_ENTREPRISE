@@ -333,6 +333,14 @@ public class PermissionCheckService {
             modulesToCheck.add(intrinsicModule);
         }
 
+        // Lectures du tableau de bord (liste fermée, GET uniquement) : le droit Dashboard suffit,
+        // même si le chemin relève aussi du flux réconciliation (/api/result8rec...).
+        // Décidé côté serveur : l'en-tête X-Permission-Module « Dashboard » n'est pas pris en compte.
+        String dashboardReadModule = mapDashboardReadApiPathToModule(apiPath, httpMethod);
+        if (dashboardReadModule != null) {
+            modulesToCheck.add(dashboardReadModule);
+        }
+
         if (moduleOverride != null && !moduleOverride.isBlank()) {
             modulesToCheck.add(canonicalizeModuleOverride(moduleOverride));
         }
@@ -554,6 +562,16 @@ public class PermissionCheckService {
         return ApiModuleMapping.moduleForPath(apiPath);
     }
 
+    /** En-tete X-Permission-Module tel qu'il est reellement pris en compte (null si ignore). */
+    public String effectiveModuleOverride(String moduleOverride) {
+        return sanitizeModuleOverride(moduleOverride);
+    }
+
+    /** En-tete X-Permission-Action tel qu'il est reellement pris en compte (null si ignore). */
+    public String effectivePermissionOverride(String httpMethod, String permissionOverride) {
+        return sanitizePermissionOverride(httpMethod, permissionOverride);
+    }
+
     private String sanitizeModuleOverride(String moduleOverride) {
         if (moduleOverride == null || moduleOverride.isBlank()) {
             return null;
@@ -582,6 +600,7 @@ public class PermissionCheckService {
         String normalizedPath = normalizeApiPath(apiPath);
         if (normalizedPath.equals("/api/result8rec")) return "Dashboard";
         if (normalizedPath.equals("/api/result8rec/filters")) return "Dashboard";
+        if (normalizedPath.equals("/api/result8rec/dates")) return "Dashboard";
         if (normalizedPath.equals("/api/reconciliation-report/manual-trx/range")) return "Dashboard";
         if (normalizedPath.equals("/api/agency-summary/all")) return "Dashboard";
         if (normalizedPath.equals("/api/operations")) return "Dashboard";

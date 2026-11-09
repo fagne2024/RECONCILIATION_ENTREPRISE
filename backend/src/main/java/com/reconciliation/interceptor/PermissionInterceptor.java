@@ -225,8 +225,13 @@ public class PermissionInterceptor implements HandlerInterceptor {
                     response.setContentType("application/json");
                     response.setCharacterEncoding("UTF-8");
                     
-                    String moduleName = permissionCheckService.resolveModuleForApiPath(path, method, moduleOverride);
-                    String actionName = permissionCheckService.resolvePermissionForApiPath(path, method, moduleOverride, permissionOverride);
+                    // Message base sur les en-tetes effectivement pris en compte par le controle
+                    // (un X-Permission-Module hors sous-menu est ignore) : sinon le message citerait
+                    // le module de l'en-tete au lieu du module reellement verifie.
+                    String effectiveModuleOverride = permissionCheckService.effectiveModuleOverride(moduleOverride);
+                    String effectivePermissionOverride = permissionCheckService.effectivePermissionOverride(method, permissionOverride);
+                    String moduleName = permissionCheckService.resolveModuleForApiPath(path, method, effectiveModuleOverride);
+                    String actionName = permissionCheckService.resolvePermissionForApiPath(path, method, effectiveModuleOverride, effectivePermissionOverride);
                     if (actionName == null || actionName.isBlank()) {
                         actionName = switch (method) {
                             case "GET" -> "consulter";

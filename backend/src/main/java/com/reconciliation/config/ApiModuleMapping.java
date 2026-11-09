@@ -41,8 +41,8 @@ public final class ApiModuleMapping {
         if (apiPath.startsWith("/api/ecart-solde")) return "TSOP";
         if (apiPath.startsWith("/api/trx-sf")) return "TRX SF";
         if (apiPath.startsWith("/api/impact-op")) return "Impact OP";
-        if (apiPath.startsWith("/api/banque")) return "BANQUE";
         if (apiPath.startsWith("/api/banque-dashboard")) return "Dashboard";
+        if (apiPath.startsWith("/api/banque")) return "BANQUE";
         if (apiPath.startsWith("/api/comptabilite")) return "Comptabilité";
         if (apiPath.startsWith("/api/auto-processing-models")) return "Modèles";
         if (apiPath.startsWith("/api/auto-processing")) return "Modèles";
