@@ -7,7 +7,7 @@ import { NavigationVisibilityService } from '../../services/navigation-visibilit
 import { NavigationLabelsService } from '../../services/navigation-labels.service';
 import { LogoService, LogoSettings, DEFAULT_LOGO_SETTINGS, logoPaddingStyle } from '../../services/logo.service';
 import { UserPhotoService } from '../../services/user-photo.service';
-import { APP_NAVIGATION_CATALOG, AppNavigationGroup, AppNavigationSubmenu } from '../../constants/app-navigation-catalog';
+import { APP_NAVIGATION_CATALOG, AppNavigationGroup, AppNavigationSubmenu, buildNavigationAccessContext } from '../../constants/app-navigation-catalog';
 import { filter, takeUntil } from 'rxjs/operators';
 import { Subject } from 'rxjs';
 
@@ -108,7 +108,7 @@ export class SidebarComponent implements OnInit {
         return this.navVisibility.isGroupVisible(group) && this.isMenuAllowed(group);
       }
       const visibleChildren = this.navVisibility.getVisibleSubmenus(group)
-        .filter(submenu => this.isSubmenuAllowed(submenu))
+        .filter(submenu => this.isSubmenuAllowed(submenu, group))
         .map(submenu => this.withVisibleNestedSubmenus(submenu));
       if (!visibleChildren.length) {
         return false;
@@ -230,7 +230,7 @@ export class SidebarComponent implements OnInit {
     return this.appState.isModuleAllowed(group.moduleName);
   }
 
-  isSubmenuAllowed(submenu: AppNavigationSubmenu): boolean {
+  isSubmenuAllowed(submenu: AppNavigationSubmenu, group?: AppNavigationGroup): boolean {
     if (submenu.superAdminOnly) {
       return this.appState.isSuperAdmin();
     }
@@ -240,7 +240,26 @@ export class SidebarComponent implements OnInit {
     if (this.appState.isSuperAdmin()) return true;
     if (this.appState.isAdmin()) return true;
     if (!submenu.moduleName) return true;
+    // Droits par sous-menu (ex. « Résultats · Écarts BO ») : le module parent seul
+    // ne doit pas afficher tous les sous-menus du groupe. Le contexte est résolu
+    // sur le catalogue d'origine (par clé) car les libellés peuvent être renommés.
+    const context = this.resolveOriginalAccessContext(submenu, group);
+    if (context) {
+      return this.appState.hasNavigationAccess(context);
+    }
     return this.appState.isModuleAllowed(submenu.moduleName);
+  }
+
+  private resolveOriginalAccessContext(submenu: AppNavigationSubmenu, group?: AppNavigationGroup) {
+    if (!group) {
+      return null;
+    }
+    const originalGroup = APP_NAVIGATION_CATALOG.find(g => g.key === group.key);
+    const originalSubmenu = originalGroup?.children?.find(s => s.key === submenu.key);
+    if (!originalGroup || !originalSubmenu) {
+      return null;
+    }
+    return buildNavigationAccessContext(originalGroup, originalSubmenu);
   }
 
   canShowNavigationRoute(route: string, fallbackModule?: string): boolean {

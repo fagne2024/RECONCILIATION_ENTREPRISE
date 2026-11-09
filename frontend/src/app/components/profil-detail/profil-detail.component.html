@@ -159,7 +159,7 @@
                   <i class="fas" [ngClass]="isSubmenuActionsExpanded(submenu.key) ? 'fa-chevron-down' : 'fa-chevron-right'"></i>
                   <i class="fas" [ngClass]="submenu.icon"></i>
                   <span class="nav-submenu-label">{{ submenu.label }}</span>
-                  <span class="submenu-summary">{{ getSubmenuActionsSummaryLabel(submenu.accessModuleName) }}</span>
+                  <span class="submenu-summary">{{ getSubmenuActionsSummaryLabel(getSubmenuAccessName(group, submenu)) }}</span>
                 </div>
                 <div class="nav-submenu-access">
                   <label class="access-toggle">
@@ -177,32 +177,32 @@
                     <i class="fas fa-search"></i>
                     <input class="ds-input" 
                       type="text" 
-                      [(ngModel)]="actionSearchByModule[submenu.accessModuleName]"
-                      (input)="setActionSearchTerm(submenu.accessModuleName, $event.target.value)"
+                      [(ngModel)]="actionSearchByModule[getSubmenuAccessName(group, submenu)]"
+                      (input)="setActionSearchTerm(getSubmenuAccessName(group, submenu), $event.target.value)"
                       placeholder="{{ 'PROF.Filtrerparnomlibelléouendpoint' | translate }}">
                   </div>
                   <div class="submenu-actions-header">
-                    <span class="actions-count">{{ getFilteredSubmenuActionDetails(submenu.accessModuleName).length }} actions</span>
-                    <button type="button" class="ds-btn ds-btn--primary btn btn-sm btn-primary" (click)="selectAllSubmenuActions(submenu.accessModuleName)" [disabled]="isModuleActionsLoading(submenu.accessModuleName) || isModuleActionsSyncing(submenu.accessModuleName)">
-                      <i class="fas" [ngClass]="isModuleActionsSyncing(submenu.accessModuleName) ? 'fa-spinner fa-spin' : 'fa-check-double'"></i>
-                      {{ isModuleActionsSyncing(submenu.accessModuleName) ? ('PROF.Synchronisation' | translate) : ('PROF.Toutcocher' | translate) }}
+                    <span class="actions-count">{{ getFilteredSubmenuActionDetails(getSubmenuAccessName(group, submenu)).length }} actions</span>
+                    <button type="button" class="ds-btn ds-btn--primary btn btn-sm btn-primary" (click)="selectAllSubmenuActions(getSubmenuAccessName(group, submenu))" [disabled]="isModuleActionsLoading(getSubmenuAccessName(group, submenu)) || isModuleActionsSyncing(getSubmenuAccessName(group, submenu))">
+                      <i class="fas" [ngClass]="isModuleActionsSyncing(getSubmenuAccessName(group, submenu)) ? 'fa-spinner fa-spin' : 'fa-check-double'"></i>
+                      {{ isModuleActionsSyncing(getSubmenuAccessName(group, submenu)) ? ('PROF.Synchronisation' | translate) : ('PROF.Toutcocher' | translate) }}
                     </button>
-                    <button type="button" class="ds-btn ds-btn--secondary btn btn-sm btn-secondary" (click)="syncModuleActions(submenu.accessModuleName, getNavigationContext(group, submenu))" [disabled]="isModuleActionsLoading(submenu.accessModuleName) || isModuleActionsSyncing(submenu.accessModuleName)" *ngIf="hasUnsyncedActions(submenu.accessModuleName)">
-                      <i class="fas" [ngClass]="isModuleActionsSyncing(submenu.accessModuleName) ? 'fa-spinner fa-spin' : 'fa-sync'"></i>
+                    <button type="button" class="ds-btn ds-btn--secondary btn btn-sm btn-secondary" (click)="syncModuleActions(getSubmenuAccessName(group, submenu), getNavigationContext(group, submenu))" [disabled]="isModuleActionsLoading(getSubmenuAccessName(group, submenu)) || isModuleActionsSyncing(getSubmenuAccessName(group, submenu))" *ngIf="hasUnsyncedActions(getSubmenuAccessName(group, submenu))">
+                      <i class="fas" [ngClass]="isModuleActionsSyncing(getSubmenuAccessName(group, submenu)) ? 'fa-spinner fa-spin' : 'fa-sync'"></i>
                       {{ 'PROF.Synchroniser' | translate }}
                     </button>
                   </div>
                 </div>
 
-                <div class="actions-list" *ngIf="getFilteredSubmenuActionDetails(submenu.accessModuleName).length > 0; else noActions">
-                  <div *ngFor="let actionCategory of getGroupedSubmenuActions(submenu.accessModuleName)" class="action-category">
+                <div class="actions-list" *ngIf="getFilteredSubmenuActionDetails(getSubmenuAccessName(group, submenu)).length > 0; else noActions">
+                  <div *ngFor="let actionCategory of getGroupedSubmenuActions(getSubmenuAccessName(group, submenu))" class="action-category">
                     <h5 class="action-category-title">{{ actionCategory.category }}</h5>
                     <div class="action-items">
                       <label *ngFor="let action of actionCategory.actions" class="action-item">
                         <input type="checkbox"
-                               [checked]="hasActionForModuleName(submenu.accessModuleName, action.action)"
-                               (change)="toggleActionForModuleName(submenu.accessModuleName, action.action, $event)"
-                               [disabled]="isModuleActionsLoading(submenu.accessModuleName)">
+                               [checked]="hasActionForModuleName(getSubmenuAccessName(group, submenu), action.action)"
+                               (change)="toggleActionForModuleName(getSubmenuAccessName(group, submenu), action.action, $event)"
+                               [disabled]="isModuleActionsLoading(getSubmenuAccessName(group, submenu))">
                         <span class="action-info">
                           <span class="action-name">{{ getActionLabel(action.action) }}</span>
                           <span class="action-http" *ngIf="action.httpMethod" [ngClass]="'http-' + action.httpMethod.toLowerCase()">{{ action.httpMethod }}</span>

@@ -784,7 +784,9 @@
     "INACTIVE": "Inactive",
     "MOVE_UP": "Move up",
     "MOVE_DOWN": "Move down",
-    "AUCUN": "None"
+    "AUCUN": "None",
+    "Back": "Back",
+    "Close": "Close"
   },
   "SV": {
     "saveInProgress": "💾 Saving...",
@@ -3048,7 +3050,15 @@
     "Erreursauvegardeajouts": "Error while saving additions.",
     "Erreursauvegardesuppressions": "Error while saving removals.",
     "Modificationssauvegardées": "Changes saved successfully.",
-    "Nombredepays": "{{count}} country/countries"
+    "Nombredepays": "{{count}} country/countries",
+    "Chargementduprofil": "Loading profile...",
+    "Profilintrouvable": "Profile not found",
+    "Pays": "Countries",
+    "Navigation": "Navigation",
+    "Voirlespermissions": "View permissions",
+    "Aucunepermissiondisponiblepourcemodule": "No permission available for this module",
+    "Aucunmoduleassocié": "No associated module",
+    "Ajouterdesmodules": "Add modules"
   },
   "PROGRESS": {
     "cancel": "Cancel",

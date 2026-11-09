@@ -14,6 +14,7 @@ import {
   APP_NAVIGATION_CATALOG,
   NavigationAccessContext,
   buildNavigationAccessContext,
+  findNavigationAccessContextByAccessModuleName,
   findNavigationAccessContextByModuleName,
   findNavigationAccessContextByRoute,
   getAllNavigationAccessContexts,
@@ -793,7 +794,7 @@ private reconciliationProgressSubject = new BehaviorSubject<boolean>(false);
             return true;
         }
         if (!this.hasSubmenuNavigationGrant(accessModuleName)) {
-            return false;
+            return this.hasParentModuleFallbackPermission(accessModuleName, permission);
         }
         const normalizedPermission = this.normalizePermissionName(permission);
         if (!normalizedPermission) {
@@ -811,6 +812,28 @@ private reconciliationProgressSubject = new BehaviorSubject<boolean>(false);
             granted,
             this.normalizeModuleName(accessModuleName) ?? ''
         );
+    }
+
+    /**
+     * Repli sur les droits du module parent quand le profil n'a coché aucun
+     * sous-menu du groupe (cf. {@link hasNavigationAccess}).
+     */
+    private hasParentModuleFallbackPermission(accessModuleName: string, permission: string): boolean {
+        const context = findNavigationAccessContextByAccessModuleName(accessModuleName ?? '');
+        if (!context?.usesGranularAccess || !this.hasNavigationAccess(context)) {
+            return false;
+        }
+        const normalizedPermission = this.normalizePermissionName(permission);
+        const normalizedModule = this.normalizeModuleName(context.apiModuleName);
+        if (!normalizedPermission || !normalizedModule) {
+            return false;
+        }
+        const granted = this.getGrantedPermissionsForModule(normalizedModule);
+        if (!granted.length) {
+            return this.isReadPermission(normalizedPermission);
+        }
+        return granted.includes(normalizedPermission)
+            || this.isPermissionSatisfiedByGrantedActions(normalizedPermission, granted, normalizedModule);
     }
 
     /** Sous-menu coché dans le profil (au moins une permission enregistrée). */
@@ -971,10 +994,32 @@ private reconciliationProgressSubject = new BehaviorSubject<boolean>(false);
         }
 
         if (context.usesGranularAccess) {
-            return this.hasSubmenuNavigationGrant(context.accessModuleName);
+            if (this.hasSubmenuNavigationGrant(context.accessModuleName)) {
+                return true;
+            }
+            // Profil sans choix par sous-menu dans ce groupe (droits donnés au seul
+            // module parent, ex. « Résultats ») : tous les sous-menus du module sont
+            // accessibles. Dès qu'un sous-menu du groupe est coché, seuls les
+            // sous-menus cochés restent visibles.
+            return !this.groupHasSubmenuGrant(context)
+                && this.isModuleAllowed(context.apiModuleName);
         }
 
         return this.isModuleAllowed(context.accessModuleName);
+    }
+
+    /** Vrai si au moins un sous-menu du même module, dans le groupe, est coché. */
+    private groupHasSubmenuGrant(context: NavigationAccessContext): boolean {
+        const group = context.group;
+        if (!group?.children?.length) {
+            return false;
+        }
+        return group.children
+            .filter(sub => sub.moduleName === context.apiModuleName)
+            .map(sub => buildNavigationAccessContext(group, sub))
+            .some(sibling => !!sibling
+                && sibling.usesGranularAccess
+                && this.hasSubmenuNavigationGrant(sibling.accessModuleName));
     }
 
     canAccessNavigationRoute(route: string | null | undefined): boolean {

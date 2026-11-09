@@ -23,7 +23,8 @@ import {
   buildNavigationAccessContext,
   findNavigationAccessContextByAccessModuleName,
   getNavigationCatalogModuleNames,
-  groupUsesGranularSubmenuAccess
+  groupUsesGranularSubmenuAccess,
+  resolveSubmenuAccessModuleName
 } from '../../constants/app-navigation-catalog';
 import { PermissionService } from '../../services/permission.service';
 import {
@@ -95,6 +96,11 @@ export class ProfilDetailComponent implements OnInit {
   get pendingChangesCount(): number {
     return this.pendingPermissionChanges.length;
   }
+
+  // Onglet actif (navigation par défaut, sinon aucun contenu n'est affiché au chargement)
+  activeTab: 'navigation' | 'modules' | 'permissions' = 'navigation';
+  // Drapeaux de pays en échec de chargement (modale pays)
+  flagLoadError: { [code: string]: boolean } = {};
 
   toastMessage: string = '';
   toastType: ToastType = 'success';
@@ -171,7 +177,14 @@ export class ProfilDetailComponent implements OnInit {
 
   loadModules() {
     this.withRetry(this.profilService.getModules()).subscribe({
-      next: (m) => this.modules = m,
+      next: (m) => {
+        this.modules = m || [];
+        // Les droits du profil peuvent arriver avant les modules : le préchargement
+        // (basé sur findModuleByName) doit alors être relancé une fois les modules connus.
+        this.preloadModulePermissions();
+        this.preloadNavigationModulePermissions();
+        this.cd.detectChanges();
+      },
       error: (err) => console.error('Erreur chargement modules:', err)
     });
   }
@@ -232,6 +245,7 @@ export class ProfilDetailComponent implements OnInit {
         console.error(`Erreur chargement permissions module ${module.nom}:`, error);
         this.modulePermissionsCache[module.id] = [];
         this.loadingModulePermissionsSet.delete(module.id);
+        this.cd.detectChanges();
       }
     });
   }
@@ -733,7 +747,13 @@ export class ProfilDetailComponent implements OnInit {
     applySelection();
   }
 
-  findModuleByName(moduleName: string): Module | undefined {
+  /** Nom du module de droits d'un sous-menu (accessModuleName est optionnel dans le catalogue). */
+  getSubmenuAccessName(group: AppNavigationGroup, submenu: AppNavigationSubmenu): string {
+    return resolveSubmenuAccessModuleName(group, submenu);
+  }
+
+  findModuleByName(moduleName: string | null | undefined): Module | undefined {
+    if (!moduleName) return undefined;
     const normalized = moduleName.trim().toLowerCase();
     return this.modules.find(module => (module.nom || '').trim().toLowerCase() === normalized);
   }
@@ -1138,15 +1158,39 @@ export class ProfilDetailComponent implements OnInit {
       });
   }
 
-  selectAllPermissions(module: Module) {
+  /**
+   * Case "Associé" de l'onglet Modules : cocher accorde toutes les permissions du
+   * module (ou, à défaut, le marqueur d'association) ; décocher les retire toutes.
+   */
+  toggleModuleAssociation(module: Module, event: Event): void {
+    if (!this.profil || !module?.id) return;
+    const checked = (event.target as HTMLInputElement).checked;
+    if (!checked) {
+      this.deselectAllPermissions(module);
+      return;
+    }
+    if (this.isModuleAssociated(module)) return;
+    this.selectAllPermissions(module, () => this.ensureModuleAssociationMarker(module));
+  }
+
+  selectAllPermissions(module: Module, onEmpty?: () => void) {
     if (!this.profil || !module || !module.id) return;
-    const toAdd = this.modulePermissionsCache[module.id];
-    if (!toAdd || toAdd.length === 0) {
-      this.profilService.getPermissionsForModule(module.id).subscribe(permissions => {
-        this.modulePermissionsCache[module.id] = permissions;
-        this.cd.detectChanges();
-        this.selectAllPermissions(module);
+    const cached = this.modulePermissionsCache[module.id];
+    if (!cached) {
+      // Chargement unique : un module sans permission ne doit pas relancer la requête en boucle.
+      this.profilService.getPermissionsForModule(module.id).subscribe({
+        next: permissions => {
+          this.modulePermissionsCache[module.id] = permissions || [];
+          this.cd.detectChanges();
+          this.selectAllPermissions(module, onEmpty);
+        },
+        error: err => console.error(`Erreur chargement permissions module ${module.nom}:`, err)
       });
+      return;
+    }
+    const toAdd = this.getDisplayedPermissions(module);
+    if (toAdd.length === 0) {
+      onEmpty?.();
       return;
     }
     toAdd.forEach(permission => {
