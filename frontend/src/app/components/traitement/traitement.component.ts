@@ -484,10 +484,13 @@ End Sub`;
   compileHeadersIsProcessing: boolean = false;
   compileHeadersProgress: string = '';
 
-  /** Traitement côté serveur (lots en base) : les lignes ne restent pas dans le navigateur. */
-  readonly USE_SERVER_PROCESSING = true;
-  /** Séparation des feuilles faite par le serveur (repasser à false pour l'ancien traitement local). */
-  readonly USE_SERVER_SHEET_SPLIT = true;
+  /**
+   * Au-delà de ce volume (somme des fichiers sélectionnés), le traitement passe par le serveur (lots en base) ;
+   * en dessous, il reste dans le navigateur comme avant.
+   */
+  readonly SEUIL_TRAITEMENT_SERVEUR_OCTETS = 50 * 1024 * 1024;
+  /** Au-delà de cette taille, la séparation des feuilles passe par le serveur ; en dessous, par le navigateur. */
+  readonly SEUIL_SEPARATION_SERVEUR_OCTETS = 50 * 1024 * 1024;
   private traitementFeuillesService = inject(TraitementFeuillesService);
   readonly SERVER_PAGE_SIZE = 200;
   serverLot: TraitementLotResume | null = null;
@@ -697,6 +700,12 @@ End Sub`;
     this.addDragOverStyle();
   }
 
+  /** Vrai si la sélection dépasse le seuil : le traitement se fait alors sur le serveur. */
+  traitementCoteServeur(): boolean {
+    const total = this.selectedFiles.reduce((somme, f) => somme + f.size, 0);
+    return total > this.SEUIL_TRAITEMENT_SERVEUR_OCTETS;
+  }
+
   addFiles(fileList: FileList) {
     for (let i = 0; i < fileList.length; i++) {
       const file = fileList.item(i);
@@ -706,7 +715,7 @@ End Sub`;
         // Si c'est un fichier CSV/TSV, déclencher la prévisualisation
         // En mode serveur, pas de prévisualisation côté navigateur : elle analyse tout le fichier
         // en mémoire, en parallèle de l'envoi, et fait tomber l'onglet sur les gros fichiers.
-        if (!this.USE_SERVER_PROCESSING && this.isCsvTextExtension(file.name)) {
+        if (!this.traitementCoteServeur() && this.isCsvTextExtension(file.name)) {
           this.previewCsvFile(file);
         }
       }
@@ -758,7 +767,7 @@ End Sub`;
       return;
     }
     
-    if (this.USE_SERVER_PROCESSING) {
+    if (this.traitementCoteServeur()) {
       await this.processFilesOnServer();
       return;
     }
@@ -4469,7 +4478,7 @@ End Sub`;
       this.showError('sheetSplit', this.t('TRT.msg.selectExcelFile'));
       return;
     }
-    if (this.USE_SERVER_SHEET_SPLIT) {
+    if (this.sheetSplitFile.size > this.SEUIL_SEPARATION_SERVEUR_OCTETS) {
       await this.splitExcelSheetsServeur(this.sheetSplitFile);
       return;
     }
