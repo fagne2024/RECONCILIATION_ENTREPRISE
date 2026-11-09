@@ -72,21 +72,55 @@ public class PermissionCheckService {
             return false;
         }
 
-        List<String> grantedPermissions = getGrantedPermissionNamesForModule(user.getProfil().getId(), moduleName);
+        Long profilId = user.getProfil().getId();
+        String required = normalizePermissionName(permissionName);
+        List<String> grantedPermissions = getGrantedPermissionNamesForModule(profilId, moduleName);
         if (grantedPermissions.isEmpty()) {
-            if (isReadPermission(normalizePermissionName(permissionName))
-                && hasModuleAssociation(user.getProfil().getId(), moduleName)) {
+            if (isReadPermission(required) && hasModuleAssociation(profilId, moduleName)) {
                 return true;
             }
-            return false;
+            return hasReadGrantOnSubmenuOfParent(profilId, moduleName, required, httpMethod);
         }
 
-        String required = normalizePermissionName(permissionName);
         if (grantedPermissions.contains(required)) {
             return true;
         }
 
-        return isPermissionSatisfiedByGrantedActions(required, grantedPermissions, moduleName, httpMethod);
+        if (isPermissionSatisfiedByGrantedActions(required, grantedPermissions, moduleName, httpMethod)) {
+            return true;
+        }
+        return hasReadGrantOnSubmenuOfParent(profilId, moduleName, required, httpMethod);
+    }
+
+    /**
+     * Profils à droits granulaires : seuls les sous-menus (ex. « Réconciliation · Lanceur ») sont cochés,
+     * jamais le module parent (« Réconciliation »). Une lecture sur le module parent est accordée si
+     * au moins un de ses sous-menus accorde une lecture (aligné sur hasGrantedSubmenuForParentModule côté frontend).
+     */
+    private boolean hasReadGrantOnSubmenuOfParent(Long profilId, String parentModuleName, String requiredPermission, String httpMethod) {
+        if (!isReadPermission(requiredPermission) || parentModuleName == null) {
+            return false;
+        }
+        String normalizedParent = normalizePermissionName(parentModuleName);
+        for (com.reconciliation.config.NavigationSubmenuRegistry.SubmenuAccessDefinition definition
+            : com.reconciliation.config.NavigationSubmenuRegistry.allDefinitions()) {
+            if (!normalizedParent.equals(normalizePermissionName(definition.parentModuleName()))) {
+                continue;
+            }
+            String submenuModule = definition.accessModuleName();
+            List<String> submenuGrants = getGrantedPermissionNamesForModule(profilId, submenuModule);
+            if (submenuGrants.isEmpty()) {
+                if (hasModuleAssociation(profilId, submenuModule)) {
+                    return true;
+                }
+                continue;
+            }
+            if (submenuGrants.contains(requiredPermission)
+                || isPermissionSatisfiedByGrantedActions(requiredPermission, submenuGrants, parentModuleName, httpMethod)) {
+                return true;
+            }
+        }
+        return false;
     }
 
     private List<String> getGrantedPermissionNamesForModule(Long profilId, String moduleName) {
@@ -559,8 +593,8 @@ public class PermissionCheckService {
         if (apiPath.startsWith("/api/ecart-solde")) return "TSOP";
         if (apiPath.startsWith("/api/trx-sf")) return "TRX SF";
         if (apiPath.startsWith("/api/impact-op")) return "Impact OP";
-        if (apiPath.startsWith("/api/banque")) return "BANQUE";
         if (apiPath.startsWith("/api/banque-dashboard")) return "Dashboard";
+        if (apiPath.startsWith("/api/banque")) return "BANQUE";
         if (apiPath.startsWith("/api/comptabilite")) return "Comptabilité";
         if (apiPath.startsWith("/api/auto-processing-models")) return "Modèles";
         if (apiPath.startsWith("/api/auto-processing")) return "Modèles";

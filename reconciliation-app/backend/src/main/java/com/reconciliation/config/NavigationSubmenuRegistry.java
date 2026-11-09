@@ -224,15 +224,15 @@ public final class NavigationSubmenuRegistry {
         new SubmenuAccessDefinition(
             "BANQUE · Banque",
             "BANQUE",
-            List.of("/api/banque"),
-            List.of("/api/banque"),
+            List.of("/api/banque", "/api/releve-bancaire"),
+            List.of("/api/banque", "/api/releve-bancaire"),
             "/banque"
         ),
         new SubmenuAccessDefinition(
             "BANQUE · Dashboard banque",
             "BANQUE",
-            List.of("/api/banque-dashboard"),
-            List.of("/api/banque-dashboard"),
+            List.of("/api/banque-dashboard", "/api/releve-bancaire"),
+            List.of("/api/banque-dashboard", "/api/releve-bancaire/list"),
             "/banque-dashboard"
         ),
 

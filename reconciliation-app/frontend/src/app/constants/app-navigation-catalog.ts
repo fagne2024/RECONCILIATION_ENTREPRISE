@@ -380,7 +380,7 @@ export const APP_NAVIGATION_CATALOG: AppNavigationGroup[] = [
         label: 'Banque',
         route: '/banque',
         moduleName: 'BANQUE',
-        apiPathPrefixes: ['/api/banque'],
+        apiPathPrefixes: ['/api/banque', '/api/releve-bancaire'],
         icon: 'fa-university'
       },
       {
@@ -388,7 +388,8 @@ export const APP_NAVIGATION_CATALOG: AppNavigationGroup[] = [
         label: 'Dashboard banque',
         route: '/banque-dashboard',
         moduleName: 'BANQUE',
-        apiPathPrefixes: ['/api/banque-dashboard'],
+        apiPathPrefixes: ['/api/banque-dashboard', '/api/releve-bancaire'],
+        actionPathPrefixes: ['/api/banque-dashboard', '/api/releve-bancaire/list'],
         icon: 'fa-chart-bar'
       }
     ]
