@@ -70,6 +70,8 @@ public class PermissionInterceptor implements HandlerInterceptor {
     // Parametrage d'affichage (theme, logo, libelles de navigation) : deja
     // accessible en lecture aux anonymes (SecurityConfig), donc egalement
     // autorise en lecture au SUPER_ADMIN.
+    private static final String CALCULATION_RULES_PATH = "/api/configuration/calcul";
+
     private static final String[] PUBLIC_CONFIGURATION_PATHS = {
         "/api/configuration/logo",
         "/api/configuration/theme",
@@ -169,6 +171,19 @@ public class PermissionInterceptor implements HandlerInterceptor {
                 System.err.println("Erreur lors de l'\u00e9criture de la r\u00e9ponse d'erreur: " + e.getMessage());
             }
             return false;
+        }
+
+        // Regles de calcul (Configuration > Calcul) : chargees au login par tous
+        // les utilisateurs de l'entreprise, car les moteurs de calcul des ecrans
+        // metier en dependent. Lecture ouverte a tout utilisateur d'entreprise
+        // (donnees deja cloisonnees par tenant) ; l'ecriture reste soumise au
+        // module "Modèles" via le controle de permissions ci-dessous.
+        if ("GET".equalsIgnoreCase(method)
+                && isCalculationRulesPath(path)
+                && isAuthenticatedRequest()
+                && !isSuperAdminRequest()
+                && TenantContext.isSet()) {
+            return true;
         }
 
         // Etape 5 : le module metier doit etre ACTIF pour l'entreprise de
@@ -304,6 +319,12 @@ public class PermissionInterceptor implements HandlerInterceptor {
      * Vrai si le chemin correspond a un endpoint de parametrage d'affichage
      * public (lecture non sensible : theme, logo, libelles de navigation).
      */
+    private boolean isCalculationRulesPath(String path) {
+        return path.equals(CALCULATION_RULES_PATH)
+            || path.startsWith(CALCULATION_RULES_PATH + "/")
+            || path.startsWith(CALCULATION_RULES_PATH + "?");
+    }
+
     private boolean isPublicConfigurationPath(String path) {
         for (String allowed : PUBLIC_CONFIGURATION_PATHS) {
             if (path.equals(allowed) || path.startsWith(allowed + "/") || path.startsWith(allowed + "?")) {
