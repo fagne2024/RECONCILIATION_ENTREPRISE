@@ -70,6 +70,10 @@ export interface ProcessingPopupState {
   summary: string;
   errors: string[];
   elapsed: string;
+  /** Taille totale de la sélection, en Mo (affichage). */
+  tailleMo: string;
+  /** Mode de traitement retenu : navigateur ou serveur. */
+  mode: string;
 }
 
 @Component({
@@ -488,9 +492,9 @@ End Sub`;
    * Au-delà de ce volume (somme des fichiers sélectionnés), le traitement passe par le serveur (lots en base) ;
    * en dessous, il reste dans le navigateur comme avant.
    */
-  readonly SEUIL_TRAITEMENT_SERVEUR_OCTETS = 50 * 1024 * 1024;
+  readonly SEUIL_TRAITEMENT_SERVEUR_OCTETS = 30 * 1024 * 1024;
   /** Au-delà de cette taille, la séparation des feuilles passe par le serveur ; en dessous, par le navigateur. */
-  readonly SEUIL_SEPARATION_SERVEUR_OCTETS = 50 * 1024 * 1024;
+  readonly SEUIL_SEPARATION_SERVEUR_OCTETS = 30 * 1024 * 1024;
   private traitementFeuillesService = inject(TraitementFeuillesService);
   readonly SERVER_PAGE_SIZE = 200;
   serverLot: TraitementLotResume | null = null;
@@ -564,7 +568,7 @@ End Sub`;
   /** État du pop-up de suivi du traitement (affiché pendant et après processFiles). */
   processingPopup: ProcessingPopupState = {
     visible: false, status: 'running', progress: 0, step: '', currentFile: 0,
-    totalFiles: 0, message: '', summary: '', errors: [], elapsed: '0.0 s'
+    totalFiles: 0, message: '', summary: '', errors: [], elapsed: '0.0 s', tailleMo: '0,00 Mo', mode: ''
   };
   private processingStartedAt = 0;
 
@@ -577,9 +581,14 @@ End Sub`;
 
   private openProcessingPopup(totalFiles: number): void {
     this.processingStartedAt = Date.now();
+    const octets = this.selectedFiles.reduce((somme, f) => somme + f.size, 0);
     this.processingPopup = {
       visible: true, status: 'running', progress: 0, step: 'Préparation du traitement',
-      currentFile: 0, totalFiles, message: '', summary: '', errors: [], elapsed: '0.0 s'
+      currentFile: 0, totalFiles, message: '', summary: '', errors: [], elapsed: '0.0 s',
+      tailleMo: `${(octets / (1024 * 1024)).toLocaleString('fr-FR', { minimumFractionDigits: 2, maximumFractionDigits: 2 })} Mo`,
+      mode: this.traitementCoteServeur()
+        ? `Serveur (fichiers > ${this.SEUIL_TRAITEMENT_SERVEUR_OCTETS / (1024 * 1024)} Mo, lots en base)`
+        : 'Navigateur (traitement local)'
     };
     this.afficherPopupOverlay();
     this.cd.detectChanges();
@@ -707,17 +716,29 @@ End Sub`;
   }
 
   addFiles(fileList: FileList) {
+    const nouveaux: File[] = [];
     for (let i = 0; i < fileList.length; i++) {
       const file = fileList.item(i);
       if (file && !this.selectedFiles.some(f => f.name === file.name && f.size === file.size)) {
         this.selectedFiles.push(file);
-        
-        // Si c'est un fichier CSV/TSV, déclencher la prévisualisation
-        // En mode serveur, pas de prévisualisation côté navigateur : elle analyse tout le fichier
-        // en mémoire, en parallèle de l'envoi, et fait tomber l'onglet sur les gros fichiers.
-        if (!this.traitementCoteServeur() && this.isCsvTextExtension(file.name)) {
-          this.previewCsvFile(file);
-        }
+        nouveaux.push(file);
+      }
+    }
+    // Le mode se décide sur le total final de la sélection, pas fichier par fichier : sinon les premiers
+    // CSV seraient lus entièrement dans le navigateur (aperçu) avant que le total ne dépasse le seuil.
+    if (this.traitementCoteServeur()) {
+      // Aperçu éventuellement ouvert pour un fichier de la sélection : on le ferme sans vider la sélection
+      // (cancelCsvPreview() vide aussi les fichiers sélectionnés).
+      if (this.showCsvPreview) {
+        this.showCsvPreview = false;
+        this.viderDonneesEnMemoire();
+      }
+      return;
+    }
+    // Aperçu CSV/TSV uniquement en mode navigateur.
+    for (const file of nouveaux) {
+      if (this.isCsvTextExtension(file.name)) {
+        this.previewCsvFile(file);
       }
     }
   }
@@ -767,6 +788,9 @@ End Sub`;
       return;
     }
     
+    // Données du traitement précédent libérées avant tout nouveau traitement
+    this.viderDonneesEnMemoire();
+
     if (this.traitementCoteServeur()) {
       await this.processFilesOnServer();
       return;
@@ -891,7 +915,10 @@ End Sub`;
           }
         });
         const batchHeaders = chooseBatchHeaderSet([...keySet]);
-        this.allRows = alignRowsToHeaders(this.allRows.toArray() as Record<string, string>[], batchHeaders) as any[];
+        // Reste une RowCollection : les étapes suivantes utilisent clone() et setAt().
+        this.allRows = RowCollection.from(
+          alignRowsToHeaders(this.allRows.toArray() as Record<string, string>[], batchHeaders) as any[]
+        );
       }
 
       // Fusion optimisée des colonnes
@@ -971,6 +998,7 @@ End Sub`;
     this.serverLot = null;
     this.serverRows = [];
     this.serverColumns = [];
+    this.viderDonneesEnMemoire();
     this.serverPage = 1;
     this.openProcessingPopup(files.length);
 
@@ -1132,6 +1160,26 @@ End Sub`;
   }
 
   /** Lots serveur en cours : supprimés en arrière-plan, puis état serveur de l'écran vidé. */
+  /**
+   * Libère les données du traitement précédent (lignes en mémoire, aperçu et texte CSV, pages serveur)
+   * avant de lancer un nouveau traitement, pour que le navigateur ne garde pas deux jeux de données.
+   */
+  private viderDonneesEnMemoire(): void {
+    this.allRows = [];
+    this.allColumns = [];
+    this.originalRows = [];
+    this.combinedRows = [];
+    this.filteredRows = [];
+    this.displayedRows = [];
+    this.csvPreviewData = [];
+    this.csvPreviewColumns = [];
+    this.csvRawPreviewLines = [];
+    this.csvContentToProcess = '';
+    this.csvFileToProcess = null;
+    this.serverRows = [];
+    this.serverColumns = [];
+  }
+
   private reinitialiserEtatServeur(): void {
     const ids = new Set<number>();
     if (this.serverOriginLotId) ids.add(this.serverOriginLotId);
@@ -1640,34 +1688,27 @@ End Sub`;
 
   private async mergeColumnsOptimized(): Promise<string[]> {
     const allColsSet = new Set<string>();
-    
-    // Traitement optimisé par chunks
-    for (let i = 0; i < this.allRows.length; i += this.chunkSize) {
-      const chunk = this.allRows.slice(i, i + this.chunkSize);
-      chunk.forEach(row => {
-        Object.keys(row).forEach(col => allColsSet.add(col));
-      });
-    }
-    
+    // Parcours direct de la collection : pas de tableau intermédiaire par tranche.
+    this.allRows.forEach(row => {
+      Object.keys(row).forEach(col => allColsSet.add(col));
+    });
     return Array.from(allColsSet);
   }
 
   private async normalizeDataOptimized(): Promise<void> {
-    // Traitement optimisé par chunks
-    for (let i = 0; i < this.allRows.length; i += this.chunkSize) {
-      const chunk = this.allRows.slice(i, i + this.chunkSize);
-      const normalizedChunk = chunk.map(row => {
-        const newRow: any = {};
-        for (const col of this.allColumns) {
-          newRow[col] = row[col] !== undefined ? row[col] : '';
-        }
-        return newRow;
-      });
-      
-      // Remplacer les lignes dans le tableau original
-      for (let j = 0; j < normalizedChunk.length; j++) {
-        this.allRows.setAt(i + j, normalizedChunk[j]);
+    const colonnes = this.allColumns;
+    // Seules les lignes incomplètes sont réécrites : la plupart des lignes ont déjà toutes les colonnes,
+    // les recopier toutes doublait le travail sur les gros volumes.
+    for (let i = 0; i < this.allRows.length; i++) {
+      const row = this.allRows.at(i);
+      if (colonnes.every(col => row[col] !== undefined)) {
+        continue;
       }
+      const newRow: any = {};
+      for (const col of colonnes) {
+        newRow[col] = row[col] !== undefined ? row[col] : '';
+      }
+      this.allRows.setAt(i, newRow);
     }
   }
 
@@ -6094,6 +6135,7 @@ End Sub`;
   newTraitement() {
     // Vider les données serveur (lots, lignes, opérations, popup) puis toutes les données locales
     this.reinitialiserEtatServeur();
+    this.viderDonneesEnMemoire();
     this.selectedFiles = [];
     this.combinedRows = [];
     this.columns = [];

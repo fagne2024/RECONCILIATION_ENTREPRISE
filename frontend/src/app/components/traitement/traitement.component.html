@@ -84,6 +84,9 @@
         <span>{{ processingPopup.progress | number:'1.0-0' }} %</span>
         <span>Durée : {{ processingPopup.elapsed }}</span>
       </div>
+      <div class="proc-line">
+        Taille : {{ processingPopup.tailleMo }} · Traitement : {{ processingPopup.mode }}
+      </div>
       <div *ngIf="processingPopup.totalFiles > 0" class="proc-line">
         Fichier {{ processingPopup.currentFile }} / {{ processingPopup.totalFiles }}
       </div>
