@@ -486,84 +486,15 @@ public class PermissionGeneratorService {
      * /api/statistics/dashboard-metrics → Dashboard et non Statistiques.
      */
     private String findModuleForPath(String path, Map<String, String> apiToModuleMap) {
-        String bestMatch = null;
-        int bestLength = -1;
-        for (Map.Entry<String, String> entry : apiToModuleMap.entrySet()) {
-            if (path.startsWith(entry.getKey()) && entry.getKey().length() > bestLength) {
-                bestMatch = entry.getValue();
-                bestLength = entry.getKey().length();
-            }
-        }
-        return bestMatch;
+        // Meme correspondance que le controle d'acces (PermissionCheckService).
+        return com.reconciliation.config.ApiModuleMapping.moduleForPath(path);
     }
 
     /**
-     * Crée la cartographie entre les chemins d'API et les modules
+     * Ancienne cartographie locale, remplacee par {@link com.reconciliation.config.ApiModuleMapping}.
      */
     private Map<String, String> createApiToModuleMapping() {
-        Map<String, String> mapping = new HashMap<>();
-        
-        // Chemins Dashboard (avant /api/statistics pour priorité) :
-        mapping.put("/api/statistics/dashboard-metrics", "Dashboard");
-        mapping.put("/api/statistics/filter-options", "Dashboard");
-        mapping.put("/api/statistics/detailed-metrics", "Dashboard");
-        mapping.put("/api/statistics/transaction-created-stats", "Dashboard");
-        mapping.put("/api/result8rec/filters", "Dashboard");
-        mapping.put("/api/result8rec", "Résultats");
-        mapping.put("/api/reconciliation-report/manual-trx/range", "Dashboard");
-        mapping.put("/api/service-references/dashboard", "Dashboard");
-        mapping.put("/api/dashboard", "Dashboard");
-        mapping.put("/api/reconciliation-dashboard", "Dashboard");
-        mapping.put("/api/banque-dashboard", "Dashboard");
-        mapping.put("/api/report-dashboard", "Résultats");
-        mapping.put("/api/ecart-bo-summary", "Résultats");
-        
-        // Autres routes
-        mapping.put("/api/operations", "Opérations");
-        mapping.put("/api/operations-bancaires", "Opérations");
-        mapping.put("/api/comptes", "Comptes");
-        mapping.put("/api/service-balance", "Comptes");
-        mapping.put("/api/redevance", "Comptes");
-        mapping.put("/api/flux", "Comptes");
-        mapping.put("/api/supply", "Comptes");
-        mapping.put("/api/predictions", "Comptes");
-        mapping.put("/api/frais", "Frais");
-        mapping.put("/api/commission", "Frais");
-        mapping.put("/api/reconciliation", "Réconciliation");
-        mapping.put("/api/reconciliation-launcher", "Réconciliation");
-        mapping.put("/api/stats", "Statistiques");
-        mapping.put("/api/statistics", "Statistiques");
-        mapping.put("/api/ranking", "Classements");
-        mapping.put("/api/rankings", "Classements");
-        mapping.put("/api/ecart-solde", "TSOP");
-        mapping.put("/api/trx-sf", "TRX SF");
-        mapping.put("/api/impact-op", "Impact OP");
-        mapping.put("/api/banque", "BANQUE");
-        mapping.put("/api/comptabilite", "Comptabilité");
-        mapping.put("/api/auto-processing-models", "Modèles");
-        mapping.put("/api/auto-processing", "Modèles");
-        mapping.put("/api/model-management", "Modèles");
-        mapping.put("/api/file-watcher", "Modèles");
-        mapping.put("/api/profils", "Profil");
-        mapping.put("/api/users", "Utilisateur");
-        mapping.put("/api/log-utilisateur", "Log utilisateur");
-        mapping.put("/api/traitement", "Traitement");
-        mapping.put("/api/results", "Résultats");
-        mapping.put("/api/reconciliation-report", "Résultats");
-        mapping.put("/api/bo-partenaire-controle-interne", "Résultats");
-        mapping.put("/api/aide", "AIDE");
-        mapping.put("/api/guide-nodes", "AIDE");
-        mapping.put("/api/guide-documents", "AIDE");
-        mapping.put("/api/sop-nodes", "AIDE");
-        mapping.put("/api/sop-documents", "AIDE");
-        mapping.put("/api/agency-summary", "Statistiques");
-        mapping.put("/api/compte-solde-bo", "Réconciliation");
-        mapping.put("/api/compte-solde-cloture", "Réconciliation");
-        mapping.put("/api/certification-solde-resultats", "Réconciliation");
-        mapping.put("/api/suivi-ecart", "TSOP");
-        mapping.put("/api/frais-transaction", "Frais");
-        
-        return mapping;
+        return Map.of();
     }
 
     /**
@@ -797,6 +728,40 @@ public class PermissionGeneratorService {
         result.put("permissionsCreated", permissionsCreated);
         result.put("message", actions.size() + " action(s) synchronisée(s) pour le module « " + moduleName + " ».");
         return result;
+    }
+
+    /** Actions proposees pour un module sans API decouverte (ex. ecran purement client). */
+    private static final List<String> BASE_ACTIONS = List.of("consulter", "creer", "modifier", "supprimer");
+
+    /**
+     * Complete le catalogue pour que tout module et sous-menu soit attribuable a un
+     * profil : synchronise chaque sous-menu de navigation (« Module · Sous-menu »)
+     * puis donne les actions de base aux modules qui n'ont encore aucune permission.
+     * Idempotent.
+     *
+     * @return nombre de modules completes par les actions de base
+     */
+    @Transactional
+    public int completeCatalogForAllModules() {
+        for (com.reconciliation.config.NavigationSubmenuRegistry.SubmenuAccessDefinition def
+                : com.reconciliation.config.NavigationSubmenuRegistry.allDefinitions()) {
+            syncSubmenuModuleActions(def.accessModuleName(), def.parentModuleName(),
+                com.reconciliation.config.NavigationSubmenuRegistry.resolveActionPathPrefixes(def));
+        }
+        int completed = 0;
+        for (ModuleEntity module : moduleRepository.findAll()) {
+            if (module.getNom() == null || module.getNom().isBlank()) {
+                continue;
+            }
+            if (!modulePermissionRepository.findByModuleId(module.getId()).isEmpty()) {
+                continue;
+            }
+            for (String action : BASE_ACTIONS) {
+                ensureModulePermissionAssociation(module.getNom(), action);
+            }
+            completed++;
+        }
+        return completed;
     }
 
     /**

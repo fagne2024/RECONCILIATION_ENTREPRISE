@@ -37,6 +37,8 @@ public class PermissionCatalogInitializer implements ApplicationRunner {
         try {
             Map<String, Object> result = permissionGeneratorService.generatePermissionsForAllModules();
             log.info("Catalogue des permissions synchronise : {} association(s) creee(s)", result.get("totalCreated"));
+            int completed = permissionGeneratorService.completeCatalogForAllModules();
+            log.info("Catalogue des permissions : sous-menus synchronises, {} module(s) complete(s) avec les actions de base", completed);
         } catch (Exception e) {
             // Ne pas bloquer le demarrage : la generation reste disponible depuis /permissions.
             log.error("Echec de la synchronisation du catalogue des permissions au demarrage", e);

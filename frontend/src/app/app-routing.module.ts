@@ -186,7 +186,7 @@ const routes: Routes = [
   { path: 'profils/:id', component: ProfilDetailComponent, canActivate: [AuthGuard, AdminGuard] },
   { path: 'modules', component: ModulesComponent, canActivate: [AuthGuard, AdminGuard] },
   { path: 'configuration', redirectTo: 'configuration/logo', pathMatch: 'full' },
-  { path: 'configuration/niveaux-validation-reco', loadComponent: () => import('./components/niveaux-validation-reco/niveaux-validation-reco.component').then(m => m.NiveauxValidationRecoComponent), canActivate: [AuthGuard, AdminGuard] },
+  { path: 'configuration/niveaux-validation-reco', loadComponent: () => import('./components/niveaux-validation-reco/niveaux-validation-reco.component').then(m => m.NiveauxValidationRecoComponent), canActivate: [AuthGuard, ModuleAccessGuard] },
   { path: 'configuration/renommer', loadComponent: () => import('./components/configuration-renommer/configuration-renommer.component').then(m => m.ConfigurationRenommerComponent), canActivate: [AuthGuard, AdminGuard] },
   { path: 'configuration/logo', loadComponent: () => import('./components/configuration-logo/configuration-logo.component').then(m => m.ConfigurationLogoComponent), canActivate: [AuthGuard, AdminGuard] },
   { path: 'configuration/calcul', loadComponent: () => import('./components/configuration-calcul/configuration-calcul.component').then(m => m.ConfigurationCalculComponent), canActivate: [AuthGuard, AdminGuard] },

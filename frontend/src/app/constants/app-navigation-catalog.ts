@@ -466,10 +466,11 @@ export const APP_NAVIGATION_CATALOG: AppNavigationGroup[] = [
     label: 'NAV.configuration',
     icon: 'fa-sliders-h',
     moduleName: 'Configuration',
-    adminOnly: true,
+    // Pas adminOnly au niveau du groupe : « Niveaux de validation » est attribuable
+    // à un profil ; les autres sous-menus restent réservés aux administrateurs.
     children: [
       { key: 'param-modeles', label: 'NAV.models', route: '/auto-processing-models', moduleName: 'Modèles', apiPathPrefixes: ['/api/auto-processing-models'], icon: 'fa-cogs', adminOnly: true },
-      { key: 'param-niveaux-validation-reco', label: 'NAV.niveauValidationReco', route: '/configuration/niveaux-validation-reco', moduleName: 'NiveauValidationReco', icon: 'fa-list-ol', adminOnly: true },
+      { key: 'param-niveaux-validation-reco', label: 'NAV.niveauValidationReco', route: '/configuration/niveaux-validation-reco', moduleName: 'NiveauValidationReco', icon: 'fa-list-ol' },
       { key: 'param-renommer', label: 'Renommer', labelKey: 'NAV.rename', route: '/configuration/renommer', moduleName: 'Configuration', apiPathPrefixes: ['/api/configuration/rename'], icon: 'fa-edit', adminOnly: true },
       { key: 'param-calcul', label: 'Calcul', labelKey: 'NAV.calcul', route: '/configuration/calcul', moduleName: 'Configuration', apiPathPrefixes: ['/api/configuration/calcul'], icon: 'fa-calculator', adminOnly: true },
       { key: 'param-top-users', label: 'Top utilisateurs', labelKey: 'NAV.topUsers', route: '/configuration/top-users', moduleName: 'Configuration', apiPathPrefixes: ['/api/configuration/top-users'], icon: 'fa-star', adminOnly: true },
