@@ -39,14 +39,20 @@ export class ModuleAccessGuard implements CanActivate {
       return true;
     }
 
+    // Module parent accessible directement, ou via au moins un sous-menu coché
+    // (profils configurés par sous-menu : « Réconciliation · Mode Manuel », etc.).
+    const moduleAccessible = this.appState.isModuleAllowed(requiredModule)
+      || this.appState.hasAnyGrantedSubmenuForModule(requiredModule);
+
     if (
-      this.appState.isModuleAllowed(requiredModule)
-      && this.appState.hasAllModulePermissions(requiredModule, requiredPermissions)
+      (this.appState.isModuleAllowed(requiredModule)
+        && this.appState.hasAllModulePermissions(requiredModule, requiredPermissions))
+      || this.appState.canAccessModuleViaSubmenu(requiredModule, requiredPermissions)
     ) {
       return true;
     }
 
-    if (!this.appState.isModuleAllowed(requiredModule)) {
+    if (!moduleAccessible) {
       this.popupService.showWarning(
         `Vous n'avez pas accès au module « ${requiredModule} ».`,
         'Accès refusé'

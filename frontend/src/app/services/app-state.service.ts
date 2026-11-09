@@ -921,6 +921,43 @@ private reconciliationProgressSubject = new BehaviorSubject<boolean>(false);
         );
     }
 
+    /**
+     * Vrai si le profil a au moins un sous-menu coché du module parent
+     * (ex. « Réconciliation · Mode Manuel » pour « Réconciliation »).
+     * Sert aux pages hors menu (ex. /column-selection, /reconciliation) protégées
+     * par le module parent seul.
+     */
+    hasAnyGrantedSubmenuForModule(parentModule: string): boolean {
+        const normalizedParent = this.normalizeModuleName(parentModule);
+        if (!normalizedParent) {
+            return false;
+        }
+        return getAllNavigationAccessContexts().some(context =>
+            context.usesGranularAccess
+            && this.normalizeModuleName(context.apiModuleName) === normalizedParent
+            && this.hasSubmenuNavigationGrant(context.accessModuleName)
+        );
+    }
+
+    /**
+     * Accès à une page protégée par le module parent pour un profil configuré par
+     * sous-menu : au moins un sous-menu coché ; la lecture (« consulter ») est alors
+     * acquise, toute autre permission doit être donnée sur un sous-menu coché.
+     */
+    canAccessModuleViaSubmenu(parentModule: string, permissions: string[]): boolean {
+        if (!this.hasAnyGrantedSubmenuForModule(parentModule)) {
+            return false;
+        }
+        return (permissions || []).every(permission => {
+            const normalized = this.normalizePermissionName(permission);
+            if (!normalized) {
+                return false;
+            }
+            return this.isReadPermission(normalized)
+                || this.hasGrantedSubmenuForParentModule(parentModule, permission);
+        });
+    }
+
     private hasGrantedSubmenuForParentModule(parentModule: string, permission: string): boolean {
         const normalizedParent = this.normalizeModuleName(parentModule);
         if (!normalizedParent) {
