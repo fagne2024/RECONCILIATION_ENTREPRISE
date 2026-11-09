@@ -223,6 +223,10 @@
             <input #boFileInput type="file" (change)="onBoFileSelected($event)" accept=".csv, .xls, .xlsx, .xlsm, .xlsb" style="display: none">
             <div class="file-info" [class.loaded]="boFile">
                 {{ (boFile ? boFile.name : ('FU.NoFileSelected' | translate)) }}
+                <button type="button" *ngIf="boFile && boData.length" class="client-volume-btn ds-btn ds-btn--ghost ds-btn--sm"
+                        [title]="'FU.ClientVolume.Button' | translate" (click)="openClientVolumeCheck('bo', 'columns', $event)">
+                    <i class="fas fa-user-check"></i>
+                </button>
                 <button type="button" *ngIf="boFile" class="remove-file-btn ds-btn ds-btn--ghost ds-btn--sm" (click)="removeBoFile($event)">
                     <i class="fas fa-times"></i>
                 </button>
@@ -236,10 +240,172 @@
             <input #partnerFileInput type="file" (change)="onPartnerFileSelected($event)" accept=".csv, .xls, .xlsx, .xlsm, .xlsb" style="display: none">
             <div class="file-info" [class.loaded]="partnerFile">
                 {{ (partnerFile ? partnerFile.name : ('FU.NoFileSelected' | translate)) }}
+                <button type="button" *ngIf="partnerFile && partnerData.length" class="client-volume-btn ds-btn ds-btn--ghost ds-btn--sm"
+                        [title]="'FU.ClientVolume.Button' | translate" (click)="openClientVolumeCheck('partner', 'columns', $event)">
+                    <i class="fas fa-user-check"></i>
+                </button>
                 <button type="button" *ngIf="partnerFile" class="remove-file-btn ds-btn ds-btn--ghost ds-btn--sm" (click)="removePartnerFile($event)">
                     <i class="fas fa-times"></i>
                 </button>
             </div>
+        </div>
+    </div>
+
+    <!-- Contrôle du volume par client (téléphone / montant) -->
+    <div class="manual-service-selection-overlay client-volume-overlay" *ngIf="clientVolumeStep" (click)="closeClientVolumeCheck()">
+        <div class="manual-service-selection-modal client-volume-modal" role="dialog" aria-modal="true" (click)="$event.stopPropagation()">
+            <div class="client-volume-header">
+                <h3>
+                    <i class="fas fa-user-check"></i>
+                    {{ 'FU.ClientVolume.Title' | translate }} —
+                    {{ (clientVolumeTarget === 'bo' ? 'FU.BObackoffice' : 'TBL.partner') | translate }}
+                </h3>
+                <button type="button" class="close-modal-btn" (click)="closeClientVolumeCheck()" [attr.aria-label]="'FU.ClientVolume.Close' | translate">
+                    <i class="fas fa-times"></i>
+                </button>
+            </div>
+
+            <p class="client-volume-rule">
+                {{ 'FU.ClientVolume.Rule' | translate: { occ: clientVolumeRule.minOccurrences, volume: (clientVolumeRule.minVolume | number:'1.0-0':'fr') } }}
+            </p>
+
+            <!-- Étape 1 : proposition -->
+            <ng-container *ngIf="clientVolumeStep === 'ask'">
+                <p class="client-volume-question">{{ 'FU.ClientVolume.Question' | translate: { rows: (clientVolumeTarget === 'bo' ? boData.length : partnerData.length) } }}</p>
+                <div class="client-volume-actions">
+                    <button type="button" class="ds-btn ds-btn--secondary" (click)="closeClientVolumeCheck()">{{ 'FU.No' | translate }}</button>
+                    <button type="button" class="ds-btn ds-btn--primary" (click)="acceptClientVolumeCheck()">{{ 'FU.Yes' | translate }}</button>
+                </div>
+            </ng-container>
+
+            <!-- Étape 2 : choix des colonnes -->
+            <ng-container *ngIf="clientVolumeStep === 'columns'">
+                <div class="client-volume-fields">
+                    <label class="client-volume-field">
+                        <span>{{ 'FU.ClientVolume.PhoneColumn' | translate }}</span>
+                        <select class="ds-select" [(ngModel)]="clientVolumePhoneColumn">
+                            <option value="" disabled>{{ 'FU.ClientVolume.ChooseColumn' | translate }}</option>
+                            <option *ngFor="let col of clientVolumeColumns" [value]="col">{{ col }}</option>
+                        </select>
+                    </label>
+                    <label class="client-volume-field">
+                        <span>{{ 'FU.ClientVolume.AmountColumn' | translate }}</span>
+                        <select class="ds-select" [(ngModel)]="clientVolumeAmountColumn">
+                            <option value="" disabled>{{ 'FU.ClientVolume.ChooseColumn' | translate }}</option>
+                            <option *ngFor="let col of clientVolumeColumns" [value]="col">{{ col }}</option>
+                        </select>
+                    </label>
+                    <label class="client-volume-field">
+                        <span>{{ 'FU.ClientVolume.ServiceColumn' | translate }}</span>
+                        <select class="ds-select" [(ngModel)]="clientVolumeServiceColumn">
+                            <option value="">{{ 'FU.ClientVolume.NoServiceColumn' | translate }}</option>
+                            <option *ngFor="let col of clientVolumeColumns" [value]="col">{{ col }}</option>
+                        </select>
+                    </label>
+                </div>
+                <div class="client-volume-actions">
+                    <button type="button" class="ds-btn ds-btn--secondary" (click)="closeClientVolumeCheck()">{{ 'FU.ClientVolume.Cancel' | translate }}</button>
+                    <button type="button" class="ds-btn ds-btn--primary"
+                            [disabled]="!clientVolumePhoneColumn || !clientVolumeAmountColumn || clientVolumePhoneColumn === clientVolumeAmountColumn"
+                            (click)="runClientVolumeCheck()">
+                        {{ 'FU.ClientVolume.Run' | translate }}
+                    </button>
+                </div>
+            </ng-container>
+
+            <!-- Étape 3 : résultats -->
+            <ng-container *ngIf="clientVolumeStep === 'results' && clientVolumeResult">
+                <p class="client-volume-summary">
+                    {{ 'FU.ClientVolume.Summary' | translate: {
+                        count: clientVolumeResult.entries.length,
+                        rows: clientVolumeResult.analyzedRows,
+                        phones: clientVolumeResult.distinctPhones
+                    } }}
+                    <span *ngIf="clientVolumeResult.skippedRows > 0" class="client-volume-skipped">
+                        {{ 'FU.ClientVolume.Skipped' | translate: { skipped: clientVolumeResult.skippedRows } }}
+                    </span>
+                </p>
+
+                <div class="client-volume-empty" *ngIf="clientVolumeResult.entries.length === 0">
+                    <i class="fas fa-check-circle"></i> {{ 'FU.ClientVolume.NoMatch' | translate }}
+                </div>
+
+                <div class="client-volume-toolbar" *ngIf="clientVolumeResult.entries.length > 0">
+                    <label class="client-volume-field" *ngIf="clientVolumeAvailableServices.length > 0">
+                        <span>{{ 'FU.ClientVolume.FilterService' | translate }}</span>
+                        <select class="ds-select" [(ngModel)]="clientVolumeServiceFilter" (ngModelChange)="refreshClientVolumeView()">
+                            <option value="">{{ 'FU.ClientVolume.AllServices' | translate }}</option>
+                            <option *ngFor="let s of clientVolumeAvailableServices" [value]="s">{{ s }}</option>
+                        </select>
+                    </label>
+                    <label class="client-volume-field">
+                        <span>{{ 'FU.ClientVolume.SortBy' | translate }}</span>
+                        <select class="ds-select" [(ngModel)]="clientVolumeSortKey" (ngModelChange)="refreshClientVolumeView()">
+                            <option value="volume">{{ 'FU.ClientVolume.Volume' | translate }}</option>
+                            <option value="occurrences">{{ 'FU.ClientVolume.Occurrences' | translate }}</option>
+                            <option value="phone">{{ clientVolumePhoneColumn }}</option>
+                            <option value="services" *ngIf="clientVolumeServiceColumn">{{ 'FU.ClientVolume.Services' | translate }}</option>
+                        </select>
+                    </label>
+                    <label class="client-volume-field">
+                        <span>{{ 'FU.ClientVolume.Order' | translate }}</span>
+                        <select class="ds-select" [(ngModel)]="clientVolumeSortDir" (ngModelChange)="refreshClientVolumeView()">
+                            <option value="asc">{{ 'FU.ClientVolume.Asc' | translate }}</option>
+                            <option value="desc">{{ 'FU.ClientVolume.Desc' | translate }}</option>
+                        </select>
+                    </label>
+                    <span class="client-volume-count" *ngIf="clientVolumeServiceFilter">
+                        {{ 'FU.ClientVolume.Filtered' | translate: { shown: clientVolumeView.length, total: clientVolumeResult.entries.length, rows: clientVolumeServiceRows } }}
+                    </span>
+                </div>
+
+                <div class="client-volume-table-wrapper" *ngIf="clientVolumeResult.entries.length > 0">
+                    <table class="client-volume-table">
+                        <thead>
+                            <tr>
+                                <th>#</th>
+                                <th class="sortable" [attr.aria-sort]="clientVolumeAriaSort('phone')">
+                                    <button type="button" class="sort-btn" (click)="sortClientVolumeBy('phone')">
+                                        {{ clientVolumePhoneColumn }} <i class="fas" [ngClass]="clientVolumeSortIcon('phone')"></i>
+                                    </button>
+                                </th>
+                                <th class="sortable num" [attr.aria-sort]="clientVolumeAriaSort('occurrences')">
+                                    <button type="button" class="sort-btn" (click)="sortClientVolumeBy('occurrences')">
+                                        {{ 'FU.ClientVolume.Occurrences' | translate }} <i class="fas" [ngClass]="clientVolumeSortIcon('occurrences')"></i>
+                                    </button>
+                                </th>
+                                <th class="sortable num" [attr.aria-sort]="clientVolumeAriaSort('volume')">
+                                    <button type="button" class="sort-btn" (click)="sortClientVolumeBy('volume')">
+                                        {{ 'FU.ClientVolume.Volume' | translate }} <i class="fas" [ngClass]="clientVolumeSortIcon('volume')"></i>
+                                    </button>
+                                </th>
+                                <th *ngIf="clientVolumeServiceColumn" class="sortable" [attr.aria-sort]="clientVolumeAriaSort('services')">
+                                    <button type="button" class="sort-btn" (click)="sortClientVolumeBy('services')">
+                                        {{ 'FU.ClientVolume.Services' | translate }} <i class="fas" [ngClass]="clientVolumeSortIcon('services')"></i>
+                                    </button>
+                                </th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            <tr *ngFor="let e of clientVolumeView; let i = index">
+                                <td>{{ i + 1 }}</td>
+                                <td class="mono">{{ e.phone }}</td>
+                                <td class="num">{{ e.occurrences }}</td>
+                                <td class="num">{{ e.volume | number:'1.0-2':'fr' }}</td>
+                                <td *ngIf="clientVolumeServiceColumn" class="services">{{ e.services.length ? e.services.join(', ') : '—' }}</td>
+                            </tr>
+                        </tbody>
+                    </table>
+                </div>
+
+                <div class="client-volume-actions">
+                    <button type="button" class="ds-btn ds-btn--secondary" (click)="clientVolumeStep = 'columns'">{{ 'FU.ClientVolume.ChangeColumns' | translate }}</button>
+                    <button type="button" class="ds-btn ds-btn--secondary" *ngIf="clientVolumeView.length > 0" (click)="exportClientVolumeResult()">
+                        <i class="fas fa-download"></i> {{ 'FU.ClientVolume.Export' | translate }}
+                    </button>
+                    <button type="button" class="ds-btn ds-btn--primary" (click)="closeClientVolumeCheck()">{{ 'FU.ClientVolume.Close' | translate }}</button>
+                </div>
+            </ng-container>
         </div>
     </div>
 

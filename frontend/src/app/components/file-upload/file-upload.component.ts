@@ -45,6 +45,19 @@ import { ColumnRulesProcessorService } from '../../services/column-rules-process
 import { readCsvFileUltraFast, readCsvContentUltraFast } from '../../utils/fast-csv-reader.util';
 import { findHeaderLineIndexInCsvLines, findHeaderRowIndexInGrid, detectGenericHeaderRowIndex, isMarkerCellValue } from '../../utils/model-header-detection.util';
 import { discoverReconciliationKeyColumns } from '../../utils/reconciliation-key.util';
+import {
+    ClientVolumeCheckResult,
+    ClientVolumeEntry,
+    ClientVolumeSortKey,
+    SortDirection,
+    collectEntryServices,
+    filterAndSortClientVolumes,
+    DEFAULT_CLIENT_VOLUME_CHECK_OPTIONS,
+    computeClientVolumes,
+    guessAmountColumn,
+    guessPhoneColumn,
+    guessServiceColumn
+} from '../../utils/client-volume-check.util';
 import { formatGridCellAsString, isTransactionIdPreserveColumn, isMsisdnPreserveColumn } from '../../utils/text-cell.util';
 
 @Component({
@@ -103,8 +116,50 @@ export class FileUploadComponent implements OnInit, OnDestroy {
 
     boFile: File | null = null;
     partnerFile: File | null = null;
-    boData: Record<string, string>[] = [];
-    partnerData: Record<string, string>[] = [];
+    private _boData: Record<string, string>[] = [];
+    private _partnerData: Record<string, string>[] = [];
+
+    get boData(): Record<string, string>[] {
+        return this._boData;
+    }
+    set boData(value: Record<string, string>[]) {
+        this._boData = value;
+        this.scheduleClientVolumePrompt('bo');
+    }
+
+    get partnerData(): Record<string, string>[] {
+        return this._partnerData;
+    }
+    set partnerData(value: Record<string, string>[]) {
+        this._partnerData = value;
+        this.scheduleClientVolumePrompt('partner');
+    }
+
+    // Contrôle du volume par client (popup proposé au chargement BO / partenaire, mode manuel)
+    clientVolumeStep: 'ask' | 'columns' | 'results' | null = null;
+    clientVolumeTarget: 'bo' | 'partner' = 'bo';
+    clientVolumeColumns: string[] = [];
+    clientVolumePhoneColumn = '';
+    clientVolumeAmountColumn = '';
+    /** Colonne service (facultative) : services utilisés regroupés sur la ligne du numéro. */
+    clientVolumeServiceColumn = '';
+    /** Navigation vers la sélection des colonnes différée jusqu'à la fermeture du popup. */
+    private clientVolumeContinuePending = false;
+    clientVolumeResult: ClientVolumeCheckResult | null = null;
+    /** Résultats affichés (après filtre service et tri). */
+    clientVolumeView: ClientVolumeEntry[] = [];
+    clientVolumeAvailableServices: string[] = [];
+    clientVolumeServiceFilter = '';
+    /** Nombre de transactions du service filtré (0 si aucun filtre). */
+    clientVolumeServiceRows = 0;
+    clientVolumeSortKey: ClientVolumeSortKey = 'volume';
+    clientVolumeSortDir: SortDirection = 'desc';
+    readonly clientVolumeRule = DEFAULT_CLIENT_VOLUME_CHECK_OPTIONS;
+    /** Fichiers pour lesquels le popup a déjà été proposé (une seule proposition par fichier chargé). */
+    private clientVolumePromptedFiles = new WeakSet<File>();
+    private clientVolumeQueue: ('bo' | 'partner')[] = [];
+    private clientVolumeTimer: ReturnType<typeof setTimeout> | null = null;
+
     estimatedTime: string = '';
 
     // Fichiers pour le mode automatique
@@ -9023,10 +9078,15 @@ export class FileUploadComponent implements OnInit, OnDestroy {
             return;
         }
         
+        // Proposer d'abord le contrôle du volume par client s'il est en attente.
+        if (this.deferForClientVolumePrompt()) {
+            return;
+        }
+
         // Sauvegarder les données dans le service d'état
         this.appStateService.setReconciliationData(this.boData, this.partnerData);
         this.appStateService.setCurrentStep(2);
-        
+
         // Naviguer vers la page de sélection des colonnes
         this.router.navigate(['/column-selection']);
     }
@@ -9283,8 +9343,261 @@ export class FileUploadComponent implements OnInit, OnDestroy {
         const totalDuration = performance.now() - clickStartTime;
     }
 
+    // ===== Contrôle du volume par client =====
+
+    /** Planifie la proposition du contrôle dès qu'un nouveau fichier (mode manuel) est chargé. */
+    private scheduleClientVolumePrompt(target: 'bo' | 'partner'): void {
+        if (this.reconciliationMode !== 'manual') {
+            return;
+        }
+        const file = target === 'bo' ? this.boFile : this.partnerFile;
+        const data = target === 'bo' ? this._boData : this._partnerData;
+        if (!file || !data || data.length === 0 || this.clientVolumePromptedFiles.has(file)) {
+            return;
+        }
+        if (!this.clientVolumeQueue.includes(target)) {
+            this.clientVolumeQueue.push(target);
+        }
+        this.armClientVolumeTimer(600);
+    }
+
+    private armClientVolumeTimer(delay: number): void {
+        if (this.clientVolumeTimer) {
+            clearTimeout(this.clientVolumeTimer);
+        }
+        this.clientVolumeTimer = setTimeout(() => {
+            this.clientVolumeTimer = null;
+            this.ngZone.run(() => this.flushClientVolumeQueue());
+        }, delay);
+    }
+
+    /** Un autre popup (agences, services, statuts…) ou un traitement est en cours : on attend. */
+    private isClientVolumePromptBlocked(): boolean {
+        return this.clientVolumeStep !== null
+            || this.isProcessingLargeFile
+            || this.showAgencySelection
+            || this.showServiceSelection
+            || this.showAutoStatusSelection
+            || this.showManualServiceSelection
+            || this.showManualStatusSelection
+            || this.showPartnerServiceSelection
+            || this.showPartnerStatusSelection
+            || this.showPartnerPaymentSelection
+            || this.showPartnerAgencySelection
+            || this.showTraitementModal;
+    }
+
+    private flushClientVolumeQueue(): void {
+        if (this.clientVolumeQueue.length === 0) {
+            return;
+        }
+        if (this.isClientVolumePromptBlocked()) {
+            this.armClientVolumeTimer(500);
+            return;
+        }
+        while (this.clientVolumeQueue.length > 0) {
+            const target = this.clientVolumeQueue.shift()!;
+            const file = target === 'bo' ? this.boFile : this.partnerFile;
+            const data = target === 'bo' ? this._boData : this._partnerData;
+            if (file && data.length > 0 && !this.clientVolumePromptedFiles.has(file)) {
+                this.clientVolumePromptedFiles.add(file);
+                this.openClientVolumeCheck(target, 'ask');
+                return;
+            }
+        }
+    }
+
+    /** Ouvre le contrôle (aussi accessible via le bouton de la carte fichier). */
+    openClientVolumeCheck(target: 'bo' | 'partner', step: 'ask' | 'columns' = 'columns', event?: Event): void {
+        event?.stopPropagation();
+        const data = target === 'bo' ? this._boData : this._partnerData;
+        if (!data || data.length === 0) {
+            return;
+        }
+        this.clientVolumeTarget = target;
+        this.clientVolumeColumns = this.collectClientVolumeColumns(data);
+        this.clientVolumePhoneColumn = guessPhoneColumn(this.clientVolumeColumns);
+        this.clientVolumeAmountColumn = guessAmountColumn(this.clientVolumeColumns);
+        this.clientVolumeServiceColumn = guessServiceColumn(this.clientVolumeColumns);
+        this.clientVolumeResult = null;
+        this.clientVolumeStep = step;
+        this.cd.detectChanges();
+    }
+
+    private collectClientVolumeColumns(data: Record<string, string>[]): string[] {
+        const cols = new Set<string>();
+        const sample = Math.min(data.length, 50);
+        for (let i = 0; i < sample; i++) {
+            Object.keys(data[i] || {}).forEach(k => cols.add(k));
+        }
+        return Array.from(cols);
+    }
+
+    acceptClientVolumeCheck(): void {
+        this.clientVolumeStep = 'columns';
+    }
+
+    runClientVolumeCheck(): void {
+        if (!this.clientVolumePhoneColumn || !this.clientVolumeAmountColumn) {
+            return;
+        }
+        const data = this.clientVolumeTarget === 'bo' ? this._boData : this._partnerData;
+        this.clientVolumeResult = computeClientVolumes(
+            data,
+            this.clientVolumePhoneColumn,
+            this.clientVolumeAmountColumn,
+            this.clientVolumeRule,
+            this.clientVolumeServiceColumn || null
+        );
+        this.clientVolumeAvailableServices = this.clientVolumeServiceColumn
+            ? collectEntryServices(this.clientVolumeResult.entries)
+            : [];
+        this.clientVolumeServiceFilter = '';
+        this.clientVolumeSortKey = 'volume';
+        this.clientVolumeSortDir = 'desc';
+        this.refreshClientVolumeView();
+        this.clientVolumeStep = 'results';
+    }
+
+    /** Recalcule la liste affichée (filtre service + tri). */
+    refreshClientVolumeView(): void {
+        if (!this.clientVolumeResult) {
+            this.clientVolumeView = [];
+            this.clientVolumeServiceRows = 0;
+            return;
+        }
+        let entries = this.clientVolumeResult.entries;
+        this.clientVolumeServiceRows = 0;
+        if (this.clientVolumeServiceFilter && this.clientVolumeServiceColumn) {
+            // Filtre service : nombre de transactions, volume et règle recalculés sur ce service seul.
+            const data = this.clientVolumeTarget === 'bo' ? this._boData : this._partnerData;
+            const perService = computeClientVolumes(
+                data,
+                this.clientVolumePhoneColumn,
+                this.clientVolumeAmountColumn,
+                this.clientVolumeRule,
+                this.clientVolumeServiceColumn,
+                this.clientVolumeServiceFilter
+            );
+            entries = perService.entries;
+            this.clientVolumeServiceRows = perService.analyzedRows;
+        }
+        this.clientVolumeView = filterAndSortClientVolumes(
+            entries,
+            '',
+            this.clientVolumeSortKey,
+            this.clientVolumeSortDir
+        );
+    }
+
+    /** Clic sur un en-tête : même colonne = inverse le sens, nouvelle colonne = décroissant (texte : croissant). */
+    sortClientVolumeBy(key: ClientVolumeSortKey): void {
+        if (this.clientVolumeSortKey === key) {
+            this.clientVolumeSortDir = this.clientVolumeSortDir === 'asc' ? 'desc' : 'asc';
+        } else {
+            this.clientVolumeSortKey = key;
+            this.clientVolumeSortDir = key === 'phone' || key === 'services' ? 'asc' : 'desc';
+        }
+        this.refreshClientVolumeView();
+    }
+
+    clientVolumeSortIcon(key: ClientVolumeSortKey): string {
+        if (this.clientVolumeSortKey !== key) {
+            return 'fa-sort';
+        }
+        return this.clientVolumeSortDir === 'asc' ? 'fa-sort-up' : 'fa-sort-down';
+    }
+
+    clientVolumeAriaSort(key: ClientVolumeSortKey): string {
+        if (this.clientVolumeSortKey !== key) {
+            return 'none';
+        }
+        return this.clientVolumeSortDir === 'asc' ? 'ascending' : 'descending';
+    }
+
+    exportClientVolumeResult(): void {
+        if (!this.clientVolumeResult || this.clientVolumeView.length === 0) {
+            return;
+        }
+        const withServices = !!this.clientVolumeServiceColumn;
+        // Export de la vue affichée (filtre service et tri appliqués).
+        const csv = Papa.unparse(this.clientVolumeView.map(e => {
+            const line: Record<string, string | number> = {
+                [this.clientVolumePhoneColumn]: e.phone,
+                'Nombre de transactions': e.occurrences,
+                [`Volume (${this.clientVolumeAmountColumn})`]: e.volume
+            };
+            if (withServices) {
+                line[`Services (${this.clientVolumeServiceColumn})`] = e.services.join(', ');
+            }
+            return line;
+        }), { delimiter: ';' });
+        const blob = new Blob(['﻿' + csv], { type: 'text/csv;charset=utf-8' });
+        const url = URL.createObjectURL(blob);
+        const a = document.createElement('a');
+        a.href = url;
+        const suffix = this.clientVolumeServiceFilter
+            ? '_' + this.clientVolumeServiceFilter.replace(/[^\w-]+/g, '_')
+            : '';
+        a.download = `volume_par_client_${this.clientVolumeTarget === 'bo' ? 'BO' : 'partenaire'}${suffix}.csv`;
+        a.click();
+        URL.revokeObjectURL(url);
+    }
+
+    closeClientVolumeCheck(): void {
+        this.clientVolumeStep = null;
+        this.clientVolumeResult = null;
+        this.clientVolumeView = [];
+        // Proposer le fichier suivant éventuellement en attente (ex. partenaire après BO).
+        if (this.clientVolumeQueue.length > 0) {
+            if (this.clientVolumeContinuePending) {
+                this.flushClientVolumeQueue();
+            } else {
+                this.armClientVolumeTimer(300);
+            }
+            return;
+        }
+        // La suite (sélection des colonnes) avait été suspendue pour laisser place au popup.
+        if (this.clientVolumeContinuePending) {
+            this.clientVolumeContinuePending = false;
+            this.continueWithManualReconciliation();
+        }
+    }
+
+    /**
+     * Avant de quitter l'écran (navigation vers la sélection des colonnes), propose
+     * d'abord le contrôle en attente. Retourne true si la navigation doit être différée.
+     */
+    private deferForClientVolumePrompt(): boolean {
+        if (this.reconciliationMode !== 'manual') {
+            return false;
+        }
+        if (this.clientVolumeStep !== null) {
+            this.clientVolumeContinuePending = true;
+            return true;
+        }
+        if (this.clientVolumeQueue.length === 0) {
+            return false;
+        }
+        if (this.clientVolumeTimer) {
+            clearTimeout(this.clientVolumeTimer);
+            this.clientVolumeTimer = null;
+        }
+        this.clientVolumeContinuePending = true;
+        this.flushClientVolumeQueue();
+        if (this.clientVolumeStep === null && this.clientVolumeQueue.length === 0) {
+            // Rien à proposer finalement (fichier déjà traité) : on continue normalement.
+            this.clientVolumeContinuePending = false;
+            return false;
+        }
+        return true;
+    }
+
     ngOnDestroy(): void {
         this.traitementViewDestroyed = true;
+        if (this.clientVolumeTimer) {
+            clearTimeout(this.clientVolumeTimer);
+        }
         // Nettoyer l'abonnement à la progression
         if (this.reconciliationProgressSubscription) {
             this.reconciliationProgressSubscription.unsubscribe();

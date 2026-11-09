@@ -2351,3 +2351,196 @@
         margin-top: 8px;
     }
 }
+/* ===== Contrôle du volume par client ===== */
+.file-info .client-volume-btn {
+    margin-left: var(--space-2);
+}
+
+.client-volume-modal {
+    max-width: 860px;
+    padding: var(--space-5);
+
+    .client-volume-header {
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        gap: var(--space-3);
+        margin-bottom: var(--space-3);
+
+        h3 {
+            margin: 0;
+            font-size: 1.15rem;
+            color: var(--color-text-primary);
+
+            i {
+                color: var(--color-accent);
+                margin-right: var(--space-2);
+            }
+        }
+
+        .close-modal-btn {
+            background: none;
+            border: none;
+            cursor: pointer;
+            color: var(--color-text-muted);
+            font-size: 1.1rem;
+            padding: var(--space-1) var(--space-2);
+            border-radius: var(--radius-sm);
+
+            &:hover {
+                background: var(--color-hover);
+            }
+        }
+    }
+
+    .client-volume-rule {
+        margin: 0 0 var(--space-4);
+        padding: var(--space-2) var(--space-3);
+        border-radius: var(--radius-md);
+        background: var(--color-accent-soft);
+        color: var(--color-text-primary);
+        font-size: 0.9rem;
+    }
+
+    .client-volume-question,
+    .client-volume-summary {
+        color: var(--color-text-primary);
+        margin: 0 0 var(--space-4);
+    }
+
+    .client-volume-skipped {
+        display: block;
+        color: var(--color-text-muted);
+        font-size: 0.85rem;
+        margin-top: var(--space-1);
+    }
+
+    .client-volume-fields {
+        display: grid;
+        grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+        gap: var(--space-3);
+        margin-bottom: var(--space-4);
+    }
+
+    .client-volume-field {
+        display: flex;
+        flex-direction: column;
+        gap: var(--space-1);
+        font-weight: 600;
+        color: var(--color-text-primary);
+
+        select {
+            width: 100%;
+            font-weight: normal;
+        }
+    }
+
+    .client-volume-empty {
+        padding: var(--space-4);
+        text-align: center;
+        color: var(--color-success-solid);
+        background: var(--color-surface-sunken);
+        border-radius: var(--radius-md);
+        margin-bottom: var(--space-4);
+    }
+
+    .client-volume-toolbar {
+        display: flex;
+        flex-wrap: wrap;
+        align-items: flex-end;
+        gap: var(--space-3);
+        margin-bottom: var(--space-3);
+
+        .client-volume-field {
+            min-width: 170px;
+            font-size: 0.85rem;
+        }
+
+        .client-volume-count {
+            color: var(--color-text-muted);
+            font-size: 0.85rem;
+            padding-bottom: var(--space-2);
+        }
+    }
+
+    .client-volume-table-wrapper {
+        max-height: 45vh;
+        overflow: auto;
+        border: 1px solid var(--color-border);
+        border-radius: var(--radius-md);
+        margin-bottom: var(--space-4);
+    }
+
+    .client-volume-table {
+        width: 100%;
+        border-collapse: collapse;
+        font-size: 0.9rem;
+
+        th,
+        td {
+            padding: var(--space-2) var(--space-3);
+            border-bottom: 1px solid var(--color-border);
+            text-align: left;
+            color: var(--color-text-primary);
+        }
+
+        th {
+            position: sticky;
+            top: 0;
+            background: var(--color-surface-sunken);
+            font-weight: 600;
+        }
+
+        th.sortable {
+            padding: 0;
+
+            .sort-btn {
+                width: 100%;
+                display: flex;
+                align-items: center;
+                gap: var(--space-1);
+                padding: var(--space-2) var(--space-3);
+                background: none;
+                border: none;
+                cursor: pointer;
+                font: inherit;
+                font-weight: 600;
+                color: inherit;
+                text-align: left;
+
+                i {
+                    color: var(--color-text-muted);
+                }
+
+                &:hover {
+                    background: var(--color-hover);
+                }
+            }
+
+            &.num .sort-btn {
+                justify-content: flex-end;
+            }
+        }
+
+        .num {
+            text-align: right;
+            font-variant-numeric: tabular-nums;
+        }
+
+        .mono {
+            font-family: monospace;
+        }
+
+        .services {
+            min-width: 180px;
+            white-space: normal;
+        }
+    }
+
+    .client-volume-actions {
+        display: flex;
+        justify-content: flex-end;
+        flex-wrap: wrap;
+        gap: var(--space-2);
+    }
+}
