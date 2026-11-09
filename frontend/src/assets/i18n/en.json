@@ -3058,7 +3058,9 @@
     "Voirlespermissions": "View permissions",
     "Aucunepermissiondisponiblepourcemodule": "No permission available for this module",
     "Aucunmoduleassocié": "No associated module",
-    "Ajouterdesmodules": "Add modules"
+    "Ajouterdesmodules": "Add modules",
+    "paginationMenus": "menus",
+    "paginationModules": "modules"
   },
   "PROGRESS": {
     "cancel": "Cancel",

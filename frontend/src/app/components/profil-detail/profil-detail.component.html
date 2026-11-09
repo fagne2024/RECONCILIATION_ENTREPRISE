@@ -132,7 +132,7 @@
       </div>
 
       <div class="navigation-tree" *ngIf="filteredNavigationCatalog.length > 0; else noNavMatch">
-        <div *ngFor="let group of filteredNavigationCatalog" class="nav-group">
+        <div *ngFor="let group of paginate(filteredNavigationCatalog, 'navigation')" class="nav-group">
           <div class="nav-group-header" (click)="toggleNavGroup(group.key)">
             <div class="nav-group-main">
               <i class="fas" [ngClass]="isNavGroupExpanded(group.key) ? 'fa-chevron-down' : 'fa-chevron-right'"></i>
@@ -223,6 +223,18 @@
           </div>
         </div>
       </div>
+      <ng-container *ngIf="filteredNavigationCatalog.length > 0">
+      <ds-pagination
+        [page]="getCurrentPage(filteredNavigationCatalog, 'navigation')"
+        [pageCount]="getPageCount(filteredNavigationCatalog, 'navigation')"
+        [totalItems]="filteredNavigationCatalog.length"
+        [pageSize]="pagination.navigation.size"
+        [pageSizes]="pageSizes"
+        [itemLabel]="'PROF.paginationMenus' | translate"
+        (pageChange)="onPageChange('navigation', $event)"
+        (pageSizeChange)="onPageSizeChange('navigation', $event)">
+      </ds-pagination>
+      </ng-container>
       <ng-template #noNavMatch>
         <div class="no-data-message">
           <i class="fas fa-search"></i>
@@ -235,7 +247,7 @@
     <div *ngIf="activeTab === 'modules'" class="tab-content">
       <div class="modules-overview">
         <div class="modules-grid">
-          <div *ngFor="let module of modules" 
+          <div *ngFor="let module of paginate(modules, 'modules')" 
                class="module-card"
                [class.associated]="isModuleAssociated(module)"
                [class.available]="!isModuleAssociated(module)">
@@ -274,12 +286,22 @@
           </div>
         </div>
       </div>
+      <ds-pagination
+        [page]="getCurrentPage(modules, 'modules')"
+        [pageCount]="getPageCount(modules, 'modules')"
+        [totalItems]="modules.length"
+        [pageSize]="pagination.modules.size"
+        [pageSizes]="pageSizes"
+        [itemLabel]="'PROF.paginationModules' | translate"
+        (pageChange)="onPageChange('modules', $event)"
+        (pageSizeChange)="onPageSizeChange('modules', $event)">
+      </ds-pagination>
     </div>
 
     <!-- Onglet Permissions (Vue détaillée par module) -->
     <div *ngIf="activeTab === 'permissions'" class="tab-content">
       <div class="modules-permissions">
-        <div *ngFor="let module of getAssociatedModules()" class="module-card">
+        <div *ngFor="let module of paginate(getAssociatedModules(), 'permissions')" class="module-card">
           <div class="module-header">
             <h5><i class="fas fa-folder"></i> {{ module.nom }}</h5>
             <span class="module-permissions-count">
@@ -321,6 +343,18 @@
           </div>
         </div>
 
+        <ng-container *ngIf="getAssociatedModules().length > 0">
+          <ds-pagination
+        [page]="getCurrentPage(getAssociatedModules(), 'permissions')"
+        [pageCount]="getPageCount(getAssociatedModules(), 'permissions')"
+        [totalItems]="getAssociatedModules().length"
+        [pageSize]="pagination.permissions.size"
+        [pageSizes]="pageSizes"
+        [itemLabel]="'PROF.paginationModules' | translate"
+        (pageChange)="onPageChange('permissions', $event)"
+        (pageSizeChange)="onPageSizeChange('permissions', $event)">
+      </ds-pagination>
+        </ng-container>
         <div *ngIf="getAssociatedModules().length === 0" class="no-data-message">
           <i class="fas fa-cube"></i>
           <p>{{ 'PROF.Aucunmoduleassocié' | translate }}</p>

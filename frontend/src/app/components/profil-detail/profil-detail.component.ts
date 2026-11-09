@@ -2,6 +2,7 @@ import { Component, OnInit, ChangeDetectorRef } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
 import { TranslateModule } from '@ngx-translate/core';
+import { DsPaginationComponent } from '../../shared/ui/pagination/ds-pagination.component';
 import { ActivatedRoute, Router } from '@angular/router';
 import { ProfilService } from '../../services/profil.service';
 import { PaysService } from '../../services/pays.service';
@@ -43,7 +44,7 @@ type ToastType = 'success' | 'error' | 'info' | 'warning';
 @Component({
   selector: 'app-profil-detail',
   standalone: true,
-  imports: [CommonModule, FormsModule, TranslateModule],
+  imports: [CommonModule, FormsModule, TranslateModule, DsPaginationComponent],
   templateUrl: './profil-detail.component.html',
   styleUrls: ['./profil-detail.component.scss']
 })
@@ -1028,6 +1029,39 @@ export class ProfilDetailComponent implements OnInit {
     this.expandedSubmenuActions.add(context.key);
     this.loadModuleActionsForNavigationContext(context);
     this.cd.detectChanges();
+  }
+
+  /** Pagination côté client des listes des onglets Navigation, Modules et Permissions. */
+  readonly pageSizes = [5, 10, 20, 50];
+  pagination: { [list in 'navigation' | 'modules' | 'permissions']: { page: number; size: number } } = {
+    navigation: { page: 1, size: 5 },
+    modules: { page: 1, size: 20 },
+    permissions: { page: 1, size: 5 }
+  };
+
+  getPageCount(items: unknown[] | null | undefined, list: 'navigation' | 'modules' | 'permissions'): number {
+    return Math.max(1, Math.ceil((items?.length ?? 0) / this.pagination[list].size));
+  }
+
+  paginate<T>(items: T[] | null | undefined, list: 'navigation' | 'modules' | 'permissions'): T[] {
+    const all = items ?? [];
+    const state = this.pagination[list];
+    // Une recherche ou un retrait peut réduire la liste : rester sur une page existante.
+    const page = Math.min(state.page, this.getPageCount(all, list));
+    const start = (page - 1) * state.size;
+    return all.slice(start, start + state.size);
+  }
+
+  getCurrentPage(items: unknown[] | null | undefined, list: 'navigation' | 'modules' | 'permissions'): number {
+    return Math.min(this.pagination[list].page, this.getPageCount(items, list));
+  }
+
+  onPageChange(list: 'navigation' | 'modules' | 'permissions', page: number): void {
+    this.pagination[list].page = page;
+  }
+
+  onPageSizeChange(list: 'navigation' | 'modules' | 'permissions', size: number): void {
+    this.pagination[list] = { page: 1, size };
   }
 
   get filteredNavigationCatalog(): AppNavigationGroup[] {
