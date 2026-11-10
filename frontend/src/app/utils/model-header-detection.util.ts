@@ -3,7 +3,7 @@
  * (fichier modèle du watch-folder, règles de traitement, etc.).
  */
 
-import { resolveCanonicalColumnId } from './bilingual-column.util';
+import { resolveCanonicalColumnId, resolveTrxboColumnId } from './bilingual-column.util';
 
 export function normalizeHeaderLabelForMatch(label: string): string {
   return (label || '')
@@ -32,11 +32,22 @@ function headerLabelsMatch(cell: string, expected: string): boolean {
 /**
  * Score une ligne comme en-tête modèle (0 = pas assez de correspondances).
  * Une colonne attendue est trouvée si son libellé correspond, ou si la cellule désigne
- * la même colonne en français ou en anglais (ex. « Numéro de compte » / « Account Number »).
+ * la même colonne en français ou en anglais (ex. « Numéro de compte » / « Account Number »,
+ * ou pour le fichier BO « Numéro Trans GU » / « Num Trans GU »).
  */
-export function scoreHeaderRowMatch(rowCells: string[], expectedColumns: string[]): number {
+export function scoreHeaderRowMatch(
+  rowCells: string[],
+  expectedColumns: string[],
+  alternatives?: ReadonlyMap<string, readonly string[]>
+): number {
   const expected = (expectedColumns || [])
-    .map(col => ({ norm: normalizeHeaderLabelForMatch(col), id: resolveCanonicalColumnId(col) }))
+    .map(col => ({
+      norm: normalizeHeaderLabelForMatch(col),
+      // En-têtes équivalents configurés (Configuration > Normalisation modèle) : comparaison exacte.
+      alts: (alternatives?.get(col) || []).map(a => normalizeHeaderLabelForMatch(a)).filter(Boolean),
+      id: resolveCanonicalColumnId(col),
+      trxboId: resolveTrxboColumnId(col)
+    }))
     .filter(e => !!e.norm);
   if (!expected.length) {
     return 0;
@@ -50,17 +61,24 @@ export function scoreHeaderRowMatch(rowCells: string[], expectedColumns: string[
     return 0;
   }
   const rowIds = new Set<string>();
+  const rowTrxboIds = new Set<string>();
   for (const cell of rawCells) {
     const id = resolveCanonicalColumnId(cell);
     if (id) {
       rowIds.add(id);
     }
+    const trxboId = resolveTrxboColumnId(cell);
+    if (trxboId) {
+      rowTrxboIds.add(trxboId);
+    }
   }
 
   let matches = 0;
   for (const exp of expected) {
-    const byLabel = row.some(cell => headerLabelsMatch(cell, exp.norm));
-    const byColumn = !!exp.id && rowIds.has(exp.id);
+    const byLabel = row.some(cell => headerLabelsMatch(cell, exp.norm))
+      || exp.alts.some(alt => row.includes(alt));
+    const byColumn = (!!exp.id && rowIds.has(exp.id))
+      || (!!exp.trxboId && rowTrxboIds.has(exp.trxboId));
     if (byLabel || byColumn) {
       matches++;
     }
@@ -79,7 +97,8 @@ export function scoreHeaderRowMatch(rowCells: string[], expectedColumns: string[
 export function findHeaderRowIndexInGrid(
   grid: unknown[][],
   expectedColumns: string[],
-  maxScanRows = 80
+  maxScanRows = 80,
+  alternatives?: ReadonlyMap<string, readonly string[]>
 ): number | null {
   if (!grid?.length || !expectedColumns?.length) {
     return null;
@@ -95,7 +114,7 @@ export function findHeaderRowIndexInGrid(
       continue;
     }
     const cells = row.map(cell => String(cell ?? '').trim());
-    const score = scoreHeaderRowMatch(cells, expectedColumns);
+    const score = scoreHeaderRowMatch(cells, expectedColumns, alternatives);
     if (score > bestScore) {
       bestScore = score;
       bestIndex = i;
@@ -110,7 +129,8 @@ export function findHeaderLineIndexInCsvLines(
   lines: string[],
   delimiter: string,
   expectedColumns: string[],
-  maxScanLines = 80
+  maxScanLines = 80,
+  alternatives?: ReadonlyMap<string, readonly string[]>
 ): number | null {
   if (!lines?.length || !expectedColumns?.length) {
     return null;
@@ -126,7 +146,7 @@ export function findHeaderLineIndexInCsvLines(
       continue;
     }
     const cells = line.split(delimiter).map(cell => cell.trim());
-    const score = scoreHeaderRowMatch(cells, expectedColumns);
+    const score = scoreHeaderRowMatch(cells, expectedColumns, alternatives);
     if (score > bestScore) {
       bestScore = score;
       bestIndex = i;

@@ -1,5 +1,5 @@
 import { fixCellEncoding } from './encoding-fixer';
-import { getCanonicalFrenchLabel, resolveCanonicalColumnId } from './bilingual-column.util';
+import { getCanonicalFrenchLabel, resolveCanonicalColumnId, resolveTrxboColumnId } from './bilingual-column.util';
 
 /**
  * Désambiguïse une liste d'en-têtes (y compris les doublons) en noms de colonnes uniques.
@@ -62,6 +62,16 @@ export function resolveColumnKeyInRow(row: Record<string, string>, column: strin
   if (targetCanonicalId) {
     for (const key of Object.keys(row)) {
       if (resolveCanonicalColumnId(key) === targetCanonicalId) {
+        return key;
+      }
+    }
+  }
+
+  // Colonnes du fichier BO (TRXBO) : modèle configuré en FR, export en EN (ou l'inverse).
+  const targetTrxboId = resolveTrxboColumnId(column);
+  if (targetTrxboId) {
+    for (const key of Object.keys(row)) {
+      if (resolveTrxboColumnId(key) === targetTrxboId) {
         return key;
       }
     }

@@ -10,6 +10,7 @@ import { fixCellEncoding } from '../utils/encoding-fixer';
 import {
   BO_RECONCILIATION_KEY_ALIASES,
   PARTNER_REFERENCE_KEY_ALIASES,
+  findColumnByCanonicalId,
   normalizeReconciliationKeyValue
 } from '../utils/reconciliation-key.util';
 import { partnerServiceMatchesBo } from '../utils/service-match.util';
@@ -744,7 +745,8 @@ export class PartnerConditionalKeysService {
       }
     }
 
-    return null;
+    // Équivalence FR/EN (ex. clé modèle « Numéro Trans GU » ↔ export BO anglais « Num Trans GU »).
+    return findColumnByCanonicalId(available, candidateKeys);
   }
 
   private normalizeColumnName(name: string): string {

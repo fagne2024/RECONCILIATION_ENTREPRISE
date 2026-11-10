@@ -6,7 +6,7 @@ import { AppStateService } from './app-state.service';
 import { KeySuggestionService } from './key-suggestion.service';
 import { PartnerConditionalKeysService } from './partner-conditional-keys.service';
 import { ReconciliationResponse } from '../models/reconciliation-response.model';
-import { fixCellEncoding } from '../utils/encoding-fixer';
+import { bruteForceReconciliationKeyMatch } from '../utils/reconciliation-key.util';
 import { AutoDiscoveryReconciliationService, ReconciliationPlan, ColumnProfile } from './auto-discovery-reconciliation.service';
 
 export interface MagicServiceMatch {
@@ -888,86 +888,15 @@ export class MagicReconciliationService {
     return null;
   }
 
+  /**
+   * Recherche exhaustive partagée avec le mode assisté : exclut les colonnes catégorielles
+   * (Service, Statut…) qui ne sont pas des identifiants de transaction.
+   */
   private bruteForceKeyMatch(
     boData: Record<string, string>[],
     partnerData: Record<string, string>[]
   ): { boKeyColumn: string; partnerKeyColumn: string } | null {
-    const boCols = Object.keys(boData[0] || {});
-    const partnerCols = Object.keys(partnerData[0] || {});
-    let best: { bo: string; partner: string; score: number } | null = null;
-
-    for (const boCol of boCols) {
-      const boValues = new Set(
-        boData.slice(0, 200).map(r => (r[boCol] || '').trim()).filter(Boolean)
-      );
-      if (boValues.size < 2) {
-        continue;
-      }
-      for (const partnerCol of partnerCols) {
-        const partnerValues = new Set(
-          partnerData.slice(0, 200).map(r => (r[partnerCol] || '').trim()).filter(Boolean)
-        );
-        if (partnerValues.size < 2) {
-          continue;
-        }
-        let overlap = 0;
-        for (const v of boValues) {
-          if (partnerValues.has(v)) {
-            overlap++;
-          }
-        }
-        const score = overlap / Math.max(boValues.size, partnerValues.size);
-        if (!best || score > best.score) {
-          best = { bo: boCol, partner: partnerCol, score };
-        }
-      }
-    }
-
-    if (best && best.score >= 0.15) {
-      return { boKeyColumn: best.bo, partnerKeyColumn: best.partner };
-    }
-    return null;
-  }
-
-  private findExistingColumn(data: Record<string, string>[], candidateKeys: string[]): string | null {
-    if (!data?.length || !candidateKeys?.length) {
-      return null;
-    }
-    const available = Object.keys(data[0]);
-    const normAvailable = available.map(c => this.normalizeColumnName(c));
-    const normCandidates = candidateKeys.map(k => this.normalizeColumnName(k));
-
-    for (let i = 0; i < normCandidates.length; i++) {
-      const idx = normAvailable.indexOf(normCandidates[i]);
-      if (idx !== -1) {
-        return available[idx];
-      }
-    }
-
-    for (let i = 0; i < normCandidates.length; i++) {
-      const candidate = normCandidates[i].toLowerCase();
-      for (let j = 0; j < normAvailable.length; j++) {
-        if (normAvailable[j].toLowerCase() === candidate) {
-          return available[j];
-        }
-      }
-    }
-
-    for (let i = 0; i < normCandidates.length; i++) {
-      const candidate = normCandidates[i].replace(/\s+/g, '').toLowerCase();
-      for (let j = 0; j < normAvailable.length; j++) {
-        const column = normAvailable[j].replace(/\s+/g, '').toLowerCase();
-        if (candidate === column) {
-          return available[j];
-        }
-      }
-    }
-
-    return null;
-  }
-
-  private normalizeColumnName(name: string): string {
-    return fixCellEncoding(name).replace(/\s+/g, ' ').trim();
+    return bruteForceReconciliationKeyMatch(boData, partnerData, 0.15);
   }
 
   /**

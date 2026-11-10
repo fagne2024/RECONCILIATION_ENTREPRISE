@@ -1,5 +1,6 @@
 import { PartnerConditionalKeysService, BO_CONDITIONAL_KEY_COLUMN, PARTNER_CONDITIONAL_KEY_COLUMN } from './partner-conditional-keys.service';
 import { AutoProcessingModel } from './auto-processing.service';
+import { TRXBO_COLUMN_DEFINITIONS } from '../utils/bilingual-column.util';
 
 describe('PartnerConditionalKeysService', () => {
   let service: PartnerConditionalKeysService;
@@ -54,6 +55,55 @@ describe('PartnerConditionalKeysService', () => {
 
   beforeEach(() => {
     service = new PartnerConditionalKeysService();
+  });
+
+  it('résout la clé modèle « Numéro Trans GU » sur un export BO anglais « Num Trans GU »', () => {
+    const airtelModel = {
+      reconciliationKeys: {
+        partnerKeys: ['Reference Number'],
+        boKeys: ['Numéro Trans GU'],
+        boModels: ['trxbo'],
+        boModelKeys: { trxbo: ['Numéro Trans GU'] },
+        partnerConditionalKeys: { enabled: false, conditionColumn: '', rules: [] },
+        boConditionalKeys: { enabled: false, conditionColumn: '', rules: [] }
+      }
+    } as any;
+    const bo = [{ 'Service': 'GA_CASHIN_AIRTEL', 'Num Trans GU': '1794265188147' }];
+    const partner = [{ 'SERVICE': 'GA_CASHIN_AIRTEL', 'Reference Number': '1794265188147' }];
+    expect(service.resolveKeysFromPartnerModel(airtelModel, bo, partner)).toEqual({
+      boKeyColumn: 'Num Trans GU',
+      partnerKeyColumn: 'Reference Number'
+    });
+  });
+
+  describe('équivalence FR/EN des colonnes TRXBO (tous modèles)', () => {
+    const rowFrom = (headers: string[]) => [Object.fromEntries(headers.map(h => [h, 'x']))];
+    const frHeaders = TRXBO_COLUMN_DEFINITIONS.map(d => d.fr);
+    const enHeaders = TRXBO_COLUMN_DEFINITIONS.map(d => d.en);
+
+    it.each(TRXBO_COLUMN_DEFINITIONS.map(d => [d.fr, d.en]))(
+      'clé modèle « %s » ↔ export anglais « %s » (dans les deux sens)',
+      (fr, en) => {
+        expect(service.findExistingColumn(rowFrom(enHeaders), [fr])).toBe(en);
+        expect(service.findExistingColumn(rowFrom(frHeaders), [en])).toBe(fr);
+      }
+    );
+
+    // Clés BO des modèles partenaires configurés (OPPART, OPBO, AIRTELGA, ORANGECM).
+    it.each([
+      ['Numéro Trans GU', 'Num Trans GU'],
+      ['Agence', 'Agency'],
+      ['IDTransaction', 'ID Transaction']
+    ])('modèle avec clé BO « %s » résolu sur un TRXBO anglais → « %s »', (modelKey, expected) => {
+      const model = {
+        reconciliationKeys: {
+          boKeys: [modelKey],
+          boModels: ['trxbo'],
+          boModelKeys: { trxbo: [modelKey] }
+        }
+      } as any;
+      expect(service.resolveBoKeyFromModel(model, rowFrom(enHeaders))).toBe(expected);
+    });
   });
 
   it('résout les colonnes synthétiques pour un modèle avec clés conditionnelles', () => {

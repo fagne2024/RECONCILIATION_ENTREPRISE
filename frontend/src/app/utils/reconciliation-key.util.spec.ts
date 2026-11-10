@@ -1,4 +1,9 @@
-import { normalizeReconciliationKeyValue } from './reconciliation-key.util';
+import {
+  bruteForceReconciliationKeyMatch,
+  discoverReconciliationKeyColumns,
+  findColumnByAliases,
+  normalizeReconciliationKeyValue
+} from './reconciliation-key.util';
 
 describe('reconciliation-key.util - normalizeReconciliationKeyValue', () => {
   describe('null/undefined handling', () => {
@@ -126,6 +131,39 @@ describe('reconciliation-key.util - normalizeReconciliationKeyValue', () => {
     it('should not convert strings with non-numeric chars to numbers', () => {
       expect(normalizeReconciliationKeyValue('123abc')).toBe('123abc');
       expect(normalizeReconciliationKeyValue('123.45.67')).toBe('123.45.67');
+    });
+  });
+});
+
+describe('reconciliation-key.util - détection des clés (assisté)', () => {
+  const services = ['GA_CASHIN_AIRTEL', 'GA_PAIEMENTMARCHAND_AIRTEL', 'GA_CASHOUT_AIRTEL'];
+  // Export BO en anglais (« Num Trans GU ») et partenaire Airtel (« Reference Number »).
+  const bo = Array.from({ length: 200 }, (_, i) => ({
+    'ID': `BO${i}`,
+    'Service': services[i % services.length],
+    'Num Trans GU': `17942${100000 + i}`
+  }));
+  const partner = Array.from({ length: 200 }, (_, i) => ({
+    'Transaction ID': `AP${i}`,
+    'SERVICE': services[(i + 1) % services.length],
+    'Reference Number': `17942${100000 + i}`
+  }));
+
+  it('résout « Numéro Trans GU » vers la colonne anglaise « Num Trans GU »', () => {
+    expect(findColumnByAliases(Object.keys(bo[0]), ['Numéro Trans GU'])).toBe('Num Trans GU');
+  });
+
+  it('ne retient jamais une colonne catégorielle (Service) comme clé', () => {
+    expect(bruteForceReconciliationKeyMatch(bo, partner)).toEqual({
+      boKeyColumn: 'Num Trans GU',
+      partnerKeyColumn: 'Reference Number'
+    });
+  });
+
+  it('discoverReconciliationKeyColumns choisit Num Trans GU ↔ Reference Number', () => {
+    expect(discoverReconciliationKeyColumns(bo, partner)).toEqual({
+      boKeyColumn: 'Num Trans GU',
+      partnerKeyColumn: 'Reference Number'
     });
   });
 });

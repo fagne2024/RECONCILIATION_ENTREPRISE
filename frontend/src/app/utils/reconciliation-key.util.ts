@@ -1,5 +1,6 @@
 import { fixCellEncoding } from './encoding-fixer';
 import { normalizeColumnKey } from './row-column.util';
+import { areEquivalentColumnHeaders } from './bilingual-column.util';
 import { KeySuggestionService } from '../services/key-suggestion.service';
 
 /** Taille d'échantillon pour la vérification de format (rapide, indépendant du volume). */
@@ -7,6 +8,14 @@ export const KEY_FORMAT_SAMPLE_SIZE = 300;
 
 /** Seuil minimal de recouvrement sur échantillon pour valider une paire de clés. */
 export const KEY_OVERLAP_MIN_RATIO = 0.05;
+
+/**
+ * Ratio minimal valeurs distinctes / valeurs non vides (sur échantillon) pour qu'une colonne
+ * soit candidate comme clé dans la recherche exhaustive. Écarte les colonnes catégorielles
+ * (Service, Statut, Pays…) dont le recouvrement est mécaniquement élevé mais qui ne sont pas
+ * des identifiants : matcher dessus en 1-1 apparie des transactions au hasard.
+ */
+export const KEY_MIN_DISTINCT_RATIO = 0.5;
 
 /** Colonnes BO couramment utilisées comme clé de réconciliation. */
 export const BO_RECONCILIATION_KEY_ALIASES = [
@@ -233,6 +242,26 @@ export function findColumnByAliases(
     }
   }
 
+  return findColumnByCanonicalId(availableColumns, aliases);
+}
+
+/**
+ * Dernier recours : équivalence FR/EN déclarée dans les définitions bilingues (index global + TRXBO)
+ * (ex. alias « Numéro Trans GU » ↔ colonne « Num Trans GU » d'un export BO en anglais).
+ */
+export function findColumnByCanonicalId(
+  availableColumns: string[],
+  aliases: string[]
+): string | null {
+  if (!availableColumns?.length || !aliases?.length) {
+    return null;
+  }
+  for (const alias of aliases) {
+    const match = availableColumns.find(column => areEquivalentColumnHeaders(alias, column));
+    if (match) {
+      return match;
+    }
+  }
   return null;
 }
 
@@ -473,34 +502,40 @@ function isCompatibleKeyPair(
 
 export function bruteForceReconciliationKeyMatch(
   boData: Record<string, string>[],
-  partnerData: Record<string, string>[]
+  partnerData: Record<string, string>[],
+  minOverlapRatio: number = KEY_OVERLAP_MIN_RATIO
 ): { boKeyColumn: string; partnerKeyColumn: string } | null {
   const boCols = Object.keys(boData[0] || {});
   const partnerCols = Object.keys(partnerData[0] || {});
   let best: { bo: string; partner: string; score: number } | null = null;
 
+  const sampleDistinctValues = (rows: Record<string, string>[], column: string): Set<string> | null => {
+    const values = rows
+      .slice(0, KEY_FORMAT_SAMPLE_SIZE)
+      .map(row => normalizeReconciliationKeyValue(row[column]))
+      .filter(Boolean);
+    const distinct = new Set(values);
+    if (distinct.size < 2 || distinct.size / values.length < KEY_MIN_DISTINCT_RATIO) {
+      return null;
+    }
+    return distinct;
+  };
+
+  const partnerCandidates = new Map<string, Set<string>>();
+  for (const partnerCol of partnerCols) {
+    const values = sampleDistinctValues(partnerData, partnerCol);
+    if (values) {
+      partnerCandidates.set(partnerCol, values);
+    }
+  }
+
   for (const boCol of boCols) {
-    const boValues = new Set(
-      boData
-        .slice(0, KEY_FORMAT_SAMPLE_SIZE)
-        .map(row => normalizeReconciliationKeyValue(row[boCol]))
-        .filter(Boolean)
-    );
-    if (boValues.size < 2) {
+    const boValues = sampleDistinctValues(boData, boCol);
+    if (!boValues) {
       continue;
     }
 
-    for (const partnerCol of partnerCols) {
-      const partnerValues = new Set(
-        partnerData
-          .slice(0, KEY_FORMAT_SAMPLE_SIZE)
-          .map(row => normalizeReconciliationKeyValue(row[partnerCol]))
-          .filter(Boolean)
-      );
-      if (partnerValues.size < 2) {
-        continue;
-      }
-
+    for (const [partnerCol, partnerValues] of partnerCandidates) {
       let overlap = 0;
       for (const value of boValues) {
         if (partnerValues.has(value)) {
@@ -515,7 +550,7 @@ export function bruteForceReconciliationKeyMatch(
     }
   }
 
-  if (best && best.score >= KEY_OVERLAP_MIN_RATIO) {
+  if (best && best.score >= minOverlapRatio) {
     return { boKeyColumn: best.bo, partnerKeyColumn: best.partner };
   }
 

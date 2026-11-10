@@ -299,6 +299,151 @@ export function resolveCanonicalColumnId(header: string): string | null {
 }
 
 /** Libellé FR canonique pour un id (utilisé après normalisation des fichiers EN). */
+/**
+ * Variante stricte de `resolveCanonicalColumnId` : uniquement l'index exact (FR, EN, alias déclarés),
+ * sans rapprochement par inclusion. À utiliser pour résoudre une colonne clé de réconciliation,
+ * où un faux positif ferait matcher sur une mauvaise colonne.
+ * Ex. "Num Trans GU" et "Numéro Trans GU" → "bkNumTransGU".
+ */
+export function resolveExactCanonicalColumnId(header: string): string | null {
+  const normalized = normalizeHeaderForMatch(header);
+  if (!normalized) {
+    return null;
+  }
+  return getNormalizedHeaderIndex().get(normalized)?.id ?? null;
+}
+
+/**
+ * En-têtes du fichier BO (TRXBO) : export français ↔ export anglais, colonne par colonne.
+ * Volontairement hors de l'index global (`getNormalizedHeaderIndex`) : cet index sert aussi
+ * aux filtres, à la déduplication et à l'enrichissement des lignes, où « Payment method »,
+ * « Sender » ou « Beneficiary » ont déjà un autre sens (relevés bancaires, transferts).
+ * Ici, il ne sert qu'à résoudre les colonnes configurées dans les modèles (clés, conditions).
+ */
+export const TRXBO_COLUMN_DEFINITIONS: Array<BilingualColumnDefinition & { aliases?: string[] }> = [
+  { id: 'trxboId', fr: 'ID', en: 'ID' },
+  { id: 'trxboIdTransaction', fr: 'IDTransaction', en: 'ID Transaction', aliases: ['Id Transaction'] },
+  { id: 'trxboTelephoneClient', fr: 'téléphone client', en: 'customer phone', aliases: ['Telephone client', 'Customer Phone Number'] },
+  { id: 'trxboMontant', fr: 'montant', en: 'amount' },
+  { id: 'trxboService', fr: 'Service', en: 'Service' },
+  { id: 'trxboMoyenPaiement', fr: 'Moyen de Paiement', en: 'Payment method', aliases: ['Moyen paiement'] },
+  { id: 'trxboAgence', fr: 'Agence', en: 'Agency' },
+  { id: 'trxboAgent', fr: 'Agent', en: 'Agent' },
+  { id: 'trxboTypeAgent', fr: 'Type agent', en: 'Agent Type' },
+  { id: 'trxboPixi', fr: 'PIXI', en: 'PIXI' },
+  { id: 'trxboDate', fr: 'Date', en: 'Date' },
+  { id: 'trxboNumTransGu', fr: 'Numéro Trans GU', en: 'Num Trans GU', aliases: ['Numero Trans GU', 'numeroTransGU', 'numtransactiongu'] },
+  { id: 'trxboGrx', fr: 'GRX', en: 'GRX' },
+  { id: 'trxboStatut', fr: 'Statut', en: 'Status' },
+  { id: 'trxboLatitude', fr: 'Latitude', en: 'Latitude' },
+  { id: 'trxboLongitude', fr: 'Longitude', en: 'Longitude' },
+  { id: 'trxboIdPartenaireDist', fr: 'ID Partenaire DIST', en: 'Partner ID DIST' },
+  { id: 'trxboExpediteur', fr: 'Expéditeur', en: 'Sender' },
+  { id: 'trxboPaysProvenance', fr: 'Pays provenance', en: 'Country of origin' },
+  { id: 'trxboBeneficiaire', fr: 'Bénéficiaire', en: 'Beneficiary' },
+  { id: 'trxboCanalDistribution', fr: 'Canal de distribution', en: 'Distribution channel' }
+];
+
+let _trxboHeaderIndex: Map<string, string> | null = null;
+
+function normalizeTrxboHeader(header: string): string {
+  return normalizeHeaderForMatch(header).replace(/\s+/g, '');
+}
+
+function getTrxboHeaderIndex(): Map<string, string> {
+  if (_trxboHeaderIndex) {
+    return _trxboHeaderIndex;
+  }
+  const index = new Map<string, string>();
+  for (const def of TRXBO_COLUMN_DEFINITIONS) {
+    for (const label of [def.fr, def.en, ...(def.aliases || [])]) {
+      const key = normalizeTrxboHeader(label);
+      if (key && !index.has(key)) {
+        index.set(key, def.id);
+      }
+    }
+  }
+  _trxboHeaderIndex = index;
+  return index;
+}
+
+/** Cache en-tête → id TRXBO : appelé dans les boucles sur les lignes (résolution des règles). */
+const _trxboIdCache = new Map<string, string | null>();
+
+/**
+ * Identifiant de colonne TRXBO (FR ou EN), ex. « Num Trans GU » et « Numéro Trans GU » → « trxboNumTransGu ».
+ * Null si l'en-tête n'est pas une colonne du fichier BO.
+ */
+export function resolveTrxboColumnId(header: string): string | null {
+  if (!header) {
+    return null;
+  }
+  const cached = _trxboIdCache.get(header);
+  if (cached !== undefined) {
+    return cached;
+  }
+  const id = getTrxboHeaderIndex().get(normalizeTrxboHeader(header)) ?? null;
+  if (_trxboIdCache.size > 5000) {
+    _trxboIdCache.clear();
+  }
+  _trxboIdCache.set(header, id);
+  return id;
+}
+
+/**
+ * Indique si deux en-têtes désignent la même colonne métier, quelle que soit la langue :
+ * même identifiant dans l'index bilingue global, ou même colonne du fichier BO (TRXBO).
+ * Utilisé pour retrouver dans les données une colonne configurée dans un modèle.
+ */
+export function areEquivalentColumnHeaders(a: string, b: string): boolean {
+  if (!a || !b) {
+    return false;
+  }
+  const globalA = resolveExactCanonicalColumnId(a);
+  if (globalA && globalA === resolveExactCanonicalColumnId(b)) {
+    return true;
+  }
+  const trxboA = resolveTrxboColumnId(a);
+  return !!trxboA && trxboA === resolveTrxboColumnId(b);
+}
+
+/**
+ * Libellés connus pour la même colonne dans l'autre langue ou en variante (définitions TRXBO
+ * et bancaires). Sert de suggestions dans Configuration > Normalisation modèle.
+ * Ex. « Numéro Trans GU » → ['Num Trans GU', 'Numero Trans GU', …].
+ */
+export function suggestEquivalentHeaders(column: string): string[] {
+  const target = normalizeTrxboHeader(column);
+  if (!target) {
+    return [];
+  }
+  const result: string[] = [];
+  const seen = new Set<string>([target]);
+  const definitions = [...TRXBO_COLUMN_DEFINITIONS, ...BANKING_COLUMN_DEFINITIONS];
+  for (const def of definitions) {
+    const labels = [def.fr, def.en, ...(def.aliases || [])];
+    if (!labels.some(label => normalizeTrxboHeader(label) === target)) {
+      continue;
+    }
+    for (const label of labels) {
+      const key = normalizeTrxboHeader(label);
+      if (key && !seen.has(key)) {
+        seen.add(key);
+        result.push(label);
+      }
+    }
+  }
+  return result;
+}
+
+/** Premier en-tête de `headers` désignant la même colonne que `column` (FR ↔ EN), sinon null. */
+export function findEquivalentHeader(headers: readonly string[], column: string): string | null {
+  if (!column || !headers?.length) {
+    return null;
+  }
+  return headers.find(h => h !== column && areEquivalentColumnHeaders(column, h)) ?? null;
+}
+
 export function getCanonicalFrenchLabel(columnId: string): string | null {
   const merchantDef = MERCHANT_REPORT_COLUMNS.find(d => d.id === columnId);
   if (merchantDef) {
