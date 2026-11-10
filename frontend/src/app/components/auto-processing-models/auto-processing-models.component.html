@@ -172,8 +172,8 @@
         <div class="form-row" *ngIf="modelForm.get('templateFile')?.value && !isLoadingTemplateColumns">
           <div class="form-group">
             <label>{{ 'APM.Cléspartenaire' | translate }}</label>
-            <div class="key-selection" *ngIf="availableTemplateColumns.length > 0">
-              <div *ngFor="let column of availableTemplateColumns" 
+            <div class="key-selection" *ngIf="templateFileColumns.length > 0">
+              <div *ngFor="let column of templateFileColumns" 
                    class="key-option"
                    [class.selected]="selectedPartnerKeys.includes(column)">
                 <label class="key-label">
@@ -188,8 +188,15 @@
                 </label>
               </div>
             </div>
-            <div class="no-columns" *ngIf="availableTemplateColumns.length === 0">
+            <div class="no-columns" *ngIf="templateFileColumns.length === 0">
               <small class="text-muted">{{ 'APM.Aucunecolonnedisponiblepourcefichiermodèle' | translate }}</small>
+            </div>
+            <div class="keys-outside-file" *ngIf="partnerKeysOutsideFile.length > 0">
+              <small>{{ 'APM.keysOutsideFile' | translate }}</small>
+              <button type="button" class="model-chip" *ngFor="let key of partnerKeysOutsideFile"
+                      (click)="removePartnerKey(key)" [title]="'APM.removeKey' | translate">
+                {{ key }} <i class="fas fa-times"></i>
+              </button>
             </div>
             <small class="form-text text-muted">{{ 'APM.Sélectionnezlescolonnesclésdufichierpartenaire' | translate }}</small>
           </div>
@@ -324,28 +331,42 @@
           <span>{{ 'APM.Chargementdescolonnesdufichiermodèle' | translate }}</span>
         </div>
 
-        <!-- Colonnes des modèles BO sélectionnés -->
+        <!-- Colonnes des modèles BO sélectionnés : une liste par modèle, colonnes de son fichier modèle -->
         <div class="form-row" *ngIf="selectedBOModels.length > 0 && !isLoadingBOColumns">
           <div class="form-group">
             <label>{{ 'APM.Colonnesdesmodèlesbosélectionnés' | translate }}</label>
-            <div class="key-selection" *ngIf="getBoConditionalColumnOptions().length > 0">
-              <div *ngFor="let column of getBoConditionalColumnOptions()" 
-                   class="key-option"
-                   [class.selected]="selectedBOKeys.includes(column)">
-                <label class="key-label">
-                  <input type="checkbox" 
-                         [value]="column" 
-                         [checked]="selectedBOKeys.includes(column)"
-                         (change)="toggleBOKey(column, $event)" class="ds-checkbox">
-                  <span class="column-name" [class.selected-text]="selectedBOKeys.includes(column)">
-                    <i class="fas fa-check-circle selected-icon" *ngIf="selectedBOKeys.includes(column)"></i>
-                    {{ column }}
-                  </span>
-                </label>
+            <div class="bo-model-columns" *ngFor="let modelId of selectedBOModels">
+              <div class="bo-model-columns-title">
+                <i class="fas fa-file-alt"></i>
+                <strong>{{ getBoModelName(modelId) }}</strong>
+                <small class="text-muted" *ngIf="getBoModelTemplateFile(modelId)">({{ getBoModelTemplateFile(modelId) }})</small>
               </div>
-            </div>
-            <div class="no-columns" *ngIf="availableBOColumns.length === 0">
-              <small class="text-muted">{{ 'APM.Aucunecolonnedisponiblepourlesmodèlesbosélectionnés' | translate }}</small>
+              <div class="key-selection" *ngIf="getBoModelFileColumns(modelId).length > 0">
+                <div *ngFor="let column of getBoModelFileColumns(modelId)"
+                     class="key-option"
+                     [class.selected]="isBoModelKeySelected(modelId, column)">
+                  <label class="key-label">
+                    <input type="checkbox"
+                           [value]="column"
+                           [checked]="isBoModelKeySelected(modelId, column)"
+                           (change)="toggleBoModelKey(modelId, column, $any($event.target).checked)" class="ds-checkbox">
+                    <span class="column-name" [class.selected-text]="isBoModelKeySelected(modelId, column)">
+                      <i class="fas fa-check-circle selected-icon" *ngIf="isBoModelKeySelected(modelId, column)"></i>
+                      {{ column }}
+                    </span>
+                  </label>
+                </div>
+              </div>
+              <div class="no-columns" *ngIf="getBoModelFileColumns(modelId).length === 0">
+                <small class="text-muted">{{ 'APM.Aucunecolonnedisponiblepourcefichiermodèle' | translate }}</small>
+              </div>
+              <div class="keys-outside-file" *ngIf="getBoModelKeysOutsideFile(modelId).length > 0">
+                <small>{{ 'APM.keysOutsideFile' | translate }}</small>
+                <button type="button" class="model-chip" *ngFor="let key of getBoModelKeysOutsideFile(modelId)"
+                        (click)="toggleBoModelKey(modelId, key, false)" [title]="'APM.removeKey' | translate">
+                  {{ key }} <i class="fas fa-times"></i>
+                </button>
+              </div>
             </div>
             <small class="form-text text-muted">{{ 'APM.Colonnesdisponiblesdanslesmodèlesbosélectionnés' | translate }}</small>
           </div>

@@ -1,4 +1,5 @@
 import { Component, OnInit, ChangeDetectorRef } from '@angular/core';
+import { firstValueFrom } from 'rxjs';
 import { SharedUiModule } from '../../shared/shared-ui.module';
 import { CdkDragDrop, moveItemInArray } from '@angular/cdk/drag-drop';
 import { FormBuilder, FormGroup, Validators, FormArray, FormControl } from '@angular/forms';
@@ -292,6 +293,12 @@ export class AutoProcessingModelsComponent implements OnInit {
   selectedPartnerKeys: string[] = [];
   selectedBOModels: string[] = [];
   selectedBOKeys: string[] = [];
+  /** Colonnes du fichier modèle de chaque modèle BO sélectionné (une liste par modèle). */
+  boModelFileColumns: Record<string, string[]> = {};
+  /** Clés BO choisies pour chaque modèle BO sélectionné. */
+  boModelKeySelection: Record<string, string[]> = {};
+  /** Colonnes réellement présentes dans le fichier modèle (sans colonnes ajoutées par la configuration). */
+  templateFileColumns: string[] = [];
 
   /** Clés partenaire conditionnelles (optionnel). */
   partnerConditionalKeysEnabled = false;
@@ -816,43 +823,7 @@ export class AutoProcessingModelsComponent implements OnInit {
     return this.fileWatcherService.getAvailableFiles().toPromise().then(files => {
       this.availableFiles = files || [];
       
-      // Correction spécifique pour OPPART.xls
-      this.availableFiles.forEach(file => {
-        if (this.fileNameMatchesKind(file.fileName, 'OPPART')) {
-          file.columns = [
-            'ID Opération', 'Type Opération', 'Montant', 'Solde avant', 'Solde aprés',
-            'Code proprietaire', 'Téléphone', 'Statut', 'ID Transaction', 'Num bordereau',
-            'Date opération', 'Date de versement', 'Banque appro', 'Login demandeur Appro',
-            'Login valideur Appro', 'Motif rejet', 'Frais connexion', 'Numéro Trans GU',
-            'Agent', 'Motif régularisation', 'groupe de réseau'
-          ];
-        }
-        
-        // Correction spécifique pour TRXBO.xls
-        if (this.fileNameMatchesKind(file.fileName, 'TRXBO')) {
-          file.columns = [
-            'ID', 'IDTransaction', 'téléphone client', 'montant', 'Service',
-            'Moyen de Paiement', 'Agence', 'Agent', 'Type agent', 'PIXI',
-            'Date', 'Numéro Trans GU', 'GRX', 'Statut', 'Latitude',
-            'Longitude', 'ID Partenaire DIST', 'Expéditeur', 'Pays provenance',
-            'Bénéficiaire', 'Canal de distribution'
-          ];
-        }
-        
-        // Correction spécifique pour USSDPART.xls
-        if (this.fileNameMatchesKind(file.fileName, 'USSDPART')) {
-          file.columns = [
-            'ID', 'Groupe Réseaux', 'Code réseau', 'Agence', 'Code PIXI',
-            'Code de Proxy', 'Code service', 'Numéro Trans GU', 'Déstinataire',
-            'Login agent', 'Type agent', 'date de création', 'Date d\'envoi vers part',
-            'Etat', 'Type', 'Token', 'SMS', 'Action faite', 'Statut',
-            'Utilisateur', 'Montant', 'Date dernier traitement', 'Latitude',
-            'Longitude', 'Partenaire dist ID', 'Agence SC', 'Groupe reseau SC',
-            'Agent SC', 'PDA SC'
-          ];
-        }
-      });
-      
+      // Les colonnes sont celles lues dans le fichier (aucune liste codée en dur).
       this.loading = false;
     }).catch(error => {
       console.error('Erreur lors du chargement des fichiers:', error);
@@ -1074,56 +1045,9 @@ export class AutoProcessingModelsComponent implements OnInit {
     });
   }
 
-  private getHardcodedColumnsForTemplate(templateFile: string): string[] | null {
-    const lower = templateFile.toLowerCase();
-    if (this.fileNameMatchesKind(lower, 'OPPART')) {
-      return [
-        'ID Opération', 'Type Opération', 'Montant', 'Solde avant', 'Solde après',
-        'Code propriétaire', 'Téléphone', 'Statut', 'ID Transaction', 'Num bordereau',
-        'Date opération', 'Date de versement', 'Banque appro', 'Login demandeur Appro',
-        'Login valideur Appro', 'Motif rejet', 'Frais connexion', 'Numéro Trans GU',
-        'Agent', 'Motif régularisation', 'groupe de réseau'
-      ];
-    }
-    if (this.fileNameMatchesKind(lower, 'TRXBO')) {
-      return [
-        'ID', 'IDTransaction', 'téléphone client', 'montant', 'Service',
-        'Moyen de Paiement', 'Agence', 'Agent', 'Type agent', 'PIXI',
-        'Date', 'Numéro Trans GU', 'Numero Trans GU', 'numeroTransGU', 'GRX', 'Statut',
-        'Latitude', 'Longitude', 'ID Partenaire DIST', 'Expéditeur', 'Pays provenance',
-        'Bénéficiaire', 'Canal de distribution', 'CLE', 'Cle', 'cle', 'Key', 'key',
-        'SOURCE', ENV_COLUMN_NAME
-      ];
-    }
-    if (this.fileNameMatchesKind(lower, 'USSDPART')) {
-      return [
-        'ID', 'Groupe Réseaux', 'Code réseau', 'Agence', 'Code PIXI',
-        'Code de Proxy', 'Code service', 'Numéro Trans GU', 'Destinataire',
-        'Login agent', 'Type agent', 'date de création', 'Date d\'envoi vers part',
-        'Etat', 'Type', 'Token', 'SMS', 'Action faite', 'Statut',
-        'Utilisateur', 'Montant', 'Date dernier traitement', 'Latitude',
-        'Longitude', 'Partenaire dist ID', 'Agence SC', 'Groupe reseau SC',
-        'Agent SC', 'PDA SC'
-      ];
-    }
-    return null;
-  }
-
+  /** Colonnes lues dans le fichier modèle du dossier surveillé, et rien d'autre. */
   private async resolveTemplateColumnNames(templateFile: string): Promise<string[]> {
-    await this.ensureAvailableFilesLoaded();
-
-    const hardcoded = this.getHardcodedColumnsForTemplate(templateFile);
-    if (hardcoded?.length) {
-      return this.normalizeColumnNames(hardcoded);
-    }
-
-    const selectedFile = this.findAvailableFile(templateFile);
-    if (selectedFile?.columns?.length) {
-      return this.normalizeColumnNames(selectedFile.columns);
-    }
-
-    const simulated = await this.getFileColumns(templateFile);
-    return this.normalizeColumnNames(simulated);
+    return this.normalizeColumnNames(await this.getFileColumns(templateFile));
   }
 
   private extractColumnsFromPreProcessingConfig(config?: ModelPreProcessingConfig | null): string[] {
@@ -1225,6 +1149,7 @@ export class AutoProcessingModelsComponent implements OnInit {
     }
   ): Promise<string[]> {
     if (!templateFile?.trim()) {
+      this.templateFileColumns = [];
       this.syncTemplateColumnLists([]);
       return [];
     }
@@ -1232,6 +1157,7 @@ export class AutoProcessingModelsComponent implements OnInit {
     this.isLoadingTemplateColumns = true;
     try {
       const resolved = await this.resolveTemplateColumnNames(templateFile);
+      this.templateFileColumns = [...resolved];
       const extraColumns = [
         ...(extras?.partnerKeys || []),
         ...(extras?.boKeys || []),
@@ -1285,15 +1211,12 @@ export class AutoProcessingModelsComponent implements OnInit {
 
     this.loadBOColumnsFromSelectedModels(selectedBOModels);
 
-    const fallbackKeys = this.selectedBOKeys.length > 0 ? [...this.selectedBOKeys] : [];
-
     selectedBOModels.forEach((modelId: string) => {
       const model = this.models.find(m => m.id === modelId || m.modelId === modelId);
       if (model) {
-        const keys = preservedKeys[modelId]?.length
-          ? preservedKeys[modelId]
-          : fallbackKeys;
-        boModelKeysGroup.addControl(modelId, this.fb.control(keys));
+        const keys = this.boModelKeySelection[modelId] ?? preservedKeys[modelId] ?? [];
+        this.boModelKeySelection[modelId] = [...keys];
+        boModelKeysGroup.addControl(modelId, this.fb.control([...keys]));
         boTreatmentsGroup.addControl(
           modelId,
           this.fb.control(preservedTreatments[modelId] || [])
@@ -1301,9 +1224,7 @@ export class AutoProcessingModelsComponent implements OnInit {
       }
     });
 
-    if (fallbackKeys.length > 0) {
-      this.selectedBOKeys = [...fallbackKeys];
-    }
+    this.syncBoKeysFromModelSelection();
   }
 
   getAvailableBOModels(): AutoProcessingModel[] {
@@ -1315,10 +1236,7 @@ export class AutoProcessingModelsComponent implements OnInit {
   }
 
   private appendBoColumnsFromTemplate(columns: Set<string>, templateFile: string): void {
-    const hardcoded = this.getHardcodedColumnsForTemplate(templateFile);
-    hardcoded?.forEach(col => columns.add(this.normalizeColumnName(col)));
-
-    const file = this.findAvailableFile(templateFile);
+    const file = this.findTemplateFileStrict(templateFile);
     if (file?.columns?.length) {
       this.normalizeColumnNames(file.columns).forEach(col => columns.add(col));
     }
@@ -1448,8 +1366,9 @@ export class AutoProcessingModelsComponent implements OnInit {
   private syncReconciliationKeysBeforeSave(): void {
     const boModelKeys: Record<string, string[]> = {};
     this.selectedBOModels.forEach(modelId => {
-      boModelKeys[modelId] = [...this.selectedBOKeys];
+      boModelKeys[modelId] = [...(this.boModelKeySelection[modelId] ?? this.selectedBOKeys)];
     });
+    this.selectedBOKeys = [...new Set(Object.values(boModelKeys).flat())];
     this.modelForm.patchValue({
       reconciliationKeys: {
         partnerKeys: this.selectedPartnerKeys,
@@ -2281,6 +2200,12 @@ export class AutoProcessingModelsComponent implements OnInit {
 
     this.selectedBOModels = reconciliationKeys.boModels || [];
     this.selectedBOKeys = this.extractBOKeysFromReconciliationKeys(reconciliationKeys);
+    this.boModelKeySelection = {};
+    this.selectedBOModels.forEach(modelId => {
+      const own = reconciliationKeys.boModelKeys?.[modelId];
+      this.boModelKeySelection[modelId] = Array.isArray(own) ? [...own] : [...this.selectedBOKeys];
+    });
+    void this.refreshBoModelFileColumns();
     
     // Debug: Vérifier les valeurs après le patchValue
     setTimeout(() => {
@@ -3258,35 +3183,42 @@ export class AutoProcessingModelsComponent implements OnInit {
 
 
 
-  /**
-   * Récupère les colonnes d'un fichier (avec fallback vers la simulation)
-   */
-  private async getFileColumns(fileName: string): Promise<string[]> {
-    // D'abord, essayer de trouver le fichier dans les fichiers disponibles
-    const file = this.availableFiles.find(f => f.fileName === fileName);
-    if (file && file.columns && file.columns.length > 0) {
-      console.log('✅ Colonnes trouvées dans availableFiles pour:', fileName);
-      return file.columns;
-    }
+  /** Colonnes de fichiers modèles obtenues par analyse (fichiers absents de la liste). */
+  private templateFileColumnsCache = new Map<string, string[]>();
 
-    // Fallback vers la simulation si le fichier n'est pas trouvé
-    console.warn('⚠️ Fichier non trouvé dans availableFiles, utilisation de la simulation pour:', fileName);
-    return new Promise((resolve) => {
-      setTimeout(() => {
-        // Simuler différents types de fichiers avec leurs colonnes
-        const demoPhone = I18nService.t('APM.demoCustomerPhone');
-        const simulatedColumns = ['IDTransaction', demoPhone, 'montant', 'Service', 'Agence', 'Date', 'Numero Trans GU'];
-        const fileColumns: { [key: string]: string[] } = {
-          'TRXBO.xls': [...simulatedColumns],
-          'OPPART.xls': [...simulatedColumns],
-          'USSDPART.xls': [...simulatedColumns],
-          'CIOMCM.xls': [...simulatedColumns],
-          'PMOMCM.xls': [...simulatedColumns]
-        };
-        
-        resolve(fileColumns[fileName] || [1, 2, 3].map(index => I18nService.t('APM.demoColumn', { index })));
-      }, 500); // Délai réduit pour la simulation
-    });
+  /** Colonnes du fichier modèle telles que lues dans le fichier (vide si introuvable). */
+  private async getFileColumns(fileName: string): Promise<string[]> {
+    if (!fileName?.trim()) {
+      return [];
+    }
+    await this.ensureAvailableFilesLoaded();
+    const file = this.findTemplateFileStrict(fileName);
+    if (file?.columns?.length) {
+      return file.columns.map((col: string) => String(col).trim()).filter(Boolean);
+    }
+    const cached = this.templateFileColumnsCache.get(fileName);
+    if (cached) {
+      return cached;
+    }
+    try {
+      const analyzed = await firstValueFrom(this.fileWatcherService.analyzeFile(file?.fileName || fileName));
+      const columns = (analyzed?.columns || []).map((col: string) => String(col).trim()).filter(Boolean);
+      this.templateFileColumnsCache.set(fileName, columns);
+      return columns;
+    } catch {
+      return [];
+    }
+  }
+
+  /** Fichier modèle : même nom (casse ignorée), ou même nom sans extension. */
+  private findTemplateFileStrict(templateFile: string) {
+    const normalized = (templateFile || '').trim().toLowerCase();
+    if (!normalized) {
+      return undefined;
+    }
+    const base = normalized.replace(/\.[^.]+$/, '');
+    return this.availableFiles.find(f => f.fileName.trim().toLowerCase() === normalized)
+      || this.availableFiles.find(f => f.fileName.trim().toLowerCase().replace(/\.[^.]+$/, '') === base);
   }
 
   /**
@@ -3337,11 +3269,14 @@ export class AutoProcessingModelsComponent implements OnInit {
     if (event.target.checked) {
       if (!this.selectedBOModels.includes(modelId)) {
         this.selectedBOModels.push(modelId);
+        this.boModelKeySelection[modelId] = this.boModelKeySelection[modelId] ?? [];
         console.log('✅ Modèle BO ajouté:', modelId);
         console.log('📋 Modèles BO actuels:', this.selectedBOModels);
       }
     } else {
       this.selectedBOModels = this.selectedBOModels.filter(id => id !== modelId);
+      delete this.boModelKeySelection[modelId];
+      delete this.boModelFileColumns[modelId];
       console.log('❌ Modèle BO supprimé:', modelId);
       console.log('📋 Modèles BO actuels:', this.selectedBOModels);
       if (this.selectedBOModels.length === 0) {
@@ -3356,35 +3291,91 @@ export class AutoProcessingModelsComponent implements OnInit {
     }, { emitEvent: false });
     this.onBOModelsChange();
     this.loadBOColumns();
+    void this.refreshBoModelFileColumns();
   }
 
-  toggleBOKey(column: string, event: any): void {
-    if (event.target.checked) {
-      if (!this.selectedBOKeys.includes(column)) {
-        this.selectedBOKeys.push(column);
-        console.log('✅ Clé BO ajoutée:', column);
-        console.log('📋 Clés BO actuelles:', this.selectedBOKeys);
-      }
-    } else {
-      this.selectedBOKeys = this.selectedBOKeys.filter(key => key !== column);
-      console.log('❌ Clé BO supprimée:', column);
-      console.log('📋 Clés BO actuelles:', this.selectedBOKeys);
+  /** Colonnes du fichier modèle d'un modèle BO sélectionné (affichage cloisonné par modèle). */
+  getBoModelFileColumns(modelId: string): string[] {
+    return this.boModelFileColumns[modelId] || [];
+  }
+
+  getBoModelName(modelId: string): string {
+    return this.findBoModel(modelId)?.name || modelId;
+  }
+
+  getBoModelTemplateFile(modelId: string): string {
+    return this.findBoModel(modelId)?.templateFile || '';
+  }
+
+  private findBoModel(modelId: string): AutoProcessingModel | undefined {
+    return this.availableBOModels.find(m => m.id === modelId)
+      || this.models.find(m => m.id === modelId || m.modelId === modelId);
+  }
+
+  isBoModelKeySelected(modelId: string, column: string): boolean {
+    return (this.boModelKeySelection[modelId] || []).includes(column);
+  }
+
+  /** Clés enregistrées pour ce modèle BO mais absentes de son fichier modèle (à retirer). */
+  getBoModelKeysOutsideFile(modelId: string): string[] {
+    const columns = new Set(this.getBoModelFileColumns(modelId));
+    if (!columns.size) {
+      return [];
     }
-    
-    // Construire l'objet boModelKeys avec les clés associées aux modèles BO
-    const boModelKeys: { [key: string]: string[] } = {};
+    return (this.boModelKeySelection[modelId] || []).filter(key => !columns.has(key));
+  }
+
+  /** Clés partenaire enregistrées mais absentes du fichier modèle (à retirer). */
+  get partnerKeysOutsideFile(): string[] {
+    const columns = new Set(this.templateFileColumns);
+    if (!columns.size) {
+      return [];
+    }
+    return this.selectedPartnerKeys.filter(key => !columns.has(key));
+  }
+
+  removePartnerKey(column: string): void {
+    this.togglePartnerKey(column, { target: { checked: false } });
+  }
+
+  toggleBoModelKey(modelId: string, column: string, checked: boolean): void {
+    const current = this.boModelKeySelection[modelId] || [];
+    this.boModelKeySelection[modelId] = checked
+      ? (current.includes(column) ? current : [...current, column])
+      : current.filter(key => key !== column);
+    this.syncBoKeysFromModelSelection();
+  }
+
+  /** Clés BO globales (boKeys) = union des clés de chaque modèle ; boModelKeys = clés par modèle. */
+  private syncBoKeysFromModelSelection(): void {
+    const boModelKeys: Record<string, string[]> = {};
     this.selectedBOModels.forEach(modelId => {
-      boModelKeys[modelId] = this.selectedBOKeys;
+      boModelKeys[modelId] = [...(this.boModelKeySelection[modelId] || [])];
     });
-    
-    // Synchroniser avec le formulaire
-    this.modelForm.patchValue({
-      reconciliationKeys: {
-        boModelKeys: boModelKeys
-      }
-    }, { emitEvent: false });
-    
-    console.log('🔧 boModelKeys mis à jour:', boModelKeys);
+    this.selectedBOKeys = [...new Set(Object.values(boModelKeys).flat())];
+    const group = this.modelForm.get('reconciliationKeys.boModelKeys') as FormGroup | null;
+    if (group) {
+      Object.entries(boModelKeys).forEach(([modelId, keys]) => {
+        const control = group.get(modelId);
+        if (control) {
+          control.setValue(keys, { emitEvent: false });
+        } else {
+          group.addControl(modelId, this.fb.control(keys), { emitEvent: false });
+        }
+      });
+    }
+    this.modelForm.patchValue({ reconciliationKeys: { boKeys: this.selectedBOKeys } }, { emitEvent: false });
+  }
+
+  /** Lit les colonnes du fichier modèle de chaque modèle BO sélectionné. */
+  private async refreshBoModelFileColumns(): Promise<void> {
+    const next: Record<string, string[]> = {};
+    for (const modelId of [...this.selectedBOModels]) {
+      const templateFile = this.getBoModelTemplateFile(modelId);
+      next[modelId] = templateFile ? this.normalizeColumnNames(await this.getFileColumns(templateFile)) : [];
+    }
+    this.boModelFileColumns = next;
+    this.cdr.detectChanges();
   }
 
   // ===== MÉTHODES POUR LES RÈGLES DE TRAITEMENT DES COLONNES (NOUVELLE STRUCTURE) =====
@@ -4177,6 +4168,9 @@ export class AutoProcessingModelsComponent implements OnInit {
     this.selectedPartnerKeys = [];
     this.selectedBOModels = [];
     this.selectedBOKeys = [];
+    this.boModelKeySelection = {};
+    this.boModelFileColumns = {};
+    this.templateFileColumns = [];
     this.resetPartnerConditionalKeysConfig();
     this.resetBoConditionalKeysConfig();
     this.availableBOColumns = [];

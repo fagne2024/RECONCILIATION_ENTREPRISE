@@ -3043,3 +3043,37 @@ textarea.form-control {
     top: 56px;
   }
 }
+
+/* Colonnes des modèles BO sélectionnés : un bloc par modèle */
+.bo-model-columns {
+  border: 1px solid var(--rd-border);
+  border-radius: var(--rd-r-sm);
+  padding: 10px 12px;
+  margin-bottom: 10px;
+}
+
+.bo-model-columns-title {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  margin-bottom: 8px;
+}
+
+.keys-outside-file {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 6px;
+  margin-top: 8px;
+  color: var(--rd-amber);
+}
+
+.keys-outside-file .model-chip {
+  border: 1px solid currentColor;
+  border-radius: 12px;
+  background: transparent;
+  color: inherit;
+  padding: 2px 8px;
+  font-size: 0.8rem;
+  cursor: pointer;
+}
