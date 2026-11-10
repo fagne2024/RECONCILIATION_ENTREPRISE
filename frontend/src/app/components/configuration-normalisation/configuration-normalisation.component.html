@@ -1,0 +1,163 @@
+<div class="config-normalisation-page">
+  <header class="top">
+    <div class="top-text">
+      <h1>{{ 'CFG.normalisation.title' | translate }}</h1>
+      <p>{{ 'CFG.normalisation.subtitle' | translate }}</p>
+    </div>
+    <div class="top-acts">
+      <button type="button" class="ds-btn ds-btn--secondary icon-btn" (click)="close()" [title]="'CFG.normalisation.close' | translate">
+        <i class="fas fa-times"></i>
+      </button>
+    </div>
+  </header>
+
+  <div class="loading" *ngIf="loadingModels">
+    <i class="fas fa-spinner fa-spin"></i> {{ 'CFG.normalisation.loading' | translate }}
+  </div>
+
+  <div class="error" *ngIf="errorMessage">{{ errorMessage }}</div>
+
+  <div class="empty" *ngIf="!loadingModels && !errorMessage && models.length === 0">
+    {{ 'CFG.normalisation.noModels' | translate }}
+  </div>
+
+  <ng-container *ngIf="!loadingModels && models.length > 0">
+    <div class="sticky">
+      <div class="tools">
+        <label class="fld-label">
+          <span>{{ 'CFG.normalisation.model' | translate }}</span>
+          <select class="ds-select fld" [ngModel]="selectedModelKey" (ngModelChange)="onModelChange($event)">
+            <option *ngFor="let m of models" [value]="modelKey(m)">
+              {{ m.name }} — {{ modelTypeLabel(m) }}{{ savedCount(m) ? ' (' + savedCount(m) + ')' : '' }}
+            </option>
+          </select>
+        </label>
+
+        <label class="search">
+          <i class="fas fa-search"></i>
+          <input class="ds-input" type="search" [(ngModel)]="searchTerm"
+                 [placeholder]="'CFG.normalisation.searchPlaceholder' | translate" />
+        </label>
+
+        <label class="ds-btn ds-btn--secondary file-btn" [class.is-busy]="checking">
+          <i class="fas" [class.fa-file-import]="!checking" [class.fa-spinner]="checking" [class.fa-spin]="checking"></i>
+          {{ 'CFG.normalisation.checkFile' | translate }}
+          <input type="file" accept=".csv,.txt,.tsv,.xls,.xlsx" (change)="onCheckFile($event)" [disabled]="checking" hidden />
+        </label>
+
+        <div class="save-acts">
+          <span class="dirty" *ngIf="dirty">{{ 'CFG.normalisation.unsaved' | translate }}</span>
+          <button type="button" class="ds-btn ds-btn--secondary" (click)="cancel()" [disabled]="!dirty || saving">
+            {{ 'CFG.normalisation.cancel' | translate }}
+          </button>
+          <button type="button" class="ds-btn ds-btn--primary" (click)="save()" [disabled]="!dirty || saving">
+            <i class="fas" [class.fa-save]="!saving" [class.fa-spinner]="saving" [class.fa-spin]="saving"></i>
+            {{ 'CFG.normalisation.save' | translate }}
+          </button>
+        </div>
+      </div>
+      <p class="hint">
+        {{ 'CFG.normalisation.hint' | translate }}
+        <b>{{ configuredCount }}</b> / {{ rows.length }} {{ 'CFG.normalisation.columnsConfigured' | translate }}
+      </p>
+      <p class="hint warn" *ngIf="!loadingColumns && !templateFileFound && selectedModel">
+        <i class="fas fa-exclamation-triangle"></i>
+        {{ 'CFG.normalisation.templateFallback' | translate: { file: selectedModel.templateFile || '—' } }}
+      </p>
+    </div>
+
+    <!-- Résultat de la vérification d'un fichier -->
+    <section class="check" *ngIf="check">
+      <div class="check-head">
+        <div>
+          <h2>{{ 'CFG.normalisation.checkTitle' | translate: { file: check.fileName } }}</h2>
+          <p *ngIf="!check.headerFound" class="warn">{{ 'CFG.normalisation.headerNotFound' | translate }}</p>
+        </div>
+        <div class="check-stats">
+          <span class="stat ok"><i class="fas fa-check"></i> {{ checkSummary.present }} {{ 'CFG.normalisation.statusPresent' | translate }}</span>
+          <span class="stat eq"><i class="fas fa-exchange-alt"></i> {{ checkSummary.equivalent }} {{ 'CFG.normalisation.statusEquivalent' | translate }}</span>
+          <span class="stat ko"><i class="fas fa-times"></i> {{ checkSummary.missing }} {{ 'CFG.normalisation.statusMissing' | translate }}</span>
+          <button type="button" class="ds-btn ds-btn--secondary icon-btn" (click)="check = null" [title]="'CFG.normalisation.close' | translate">
+            <i class="fas fa-times"></i>
+          </button>
+        </div>
+      </div>
+      <div class="extra" *ngIf="check.extraHeaders.length && missingRows.length">
+        <p>{{ 'CFG.normalisation.extraHint' | translate }}</p>
+        <div class="extra-list">
+          <div class="extra-item" *ngFor="let h of check.extraHeaders">
+            <span class="chip chip--file">{{ h }}</span>
+            <select class="ds-select fld-sm" #target>
+              <option value="">{{ 'CFG.normalisation.mapTo' | translate }}</option>
+              <option *ngFor="let r of missingRows" [value]="r.columnName">{{ r.columnName }}</option>
+            </select>
+            <button type="button" class="ds-btn ds-btn--secondary btn-sm"
+                    (click)="mapExtraHeader(target.value, h)"
+                    [disabled]="!target.value">
+              <i class="fas fa-link"></i>
+            </button>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <div class="loading" *ngIf="loadingColumns">
+      <i class="fas fa-spinner fa-spin"></i> {{ 'CFG.normalisation.loadingColumns' | translate }}
+    </div>
+
+    <div class="panel" *ngIf="!loadingColumns">
+      <div class="thead" [class.has-check]="!!check">
+        <span>{{ 'CFG.normalisation.colDefault' | translate }}</span>
+        <span>{{ 'CFG.normalisation.colEquivalents' | translate }}</span>
+        <span *ngIf="check">{{ 'CFG.normalisation.colCheck' | translate }}</span>
+      </div>
+
+      <div class="empty" *ngIf="rows.length === 0">{{ 'CFG.normalisation.noColumns' | translate }}</div>
+
+      <div class="trow" *ngFor="let row of filteredRows; trackBy: trackByColumn" [class.has-check]="!!check">
+        <div class="col-name">
+          <span class="name">{{ row.columnName }}</span>
+          <span class="tag" *ngIf="row.custom">{{ 'CFG.normalisation.custom' | translate }}</span>
+          <button type="button" class="link-btn" *ngIf="row.custom" (click)="removeCustomColumn(row)"
+                  [title]="'CFG.normalisation.removeColumn' | translate">
+            <i class="fas fa-trash-alt"></i>
+          </button>
+        </div>
+
+        <div class="col-eq">
+          <span class="chip" *ngFor="let eq of row.equivalents; let i = index">
+            {{ eq }}
+            <button type="button" (click)="removeEquivalent(row, i)" [attr.aria-label]="'CFG.normalisation.remove' | translate">
+              <i class="fas fa-times"></i>
+            </button>
+          </span>
+          <input class="ds-input eq-input" type="text" [(ngModel)]="row.draft"
+                 (keydown.enter)="addEquivalent(row)" (blur)="addEquivalent(row)"
+                 [placeholder]="'CFG.normalisation.addEquivalent' | translate" />
+          <span class="suggest" *ngIf="row.suggestions.length">
+            <span class="suggest-label">{{ 'CFG.normalisation.suggestions' | translate }}</span>
+            <button type="button" class="chip chip--suggest" *ngFor="let s of row.suggestions" (click)="addEquivalent(row, s)">
+              <i class="fas fa-plus"></i> {{ s }}
+            </button>
+          </span>
+        </div>
+
+        <div class="col-check" *ngIf="check">
+          <ng-container *ngIf="checkStatus(row) as st">
+            <span class="status ok" *ngIf="st.status === 'present'"><i class="fas fa-check"></i> {{ 'CFG.normalisation.statusPresent' | translate }}</span>
+            <span class="status eq" *ngIf="st.status === 'equivalent'"><i class="fas fa-exchange-alt"></i> {{ st.foundAs }}</span>
+            <span class="status ko" *ngIf="st.status === 'missing'"><i class="fas fa-times"></i> {{ 'CFG.normalisation.statusMissing' | translate }}</span>
+          </ng-container>
+        </div>
+      </div>
+
+      <div class="add-col">
+        <input class="ds-input" type="text" [(ngModel)]="newColumnName" (keydown.enter)="addCustomColumn()"
+               [placeholder]="'CFG.normalisation.newColumnPlaceholder' | translate" />
+        <button type="button" class="ds-btn ds-btn--secondary" (click)="addCustomColumn()" [disabled]="!newColumnName.trim()">
+          <i class="fas fa-plus"></i> {{ 'CFG.normalisation.addColumn' | translate }}
+        </button>
+      </div>
+    </div>
+  </ng-container>
+</div>

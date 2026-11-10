@@ -32,6 +32,13 @@ import {
 } from '../../utils/text-cell.util';
 import { renameKeyPreservingOrder, normalizeColumnKey } from '../../utils/row-column.util';
 import { resolveCanonicalColumnId } from '../../utils/bilingual-column.util';
+import { ModelNormalizationService } from '../../services/model-normalization.service';
+import {
+  describeColumnNormalization,
+  ModelColumnEquivalence,
+  normalizeHeaderKey,
+  planColumnNormalization
+} from '../../utils/model-column-normalization.util';
 import { AutoProcessingService, AutoProcessingModel } from '../../services/auto-processing.service';
 import * as Papa from 'papaparse';
 import * as XLSX from 'xlsx';
@@ -262,6 +269,10 @@ export class TraitementComponent implements OnInit, AfterViewInit, OnDestroy {
   selectedModelId: string = '';
   /** Colonnes cibles du modèle sélectionné. */
   modelColumns: string[] = [];
+  /** En-têtes équivalents configurés pour le modèle sélectionné (clé normalisée → équivalents). */
+  private modelColumnEquivalents = new Map<string, Set<string>>();
+  /** Équivalences brutes du modèle sélectionné (Configuration > Normalisation modèle). */
+  private modelEquivalenceList: ModelColumnEquivalence[] = [];
   modelColumnsLoading: boolean = false;
   /** Colonne du modèle -> colonne du traitement liée ('' = non liée). */
   modelLinks: Record<string, string> = {};
@@ -522,7 +533,8 @@ End Sub`;
     private excelConversionService: ExcelConversionService,
     private translate: TranslateService,
     private configurationCalculService: ConfigurationCalculService,
-    private autoProcessingService: AutoProcessingService
+    private autoProcessingService: AutoProcessingService,
+    private modelNormalizationService: ModelNormalizationService
   ) {}
 
   private t(key: string, params?: any): string {
@@ -940,6 +952,7 @@ End Sub`;
       this.combinedRows = this.allRows.clone();
       this.columns = [...this.allColumns];
       this.originalRows = this.allRows.clone();
+      this.applyConfiguredEquivalences();
       
       // Optimiser l'affichage pour les gros fichiers
       this.optimizeForLargeFiles();
@@ -6409,6 +6422,7 @@ End Sub`;
       this.isColumnReorderMode = false;
       this.reorderedColumns = [...this.allColumns];
       this.currentPage = 1;
+      this.applyConfiguredEquivalences();
 
       // Optimiser l'affichage pour les gros fichiers
       this.optimizeForLargeFiles();
@@ -6594,13 +6608,27 @@ End Sub`;
     this.modelLinks = {};
     this.modelLinkMessage = '';
     this.modelColumns = [];
+    this.modelEquivalenceList = [];
+    this.modelColumnEquivalents = new Map();
     if (!modelId) {
       return;
     }
     this.modelColumnsLoading = true;
     try {
-      this.modelColumns = await this.autoProcessingService.getTargetColumns(modelId);
+      const [columns, equivalences] = await Promise.all([
+        this.autoProcessingService.getTargetColumns(modelId),
+        this.modelNormalizationService.getForModels([modelId])
+      ]);
+      this.modelColumns = columns;
+      this.modelEquivalenceList = equivalences;
+      this.modelColumnEquivalents = new Map(equivalences.map(eq => [
+        normalizeHeaderKey(eq.columnName),
+        new Set((eq.equivalents || []).map(normalizeHeaderKey))
+      ]));
       this.resetModelLinks();
+      if (this.combinedRows.length) {
+        this.applyConfiguredEquivalences();
+      }
     } catch {
       this.modelLinkMessage = 'Colonnes du modèle indisponibles.';
     } finally {
@@ -6609,7 +6637,10 @@ End Sub`;
     }
   }
 
-  /** Propose les liens : même nom normalisé, ou même concept (ex. Transfer ID / Transaction ID). */
+  /**
+   * Propose les liens : même nom normalisé, puis en-tête équivalent configuré
+   * (Configuration > Normalisation modèle), puis même concept (ex. Transfer ID / Transaction ID).
+   */
   resetModelLinks(): void {
     const displayCols = this.comparisonDisplayColumns;
     const used = new Set<string>();
@@ -6617,10 +6648,12 @@ End Sub`;
     for (const modelCol of this.modelColumns) {
       const modelKey = normalizeColumnKey(modelCol);
       const modelId = resolveCanonicalColumnId(modelCol);
-      const match = displayCols.find(c =>
-        !used.has(c) &&
-        (normalizeColumnKey(c) === modelKey || (!!modelId && resolveCanonicalColumnId(c) === modelId))
-      );
+      const equivalents = this.modelColumnEquivalents.get(normalizeHeaderKey(modelCol));
+      const free = displayCols.filter(c => !used.has(c));
+      const match =
+        free.find(c => normalizeColumnKey(c) === modelKey) ??
+        free.find(c => !!equivalents?.has(normalizeHeaderKey(c))) ??
+        free.find(c => !!modelId && resolveCanonicalColumnId(c) === modelId);
       links[modelCol] = match ?? '';
       if (match) {
         used.add(match);
@@ -6668,7 +6701,31 @@ End Sub`;
       this.modelLinkMessage = `Impossible : « ${clash} » existe déjà dans le traitement sans lien.`;
       return;
     }
+    this.renameTreatmentColumns(rename);
+    this.modelLinkMessage = `${rename.size} colonne(s) renommée(s) selon le modèle.`;
+  }
 
+  /**
+   * Configuration > Normalisation modèle, écran Traitement : dès que le fichier est importé et le
+   * modèle connu, chaque en-tête équivalent configuré est renommé avec la colonne d'origine.
+   * Le tableau, les traitements suivants et l'export portent alors la colonne d'origine.
+   */
+  private applyConfiguredEquivalences(): void {
+    if (!this.modelEquivalenceList.length || !this.combinedRows.length || !this.allColumns.length) {
+      return;
+    }
+    const plan = planColumnNormalization(this.allColumns, this.modelEquivalenceList, this.modelColumns);
+    if (plan.renames.length) {
+      this.renameTreatmentColumns(new Map(plan.renames.map(r => [r.from, r.to])));
+    }
+    const message = describeColumnNormalization({ ...plan, missing: [] });
+    if (message) {
+      this.modelLinkMessage = message;
+    }
+  }
+
+  /** Renomme des colonnes (ancien nom → nouveau) dans les lignes et toutes les listes de colonnes. */
+  private renameTreatmentColumns(rename: ReadonlyMap<string, string>): void {
     const renameKey = (key: string) => rename.get(key) ?? key;
     const renameRow = (row: any) => {
       const out: any = {};
@@ -6690,7 +6747,6 @@ End Sub`;
     this.updateDisplayedRows();
     this.updatePagination();
     this.resetModelLinks();
-    this.modelLinkMessage = `${rename.size} colonne(s) renommée(s) selon le modèle.`;
   }
 
   /** Changement de la case « plusieurs langues » ou de la langue : l'aperçu est recalculé. */

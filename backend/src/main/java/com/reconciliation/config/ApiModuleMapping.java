@@ -67,6 +67,7 @@ public final class ApiModuleMapping {
         if (apiPath.startsWith("/api/sop-nodes")) return "AIDE";
         if (apiPath.startsWith("/api/sop-documents")) return "AIDE";
         if (apiPath.startsWith("/api/configuration/calcul")) return "Modèles";
+        if (apiPath.startsWith("/api/configuration/normalisation")) return "Modèles";
         if (apiPath.startsWith("/api/configuration/top-users")) return "Dashboard";
         if (apiPath.startsWith("/api/configuration")) return "Profil";
         if (apiPath.startsWith("/api/conversion")) return "Modèles";

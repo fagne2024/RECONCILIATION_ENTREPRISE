@@ -20,7 +20,8 @@ import {
   chooseBatchHeaderSet,
   FrenchAliasEntry,
   getCanonicalFrenchLabel,
-  resolveCanonicalColumnId
+  resolveCanonicalColumnId,
+  findEquivalentHeader
 } from '../../utils/bilingual-column.util';
 import { resolveColumnKeyInRow, deduplicateHeaderNames, alignRowsToHeaders, filterRealDataRows } from '../../utils/row-column.util';
 import { stripAllWhitespace } from '../../utils/concat.util';
@@ -44,6 +45,12 @@ import { ProgressIndicatorService } from '../../services/progress-indicator.serv
 import { ColumnRulesProcessorService } from '../../services/column-rules-processor.service';
 import { readCsvFileUltraFast, readCsvContentUltraFast } from '../../utils/fast-csv-reader.util';
 import { findHeaderLineIndexInCsvLines, findHeaderRowIndexInGrid, detectGenericHeaderRowIndex, isMarkerCellValue } from '../../utils/model-header-detection.util';
+import {
+    describeColumnNormalization,
+    listColumnsOutsideModel,
+    templateCoverage
+} from '../../utils/model-column-normalization.util';
+import { ModelNormalizationService } from '../../services/model-normalization.service';
 import { discoverReconciliationKeyColumns } from '../../utils/reconciliation-key.util';
 import {
     ClientVolumeCheckResult,
@@ -372,7 +379,8 @@ export class FileUploadComponent implements OnInit, OnDestroy {
         private fileWatcherService: FileWatcherService,
         private columnRulesProcessor: ColumnRulesProcessorService,
         private cd: ChangeDetectorRef,
-        private ngZone: NgZone
+        private ngZone: NgZone,
+        private modelNormalizationService: ModelNormalizationService
     ) {
         // Le type de réconciliation est réhydraté dans ngOnInit, une fois le mode actif connu.
     }
@@ -730,8 +738,7 @@ export class FileUploadComponent implements OnInit, OnDestroy {
         if (!model || !this.traitementOutputDate) {
             return '';
         }
-        const sampleFile = this.traitementFiles[0] || new File([''], 'fichier.csv');
-        return this.buildProcessedOutputFileName(model, sampleFile);
+        return this.buildProcessedOutputFileName(model);
     }
 
     private getDefaultTraitementOutputDate(): Date {
@@ -1065,6 +1072,14 @@ export class FileUploadComponent implements OnInit, OnDestroy {
             return defaultColumns;
         }
 
+        return this.resolveWatchFolderTemplateColumns(model);
+    }
+
+    /**
+     * Colonnes du vrai fichier modèle (dossier surveillé), sans la liste générique codée en dur.
+     * C'est la référence de la normalisation : ses colonnes ne sont jamais renommées.
+     */
+    private async resolveWatchFolderTemplateColumns(model: AutoProcessingModel): Promise<string[]> {
         const templateFile = model.templateFile?.trim();
         if (!templateFile) {
             return [];
@@ -1444,10 +1459,23 @@ export class FileUploadComponent implements OnInit, OnDestroy {
         const columnRules = await this.getTraitementColumnRules(model.id!);
         const expectedHeaderColumns = await this.resolveModelExpectedHeaderColumns(model, columnRules);
 
-        const needsCompilation = await this.needsAssistedCompilation(files);
-        const compiled = needsCompilation
-            ? await this.compileAssistedTreatmentFileRows(files, expectedHeaderColumns)
-            : await this.loadSingleAssistedTreatmentFile(files[0], expectedHeaderColumns);
+        // Configuration > Normalisation modèle : les en-têtes équivalents aident aussi à localiser
+        // la ligne d'en-tête quand le fichier ne porte pas les colonnes par défaut.
+        const modelIds = [model.modelId, model.id];
+        const equivalences = await this.modelNormalizationService.getForModels(modelIds);
+        this.assistedHeaderAlternatives = equivalences.length
+            ? new Map(equivalences.map(eq => [eq.columnName, eq.equivalents]))
+            : undefined;
+
+        let compiled: Awaited<ReturnType<FileUploadComponent['loadSingleAssistedTreatmentFile']>>;
+        try {
+            const needsCompilation = await this.needsAssistedCompilation(files);
+            compiled = needsCompilation
+                ? await this.compileAssistedTreatmentFileRows(files, expectedHeaderColumns)
+                : await this.loadSingleAssistedTreatmentFile(files[0], expectedHeaderColumns);
+        } finally {
+            this.assistedHeaderAlternatives = undefined;
+        }
 
         await this.updateTraitementProgress(
             `Lecture terminée (${compiled.rows.length.toLocaleString('fr-FR')} ligne(s)) — ${model.name}...`
@@ -1460,13 +1488,28 @@ export class FileUploadComponent implements OnInit, OnDestroy {
                 warningMessage: 'Aucune donnée lisible dans les fichiers sélectionnés.'
             };
         }
+        // Colonnes par défaut absentes : chaque en-tête équivalent configuré est renommé avec le
+        // nom de la colonne d'origine avant le traitement ; le fichier téléchargé porte donc la
+        // colonne d'origine. Seule exception : un équivalent qui est une colonne du vrai fichier
+        // modèle (erreur de configuration), ignoré et signalé.
+        const normalization = await this.modelNormalizationService.normalizeRows(
+            compiled.rows,
+            modelIds,
+            () => this.yieldToMainThread(true),
+            await this.resolveWatchFolderTemplateColumns(model)
+        );
+        const normalizationMessage = describeColumnNormalization(normalization.plan);
+        if (normalizationMessage) {
+            console.info(`[Normalisation modèle] ${model.name} — ${normalizationMessage}`);
+        }
+
         const inputColumns = this.collectAssistedTreatmentInputColumns(model, columnRules);
-        let workingRows = compiled.rows;
-        const needsEnrichment = this.needsAssistedColumnEnrichment(compiled.rows[0], inputColumns);
+        let workingRows = normalization.rows;
+        const needsEnrichment = this.needsAssistedColumnEnrichment(workingRows[0], inputColumns);
 
         if (needsEnrichment) {
             workingRows = await this.enrichAssistedRowsAsync(
-                compiled.rows,
+                workingRows,
                 inputColumns,
                 (done, total) => this.updateTraitementProgress(
                     `${model.name} — colonnes : ${done.toLocaleString('fr-FR')} / ${total.toLocaleString('fr-FR')}...`
@@ -1562,21 +1605,41 @@ export class FileUploadComponent implements OnInit, OnDestroy {
             };
         }
 
+        // Seules les colonnes du modèle sont conservées : colonnes du vrai fichier modèle et
+        // colonnes produites par le modèle (renommages, concaténations, règles). Les autres
+        // colonnes du fichier chargé sont ignorées (fichier téléchargé et réconciliation).
+        let projectionColumns = exportColumns;
+        let ignoredColumnsMessage = '';
+        if (!projectionColumns.length) {
+            const templateColumns = await this.resolveWatchFolderTemplateColumns(model);
+            if (templateColumns.length) {
+                projectionColumns = this.modelPreProcessingService.buildAssistedExportColumnCatalog(
+                    model,
+                    columnRules,
+                    templateColumns
+                );
+                const ignored = listColumnsOutsideModel(Object.keys(mergedRows[0] ?? {}), projectionColumns);
+                if (ignored.length) {
+                    ignoredColumnsMessage = `Colonnes hors modèle ignorées (${ignored.length}) : ${ignored.join(', ')}`;
+                    console.info(`[Colonnes du modèle] ${model.name} — ${ignoredColumnsMessage}`);
+                }
+            }
+        }
+
         let exportRows = mergedRows;
-        if (exportColumns.length) {
+        if (projectionColumns.length) {
             exportRows = this.modelPreProcessingService.projectRowsToExportColumns(
                 mergedRows,
-                exportColumns,
+                projectionColumns,
                 columnRules,
                 model
             );
         }
 
-        const outputName = this.buildProcessedOutputFileName(model, compiled.referenceFile);
         let { rows: finalExportRows, columns: finalExportColumns } =
             this.modelPreProcessingService.dropEmptyColumnsFromRows(
                 exportRows,
-                exportColumns.length ? exportColumns : undefined
+                projectionColumns.length ? projectionColumns : undefined
             );
 
         const dedupResult = this.traitementDedupEnabled && this.traitementDedupColumns.length
@@ -1594,6 +1657,8 @@ export class FileUploadComponent implements OnInit, OnDestroy {
         if (!finalExportRows.length) {
             return { success: false, warningMessage: 'Aucune ligne unique après déduplication.' };
         }
+
+        const outputName = this.buildProcessedOutputFileName(model);
         console.error('[DIAG-TRAITEMENT] APRÈS DÉDUP:', finalExportRows.length, '— supprimés:', dedupResult.duplicatesRemoved, '— clé:', dedupResult.dedupColumns);
 
         if (dedupResult.duplicatesRemoved > 0) {
@@ -1626,7 +1691,9 @@ export class FileUploadComponent implements OnInit, OnDestroy {
             outputName,
             lineCount: finalExportRows.length,
             duplicatesRemoved: dedupResult.duplicatesRemoved,
-            preProcessingResultMessage,
+            preProcessingResultMessage: [normalizationMessage, ignoredColumnsMessage, preProcessingResultMessage]
+                .filter(Boolean)
+                .join('\n'),
             exportRows: finalExportRows
         };
     }
@@ -1739,6 +1806,9 @@ export class FileUploadComponent implements OnInit, OnDestroy {
     /** Fusionne plusieurs fichiers ou feuilles Excel en un seul jeu de lignes. */
     /** Vrai pendant la lecture des fichiers à compiler : pas d'ajout des libellés FR. */
     private assistedRawHeaderCompile = false;
+
+    /** En-têtes équivalents du modèle en cours de lecture (Configuration > Normalisation modèle). */
+    private assistedHeaderAlternatives: Map<string, string[]> | undefined;
 
     /** Clés distinctes de toutes les lignes, dans l'ordre d'apparition. */
     private collectRowKeys(rows: Record<string, string>[]): string[] {
@@ -1952,7 +2022,8 @@ export class FileUploadComponent implements OnInit, OnDestroy {
                 lines,
                 delimiter,
                 expectedHeaderColumns,
-                80
+                80,
+                this.assistedHeaderAlternatives
             );
             if (modelLineIndex !== null) {
                 const headerCells = this.splitCsvLineFast(lines[modelLineIndex], delimiter);
@@ -2072,7 +2143,14 @@ export class FileUploadComponent implements OnInit, OnDestroy {
         sampleRow: Record<string, string>,
         inputColumns: string[]
     ): boolean {
+        const headers = Object.keys(sampleRow);
         for (const column of inputColumns) {
+            // Colonne du modèle absente sous son nom exact mais présente dans l'autre langue
+            // (ex. modèle « Numéro Trans GU », fichier « Num Trans GU ») : on ajoute l'alias.
+            if (column && !Object.prototype.hasOwnProperty.call(sampleRow, column)
+                && findEquivalentHeader(headers, column)) {
+                return true;
+            }
             if (!column || resolveColumnKeyInRow(sampleRow, column)) {
                 continue;
             }
@@ -2092,9 +2170,26 @@ export class FileUploadComponent implements OnInit, OnDestroy {
         inputColumns: string[],
         sampleRow: Record<string, string>
     ): FrenchAliasEntry[] {
+        // Alias pilotés par le modèle, dans les deux sens (modèle FR / fichier EN et inverse) :
+        // la ligne reçoit la colonne sous le nom exact attendu par les règles et l'export.
+        const modelAliases: FrenchAliasEntry[] = [];
+        for (const column of inputColumns) {
+            if (!column || Object.prototype.hasOwnProperty.call(sampleRow, column)) {
+                continue;
+            }
+            const source = findEquivalentHeader(headers, column);
+            if (source) {
+                modelAliases.push({ frenchKey: column, sourceKey: source });
+            }
+        }
+        const withModelAliases = (entries: FrenchAliasEntry[]): FrenchAliasEntry[] => {
+            const known = new Set(modelAliases.map(a => a.frenchKey));
+            return [...modelAliases, ...entries.filter(e => !known.has(e.frenchKey))];
+        };
+
         const allAliases = buildFrenchAliasEntries(headers);
         if (!allAliases.length || !inputColumns.length) {
-            return [];
+            return modelAliases;
         }
 
         const neededFrenchKeys = new Set<string>();
@@ -2110,10 +2205,10 @@ export class FileUploadComponent implements OnInit, OnDestroy {
         }
 
         if (!neededFrenchKeys.size) {
-            return allAliases;
+            return withModelAliases(allAliases);
         }
 
-        return allAliases.filter(alias => neededFrenchKeys.has(alias.frenchKey));
+        return withModelAliases(allAliases.filter(alias => neededFrenchKeys.has(alias.frenchKey)));
     }
 
     private async enrichAssistedRowsAsync(
@@ -2826,7 +2921,12 @@ export class FileUploadComponent implements OnInit, OnDestroy {
         source: string;
     } {
         if (expectedHeaderColumns.length >= 2) {
-            const modelHeaderIndex = findHeaderRowIndexInGrid(jsonData, expectedHeaderColumns, 80);
+            const modelHeaderIndex = findHeaderRowIndexInGrid(
+                jsonData,
+                expectedHeaderColumns,
+                80,
+                this.assistedHeaderAlternatives
+            );
             if (modelHeaderIndex !== null) {
                 const headerRow = this.extractAssistedGridRowStrings(jsonData[modelHeaderIndex]);
                 return {
@@ -3116,17 +3216,17 @@ export class FileUploadComponent implements OnInit, OnDestroy {
         return true;
     }
 
-    private buildProcessedOutputFileName(model: AutoProcessingModel, originalFile: File): string {
+    /**
+     * Nom du fichier final : base du motif du modèle + date. Le fichier final est toujours un
+     * CSV, quel que soit le format du motif ou du fichier chargé (.xls limité à 65 535 lignes,
+     * Excel lent sur les gros volumes) ; les motifs des modèles acceptent .csv comme .xls/.xlsx.
+     */
+    private buildProcessedOutputFileName(model: AutoProcessingModel): string {
         const pattern = (model.filePattern || model.name || 'modele').trim();
         const patternDotIndex = pattern.lastIndexOf('.');
         const rawBase = patternDotIndex > 0 ? pattern.substring(0, patternDotIndex) : pattern;
         const base = this.sanitizePatternBaseForFileName(rawBase);
-        const ext = patternDotIndex > 0
-            ? pattern.substring(patternDotIndex).replace(/[*?]/g, '')
-            : (() => {
-                const originalDotIndex = originalFile.name.lastIndexOf('.');
-                return originalDotIndex > 0 ? originalFile.name.substring(originalDotIndex) : '.csv';
-            })();
+        const ext = '.csv';
         const dateSuffix = this.formatDateForFileName(this.traitementOutputDate);
         const nameSuffix = this.sanitizeFileNameSegment(this.traitementOutputNameSuffix);
         const fileBase = nameSuffix ? `${base}_${nameSuffix}_${dateSuffix}` : `${base}_${dateSuffix}`;
@@ -5861,15 +5961,17 @@ export class FileUploadComponent implements OnInit, OnDestroy {
         
         if (this.canProceed()) {
             
-            // Sauvegarder les données dans le service d'état
-            this.appStateService.setReconciliationLaunchMode('manual');
-            this.appStateService.setReconciliationEntryPath('/upload');
-            this.appStateService.setReconciliationData(this.boData, this.partnerData);
-            this.appStateService.setReconciliationType(this.reconciliationType);
-            this.appStateService.setCurrentStep(2);
-            
-            // Naviguer vers la page de sélection des colonnes
-            this.router.navigate(['/column-selection']);
+            // Normaliser les colonnes (Configuration > Normalisation modèle) puis sauvegarder
+            void this.normalizeManualReconciliationColumns().then(() => {
+                this.appStateService.setReconciliationLaunchMode('manual');
+                this.appStateService.setReconciliationEntryPath('/upload');
+                this.appStateService.setReconciliationData(this.boData, this.partnerData);
+                this.appStateService.setReconciliationType(this.reconciliationType);
+                this.appStateService.setCurrentStep(2);
+
+                // Naviguer vers la page de sélection des colonnes
+                this.router.navigate(['/column-selection']);
+            });
         } else {
         }
     }
@@ -8638,6 +8740,185 @@ export class FileUploadComponent implements OnInit, OnDestroy {
 
 
 
+    /** Réconciliation assistée : normalise les fichiers BO / partenaire chargés. */
+    private async normalizeAssistedReconciliationColumns(): Promise<void> {
+        const result = await this.normalizeReconciliationColumns(
+            this.autoBoData,
+            this.autoPartnerData,
+            this.getResolvedAutoBoFileName(),
+            this.getResolvedAutoPartnerFileName()
+        );
+        this.autoBoData = result.bo;
+        this.autoPartnerData = result.partner;
+        if (result.message) {
+            this.reconciliationProgress = { ...this.reconciliationProgress, step: result.message };
+            this.cd.detectChanges();
+        }
+    }
+
+    /** Réconciliation manuelle : normalise avant la sélection des colonnes. */
+    private async normalizeManualReconciliationColumns(): Promise<void> {
+        const result = await this.normalizeReconciliationColumns(
+            this.boData,
+            this.partnerData,
+            this.boFile?.name || '',
+            this.partnerFile?.name || ''
+        );
+        this.boData = result.bo;
+        this.partnerData = result.partner;
+        if (result.message) {
+            this.successMessage = result.message;
+        }
+    }
+
+    /**
+     * Configuration > Normalisation modèle, côté réconciliation : si une colonne par défaut des
+     * modèles est absente d'un fichier, l'en-tête équivalent configuré est renommé.
+     * Modèles pris en compte : modèle partenaire retenu (traitement assisté ou nom de fichier),
+     * ses modèles BO liés, et le modèle BO retenu au traitement ou reconnu par le nom du fichier.
+     * Ne bloque jamais la réconciliation (erreur → données inchangées).
+     */
+    private async normalizeReconciliationColumns(
+        boRows: Record<string, string>[],
+        partnerRows: Record<string, string>[],
+        boFileName: string,
+        partnerFileName: string
+    ): Promise<{ bo: Record<string, string>[]; partner: Record<string, string>[]; message: string }> {
+        try {
+            const models = await this.autoProcessingService.getAllModelsUnrestricted();
+            const idOf = (m: AutoProcessingModel) => m.modelId || m.id;
+            const sameId = (m: AutoProcessingModel, id: string | null | undefined) =>
+                !!id && (m.id === id || m.modelId === id);
+
+            const partnerModels = models.filter(m =>
+                (m.fileType === 'partner' || m.fileType === 'both') && (
+                    sameId(m, this.assistedPartnerReconciliationModelId)
+                    || (!!partnerFileName && this.matchesFilePattern(partnerFileName, m.filePattern))
+                )
+            );
+            const linkedBoIds = new Set<string>();
+            for (const pm of partnerModels) {
+                (pm.reconciliationKeys?.boModels || []).forEach(id => linkedBoIds.add(id));
+            }
+            const boModels = models.filter(m =>
+                (m.fileType === 'bo' || m.fileType === 'both') && (
+                    linkedBoIds.has(m.modelId || '') || linkedBoIds.has(m.id || '')
+                    || sameId(m, this.assistedBoTreatmentModelId)
+                    || (!!boFileName && this.matchesFilePattern(boFileName, m.filePattern))
+                )
+            );
+
+            const messages: string[] = [];
+            // Colonnes des vrais fichiers modèles : un équivalent qui en fait partie n'est pas renommé.
+            const templateColumnsOf = async (list: AutoProcessingModel[]): Promise<string[]> => {
+                const columns: string[] = [];
+                for (const m of list) {
+                    columns.push(...(await this.resolveWatchFolderTemplateColumns(m)));
+                }
+                return columns;
+            };
+            // Clés de réconciliation de tous les modèles retenus : toujours conservées.
+            const keyColumns = [...partnerModels, ...boModels].flatMap(m => {
+                const rk = m.reconciliationKeys;
+                const conditional = [rk?.partnerConditionalKeys, rk?.boConditionalKeys].flatMap(c => c?.enabled ? [
+                    c.conditionColumn,
+                    c.defaultKeyColumn || '',
+                    ...(c.rules || []).flatMap(r => [r.keyColumn, r.boKeyColumn || ''])
+                ] : []);
+                return [
+                    ...(rk?.partnerKeys || []),
+                    ...(rk?.boKeys || []),
+                    ...Object.values(rk?.boModelKeys || {}).flat(),
+                    ...conditional
+                ].filter((c): c is string => !!c && !!String(c).trim());
+            });
+            const run = async (
+                label: string,
+                rows: Record<string, string>[],
+                list: AutoProcessingModel[]
+            ): Promise<Record<string, string>[]> => {
+                const templateColumns = await templateColumnsOf(list);
+                const result = await this.modelNormalizationService.normalizeRows(
+                    rows,
+                    list.map(idOf),
+                    () => this.yieldToMainThread(true),
+                    templateColumns
+                );
+                const message = describeColumnNormalization(result.plan);
+                if (message) {
+                    messages.push(`${label} — ${message}`);
+                }
+                const projected = await this.keepOnlyModelColumns(result.rows, list, templateColumns, keyColumns);
+                if (projected.message) {
+                    messages.push(`${label} — ${projected.message}`);
+                }
+                return projected.rows;
+            };
+
+            const bo = await run('BO', boRows, boModels);
+            const partner = await run('Partenaire', partnerRows, partnerModels);
+            const message = messages.join(' | ');
+            if (message) {
+                console.info('[Normalisation modèle]', message);
+            }
+            return { bo, partner, message };
+        } catch (error) {
+            console.warn('[Normalisation modèle] ignorée :', error);
+            return { bo: boRows, partner: partnerRows, message: '' };
+        }
+    }
+
+    /**
+     * Réconciliation : seules les colonnes des modèles reconnus sont conservées (vrai fichier
+     * modèle, colonnes produites par le modèle, clés). Appliqué seulement si au moins la moitié
+     * des colonnes du fichier modèle est présente, pour ne jamais vider un fichier rattaché à
+     * tort à un modèle.
+     */
+    private async keepOnlyModelColumns(
+        rows: Record<string, string>[],
+        models: AutoProcessingModel[],
+        templateColumns: string[],
+        keyColumns: string[]
+    ): Promise<{ rows: Record<string, string>[]; message: string }> {
+        const headers = Object.keys(rows?.[0] ?? {});
+        if (!rows?.length || !models.length || !templateColumns.length
+            || templateCoverage(headers, templateColumns) < 0.5) {
+            return { rows, message: '' };
+        }
+        const columns: string[] = [];
+        const rulesByModel: ColumnProcessingRule[] = [];
+        for (const m of models) {
+            const modelTemplate = await this.resolveWatchFolderTemplateColumns(m);
+            if (!modelTemplate.length) {
+                continue;
+            }
+            const rules = m.id ? await this.getTraitementColumnRules(m.id) : [];
+            rulesByModel.push(...rules);
+            columns.push(...this.modelPreProcessingService.buildAssistedExportColumnCatalog(m, rules, modelTemplate));
+        }
+        columns.push(...keyColumns);
+        const uniqueColumns = [...new Set(columns.map(c => c.trim()).filter(Boolean))];
+        const ignored = listColumnsOutsideModel(headers, uniqueColumns);
+        if (!uniqueColumns.length || !ignored.length) {
+            return { rows, message: '' };
+        }
+        await this.yieldToMainThread(true);
+        const projected = this.modelPreProcessingService.projectRowsToExportColumns(
+            rows,
+            uniqueColumns,
+            rulesByModel,
+            models[0]
+        );
+        const kept = this.modelPreProcessingService.dropEmptyColumnsFromRows(projected, uniqueColumns);
+        if (!kept.rows.length) {
+            return { rows, message: '' };
+        }
+        return {
+            rows: kept.rows,
+            message: `Colonnes hors modèle ignorées (${ignored.length}) : ${ignored.join(', ')}`
+        };
+    }
+
     canProceedAuto(): boolean {
         return this.autoBoData.length > 0 && this.autoPartnerData.length > 0;
     }
@@ -8711,6 +8992,10 @@ export class FileUploadComponent implements OnInit, OnDestroy {
 
 
             try {
+                // Configuration > Normalisation modèle : avant la détection des clés, les en-têtes
+                // équivalents sont renommés avec les colonnes par défaut des modèles BO / partenaire.
+                await this.normalizeAssistedReconciliationColumns();
+
                 // Détecter intelligemment les clés de réconciliation
                 const keyDetectionResult = await this.detectReconciliationKeys(
                     this.autoBoData,
@@ -9083,12 +9368,14 @@ export class FileUploadComponent implements OnInit, OnDestroy {
             return;
         }
 
-        // Sauvegarder les données dans le service d'état
-        this.appStateService.setReconciliationData(this.boData, this.partnerData);
-        this.appStateService.setCurrentStep(2);
+        // Normaliser les colonnes (Configuration > Normalisation modèle) puis sauvegarder
+        void this.normalizeManualReconciliationColumns().then(() => {
+            this.appStateService.setReconciliationData(this.boData, this.partnerData);
+            this.appStateService.setCurrentStep(2);
 
-        // Naviguer vers la page de sélection des colonnes
-        this.router.navigate(['/column-selection']);
+            // Naviguer vers la page de sélection des colonnes
+            this.router.navigate(['/column-selection']);
+        });
     }
 
     onManualServiceSelectionChange(event: Event, service: string): void {

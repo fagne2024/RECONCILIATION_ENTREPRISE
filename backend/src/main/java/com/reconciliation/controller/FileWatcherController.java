@@ -9,6 +9,11 @@ import com.reconciliation.service.EntrepriseWatchFolderService;
 import com.reconciliation.service.CalculationRuleService;
 
 import java.io.*;
+import java.nio.ByteBuffer;
+import java.nio.charset.CharacterCodingException;
+import java.nio.charset.Charset;
+import java.nio.charset.CodingErrorAction;
+import java.nio.charset.StandardCharsets;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.nio.file.Paths;
@@ -365,62 +370,11 @@ public class FileWatcherController {
 
     private List<String> readCsvColumns(File file) throws IOException {
         List<String> columns = new ArrayList<>();
-        
-        // Essayer différents encodages
-        String[] encodings = {"UTF-8", "ISO-8859-1", "Windows-1252", "UTF-8-BOM"};
-        
-        for (String encoding : encodings) {
-            try {
-                BufferedReader reader;
-                if ("UTF-8-BOM".equals(encoding)) {
-                    // Gérer le BOM UTF-8
-                    reader = new BufferedReader(new InputStreamReader(new FileInputStream(file), "UTF-8"));
-                    reader.mark(3);
-                    int bom = reader.read();
-                    if (bom != 0xEF) {
-                        reader.reset();
-                    }
-                } else {
-                    reader = new BufferedReader(new InputStreamReader(new FileInputStream(file), encoding));
-                }
-                
-                // Lire les premières lignes pour une meilleure détection
-                String firstLine = reader.readLine();
-                if (firstLine != null && !firstLine.trim().isEmpty()) {
-                    // Détecter le délimiteur de manière robuste
-                    String delimiter = detectCsvDelimiter(firstLine);
-                    log.debug("Délimiteur CSV détecté: '{}'", delimiter);
-                    
-                    // Parser les colonnes en gérant les guillemets
-                    String[] columnArray = parseCsvLine(firstLine, delimiter);
-                    for (String column : columnArray) {
-                        // Normaliser le nom de colonne
-                        String normalizedColumn = normalizeColumnName(column);
-                        if (!normalizedColumn.isEmpty()) {
-                            columns.add(normalizedColumn);
-                        }
-                    }
-                    reader.close();
-                    
-                    if (!columns.isEmpty()) {
-                        log.debug("Colonnes détectées avec encodage {}: {}", encoding, columns);
-                        return columns;
-                    }
-                }
-                reader.close();
-            } catch (Exception e) {
-                log.debug("Erreur avec l'encodage {}: {}", encoding, e.getMessage());
-                columns.clear();
-            }
-        }
-        
-        // Fallback avec UTF-8
-        try (BufferedReader reader = new BufferedReader(new InputStreamReader(new FileInputStream(file), "UTF-8"))) {
+        try (BufferedReader reader = openCsvReader(file)) {
             String firstLine = reader.readLine();
             if (firstLine != null && !firstLine.trim().isEmpty()) {
                 String delimiter = detectCsvDelimiter(firstLine);
-                String[] columnArray = parseCsvLine(firstLine, delimiter);
-                for (String column : columnArray) {
+                for (String column : parseCsvLine(firstLine, delimiter)) {
                     String normalizedColumn = normalizeColumnName(column);
                     if (!normalizedColumn.isEmpty()) {
                         columns.add(normalizedColumn);
@@ -428,9 +382,54 @@ public class FileWatcherController {
                 }
             }
         }
-        
-        // Colonnes détectées (fallback)
         return columns;
+    }
+
+    /**
+     * Encodage réel d'un fichier CSV : UTF-8 si le début du fichier est de l'UTF-8 valide,
+     * sinon Windows-1252 (exports Excel français). Le décodeur UTF-8 de Java remplace les
+     * octets invalides par « U+FFFD » sans erreur : sans ce contrôle strict, un fichier
+     * Latin-1 donnait des colonnes « T?l?phone client ».
+     */
+    static Charset detectCsvCharset(File file) throws IOException {
+        final int sampleSize = 64 * 1024;
+        byte[] head;
+        try (InputStream in = new FileInputStream(file)) {
+            head = in.readNBytes(sampleSize);
+        }
+        int end = head.length;
+        if (end == sampleSize) {
+            // Ne pas couper un caractère multi-octets en fin d'échantillon.
+            int i = end - 1;
+            while (i > 0 && head[i] != '\n') {
+                i--;
+            }
+            if (i > 0) {
+                end = i;
+            }
+        }
+        try {
+            StandardCharsets.UTF_8.newDecoder()
+                .onMalformedInput(CodingErrorAction.REPORT)
+                .onUnmappableCharacter(CodingErrorAction.REPORT)
+                .decode(ByteBuffer.wrap(head, 0, end));
+            return StandardCharsets.UTF_8;
+        } catch (CharacterCodingException e) {
+            return Charset.forName("windows-1252");
+        }
+    }
+
+    /** Lecteur CSV dans l'encodage détecté, BOM UTF-8 retiré. */
+    private static BufferedReader openCsvReader(File file) throws IOException {
+        Charset charset = detectCsvCharset(file);
+        BufferedReader reader = new BufferedReader(new InputStreamReader(new FileInputStream(file), charset));
+        if (StandardCharsets.UTF_8.equals(charset)) {
+            reader.mark(1);
+            if (reader.read() != 0xFEFF) {
+                reader.reset();
+            }
+        }
+        return reader;
     }
     
     /**
@@ -552,88 +551,30 @@ public class FileWatcherController {
     private List<Map<String, Object>> readCsvSampleData(File file) throws IOException {
         List<Map<String, Object>> sampleData = new ArrayList<>();
         List<String> columns = readCsvColumns(file);
-        
         if (columns.isEmpty()) {
             return sampleData;
         }
-
-        // Utiliser le même encodage que pour les colonnes
-        String[] encodings = {"UTF-8", "ISO-8859-1", "Windows-1252", "UTF-8-BOM"};
-        
-        for (String encoding : encodings) {
-            try {
-                BufferedReader reader;
-                if ("UTF-8-BOM".equals(encoding)) {
-                    reader = new BufferedReader(new InputStreamReader(new FileInputStream(file), "UTF-8"));
-                    reader.mark(3);
-                    int bom = reader.read();
-                    if (bom != 0xEF) {
-                        reader.reset();
-                    }
-                } else {
-                    reader = new BufferedReader(new InputStreamReader(new FileInputStream(file), encoding));
-                }
-                
-                // Lire l'en-tête
-                String headerLine = reader.readLine();
-                if (headerLine == null) {
-                    reader.close();
-                    continue;
-                }
-                
-                // Détecter le délimiteur
-                String delimiter = headerLine.contains(";") ? ";" : ",";
-                
-                // Lire les premières lignes (max 5) pour les données d'exemple
-                int lineCount = 0;
-                String line;
-                while ((line = reader.readLine()) != null && lineCount < 5) {
-                    if (!line.trim().isEmpty()) {
-                        String[] values = line.split(delimiter);
-                        Map<String, Object> row = new java.util.HashMap<>();
-                        
-                        for (int i = 0; i < columns.size() && i < values.length; i++) {
-                            row.put(columns.get(i), values[i].trim());
-                        }
-                        
-                        sampleData.add(row);
-                        lineCount++;
-                    }
-                }
-                reader.close();
-                // Données d'exemple lues
-                return sampleData;
-            } catch (Exception e) {
-                log.debug("Erreur avec l'encodage {} pour les données: {}", encoding, e.getMessage());
-                sampleData.clear();
-            }
-        }
-        
-        // Fallback avec UTF-8
-        try (BufferedReader reader = new BufferedReader(new InputStreamReader(new FileInputStream(file), "UTF-8"))) {
+        try (BufferedReader reader = openCsvReader(file)) {
             String headerLine = reader.readLine();
-            if (headerLine != null) {
-                String delimiter = headerLine.contains(";") ? ";" : ",";
-                
-                int lineCount = 0;
-                String line;
-                while ((line = reader.readLine()) != null && lineCount < 5) {
-                    if (!line.trim().isEmpty()) {
-                        String[] values = line.split(delimiter);
-                        Map<String, Object> row = new java.util.HashMap<>();
-                        
-                        for (int i = 0; i < columns.size() && i < values.length; i++) {
-                            row.put(columns.get(i), values[i].trim());
-                        }
-                        
-                        sampleData.add(row);
-                        lineCount++;
+            if (headerLine == null) {
+                return sampleData;
+            }
+            String delimiter = headerLine.contains(";") ? ";" : ",";
+            // Premières lignes (max 5) pour les données d'exemple
+            int lineCount = 0;
+            String line;
+            while ((line = reader.readLine()) != null && lineCount < 5) {
+                if (!line.trim().isEmpty()) {
+                    String[] values = line.split(delimiter);
+                    Map<String, Object> row = new java.util.HashMap<>();
+                    for (int i = 0; i < columns.size() && i < values.length; i++) {
+                        row.put(columns.get(i), values[i].trim());
                     }
+                    sampleData.add(row);
+                    lineCount++;
                 }
             }
         }
-        
-        // Données d'exemple (fallback)
         return sampleData;
     }
 

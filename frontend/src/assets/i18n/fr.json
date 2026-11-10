@@ -539,7 +539,9 @@
     "demoColumn": "Colonne {{index}}",
     "rulesConfiguredCount": "Règles configurées ({{count}})",
     "ruleOrderTooltip": "Ordre d'application : {{order}}",
-    "conditionSpecificForColumn": "Condition spécifique pour «{{column}}»"
+    "conditionSpecificForColumn": "Condition spécifique pour «{{column}}»",
+    "keysOutsideFile": "Clés enregistrées absentes du fichier modèle (cliquer pour retirer) :",
+    "removeKey": "Retirer cette clé"
   },
   "BQ": {
     "ReconResultExportExcel": "Excel",
@@ -2274,7 +2276,8 @@
     "platformAdmin": "Administration plateforme",
     "companies": "Entreprises",
     "modulesPerCompany": "Modules par entreprise",
-    "auditLog": "Journal d'audit"
+    "auditLog": "Journal d'audit",
+    "modelNormalization": "Normalisation modèle"
   },
   "OPL": {
     "1ligne": "= 1 ligne",
@@ -3063,7 +3066,10 @@
     "Aucunmoduleassocié": "Aucun module associé",
     "Ajouterdesmodules": "Ajouter des modules",
     "paginationMenus": "menus",
-    "paginationModules": "modules"
+    "paginationModules": "modules",
+    "Rechercherunmodule": "Rechercher un module...",
+    "Rechercherunmoduleouunepermission": "Rechercher un module ou une permission...",
+    "Aucunresultatpour": "Aucun résultat pour"
   },
   "PROGRESS": {
     "cancel": "Annuler",
@@ -6431,6 +6437,51 @@
       "SAVE_SUCCESS": "{{count}} élément(s) sauvegardé(s) avec succès",
       "SAVE_PARTIAL": "{{success}} sauvegardé(s), {{errors}} erreur(s)",
       "SAVE_ERROR": "{{count}} erreur(s) lors de la sauvegarde"
+    },
+    "normalisation": {
+      "title": "Normalisation modèle",
+      "subtitle": "Pour chaque modèle, associez aux colonnes par défaut leurs en-têtes équivalents (autre langue, nouvelle version du fichier, libellé propre à un partenaire). Au chargement d'un fichier, en traitement comme en réconciliation, chaque en-tête équivalent trouvé est renommé avec le libellé de la colonne d'origine avant le traitement : le fichier téléchargé porte la colonne d'origine.",
+      "close": "Fermer",
+      "loading": "Chargement des modèles...",
+      "loadingColumns": "Chargement des colonnes du modèle...",
+      "loadError": "Impossible de charger les modèles ou leur normalisation.",
+      "noModels": "Aucun modèle de traitement configuré.",
+      "noColumns": "Aucune colonne par défaut trouvée pour ce modèle : ajoutez-les ci-dessous.",
+      "model": "Modèle",
+      "typeBo": "BO",
+      "typePartner": "Partenaire",
+      "typeOther": "Autre",
+      "searchPlaceholder": "Rechercher une colonne ou un en-tête...",
+      "checkFile": "Vérifier un fichier",
+      "unsaved": "Modifications non enregistrées",
+      "cancel": "Annuler",
+      "save": "Enregistrer",
+      "saved": "Normalisation du modèle enregistrée.",
+      "saveError": "Erreur lors de l'enregistrement de la normalisation.",
+      "discardConfirm": "Des modifications ne sont pas enregistrées. Changer de modèle et les abandonner ?",
+      "hint": "Colonnes par défaut issues du fichier modèle et de la configuration du modèle.",
+      "columnsConfigured": "colonnes avec équivalents",
+      "colDefault": "Colonne par défaut",
+      "colEquivalents": "En-têtes équivalents",
+      "colCheck": "Fichier vérifié",
+      "custom": "ajoutée",
+      "removeColumn": "Retirer cette colonne",
+      "remove": "Retirer",
+      "addEquivalent": "Ajouter un en-tête équivalent...",
+      "suggestions": "Suggestions :",
+      "newColumnPlaceholder": "Nom d'une colonne par défaut à ajouter...",
+      "addColumn": "Ajouter une colonne",
+      "conflict": "L'en-tête « {{header}} » est déjà utilisé par la colonne « {{column}} ».",
+      "columnExists": "La colonne « {{column}} » existe déjà.",
+      "checkTitle": "Vérification de « {{file}} »",
+      "headerNotFound": "Ligne d'en-tête du modèle non reconnue : la première ligne du fichier a été utilisée.",
+      "statusPresent": "présente",
+      "statusEquivalent": "via équivalent",
+      "statusMissing": "manquante",
+      "extraHint": "En-têtes du fichier non reconnus : associez-les à une colonne manquante pour les ajouter comme équivalents.",
+      "mapTo": "Associer à...",
+      "checkError": "Impossible de lire ce fichier.",
+      "templateFallback": "Fichier modèle « {{file}} » introuvable dans le dossier surveillé : colonnes génériques affichées, à vérifier avec « Vérifier un fichier »."
     }
   },
   "MOD": {

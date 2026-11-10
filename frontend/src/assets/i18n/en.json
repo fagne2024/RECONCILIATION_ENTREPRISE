@@ -539,7 +539,9 @@
     "demoColumn": "Column {{index}}",
     "rulesConfiguredCount": "Configured rules ({{count}})",
     "ruleOrderTooltip": "Application order: {{order}}",
-    "conditionSpecificForColumn": "Specific condition for \"{{column}}\""
+    "conditionSpecificForColumn": "Specific condition for \"{{column}}\"",
+    "keysOutsideFile": "Saved keys missing from the model file (click to remove):",
+    "removeKey": "Remove this key"
   },
   "BQ": {
     "ReconResultExportExcel": "Excel",
@@ -2271,7 +2273,8 @@
     "platformAdmin": "Platform administration",
     "companies": "Companies",
     "modulesPerCompany": "Modules per company",
-    "auditLog": "Audit log"
+    "auditLog": "Audit log",
+    "modelNormalization": "Model normalization"
   },
   "OPL": {
     "1ligne": "= 1 row",
@@ -3060,7 +3063,10 @@
     "Aucunmoduleassocié": "No associated module",
     "Ajouterdesmodules": "Add modules",
     "paginationMenus": "menus",
-    "paginationModules": "modules"
+    "paginationModules": "modules",
+    "Rechercherunmodule": "Search a module...",
+    "Rechercherunmoduleouunepermission": "Search a module or a permission...",
+    "Aucunresultatpour": "No result for"
   },
   "PROGRESS": {
     "cancel": "Cancel",
@@ -6428,6 +6434,51 @@
       "SAVE_SUCCESS": "{{count}} item(s) saved successfully",
       "SAVE_PARTIAL": "{{success}} saved, {{errors}} error(s)",
       "SAVE_ERROR": "{{count}} error(s) while saving"
+    },
+    "normalisation": {
+      "title": "Model normalization",
+      "subtitle": "For each model, link the default columns to their equivalent headers (other language, new file version, partner-specific label). When a file is loaded, in processing as in reconciliation, every equivalent header found is renamed to the original column label before processing: the downloaded file carries the original column.",
+      "close": "Close",
+      "loading": "Loading models...",
+      "loadingColumns": "Loading model columns...",
+      "loadError": "Unable to load models or their normalization.",
+      "noModels": "No processing model configured.",
+      "noColumns": "No default column found for this model: add them below.",
+      "model": "Model",
+      "typeBo": "BO",
+      "typePartner": "Partner",
+      "typeOther": "Other",
+      "searchPlaceholder": "Search a column or header...",
+      "checkFile": "Check a file",
+      "unsaved": "Unsaved changes",
+      "cancel": "Cancel",
+      "save": "Save",
+      "saved": "Model normalization saved.",
+      "saveError": "Error while saving the normalization.",
+      "discardConfirm": "Some changes are not saved. Switch model and discard them?",
+      "hint": "Default columns come from the model file and the model configuration.",
+      "columnsConfigured": "columns with equivalents",
+      "colDefault": "Default column",
+      "colEquivalents": "Equivalent headers",
+      "colCheck": "Checked file",
+      "custom": "added",
+      "removeColumn": "Remove this column",
+      "remove": "Remove",
+      "addEquivalent": "Add an equivalent header...",
+      "suggestions": "Suggestions:",
+      "newColumnPlaceholder": "Name of a default column to add...",
+      "addColumn": "Add a column",
+      "conflict": "Header \"{{header}}\" is already used by column \"{{column}}\".",
+      "columnExists": "Column \"{{column}}\" already exists.",
+      "checkTitle": "Check of \"{{file}}\"",
+      "headerNotFound": "Model header row not recognized: the first row of the file was used.",
+      "statusPresent": "present",
+      "statusEquivalent": "via equivalent",
+      "statusMissing": "missing",
+      "extraHint": "Unrecognized file headers: link them to a missing column to add them as equivalents.",
+      "mapTo": "Link to...",
+      "checkError": "Unable to read this file.",
+      "templateFallback": "Model file \"{{file}}\" not found in the watch folder: generic columns shown, check them with \"Check a file\"."
     }
   },
   "MOD": {

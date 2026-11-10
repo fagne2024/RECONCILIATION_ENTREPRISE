@@ -1,5 +1,5 @@
 import { Injectable } from '@angular/core';
-import { HttpClient } from '@angular/common/http';
+import { HttpClient, HttpHeaders } from '@angular/common/http';
 import { TranslateLoader } from '@ngx-translate/core';
 import { Observable, of } from 'rxjs';
 import { catchError } from 'rxjs/operators';
@@ -22,7 +22,11 @@ export class TranslationsLoader implements TranslateLoader {
   constructor(private readonly http: HttpClient) {}
 
   getTranslation(lang: string): Observable<any> {
-    return this.http.get(`assets/i18n/${lang}.json`).pipe(
+    // Revalidation systématique : sans Cache-Control côté serveur, le navigateur peut
+    // réutiliser une ancienne version du fichier (libellés récents affichés comme des clés
+    // après une mise à jour). Fichier inchangé → simple réponse 304 (ETag).
+    const headers = new HttpHeaders({ 'Cache-Control': 'no-cache', Pragma: 'no-cache' });
+    return this.http.get(`assets/i18n/${lang}.json`, { headers }).pipe(
       catchError(() => of({}))
     );
   }

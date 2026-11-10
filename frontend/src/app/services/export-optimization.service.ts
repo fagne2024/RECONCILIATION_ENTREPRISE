@@ -45,6 +45,14 @@ export interface ExportWithCommentColorsOptions {
   colorMap?: Record<string, string>;
 }
 
+/** Nombre maximal de lignes de données d'un fichier .xls (65 536 lignes moins l'en-tête). */
+export const XLS_MAX_DATA_ROWS = 65535;
+
+/** Nom de fichier .xls → .xlsx (les motifs des modèles acceptent les deux extensions). */
+export function toXlsxFileName(fileName: string): string {
+  return /\.xls$/i.test(fileName) ? fileName.replace(/\.xls$/i, '.xlsx') : fileName;
+}
+
 @Injectable({
   providedIn: 'root'
 })
@@ -359,6 +367,14 @@ export class ExportOptimizationService {
     options: ExportOptions = {}
   ): Promise<void> {
     const totalRows = rows.length;
+
+    // Le format .xls (BIFF8) est limité à 65 536 lignes : au-delà, le fichier produit est
+    // corrompu et ne contient qu'une vingtaine de lignes. On bascule alors en .xlsx.
+    if (format === 'xls' && totalRows > XLS_MAX_DATA_ROWS) {
+      console.warn(`[Export] ${totalRows} lignes > limite .xls (${XLS_MAX_DATA_ROWS}) : export en .xlsx`);
+      format = 'xlsx';
+      fileName = toXlsxFileName(fileName);
+    }
 
     if (format === 'xls') {
       await this.exportExcelSynchronousXlsxLib(rows, sourceColumns, headerColumns, fileName, chunkSize, 'xls', options);

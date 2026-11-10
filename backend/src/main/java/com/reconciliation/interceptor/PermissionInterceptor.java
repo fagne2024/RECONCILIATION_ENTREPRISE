@@ -72,6 +72,11 @@ public class PermissionInterceptor implements HandlerInterceptor {
     // autorise en lecture au SUPER_ADMIN.
     private static final String CALCULATION_RULES_PATH = "/api/configuration/calcul";
 
+    // Equivalences d'en-tetes des modeles (Configuration > Normalisation modele) :
+    // lues au chargement des fichiers (traitement, reconciliation) par tout
+    // utilisateur de l'entreprise ; l'ecriture reste soumise au module "Modèles".
+    private static final String MODEL_NORMALISATION_PATH = "/api/configuration/normalisation";
+
     private static final String[] PUBLIC_CONFIGURATION_PATHS = {
         "/api/configuration/logo",
         "/api/configuration/theme",
@@ -179,7 +184,7 @@ public class PermissionInterceptor implements HandlerInterceptor {
         // (donnees deja cloisonnees par tenant) ; l'ecriture reste soumise au
         // module "Modèles" via le controle de permissions ci-dessous.
         if ("GET".equalsIgnoreCase(method)
-                && isCalculationRulesPath(path)
+                && (isCalculationRulesPath(path) || isModelNormalisationPath(path))
                 && isAuthenticatedRequest()
                 && !isSuperAdminRequest()
                 && TenantContext.isSet()) {
@@ -328,6 +333,12 @@ public class PermissionInterceptor implements HandlerInterceptor {
         return path.equals(CALCULATION_RULES_PATH)
             || path.startsWith(CALCULATION_RULES_PATH + "/")
             || path.startsWith(CALCULATION_RULES_PATH + "?");
+    }
+
+    private boolean isModelNormalisationPath(String path) {
+        return path.equals(MODEL_NORMALISATION_PATH)
+            || path.startsWith(MODEL_NORMALISATION_PATH + "/")
+            || path.startsWith(MODEL_NORMALISATION_PATH + "?");
     }
 
     private boolean isPublicConfigurationPath(String path) {

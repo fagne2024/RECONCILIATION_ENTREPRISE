@@ -190,6 +190,7 @@ const routes: Routes = [
   { path: 'configuration/renommer', loadComponent: () => import('./components/configuration-renommer/configuration-renommer.component').then(m => m.ConfigurationRenommerComponent), canActivate: [AuthGuard, AdminGuard] },
   { path: 'configuration/logo', loadComponent: () => import('./components/configuration-logo/configuration-logo.component').then(m => m.ConfigurationLogoComponent), canActivate: [AuthGuard, AdminGuard] },
   { path: 'configuration/calcul', loadComponent: () => import('./components/configuration-calcul/configuration-calcul.component').then(m => m.ConfigurationCalculComponent), canActivate: [AuthGuard, AdminGuard] },
+  { path: 'configuration/normalisation-modele', loadComponent: () => import('./components/configuration-normalisation/configuration-normalisation.component').then(m => m.ConfigurationNormalisationComponent), canActivate: [AuthGuard, AdminGuard] },
   { path: 'configuration/top-users', loadComponent: () => import('./components/configuration-top-users/configuration-top-users.component').then(m => m.ConfigurationTopUsersComponent), canActivate: [AuthGuard, AdminGuard] },
   { path: 'permissions', component: PermissionsComponent, canActivate: [AuthGuard, AdminGuard] },
 

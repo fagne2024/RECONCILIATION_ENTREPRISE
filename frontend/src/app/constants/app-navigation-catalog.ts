@@ -473,6 +473,7 @@ export const APP_NAVIGATION_CATALOG: AppNavigationGroup[] = [
       { key: 'param-niveaux-validation-reco', label: 'NAV.niveauValidationReco', route: '/configuration/niveaux-validation-reco', moduleName: 'NiveauValidationReco', icon: 'fa-list-ol' },
       { key: 'param-renommer', label: 'Renommer', labelKey: 'NAV.rename', route: '/configuration/renommer', moduleName: 'Configuration', apiPathPrefixes: ['/api/configuration/rename'], icon: 'fa-edit', adminOnly: true },
       { key: 'param-calcul', label: 'Calcul', labelKey: 'NAV.calcul', route: '/configuration/calcul', moduleName: 'Configuration', apiPathPrefixes: ['/api/configuration/calcul'], icon: 'fa-calculator', adminOnly: true },
+      { key: 'param-normalisation-modele', label: 'Normalisation modèle', labelKey: 'NAV.modelNormalization', route: '/configuration/normalisation-modele', moduleName: 'Configuration', apiPathPrefixes: ['/api/configuration/normalisation'], icon: 'fa-random', adminOnly: true },
       { key: 'param-top-users', label: 'Top utilisateurs', labelKey: 'NAV.topUsers', route: '/configuration/top-users', moduleName: 'Configuration', apiPathPrefixes: ['/api/configuration/top-users'], icon: 'fa-star', adminOnly: true },
       { key: 'param-logo', label: 'Logo', labelKey: 'NAV.logo', route: '/configuration/logo', moduleName: 'Configuration', apiPathPrefixes: ['/api/configuration/logo'], icon: 'fa-image', adminOnly: true }
     ]
