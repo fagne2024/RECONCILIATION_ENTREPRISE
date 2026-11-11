@@ -21,7 +21,7 @@
 
 .PARAMETER Profile
     Profil Spring a activer. "dev" (defaut) ou "prod".
-    Pour l'environnement de test (base dediee Reconciliation_app_TEST),
+    Pour l'environnement de test (base dediee top20_entreprise_test),
     utiliser le script dedie : .\start-test.ps1
 
 .PARAMETER EnvFile
@@ -56,7 +56,10 @@ if (-not (Test-Path -LiteralPath $envFilePath)) {
         '# Variables locales du backend - fichier NON versionne (gitignore).',
         "# Genere automatiquement par start-dev.ps1 le $(Get-Date -Format 'yyyy-MM-dd HH:mm:ss').",
         '# Utilise par le profil dev (application-dev.properties) : jwt.secret=${DEV_JWT_SECRET:...}',
-        "DEV_JWT_SECRET=$generated"
+        "DEV_JWT_SECRET=$generated",
+        '# Identifiants MySQL locaux (a adapter si votre compte root a un autre mot de passe)',
+        'DB_USERNAME=root',
+        'DB_PASSWORD=root'
     ) | Set-Content -LiteralPath $envFilePath -Encoding UTF8
     Write-Host "Fichier d'environnement local cree : $envFilePath" -ForegroundColor Yellow
 }

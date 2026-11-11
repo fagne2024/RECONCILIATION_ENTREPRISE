@@ -5,7 +5,7 @@
 
 .DESCRIPTION
     Lance l'application sur une base MySQL DEDIEE aux tests (par defaut
-    Reconciliation_app_TEST), sans jamais toucher a la base de developpement /
+    top20_entreprise_test), sans jamais toucher a la base de developpement /
     production (Reconciliation_app).
 
     Ce script :
@@ -17,7 +17,7 @@
 
     Configuration par defaut :
       - Backend  : http://localhost:8086
-      - Base     : jdbc:mysql://localhost:3306/Reconciliation_app_TEST
+      - Base     : jdbc:mysql://localhost:3306/top20_entreprise_test
       - Frontend : http://localhost:4201  (cd frontend ; npm run start:test)
 
 .PARAMETER EnvFile
@@ -55,7 +55,7 @@ if (-not (Test-Path -LiteralPath $envFilePath)) {
         '# Variables locales du backend - profil TEST - fichier NON versionne (gitignore).',
         "# Genere automatiquement par start-test.ps1 le $(Get-Date -Format 'yyyy-MM-dd HH:mm:ss').",
         '# Base de donnees DEDIEE aux tests : ne jamais mettre la base de production ici.',
-        'TEST_DB_URL=jdbc:mysql://localhost:3306/Reconciliation_app_TEST?createDatabaseIfNotExist=true&allowPublicKeyRetrieval=true&useSSL=false&serverTimezone=UTC&allowMultiQueries=true&useUnicode=true&characterEncoding=UTF-8',
+        'TEST_DB_URL=jdbc:mysql://localhost:3306/top20_entreprise_test?createDatabaseIfNotExist=true&allowPublicKeyRetrieval=true&useSSL=false&serverTimezone=UTC&allowMultiQueries=true&useUnicode=true&characterEncoding=UTF-8',
         'TEST_DB_USERNAME=root',
         'TEST_DB_PASSWORD=',
         '# Si TEST_DB_USERNAME / TEST_DB_PASSWORD sont vides, le script reprend',
@@ -107,7 +107,7 @@ if (Test-Path -LiteralPath $devEnvFilePath) {
     }
 }
 
-$defaultDbUrl = 'jdbc:mysql://localhost:3306/Reconciliation_app_TEST?createDatabaseIfNotExist=true&allowPublicKeyRetrieval=true&useSSL=false&serverTimezone=UTC&allowMultiQueries=true&useUnicode=true&characterEncoding=UTF-8'
+$defaultDbUrl = 'jdbc:mysql://localhost:3306/top20_entreprise_test?createDatabaseIfNotExist=true&allowPublicKeyRetrieval=true&useSSL=false&serverTimezone=UTC&allowMultiQueries=true&useUnicode=true&characterEncoding=UTF-8'
 $dbUrl = if ($env:TEST_DB_URL) { $env:TEST_DB_URL } else { $defaultDbUrl }
 $dbName = ''
 
@@ -119,8 +119,8 @@ if (-not $SkipDatabaseCheck) {
     if (-not $dbName) {
         Write-Warning "Impossible d'extraire le nom de la base depuis TEST_DB_URL : $dbUrl"
     }
-    elseif ($dbName -ieq 'Reconciliation_app') {
-        Write-Error "Securite : TEST_DB_URL pointe vers la base '$dbName' (dev/production). Utilisez une base dediee, par exemple Reconciliation_app_TEST."
+    elseif ($dbName -ieq 'Reconciliation_app' -or $dbName -ieq 'top20') {
+        Write-Error "Securite : TEST_DB_URL pointe vers la base '$dbName' (dev/production). Utilisez une base dediee, par exemple top20_entreprise_test."
     }
     elseif ($dbName -notmatch '(?i)test') {
         Write-Warning "Le nom de la base cible '$dbName' ne contient pas 'test'. Verifiez qu'il s'agit bien d'une base de test."

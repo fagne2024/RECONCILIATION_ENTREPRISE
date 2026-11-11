@@ -9,7 +9,7 @@ production (`Reconciliation_app`).
 | Composant | Développement | Test | Production |
 |---|---|---|---|
 | Profil Spring | `dev` | `test` | `prod` |
-| Base de données | `Reconciliation_app` | **`Reconciliation_app_TEST`** | `Reconciliation_app` |
+| Base de données | `top20` | **`top20_entreprise_test`** | `top20` |
 | Port backend | `8085` | **`8086`** | `8080` |
 | Port frontend (local) | `4200` | **`4201`** | servi par IIS |
 | Schéma | Flyway | **Flyway** | Flyway |
@@ -39,7 +39,7 @@ La base est créée automatiquement au premier démarrage grâce à
 manuellement :
 
 ```sql
-CREATE DATABASE Reconciliation_app_TEST
+CREATE DATABASE top20_entreprise_test
   CHARACTER SET utf8mb4
   COLLATE utf8mb4_unicode_ci;
 ```
@@ -58,7 +58,7 @@ Au premier lancement, le script :
 3. active le profil Spring `test` ;
 4. lance `mvn spring-boot:run` sur le port **8086**.
 
-Flyway crée ensuite automatiquement le schéma dans `Reconciliation_app_TEST`
+Flyway crée ensuite automatiquement le schéma dans `top20_entreprise_test`
 (migrations `V1` à `V20` comprises).
 
 Le compte plateforme est initialisé au premier démarrage :
@@ -97,7 +97,7 @@ les variables `TEST_DB_*`.
 
 | Variable | Défaut | Description |
 |---|---|---|
-| `TEST_DB_URL` | `jdbc:mysql://localhost:3306/Reconciliation_app_TEST?...` | URL JDBC de la base TEST |
+| `TEST_DB_URL` | `jdbc:mysql://localhost:3306/top20_entreprise_test?...` | URL JDBC de la base TEST |
 | `TEST_DB_USERNAME` | `root` | Utilisateur MySQL |
 | `TEST_DB_PASSWORD` | *(vide)* | Mot de passe MySQL |
 | `TEST_JWT_SECRET` | généré | Secret JWT du profil test (≥ 32 caractères) |
@@ -117,7 +117,7 @@ les variables `TEST_DB_*`.
 Exemple de fichier :
 
 ```properties
-TEST_DB_URL=jdbc:mysql://localhost:3306/Reconciliation_app_TEST?createDatabaseIfNotExist=true&allowPublicKeyRetrieval=true&useSSL=false&serverTimezone=UTC&allowMultiQueries=true&useUnicode=true&characterEncoding=UTF-8
+TEST_DB_URL=jdbc:mysql://localhost:3306/top20_entreprise_test?createDatabaseIfNotExist=true&allowPublicKeyRetrieval=true&useSSL=false&serverTimezone=UTC&allowMultiQueries=true&useUnicode=true&characterEncoding=UTF-8
 TEST_DB_USERNAME=root
 TEST_DB_PASSWORD=mon-mot-de-passe
 TEST_JWT_SECRET=un-secret-de-test-d-au-moins-32-caracteres
@@ -128,7 +128,7 @@ TEST_SERVER_PORT=8086
 
 Le profil `test` isole volontairement l'environnement :
 
-- **base dédiée** `Reconciliation_app_TEST` (aucune donnée de dev/prod) ;
+- **base dédiée** `top20_entreprise_test` (aucune donnée de dev/prod) ;
 - **dossier de dépôt dédié** `watch-folder-test/` (ignoré par Git) ;
 - **emails désactivés** : SMTP local `localhost:1025` (compatible MailHog) et
   relance quotidienne des commentaires de blocage désactivée (`cron=-`) ;
@@ -148,7 +148,7 @@ variables d'environnement avant de lancer l'application :
 
 ```powershell
 $env:SPRING_PROFILES_ACTIVE = 'test'
-$env:TEST_DB_URL      = 'jdbc:mysql://localhost:3306/Reconciliation_app_TEST?createDatabaseIfNotExist=true&allowPublicKeyRetrieval=true&useSSL=false&serverTimezone=UTC&allowMultiQueries=true&useUnicode=true&characterEncoding=UTF-8'
+$env:TEST_DB_URL      = 'jdbc:mysql://localhost:3306/top20_entreprise_test?createDatabaseIfNotExist=true&allowPublicKeyRetrieval=true&useSSL=false&serverTimezone=UTC&allowMultiQueries=true&useUnicode=true&characterEncoding=UTF-8'
 $env:TEST_DB_USERNAME = 'reconciliation_test'
 $env:TEST_DB_PASSWORD = '<mot-de-passe>'
 $env:TEST_JWT_SECRET  = '<secret 48 caracteres>'
@@ -169,7 +169,7 @@ vers ce port.
 | | Environnement de test (ce document) | Tests automatises |
 |---|---|---|
 | Fichier | `backend/src/main/resources/application-test.properties` | `backend/src/test/resources/application-test.properties` |
-| Base | `Reconciliation_app_TEST` | `reco_test` (jetable) |
+| Base | `top20_entreprise_test` | `reco_test` (jetable) |
 | Schéma | Flyway | Hibernate `create-drop` |
 | Lancement | `start-test.ps1` | `mvn test` |
 
@@ -181,7 +181,7 @@ uniquement à l'exécution de l'application.
 ## Remise à zéro de la base de test
 
 ```powershell
-mysql -u root -p -e "DROP DATABASE IF EXISTS Reconciliation_app_TEST;"
+mysql -u root -p -e "DROP DATABASE IF EXISTS top20_entreprise_test;"
 cd backend
 .\start-test.ps1
 ```

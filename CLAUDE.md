@@ -16,9 +16,9 @@ ReconciliApp : application multi-entreprise (multi-tenant) de réconciliation fi
 
 ### Backend (`backend/`)
 ```powershell
-.\start-dev.ps1                 # profil dev, port 8085, base Reconciliation_app ; crée/charge backend/.env.dev (DEV_JWT_SECRET)
+.\start-dev.ps1                 # profil dev, port 8085, base top20 (surchargeable via DB_NAME) ; crée/charge backend/.env.dev (DEV_JWT_SECRET)
 .\start-dev.ps1 -Profile prod   # exige JWT_SECRET et DB_PASSWORD
-.\start-test.ps1                # profil test, port 8086, base Reconciliation_app_TEST (refuse de cibler Reconciliation_app)
+.\start-test.ps1                # profil test, port 8086, base top20_entreprise_test (refuse de cibler top20 / Reconciliation_app)
 mvn -B -DskipTests package      # produit target/csv-reconciliation-1.0.0.jar
 mvn -B test                     # tous les tests (certains exigent un MySQL local / Testcontainers)
 mvn -B test -Dtest=OperationDedupKeyTest            # une seule classe
