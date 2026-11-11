@@ -134,20 +134,37 @@ public class JwtAuthenticationFilter extends OncePerRequestFilter {
                     // Mettre à jour le contexte de sécurité
                     SecurityContextHolder.getContext().setAuthentication(authToken);
                 } else {
-                    // IMPORTANT: un token présent mais invalide/expiré doit être rejeté
-                    SecurityContextHolder.clearContext();
-                    response.setStatus(HttpServletResponse.SC_UNAUTHORIZED);
-                    return;
+                    // Jeton invalide/expiré : ignoré, la requête continue en anonyme.
+                    ignoreInvalidToken(request, response, "jeton invalide ou expire");
                 }
             }
         } catch (Exception e) {
-            log.debug("Erreur validation JWT: {}", e.getMessage());
-            SecurityContextHolder.clearContext();
-            response.setStatus(HttpServletResponse.SC_UNAUTHORIZED);
-            return;
+            // Signature d'une autre instance, utilisateur inconnu de cette base, jeton
+            // mal formé... : même traitement qu'un jeton invalide.
+            ignoreInvalidToken(request, response, e.getMessage());
         }
 
         filterChain.doFilter(request, response);
+    }
+
+    /**
+     * Un jeton invalide ne doit pas bloquer les routes publiques : un cookie périmé
+     * (autre environnement sur le même domaine, autre secret JWT, base différente)
+     * renvoyait 401 jusque sur /api/auth/login et empêchait toute reconnexion.
+     * La requête continue donc SANS authentification : les routes protégées restent
+     * refusées par Spring Security (anyRequest().authenticated() -> 401), seules les
+     * routes permitAll (login, 2FA, mot de passe oublié...) aboutissent.
+     * Le cookie périmé est effacé pour ne plus être renvoyé.
+     */
+    private void ignoreInvalidToken(HttpServletRequest request, HttpServletResponse response, String raison) {
+        log.debug("Jeton JWT ignore ({}) sur {} {}", raison, request.getMethod(), request.getRequestURI());
+        SecurityContextHolder.clearContext();
+        TenantContext.clear();
+        String authHeader = request.getHeader("Authorization");
+        boolean jetonDuCookie = authHeader == null || !authHeader.startsWith("Bearer ") || authHeader.substring(7).isBlank();
+        if (jetonDuCookie && authCookieService != null && authCookieService.read(request) != null) {
+            authCookieService.clear(request, response);
+        }
     }
 
     private String extractJwt(HttpServletRequest request) {
