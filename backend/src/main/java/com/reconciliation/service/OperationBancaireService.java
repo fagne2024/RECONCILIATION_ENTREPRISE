@@ -308,10 +308,12 @@ public class OperationBancaireService {
         entity.setBanqueCorrigee(request.getBanqueCorrigee());
         entity.setDemandeur(request.getDemandeur());
         entity.setValideur(request.getValideur());
-        entity.setStatut(request.getStatut() != null ? request.getStatut() : "En attente");
+        entity.setStatut(request.getStatut() != null && !request.getStatut().isBlank() ? request.getStatut() : "En attente");
 
         entity.setOperationId(request.getOperationId());
-        entity.setTraitement(request.getTraitement());
+        entity.setTraitement(request.getTraitement() != null && !request.getTraitement().isBlank()
+                ? request.getTraitement() : TRAITEMENT_NIVEAU_RECONCILIATION);
+        entity.setCommentaire(request.getCommentaire());
         
         logger.info("📋 Création opération bancaire - Traitement reçu: '{}'", request.getTraitement());
         
@@ -325,9 +327,18 @@ public class OperationBancaireService {
     
     // Mettre à jour une opération bancaire
     @Transactional
-    public OperationBancaire updateOperationBancaire(Long id, OperationBancaireUpdateRequest request) {
+    public OperationBancaire updateOperationBancaire(Long id, OperationBancaireUpdateRequest request, boolean admin) {
         OperationBancaireEntity entity = operationBancaireRepository.findById(id)
                 .orElseThrow(() -> new IllegalArgumentException("Opération bancaire non trouvée avec ID: " + id));
+
+        // Un traitement « Terminé » ne peut être modifié que par un administrateur
+        if (!admin
+                && TRAITEMENT_TERMINE.equalsIgnoreCase(entity.getTraitement())
+                && request.getTraitement() != null
+                && !TRAITEMENT_TERMINE.equalsIgnoreCase(request.getTraitement())) {
+            throw new org.springframework.security.access.AccessDeniedException(
+                    "Seul un administrateur peut modifier le traitement d'une opération « Terminé ».");
+        }
         
         String previousStatut = entity.getStatut();
 
@@ -363,6 +374,7 @@ public class OperationBancaireService {
         if (request.getStatut() != null) entity.setStatut(request.getStatut());
         if (request.getOperationId() != null) entity.setOperationId(request.getOperationId());
         if (request.getTraitement() != null) entity.setTraitement(request.getTraitement());
+        if (request.getCommentaire() != null) entity.setCommentaire(request.getCommentaire());
         
         OperationBancaireEntity savedEntity = operationBancaireRepository.save(entity);
         // Impacter le compte si le statut devient Validée ET que l'impact n'a pas déjà été appliqué
@@ -426,6 +438,35 @@ public class OperationBancaireService {
         }
     }
     
+    // Niveaux de traitement. Le « statut réconciliation » en découle (affiché côté écran) :
+    // Niveau reconciliation => En cours ; Niveau Group => OK ; Terminé => Validé.
+    public static final String TRAITEMENT_NIVEAU_RECONCILIATION = "Niveau reconciliation";
+    public static final String TRAITEMENT_NIVEAU_GROUP = "Niveau Group";
+    public static final String TRAITEMENT_TERMINE = "Terminé";
+
+    /**
+     * Applique le résultat de la réconciliation (OK/KO) sur une opération :
+     * OK (ligne rapprochée d'une ligne du relevé) => « Niveau Group » ;
+     * KO (rapprochement retiré) => retour à « Niveau reconciliation » si elle était à « Niveau Group ».
+     * Une ligne « Terminé » n'est jamais rétrogradée.
+     */
+    @Transactional
+    public boolean updateReconStatus(Long id, String status) {
+        Optional<OperationBancaireEntity> opt = operationBancaireRepository.findById(id);
+        if (opt.isEmpty()) return false;
+        OperationBancaireEntity e = opt.get();
+        e.setReconStatus(status);
+        if (!TRAITEMENT_TERMINE.equalsIgnoreCase(e.getTraitement())) {
+            if ("OK".equalsIgnoreCase(status)) {
+                e.setTraitement(TRAITEMENT_NIVEAU_GROUP);
+            } else if ("KO".equalsIgnoreCase(status) && TRAITEMENT_NIVEAU_GROUP.equalsIgnoreCase(e.getTraitement())) {
+                e.setTraitement(TRAITEMENT_NIVEAU_RECONCILIATION);
+            }
+        }
+        operationBancaireRepository.save(e);
+        return true;
+    }
+
     // Mettre à jour en lot le statut des opérations bancaires
     @Transactional
     public int bulkUpdateStatut(List<Long> ids, String nouveauStatut) {
@@ -611,6 +652,7 @@ public class OperationBancaireService {
         model.setImpactApplique(entity.getImpactApplique());
 
         model.setTraitement(entity.getTraitement());
+        model.setCommentaire(entity.getCommentaire());
         return model;
     }
 }

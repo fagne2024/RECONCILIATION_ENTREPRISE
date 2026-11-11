@@ -138,8 +138,13 @@ public class OperationBancaireController {
             @PathVariable Long id,
             @RequestBody OperationBancaireUpdateRequest request) {
         try {
-            OperationBancaire operation = operationBancaireService.updateOperationBancaire(id, request);
+            var auth = org.springframework.security.core.context.SecurityContextHolder.getContext().getAuthentication();
+            boolean admin = auth != null && auth.getAuthorities().stream()
+                    .anyMatch(a -> "ROLE_ADMIN".equals(a.getAuthority()));
+            OperationBancaire operation = operationBancaireService.updateOperationBancaire(id, request, admin);
             return ResponseEntity.ok(operation);
+        } catch (org.springframework.security.access.AccessDeniedException e) {
+            return ResponseEntity.status(HttpStatus.FORBIDDEN).build();
         } catch (IllegalArgumentException e) {
             return ResponseEntity.notFound().build();
         } catch (Exception e) {
@@ -203,13 +208,9 @@ public class OperationBancaireController {
     // Mettre à jour le recon_status (OK/KO)
     @PutMapping("/{id}/recon-status")
     public ResponseEntity<?> updateReconStatus(@PathVariable Long id, @RequestParam("status") String status) {
-        return operationBancaireRepository.findById(id)
-                .map(entity -> {
-                    entity.setReconStatus(status);
-                    operationBancaireRepository.save(entity);
-                    return ResponseEntity.ok().build();
-                })
-                .orElse(ResponseEntity.notFound().build());
+        return operationBancaireService.updateReconStatus(id, status)
+                ? ResponseEntity.ok().build()
+                : ResponseEntity.notFound().build();
     }
     // Import Excel/CSV d'opérations bancaires
     @Autowired

@@ -21,6 +21,10 @@ public class OperationBancaireUpdateRequest {
 
     private Long operationId;
     private String traitement;
+    private String commentaire;
+
+    public String getCommentaire() { return commentaire; }
+    public void setCommentaire(String commentaire) { this.commentaire = commentaire; }
     
     // Constructeurs
     public OperationBancaireUpdateRequest() {}

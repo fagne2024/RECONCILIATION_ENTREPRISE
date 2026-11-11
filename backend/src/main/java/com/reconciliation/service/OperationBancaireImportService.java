@@ -122,9 +122,13 @@ public class OperationBancaireImportService {
                     e.setDemandeur(getString(row, idx.get("demandeur")));
                     e.setValideur(getString(row, idx.get("valideur")));
                     e.setTraitement(getString(row, idx.get("traitement")));
+                    e.setCommentaire(getString(row, idx.get("commentaire")));
 
                     String statut = getString(row, idx.get("statut"));
                     e.setStatut((statut == null || statut.isBlank()) ? "En attente" : statut);
+                    if (e.getTraitement() == null || e.getTraitement().isBlank()) {
+                        e.setTraitement("Niveau reconciliation");
+                    }
                     // Clé de doublon : référence du fichier si elle existe ; sinon agence + date + montant
                     // (cas des compensations, qui n'ont pas de référence). La référence générée n'en fait pas partie.
                     e.setDedupKey(operationDedupKey(fileReference, agence, typeOperation, dateOp, montant));
@@ -282,6 +286,9 @@ public class OperationBancaireImportService {
             Map.entry("approver", "valideur"),
             Map.entry("validator", "valideur"),
             Map.entry("processing", "traitement"),
+            Map.entry("comment", "commentaire"),
+            Map.entry("comments", "commentaire"),
+            Map.entry("remark", "commentaire"),
             Map.entry("status", "statut"),
             Map.entry("reference", "reference")
     );
@@ -438,7 +445,7 @@ public class OperationBancaireImportService {
             String[] headers = new String[]{
                     "Type Opération", "Montant", "Statut", "Date Opération", "Agence",
                     "Référence", "ID GLPI", "Banque", "Banque Corrigée", "Demandeur", "Valideur", "Pays",
-                    "Traitement"
+                    "Traitement", "Commentaire"
             };
             Row h = sheet.createRow(0);
             for (int i = 0; i < headers.length; i++) {

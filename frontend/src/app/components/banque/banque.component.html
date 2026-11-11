@@ -341,7 +341,9 @@
           <input class="ds-input" type="number" placeholder="{{ 'TBL.amount' | translate }} max" [(ngModel)]="releveFilterMontantMax" (keyup.enter)="applyReleveFilters()" style="width:110px;">
           <select class="ds-select" [(ngModel)]="releveFilterReconStatus" (change)="applyReleveFilters()">
             <option [ngValue]="''">{{ 'BQ.Statuttous' | translate }}</option>
+            <option [ngValue]="'En cours'">En cours</option>
             <option [ngValue]="'OK'">{{ 'COMMON.actions.ok' | translate }}</option>
+            <option [ngValue]="'Validé'">Validé</option>
             <option [ngValue]="'KO'">KO</option>
           </select>
           <select class="ds-select" [(ngModel)]="releveFilterDateField" (change)="applyReleveFilters()">
@@ -389,16 +391,25 @@
                 <td class="right"><span class="amount" [class.debit]="!!r.montant && r.montant < 0" [class.credit]="!!r.montant && r.montant > 0">{{ r.montant !== null && r.montant !== undefined ? (r.montant | number:'1.0-0') : '-' }}</span></td>
                 <td>{{ r.devise || '-' }}</td>
               <td>
-                <span class="badge status-ok" *ngIf="getReleveReconStatus(r)==='OK'">{{ 'COMMON.actions.ok' | translate }}</span>
-                <span class="badge status-ko" *ngIf="getReleveReconStatus(r)==='KO'">KO</span>
+                <span class="badge status-ok" *ngIf="getReleveNiveauStatus(r)==='OK'">{{ 'COMMON.actions.ok' | translate }}</span>
+                <span class="badge status-en-cours" *ngIf="getReleveNiveauStatus(r)==='En cours'">En cours</span>
+                <span class="badge status-valide" *ngIf="getReleveNiveauStatus(r)==='Validé'">Validé</span>
+                <span class="badge status-ko" *ngIf="getReleveNiveauStatus(r)==='KO'">KO</span>
               </td>
               <td *ngIf="showCommentColumn" class="comment-cell">
-                <div class="comment-display" [class.empty]="!r.commentaire">
-                  <span *ngIf="r.commentaire; else noComment">{{ r.commentaire }}</span>
-                  <ng-template #noComment>
-                    <span class="no-comment">{{ 'MSG.noComment' | translate }}</span>
-                  </ng-template>
-                </div>
+                <ng-container *ngIf="editingCommentReleveId !== r.id; else editCommentReleve">
+                  <div class="comment-display" [class.empty]="!r.commentaire" (click)="startEditCommentReleve(r)" style="cursor: pointer;">
+                    <span *ngIf="r.commentaire; else noComment">{{ r.commentaire }}</span>
+                    <ng-template #noComment>
+                      <span class="no-comment">{{ 'MSG.noComment' | translate }}</span>
+                    </ng-template>
+                  </div>
+                </ng-container>
+                <ng-template #editCommentReleve>
+                  <input class="ds-input edit-select" type="text" maxlength="1000" autofocus
+                         [(ngModel)]="commentDraft" [ngModelOptions]="{standalone: true}"
+                         (keydown.enter)="saveCommentReleve(r)" (keydown.escape)="cancelEditComment()" (blur)="saveCommentReleve(r)">
+                </ng-template>
               </td>
                 <td class="actions-col" *ngIf="showActionsColumn">
                   <button type="button" class="btn-icon" (click)="openReleveEdit(r)" [disabled]="!r.id" title="{{ 'BQ.Modifiercetteligne' | translate }}">
@@ -450,9 +461,14 @@
           <label>{{ 'TBL.date' | translate }}<span class="muted">{{ 'BQ.Optionnelle' | translate }}</span></label>
           <input class="ds-input" type="date" [(ngModel)]="reconDate" (change)="onReconDateChange()">
         </div>
-        <button type="button" class="ds-btn ds-btn--primary btn-primary" (click)="reconcile()" [disabled]="reconciling || !reconPays">
+        <button type="button" class="ds-btn ds-btn--primary btn-primary" (click)="reconVoirTout = false; reconcile()" [disabled]="reconciling || !reconPays">
           <i class="fas fa-link" [class.spin]="reconciling"></i>
           {{ 'BQ.Réconcilier' | translate }}
+        </button>
+        <button type="button" class="ds-btn ds-btn--secondary btn-outline" (click)="toggleVoirTout()" [disabled]="reconciling" [class.active]="reconVoirTout"
+                title="{{ 'BQ.VoirToutHint' | translate }}">
+          <i class="fas" [ngClass]="reconVoirTout ? 'fa-compress' : 'fa-list'"></i>
+          {{ (reconVoirTout ? 'BQ.VoirMoins' : 'BQ.VoirTout') | translate }}
         </button>
         <button type="button" class="ds-btn ds-btn--secondary btn-outline recon-result-btn" (click)="openReconResult()"
                 [disabled]="reconciling || !reconPays" title="{{ 'BQ.ReconResultTitle' | translate }}">
@@ -464,6 +480,7 @@
         <div class="filter-group" style="margin-left:auto;">
           <label>{{ 'LBL.view' | translate }}</label>
           <select class="ds-select" [(ngModel)]="reconView" (change)="updatePagedReconciliationResults()">
+            <option value="all">{{ 'BQ.VoirTout' | translate }}</option>
             <option value="operation">{{ 'BQ.Suspensbo' | translate }}</option>
             <option value="releve">{{ 'BQ.Suspensbanque' | translate }}</option>
             <option value="corr_operation">{{ 'BQ.Correspondancesbo' | translate }}</option>
@@ -477,7 +494,7 @@
       </div>
 
       <!-- Barre d'actions pour la réconciliation -->
-      <div class="releve-header" style="margin-bottom: 12px;" *ngIf="reconPays">
+      <div class="releve-header" style="margin-bottom: 12px;" *ngIf="reconPays || reconVoirTout">
         <h3>{{ 'BQ.Actionsderéconciliation' | translate }}</h3>
         <div class="actions">
           <button type="button" class="ds-btn ds-btn--primary btn-primary" (click)="toggleSelectAllCurrentPage()" [class.active]="selectAllOnPage" title="{{ 'BQ.Sélectionnerdésélectionnerlapage' | translate }}" *ngIf="reconView==='corr_operation' || reconView==='corr_releve'">
@@ -495,14 +512,14 @@
       <div class="table-container" *ngIf="reconDiffRows.length || (matchedPairs && matchedPairs.length)">
         <!-- Filtres Réconciliation -->
         <div class="table-filters">
-          <div class="filter-group" *ngIf="reconView==='operation' || reconView==='corr_operation'">
+          <div class="filter-group" *ngIf="reconView==='operation' || reconView==='corr_operation' || reconView==='all'">
             <label>{{ 'TBL.operationType' | translate }}</label>
             <select class="ds-select" [(ngModel)]="reconFilters.typeOperation" (change)="applyReconFilters()">
               <option value="">{{ 'FILT.all' | translate }}</option>
               <option *ngFor="let type of typesOperation" [value]="type">{{ type }}</option>
             </select>
           </div>
-          <div class="filter-group" *ngIf="reconView==='operation' || reconView==='corr_operation'">
+          <div class="filter-group" *ngIf="reconView==='operation' || reconView==='corr_operation' || reconView==='all'">
             <label>{{ 'TBL.status' | translate }}</label>
             <select class="ds-select" [(ngModel)]="reconFilters.statut" (change)="applyReconFilters()">
               <option value="">{{ 'FILT.all' | translate }}</option>
@@ -535,7 +552,7 @@
         </div>
 
         <!-- Message d'information si pas de données de réconciliation -->
-        <div class="recon-info-message" *ngIf="!reconPays">
+        <div class="recon-info-message" *ngIf="!reconPays && !reconVoirTout">
           <div class="info-card">
             <i class="fas fa-info-circle"></i>
             <div class="info-content">
@@ -545,7 +562,7 @@
           </div>
         </div>
 
-        <div class="recon-info-message" *ngIf="reconPays && !(leftOnlyOperations?.length || rightOnlyReleves?.length || matchedOperations?.length || matchedReleves?.length)">
+        <div class="recon-info-message" *ngIf="(reconPays || reconVoirTout) && !(leftOnlyOperations?.length || rightOnlyReleves?.length || matchedOperations?.length || matchedReleves?.length)">
           <div class="info-card">
             <i class="fas fa-exclamation-triangle"></i>
             <div class="info-content">
@@ -790,7 +807,130 @@
           </tbody>
         </table>
 
-        <div class="pagination small" *ngIf="reconPays">
+        <ng-container *ngIf="reconView==='all'">
+          <div class="rr-filters">
+            <div class="filter-group">
+              <label>{{ 'TBL.status' | translate }}</label>
+              <select class="ds-select" [(ngModel)]="voirToutStatut" (change)="onVoirToutFilterChange()">
+                <option value="">{{ 'FILT.all' | translate }}</option>
+                <option value="Suspens">Suspens</option>
+                <option value="Correspondance">Correspondance</option>
+              </select>
+            </div>
+            <div class="filter-group">
+              <label>{{ 'BQ.Recherche' | translate }}</label>
+              <input class="ds-input" type="text" [(ngModel)]="voirToutSearch" (input)="onVoirToutFilterChange()">
+            </div>
+          </div>
+
+          <h4 class="recon-all-title">
+            {{ 'BQ.OperationsBancaires' | translate }} ({{ voirToutOps.length }})
+            <span class="muted">— {{ voirToutOpCount.suspens }} suspens · {{ voirToutOpCount.correspondances }} correspondances</span>
+          </h4>
+          <table class="ds-table operations-table">
+            <thead>
+              <tr>
+                <th>{{ 'TBL.country' | translate }}</th>
+                <th>{{ 'TBL.operationDate' | translate }}</th>
+                <th>{{ 'TBL.agency' | translate }}</th>
+                <th>{{ 'TBL.operationType' | translate }}</th>
+                <th>{{ 'TBL.account' | translate }}</th>
+                <th>{{ 'TBL.amount' | translate }}</th>
+                <th>{{ 'TBL.reference' | translate }}</th>
+                <th>{{ 'TBL.ticketId' | translate }}</th>
+                <th>{{ 'TBL.bank' | translate }}</th>
+                <th>{{ 'TBL.status' | translate }}</th>
+                <th>{{ 'BQ.StatutRapprochement' | translate }}</th>
+              </tr>
+            </thead>
+            <tbody>
+              <tr *ngFor="let x of pagedVoirToutOps">
+                <td>{{ x.op.pays }}</td>
+                <td>{{ x.op.dateOperation | date:'dd/MM/yyyy' }}</td>
+                <td>{{ x.op.agence }}</td>
+                <td>{{ x.op.typeOperation }}</td>
+                <td>{{ x.op.compteADebiter }}</td>
+                <td>{{ x.op.montant | currency:'XAF':'symbol':'1.0-0' }}</td>
+                <td>{{ x.op.reference }}</td>
+                <td>{{ x.op.idGlpi || '-' }}</td>
+                <td>{{ x.op.bo }}</td>
+                <td>{{ x.op.statut }}</td>
+                <td>
+                  <span class="badge" [ngClass]="x.statut === 'Suspens' ? 'status-ko' : 'status-ok'">{{ x.statut }}</span>
+                </td>
+              </tr>
+              <tr *ngIf="!pagedVoirToutOps.length">
+                <td colspan="11" class="empty-row">{{ 'BQ.ReconResultEmpty' | translate }}</td>
+              </tr>
+            </tbody>
+          </table>
+          <div class="pagination small">
+            <ds-pagination
+              [page]="voirToutOpPage"
+              [pageCount]="voirToutOpTotalPages"
+              [totalItems]="voirToutOps.length"
+              [pageSize]="reconPageSize"
+              [pageSizes]="[5, 10, 20, 50, 100]"
+              [itemLabel]="'BQ.Lignesautotal' | translate"
+              (pageChange)="voirToutGoToOpPage($event)"
+              (pageSizeChange)="reconSetPageSize($event)">
+            </ds-pagination>
+          </div>
+
+          <h4 class="recon-all-title">
+            {{ 'BQ.RelevesBancaires' | translate }} ({{ voirToutReleves.length }})
+            <span class="muted">— {{ voirToutRevCount.suspens }} suspens · {{ voirToutRevCount.correspondances }} correspondances</span>
+          </h4>
+          <table class="ds-table operations-table">
+            <thead>
+              <tr>
+                <th>{{ 'TBL.accountNumber' | translate }}</th>
+                <th>{{ 'TBL.accountName' | translate }}</th>
+                <th>{{ 'TBL.bank' | translate }}</th>
+                <th>{{ 'TBL.accountingDate' | translate }}</th>
+                <th>{{ 'TBL.valueDate' | translate }}</th>
+                <th>{{ 'TBL.labelNarration' | translate }}</th>
+                <th class="right">{{ 'TBL.debit' | translate }}</th>
+                <th class="right">{{ 'TBL.credit' | translate }}</th>
+                <th class="right">{{ 'TBL.amount' | translate }}</th>
+                <th>{{ 'BQ.StatutRapprochement' | translate }}</th>
+              </tr>
+            </thead>
+            <tbody>
+              <tr *ngFor="let x of pagedVoirToutReleves">
+                <td>{{ x.row.numeroCompte || '-' }}</td>
+                <td>{{ x.row.nomCompte || '-' }}</td>
+                <td>{{ x.row.banque || '-' }}</td>
+                <td>{{ x.row.dateComptable ? (x.row.dateComptable | date:'dd/MM/yyyy') : '-' }}</td>
+                <td>{{ x.row.dateValeur ? (x.row.dateValeur | date:'dd/MM/yyyy') : '-' }}</td>
+                <td class="libelle-cell" [title]="x.row.libelle">{{ x.row.libelle || '-' }}</td>
+                <td class="right">{{ x.row.debit !== null && x.row.debit !== undefined ? (x.row.debit | number:'1.0-0') : '-' }}</td>
+                <td class="right">{{ x.row.credit !== null && x.row.credit !== undefined ? (x.row.credit | number:'1.0-0') : '-' }}</td>
+                <td class="right">{{ x.row.montant !== null && x.row.montant !== undefined ? (x.row.montant | number:'1.0-0') : '-' }}</td>
+                <td>
+                  <span class="badge" [ngClass]="x.statut === 'Suspens' ? 'status-ko' : 'status-ok'">{{ x.statut }}</span>
+                </td>
+              </tr>
+              <tr *ngIf="!pagedVoirToutReleves.length">
+                <td colspan="10" class="empty-row">{{ 'BQ.ReconResultEmpty' | translate }}</td>
+              </tr>
+            </tbody>
+          </table>
+          <div class="pagination small">
+            <ds-pagination
+              [page]="voirToutRevPage"
+              [pageCount]="voirToutRevTotalPages"
+              [totalItems]="voirToutReleves.length"
+              [pageSize]="reconPageSize"
+              [pageSizes]="[5, 10, 20, 50, 100]"
+              [itemLabel]="'BQ.Lignesautotal' | translate"
+              (pageChange)="voirToutGoToRevPage($event)"
+              (pageSizeChange)="reconSetPageSize($event)">
+            </ds-pagination>
+          </div>
+        </ng-container>
+
+        <div class="pagination small" *ngIf="(reconPays || reconVoirTout) && reconView!=='all'">
           <ds-pagination
             [page]="reconCurrentPage"
             [pageCount]="reconCurrentTotalPages"
@@ -1046,6 +1186,10 @@
           <button type="button" class="ds-btn ds-btn--secondary btn-success" (click)="exportOperations()" [disabled]="filteredOperations.length === 0" title="{{ 'BQ.Exporterexcel' | translate }}">
             <i class="fas fa-file-excel"></i> {{ 'COMMON.actions.export' | translate }}
           </button>
+          <button type="button" class="ds-btn ds-btn--primary btn-primary" (click)="toggleOpCommentColumn()" [class.active]="showOpCommentColumn" title="{{ 'BQ.Affichermasquerlacolonnecommentaire' | translate }}">
+            <i class="fas" [class.fa-comment]="!showOpCommentColumn" [class.fa-comment-slash]="showOpCommentColumn"></i>
+            {{ showOpCommentColumn ? 'Masquer Commentaires' : 'Afficher Commentaires' }}
+          </button>
           <button type="button" class="ds-btn ds-btn--primary btn-primary" (click)="toggleActionsColumn()" [class.active]="showActionsColumn" title="{{ 'BQ.Affichermasquerlescolonnesactions' | translate }}">
             <i class="fas" [class.fa-eye]="!showActionsColumn" [class.fa-eye-slash]="showActionsColumn"></i>
             {{ showActionsColumn ? 'Masquer Actions' : 'Afficher Actions' }}
@@ -1140,8 +1284,9 @@
           <label>{{ 'TBL.reconciliationStatus' | translate }}</label>
           <select class="ds-select" [(ngModel)]="operationsReconStatusFilter" (change)="applyFilters()">
             <option value="">{{ 'FILT.all' | translate }}</option>
+            <option value="En cours">En cours</option>
             <option value="OK">{{ 'COMMON.actions.ok' | translate }}</option>
-            <option value="KO">KO</option>
+            <option value="Validé">Validé</option>
           </select>
         </div>
         <div class="filter-group">
@@ -1203,6 +1348,7 @@
               <th>{{ 'TBL.processing' | translate }}</th>
               <th>{{ 'BQ.Demandeur' | translate }}</th>
               <th>{{ 'BQ.Valideur' | translate }}</th>
+              <th *ngIf="showOpCommentColumn">{{ 'BQ.Commentaire' | translate }}</th>
               <th *ngIf="showActionsColumn">{{ 'TBL.actions' | translate }}</th>
               <th>{{ 'TBL.reconciliationStatus' | translate }}</th>
             </tr>
@@ -1248,7 +1394,7 @@
               </td>
               <td class="traitement-cell">
                 <ng-container *ngIf="editingOperation !== operation; else editTraitement">
-                  <span [class]="getTraitementClass(operation.traitement)" class="traitement-badge" (click)="startEditTraitement(operation)" style="cursor: pointer;">
+                  <span [class]="getTraitementClass(operation.traitement)" class="traitement-badge" (click)="startEditTraitement(operation)" [style.cursor]="canEditTraitement(operation) ? 'pointer' : 'not-allowed'" [title]="canEditTraitement(operation) ? '' : 'Réservé à l\'administrateur'">
                     {{ operation.traitement || '-' }}
                   </span>
                 </ng-container>
@@ -1261,6 +1407,16 @@
               </td>
               <td>{{ operation.demandeur || '-' }}</td>
               <td>{{ operation.valideur || '-' }}</td>
+              <td *ngIf="showOpCommentColumn" class="commentaire-cell">
+                <ng-container *ngIf="editingCommentOperation !== operation; else editCommentOp">
+                  <span (click)="startEditCommentOperation(operation)" style="cursor: pointer;" [title]="operation.commentaire || ''">{{ operation.commentaire || '-' }}</span>
+                </ng-container>
+                <ng-template #editCommentOp>
+                  <input class="ds-input edit-select" type="text" maxlength="1000" autofocus
+                         [(ngModel)]="commentDraft" [ngModelOptions]="{standalone: true}"
+                         (keydown.enter)="saveCommentOperation(operation)" (keydown.escape)="cancelEditComment()" (blur)="saveCommentOperation(operation)">
+                </ng-template>
+              </td>
               <td class="actions" *ngIf="showActionsColumn">
                 <button type="button" class="btn-icon" (click)="viewOperation(operation)" title="{{ 'ACT.view' | translate }}">
                   <i class="fas fa-eye"></i>
@@ -1276,8 +1432,8 @@
                 </button>
               </td>
               <td>
-                <span class="badge status-{{ getOperationReconStatus(operation).toLowerCase() }}">
-                  {{ getOperationReconStatus(operation) }}
+                <span class="badge" [ngClass]="getOperationNiveauStatusClass(operation)">
+                  {{ getOperationNiveauStatus(operation) }}
                 </span>
               </td>
             </tr>
@@ -1301,8 +1457,9 @@
           <label>{{ 'TBL.reconciliationStatus' | translate }}</label>
           <select class="ds-select" [(ngModel)]="operationsReconStatusFilter" (change)="onOperationsReconStatusFilterChange()">
             <option value="">{{ 'FILT.all' | translate }}</option>
+            <option value="En cours">En cours</option>
             <option value="OK">{{ 'COMMON.actions.ok' | translate }}</option>
-            <option value="KO">KO</option>
+            <option value="Validé">Validé</option>
           </select>
         </div>
       </div>
@@ -1374,6 +1531,10 @@
           <div class="detail-item">
             <label><i class="fas fa-user-check"></i>{{ 'BQ.Valideur' | translate }}</label>
             <span>{{ selectedOperation.valideur || 'Non renseigné' }}</span>
+          </div>
+          <div class="detail-item">
+            <label><i class="fas fa-comment"></i>{{ 'BQ.Commentaire' | translate }}</label>
+            <span>{{ selectedOperation.commentaire || 'Non renseigné' }}</span>
           </div>
           <div class="detail-item">
             <label><i class="fas fa-info-circle"></i>{{ 'TBL.status' | translate }}</label>
@@ -1453,6 +1614,31 @@
               <option value="CLE">{{ 'BQ.ReconResultByKey' | translate }}</option>
             </select>
           </div>
+          <div class="filter-group">
+            <label>{{ 'TBL.country' | translate }}</label>
+            <select class="ds-select" [(ngModel)]="reconResultPaysFilter" (change)="onReconResultFilterChange()">
+              <option value="">{{ 'FILT.all' | translate }}</option>
+              <option *ngFor="let pays of reconResultPaysOptions" [value]="pays">{{ pays }}</option>
+            </select>
+          </div>
+          <div class="filter-group">
+            <label>{{ 'TBL.bank' | translate }}</label>
+            <select class="ds-select" [(ngModel)]="reconResultBanqueFilter" (change)="onReconResultFilterChange()">
+              <option value="">{{ 'FILT.all' | translate }}</option>
+              <option *ngFor="let b of reconResultBanqueOptions" [value]="b">{{ b }}</option>
+            </select>
+          </div>
+          <div class="filter-group">
+            <label>Date du</label>
+            <input class="ds-input" type="date" [(ngModel)]="reconResultDateDebut" (change)="onReconResultFilterChange()">
+          </div>
+          <div class="filter-group">
+            <label>au</label>
+            <input class="ds-input" type="date" [(ngModel)]="reconResultDateFin" (change)="onReconResultFilterChange()">
+          </div>
+          <button type="button" class="ds-btn ds-btn--secondary btn-clear-filters" (click)="clearReconResultFilters()">
+            <i class="fas fa-eraser"></i> {{ 'COMMON.actions.reset' | translate }}
+          </button>
         </div>
 
         <div class="rr-table-wrap">
@@ -1815,6 +2001,10 @@
             <div class="form-group">
               <label><i class="fas fa-user-check"></i>{{ 'BQ.Valideur' | translate }}</label>
               <input class="ds-input" type="text" [(ngModel)]="editForm.valideur" name="valideur" placeholder="{{ 'BQ.Valideur' | translate }}">
+            </div>
+            <div class="form-group">
+              <label><i class="fas fa-comment"></i>{{ 'BQ.Commentaire' | translate }}</label>
+              <input class="ds-input" type="text" [(ngModel)]="editForm.commentaire" name="commentaire" maxlength="1000" placeholder="{{ 'BQ.Commentaire' | translate }}">
             </div>
           </div>
 

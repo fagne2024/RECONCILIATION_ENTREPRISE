@@ -81,6 +81,12 @@ public class OperationBancaireEntity {
     
     @Column(name = "traitement")
     private String traitement;
+
+    @Column(name = "commentaire", length = 1000)
+    private String commentaire;
+
+    public String getCommentaire() { return commentaire; }
+    public void setCommentaire(String commentaire) { this.commentaire = commentaire; }
     
     // Constructeurs
     public OperationBancaireEntity() {}

@@ -26,6 +26,10 @@ public class OperationBancaire {
     private Long operationId;
     private Boolean impactApplique; // Flag pour savoir si l'impact a déjà été appliqué
     private String traitement;
+    private String commentaire;
+
+    public String getCommentaire() { return commentaire; }
+    public void setCommentaire(String commentaire) { this.commentaire = commentaire; }
     
     // Constructeurs
     public OperationBancaire() {}

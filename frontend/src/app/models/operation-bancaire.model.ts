@@ -21,6 +21,7 @@ export interface OperationBancaire {
     traitement?: string;
     demandeur?: string;
     valideur?: string;
+    commentaire?: string;
 }
 
 export interface OperationBancaireCreateRequest {
@@ -43,6 +44,7 @@ export interface OperationBancaireCreateRequest {
     traitement?: string;
     demandeur?: string;
     valideur?: string;
+    commentaire?: string;
 }
 
 export interface OperationBancaireUpdateRequest {
@@ -65,6 +67,7 @@ export interface OperationBancaireUpdateRequest {
     traitement?: string;
     demandeur?: string;
     valideur?: string;
+    commentaire?: string;
 }
 
 export interface OperationBancaireFilter {

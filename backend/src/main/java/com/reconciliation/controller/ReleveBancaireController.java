@@ -257,6 +257,23 @@ public class ReleveBancaireController {
         return ResponseEntity.ok(entity);
     }
 
+    /** Met à jour uniquement le commentaire d'une ligne de relevé (les autres champs sont conservés). */
+    @PutMapping("/{id}/commentaire")
+    public ResponseEntity<?> updateCommentaire(@PathVariable("id") Long id, @RequestBody java.util.Map<String, String> body) {
+        var opt = repository.findById(id);
+        if (opt.isEmpty()) {
+            return ResponseEntity.notFound().build();
+        }
+        String commentaire = body == null ? null : body.get("commentaire");
+        if (commentaire != null && commentaire.length() > 1000) {
+            return ResponseEntity.badRequest().body(java.util.Map.of("message", "Commentaire trop long (1000 caractères max)"));
+        }
+        var entity = opt.get();
+        entity.setCommentaire(commentaire == null || commentaire.isBlank() ? null : commentaire);
+        repository.save(entity);
+        return ResponseEntity.ok(entity);
+    }
+
     @PutMapping("/{id}/recon-status")
     public ResponseEntity<?> updateReconStatus(@PathVariable("id") Long id, @RequestParam("status") String status) {
         var opt = repository.findById(id);

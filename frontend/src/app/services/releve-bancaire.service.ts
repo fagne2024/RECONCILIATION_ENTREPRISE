@@ -67,6 +67,11 @@ export class ReleveBancaireService {
     return this.http.put<ReleveBancaireRow>(`${this.apiUrl}/${id}`, payload);
   }
 
+  /** Met à jour uniquement le commentaire (les autres champs de la ligne sont conservés). */
+  updateCommentaire(id: number, commentaire: string): Observable<ReleveBancaireRow> {
+    return this.http.put<ReleveBancaireRow>(`${this.apiUrl}/${id}/commentaire`, { commentaire });
+  }
+
   updateReconStatus(id: number, status: 'OK' | 'KO'): Observable<any> {
     return this.http.put(`${this.apiUrl}/${id}/recon-status?status=${encodeURIComponent(status)}`, {});
   }

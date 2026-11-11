@@ -1,3 +1,4 @@
+import { AppStateService } from '../../services/app-state.service';
 import { Component, OnInit, inject } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { FormsModule, ReactiveFormsModule } from '@angular/forms';
@@ -111,6 +112,10 @@ const OPERATION_IMPORT_HEADER_ALIASES: Record<string, string> = {
   demandeur: 'Demandeur',
   valideur: 'Valideur',
   traitement: 'Traitement',
+  commentaire: 'Commentaire',
+  comment: 'Commentaire',
+  comments: 'Commentaire',
+  remark: 'Commentaire',
   banquecorrigee: 'Banque Corrigée',
   // En-têtes anglais
   country: 'Pays',
@@ -268,6 +273,12 @@ export class BanqueComponent implements OnInit {
   
   // Contrôle de visibilité de la colonne commentaire
   showCommentColumn = false;
+  /** Colonne commentaire du tableau des opérations : masquée par défaut. */
+  showOpCommentColumn = false;
+  /** Ligne (opération / relevé) dont le commentaire est en cours d'édition en ligne. */
+  editingCommentOperation: OperationBancaireDisplay | null = null;
+  editingCommentReleveId: number | null = null;
+  commentDraft = '';
 
   // Traitement Automatique (Opérations)
   showOpAutoTreatment = false;
@@ -393,7 +404,7 @@ export class BanqueComponent implements OnInit {
     return `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())}`;
   }
   reconPaysOptions: string[] = [];
-  reconView: 'operation' | 'releve' | 'corr_operation' | 'corr_releve' = 'operation';
+  reconView: 'operation' | 'releve' | 'corr_operation' | 'corr_releve' | 'all' = 'operation';
   // Résultats bruts (incluant BOTH/OPERATION/RELEVE) conservés pour la popup correspondance
   reconciliationResults: Array<{
     date: string;
@@ -716,7 +727,7 @@ export class BanqueComponent implements OnInit {
   // Filtres Statut Réconciliation (UI)
   reconStatusFilter: '' | 'OK' | 'KO' = '';
   releveStatusFilter: '' | 'OK' | 'KO' = '';
-  operationsReconStatusFilter: '' | 'OK' | 'KO' = '';
+  operationsReconStatusFilter: '' | 'En cours' | 'OK' | 'Validé' = '';
 
   private loadReconOkKeys() {
     try {
@@ -869,7 +880,16 @@ export class BanqueComponent implements OnInit {
     }
   }
 
+  /** Un traitement « Terminé » n'est modifiable que par un administrateur. */
+  canEditTraitement(operation: OperationBancaireDisplay): boolean {
+    return operation.traitement !== 'Terminé' || this.appState.isAdmin();
+  }
+
   startEditTraitement(operation: OperationBancaireDisplay) {
+    if (!this.canEditTraitement(operation)) {
+      this.popupService.showWarning('Seul un administrateur peut modifier le traitement d\'une opération « Terminé ».');
+      return;
+    }
     this.editingOperation = operation;
   }
 
@@ -900,6 +920,9 @@ export class BanqueComponent implements OnInit {
       },
       error: (err) => {
         console.error('Erreur lors de la mise à jour du traitement', err);
+        if (err && err.status === 403) {
+          this.popupService.showError('❌ Seul un administrateur peut modifier le traitement d\'une opération « Terminé ».');
+        }
         // Restaurer la valeur précédente en cas d'erreur
         const originalOp = this.operations.find(op => op.id === operation.id);
         if (originalOp) {
@@ -909,6 +932,26 @@ export class BanqueComponent implements OnInit {
     });
   }
   
+  /**
+   * Statut réconciliation du tableau des opérations, dérivé du niveau de traitement :
+   * Niveau reconciliation (ou vide) => En cours ; Niveau Group => OK ; Terminé => Validé.
+   */
+  getOperationNiveauStatus(op: OperationBancaireDisplay): 'En cours' | 'OK' | 'Validé' {
+    switch (op && op.traitement) {
+      case 'Niveau Group': return 'OK';
+      case 'Terminé': return 'Validé';
+      default: return 'En cours';
+    }
+  }
+
+  getOperationNiveauStatusClass(op: OperationBancaireDisplay): string {
+    switch (this.getOperationNiveauStatus(op)) {
+      case 'OK': return 'status-ok';
+      case 'Validé': return 'status-valide';
+      default: return 'status-en-cours';
+    }
+  }
+
   getOperationReconStatus(op: OperationBancaireDisplay): 'OK' | 'KO' {
     const key = op && (op as any).id !== undefined ? String((op as any).id) : '';
     // 1) override direct par id
@@ -949,6 +992,42 @@ export class BanqueComponent implements OnInit {
     }
   // Désactivé: la modification doit se faire uniquement dans Correspondances
   toggleReleveReconStatus(row: ReleveBancaireRow) { return; }
+
+  private opByBaseKeyCache: { ref: any; len: number; map: Map<string, OperationBancaireDisplay> } | null = null;
+
+  /** Index (clé de base → opération) pour retrouver l'opération qui correspond à une ligne de relevé. */
+  private getOpByBaseKey(): Map<string, OperationBancaireDisplay> {
+    const ops = this.operations || [];
+    if (this.opByBaseKeyCache && this.opByBaseKeyCache.ref === ops && this.opByBaseKeyCache.len === ops.length) {
+      return this.opByBaseKeyCache.map;
+    }
+    const map = new Map<string, OperationBancaireDisplay>();
+    ops.forEach(op => {
+      try {
+        const k = this.buildBaseReconKeyForOperation(op);
+        if (k && !map.has(k)) map.set(k, op);
+      } catch {}
+    });
+    this.opByBaseKeyCache = { ref: ops, len: ops.length, map };
+    return map;
+  }
+
+  /**
+   * Statut réconciliation affiché sur le relevé : pour une ligne rapprochée d'une opération,
+   * il prend la même valeur que l'opération (En cours / OK / Validé). Sinon OK/KO habituel.
+   */
+  getReleveNiveauStatus(row: ReleveBancaireRow): 'En cours' | 'OK' | 'Validé' | 'KO' {
+    const base = this.getReleveReconStatus(row);
+    try {
+      const map = this.getOpByBaseKey();
+      const op = map.get(this.buildBaseReconKeyForReleve(row)) || map.get(this.buildBaseReconKeyForReleveUsingDateComptable(row));
+      if (op) {
+        const niveau = this.getOperationNiveauStatus(op);
+        if (base === 'OK' || niveau !== 'En cours') return niveau;
+      }
+    } catch {}
+    return base;
+  }
 
   getReconStatusByKey(key: string | undefined, defaultStatus: 'OK' | 'KO'): 'OK' | 'KO' {
     if (!key) return defaultStatus;
@@ -1111,12 +1190,26 @@ export class BanqueComponent implements OnInit {
     });
   }
 
+  /** Reflète localement la règle serveur : OK => Niveau Group ; KO => retour Niveau reconciliation (sauf Terminé). */
+  private appliquerNiveauLocal(op: any, status: 'OK' | 'KO') {
+    if (op.traitement === 'Terminé') return;
+    const cibles = [op, this.operations.find(o => o.id === op.id), this.filteredOperations.find(o => o.id === op.id)].filter(Boolean) as any[];
+    if (status === 'OK') {
+      cibles.forEach(o => { o.traitement = 'Niveau Group'; });
+    } else if (op.traitement === 'Niveau Group') {
+      cibles.forEach(o => { o.traitement = 'Niveau reconciliation'; });
+    }
+  }
+
   // Mettre à jour le recon_status des entités côté base si l'identifiant est disponible
   private updateEntityStatusesForKey(key: string, status: 'OK' | 'KO') {
     try {
       const opAny: any = (this as any).keyToOp && (this as any).keyToOp[key];
       if (opAny && opAny.id !== undefined) {
-        this.operationBancaireService.updateReconStatus(opAny.id, status).subscribe({ next: () => {}, error: () => {} });
+        this.operationBancaireService.updateReconStatus(opAny.id, status).subscribe({
+          next: () => this.appliquerNiveauLocal(opAny, status),
+          error: () => {}
+        });
       }
     } catch {}
     try {
@@ -1161,7 +1254,8 @@ export class BanqueComponent implements OnInit {
     statut: '',
     traitement: '',
     demandeur: '',
-    valideur: ''
+    valideur: '',
+    commentaire: ''
   };
 
   constructor(
@@ -1173,7 +1267,8 @@ export class BanqueComponent implements OnInit {
     private operationApi: OperationServiceApi,
     private exportOptimizationService: ExportOptimizationService,
     private popupService: PopupService,
-    private calculService: ConfigurationCalculService
+    private calculService: ConfigurationCalculService,
+    private appState: AppStateService
   ) { }
 
   private normalizeCountryName(input: string): string {
@@ -1250,6 +1345,7 @@ export class BanqueComponent implements OnInit {
 
   /** Réconciliation silencieuse pour rendre le Résultat immédiatement accessible. */
   private autoReconcile() {
+    this.reconVoirTout = false;
     if (!this.reconPays) {
       this.reconResultPairs = [];
       return;
@@ -1904,6 +2000,74 @@ export class BanqueComponent implements OnInit {
     this.showActionsColumn = !this.showActionsColumn;
   }
 
+  toggleOpCommentColumn() {
+    this.showOpCommentColumn = !this.showOpCommentColumn;
+    this.cancelEditComment();
+  }
+
+  startEditCommentOperation(operation: OperationBancaireDisplay) {
+    this.editingCommentReleveId = null;
+    this.editingCommentOperation = operation;
+    this.commentDraft = operation.commentaire || '';
+  }
+
+  cancelEditComment() {
+    this.editingCommentOperation = null;
+    this.editingCommentReleveId = null;
+  }
+
+  saveCommentOperation(operation: OperationBancaireDisplay) {
+    if (this.editingCommentOperation !== operation) return;
+    const commentaire = this.commentDraft.trim();
+    if (!operation.id || commentaire === (operation.commentaire || '')) {
+      this.cancelEditComment();
+      return;
+    }
+    this.operationBancaireService.updateOperationBancaire(operation.id, { commentaire }).subscribe({
+      next: (updated) => {
+        const valeur = updated.commentaire || '';
+        operation.commentaire = valeur;
+        const op = this.operations.find(o => o.id === operation.id);
+        if (op) op.commentaire = valeur;
+        const fop = this.filteredOperations.find(o => o.id === operation.id);
+        if (fop) fop.commentaire = valeur;
+        this.cancelEditComment();
+      },
+      error: (err) => {
+        console.error('Erreur lors de la mise à jour du commentaire', err);
+        this.popupService.showError('❌ Échec de la sauvegarde du commentaire');
+        this.cancelEditComment();
+      }
+    });
+  }
+
+  startEditCommentReleve(row: ReleveBancaireRow) {
+    if (!row.id) return;
+    this.editingCommentOperation = null;
+    this.editingCommentReleveId = row.id;
+    this.commentDraft = row.commentaire || '';
+  }
+
+  saveCommentReleve(row: ReleveBancaireRow) {
+    if (this.editingCommentReleveId !== row.id) return;
+    const commentaire = this.commentDraft.trim();
+    if (!row.id || commentaire === (row.commentaire || '')) {
+      this.cancelEditComment();
+      return;
+    }
+    this.releveService.updateCommentaire(row.id, commentaire).subscribe({
+      next: () => {
+        row.commentaire = commentaire;
+        this.cancelEditComment();
+      },
+      error: (err) => {
+        console.error('Erreur sauvegarde commentaire', err);
+        this.popupService.showError('❌ Échec de la sauvegarde du commentaire');
+        this.cancelEditComment();
+      }
+    });
+  }
+
   // Contrôle de visibilité de la colonne commentaire
   toggleCommentColumn() {
     this.showCommentColumn = !this.showCommentColumn;
@@ -2418,7 +2582,7 @@ export class BanqueComponent implements OnInit {
   // ----- Filtres Relevé Bancaire -----
   releveFilterNumeroCompte: string = '';
   releveFilterBanque: string = '';
-  releveFilterReconStatus: '' | 'OK' | 'KO' = '' as any;
+  releveFilterReconStatus: '' | 'En cours' | 'OK' | 'Validé' | 'KO' = '' as any;
   releveFilterDateDebut: string = '';
   releveFilterDateFin: string = '';
   releveFilterDateField: 'comptable' | 'valeur' = 'comptable';
@@ -2567,7 +2731,7 @@ export class BanqueComponent implements OnInit {
     
     // Filtre par statut de réconciliation
     if (this.releveFilterReconStatus) {
-      filtered = filtered.filter(r => this.getReleveReconStatus(r) === this.releveFilterReconStatus);
+      filtered = filtered.filter(r => this.getReleveNiveauStatus(r) === this.releveFilterReconStatus);
     }
 
     // Colonne montant du tableau (valeur absolue)
@@ -2930,7 +3094,7 @@ export class BanqueComponent implements OnInit {
       soldeDisponibleCloture: typeof r.soldeDisponibleCloture === 'number' ? r.soldeDisponibleCloture : '',
       soldeComptableOuverture: typeof r.soldeComptableOuverture === 'number' ? r.soldeComptableOuverture : '',
       soldeComptableCloture: typeof r.soldeComptableCloture === 'number' ? r.soldeComptableCloture : '',
-      reconStatus: this.getReleveReconStatus(r)
+      reconStatus: this.getReleveNiveauStatus(r)
     }));
 
     const isLargeDataset = exportRows.length > 10000;
@@ -3108,11 +3272,7 @@ export class BanqueComponent implements OnInit {
   saveComment(releveId: number, comment: string) {
     if (!releveId) return;
     
-    const payload: Partial<ReleveBancaireRow> = {
-      commentaire: comment || undefined
-    };
-    
-    this.releveService.update(releveId, payload).subscribe({
+    this.releveService.updateCommentaire(releveId, comment || '').subscribe({
       next: () => {
         // Mettre à jour le commentaire localement
         const releve = this.releveRows.find(r => r.id === releveId);
@@ -3267,6 +3427,7 @@ export class BanqueComponent implements OnInit {
                 traitement: '',
                 demandeur: '',
                 valideur: '',
+                commentaire: '',
                 source: 'generale'
               }));
 
@@ -3397,7 +3558,7 @@ export class BanqueComponent implements OnInit {
       const matchType = !this.filters.typeOperation || operation.typeOperation === this.filters.typeOperation;
       const matchStatut = !this.filters.statut || operation.statut === this.filters.statut;
       const matchTraitement = !this.filters.traitement || operation.traitement === this.filters.traitement;
-      const matchReconStatut = !this.operationsReconStatusFilter || this.getOperationReconStatus(operation) === this.operationsReconStatusFilter;
+      const matchReconStatut = !this.operationsReconStatusFilter || this.getOperationNiveauStatus(operation) === this.operationsReconStatusFilter;
       const f = this.filters;
       const matchColonnes =
         containsFilter(operation.agence, f.agence) &&
@@ -3474,7 +3635,7 @@ export class BanqueComponent implements OnInit {
       filtered = filtered.filter(op => {
         // Ici, vous pouvez ajouter la logique pour déterminer le statut de réconciliation
         // Pour l'instant, on simule avec le statut de l'opération
-        const reconStatus = this.getOperationReconStatus(op);
+        const reconStatus = this.getOperationNiveauStatus(op);
         return reconStatus === this.operationsReconStatusFilter;
       });
     }
@@ -3821,7 +3982,7 @@ export class BanqueComponent implements OnInit {
         this.popupService.showWarning(msg);
       }
     };
-    if (!this.reconPays) {
+    if (!this.reconPays && !this.reconVoirTout) {
       warn('Veuillez choisir un pays. La date est optionnelle.');
       return;
     }
@@ -3837,7 +3998,7 @@ export class BanqueComponent implements OnInit {
     this.reconciling = true;
 
     // Préparer les opérations filtrées (par pays + date)
-    const ymd = this.reconDate || '';
+    const ymd = this.reconVoirTout ? '' : (this.reconDate || '');
     try {
       const reconCodeDbg = this.getReconCountryCode();
       console.log('[RECON][DBG] Inputs', {
@@ -3872,7 +4033,7 @@ export class BanqueComponent implements OnInit {
         const code = (op as any).codePays ? String((op as any).codePays).toUpperCase().trim() : '';
         return code && this.paysCodeToName[code] ? this.paysCodeToName[code] : '';
       })();
-      const matchCountry = countriesMatch(opName, this.reconPays);
+      const matchCountry = !this.reconPays || countriesMatch(opName, this.reconPays);
       const matchDate = !ymd || this.normalizeDateToYmd(op.dateOperation) === ymd;
       return matchCountry && matchDate;
     });
@@ -3902,7 +4063,9 @@ export class BanqueComponent implements OnInit {
       // compte « INTOUCHCM » → Cameroun). Sans ce repli, la ligne était exclue avant tout rapprochement.
       const rowDisplayName = this.deriveCountryNameFromBanque(r.banque)
         || this.deriveCountryNameFromBanque((r as any).nomCompte);
-      const matchCountry = rowDisplayName
+      const matchCountry = !this.reconPays
+        ? true
+        : rowDisplayName
         ? countriesMatch(rowDisplayName, this.reconPays)
         : (() => {
         const rowCode = this.deriveCountryCodeFromBanque(r.banque)
@@ -4138,6 +4301,10 @@ export class BanqueComponent implements OnInit {
   showReconResultPopup = false;
   reconResultSearch = '';
   reconResultMatchFilter: '' | 'REFERENCE' | 'CLE' = '';
+  reconResultPaysFilter = '';
+  reconResultBanqueFilter = '';
+  reconResultDateDebut = '';
+  reconResultDateFin = '';
   reconResultPage = 1;
   reconResultPageSize = 25;
 
@@ -4149,8 +4316,9 @@ export class BanqueComponent implements OnInit {
       return;
     }
     // Toujours recalculer sur les données chargées : pas besoin d'avoir cliqué sur « Réconcilier »
+    this.reconVoirTout = false;
     this.reconcile(true);
-    this.reconResultPage = 1;
+    this.clearReconResultFilters();
     this.showReconResultPopup = true;
   }
 
@@ -4406,6 +4574,14 @@ export class BanqueComponent implements OnInit {
     const q = this.normalizeReconText(this.reconResultSearch);
     return this.reconResultPairs.filter(p => {
       if (this.reconResultMatchFilter && p.matchBy !== this.reconResultMatchFilter) return false;
+      if (this.reconResultPaysFilter && this.getPaysDisplay(p.op) !== this.reconResultPaysFilter) return false;
+      if (this.reconResultBanqueFilter && this.reconResultBanqueOf(p) !== this.reconResultBanqueFilter) return false;
+      if (this.reconResultDateDebut || this.reconResultDateFin) {
+        const ymd = this.normalizeDateToYmd(p.op.dateOperation as any);
+        if (!ymd) return false;
+        if (this.reconResultDateDebut && ymd < this.reconResultDateDebut) return false;
+        if (this.reconResultDateFin && ymd > this.reconResultDateFin) return false;
+      }
       if (!q) return true;
       const haystack = this.normalizeReconText([
         p.op.reference, p.op.agence, p.op.typeOperation, p.op.bo,
@@ -4436,6 +4612,35 @@ export class BanqueComponent implements OnInit {
   }
 
   onReconResultFilterChange() {
+    this.reconResultPage = 1;
+  }
+
+  /** Banque d'une paire : celle de l'opération, à défaut celle du relevé. */
+  private reconResultBanqueOf(p: ReconResultPair): string {
+    return ((p.op.bo || p.rev.banque || '') + '').trim();
+  }
+
+  /** Pays présents dans les résultats (options du filtre). */
+  get reconResultPaysOptions(): string[] {
+    const set = new Set<string>();
+    this.reconResultPairs.forEach(p => { const v = this.getPaysDisplay(p.op); if (v) set.add(v); });
+    return Array.from(set).sort((a, b) => a.localeCompare(b, 'fr'));
+  }
+
+  /** Banques présentes dans les résultats (options du filtre). */
+  get reconResultBanqueOptions(): string[] {
+    const set = new Set<string>();
+    this.reconResultPairs.forEach(p => { const v = this.reconResultBanqueOf(p); if (v) set.add(v); });
+    return Array.from(set).sort((a, b) => a.localeCompare(b, 'fr'));
+  }
+
+  clearReconResultFilters() {
+    this.reconResultSearch = '';
+    this.reconResultMatchFilter = '';
+    this.reconResultPaysFilter = '';
+    this.reconResultBanqueFilter = '';
+    this.reconResultDateDebut = '';
+    this.reconResultDateFin = '';
     this.reconResultPage = 1;
   }
 
@@ -4696,6 +4901,9 @@ export class BanqueComponent implements OnInit {
     this.reconCorrRevTotalPages = Math.ceil(this.filteredMatchedReleves.length / this.reconPageSize) || 1;
     const crevStart = (this.reconCorrRevPage - 1) * this.reconPageSize;
     this.pagedMatchedReleves = this.filteredMatchedReleves.slice(crevStart, crevStart + this.reconPageSize);
+
+    // Vue « Voir tout »
+    this.computeVoirTout();
   }
 
   applyReconFilters() {
@@ -4939,6 +5147,132 @@ export class BanqueComponent implements OnInit {
     return `Affichage de ${startItem} à ${endItem} sur ${totalItems} résultat${totalItems > 1 ? 's' : ''}`;
   }
 
+  // =========================
+  // « Voir tout » : toutes les opérations et tous les relevés avec leur statut
+  // (Suspens / Correspondance), sans obligation de pays ni de date.
+  // =========================
+  /** Mode « Voir tout » actif : pays facultatif, date ignorée. */
+  reconVoirTout = false;
+  voirToutStatut: '' | 'Suspens' | 'Correspondance' = '';
+  voirToutSearch = '';
+  voirToutOpPage = 1;
+  voirToutRevPage = 1;
+  voirToutOps: Array<{ op: OperationBancaireDisplay; statut: 'Suspens' | 'Correspondance' }> = [];
+  voirToutReleves: Array<{ row: ReleveBancaireRow; statut: 'Suspens' | 'Correspondance' }> = [];
+  pagedVoirToutOps: Array<{ op: OperationBancaireDisplay; statut: 'Suspens' | 'Correspondance' }> = [];
+  pagedVoirToutReleves: Array<{ row: ReleveBancaireRow; statut: 'Suspens' | 'Correspondance' }> = [];
+  voirToutOpTotalPages = 1;
+  voirToutRevTotalPages = 1;
+  voirToutOpCount = { suspens: 0, correspondances: 0 };
+  voirToutRevCount = { suspens: 0, correspondances: 0 };
+
+  /** Date saisie avant « Voir tout », rétablie par « Voir moins ». */
+  private reconDateAvantVoirTout = '';
+
+  /** Bascule « Voir tout » / « Voir moins ». */
+  toggleVoirTout() {
+    if (this.reconVoirTout) {
+      this.voirMoins();
+    } else {
+      this.voirTout();
+    }
+  }
+
+  /** Masque à nouveau les données : retour à l'état précédent (pays/date choisis, ou rien si aucun pays). */
+  voirMoins() {
+    this.reconVoirTout = false;
+    this.reconDate = this.reconDateAvantVoirTout;
+    this.reconDateAvantVoirTout = '';
+    this.voirToutStatut = '';
+    this.voirToutSearch = '';
+    if (this.reconPays) {
+      this.reconcile(true);
+      return;
+    }
+    // Aucun pays choisi : on vide les résultats affichés
+    this.leftOnlyOperations = [];
+    this.rightOnlyReleves = [];
+    this.matchedOperations = [];
+    this.matchedReleves = [];
+    this.matchedPairs = [];
+    this.reconDiffRows = [];
+    this.reconResultPairs = [];
+    this.reconView = 'operation';
+    this.updatePagedReconciliationResults();
+  }
+
+  /** Lance la réconciliation sur toutes les données chargées (pays facultatif, sans date) et affiche tout. */
+  voirTout() {
+    this.reconDateAvantVoirTout = this.reconDate || '';
+    this.reconVoirTout = true;
+    this.reconDate = '';
+    this.voirToutStatut = '';
+    this.voirToutSearch = '';
+    this.voirToutOpPage = 1;
+    this.voirToutRevPage = 1;
+    this.reconcile();
+    if (this.reconVoirTout && !this.reconciling) {
+      this.reconView = 'all';
+      this.updatePagedReconciliationResults();
+    }
+  }
+
+  onVoirToutFilterChange() {
+    this.voirToutOpPage = 1;
+    this.voirToutRevPage = 1;
+    this.computeVoirTout();
+  }
+
+  voirToutGoToOpPage(page: number) {
+    this.voirToutOpPage = Math.min(Math.max(1, page), this.voirToutOpTotalPages);
+    this.computeVoirTout();
+  }
+
+  voirToutGoToRevPage(page: number) {
+    this.voirToutRevPage = Math.min(Math.max(1, page), this.voirToutRevTotalPages);
+    this.computeVoirTout();
+  }
+
+  /** Construit les deux listes (opérations, relevés) avec leur statut, puis pagine. */
+  private computeVoirTout() {
+    const q = this.normalizeReconText(this.voirToutSearch);
+    const opSource: Array<{ op: OperationBancaireDisplay; statut: 'Suspens' | 'Correspondance' }> = [
+      ...(this.leftOnlyOperations || []).map(op => ({ op, statut: 'Suspens' as const })),
+      ...(this.matchedOperations || []).map(op => ({ op, statut: 'Correspondance' as const }))
+    ];
+    const revSource: Array<{ row: ReleveBancaireRow; statut: 'Suspens' | 'Correspondance' }> = [
+      ...(this.rightOnlyReleves || []).map(row => ({ row, statut: 'Suspens' as const })),
+      ...(this.matchedReleves || []).map(row => ({ row, statut: 'Correspondance' as const }))
+    ];
+    this.voirToutOpCount = {
+      suspens: opSource.filter(x => x.statut === 'Suspens').length,
+      correspondances: opSource.filter(x => x.statut === 'Correspondance').length
+    };
+    this.voirToutRevCount = {
+      suspens: revSource.filter(x => x.statut === 'Suspens').length,
+      correspondances: revSource.filter(x => x.statut === 'Correspondance').length
+    };
+    const byStatut = (statut: string) => !this.voirToutStatut || statut === this.voirToutStatut;
+    const opDate = (op: OperationBancaireDisplay) => this.normalizeDateToYmd(op.dateOperation as any) || '';
+    const revDate = (r: ReleveBancaireRow) => this.normalizeDateToYmd((r.dateValeur || r.dateComptable) as any) || '';
+    this.voirToutOps = opSource
+      .filter(x => byStatut(x.statut))
+      .filter(x => !q || this.normalizeReconText([x.op.reference, x.op.agence, x.op.typeOperation, x.op.bo, x.op.pays, x.op.compteADebiter].join(' ')).includes(q))
+      .sort((a, b) => opDate(b.op).localeCompare(opDate(a.op)));
+    this.voirToutReleves = revSource
+      .filter(x => byStatut(x.statut))
+      .filter(x => !q || this.normalizeReconText([x.row.libelle, x.row.banque, x.row.numeroCompte, x.row.nomCompte].join(' ')).includes(q))
+      .sort((a, b) => revDate(b.row).localeCompare(revDate(a.row)));
+    this.voirToutOpTotalPages = Math.max(1, Math.ceil(this.voirToutOps.length / this.reconPageSize));
+    this.voirToutRevTotalPages = Math.max(1, Math.ceil(this.voirToutReleves.length / this.reconPageSize));
+    this.voirToutOpPage = Math.min(this.voirToutOpPage, this.voirToutOpTotalPages);
+    this.voirToutRevPage = Math.min(this.voirToutRevPage, this.voirToutRevTotalPages);
+    const os = (this.voirToutOpPage - 1) * this.reconPageSize;
+    const rs = (this.voirToutRevPage - 1) * this.reconPageSize;
+    this.pagedVoirToutOps = this.voirToutOps.slice(os, os + this.reconPageSize);
+    this.pagedVoirToutReleves = this.voirToutReleves.slice(rs, rs + this.reconPageSize);
+  }
+
   reconGoToPage(page: number) {
     if (this.reconView === 'operation') {
       if (page >= 1 && page <= this.reconOpTotalPages) {
@@ -5068,7 +5402,8 @@ export class BanqueComponent implements OnInit {
       statut: operation.statut || 'En attente',
       traitement: operation.traitement || '',
       demandeur: operation.demandeur || '',
-      valideur: operation.valideur || ''
+      valideur: operation.valideur || '',
+      commentaire: operation.commentaire || ''
     };
     this.showEditPopup = true;
   }
@@ -5096,7 +5431,8 @@ export class BanqueComponent implements OnInit {
       statut: this.editForm.statut,
       traitement: this.editForm.traitement,
       demandeur: this.editForm.demandeur,
-      valideur: this.editForm.valideur
+      valideur: this.editForm.valideur,
+      commentaire: this.editForm.commentaire
     };
 
     this.operationBancaireService.updateOperationBancaire(this.selectedOperation.id, updateData).subscribe({
