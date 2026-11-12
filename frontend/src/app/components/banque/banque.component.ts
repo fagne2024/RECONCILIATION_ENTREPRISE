@@ -4619,8 +4619,10 @@ export class BanqueComponent implements OnInit {
       console.log('[RECON][DBG] matchedPairs length', this.matchedPairs.length);
     } catch {}
 
-    // Choisir la vue par défaut selon la présence d'écarts
-    if (this.leftOnlyOperations.length > 0) {
+    // Vue par défaut : les correspondances BO. Sans correspondance, on retombe sur les écarts.
+    if (this.matchedOperations.length > 0) {
+      this.reconView = 'corr_operation';
+    } else if (this.leftOnlyOperations.length > 0) {
       this.reconView = 'operation';
     } else if (this.rightOnlyReleves.length > 0) {
       this.reconView = 'releve';
