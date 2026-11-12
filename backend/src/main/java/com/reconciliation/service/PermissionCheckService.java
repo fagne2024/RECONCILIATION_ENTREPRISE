@@ -740,15 +740,24 @@ public class PermissionCheckService {
             if (path.matches("/api/auto-processing/models/[^/]+/target-columns")) return true;
             if (path.matches("/api/auto-processing/models/[^/]+/validate-rules")) return true;
             if (path.matches("/api/auto-processing-models/[^/]+")) return true;
+            // Colonnes du fichier modèle (watch-folder de l'entreprise) lues au traitement
+            // assisté pour normaliser les en-têtes : lecture seule, pas de gestion des modèles.
+            if (path.equals("/api/file-watcher/available-files")) return true;
             return false;
         }
 
         if ("POST".equals(method)) {
             if (path.matches("/api/auto-processing/process-data/[^/]+")) return true;
             if (path.matches("/api/auto-processing/process-single-row/[^/]+")) return true;
+            if (isTemplateFileAnalysisPath(path)) return true;
         }
 
         return false;
+    }
+
+    /** Analyse (lecture seule) d'un fichier modèle du watch-folder de l'entreprise. */
+    private boolean isTemplateFileAnalysisPath(String normalizedPath) {
+        return "/api/file-watcher/analyze-file".equals(normalizedPath);
     }
 
     private boolean isModelesModuleOverride(String moduleOverride) {
@@ -759,6 +768,9 @@ public class PermissionCheckService {
     }
 
     private String resolveReconciliationModelConsumptionPermission(String apiPath, String httpMethod) {
+        if (isTemplateFileAnalysisPath(normalizeApiPath(apiPath))) {
+            return "consulter";
+        }
         if ("POST".equalsIgnoreCase(httpMethod)) {
             return "lancer_reconciliation";
         }
