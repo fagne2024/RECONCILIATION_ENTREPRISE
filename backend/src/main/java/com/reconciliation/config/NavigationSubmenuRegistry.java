@@ -19,6 +19,14 @@ public final class NavigationSubmenuRegistry {
 
     public static final String SEPARATOR = " · ";
 
+    /**
+     * Lecture des colonnes du fichier modèle (watch-folder) pendant le traitement :
+     * accordée aux sous-menus qui consomment les modèles (/api/auto-processing),
+     * sans exiger le module Modèles. Aucune action générée (hors actionPathPrefixes).
+     */
+    private static final String FILE_WATCHER_AVAILABLE_FILES = "/api/file-watcher/available-files";
+    private static final String FILE_WATCHER_ANALYZE_FILE = "/api/file-watcher/analyze-file";
+
     public record SubmenuAccessDefinition(
         String accessModuleName,
         String parentModuleName,
@@ -31,7 +39,8 @@ public final class NavigationSubmenuRegistry {
         new SubmenuAccessDefinition(
             "Réconciliation · Lanceur",
             "Réconciliation",
-            List.of("/api/reconciliation-launcher", "/api/reconciliation", "/api/auto-processing"),
+            List.of("/api/reconciliation-launcher", "/api/reconciliation", "/api/auto-processing",
+                FILE_WATCHER_AVAILABLE_FILES, FILE_WATCHER_ANALYZE_FILE),
             List.of(
                 "/api/reconciliation/analyze-keys",
                 "/api/reconciliation/execute-magic",
@@ -60,7 +69,8 @@ public final class NavigationSubmenuRegistry {
         new SubmenuAccessDefinition(
             "Réconciliation · Mode assisté",
             "Réconciliation",
-            List.of("/api/reconciliation", "/api/auto-processing"),
+            List.of("/api/reconciliation", "/api/auto-processing",
+                FILE_WATCHER_AVAILABLE_FILES, FILE_WATCHER_ANALYZE_FILE),
             List.of(
                 "/api/reconciliation/upload",
                 "/api/reconciliation/reconcile",
@@ -74,7 +84,8 @@ public final class NavigationSubmenuRegistry {
         new SubmenuAccessDefinition(
             "Réconciliation · Certification de solde",
             "Réconciliation",
-            List.of("/api/reconciliation", "/api/auto-processing"),
+            List.of("/api/reconciliation", "/api/auto-processing",
+                FILE_WATCHER_AVAILABLE_FILES, FILE_WATCHER_ANALYZE_FILE),
             List.of(
                 "/api/reconciliation/upload",
                 "/api/reconciliation/reconcile",

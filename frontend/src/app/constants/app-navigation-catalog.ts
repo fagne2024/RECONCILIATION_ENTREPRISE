@@ -88,7 +88,13 @@ export const APP_NAVIGATION_CATALOG: AppNavigationGroup[] = [
         labelKey: 'NAV.reconciliationLauncher',
         route: '/reconciliation-launcher',
         moduleName: 'Réconciliation',
-        apiPathPrefixes: ['/api/reconciliation-launcher', '/api/reconciliation', '/api/auto-processing'],
+        apiPathPrefixes: [
+          '/api/reconciliation-launcher',
+          '/api/reconciliation',
+          '/api/auto-processing',
+          '/api/file-watcher/available-files',
+          '/api/file-watcher/analyze-file'
+        ],
         actionPathPrefixes: [
           '/api/reconciliation/analyze-keys',
           '/api/reconciliation/execute-magic',
@@ -123,7 +129,12 @@ export const APP_NAVIGATION_CATALOG: AppNavigationGroup[] = [
         labelKey: 'NAV.reconciliationAssisted',
         route: '/upload-assisted',
         moduleName: 'Réconciliation',
-        apiPathPrefixes: ['/api/reconciliation', '/api/auto-processing'],
+        apiPathPrefixes: [
+          '/api/reconciliation',
+          '/api/auto-processing',
+          '/api/file-watcher/available-files',
+          '/api/file-watcher/analyze-file'
+        ],
         actionPathPrefixes: [
           '/api/reconciliation/upload',
           '/api/reconciliation/reconcile',
@@ -140,7 +151,12 @@ export const APP_NAVIGATION_CATALOG: AppNavigationGroup[] = [
         labelKey: 'NAV.certificationSolde',
         route: '/certification-solde',
         moduleName: 'Réconciliation',
-        apiPathPrefixes: ['/api/reconciliation', '/api/auto-processing'],
+        apiPathPrefixes: [
+          '/api/reconciliation',
+          '/api/auto-processing',
+          '/api/file-watcher/available-files',
+          '/api/file-watcher/analyze-file'
+        ],
         actionPathPrefixes: [
           '/api/reconciliation/upload',
           '/api/reconciliation/reconcile',

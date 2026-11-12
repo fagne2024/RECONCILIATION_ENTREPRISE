@@ -50,6 +50,54 @@ class PermissionCheckServiceTemplateFilesTest {
             .isEqualTo("consulter");
     }
 
+    /**
+     * Cas réel (profil « Agent Reconciliation Banque ») : aucun droit sur le module
+     * parent Réconciliation ni sur Modèles, seulement le sous-menu Mode assisté.
+     */
+    @Test
+    void unProfilAvecSeulementLeSousMenuModeAssisteLitLesFichiersModeles() {
+        com.reconciliation.entity.ProfilEntity profil = new com.reconciliation.entity.ProfilEntity();
+        profil.setId(12L);
+        profil.setNom("Agent Reconciliation Banque");
+        com.reconciliation.entity.UserEntity user = new com.reconciliation.entity.UserEntity();
+        user.setUsername("agent.banque");
+        user.setProfil(profil);
+        org.mockito.Mockito.lenient().when(userRepository.findByUsername("agent.banque"))
+            .thenReturn(java.util.Optional.of(user));
+
+        com.reconciliation.entity.ModuleEntity modeAssiste = new com.reconciliation.entity.ModuleEntity();
+        modeAssiste.setId(100L);
+        modeAssiste.setNom("Réconciliation · Mode assisté");
+        org.mockito.Mockito.lenient().when(moduleRepository.findByNomIgnoreCase("Réconciliation · Mode assisté"))
+            .thenReturn(modeAssiste);
+
+        com.reconciliation.entity.PermissionEntity consulterModels = new com.reconciliation.entity.PermissionEntity();
+        consulterModels.setNom("consulter_models");
+        com.reconciliation.entity.ProfilPermissionEntity droit = new com.reconciliation.entity.ProfilPermissionEntity();
+        droit.setPermission(consulterModels);
+        org.mockito.Mockito.lenient().when(profilPermissionRepository.findByProfilIdAndModuleId(12L, 100L))
+            .thenReturn(java.util.List.of(droit));
+
+        assertThat(permissionCheckService.hasPermissionForApiPath("agent.banque", "/api/file-watcher/available-files", "GET"))
+            .isTrue();
+        assertThat(permissionCheckService.hasPermissionForApiPath("agent.banque", "/api/file-watcher/analyze-file", "POST"))
+            .isTrue();
+        // La gestion du watch-folder reste refusée sans le module Modèles.
+        assertThat(permissionCheckService.hasPermissionForApiPath("agent.banque", "/api/file-watcher/upload", "POST"))
+            .isFalse();
+    }
+
+    @Test
+    void lesSousMenusQuiConsommentLesModelesDonnentAccesAuxFichiersModeles() {
+        for (String path : java.util.List.of("/api/file-watcher/available-files", "/api/file-watcher/analyze-file")) {
+            assertThat(com.reconciliation.config.NavigationSubmenuRegistry.resolveAccessModulesForApiPath(path))
+                .contains("Réconciliation · Mode assisté", "Réconciliation · Lanceur", "Réconciliation · Certification de solde")
+                .doesNotContain("Réconciliation · Mode Manuel");
+        }
+        assertThat(com.reconciliation.config.NavigationSubmenuRegistry.resolveAccessModulesForApiPath("/api/file-watcher/upload"))
+            .isEmpty();
+    }
+
     @Test
     void gestionDuWatchFolderResteSurLeModuleModeles() {
         assertThat(permissionCheckService.resolveModuleForApiPath("/api/file-watcher/upload", "POST", null))
