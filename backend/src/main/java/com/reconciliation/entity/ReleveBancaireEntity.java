@@ -73,6 +73,10 @@ public class ReleveBancaireEntity {
     @Column(name = "banque")
     private String banque;
 
+    /** Code pays du compte (ex. ML, SN) : permet d'identifier les comptes par pays. */
+    @Column(name = "pays")
+    private String pays;
+
     @Column(name = "source_filename")
     private String sourceFilename;
 
@@ -132,6 +136,8 @@ public class ReleveBancaireEntity {
     public void setTotalRetraits(Double totalRetraits) { this.totalRetraits = totalRetraits; }
     public String getBanque() { return banque; }
     public void setBanque(String banque) { this.banque = banque; }
+    public String getPays() { return pays; }
+    public void setPays(String pays) { this.pays = pays; }
     public String getSourceFilename() { return sourceFilename; }
     public void setSourceFilename(String sourceFilename) { this.sourceFilename = sourceFilename; }
     public LocalDateTime getUploadedAt() { return uploadedAt; }

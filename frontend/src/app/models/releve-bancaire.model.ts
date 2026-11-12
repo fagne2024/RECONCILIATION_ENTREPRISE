@@ -3,6 +3,7 @@ export interface ReleveBancaireRow {
   numeroCompte?: string;
   nomCompte?: string;
   banque?: string; // code propriétaire
+  pays?: string; // code pays du compte (ML, SN…)
   dateComptable?: string | Date; // ISO date string or Date
   dateValeur?: string | Date;    // ISO date string or Date
   libelle?: string;
@@ -30,11 +31,22 @@ export interface ReleveUploadResponse {
   unmappedHeaders: string[];
 }
 
+/** Valeurs à appliquer aux lignes dont le numéro de compte ou la banque est absent du fichier. */
+export interface ReleveImportDefaults {
+  numeroCompte?: string;
+  nomCompte?: string;
+  banque?: string;
+  pays?: string;
+}
+
+/** Champs obligatoires qu'un fichier de relevé peut ne pas fournir. */
+export type ReleveMissingField = 'numeroCompte' | 'nomCompte' | 'banque' | 'pays';
+
 export interface ReleveListFilter {
   batchId?: string;
   numeroCompte?: string;
   banque?: string;
-  pays?: string; // dérivé des 2 dernières lettres de banque
+  pays?: string; // code pays (colonne pays du relevé)
   devise?: string;
   reconStatus?: 'OK' | 'KO';
   libelleContains?: string;

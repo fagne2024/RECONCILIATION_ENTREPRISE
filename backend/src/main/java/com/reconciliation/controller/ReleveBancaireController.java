@@ -26,11 +26,57 @@ public class ReleveBancaireController {
     private PaysFilterService paysFilterService;
 
     @PostMapping(value = "/upload", consumes = {"multipart/form-data"})
-    public ResponseEntity<java.util.Map<String, Object>> upload(@RequestParam("file") MultipartFile file) {
+    public ResponseEntity<java.util.Map<String, Object>> upload(
+            @RequestParam("file") MultipartFile file,
+            @RequestParam(value = "numeroCompte", required = false) String defaultNumeroCompte,
+            @RequestParam(value = "nomCompte", required = false) String defaultNomCompte,
+            @RequestParam(value = "banque", required = false) String defaultBanque,
+            @RequestParam(value = "pays", required = false) String defaultPays) {
         try {
             var result = importService.parseFileWithAlerts(file);
+            // Valeurs saisies par l'utilisateur pour les colonnes absentes ou vides du fichier
+            for (var row : result.rows) {
+                if ((row.numeroCompte == null || row.numeroCompte.isBlank())
+                        && defaultNumeroCompte != null && !defaultNumeroCompte.isBlank()) {
+                    row.numeroCompte = defaultNumeroCompte.trim();
+                }
+                if ((row.nomCompte == null || row.nomCompte.isBlank())
+                        && defaultNomCompte != null && !defaultNomCompte.isBlank()) {
+                    row.nomCompte = defaultNomCompte.trim();
+                }
+                if ((row.banque == null || row.banque.isBlank())
+                        && defaultBanque != null && !defaultBanque.isBlank()) {
+                    row.banque = defaultBanque.trim();
+                }
+                if ((row.pays == null || row.pays.isBlank())
+                        && defaultPays != null && !defaultPays.isBlank()) {
+                    row.pays = defaultPays.trim();
+                }
+            }
             String batchId = java.util.UUID.randomUUID().toString();
             var entities = importService.toEntities(result.rows, file.getOriginalFilename());
+
+            // Champs obligatoires absents : rien n'est enregistré, le client demande les valeurs manquantes
+            java.util.List<String> missing = new java.util.ArrayList<>();
+            if (entities.stream().anyMatch(e -> e.getNumeroCompte() == null || e.getNumeroCompte().isBlank())) {
+                missing.add("numeroCompte");
+            }
+            if (entities.stream().anyMatch(e -> e.getNomCompte() == null || e.getNomCompte().isBlank())) {
+                missing.add("nomCompte");
+            }
+            if (entities.stream().anyMatch(e -> e.getBanque() == null || e.getBanque().isBlank())) {
+                missing.add("banque");
+            }
+            if (entities.stream().anyMatch(e -> e.getPays() == null || e.getPays().isBlank())) {
+                missing.add("pays");
+            }
+            if (!missing.isEmpty()) {
+                java.util.Map<String, Object> body = new java.util.HashMap<>();
+                body.put("missingFields", missing);
+                body.put("totalRead", result.totalRead);
+                body.put("message", "Colonnes manquantes ou vides dans le fichier : " + String.join(", ", missing));
+                return ResponseEntity.unprocessableEntity().body(body);
+            }
 
             // Déduplication côté base via dedupKey: construire l'ensemble des clés et filtrer celles déjà existantes
             java.util.Set<String> allKeys = new java.util.HashSet<>();
@@ -41,9 +87,18 @@ public class ReleveBancaireController {
             java.util.Set<String> existingKeys = new java.util.HashSet<>();
             for (var ex : existing) { if (ex.getDedupKey() != null) existingKeys.add(ex.getDedupKey()); }
 
+            // Libellés déjà enregistrés (y compris sur les lignes importées avec l'ancienne clé de doublon)
+            java.util.Set<String> existingLibelles = new java.util.HashSet<>();
+            for (String lib : repository.findAllLibelles()) {
+                String n = com.reconciliation.service.ReleveBancaireImportService.normalizeLibelle(lib);
+                if (!n.isEmpty()) existingLibelles.add(n);
+            }
+
             java.util.List<com.reconciliation.entity.ReleveBancaireEntity> toInsert = new java.util.ArrayList<>();
             for (var e : entities) {
-                if (e.getDedupKey() != null && !existingKeys.contains(e.getDedupKey())) {
+                String lib = com.reconciliation.service.ReleveBancaireImportService.normalizeLibelle(e.getLibelle());
+                boolean libelleConnu = !lib.isEmpty() && existingLibelles.contains(lib);
+                if (e.getDedupKey() != null && !existingKeys.contains(e.getDedupKey()) && !libelleConnu) {
                     e.setBatchId(batchId);
                     toInsert.add(e);
                 }
@@ -76,6 +131,22 @@ public class ReleveBancaireController {
         } catch (Exception e) {
             return ResponseEntity.badRequest().build();
         }
+    }
+
+    /**
+     * Code pays d'une ligne : colonne pays si c'est un code, sinon (anciennes lignes)
+     * 2 derniers caractères de la banque.
+     */
+    private static String countryCodeOf(com.reconciliation.entity.ReleveBancaireEntity e) {
+        String p = e.getPays();
+        if (p != null && !p.isBlank() && p.trim().length() <= 3) {
+            return p.trim().toUpperCase();
+        }
+        String b = e.getBanque();
+        if (b == null) return null;
+        String trimmed = b.trim();
+        if (trimmed.length() < 2) return null;
+        return trimmed.substring(trimmed.length() - 2).toUpperCase();
     }
 
     @GetMapping("/list")
@@ -114,12 +185,8 @@ public class ReleveBancaireController {
                 // Filtrer par pays autorisés (extraire le code pays des 2 derniers caractères du champ banque)
                 final List<String> finalAllowedCountries = allowedCountries;
                 stream = stream.filter(e -> {
-                    String b = e.getBanque();
-                    if (b == null) return false;
-                    String trimmed = b.trim();
-                    if (trimmed.length() < 2) return false;
-                    String last2 = trimmed.substring(trimmed.length() - 2).toUpperCase();
-                    return finalAllowedCountries.contains(last2);
+                    String code = countryCodeOf(e);
+                    return code != null && finalAllowedCountries.contains(code);
                 });
             }
         }
@@ -137,14 +204,7 @@ public class ReleveBancaireController {
         }
         if (pays != null && !pays.isBlank()) {
             String target = pays.trim().toUpperCase();
-            stream = stream.filter(e -> {
-                String b = e.getBanque();
-                if (b == null) return false;
-                String trimmed = b.trim();
-                if (trimmed.length() < 2) return false;
-                String last2 = trimmed.substring(trimmed.length() - 2).toUpperCase();
-                return last2.equals(target);
-            });
+            stream = stream.filter(e -> target.equals(countryCodeOf(e)));
         }
         if (devise != null && !devise.isBlank()) {
             String dv = devise.trim().toUpperCase();
@@ -205,10 +265,14 @@ public class ReleveBancaireController {
         if (payload.getDateValeur() == null) {
             payload.setDateValeur(payload.getDateComptable());
         }
-        String key = com.reconciliation.service.ReleveBancaireImportService.buildDedupKey(
-                payload.getNumeroCompte(), payload.getDateComptable(), payload.getDateValeur(),
-                payload.getLibelle(), payload.getMontant());
-        if (!repository.findByDedupKeyIn(java.util.Set.of(key)).isEmpty()) {
+        String key = com.reconciliation.service.ReleveBancaireImportService.libelleDedupKey(payload.getLibelle(),
+                com.reconciliation.service.ReleveBancaireImportService.buildDedupKey(
+                        payload.getNumeroCompte(), payload.getDateComptable(), payload.getDateValeur(),
+                        payload.getLibelle(), payload.getMontant()));
+        String libelleNormalise = com.reconciliation.service.ReleveBancaireImportService.normalizeLibelle(payload.getLibelle());
+        boolean libelleExiste = !libelleNormalise.isEmpty() && repository.findAllLibelles().stream()
+                .anyMatch(l -> libelleNormalise.equals(com.reconciliation.service.ReleveBancaireImportService.normalizeLibelle(l)));
+        if (libelleExiste || !repository.findByDedupKeyIn(java.util.Set.of(key)).isEmpty()) {
             return ResponseEntity.status(org.springframework.http.HttpStatus.CONFLICT)
                     .body("Cette ligne de relevé existe déjà (doublon).");
         }
@@ -236,6 +300,7 @@ public class ReleveBancaireController {
         entity.setNumeroCompte(payload.getNumeroCompte());
         entity.setNomCompte(payload.getNomCompte());
         entity.setBanque(payload.getBanque());
+        entity.setPays(payload.getPays());
         entity.setDateComptable(payload.getDateComptable());
         entity.setDateValeur(payload.getDateValeur());
         entity.setLibelle(payload.getLibelle());
@@ -301,7 +366,7 @@ public class ReleveBancaireController {
             org.apache.poi.ss.usermodel.Workbook wb = new org.apache.poi.xssf.usermodel.XSSFWorkbook();
             org.apache.poi.ss.usermodel.Sheet sheet = wb.createSheet("Releve");
             String[] headers = new String[] {
-                "Numero de compte", "Nom du compte", "Banque", "Date comptable", "Date de valeur",
+                "Numero de compte", "Nom du compte", "Banque", "Pays", "Date comptable", "Date de valeur",
 
                 "Libelle", "Debit", "Credit", "Montant", "Devise"
             };

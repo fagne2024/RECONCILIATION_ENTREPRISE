@@ -56,6 +56,8 @@ public class OperationBancaireImportService {
             ReferenceSequencer sequencer = new ReferenceSequencer();
 
             List<OperationBancaireEntity> candidates = new ArrayList<>();
+            // Référence fournie par le fichier (les références générées ne servent pas au contrôle de doublon)
+            Map<OperationBancaireEntity, String> fileRefs = new IdentityHashMap<>();
             int last = sheet.getLastRowNum();
             for (int r = 1; r <= last; r++) {
                 Row row = sheet.getRow(r);
@@ -133,6 +135,7 @@ public class OperationBancaireImportService {
                     // (cas des compensations, qui n'ont pas de référence). La référence générée n'en fait pas partie.
                     e.setDedupKey(operationDedupKey(fileReference, agence, typeOperation, dateOp, montant));
                     candidates.add(e);
+                    fileRefs.put(e, fileReference);
                 } catch (Exception ex) {
                     result.errors.add("Ligne " + (r + 1) + ": " + ex.getMessage());
                 }
@@ -144,8 +147,25 @@ public class OperationBancaireImportService {
                 for (OperationBancaireEntity c : candidates) keys.add(c.getDedupKey());
                 Set<String> known = new HashSet<>();
                 for (OperationBancaireEntity ex : repository.findByDedupKeyIn(keys)) known.add(ex.getDedupKey());
+                // Références déjà enregistrées (colonne reference), y compris celles reportées après coup
+                // par un check de compense : une même référence ne doit pas exister deux fois.
+                Set<String> fileReferences = new LinkedHashSet<>();
+                for (String ref : fileRefs.values()) {
+                    if (ref != null && !ref.isBlank()) fileReferences.add(ref.trim());
+                }
+                Set<String> knownRefs = new HashSet<>();
+                List<String> refList = new ArrayList<>(fileReferences);
+                for (int i = 0; i < refList.size(); i += 1000) {
+                    List<String> chunk = refList.subList(i, Math.min(i + 1000, refList.size()));
+                    for (OperationBancaireEntity ex : repository.findByReferenceIn(chunk)) {
+                        knownRefs.add(BankingDedupKey.normalizeText(ex.getReference()));
+                    }
+                }
                 for (OperationBancaireEntity c : candidates) {
-                    if (known.add(c.getDedupKey())) {
+                    boolean newKey = known.add(c.getDedupKey());
+                    String ref = fileRefs.get(c);
+                    boolean newRef = ref == null || ref.isBlank() || knownRefs.add(BankingDedupKey.normalizeText(ref));
+                    if (newKey && newRef) {
                         toSave.add(c);
                     } else {
                         result.duplicatesIgnored++;

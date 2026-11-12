@@ -17,6 +17,10 @@ public interface ReleveBancaireRepository extends JpaRepository<ReleveBancaireEn
     );
 
     List<ReleveBancaireEntity> findByDedupKeyIn(Set<String> dedupKeys);
+
+    /** Libellés déjà enregistrés (contrôle de doublon sur le libellé à l'import). */
+    @org.springframework.data.jpa.repository.Query("SELECT r.libelle FROM ReleveBancaireEntity r WHERE r.libelle IS NOT NULL")
+    List<String> findAllLibelles();
 }
 
 

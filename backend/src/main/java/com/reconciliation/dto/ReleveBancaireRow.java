@@ -6,6 +6,7 @@ public class ReleveBancaireRow {
     public String nomCompte;
     public String numeroCompte;
     public String banque; // code propriétaire par défaut
+    public String pays;   // code pays du compte (fichier, compte connu ou suffixe de la banque)
     public LocalDate dateComptable;
     public LocalDate dateValeur;
     public String libelle;

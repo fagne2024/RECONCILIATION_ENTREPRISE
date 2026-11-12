@@ -28,6 +28,11 @@ public final class BankingDedupKey {
         return sha256(sb.toString());
     }
 
+    /** Texte normalisé (espaces, casse) pour comparer deux références ou deux libellés. */
+    public static String normalizeText(String value) {
+        return value == null ? "" : value.trim().replaceAll("\\s+", " ").toLowerCase(Locale.ROOT);
+    }
+
     static String normalize(Object value) {
         if (value == null) {
             return "";

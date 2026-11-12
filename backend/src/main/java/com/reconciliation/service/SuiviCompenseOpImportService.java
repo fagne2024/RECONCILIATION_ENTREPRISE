@@ -38,6 +38,19 @@ public class SuiviCompenseOpImportService {
     /** Nombre de lignes explorees a la recherche de l'en-tete. */
     private static final int HEADER_SEARCH_ROWS = 20;
 
+    /**
+     * Identifiant de l'entité compensée : « Code agence » et « Service » sont facultatifs et exclusifs.
+     * Compense distributeur : le code agence est renseigné ; compense fournisseur : c'est le service.
+     * Retourne donc le code agence s'il est présent, sinon le service (ou null si aucun des deux).
+     */
+    public static String agenceOuService(SuiviCompenseOpEntity e) {
+        if (e == null) return null;
+        String agence = e.getCodeAgence();
+        if (agence != null && !agence.isBlank()) return agence;
+        String service = e.getService();
+        return service != null && !service.isBlank() ? service : null;
+    }
+
     public List<SuiviCompenseOpEntity> parse(MultipartFile file) throws Exception {
         String orig = file.getOriginalFilename();
         String filename = orig != null ? orig.toLowerCase() : "";

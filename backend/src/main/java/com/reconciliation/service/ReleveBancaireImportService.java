@@ -21,6 +21,8 @@ public class ReleveBancaireImportService {
 
     @Autowired
     private CompteRepository compteRepository;
+    @Autowired
+    private com.reconciliation.repository.PaysRepository paysRepository;
 
     public com.reconciliation.dto.ReleveImportResult parseFileWithAlerts(MultipartFile file) throws Exception {
         String filename = file.getOriginalFilename() != null ? file.getOriginalFilename().toLowerCase() : "";
@@ -74,6 +76,7 @@ public class ReleveBancaireImportService {
                 dto.totalRetraits = getNumber(row, colIndex.get("totalRetraits"));
                 dto.numeroSerie = getString(row, colIndex.get("numeroSerie"));
                 dto.banque = getString(row, colIndex.get("banque"));
+                dto.pays = getString(row, colIndex.get("pays"));
 
                 boolean allEmpty = (dto.numeroCompte == null || dto.numeroCompte.isBlank()) && dto.libelle == null && dto.debit == null && dto.credit == null;
                 if (!allEmpty) rows.add(dto);
@@ -83,7 +86,8 @@ public class ReleveBancaireImportService {
             LinkedHashSet<String> seen = new LinkedHashSet<>();
             List<ReleveBancaireRow> deduped = new ArrayList<>();
             for (ReleveBancaireRow r : rows) {
-                String key = buildDedupKey(r.numeroCompte, r.dateComptable, r.dateValeur, r.libelle, r.montant);
+                String key = libelleDedupKey(r.libelle,
+                        buildDedupKey(r.numeroCompte, r.dateComptable, r.dateValeur, r.libelle, r.montant));
                 if (seen.add(key)) deduped.add(r);
             }
             int duplicatesIgnored = totalRead - deduped.size();
@@ -140,14 +144,51 @@ public class ReleveBancaireImportService {
                     }
                 }
             } catch (Exception ignore) {}
+            // Pays : colonne du fichier (ou valeur saisie), sinon pays du compte, sinon suffixe de la banque
+            String pays = resolvePaysCode(dto.pays);
+            try {
+                if (pays == null && dto.numeroCompte != null && !dto.numeroCompte.isBlank()) {
+                    pays = resolvePaysCode(compteRepository.findByNumeroCompte(dto.numeroCompte)
+                            .map(c -> c.getPays()).orElse(null));
+                }
+                if (pays == null && e.getBanque() != null) {
+                    String b = e.getBanque().trim();
+                    if (b.length() >= 2) {
+                        String last2 = b.substring(b.length() - 2).toUpperCase();
+                        if (paysRepository.findByCode(last2).isPresent()) pays = last2;
+                    }
+                }
+            } catch (Exception ignore) {}
+            e.setPays(pays);
+            dto.pays = pays;
             e.setSourceFilename(filename);
             e.setUploadedAt(java.time.LocalDateTime.now());
             // Définir la clé de déduplication stable
-            String dedupKey = buildDedupKey(e.getNumeroCompte(), e.getDateComptable(), e.getDateValeur(), e.getLibelle(), e.getMontant());
+            String dedupKey = libelleDedupKey(e.getLibelle(),
+                    buildDedupKey(e.getNumeroCompte(), e.getDateComptable(), e.getDateValeur(), e.getLibelle(), e.getMontant()));
             e.setDedupKey(dedupKey);
             list.add(e);
         }
         return list;
+    }
+
+    /**
+     * Code pays à partir d'un code (ML, SN…) ou d'un nom (Mali, Sénégal…) ; null si vide.
+     * Un nom inconnu est conservé tel quel (majuscules) plutôt que perdu.
+     */
+    String resolvePaysCode(String raw) {
+        if (raw == null || raw.isBlank()) return null;
+        String v = raw.trim();
+        if (v.matches("(?i)[a-z]{2,3}")) return v.toUpperCase();
+        try {
+            String target = normalizeText(v);
+            for (var p : paysRepository.findAll()) {
+                if (normalizeText(p.getNom()).equals(target) && p.getCode() != null) {
+                    return p.getCode().trim().toUpperCase();
+                }
+            }
+        } catch (Exception ignore) {}
+        return v.toUpperCase();
     }
 
     private static String safe(String s) { return s == null ? "" : s.trim(); }
@@ -161,6 +202,22 @@ public class ReleveBancaireImportService {
         // retrait espaces multiples
         t = t.replaceAll("\\s+", " ");
         return t;
+    }
+
+    /** Libellé normalisé (casse, accents, espaces) pour comparer deux libellés. */
+    public static String normalizeLibelle(String libelle) {
+        return normalizeText(libelle);
+    }
+
+    /**
+     * Clé de doublon fondée sur le libellé : un même libellé ne doit pas exister deux fois.
+     * Sans libellé, la clé de repli (compte + dates + montant) est utilisée pour ne pas écarter
+     * toutes les lignes sans libellé.
+     */
+    public static String libelleDedupKey(String libelle, String fallbackKey) {
+        String normalized = normalizeLibelle(libelle);
+        if (normalized.isEmpty()) return fallbackKey;
+        return com.reconciliation.util.BankingDedupKey.of("LIB", normalized);
     }
 
     /** Clé de doublon d'une ligne de relevé (partagée par l'import et la saisie manuelle). */
@@ -345,6 +402,10 @@ public class ReleveBancaireImportService {
         m.put("accountnumber", "numeroCompte");
         m.put("accountno", "numeroCompte");
         m.put("accountname", "nomCompte");
+        m.put("pays", "pays");
+        m.put("paysducompte", "pays");
+        m.put("codepays", "pays");
+        m.put("country", "pays");
         m.put("bank", "banque");
         m.put("bankname", "banque");
         m.put("accountingdate", "dateComptable");

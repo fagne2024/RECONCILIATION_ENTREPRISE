@@ -161,7 +161,22 @@
           <button type="button" class="ds-btn ds-btn--primary btn-primary" (click)="downloadSuiviCompenseTemplate()" title="{{ 'BQ.Téléchargerlemodèle' | translate }}">
             <i class="fas fa-file-excel"></i> {{ 'BQ.Modèle' | translate }}
           </button>
+          <button type="button" class="ds-btn ds-btn--primary btn-primary" (click)="toggleSelectionModeSuivi()" [class.active]="isSelectionModeSuivi" title="{{ 'BQ.Sélectionmultiple' | translate }}">
+            <i class="fas fa-check-square"></i>
+            {{ isSelectionModeSuivi ? 'Quitter la sélection' : 'Sélection multiple' }}
+            <span *ngIf="isSelectionModeSuivi && hasSelectedSuivi" class="badge" style="margin-left:6px;">{{ selectedSuiviIds.size }}</span>
+          </button>
         </div>
+      </div>
+
+      <div class="bulk-actions" *ngIf="isSelectionModeSuivi" style="margin-bottom: 12px;">
+        <button type="button" class="ds-btn ds-btn--secondary btn-bulk-cancel" (click)="deselectAllSuivi()" [disabled]="!hasSelectedSuivi">
+          <i class="fas fa-times"></i> Tout désélectionner
+        </button>
+        <button type="button" class="ds-btn ds-btn--secondary btn-warning" (click)="bulkDeleteSelectedSuivi()" [disabled]="isBulkDeletingSuivi || !hasSelectedSuivi">
+          <i class="fas fa-trash" [class.spin]="isBulkDeletingSuivi"></i>
+          {{ isBulkDeletingSuivi ? 'Suppression...' : 'Supprimer (' + selectedSuiviIds.size + ')' }}
+        </button>
       </div>
 
       <div class="auto-treatment-section" style="margin-bottom: 16px;">
@@ -210,6 +225,13 @@
         <table class="ds-table operations-table">
           <thead>
             <tr>
+              <th style="width:34px;" *ngIf="isSelectionModeSuivi">
+                <input type="checkbox"
+                       [checked]="allSuiviOnPageSelected"
+                       [indeterminate]="hasSelectedSuivi && !allSuiviOnPageSelected"
+                       (change)="toggleSelectAllSuiviHeader()"
+                       title="Sélectionner/Désélectionner toutes les lignes (toutes les pages)">
+              </th>
               <th>Date</th>
               <th>Code agence</th>
               <th>Banque</th>
@@ -224,7 +246,10 @@
             </tr>
           </thead>
           <tbody>
-            <tr *ngFor="let r of pagedSuiviCompenseRows">
+            <tr *ngFor="let r of pagedSuiviCompenseRows" [class.selected]="isSuiviSelected(r)">
+              <td *ngIf="isSelectionModeSuivi">
+                <input type="checkbox" [checked]="isSuiviSelected(r)" (change)="toggleSuiviSelection(r)">
+              </td>
               <td>{{ r.dateOperation ? (r.dateOperation | date:'dd/MM/yyyy') : '-' }}</td>
               <td>{{ r.codeAgence || '-' }}</td>
               <td>{{ r.banque || '-' }}</td>
@@ -242,7 +267,7 @@
               </td>
             </tr>
             <tr *ngIf="!suiviCompenseLoading && !suiviCompenseRows.length">
-              <td colspan="11">Aucune ligne importée.</td>
+              <td [attr.colspan]="isSelectionModeSuivi ? 12 : 11">Aucune ligne importée.</td>
             </tr>
           </tbody>
         </table>
@@ -285,6 +310,11 @@
           <button type="button" class="ds-btn ds-btn--primary btn-primary" (click)="toggleCommentColumn()" [class.active]="showCommentColumn" title="{{ 'BQ.Affichermasquerlacolonnecommentaire' | translate }}">
             <i class="fas" [class.fa-comment]="!showCommentColumn" [class.fa-comment-slash]="showCommentColumn"></i>
             {{ showCommentColumn ? 'Masquer Commentaires' : 'Afficher Commentaires' }}
+          </button>
+          <button type="button" class="ds-btn ds-btn--primary btn-primary" (click)="toggleSelectionModeReleve()" [class.active]="isSelectionModeReleve" title="{{ 'BQ.Sélectionmultiple' | translate }}">
+            <i class="fas fa-check-square"></i>
+            {{ isSelectionModeReleve ? 'Quitter la sélection' : 'Sélection multiple' }}
+            <span *ngIf="isSelectionModeReleve && hasSelectedReleve" class="badge" style="margin-left:6px;">{{ selectedReleveIds.size }}</span>
           </button>
           <div class="filter-group" style="margin-left:12px; display: none;">
             <label>{{ 'BQ.Lot' | translate }}</label>
@@ -337,6 +367,10 @@
         <div class="filters-row">
           <input class="ds-input" type="text" placeholder="{{ 'TBL.accountNumber' | translate }}" [(ngModel)]="releveFilterNumeroCompte" (keyup.enter)="applyReleveFilters()">
           <input class="ds-input" type="text" placeholder="{{ 'TBL.bank' | translate }}" [(ngModel)]="releveFilterBanque" (keyup.enter)="applyReleveFilters()">
+          <select class="ds-select" [(ngModel)]="releveFilterPays" (change)="applyReleveFilters()" title="{{ 'TBL.country' | translate }}">
+            <option [ngValue]="''">{{ 'TBL.country' | translate }}</option>
+            <option *ngFor="let p of relevePaysOptions" [ngValue]="p">{{ p }}</option>
+          </select>
           <input class="ds-input" type="number" placeholder="{{ 'TBL.amount' | translate }} min" [(ngModel)]="releveFilterMontantMin" (keyup.enter)="applyReleveFilters()" style="width:110px;">
           <input class="ds-input" type="number" placeholder="{{ 'TBL.amount' | translate }} max" [(ngModel)]="releveFilterMontantMax" (keyup.enter)="applyReleveFilters()" style="width:110px;">
           <select class="ds-select" [(ngModel)]="releveFilterReconStatus" (change)="applyReleveFilters()">
@@ -358,14 +392,32 @@
         </div>
       </div>
 
+      <div class="bulk-actions" *ngIf="releveRows.length && isSelectionModeReleve" style="margin-bottom: 12px;">
+        <button type="button" class="ds-btn ds-btn--secondary btn-bulk-cancel" (click)="deselectAllReleve()" [disabled]="!hasSelectedReleve">
+          <i class="fas fa-times"></i> Tout désélectionner
+        </button>
+        <button type="button" class="ds-btn ds-btn--secondary btn-warning" (click)="bulkDeleteSelectedReleve()" [disabled]="isBulkDeletingReleve || !hasSelectedReleve">
+          <i class="fas fa-trash" [class.spin]="isBulkDeletingReleve"></i>
+          {{ isBulkDeletingReleve ? 'Suppression...' : 'Supprimer (' + selectedReleveIds.size + ')' }}
+        </button>
+      </div>
+
       <div class="operations-table-container" *ngIf="releveRows.length">
         <div class="table-container" style="overflow-x: visible;">
           <table class="ds-table operations-table">
             <thead>
               <tr>
+                <th style="width:34px;" *ngIf="isSelectionModeReleve">
+                  <input type="checkbox"
+                         [checked]="allReleveOnPageSelected"
+                         [indeterminate]="hasSelectedReleve && !allReleveOnPageSelected"
+                         (change)="toggleSelectAllReleveHeader()"
+                         title="Sélectionner/Désélectionner toutes les lignes (toutes les pages)">
+                </th>
                 <th>{{ 'TBL.accountNumber' | translate }}</th>
                 <th>{{ 'TBL.accountName' | translate }}</th>
                 <th>BANQUE</th>
+                <th>{{ 'TBL.country' | translate }}</th>
                 <th>{{ 'TBL.accountingDate' | translate }}</th>
                 <th>{{ 'TBL.valueDate' | translate }}</th>
                 <th>{{ 'TBL.labelNarration' | translate }}</th>
@@ -379,10 +431,14 @@
               </tr>
             </thead>
             <tbody>
-              <tr *ngFor="let r of filteredReleveRowsForImport | slice:(relevePage-1)*relevePageSize : (relevePage-1)*relevePageSize + relevePageSize; trackBy: trackById">
+              <tr *ngFor="let r of filteredReleveRowsForImport | slice:(relevePage-1)*relevePageSize : (relevePage-1)*relevePageSize + relevePageSize; trackBy: trackById" [class.selected]="isReleveSelected(r)">
+                <td *ngIf="isSelectionModeReleve">
+                  <input type="checkbox" [checked]="isReleveSelected(r)" (change)="toggleReleveSelection(r)">
+                </td>
                 <td><code>{{ r.numeroCompte || '-' }}</code></td>
                 <td>{{ r.nomCompte || '-' }}</td>
                 <td>{{ r.banque || '-' }}</td>
+                <td>{{ r.pays ? paysLabel(r.pays) : '-' }}</td>
                 <td>{{ r.dateComptable ? (r.dateComptable | date:'dd/MM/yyyy') : '-' }}</td>
                 <td>{{ r.dateValeur ? (r.dateValeur | date:'dd/MM/yyyy') : '-' }}</td>
                 <td class="libelle-cell" [title]="r.libelle">{{ r.libelle || '-' }}</td>
@@ -1317,6 +1373,10 @@
           <button type="button" class="ds-btn ds-btn--secondary btn-success" (click)="quickBulkMain('Validée')" [disabled]="isBulkUpdatingMain || !hasSelectedMainOps">
             <i class="fas fa-check"></i> {{ 'BQ.Valider' | translate }}
           </button>
+          <button type="button" class="ds-btn ds-btn--secondary btn-warning" (click)="bulkDeleteSelectedMainOps()" [disabled]="isBulkDeletingMain || isBulkUpdatingMain || !hasSelectedMainOps">
+            <i class="fas fa-trash" [class.spin]="isBulkDeletingMain"></i>
+            {{ isBulkDeletingMain ? 'Suppression...' : 'Supprimer (' + selectedMainOpIds.size + ')' }}
+          </button>
           <button type="button" class="ds-btn ds-btn--secondary btn-warning" (click)="quickBulkMain('Rejetée')" [disabled]="isBulkUpdatingMain || !hasSelectedMainOps">
             <i class="fas fa-ban"></i> {{ 'BQ.Rejeter' | translate }}
           </button>
@@ -1330,10 +1390,10 @@
             <tr>
               <th style="width:34px;" *ngIf="isSelectionModeMain">
                 <input type="checkbox"
-                       [checked]="selectAllMainOnPage && (pagedOperations.length>0)"
-                       [indeterminate]="hasSelectedMainOps && !selectAllMainOnPage"
+                       [checked]="allMainSelected"
+                       [indeterminate]="hasSelectedMainOps && !allMainSelected"
                        (change)="toggleSelectAllMainHeader()"
-                       title="Sélectionner/Désélectionner la page">
+                       title="Sélectionner/Désélectionner toutes les lignes (toutes les pages)">
               </th>
               <th>{{ 'TBL.country' | translate }}</th>
               <th>{{ 'TBL.operationDate' | translate }}</th>
@@ -1386,7 +1446,19 @@
                 </span>
               </td>
               <td>{{ operation.bo }}</td>
-              <td>{{ operation.banqueCorrigee || '-' }}</td>
+              <td class="banque-corrigee-cell">
+                <ng-container *ngIf="editingBanqueCorrigeeOperation !== operation; else editBanqueCorrigee">
+                  <span (click)="startEditBanqueCorrigee(operation)" style="cursor: pointer;" [title]="'Cliquer pour modifier la banque corrigée'">{{ operation.banqueCorrigee || '-' }}</span>
+                </ng-container>
+                <ng-template #editBanqueCorrigee>
+                  <input class="ds-input edit-select" type="text" list="banques-corrigees-inline-list" maxlength="255" autocomplete="off" autofocus
+                         [(ngModel)]="banqueCorrigeeDraft" [ngModelOptions]="{standalone: true}"
+                         (keydown.enter)="saveBanqueCorrigee(operation)" (keydown.escape)="cancelEditBanqueCorrigee()" (blur)="saveBanqueCorrigee(operation)">
+                  <datalist id="banques-corrigees-inline-list">
+                    <option *ngFor="let b of banquesList" [value]="b"></option>
+                  </datalist>
+                </ng-template>
+              </td>
               <td>
                 <span class="badge status-{{ operation.statut.toLowerCase() }}">
                   {{ operation.statut }}
@@ -1781,6 +1853,10 @@
               <label>{{ 'TBL.bank' | translate }}</label>
               <input class="ds-input" type="text" [(ngModel)]="releveEditForm.banque" name="rv_banque">
             </div>
+            <div class="form-group">
+              <label>{{ 'TBL.country' | translate }}</label>
+              <input class="ds-input" type="text" [(ngModel)]="releveEditForm.pays" name="rv_pays" placeholder="ML, SN, CM…">
+            </div>
           </div>
           <div class="form-row">
             <div class="form-group">
@@ -1869,6 +1945,10 @@
             <div class="form-group">
               <label>{{ 'TBL.bank' | translate }}</label>
               <input class="ds-input" type="text" [(ngModel)]="createOperationForm.banque" name="co_banque">
+            </div>
+            <div class="form-group">
+              <label>{{ 'TBL.country' | translate }}</label>
+              <input class="ds-input" type="text" [(ngModel)]="createOperationForm.pays" name="co_pays" placeholder="ML, SN, CM…">
             </div>
             <div class="form-group">
               <label>{{ 'TBL.accountingDate' | translate }} *</label>
@@ -2111,6 +2191,59 @@
           Valider les correspondances ({{ checkMatchedRows.length }})
         </button>
         <button type="button" class="ds-btn ds-btn--secondary" (click)="closeCheckPopup()">Fermer</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Pop-up : colonnes obligatoires absentes du relevé importé -->
+  <div class="import-popup-backdrop" *ngIf="releveMissingPopup.visible" role="dialog" aria-modal="true">
+    <div class="import-popup releve-missing-popup">
+      <div class="import-popup__icon is-error"><i class="fas fa-triangle-exclamation"></i></div>
+      <h3>Informations manquantes dans le relevé</h3>
+      <p>
+        Le fichier ne contient pas {{ describeMissingFields(releveMissingPopup.fields) }}
+        pour toutes les lignes. Merci de {{ releveMissingPopup.fields.length > 1 ? 'les' : 'le' }} renseigner :
+        la valeur sera appliquée aux lignes concernées.
+      </p>
+      <div class="form-group" *ngIf="releveMissingPopup.fields.includes('numeroCompte')">
+        <label for="releveMissingCompte">Numéro de compte</label>
+        <input id="releveMissingCompte" class="ds-input" type="text" autocomplete="off"
+               [(ngModel)]="releveMissingPopup.values.numeroCompte"
+               (keydown.enter)="confirmReleveMissing()">
+        <small class="text-danger" *ngIf="releveMissingPopup.submitted && !releveMissingPopup.values.numeroCompte.trim()">
+          Merci de renseigner le numéro de compte.
+        </small>
+      </div>
+      <div class="form-group" *ngIf="releveMissingPopup.fields.includes('nomCompte')">
+        <label for="releveMissingNomCompte">Nom du compte</label>
+        <input id="releveMissingNomCompte" class="ds-input" type="text" autocomplete="off"
+               [(ngModel)]="releveMissingPopup.values.nomCompte"
+               (keydown.enter)="confirmReleveMissing()">
+        <small class="text-danger" *ngIf="releveMissingPopup.submitted && !releveMissingPopup.values.nomCompte.trim()">
+          Merci de renseigner le nom du compte.
+        </small>
+      </div>
+      <div class="form-group" *ngIf="releveMissingPopup.fields.includes('banque')">
+        <label for="releveMissingBanque">Banque</label>
+        <input id="releveMissingBanque" class="ds-input" type="text" autocomplete="off"
+               [(ngModel)]="releveMissingPopup.values.banque"
+               (keydown.enter)="confirmReleveMissing()">
+        <small class="text-danger" *ngIf="releveMissingPopup.submitted && !releveMissingPopup.values.banque.trim()">
+          Merci de renseigner la banque.
+        </small>
+      </div>
+      <div class="form-group" *ngIf="releveMissingPopup.fields.includes('pays')">
+        <label for="releveMissingPays">Pays (code, ex. ML, SN, CM)</label>
+        <input id="releveMissingPays" class="ds-input" type="text" autocomplete="off"
+               [(ngModel)]="releveMissingPopup.values.pays"
+               (keydown.enter)="confirmReleveMissing()">
+        <small class="text-danger" *ngIf="releveMissingPopup.submitted && !releveMissingPopup.values.pays.trim()">
+          Merci de renseigner le pays.
+        </small>
+      </div>
+      <div class="releve-missing-popup__actions">
+        <button type="button" class="ds-btn ds-btn--secondary" (click)="cancelReleveMissing()">Annuler</button>
+        <button type="button" class="ds-btn ds-btn--primary" (click)="confirmReleveMissing()">Continuer l'import</button>
       </div>
     </div>
   </div>

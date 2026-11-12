@@ -237,6 +237,7 @@ public class OperationBancaireController {
             java.util.Map<String, Object> payload = new java.util.HashMap<>();
             payload.put("totalRead", res.totalRead);
             payload.put("saved", res.saved);
+            payload.put("duplicatesIgnored", res.duplicatesIgnored);
             payload.put("errors", res.errors);
             return ResponseEntity.ok(payload);
         } catch (Exception e) {

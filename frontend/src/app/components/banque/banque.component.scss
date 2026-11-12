@@ -3378,3 +3378,10 @@
   .rr-stats { grid-template-columns: repeat(2, minmax(0, 1fr)); }
   .rr-filters .filter-group { min-width: 0; flex: 1 1 100%; }
 }
+
+.releve-missing-popup { text-align: left; }
+.releve-missing-popup .import-popup__icon { text-align: center; color: var(--rd-orange, #d97706); }
+.releve-missing-popup h3 { text-align: center; }
+.releve-missing-popup .form-group { display: flex; flex-direction: column; gap: 4px; margin-top: 12px; }
+.releve-missing-popup .text-danger { color: var(--rd-red, #dc2626); }
+.releve-missing-popup__actions { display: flex; justify-content: flex-end; gap: 8px; margin-top: 20px; }

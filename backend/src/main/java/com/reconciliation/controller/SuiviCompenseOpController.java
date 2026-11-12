@@ -40,12 +40,13 @@ public class SuiviCompenseOpController {
             for (SuiviCompenseOpEntity e : rows) {
                 e.setSourceFilename(file.getOriginalFilename());
                 e.setUploadedAt(now);
-                // Doublon : la référence ; sans référence, date + agence + montant + banque
+                // Doublon : la référence ; sans référence, date + agence (ou service) + montant + banque
                 String ref = e.getReference();
                 e.setDedupKey(ref != null && !ref.isBlank()
                         ? com.reconciliation.util.BankingDedupKey.of("REF", ref)
                         : com.reconciliation.util.BankingDedupKey.of("AMT", e.getDateOperation(),
-                                e.getCodeAgence(), e.getMontant(), e.getBanque()));
+                                com.reconciliation.service.SuiviCompenseOpImportService.agenceOuService(e),
+                                e.getMontant(), e.getBanque()));
                 if (candidates.putIfAbsent(e.getDedupKey(), e) != null) {
                     duplicates++;
                 }
@@ -56,12 +57,27 @@ public class SuiviCompenseOpController {
                     known.add(ex.getDedupKey());
                 }
             }
+            // Références déjà enregistrées : une même référence ne doit pas exister deux fois
+            java.util.Set<String> fileReferences = new java.util.LinkedHashSet<>();
+            for (SuiviCompenseOpEntity e : candidates.values()) {
+                if (e.getReference() != null && !e.getReference().isBlank()) fileReferences.add(e.getReference().trim());
+            }
+            java.util.Set<String> knownRefs = new java.util.HashSet<>();
+            java.util.List<String> refList = new java.util.ArrayList<>(fileReferences);
+            for (int i = 0; i < refList.size(); i += 1000) {
+                for (SuiviCompenseOpEntity ex : repository.findByReferenceIn(refList.subList(i, Math.min(i + 1000, refList.size())))) {
+                    knownRefs.add(com.reconciliation.util.BankingDedupKey.normalizeText(ex.getReference()));
+                }
+            }
             List<SuiviCompenseOpEntity> toSave = new java.util.ArrayList<>();
             for (var entry : candidates.entrySet()) {
-                if (known.contains(entry.getKey())) {
+                SuiviCompenseOpEntity e = entry.getValue();
+                boolean hasRef = e.getReference() != null && !e.getReference().isBlank();
+                if (known.contains(entry.getKey())
+                        || (hasRef && !knownRefs.add(com.reconciliation.util.BankingDedupKey.normalizeText(e.getReference())))) {
                     duplicates++;
                 } else {
-                    toSave.add(entry.getValue());
+                    toSave.add(e);
                 }
             }
             repository.saveAll(toSave);

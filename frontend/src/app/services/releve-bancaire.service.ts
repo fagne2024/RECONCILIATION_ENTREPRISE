@@ -2,7 +2,7 @@ import { Injectable } from '@angular/core';
 import { HttpClient, HttpHeaders, HttpParams } from '@angular/common/http';
 import { Observable } from 'rxjs';
 import { postFormWithProgress } from '../utils/upload-with-progress.util';
-import { ReleveBancaireRow, ReleveUploadResponse, ReleveListFilter } from '../models/releve-bancaire.model';
+import { ReleveBancaireRow, ReleveUploadResponse, ReleveListFilter, ReleveImportDefaults } from '../models/releve-bancaire.model';
 
 @Injectable({ providedIn: 'root' })
 export class ReleveBancaireService {
@@ -15,15 +15,29 @@ export class ReleveBancaireService {
   }
 
   /** Import avec pourcentage d'envoi (pop-up de progression). */
-  uploadWithProgress(file: File, onProgress?: (percent: number) => void): Promise<ReleveUploadResponse> {
+  uploadWithProgress(
+    file: File,
+    onProgress?: (percent: number) => void,
+    defaults?: ReleveImportDefaults
+  ): Promise<ReleveUploadResponse> {
     const form = new FormData();
     form.append('file', file);
+    this.appendDefaults(form, defaults);
     return postFormWithProgress<ReleveUploadResponse>(this.http, this.apiUrl + '/upload', form, onProgress);
   }
 
-  upload(file: File): Observable<ReleveUploadResponse> {
+  /** Valeurs saisies par l'utilisateur pour les colonnes absentes ou vides du fichier. */
+  private appendDefaults(form: FormData, defaults?: ReleveImportDefaults): void {
+    if (defaults?.numeroCompte?.trim()) form.append('numeroCompte', defaults.numeroCompte.trim());
+    if (defaults?.nomCompte?.trim()) form.append('nomCompte', defaults.nomCompte.trim());
+    if (defaults?.banque?.trim()) form.append('banque', defaults.banque.trim());
+    if (defaults?.pays?.trim()) form.append('pays', defaults.pays.trim());
+  }
+
+  upload(file: File, defaults?: ReleveImportDefaults): Observable<ReleveUploadResponse> {
     const form = new FormData();
     form.append('file', file);
+    this.appendDefaults(form, defaults);
     return this.http.post<ReleveUploadResponse>(`${this.apiUrl}/upload`, form);
   }
 

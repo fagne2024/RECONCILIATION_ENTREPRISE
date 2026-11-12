@@ -12,7 +12,7 @@ import { CompteService } from '../../services/compte.service';
 import { OperationService } from '../../services/operation.service';
 import { OperationServiceApi } from '../../services/operation.service';
 import { ReleveBancaireService } from '../../services/releve-bancaire.service';
-import { ReleveBancaireRow } from '../../models/releve-bancaire.model';
+import { ReleveBancaireRow, ReleveImportDefaults, ReleveMissingField, ReleveUploadResponse } from '../../models/releve-bancaire.model';
 import { SuiviCompenseOp } from '../../models/suivi-compense-op.model';
 import { SuiviCompenseOpService } from '../../services/suivi-compense-op.service';
 import { ExportOptimizationService } from '../../services/export-optimization.service';
@@ -296,6 +296,7 @@ export class BanqueComponent implements OnInit {
     numeroCompte: '',
     nomCompte: '',
     banque: '',
+    pays: '',
     dateComptable: '',
     dateValeur: '',
     libelle: '',
@@ -384,7 +385,7 @@ export class BanqueComponent implements OnInit {
   showReleveEditPopup = false;
   selectedReleve: (ReleveBancaireRow & { id?: number }) | null = null;
   releveEditForm: any = {
-    numeroCompte: '', nomCompte: '', banque: '',
+    numeroCompte: '', nomCompte: '', banque: '', pays: '',
     dateComptable: '', dateValeur: '', libelle: '',
     debit: null as number | null, credit: null as number | null, montant: null as number | null,
     numeroCheque: '', devise: '', commentaire: '', numeroSerie: ''
@@ -657,29 +658,24 @@ export class BanqueComponent implements OnInit {
     if (this.selectedMainOpIds.has(id)) this.selectedMainOpIds.delete(id); else this.selectedMainOpIds.add(id);
   }
 
-  private areAllMainOnPageSelected(): boolean {
-    try {
-      const page = this.pagedOperations || [];
-      if (!page.length) return false;
-      return page.every(op => typeof (op as any).id === 'number' && this.selectedMainOpIds.has((op as any).id));
-    } catch { return false; }
+  /** Toutes les lignes (toutes pages, filtres appliqués) portant un identifiant. */
+  private get allMainSelectableOps(): OperationBancaireDisplay[] {
+    return (this.filteredOperations || []).filter(op => typeof (op as any).id === 'number');
+  }
+
+  get allMainSelected(): boolean {
+    const all = this.allMainSelectableOps;
+    return all.length > 0 && all.every(op => this.selectedMainOpIds.has((op as any).id));
   }
 
   toggleSelectAllMainHeader() {
-    const allSelected = this.areAllMainOnPageSelected();
-    if (allSelected) {
-      (this.pagedOperations || []).forEach(op => {
-        const id = (op as any).id as number | undefined;
-        if (typeof id === 'number') this.selectedMainOpIds.delete(id);
-      });
-      this.selectAllMainOnPage = false;
+    const all = this.allMainSelectableOps;
+    if (this.allMainSelected) {
+      all.forEach(op => this.selectedMainOpIds.delete((op as any).id));
     } else {
-      (this.pagedOperations || []).forEach(op => {
-        const id = (op as any).id as number | undefined;
-        if (typeof id === 'number') this.selectedMainOpIds.add(id);
-      });
-      this.selectAllMainOnPage = true;
+      all.forEach(op => this.selectedMainOpIds.add((op as any).id));
     }
+    this.selectAllMainOnPage = this.allMainSelected;
   }
 
   deselectAllMain() {
@@ -722,6 +718,187 @@ export class BanqueComponent implements OnInit {
   quickBulkMain(status: string) {
     this.selectedMainTargetStatut = status;
     this.bulkChangeSelectedMainStatus();
+  }
+
+  isBulkDeletingMain = false;
+
+  async bulkDeleteSelectedMainOps() {
+    if (!this.hasSelectedMainOps) { this.popupService.showWarning('Aucune opération sélectionnée'); return; }
+    // Lignes affichées (liste filtrée) dont l'identifiant est coché, comme le montre la sélection à l'écran.
+    const targets = (this.filteredOperations || []).filter(op => this.isMainOpSelected(op));
+    if (!targets.length) { this.popupService.showWarning('Aucune opération sélectionnée'); return; }
+    const ok = await this.popupService.showConfirmDialog(
+      `⚠️ Supprimer ${targets.length} opération(s) bancaire(s) ?\n\nCette action est irréversible.`,
+      'Confirmation de suppression'
+    );
+    if (!ok) return;
+    this.isBulkDeletingMain = true;
+    let deleted = 0;
+    try {
+      for (const op of targets) {
+        try {
+          // Chaque ligne est supprimée dans sa propre table (identifiants possiblement confondus).
+          const success = await firstValueFrom(
+            op.source === 'generale'
+              ? this.operationService.deleteOperation(op.id)
+              : this.operationBancaireService.deleteOperationBancaire(op.id)
+          );
+          if (success) {
+            deleted++;
+            this.selectedMainOpIds.delete(op.id);
+          }
+        } catch { /* l'échec est compté ci-dessous */ }
+      }
+    } finally {
+      this.isBulkDeletingMain = false;
+    }
+    const failed = targets.length - deleted;
+    if (failed > 0) {
+      this.popupService.showError(`${deleted}/${targets.length} opération(s) supprimée(s) — ${failed} échec(s)`);
+    } else {
+      this.popupService.showSuccess(`✅ ${deleted} opération(s) bancaire(s) supprimée(s)`);
+      this.selectedMainOpIds.clear();
+      this.selectAllMainOnPage = false;
+      this.isSelectionModeMain = false;
+    }
+    this.loadOperations();
+    this.loadDashboardStats();
+  }
+
+  // Sélection multiple sur le relevé bancaire
+  isSelectionModeReleve = false;
+  selectedReleveIds: Set<number> = new Set<number>();
+  isBulkDeletingReleve = false;
+
+  get hasSelectedReleve(): boolean { return this.selectedReleveIds.size > 0; }
+
+  get allReleveOnPageSelected(): boolean {
+    const all = (this.filteredReleveRowsForImport || []).filter(r => typeof r.id === 'number');
+    return all.length > 0 && all.every(r => this.selectedReleveIds.has(r.id as number));
+  }
+
+  toggleSelectionModeReleve() {
+    this.isSelectionModeReleve = !this.isSelectionModeReleve;
+    if (!this.isSelectionModeReleve) this.selectedReleveIds.clear();
+  }
+
+  isReleveSelected(r: ReleveBancaireRow): boolean {
+    return typeof r.id === 'number' && this.selectedReleveIds.has(r.id);
+  }
+
+  toggleReleveSelection(r: ReleveBancaireRow) {
+    if (typeof r.id !== 'number') return;
+    if (this.selectedReleveIds.has(r.id)) this.selectedReleveIds.delete(r.id); else this.selectedReleveIds.add(r.id);
+  }
+
+  /** Sélectionne / désélectionne toutes les lignes filtrées, sur toutes les pages. */
+  toggleSelectAllReleveHeader() {
+    const all = this.allReleveOnPageSelected;
+    (this.filteredReleveRowsForImport || []).forEach(r => {
+      if (typeof r.id !== 'number') return;
+      if (all) this.selectedReleveIds.delete(r.id); else this.selectedReleveIds.add(r.id);
+    });
+  }
+
+  deselectAllReleve() { this.selectedReleveIds.clear(); }
+
+  async bulkDeleteSelectedReleve() {
+    if (!this.hasSelectedReleve) { this.popupService.showWarning('Aucune ligne de relevé sélectionnée'); return; }
+    const ids = Array.from(this.selectedReleveIds.values());
+    const ok = await this.popupService.showConfirmDialog(
+      `⚠️ Supprimer ${ids.length} ligne(s) de relevé ?\n\nCette action est irréversible.`,
+      'Confirmation de suppression'
+    );
+    if (!ok) return;
+    this.isBulkDeletingReleve = true;
+    let deleted = 0;
+    try {
+      for (const id of ids) {
+        try {
+          await firstValueFrom(this.releveService.delete(id));
+          deleted++;
+          this.selectedReleveIds.delete(id);
+        } catch { /* l'échec est compté ci-dessous */ }
+      }
+    } finally {
+      this.isBulkDeletingReleve = false;
+    }
+    const failed = ids.length - deleted;
+    if (failed > 0) {
+      this.popupService.showError(`${deleted}/${ids.length} ligne(s) supprimée(s) — ${failed} échec(s)`);
+    } else {
+      this.popupService.showSuccess(`✅ ${deleted} ligne(s) de relevé supprimée(s)`);
+      this.isSelectionModeReleve = false;
+    }
+    this.loadLatestReleveBatch();
+  }
+
+  // Sélection multiple sur le suivi compense OP
+  isSelectionModeSuivi = false;
+  selectedSuiviIds: Set<number> = new Set<number>();
+  isBulkDeletingSuivi = false;
+
+  get hasSelectedSuivi(): boolean { return this.selectedSuiviIds.size > 0; }
+
+  get allSuiviOnPageSelected(): boolean {
+    const all = (this.filteredSuiviCompenseRows || []).filter(r => typeof r.id === 'number');
+    return all.length > 0 && all.every(r => this.selectedSuiviIds.has(r.id as number));
+  }
+
+  toggleSelectionModeSuivi() {
+    this.isSelectionModeSuivi = !this.isSelectionModeSuivi;
+    if (!this.isSelectionModeSuivi) this.selectedSuiviIds.clear();
+  }
+
+  isSuiviSelected(r: SuiviCompenseOp): boolean {
+    return typeof r.id === 'number' && this.selectedSuiviIds.has(r.id);
+  }
+
+  toggleSuiviSelection(r: SuiviCompenseOp) {
+    if (typeof r.id !== 'number') return;
+    if (this.selectedSuiviIds.has(r.id)) this.selectedSuiviIds.delete(r.id); else this.selectedSuiviIds.add(r.id);
+  }
+
+  /** Sélectionne / désélectionne toutes les lignes filtrées, sur toutes les pages. */
+  toggleSelectAllSuiviHeader() {
+    const all = this.allSuiviOnPageSelected;
+    (this.filteredSuiviCompenseRows || []).forEach(r => {
+      if (typeof r.id !== 'number') return;
+      if (all) this.selectedSuiviIds.delete(r.id); else this.selectedSuiviIds.add(r.id);
+    });
+  }
+
+  deselectAllSuivi() { this.selectedSuiviIds.clear(); }
+
+  async bulkDeleteSelectedSuivi() {
+    if (!this.hasSelectedSuivi) { this.popupService.showWarning('Aucune ligne du suivi compense sélectionnée'); return; }
+    const ids = Array.from(this.selectedSuiviIds.values());
+    const ok = await this.popupService.showConfirmDialog(
+      `Supprimer ${ids.length} ligne(s) du suivi compense OP ?`,
+      'Confirmation'
+    );
+    if (!ok) return;
+    this.isBulkDeletingSuivi = true;
+    let deleted = 0;
+    try {
+      for (const id of ids) {
+        try {
+          await firstValueFrom(this.suiviCompenseService.delete(id));
+          deleted++;
+          this.selectedSuiviIds.delete(id);
+        } catch { /* l'échec est compté ci-dessous */ }
+      }
+    } finally {
+      this.isBulkDeletingSuivi = false;
+    }
+    const failed = ids.length - deleted;
+    if (failed > 0) {
+      this.popupService.showError(`${deleted}/${ids.length} ligne(s) supprimée(s) — ${failed} échec(s)`);
+    } else {
+      this.popupService.showSuccess(`${deleted} ligne(s) du suivi compense supprimée(s)`);
+      this.isSelectionModeSuivi = false;
+    }
+    this.loadSuiviCompense();
   }
 
   // Filtres Statut Réconciliation (UI)
@@ -2041,6 +2218,52 @@ export class BanqueComponent implements OnInit {
     });
   }
 
+  // ----- Banque corrigée : édition en ligne dans le tableau des opérations -----
+  editingBanqueCorrigeeOperation: OperationBancaireDisplay | null = null;
+  banqueCorrigeeDraft = '';
+
+  startEditBanqueCorrigee(operation: OperationBancaireDisplay) {
+    if (!operation.id) return;
+    this.editingBanqueCorrigeeOperation = operation;
+    this.banqueCorrigeeDraft = operation.banqueCorrigee || '';
+    // Suggestions : banques existantes du pays de l'opération
+    this.loadBanquesList(operation.pays || '');
+  }
+
+  cancelEditBanqueCorrigee() {
+    this.editingBanqueCorrigeeOperation = null;
+  }
+
+  saveBanqueCorrigee(operation: OperationBancaireDisplay) {
+    if (this.editingBanqueCorrigeeOperation !== operation) return;
+    const valeur = this.banqueCorrigeeDraft.trim();
+    if (!operation.id || valeur === (operation.banqueCorrigee || '')) {
+      this.cancelEditBanqueCorrigee();
+      return;
+    }
+    // Édition terminée : évite un second enregistrement (Entrée puis perte de focus)
+    this.cancelEditBanqueCorrigee();
+    // Les opérations générales ont leur propre table : la banque corrigée n'existe que sur les bancaires
+    if (operation.source === 'generale') {
+      this.popupService.showWarning('La banque corrigée ne peut pas être modifiée sur cette ligne.');
+      return;
+    }
+    this.operationBancaireService.updateOperationBancaire(operation.id, { banqueCorrigee: valeur }).subscribe({
+      next: (updated) => {
+        const nouvelle = updated.banqueCorrigee || '';
+        operation.banqueCorrigee = nouvelle;
+        const op = this.operations.find(o => o.id === operation.id && o.source === operation.source);
+        if (op) op.banqueCorrigee = nouvelle;
+        const fop = this.filteredOperations.find(o => o.id === operation.id && o.source === operation.source);
+        if (fop) fop.banqueCorrigee = nouvelle;
+      },
+      error: (err) => {
+        console.error('Erreur lors de la mise à jour de la banque corrigée', err);
+        this.popupService.showError('❌ Échec de la sauvegarde de la banque corrigée');
+      }
+    });
+  }
+
   startEditCommentReleve(row: ReleveBancaireRow) {
     if (!row.id) return;
     this.editingCommentOperation = null;
@@ -2260,7 +2483,27 @@ export class BanqueComponent implements OnInit {
         return;
       }
 
-      const res: any = await firstValueFrom(this.releveService.upload(file));
+      let res: any;
+      let importDefaults: ReleveImportDefaults | undefined;
+      for (;;) {
+        try {
+          res = await firstValueFrom(this.releveService.upload(file, importDefaults));
+          break;
+        } catch (uploadErr: any) {
+          const missing = this.getReleveMissingFields(uploadErr);
+          if (!missing.length) throw uploadErr;
+          // Colonnes manquantes : demander les valeurs puis relancer l'import
+          const provided = await this.askReleveMissingValues(missing);
+          if (!provided) {
+            await this.popupService.showWarning(
+              `Import annulé : ${this.describeMissingFields(missing)} non renseigné(s).`,
+              'Chargement du relevé'
+            );
+            return;
+          }
+          importDefaults = { ...importDefaults, ...provided };
+        }
+      }
       const saved = Number(res?.count ?? 0);
       const totalRead = Number(res?.totalRead ?? rows.length);
       const duplicates = Number(res?.duplicatesIgnored ?? 0);
@@ -2451,6 +2694,7 @@ export class BanqueComponent implements OnInit {
       numeroCompte: '',
       nomCompte: '',
       banque: '',
+      pays: '',
       dateComptable: new Date().toISOString().split('T')[0], // Date du jour
       dateValeur: '',
       libelle: '',
@@ -2519,6 +2763,7 @@ export class BanqueComponent implements OnInit {
       numeroCompte: f.numeroCompte.trim(),
       nomCompte: f.nomCompte,
       banque: f.banque,
+      pays: f.pays?.trim() || undefined,
       dateComptable: f.dateComptable,
       dateValeur: f.dateValeur || f.dateComptable,
       libelle: f.libelle,
@@ -2582,6 +2827,7 @@ export class BanqueComponent implements OnInit {
   // ----- Filtres Relevé Bancaire -----
   releveFilterNumeroCompte: string = '';
   releveFilterBanque: string = '';
+  releveFilterPays: string = '';
   releveFilterReconStatus: '' | 'En cours' | 'OK' | 'Validé' | 'KO' = '' as any;
   releveFilterDateDebut: string = '';
   releveFilterDateFin: string = '';
@@ -2610,6 +2856,13 @@ export class BanqueComponent implements OnInit {
     return countryCode;
   }
 
+  paysLabel(code: string): string { return countryDisplayLabel(code) || code; }
+
+  /** Pays présents dans les lignes de relevé chargées (libellés), pour le filtre. */
+  get relevePaysOptions(): string[] {
+    return normalizeCountryFilterOptions(((this.releveAllRows || []) as any[]).map(r => r?.pays));
+  }
+
   applyReleveFilters() {
     // Si on a déjà des données, juste appliquer le filtre local
     if (this.releveAllRows && this.releveAllRows.length > 0) {
@@ -2631,6 +2884,7 @@ export class BanqueComponent implements OnInit {
     this.releveFilterMontantMax = null;
     this.releveFilterNumeroCompte = '';
     this.releveFilterBanque = '';
+    this.releveFilterPays = '';
     this.releveFilterReconStatus = '' as any;
     this.releveFilterDateDebut = '';
     this.releveFilterDateFin = '';
@@ -2705,6 +2959,11 @@ export class BanqueComponent implements OnInit {
       );
     }
     
+    // Filtre par pays (colonne pays du relevé)
+    if (this.releveFilterPays) {
+      filtered = filtered.filter((r: any) => countriesMatch(r.pays, this.releveFilterPays));
+    }
+
     // Filtre par dates
     if (this.releveFilterDateDebut || this.releveFilterDateFin) {
       filtered = filtered.filter((r: any) => {
@@ -2814,47 +3073,122 @@ export class BanqueComponent implements OnInit {
     this.importPopup = { ...this.importPopup, visible: false };
   }
 
-  uploadReleve() {
-    if (!this.releveSelectedFile) return;
+  // ── Colonnes obligatoires absentes du relevé importé (numéro de compte, banque) ──
+  releveMissingPopup: {
+    visible: boolean;
+    fields: ReleveMissingField[];
+    values: { numeroCompte: string; nomCompte: string; banque: string; pays: string };
+    submitted: boolean;
+  } = { visible: false, fields: [], values: { numeroCompte: '', nomCompte: '', banque: '', pays: '' }, submitted: false };
+  private releveMissingResolver: ((v: ReleveImportDefaults | null) => void) | null = null;
+
+  /** Détecte la réponse 422 du backend listant les champs à renseigner. */
+  private getReleveMissingFields(err: any): ReleveMissingField[] {
+    const fields = err?.status === 422 ? err?.error?.missingFields : null;
+    return Array.isArray(fields)
+      ? fields.filter((f: string): f is ReleveMissingField => f === 'numeroCompte' || f === 'nomCompte' || f === 'banque' || f === 'pays')
+      : [];
+  }
+
+  /** Ouvre la pop-up et retourne les valeurs saisies, ou null si l'utilisateur annule. */
+  private askReleveMissingValues(fields: ReleveMissingField[]): Promise<ReleveImportDefaults | null> {
+    this.releveMissingPopup = { visible: true, fields, values: { numeroCompte: '', nomCompte: '', banque: '', pays: '' }, submitted: false };
+    return new Promise(resolve => { this.releveMissingResolver = resolve; });
+  }
+
+  get releveMissingValid(): boolean {
+    const p = this.releveMissingPopup;
+    return p.fields.every(f => !!p.values[f].trim());
+  }
+
+  confirmReleveMissing(): void {
+    this.releveMissingPopup = { ...this.releveMissingPopup, submitted: true };
+    if (!this.releveMissingValid) return;
+    const v = this.releveMissingPopup.values;
+    const out: ReleveImportDefaults = {};
+    if (this.releveMissingPopup.fields.includes('numeroCompte')) out.numeroCompte = v.numeroCompte.trim();
+    if (this.releveMissingPopup.fields.includes('nomCompte')) out.nomCompte = v.nomCompte.trim();
+    if (this.releveMissingPopup.fields.includes('banque')) out.banque = v.banque.trim();
+    if (this.releveMissingPopup.fields.includes('pays')) out.pays = v.pays.trim();
+    this.releveMissingPopup = { ...this.releveMissingPopup, visible: false };
+    this.releveMissingResolver?.(out);
+    this.releveMissingResolver = null;
+  }
+
+  cancelReleveMissing(): void {
+    this.releveMissingPopup = { ...this.releveMissingPopup, visible: false };
+    this.releveMissingResolver?.(null);
+    this.releveMissingResolver = null;
+  }
+
+  describeMissingFields(fields: ReleveMissingField[]): string {
+    const label = (f: ReleveMissingField) => f === 'numeroCompte' ? 'le numéro de compte' : f === 'nomCompte' ? 'le nom du compte' : f === 'banque' ? 'la banque' : 'le pays';
+    return fields.map(label).join(', ').replace(/, ([^,]*)$/, ' et $1');
+  }
+
+  async uploadReleve() {
+    const file = this.releveSelectedFile;
+    if (!file) return;
     this.releveUploading = true;
     this.releveBatchId = null;
     this.releveRows = [];
     this.releveMessageKind = 'info';
     this.releveMessage = 'Import en cours...';
     this.openImportPopup('Import du relevé bancaire');
-    from(this.releveService.uploadWithProgress(this.releveSelectedFile, pct => this.onImportUploadProgress(pct)))
-      .pipe(finalize(() => this.finishImportPopup(this.releveMessage, this.releveMessageKind)))
-      .subscribe({
-      next: (res) => {
-        this.releveBatchId = res.batchId;
-        this.releveRows = (res.rows || []).map(r => ({
-          ...r,
-          dateComptable: r.dateComptable ? new Date(r.dateComptable as any) : undefined,
-          dateValeur: r.dateValeur ? new Date(r.dateValeur as any) : undefined
-        }));
-        this.releveUploading = false;
-        this.releveMessageKind = 'success';
-        const baseMsg = `Fichier importé avec succès (${res.count} lignes).`;
-        const dupMsg = res.duplicatesIgnored ? ` ${res.duplicatesIgnored} doublon(s) ignoré(s).` : '';
-        this.releveMessage = `${baseMsg}${dupMsg} Batch: ${this.releveBatchId}`;
-        // Mettre à jour le compteur des lignes de relevé (batch importé)
-        this.totalReleveLignes = this.releveRows.length;
-        // Alerts
-        const msgs: string[] = [];
-        if (res.duplicatesIgnored) msgs.push(`${res.duplicatesIgnored} doublon(s) ignoré(s)`);
-        if (res.unmappedHeaders && res.unmappedHeaders.length) msgs.push(`Colonnes non reconnues: ${res.unmappedHeaders.join(', ')}`);
-        if (res.totalRead && res.count !== undefined) msgs.push(`Lues: ${res.totalRead}, conservées: ${res.count}`);
-        if (msgs.length) {
-          this.releveMessage += ` | ${msgs.join(' | ')}`;
+    let defaults: ReleveImportDefaults | undefined;
+    try {
+      for (;;) {
+        try {
+          const res = await this.releveService.uploadWithProgress(file, pct => this.onImportUploadProgress(pct), defaults);
+          this.applyReleveUploadResult(res);
+          break;
+        } catch (err: any) {
+          const missing = this.getReleveMissingFields(err);
+          if (!missing.length) throw err;
+          // Colonnes manquantes : demander les valeurs puis relancer l'import
+          this.closeImportPopup();
+          const provided = await this.askReleveMissingValues(missing);
+          if (!provided) {
+            this.releveUploading = false;
+            this.releveMessageKind = 'info';
+            this.releveMessage = `Import annulé : ${this.describeMissingFields(missing)} non renseigné(s).`;
+            return;
+          }
+          defaults = { ...defaults, ...provided };
+          this.openImportPopup('Import du relevé bancaire');
         }
-      },
-      error: () => {
-        this.releveUploading = false;
-        this.releveMessageKind = 'error';
-        this.releveMessage = 'Import du relevé bancaire échoué';
-        this.totalReleveLignes = 0;
       }
-    });
+    } catch {
+      this.releveUploading = false;
+      this.releveMessageKind = 'error';
+      this.releveMessage = 'Import du relevé bancaire échoué';
+      this.totalReleveLignes = 0;
+    }
+    this.finishImportPopup(this.releveMessage, this.releveMessageKind);
+  }
+
+  private applyReleveUploadResult(res: ReleveUploadResponse): void {
+    this.releveBatchId = res.batchId;
+    this.releveRows = (res.rows || []).map(r => ({
+      ...r,
+      dateComptable: r.dateComptable ? new Date(r.dateComptable as any) : undefined,
+      dateValeur: r.dateValeur ? new Date(r.dateValeur as any) : undefined
+    }));
+    this.releveUploading = false;
+    this.releveMessageKind = 'success';
+    const baseMsg = `Fichier importé avec succès (${res.count} lignes).`;
+    const dupMsg = res.duplicatesIgnored ? ` ${res.duplicatesIgnored} doublon(s) ignoré(s).` : '';
+    this.releveMessage = `${baseMsg}${dupMsg} Batch: ${this.releveBatchId}`;
+    // Mettre à jour le compteur des lignes de relevé (batch importé)
+    this.totalReleveLignes = this.releveRows.length;
+    // Alerts
+    const msgs: string[] = [];
+    if (res.duplicatesIgnored) msgs.push(`${res.duplicatesIgnored} doublon(s) ignoré(s)`);
+    if (res.unmappedHeaders && res.unmappedHeaders.length) msgs.push(`Colonnes non reconnues: ${res.unmappedHeaders.join(', ')}`);
+    if (res.totalRead && res.count !== undefined) msgs.push(`Lues: ${res.totalRead}, conservées: ${res.count}`);
+    if (msgs.length) {
+      this.releveMessage += ` | ${msgs.join(' | ')}`;
+    }
   }
 
   // Suivi compense OP
@@ -2951,7 +3285,8 @@ export class BanqueComponent implements OnInit {
     this.suiviCompenseLoading = true;
     this.suiviCompenseService.list().subscribe({
       next: (rows) => {
-        this.suiviCompenseRows = rows || [];
+        // Les lignes importées en dernier apparaissent en premier
+        this.suiviCompenseRows = [...(rows || [])].sort((a, b) => (b.id ?? 0) - (a.id ?? 0));
         this.suiviCompenseLoading = false;
         this.goToSuiviCompensePage(this.suiviCompensePage);
       },
@@ -3154,6 +3489,7 @@ export class BanqueComponent implements OnInit {
           numeroCompte: it.numeroCompte,
           ['nomCompte']: it.nomCompte,
           banque: it.banque,
+          pays: it.pays,
           dateComptable: it.dateComptable ? new Date(it.dateComptable) : undefined,
           dateValeur: it.dateValeur ? new Date(it.dateValeur) : undefined,
           libelle: it.libelle,
@@ -3169,6 +3505,8 @@ export class BanqueComponent implements OnInit {
           // Conserver le batchId pour filtrer
           ...( { batchId: bid } as any )
         } as ReleveBancaireRow & any )));
+        // Les lignes importées en dernier apparaissent en premier
+        this.releveAllRows.sort((a: any, b: any) => (b.id ?? 0) - (a.id ?? 0));
         // Par défaut, afficher tous les lots
         this.releveSelectedBatchId = 'ALL';
         // Compat: releveRows = dernier lot (pour usages hérités au besoin)
@@ -3212,6 +3550,7 @@ export class BanqueComponent implements OnInit {
       numeroCompte: row.numeroCompte || '',
       nomCompte: row.nomCompte || '',
       banque: row.banque || '',
+      pays: row.pays || '',
       dateComptable: toInput(row.dateComptable as any),
       dateValeur: toInput(row.dateValeur as any),
       libelle: row.libelle || '',
@@ -3237,6 +3576,7 @@ export class BanqueComponent implements OnInit {
       numeroCompte: this.releveEditForm.numeroCompte || null,
       nomCompte: this.releveEditForm.nomCompte || null,
       banque: this.releveEditForm.banque || null,
+      pays: this.releveEditForm.pays || null,
       dateComptable: this.releveEditForm.dateComptable || null,
       dateValeur: this.releveEditForm.dateValeur || null,
       libelle: this.releveEditForm.libelle || null,
@@ -3432,10 +3772,14 @@ export class BanqueComponent implements OnInit {
               }));
 
             // Fusionner les deux sources
-            // Plus récentes en premier : une opération nouvellement créée apparaît en page 1
-            this.operations = [...opsBancaires, ...opsGenerales].sort(
-              (a, b) => (new Date(b.dateOperation as any).getTime() || 0) - (new Date(a.dateOperation as any).getTime() || 0)
-            );
+            // Ordre de chargement inversé : les lignes importées en dernier apparaissent en premier
+            // (identifiant décroissant dans chaque table ; opérations bancaires importées d'abord,
+            // puis opérations générales créées via le formulaire).
+            const byIdDesc = (a: { id?: number }, b: { id?: number }) => (b.id ?? 0) - (a.id ?? 0);
+            this.operations = [
+              ...[...opsBancaires].sort(byIdDesc),
+              ...[...opsGenerales].sort(byIdDesc)
+            ];
             this.filteredOperations = [...this.operations];
             
             const rawPays = (this.operations || []).map(o => {
@@ -4061,7 +4405,8 @@ export class BanqueComponent implements OnInit {
     const relevéFiltered = sourceReleves.filter(r => {
       // Pays déduit de la banque, sinon du nom de compte (ex. banque « ECOBANK » sans pays,
       // compte « INTOUCHCM » → Cameroun). Sans ce repli, la ligne était exclue avant tout rapprochement.
-      const rowDisplayName = this.deriveCountryNameFromBanque(r.banque)
+      const rowDisplayName = (r.pays ? countryDisplayLabel(r.pays) : '')
+        || this.deriveCountryNameFromBanque(r.banque)
         || this.deriveCountryNameFromBanque((r as any).nomCompte);
       const matchCountry = !this.reconPays
         ? true

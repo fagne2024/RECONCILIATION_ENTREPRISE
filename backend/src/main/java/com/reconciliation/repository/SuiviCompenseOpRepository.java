@@ -11,4 +11,7 @@ public interface SuiviCompenseOpRepository extends JpaRepository<SuiviCompenseOp
     List<SuiviCompenseOpEntity> findAllByOrderByDateOperationDescIdDesc();
 
     List<SuiviCompenseOpEntity> findByDedupKeyIn(java.util.Collection<String> dedupKeys);
+
+    /** Lignes dont la référence figure dans la liste (contrôle de doublon à l'import). */
+    List<SuiviCompenseOpEntity> findByReferenceIn(java.util.Collection<String> references);
 }

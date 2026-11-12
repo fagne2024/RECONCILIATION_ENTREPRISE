@@ -80,7 +80,8 @@ public class OperationBancaireCheckService {
         for (SuiviCompenseOpEntity s : suiviRepository.findAll()) {
             if (s.getDateOperation() == null || s.getMontant() == null) continue;
             if (s.getReference() != null && validatedRefs.contains(s.getReference())) continue;
-            suivis.computeIfAbsent(key(s.getDateOperation(), s.getCodeAgence(), s.getMontant()),
+            // Compense distributeur : code agence ; compense fournisseur : service (colonnes exclusives).
+            suivis.computeIfAbsent(key(s.getDateOperation(), SuiviCompenseOpImportService.agenceOuService(s), s.getMontant()),
                     k -> new ArrayDeque<>()).add(s);
         }
         List<CheckRow> rows = new ArrayList<>();

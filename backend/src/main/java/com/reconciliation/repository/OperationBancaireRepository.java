@@ -110,4 +110,7 @@ public interface OperationBancaireRepository extends JpaRepository<OperationBanc
     List<OperationBancaireEntity> findByReferenceStartingWith(String prefix);
 
     List<OperationBancaireEntity> findByDedupKeyIn(java.util.Collection<String> dedupKeys);
+
+    /** Opérations dont la référence figure dans la liste (contrôle de doublon à l'import). */
+    List<OperationBancaireEntity> findByReferenceIn(java.util.Collection<String> references);
 }

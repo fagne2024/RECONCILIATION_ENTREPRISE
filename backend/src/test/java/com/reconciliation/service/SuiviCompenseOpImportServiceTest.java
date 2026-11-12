@@ -65,6 +65,40 @@ class SuiviCompenseOpImportServiceTest {
     }
 
     @Test
+    void agenceEtServiceSontFacultatifsEtExclusifs() throws Exception {
+        String content = String.join("\n",
+                "Date;Code agence;Banque;Montant;Référence;Service;Réseau",
+                "15/01/2026;MTPTG0024;SITUATION CB MYTP;1 000 000;REF-DIST;;HT",
+                "15/01/2026;;UBA ML;2 000 000;REF-FOUR;TG_SEND_CB_TP1;HT");
+        MockMultipartFile file = new MockMultipartFile("file", "suivi.csv", "text/csv", content.getBytes(StandardCharsets.UTF_8));
+
+        List<SuiviCompenseOpEntity> rows = service.parse(file);
+
+        assertEquals(2, rows.size());
+        // Distributeur : agence renseignée, service vide
+        assertEquals("MTPTG0024", rows.get(0).getCodeAgence());
+        assertNull(rows.get(0).getService());
+        assertEquals("MTPTG0024", SuiviCompenseOpImportService.agenceOuService(rows.get(0)));
+        // Fournisseur : service renseigné, agence vide
+        assertNull(rows.get(1).getCodeAgence());
+        assertEquals("TG_SEND_CB_TP1", rows.get(1).getService());
+        assertEquals("TG_SEND_CB_TP1", SuiviCompenseOpImportService.agenceOuService(rows.get(1)));
+    }
+
+    @Test
+    void importSansColonneAgenceNiService() throws Exception {
+        String content = String.join("\n",
+                "Date;Banque;Compte bancaire;Montant;Référence",
+                "15/01/2026;UBA ML;123;500 000;REF-1");
+        MockMultipartFile file = new MockMultipartFile("file", "suivi.csv", "text/csv", content.getBytes(StandardCharsets.UTF_8));
+
+        List<SuiviCompenseOpEntity> rows = service.parse(file);
+
+        assertEquals(1, rows.size());
+        assertNull(SuiviCompenseOpImportService.agenceOuService(rows.get(0)));
+    }
+
+    @Test
     void rejectsFileWithoutRecognisableHeader() {
         MockMultipartFile file = new MockMultipartFile("file", "x.csv", "text/csv",
                 "a;b;c\n1;2;3".getBytes(StandardCharsets.UTF_8));
