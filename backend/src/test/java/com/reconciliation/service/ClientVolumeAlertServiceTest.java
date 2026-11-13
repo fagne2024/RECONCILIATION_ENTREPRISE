@@ -54,12 +54,37 @@ class ClientVolumeAlertServiceTest {
         // b@exemple.com est déjà en destinataire principal : retiré de la copie
         assertEquals(List.of("c@exemple.com"), cc.getValue());
         assertEquals(3, count);
-        assertTrue(subject.getValue().contains("1 numéro client"));
-        assertTrue(subject.getValue().contains("BO"));
-        assertTrue(body.getValue().contains("237690000000"));
-        assertTrue(body.getValue().contains("12 transaction(s)"));
-        assertTrue(body.getValue().contains("PAIEMENT, CASHIN"));
-        assertTrue(body.getValue().contains("400 000"));
+        assertEquals("Point de vérification sur les volumes par client (BO)", subject.getValue());
+        assertTrue(body.getValue().contains("sur le back office"));
+        assertTrue(body.getValue().contains("Lignes analysées : 1 200"));
+        assertTrue(body.getValue().contains(
+            "Critère retenu : numéro apparaissant plus de 3 fois, avec un volume cumulé d'au moins 400 000"));
+        assertTrue(body.getValue().contains("237690000000 : 12 transactions, volume cumulé de 1 250 000 (services : PAIEMENT, CASHIN)"));
+        assertTrue(body.getValue().endsWith("Bien cordialement,\nL'équipe ReconciliApp"));
+    }
+
+    @Test
+    void reprendLeModeleAvecServiceFiltre() {
+        ClientVolumeAlertRequest r = request();
+        r.setServiceFilter("GA_CASHIN_AIRTEL");
+        r.setAnalyzedRows(10114);
+        r.getEntries().get(0).setOccurrences(1);
+        String subject = ClientVolumeAlertService.buildSubject(r);
+        String body = ClientVolumeAlertService.buildBody(r);
+
+        assertEquals("Point de vérification sur les volumes par client (GA_CASHIN_AIRTEL)", subject);
+        assertTrue(body.contains("Service : GA_CASHIN_AIRTEL\nLignes analysées : 10 114\n"));
+        // singulier, et pas de détail de services quand le calcul est déjà limité à un service
+        assertTrue(body.contains("237690000000 : 1 transaction, volume cumulé de 1 250 000\n"));
+        assertTrue(body.contains("un numéro nous a semblé mériter"));
+    }
+
+    @Test
+    void ciblePartenaireQuandLeFichierEstPartenaire() {
+        ClientVolumeAlertRequest r = request();
+        r.setSource("partner");
+        assertEquals("Point de vérification sur les volumes par client (Partenaire)", ClientVolumeAlertService.buildSubject(r));
+        assertTrue(ClientVolumeAlertService.buildBody(r).contains("sur le fichier partenaire"));
     }
 
     @Test

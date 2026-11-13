@@ -77,16 +77,11 @@ public class ClientVolumeAlertService {
         return new ArrayList<>(out);
     }
 
+    /** « Point de vérification sur les volumes par client (SERVICE) » ; sans service, la source du fichier. */
     static String buildSubject(ClientVolumeAlertRequest r) {
-        int n = r.getEntries().size();
-        StringBuilder sb = new StringBuilder("[ALERTE] Volume de transactions anormal - ")
-            .append(n).append(n > 1 ? " numéros clients" : " numéro client")
-            .append(" - ").append(sourceLabel(r.getSource()));
         String service = sanitize(r.getServiceFilter());
-        if (!service.isEmpty()) {
-            sb.append(" - ").append(service);
-        }
-        return sb.toString();
+        return "Point de vérification sur les volumes par client ("
+            + (service.isEmpty() ? sourceShort(r.getSource()) : service) + ")";
     }
 
     static String buildBody(ClientVolumeAlertRequest r) {
@@ -94,69 +89,72 @@ public class ClientVolumeAlertService {
         int n = entries.size();
         NumberFormat nf = NumberFormat.getNumberInstance(Locale.FRANCE);
         nf.setMaximumFractionDigits(2);
+        String service = sanitize(r.getServiceFilter());
 
         StringBuilder b = new StringBuilder();
         b.append("Bonjour,\n\n");
-        b.append("Une alerte a été détectée lors du contrôle du volume par client (")
-            .append(sourceLabel(r.getSource())).append(") : ")
-            .append(n).append(n > 1 ? " numéros présentent" : " numéro présente")
-            .append(" un nombre de transactions anormal.\n\n");
+        b.append("Lors du contrôle habituel des volumes par client sur ").append(sourceWhere(r.getSource())).append(", ")
+            .append(n > 1 ? "quelques numéros nous ont semblé mériter" : "un numéro nous a semblé mériter")
+            .append(" un regard attentif. Il s'agit d'un simple point de vérification, sans conclusion à ce stade.\n\n");
 
-        if (r.getMinOccurrences() != null && r.getMinVolume() != null) {
-            b.append("Règle appliquée : numéro présent plus de ").append(r.getMinOccurrences())
-                .append(" fois et volume cumulé supérieur ou égal à ")
-                .append(fmt(nf, r.getMinVolume())).append(".\n");
-        }
-        String service = sanitize(r.getServiceFilter());
+        b.append("Périmètre du contrôle\n\n");
         if (!service.isEmpty()) {
-            b.append("Service concerné : ").append(service).append("\n");
+            b.append("Service : ").append(service).append("\n");
         }
         if (r.getAnalyzedRows() != null) {
-            b.append("Lignes analysées : ").append(fmt(nf, r.getAnalyzedRows()));
-            if (r.getDistinctPhones() != null) {
-                b.append(" (").append(fmt(nf, r.getDistinctPhones())).append(" numéros distincts)");
-            }
-            b.append("\n");
+            b.append("Lignes analysées : ").append(fmt(nf, r.getAnalyzedRows())).append("\n");
+        }
+        if (r.getMinOccurrences() != null && r.getMinVolume() != null) {
+            b.append("Critère retenu : numéro apparaissant plus de ").append(r.getMinOccurrences())
+                .append(" fois, avec un volume cumulé d'au moins ").append(fmt(nf, r.getMinVolume())).append("\n");
         }
 
-        b.append("\nDétail des numéros concernés :\n");
+        b.append("\nNuméros concernés\n\n");
         int shown = Math.min(n, MAX_DETAIL_LINES);
         for (int i = 0; i < shown; i++) {
             ClientVolumeAlertRequest.Entry e = entries.get(i);
-            b.append(String.format("%d. %s - %s transaction(s) - volume cumulé : %s",
-                i + 1,
-                sanitize(e.getPhone()),
-                e.getOccurrences() == null ? "?" : e.getOccurrences().toString(),
-                e.getVolume() == null ? "?" : fmt(nf, e.getVolume())));
-            List<String> services = e.getServices();
-            if (services != null && !services.isEmpty()) {
+            int occ = e.getOccurrences() == null ? 0 : e.getOccurrences();
+            b.append(sanitize(e.getPhone())).append(" : ")
+                .append(e.getOccurrences() == null ? "?" : String.valueOf(occ))
+                .append(occ > 1 ? " transactions" : " transaction")
+                .append(", volume cumulé de ")
+                .append(e.getVolume() == null ? "?" : fmt(nf, e.getVolume()));
+            // Sans filtre de service, les services utilisés par le numéro aident à situer l'activité.
+            if (service.isEmpty() && e.getServices() != null) {
                 List<String> clean = new ArrayList<>();
-                for (String s : services) {
+                for (String s : e.getServices()) {
                     String c = sanitize(s);
                     if (!c.isEmpty()) {
                         clean.add(c);
                     }
                 }
                 if (!clean.isEmpty()) {
-                    b.append(" - services : ").append(String.join(", ", clean));
+                    b.append(" (services : ").append(String.join(", ", clean)).append(")");
                 }
             }
             b.append("\n");
         }
         if (n > shown) {
-            b.append("... et ").append(n - shown).append(" autre(s) numéro(s) non détaillé(s).\n");
+            b.append("… et ").append(n - shown).append(" autre(s) numéro(s) non détaillé(s).\n");
         }
 
-        b.append("\nMerci de vérifier ces transactions et de revenir vers nous en cas d'anomalie confirmée.\n\n");
-        b.append("Cordialement,\nReconciliApp");
+        b.append("\nPourriez-vous jeter un œil à ces opérations ? Si quelque chose vous paraît inhabituel, ")
+            .append("n'hésitez pas à nous le faire savoir, afin que nous puissions en discuter ensemble.\n\n");
+        b.append("Merci d'avance pour votre aide.\n\n");
+        b.append("Bien cordialement,\nL'équipe ReconciliApp");
         return b.toString();
     }
 
-    private static String sourceLabel(String source) {
-        if ("partner".equalsIgnoreCase(source)) {
-            return "Partenaire";
-        }
-        return "BO (Back Office)";
+    private static boolean isPartner(String source) {
+        return "partner".equalsIgnoreCase(source);
+    }
+
+    private static String sourceShort(String source) {
+        return isPartner(source) ? "Partenaire" : "BO";
+    }
+
+    private static String sourceWhere(String source) {
+        return isPartner(source) ? "le fichier partenaire" : "le back office";
     }
 
     private static String fmt(NumberFormat nf, Number value) {
