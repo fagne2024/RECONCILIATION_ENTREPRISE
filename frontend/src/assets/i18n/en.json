@@ -547,6 +547,7 @@
     "removeKey": "Remove this key"
   },
   "BQ": {
+    "ReconResultShowKeyHint": "Click to show the key",
     "crTitre": "Copy the comment to the statement",
     "crAucun": "No statement line for this bank.",
     "crCommentaireActuel": "Current comment",

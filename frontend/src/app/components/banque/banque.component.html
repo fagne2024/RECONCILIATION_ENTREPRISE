@@ -1818,11 +1818,16 @@
                 <td class="rr-op">{{ p.op.bo || '—' }}</td>
                 <td class="rr-op rr-num">{{ p.op.montant | number:'1.0-2':'fr' }}</td>
                 <td class="rr-link">
-                  <span class="rr-badge" [class.rr-badge--ref]="p.matchBy==='REFERENCE'" [class.rr-badge--key]="p.matchBy==='CLE'"
-                        [title]="(p.matchBy==='REFERENCE' ? 'BQ.ReconResultByReferenceHint' : 'BQ.ReconResultByKeyHint') | translate">
+                  <span class="rr-badge rr-badge--clickable" [class.rr-badge--ref]="p.matchBy==='REFERENCE'" [class.rr-badge--key]="p.matchBy==='CLE'"
+                        role="button" tabindex="0"
+                        (click)="toggleReconResultKey(p.key)" (keydown.enter)="toggleReconResultKey(p.key)"
+                        [title]="'BQ.ReconResultShowKeyHint' | translate">
                     <i class="fas" [ngClass]="p.matchBy==='REFERENCE' ? 'fa-hashtag' : 'fa-link'"></i>
                     {{ (p.matchBy==='REFERENCE' ? 'BQ.ReconResultRef' : 'BQ.ReconResultKey') | translate }}
                   </span>
+                  <div class="rr-key" *ngIf="isReconResultKeyShown(p.key)">
+                    <code>{{ p.key }}</code>
+                  </div>
                   <span class="rr-gap" *ngIf="p.ecart !== 0" [title]="'BQ.ReconResultGapHint' | translate">
                     {{ 'BQ.ReconResultGap' | translate }} {{ p.ecart | number:'1.0-2':'fr' }}
                   </span>

@@ -547,6 +547,7 @@
     "removeKey": "Retirer cette clé"
   },
   "BQ": {
+    "ReconResultShowKeyHint": "Cliquer pour afficher la clé",
     "crTitre": "Reporter le commentaire sur le relevé",
     "crAucun": "Aucune ligne de relevé pour cette banque.",
     "crCommentaireActuel": "Commentaire actuel",

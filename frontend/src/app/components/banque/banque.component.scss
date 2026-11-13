@@ -3431,3 +3431,10 @@
 .group-cell {
   white-space: nowrap;
 }
+
+// Popup Résultat : le badge « lien » affiche la clé au clic
+.rr-badge--clickable { cursor: pointer; }
+.rr-key {
+  margin-top: 4px;
+  code { font-size: 0.75rem; word-break: break-all; }
+}

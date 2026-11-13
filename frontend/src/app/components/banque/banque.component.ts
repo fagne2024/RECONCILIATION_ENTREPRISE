@@ -4970,6 +4970,16 @@ export class BanqueComponent implements OnInit {
   // =========================
   reconResultPairs: ReconResultPair[] = [];
   showReconResultPopup = false;
+  /** Clés affichées sous le badge « lien » du popup Résultat (clic pour afficher / masquer). */
+  private reconResultShownKeys = new Set<string>();
+
+  toggleReconResultKey(key: string): void {
+    if (this.reconResultShownKeys.has(key)) this.reconResultShownKeys.delete(key); else this.reconResultShownKeys.add(key);
+  }
+
+  isReconResultKeyShown(key: string): boolean {
+    return this.reconResultShownKeys.has(key);
+  }
   reconResultSearch = '';
   reconResultMatchFilter: '' | 'REFERENCE' | 'CLE' = '';
   reconResultPaysFilter = '';
