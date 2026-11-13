@@ -1,0 +1,296 @@
+<div class="etat-reconciliations-page etat-bancaire-page">
+    <div class="wrap">
+        <div class="topbar">
+            <div class="title-block">
+                <h1>{{ 'EBQ.title' | translate }}</h1>
+                <div class="sub">{{ periodSubtitle }}</div>
+            </div>
+            <div class="top-actions">
+                <div class="refresh-note">
+                    <span class="dot-live" *ngIf="!loading"></span>
+                    {{ refreshLabel }}
+                </div>
+                <button type="button" class="btn ds-btn ds-btn--secondary" (click)="load()" [disabled]="loading">
+                    <i class="fas fa-sync-alt"></i> {{ 'EBQ.refresh' | translate }}
+                </button>
+                <button type="button" class="btn ds-btn ds-btn--secondary" (click)="exportCsv()" [disabled]="!filteredRows.length">
+                    ⭳ {{ 'COMMON.actions.export' | translate }}
+                </button>
+                <select class="period ds-select" [(ngModel)]="period" (change)="onPeriodChange()" [attr.aria-label]="'EBQ.period' | translate">
+                    <option value="jour">{{ 'ETA.periodOptions.jour' | translate }}</option>
+                    <option value="7_jours">{{ 'LBL.last7Days' | translate }}</option>
+                    <option value="30_jours">{{ 'LBL.last30Days' | translate }}</option>
+                    <option value="semaine">{{ 'ETA.periodOptions.semaine' | translate }}</option>
+                    <option value="semaine_passee">{{ 'ETA.periodOptions.semaine_passee' | translate }}</option>
+                    <option value="mois">{{ 'TBL.month' | translate }}</option>
+                    <option value="trimestre">{{ 'ETA.periodOptions.trimestre' | translate }}</option>
+                    <option value="semestre">{{ 'ETA.periodOptions.semestre' | translate }}</option>
+                    <option value="annee">{{ 'TBL.year' | translate }}</option>
+                </select>
+            </div>
+        </div>
+
+        <section class="top-users" *ngIf="topUsersConfig.enabled" [attr.aria-label]="'EBQ.top.title' | translate:{ count: topUsersConfig.topN }">
+            <div class="tu-head">
+                <div class="tu-title">
+                    <b>{{ 'EBQ.top.title' | translate:{ count: topUsersConfig.topN } }}</b>
+                    <span class="tu-period">· {{ periodSubtitle }}</span>
+                </div>
+                <span class="tu-sub">{{ 'EBQ.top.subtitle' | translate }}</span>
+            </div>
+
+            <div class="tu-state" *ngIf="topUsersLoading">{{ 'ETA.topUsers.loading' | translate }}</div>
+
+            <div class="tu-cols" *ngIf="!topUsersLoading" [style.--cols]="topUsersColumns">
+                <div class="tu-col" *ngFor="let cat of topUsersCategories; trackBy: trackByCategoryKey" [style.--a]="cat.accent">
+                    <div class="tu-col-head">
+                        <h2><i></i>{{ cat.titleKey | translate }}</h2>
+                        <small>{{ cat.total }} {{ 'ETA.topUsers.actions' | translate }}</small>
+                    </div>
+                    <div class="tu-empty" *ngIf="!cat.users.length">{{ 'ETA.topUsers.empty' | translate }}</div>
+                    <div class="tu-user" *ngFor="let user of cat.users; let i = index; trackBy: trackByUsername"
+                         [title]="user.displayName + ' : ' + user.count">
+                        <span class="ph" [class.p1]="i === 0">
+                            <img *ngIf="user.photo" [src]="user.photo" [alt]="'ETA.topUsers.photoAlt' | translate:{ name: user.displayName }"
+                                 width="40" height="40" (error)="onTopUserPhotoError(user)">
+                            <span class="av" *ngIf="!user.photo">{{ user.initials }}</span>
+                            <span class="rk" [ngClass]="'r' + (i + 1)" [attr.aria-label]="'#' + (i + 1)">{{ i + 1 }}</span>
+                        </span>
+                        <div class="tu-id">
+                            <div class="nm">{{ user.displayName }}</div>
+                            <div class="pl">{{ cat.actionLabelKey | translate }}</div>
+                        </div>
+                        <div class="nb">
+                            <b>{{ user.count }}</b>
+                            <span class="d eq" *ngIf="topUsersConfig.showDelta && user.delta === 0">{{ 'ETA.topUsers.stable' | translate }}</span>
+                            <span class="d up" *ngIf="topUsersConfig.showDelta && user.delta > 0">▲ {{ user.delta }}</span>
+                            <span class="d dn" *ngIf="topUsersConfig.showDelta && user.delta < 0">▼ {{ -user.delta }}</span>
+                        </div>
+                        <div class="bar"><i [style.width.%]="user.barPct"></i></div>
+                    </div>
+                </div>
+            </div>
+        </section>
+
+        <div class="filters ds-filter-bar">
+            <div class="field ds-field">
+                <label for="ebq-country">{{ 'LBL.countryLabel' | translate }}</label>
+                <select id="ebq-country" class="ds-select" [(ngModel)]="country" (change)="onFilterChange()">
+                    <option value="">{{ 'FILT.all' | translate }}</option>
+                    <option *ngFor="let c of countries" [ngValue]="c">{{ c }}</option>
+                </select>
+            </div>
+            <div class="field ds-field">
+                <label for="ebq-bank">{{ 'EBQ.col.bank' | translate }}</label>
+                <select id="ebq-bank" class="ds-select" [(ngModel)]="banque" (change)="onFilterChange()">
+                    <option value="">{{ 'FILT.all' | translate }}</option>
+                    <option *ngFor="let b of banques" [ngValue]="b">{{ b }}</option>
+                </select>
+            </div>
+            <div class="field ds-field">
+                <label for="ebq-search">{{ 'EBQ.searchAccount' | translate }}</label>
+                <input id="ebq-search" type="text" class="ds-input" [(ngModel)]="searchQuery" (ngModelChange)="onFilterChange()"
+                       [placeholder]="'EBQ.searchPlaceholder' | translate" autocomplete="off">
+            </div>
+            <div class="legend">
+                <div class="legend-item clickable" [class.active]="statusFilter === 'RECONCILIE'" (click)="setStatusFilter('RECONCILIE')">
+                    <span class="sw sw-ok"></span>{{ 'EBQ.status.reconciled' | translate }}
+                </div>
+                <div class="legend-item clickable" [class.active]="statusFilter === 'EN_COURS_VALIDATION'" (click)="setStatusFilter('EN_COURS_VALIDATION')">
+                    <span class="sw sw-progress"></span>{{ 'EBQ.status.validating' | translate }}
+                </div>
+                <div class="legend-item clickable" [class.active]="statusFilter === 'EN_COURS_CLOTURE'" (click)="setStatusFilter('EN_COURS_CLOTURE')">
+                    <span class="sw sw-closing"></span>{{ 'EBQ.status.closing' | translate }}
+                </div>
+                <div class="legend-item clickable" [class.active]="statusFilter === 'TERMINE'" (click)="setStatusFilter('TERMINE')">
+                    <span class="sw sw-done"></span>{{ 'EBQ.status.done' | translate }}
+                </div>
+                <div class="legend-item clickable" [class.active]="statusFilter === 'NON_RECONCILIE'" (click)="setStatusFilter('NON_RECONCILIE')">
+                    <span class="sw sw-ko"></span>{{ 'EBQ.status.notReconciled' | translate }}
+                </div>
+            </div>
+        </div>
+
+        <div *ngIf="loading && !allRows.length" class="state-msg loading">{{ 'EBQ.loading' | translate }}</div>
+        <div *ngIf="!loading && error" class="state-msg error" role="alert">
+            {{ error }}
+            <button type="button" class="btn ds-btn ds-btn--secondary ds-btn--sm" (click)="load()">{{ 'EBQ.retry' | translate }}</button>
+        </div>
+
+        <div class="state-msg warn" *ngIf="operationsUnavailable && !error" role="status">
+            {{ 'EBQ.operationsUnavailable' | translate }}
+        </div>
+
+        <div class="kpis kpis-6" *ngIf="!error && stats.total > 0">
+            <div class="kpi total">
+                <div class="label">{{ 'EBQ.kpi.total' | translate }}</div>
+                <div class="value ds-num">{{ stats.total }}</div>
+                <div class="delta" [ngClass]="formatKpiDelta(stats.total, previousStats.total).cls">
+                    {{ formatKpiDelta(stats.total, previousStats.total).text }}
+                </div>
+                <div class="spark"><i *ngFor="let h of sparkTotal; trackBy: trackByIndex" [style.height.px]="h"></i></div>
+            </div>
+            <div class="kpi ok">
+                <div class="label">{{ 'EBQ.kpi.reconciled' | translate }}</div>
+                <div class="value ds-num">{{ stats.reconcilie }}</div>
+                <div class="delta" [ngClass]="formatKpiDelta(stats.reconcilie, previousStats.reconcilie).cls">
+                    {{ formatKpiDelta(stats.reconcilie, previousStats.reconcilie).text }}
+                </div>
+                <div class="spark"><i *ngFor="let h of sparkOk; trackBy: trackByIndex" [style.height.px]="h"></i></div>
+            </div>
+            <div class="kpi progress">
+                <div class="label">{{ 'EBQ.kpi.validating' | translate }}</div>
+                <div class="value ds-num">{{ stats.enCoursValidation }}</div>
+                <div class="delta" [ngClass]="formatKpiDelta(stats.enCoursValidation, previousStats.enCoursValidation, false).cls">
+                    {{ formatKpiDelta(stats.enCoursValidation, previousStats.enCoursValidation, false).text }}
+                </div>
+                <div class="spark"><i *ngFor="let h of sparkValidation; trackBy: trackByIndex" [style.height.px]="h"></i></div>
+            </div>
+            <div class="kpi closing">
+                <div class="label">{{ 'EBQ.kpi.closing' | translate }}</div>
+                <div class="value ds-num">{{ stats.enCoursCloture }}</div>
+                <div class="delta" [ngClass]="formatKpiDelta(stats.enCoursCloture, previousStats.enCoursCloture, false).cls">
+                    {{ formatKpiDelta(stats.enCoursCloture, previousStats.enCoursCloture, false).text }}
+                </div>
+                <div class="spark"><i *ngFor="let h of sparkCloture; trackBy: trackByIndex" [style.height.px]="h"></i></div>
+            </div>
+            <div class="kpi done">
+                <div class="label">{{ 'EBQ.kpi.done' | translate }}</div>
+                <div class="value ds-num">{{ stats.termine }}</div>
+                <div class="delta" [ngClass]="formatKpiDelta(stats.termine, previousStats.termine).cls">
+                    {{ formatKpiDelta(stats.termine, previousStats.termine).text }}
+                </div>
+                <div class="spark"><i *ngFor="let h of sparkTermine; trackBy: trackByIndex" [style.height.px]="h"></i></div>
+            </div>
+            <div class="kpi ko">
+                <div class="label">{{ 'EBQ.kpi.notReconciled' | translate }}</div>
+                <div class="value ds-num">{{ stats.nonReco }}</div>
+                <div class="delta" [ngClass]="formatKpiDelta(stats.nonReco, previousStats.nonReco, false).cls">
+                    {{ formatKpiDelta(stats.nonReco, previousStats.nonReco, false).text }}
+                </div>
+                <div class="spark"><i *ngFor="let h of sparkKo; trackBy: trackByIndex" [style.height.px]="h"></i></div>
+            </div>
+        </div>
+
+        <div class="panel" *ngIf="!error && (!loading || allRows.length)">
+            <div class="panel-head">
+                <h2>{{ 'EBQ.detailByAccount' | translate }}</h2>
+                <div class="toolbar" *ngIf="allRows.length">
+                    <div class="tabs">
+                        <button type="button" *ngFor="let tab of countryTabs; trackBy: trackById"
+                                [class.active]="countryTab === tab.id" (click)="setCountryTab(tab.id)">
+                            {{ tab.label }} ({{ tab.count }})
+                        </button>
+                    </div>
+                    <div class="chip warn" [class.active]="anomaliesOnly" (click)="toggleAnomaliesOnly()">
+                        <input type="checkbox" class="ds-checkbox" [checked]="anomaliesOnly" tabindex="-1" aria-hidden="true">
+                        {{ 'EBQ.anomaliesOnly' | translate:{ count: anomalyRowsCount } }}
+                    </div>
+                </div>
+            </div>
+            <div class="meta" *ngIf="filteredRows.length">
+                {{ 'EBQ.meta' | translate:{ count: filteredRows.length, period: periodRangeLabel } }}
+            </div>
+
+            <div class="table-scroll ds-table-scroll" *ngIf="filteredRows.length">
+                <table class="ds-table">
+                    <thead>
+                        <tr>
+                            <th>{{ 'EBQ.col.account' | translate }}</th>
+                            <th *ngFor="let d of visibleDays; let i = index; trackBy: trackByDate" [class.weekend]="isWeekend(d.date)">
+                                <button *ngIf="i === 0" type="button" class="day-nav ds-btn ds-btn--ghost ds-btn--sm"
+                                        (click)="prevDaysWindow(); $event.stopPropagation()" [disabled]="!canGoPrevDays()"
+                                        [attr.aria-label]="'EBQ.prevDays' | translate">‹</button>
+                                {{ d.label }}
+                                <button *ngIf="i === visibleDays.length - 1" type="button" class="day-nav ds-btn ds-btn--ghost ds-btn--sm"
+                                        (click)="nextDaysWindow(); $event.stopPropagation()" [disabled]="!canGoNextDays()"
+                                        [attr.aria-label]="'EBQ.nextDays' | translate">›</button>
+                            </th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        <tr *ngFor="let row of pagedRows; trackBy: trackByKey" [class.anomaly]="countAnomalyDays(row) > 0">
+                            <td>
+                                <span class="svc-name">{{ row.label }}</span>
+                                <span class="svc-code" *ngIf="row.code">({{ row.code }})</span>
+                                <span class="bank-tag" *ngIf="row.banque">{{ row.banque }}</span>
+                                <span class="svc-flag" *ngIf="countAnomalyDays(row) > 0">
+                                    {{ 'EBQ.daysToProcess' | translate:{ count: countAnomalyDays(row) } }}
+                                </span>
+                            </td>
+                            <td *ngFor="let d of visibleDays; trackBy: trackByDate" [class.weekend]="isWeekend(d.date)">
+                                <ng-container *ngIf="cell(row, d.date) as c; else noLine">
+                                    <button type="button" [class]="pillClass(c.status)" class="pill-btn"
+                                            [title]="cellTooltip(c)" (click)="openDetail(row, c)">
+                                        <span class="sw"></span>{{ statusLabel(c.status) }}
+                                        <span class="pill-count" *ngIf="c.total > 1">×{{ c.total }}</span>
+                                    </button>
+                                </ng-container>
+                                <ng-template #noLine><span class="no-line" [title]="'EBQ.noStatement' | translate">—</span></ng-template>
+                            </td>
+                        </tr>
+                    </tbody>
+                </table>
+            </div>
+            <div class="empty-table" *ngIf="!filteredRows.length && !loading">{{ 'EBQ.noData' | translate }}</div>
+
+            <div class="footer-nav" *ngIf="filteredRows.length">
+                <div class="pagination-left">
+                    <label>
+                        {{ 'PAG.rowsPerPage' | translate }}
+                        <select class="ds-select" [(ngModel)]="pageSize" (ngModelChange)="onPageSizeChange()">
+                            <option *ngFor="let n of pageSizeOptions" [ngValue]="n">{{ n }}</option>
+                        </select>
+                    </label>
+                    <span class="pagination-range">{{ paginationLabel }}</span>
+                </div>
+                <div class="pagination-controls pagination-controls-centered" *ngIf="totalPages > 1">
+                    <button type="button" class="ds-btn ds-btn--secondary ds-btn--sm" (click)="prevPage()" [disabled]="pageIndex === 0">‹</button>
+                    {{ 'ETA.pageOf' | translate:{ current: (pageIndex + 1), total: totalPages } }}
+                    <button type="button" class="ds-btn ds-btn--secondary ds-btn--sm" (click)="nextPage()" [disabled]="pageIndex >= totalPages - 1">›</button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div class="j1-modal-overlay" *ngIf="detail" (click)="closeDetail()">
+        <div class="j1-modal ebq-modal" role="dialog" aria-modal="true" (click)="$event.stopPropagation()" (keydown.escape)="closeDetail()">
+            <h3>{{ 'EBQ.modal.title' | translate }}</h3>
+            <p class="j1-modal-sub">
+                <strong>{{ detail.row.label }}</strong>
+                <ng-container *ngIf="detail.row.code"> ({{ detail.row.code }})</ng-container>
+                — {{ displayDate(detail.cell.date) }}
+                <span [class]="pillClass(detail.cell.status)" class="pill ebq-modal-pill"><span class="sw"></span>{{ statusLabel(detail.cell.status) }}</span>
+            </p>
+            <p class="j1-modal-hint">{{ 'EBQ.modal.summary' | translate:{ total: detail.cell.total } }} {{ cellTooltip(detail.cell) }}</p>
+            <div class="ebq-lines ds-table-scroll">
+                <table class="ds-table">
+                    <thead>
+                        <tr>
+                            <th>{{ 'EBQ.modal.label' | translate }}</th>
+                            <th class="num">{{ 'EBQ.modal.amount' | translate }}</th>
+                            <th>{{ 'EBQ.modal.status' | translate }}</th>
+                            <th>{{ 'EBQ.modal.operation' | translate }}</th>
+                            <th>{{ 'EBQ.modal.comment' | translate }}</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        <tr *ngFor="let l of detail.cell.lines; trackBy: trackByIndex">
+                            <td>{{ l.row.libelle || '—' }}</td>
+                            <td class="num">{{ lineAmount(l) !== null ? (lineAmount(l) | number:'1.0-2':'fr') : '—' }}</td>
+                            <td>
+                                <span [class]="pillClass(l.status)" class="pill"><span class="sw"></span>{{ statusLabel(l.status) }}</span>
+                            </td>
+                            <td>{{ l.operation ? (l.operation.reference || ('#' + l.operation.id)) : '—' }}</td>
+                            <td>{{ l.row.commentaire || '' }}</td>
+                        </tr>
+                    </tbody>
+                </table>
+            </div>
+            <div class="j1-modal-actions">
+                <button type="button" class="btn ds-btn ds-btn--secondary" (click)="openBanque()">{{ 'EBQ.modal.openBank' | translate }}</button>
+                <button type="button" class="btn btn-primary ds-btn ds-btn--primary" (click)="closeDetail()">{{ 'EBQ.modal.close' | translate }}</button>
+            </div>
+        </div>
+    </div>
+</div>

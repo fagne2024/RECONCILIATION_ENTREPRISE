@@ -6,7 +6,9 @@ import {
     OperationBancaire, 
     OperationBancaireCreateRequest, 
     OperationBancaireUpdateRequest, 
-    OperationBancaireFilter 
+    OperationBancaireFilter,
+    OperationBancaireAudit,
+    OperationBancaireAuditStat
 } from '../models/operation-bancaire.model';
 
 export interface OperationCheckRow {
@@ -87,6 +89,21 @@ export class OperationBancaireService {
     // Mettre à jour en lot le statut des opérations bancaires
     bulkUpdateStatut(ids: number[], statut: string): Observable<number> {
         return this.http.put<number>(`${this.apiUrl}/bulk-statut`, { ids, statut });
+    }
+
+    // Top des utilisateurs : actions par utilisateur et type sur la période (dates incluses)
+    getAuditSummary(start: string, end: string): Observable<OperationBancaireAuditStat[]> {
+        return this.http.get<OperationBancaireAuditStat[]>(`${this.apiUrl}/audit-summary`, { params: { start, end } });
+    }
+
+    // Clôture en lot : traitement « Niveau Group » → « Terminé » (statut inchangé)
+    bulkCloturer(ids: number[]): Observable<number> {
+        return this.http.put<number>(`${this.apiUrl}/bulk-cloture`, { ids });
+    }
+
+    // Historique des actions (utilisateur, date, détail) d'une opération
+    getAuditHistory(id: number): Observable<OperationBancaireAudit[]> {
+        return this.http.get<OperationBancaireAudit[]>(`${this.apiUrl}/${id}/audit-history`);
     }
 
     // Supprimer une opération bancaire

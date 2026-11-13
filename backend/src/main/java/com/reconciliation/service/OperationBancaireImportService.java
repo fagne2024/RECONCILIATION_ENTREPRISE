@@ -34,6 +34,9 @@ public class OperationBancaireImportService {
     @Autowired
     private OperationBancaireRepository repository;
 
+    @Autowired
+    private OperationBancaireAuditService auditService;
+
     public static class ImportResult {
         public int totalRead;
         public int saved;
@@ -174,8 +177,9 @@ public class OperationBancaireImportService {
                 }
             }
             if (!toSave.isEmpty()) {
-                repository.saveAll(toSave);
+                List<OperationBancaireEntity> enregistrees = repository.saveAll(toSave);
                 result.saved = toSave.size();
+                auditService.logCreations(enregistrees, "Opération importée");
             }
             return result;
         }

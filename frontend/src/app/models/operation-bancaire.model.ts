@@ -22,6 +22,8 @@ export interface OperationBancaire {
     demandeur?: string;
     valideur?: string;
     commentaire?: string;
+    lastActionUser?: string;
+    lastActionAt?: string;
 }
 
 export interface OperationBancaireCreateRequest {
@@ -82,3 +84,21 @@ export interface OperationBancaireFilter {
     reference?: string;
 }
 
+
+/** Ligne d'historique des actions d'une opération bancaire. */
+export interface OperationBancaireAudit {
+    id: number;
+    actionType: string;
+    username?: string;
+    statutSnapshot?: string;
+    traitementSnapshot?: string;
+    detail?: string;
+    createdAt: string;
+}
+
+/** Actions par utilisateur et type d'action (classement « Top des utilisateurs » banque). */
+export interface OperationBancaireAuditStat {
+    username: string;
+    actionType: string;
+    count: number;
+}

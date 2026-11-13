@@ -26,6 +26,8 @@ public class OperationBancaireController {
     private com.reconciliation.service.OperationBancaireImportService importService;
     @Autowired
     private com.reconciliation.repository.OperationBancaireRepository operationBancaireRepository;
+    @Autowired
+    private com.reconciliation.service.OperationBancaireAuditService auditService;
     
     
     // Récupérer toutes les opérations bancaires
@@ -47,6 +49,27 @@ public class OperationBancaireController {
         return ResponseEntity.ok(updated);
     }
     
+    // Top des utilisateurs : actions par utilisateur et type sur la période (dates incluses, AAAA-MM-JJ)
+    @GetMapping("/audit-summary")
+    public ResponseEntity<List<com.reconciliation.dto.OperationBancaireAuditStatDto>> getAuditSummary(
+            @RequestParam String start, @RequestParam String end) {
+        java.time.LocalDate d = java.time.LocalDate.parse(start);
+        java.time.LocalDate f = java.time.LocalDate.parse(end);
+        return ResponseEntity.ok(auditService.summarize(d.atStartOfDay(), f.plusDays(1).atStartOfDay()));
+    }
+
+    // Clôture en lot : traitement « Niveau Group » → « Terminé » (statut inchangé)
+    @PutMapping("/bulk-cloture")
+    public ResponseEntity<Integer> bulkCloturer(@RequestBody com.reconciliation.dto.BulkUpdateStatutRequest request) {
+        return ResponseEntity.ok(operationBancaireService.bulkCloturer(request.getIds()));
+    }
+
+    // Historique des actions d'une opération (utilisateur, date, détail)
+    @GetMapping("/{id}/audit-history")
+    public ResponseEntity<List<com.reconciliation.dto.OperationBancaireAuditDto>> getAuditHistory(@PathVariable Long id) {
+        return ResponseEntity.ok(auditService.listHistory(id));
+    }
+
     // Récupérer une opération bancaire par ID
     @GetMapping("/{id}")
     public ResponseEntity<OperationBancaire> getOperationBancaireById(@PathVariable Long id) {

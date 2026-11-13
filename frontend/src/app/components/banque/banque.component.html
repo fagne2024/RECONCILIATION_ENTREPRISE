@@ -378,10 +378,7 @@
           <input class="ds-input" type="number" placeholder="{{ 'TBL.amount' | translate }} max" [(ngModel)]="releveFilterMontantMax" (keyup.enter)="applyReleveFilters()" style="width:110px;">
           <select class="ds-select" [(ngModel)]="releveFilterReconStatus" (change)="applyReleveFilters()">
             <option [ngValue]="''">{{ 'BQ.Statuttous' | translate }}</option>
-            <option [ngValue]="'En cours'">En cours</option>
-            <option [ngValue]="'OK'">{{ 'COMMON.actions.ok' | translate }}</option>
-            <option [ngValue]="'Validé'">Validé</option>
-            <option [ngValue]="'KO'">KO</option>
+            <option *ngFor="let st of releveStatutOptions" [ngValue]="st">{{ st === 'OK' ? ('COMMON.actions.ok' | translate) : st }}</option>
           </select>
           <select class="ds-select" [(ngModel)]="releveFilterDateField" (change)="applyReleveFilters()">
             <option [ngValue]="'comptable'">{{ 'BQ.Pardatecomptable' | translate }}</option>
@@ -463,7 +460,7 @@
               <td>
                 <span class="badge status-ok" *ngIf="getReleveNiveauStatus(r)==='OK'">{{ 'COMMON.actions.ok' | translate }}</span>
                 <span class="badge status-en-cours" *ngIf="getReleveNiveauStatus(r)==='En cours'">En cours</span>
-                <span class="badge status-valide" *ngIf="getReleveNiveauStatus(r)==='Validé'">Validé</span>
+                <span class="badge status-valide" *ngIf="getReleveNiveauStatus(r)==='Clôturé'">Clôturé</span>
                 <span class="badge status-ko" *ngIf="getReleveNiveauStatus(r)==='KO'">KO</span>
               </td>
               <td *ngIf="showCommentColumn" class="comment-cell">
@@ -593,7 +590,7 @@
             <label>{{ 'TBL.status' | translate }}</label>
             <select class="ds-select" [(ngModel)]="reconFilters.statut" (change)="applyReconFilters()">
               <option value="">{{ 'FILT.all' | translate }}</option>
-              <option *ngFor="let s of statutsList" [value]="s">{{ s }}</option>
+              <option *ngFor="let s of operationStatutOptions" [value]="s">{{ s }}</option>
             </select>
           </div>
           <button type="button" class="ds-btn ds-btn--secondary btn-outline" *ngIf="reconView==='corr_operation' || reconView==='corr_releve'" (click)="openOkList()" title="{{ 'BQ.Voirlesokdéfinitifs' | translate }}">
@@ -670,8 +667,8 @@
                 <i class="fas fa-exchange-alt"></i>
                 {{ isBulkUpdatingOps ? 'Changement...' : 'Changer statut (' + selectedOpIds.size + ')' }}
               </button>
-              <button type="button" class="ds-btn ds-btn--secondary btn-success" (click)="quickBulkOps('Validée')" [disabled]="isBulkUpdatingOps || !hasSelectedOps">
-                <i class="fas fa-check"></i> {{ 'BQ.Valider' | translate }}
+              <button type="button" class="ds-btn ds-btn--secondary btn-success" (click)="cloturerSelection('ops')" [disabled]="isBulkUpdatingOps || !hasSelectedOps">
+                <i class="fas fa-lock"></i> {{ 'BQ.Cloturer' | translate }}
               </button>
               <button type="button" class="ds-btn ds-btn--secondary btn-warning" (click)="quickBulkOps('Rejetée')" [disabled]="isBulkUpdatingOps || !hasSelectedOps">
                 <i class="fas fa-ban"></i> {{ 'BQ.Rejeter' | translate }}
@@ -947,7 +944,7 @@
             </div>
             <div class="filter-group">
               <label>{{ 'BQ.Recherche' | translate }}</label>
-              <input class="ds-input" type="text" [(ngModel)]="voirToutSearch" (input)="onVoirToutFilterChange()">
+              <input class="ds-input" type="text" [(ngModel)]="voirToutSearch" (input)="onVoirToutFilterChange()" placeholder="{{ 'BQ.RechercherCleEtc' | translate }}">
             </div>
           </div>
 
@@ -958,6 +955,7 @@
           <table class="ds-table operations-table">
             <thead>
               <tr>
+                <th>{{ 'BQ.ReconResultKey' | translate }}</th>
                 <th>{{ 'TBL.country' | translate }}</th>
                 <th>{{ 'TBL.operationDate' | translate }}</th>
                 <th>{{ 'TBL.agency' | translate }}</th>
@@ -973,6 +971,7 @@
             </thead>
             <tbody>
               <tr *ngFor="let x of pagedVoirToutOps">
+                <td><code>{{ $any(x.op).key || '-' }}</code></td>
                 <td>{{ x.op.pays }}</td>
                 <td>{{ x.op.dateOperation | date:'dd/MM/yyyy' }}</td>
                 <td>{{ x.op.agence }}</td>
@@ -988,7 +987,7 @@
                 </td>
               </tr>
               <tr *ngIf="!pagedVoirToutOps.length">
-                <td colspan="11" class="empty-row">{{ 'BQ.ReconResultEmpty' | translate }}</td>
+                <td colspan="12" class="empty-row">{{ 'BQ.ReconResultEmpty' | translate }}</td>
               </tr>
             </tbody>
           </table>
@@ -1012,6 +1011,7 @@
           <table class="ds-table operations-table">
             <thead>
               <tr>
+                <th>{{ 'BQ.ReconResultKey' | translate }}</th>
                 <th>{{ 'TBL.accountNumber' | translate }}</th>
                 <th>{{ 'TBL.accountName' | translate }}</th>
                 <th>{{ 'TBL.bank' | translate }}</th>
@@ -1026,6 +1026,7 @@
             </thead>
             <tbody>
               <tr *ngFor="let x of pagedVoirToutReleves">
+                <td><code>{{ $any(x.row).key || '-' }}</code></td>
                 <td>{{ x.row.numeroCompte || '-' }}</td>
                 <td>{{ x.row.nomCompte || '-' }}</td>
                 <td>{{ x.row.banque || '-' }}</td>
@@ -1040,7 +1041,7 @@
                 </td>
               </tr>
               <tr *ngIf="!pagedVoirToutReleves.length">
-                <td colspan="10" class="empty-row">{{ 'BQ.ReconResultEmpty' | translate }}</td>
+                <td colspan="11" class="empty-row">{{ 'BQ.ReconResultEmpty' | translate }}</td>
               </tr>
             </tbody>
           </table>
@@ -1322,6 +1323,10 @@
             <i class="fas" [class.fa-eye]="!showActionsColumn" [class.fa-eye-slash]="showActionsColumn"></i>
             {{ showActionsColumn ? 'Masquer Actions' : 'Afficher Actions' }}
           </button>
+          <button type="button" class="ds-btn ds-btn--primary btn-primary" (click)="toggleLastActionColumn()" [class.active]="showLastActionColumn" title="{{ 'BQ.HistoriqueActions' | translate }}">
+            <i class="fas fa-history"></i>
+            {{ showLastActionColumn ? 'Masquer Dernière action' : 'Afficher Dernière action' }}
+          </button>
           <button type="button" class="ds-btn ds-btn--primary btn-primary" (click)="toggleSelectionModeMain()" [class.active]="isSelectionModeMain" title="{{ 'BQ.Sélectionmultiple' | translate }}">
             <i class="fas fa-check-square"></i>
             {{ isSelectionModeMain ? 'Quitter la sélection' : 'Sélection multiple' }}
@@ -1399,7 +1404,7 @@
           <label>{{ 'TBL.status' | translate }}</label>
           <select class="ds-select" [(ngModel)]="filters.statut" (change)="applyFilters()">
             <option value="">{{ 'FILT.allStatuses' | translate }}</option>
-            <option *ngFor="let statut of statutsList" [value]="statut">{{ statut }}</option>
+            <option *ngFor="let statut of operationStatutOptions" [value]="statut">{{ statut }}</option>
           </select>
         </div>
         <div class="filter-group">
@@ -1415,7 +1420,7 @@
             <option value="">{{ 'FILT.all' | translate }}</option>
             <option value="En cours">En cours</option>
             <option value="OK">{{ 'COMMON.actions.ok' | translate }}</option>
-            <option value="Validé">Validé</option>
+            <option value="Clôturé">Clôturé</option>
           </select>
         </div>
         <div class="filter-group">
@@ -1443,8 +1448,8 @@
             <i class="fas fa-exchange-alt"></i>
             {{ isBulkUpdatingMain ? 'Changement...' : 'Changer statut (' + selectedMainOpIds.size + ')' }}
           </button>
-          <button type="button" class="ds-btn ds-btn--secondary btn-success" (click)="quickBulkMain('Validée')" [disabled]="isBulkUpdatingMain || !hasSelectedMainOps">
-            <i class="fas fa-check"></i> {{ 'BQ.Valider' | translate }}
+          <button type="button" class="ds-btn ds-btn--secondary btn-success" (click)="cloturerSelection('main')" [disabled]="isBulkUpdatingMain || !hasSelectedMainOps">
+            <i class="fas fa-lock"></i> {{ 'BQ.Cloturer' | translate }}
           </button>
           <button type="button" class="ds-btn ds-btn--secondary btn-warning" (click)="bulkDeleteSelectedMainOps()" [disabled]="isBulkDeletingMain || isBulkUpdatingMain || !hasSelectedMainOps">
             <i class="fas fa-trash" [class.spin]="isBulkDeletingMain"></i>
@@ -1484,10 +1489,12 @@
               <th *ngIf="showOpCommentColumn">{{ 'BQ.Commentaire' | translate }}</th>
               <th *ngIf="showActionsColumn">{{ 'TBL.actions' | translate }}</th>
               <th>{{ 'TBL.reconciliationStatus' | translate }}</th>
+              <th *ngIf="showLastActionColumn">{{ 'BQ.DerniereAction' | translate }}</th>
             </tr>
           </thead>
           <tbody>
-            <tr *ngFor="let operation of pagedOperations; trackBy: trackById" [class.selected]="isMainOpSelected(operation)">
+            <ng-container *ngFor="let operation of pagedOperations; trackBy: trackById">
+            <tr [class.selected]="isMainOpSelected(operation)">
               <td *ngIf="isSelectionModeMain">
                 <input type="checkbox" [checked]="isMainOpSelected(operation)" (change)="toggleMainOpSelection(operation)">
               </td>
@@ -1581,7 +1588,47 @@
                   {{ getOperationNiveauStatus(operation) }}
                 </span>
               </td>
+              <td class="last-action-cell" *ngIf="showLastActionColumn">
+                <button type="button" class="btn-icon" (click)="toggleOpAudit(operation)" [disabled]="operation.id === undefined"
+                        title="{{ 'BQ.HistoriqueActions' | translate }}">
+                  <i class="fas" [ngClass]="expandedOpAudit.has(operation.id!) ? 'fa-chevron-down' : 'fa-chevron-right'"></i>
+                </button>
+                <span *ngIf="operation.lastActionUser; else noLastAction">
+                  <strong>{{ operation.lastActionUser }}</strong>
+                  <small class="muted"> · {{ operation.lastActionAt | date:'dd/MM/yyyy HH:mm' }}</small>
+                </span>
+                <ng-template #noLastAction><span class="muted">-</span></ng-template>
+              </td>
             </tr>
+            <tr class="op-audit-row" *ngIf="showLastActionColumn && operation.id !== undefined && expandedOpAudit.has(operation.id)">
+              <td colspan="30">
+                <div *ngIf="opAuditLoading.has(operation.id)" class="empty-row"><i class="fas fa-spinner spin"></i> {{ 'MSG.loading' | translate }}</div>
+                <div *ngIf="!opAuditLoading.has(operation.id) && !(opAuditCache[operation.id]?.length)" class="empty-row">{{ 'BQ.AucuneAction' | translate }}</div>
+                <table class="ds-table op-audit-table" *ngIf="opAuditCache[operation.id]?.length">
+                  <thead>
+                    <tr>
+                      <th>{{ 'BQ.auditDate' | translate }}</th>
+                      <th>{{ 'BQ.auditAction' | translate }}</th>
+                      <th>{{ 'BQ.auditUtilisateur' | translate }}</th>
+                      <th>{{ 'TBL.processing' | translate }}</th>
+                      <th>{{ 'TBL.status' | translate }}</th>
+                      <th>{{ 'BQ.auditDetail' | translate }}</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    <tr *ngFor="let a of opAuditCache[operation.id]">
+                      <td>{{ a.createdAt | date:'dd/MM/yyyy HH:mm:ss' }}</td>
+                      <td>{{ ('BQ.audit.' + (a.actionType || '').toLowerCase()) | translate }}</td>
+                      <td>{{ a.username || '-' }}</td>
+                      <td>{{ a.traitementSnapshot || '-' }}</td>
+                      <td>{{ a.statutSnapshot || '-' }}</td>
+                      <td class="op-audit-detail">{{ a.detail || '-' }}</td>
+                    </tr>
+                  </tbody>
+                </table>
+              </td>
+            </tr>
+            </ng-container>
           </tbody>
         </table>
       </div>
@@ -1604,7 +1651,7 @@
             <option value="">{{ 'FILT.all' | translate }}</option>
             <option value="En cours">En cours</option>
             <option value="OK">{{ 'COMMON.actions.ok' | translate }}</option>
-            <option value="Validé">Validé</option>
+            <option value="Clôturé">Clôturé</option>
           </select>
         </div>
       </div>
@@ -1986,9 +2033,13 @@
         </button>
       </div>
       <div class="popup-content">
+        <div class="filter-group" *ngIf="!okListLoading && okKeysList.length">
+          <input class="ds-input" type="text" [(ngModel)]="okKeysFilter" placeholder="{{ 'BQ.RechercherCle' | translate }}">
+        </div>
         <div *ngIf="okListLoading" class="empty-row"><i class="fas fa-spinner spin"></i>{{ 'MSG.loading' | translate }}</div>
         <div *ngIf="!okListLoading && okKeysList.length===0" class="empty-row">{{ 'BQ.Aucunecléokdéfinitive' | translate }}</div>
-        <table class="ds-table operations-table" *ngIf="!okListLoading && okKeysList.length">
+        <div *ngIf="!okListLoading && okKeysList.length && !filteredOkKeys.length" class="empty-row">{{ 'BQ.ReconResultEmpty' | translate }}</div>
+        <table class="ds-table operations-table" *ngIf="!okListLoading && filteredOkKeys.length">
           <thead>
             <tr>
               <th>{{ 'BQ.Clé' | translate }}</th>
@@ -1996,7 +2047,7 @@
             </tr>
           </thead>
           <tbody>
-            <tr *ngFor="let k of okKeysList; trackBy: trackByValue">
+            <tr *ngFor="let k of filteredOkKeys; trackBy: trackByValue">
               <td><code>{{ k }}</code></td>
               <td class="actions">
                 <button type="button" class="btn-icon" (click)="unmarkOkFromList(k)" title="{{ 'BQ.Annulerokdéfinitif' | translate }}"><i class="fas fa-undo"></i></button>

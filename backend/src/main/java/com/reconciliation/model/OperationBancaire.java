@@ -28,6 +28,15 @@ public class OperationBancaire {
     private String traitement;
     private String commentaire;
 
+    private String lastActionUser;
+    private LocalDateTime lastActionAt;
+
+    public String getLastActionUser() { return lastActionUser; }
+    public void setLastActionUser(String lastActionUser) { this.lastActionUser = lastActionUser; }
+
+    public LocalDateTime getLastActionAt() { return lastActionAt; }
+    public void setLastActionAt(LocalDateTime lastActionAt) { this.lastActionAt = lastActionAt; }
+
     public String getCommentaire() { return commentaire; }
     public void setCommentaire(String commentaire) { this.commentaire = commentaire; }
     

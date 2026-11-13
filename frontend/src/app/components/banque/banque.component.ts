@@ -5,7 +5,7 @@ import { FormsModule, ReactiveFormsModule } from '@angular/forms';
 import { Router } from '@angular/router';
 import { firstValueFrom, from } from 'rxjs';
 import { finalize } from 'rxjs/operators';
-import { OperationBancaire } from '../../models/operation-bancaire.model';
+import { OperationBancaire, OperationBancaireAudit } from '../../models/operation-bancaire.model';
 import { OperationBancaireService, OperationCheckResult } from '../../services/operation-bancaire.service';
 import { Compte } from '../../models/compte.model';
 import { CompteService } from '../../services/compte.service';
@@ -291,6 +291,8 @@ export class BanqueComponent implements OnInit {
   showCommentColumn = false;
   /** Colonne commentaire du tableau des opérations : masquée par défaut. */
   showOpCommentColumn = false;
+  /** Colonne « Dernière action » (utilisateur + historique) : masquée par défaut. */
+  showLastActionColumn = false;
   /** Ligne (opération / relevé) dont le commentaire est en cours d'édition en ligne. */
   editingCommentOperation: OperationBancaireDisplay | null = null;
   editingCommentReleveId: number | null = null;
@@ -354,7 +356,58 @@ export class BanqueComponent implements OnInit {
     }
     return this.typesCache;
   }
+  /** Statuts proposés comme cible d'un changement de statut (la clôture passe par le bouton « Clôturer »). */
   statutsList: string[] = ['Validée', 'En attente', 'Rejetée', 'En cours'];
+
+  /** Statuts réellement présents dans le tableau des opérations (filtres). */
+  get operationStatutOptions(): string[] {
+    const set = new Set<string>();
+    (this.operations || []).forEach(o => { const v = (o.statut || '').toString().trim(); if (v) set.add(v); });
+    return Array.from(set).sort((a, b) => a.localeCompare(b, 'fr'));
+  }
+
+  /** Statuts de rapprochement réellement présents dans le tableau des relevés (filtres). */
+  get releveStatutOptions(): string[] {
+    const ordre = ['En cours', 'OK', 'Clôturé', 'KO'];
+    const set = new Set<string>();
+    (this.releveAllRows || []).forEach(r => set.add(this.getReleveNiveauStatus(r)));
+    return ordre.filter(x => set.has(x));
+  }
+
+  // --- Historique des actions par opération (ligne dépliable) ---
+  expandedOpAudit = new Set<number>();
+  opAuditCache: Record<number, OperationBancaireAudit[]> = {};
+  opAuditLoading = new Set<number>();
+
+  /** Après un rechargement des opérations : vide le cache d'historique et recharge les lignes dépliées. */
+  private rafraichirAuditOuvert(): void {
+    this.opAuditCache = {};
+    this.expandedOpAudit.forEach(id => this.loadOpAudit(id, true));
+  }
+
+  toggleOpAudit(op: { id?: number }): void {
+    const id = op?.id;
+    if (id === undefined || id === null) return;
+    if (this.expandedOpAudit.has(id)) { this.expandedOpAudit.delete(id); return; }
+    this.expandedOpAudit.add(id);
+    this.loadOpAudit(id);
+  }
+
+  loadOpAudit(id: number, force = false): void {
+    if (!force && this.opAuditCache[id]) return;
+    this.opAuditLoading.add(id);
+    this.operationBancaireService.getAuditHistory(id).subscribe({
+      next: (rows) => { this.opAuditCache[id] = rows || []; this.opAuditLoading.delete(id); },
+      error: () => { this.opAuditCache[id] = []; this.opAuditLoading.delete(id); }
+    });
+  }
+
+  // --- Filtre de recherche de clé dans la popup « OK définitifs » ---
+  okKeysFilter = '';
+  get filteredOkKeys(): string[] {
+    const q = (this.okKeysFilter || '').trim().toLowerCase();
+    return q ? this.okKeysList.filter(k => (k || '').toLowerCase().includes(q)) : this.okKeysList;
+  }
   modesPaiement: string[] = ['Virement bancaire', 'Chèque', 'Espèces', 'Mobile Money'];
   traitementOptions: string[] = ['Niveau reconciliation', 'Niveau Group', 'Terminé'];
   
@@ -816,9 +869,34 @@ export class BanqueComponent implements OnInit {
     }
   }
 
-  quickBulkOps(status: string) {
-    this.selectedOpsTargetStatut = status;
-    this.bulkChangeSelectedOpsStatus();
+  /** Clôture les lignes sélectionnées : traitement « Niveau Group » → « Terminé », statut inchangé. */
+  async cloturerSelection(source: 'ops' | 'main') {
+    const sel = source === 'ops' ? this.selectedOpIds : this.selectedMainOpIds;
+    if (!sel.size) { this.popupService.showWarning('Aucune opération sélectionnée'); return; }
+    const ok = await this.popupService.showConfirm(
+      `Clôturer ${sel.size} opération(s) ?\n\nSeules les lignes au niveau « Niveau Group » passent à « Terminé » (statut de réconciliation : Clôturé).`,
+      'Confirmation de clôture'
+    );
+    if (!ok) return;
+    const ids = Array.from(sel.values());
+    try {
+      if (source === 'ops') this.isBulkUpdatingOps = true; else this.isBulkUpdatingMain = true;
+      const done = (await this.operationBancaireService.bulkCloturer(ids).toPromise()) || 0;
+      const ignorees = Math.max(0, ids.length - done);
+      this.popupService.showSuccess(
+        `Clôturées : ${done}/${ids.length}${ignorees > 0 ? `\nIgnorées (pas au niveau groupe) : ${ignorees}` : ''}`,
+        'Clôture'
+      );
+      sel.clear();
+      if (source === 'ops') { this.selectAllOpsOnPage = false; this.isSelectionModeOps = false; }
+      else { this.selectAllMainOnPage = false; this.isSelectionModeMain = false; }
+      this.loadOperations();
+      if (source === 'ops') this.updatePagedReconciliationResults();
+    } catch (e) {
+      this.popupService.showError('Erreur lors de la clôture', 'Erreur');
+    } finally {
+      this.isBulkUpdatingOps = false; this.isBulkUpdatingMain = false;
+    }
   }
 
   // Sélection multiple sur la liste principale (hors réconciliation)
@@ -902,11 +980,6 @@ export class BanqueComponent implements OnInit {
     } finally {
       this.isBulkUpdatingMain = false;
     }
-  }
-
-  quickBulkMain(status: string) {
-    this.selectedMainTargetStatut = status;
-    this.bulkChangeSelectedMainStatus();
   }
 
   isBulkDeletingMain = false;
@@ -1093,7 +1166,7 @@ export class BanqueComponent implements OnInit {
   // Filtres Statut Réconciliation (UI)
   reconStatusFilter: '' | 'OK' | 'KO' = '';
   releveStatusFilter: '' | 'OK' | 'KO' = '';
-  operationsReconStatusFilter: '' | 'En cours' | 'OK' | 'Validé' = '';
+  operationsReconStatusFilter: '' | 'En cours' | 'OK' | 'Clôturé' = '';
 
   private loadReconOkKeys() {
     try {
@@ -1302,10 +1375,10 @@ export class BanqueComponent implements OnInit {
    * Statut réconciliation du tableau des opérations, dérivé du niveau de traitement :
    * Niveau reconciliation (ou vide) => En cours ; Niveau Group => OK ; Terminé => Validé.
    */
-  getOperationNiveauStatus(op: OperationBancaireDisplay): 'En cours' | 'OK' | 'Validé' {
+  getOperationNiveauStatus(op: OperationBancaireDisplay): 'En cours' | 'OK' | 'Clôturé' {
     switch (op && op.traitement) {
       case 'Niveau Group': return 'OK';
-      case 'Terminé': return 'Validé';
+      case 'Terminé': return 'Clôturé';
       default: return 'En cours';
     }
   }
@@ -1313,7 +1386,7 @@ export class BanqueComponent implements OnInit {
   getOperationNiveauStatusClass(op: OperationBancaireDisplay): string {
     switch (this.getOperationNiveauStatus(op)) {
       case 'OK': return 'status-ok';
-      case 'Validé': return 'status-valide';
+      case 'Clôturé': return 'status-valide';
       default: return 'status-en-cours';
     }
   }
@@ -1382,7 +1455,7 @@ export class BanqueComponent implements OnInit {
    * Statut réconciliation affiché sur le relevé : pour une ligne rapprochée d'une opération,
    * il prend la même valeur que l'opération (En cours / OK / Validé). Sinon OK/KO habituel.
    */
-  getReleveNiveauStatus(row: ReleveBancaireRow): 'En cours' | 'OK' | 'Validé' | 'KO' {
+  getReleveNiveauStatus(row: ReleveBancaireRow): 'En cours' | 'OK' | 'Clôturé' | 'KO' {
     const base = this.getReleveReconStatus(row);
     try {
       const map = this.getOpByBaseKey();
@@ -2378,6 +2451,11 @@ export class BanqueComponent implements OnInit {
     this.showActionsColumn = !this.showActionsColumn;
   }
 
+  toggleLastActionColumn() {
+    this.showLastActionColumn = !this.showLastActionColumn;
+    if (!this.showLastActionColumn) this.expandedOpAudit.clear();
+  }
+
   toggleOpCommentColumn() {
     this.showOpCommentColumn = !this.showOpCommentColumn;
     this.cancelEditComment();
@@ -3150,7 +3228,7 @@ export class BanqueComponent implements OnInit {
   releveFilterNumeroCompte: string = '';
   releveFilterBanque: string = '';
   releveFilterPays: string = '';
-  releveFilterReconStatus: '' | 'En cours' | 'OK' | 'Validé' | 'KO' = '' as any;
+  releveFilterReconStatus: '' | 'En cours' | 'OK' | 'Clôturé' | 'KO' = '' as any;
   releveFilterDateDebut: string = '';
   releveFilterDateFin: string = '';
   releveFilterDateField: 'comptable' | 'valeur' = 'comptable';
@@ -4098,6 +4176,7 @@ export class BanqueComponent implements OnInit {
             // (identifiant décroissant dans chaque table ; opérations bancaires importées d'abord,
             // puis opérations générales créées via le formulaire).
             const byIdDesc = (a: { id?: number }, b: { id?: number }) => (b.id ?? 0) - (a.id ?? 0);
+            this.rafraichirAuditOuvert();
             this.operations = [
               ...[...opsBancaires].sort(byIdDesc),
               ...[...opsGenerales].sort(byIdDesc)
@@ -4139,6 +4218,7 @@ export class BanqueComponent implements OnInit {
           error: (error) => {
             console.error('Erreur lors du chargement des opérations générales:', error);
             // En cas d'erreur, utiliser seulement les opérations bancaires
+            this.rafraichirAuditOuvert();
             this.operations = opsBancaires;
             this.filteredOperations = [...this.operations];
             this.updatePagedOperations();
@@ -5938,11 +6018,11 @@ export class BanqueComponent implements OnInit {
     const revDate = (r: ReleveBancaireRow) => this.normalizeDateToYmd((r.dateValeur || r.dateComptable) as any) || '';
     this.voirToutOps = opSource
       .filter(x => byStatut(x.statut))
-      .filter(x => !q || this.normalizeReconText([x.op.reference, x.op.agence, x.op.typeOperation, this.getOperationBanque(x.op), x.op.pays, x.op.compteADebiter].join(' ')).includes(q))
+      .filter(x => !q || this.normalizeReconText([(x.op as any).key, x.op.reference, x.op.agence, x.op.typeOperation, this.getOperationBanque(x.op), x.op.pays, x.op.compteADebiter].join(' ')).includes(q))
       .sort((a, b) => opDate(b.op).localeCompare(opDate(a.op)));
     this.voirToutReleves = revSource
       .filter(x => byStatut(x.statut))
-      .filter(x => !q || this.normalizeReconText([x.row.libelle, x.row.banque, x.row.numeroCompte, x.row.nomCompte].join(' ')).includes(q))
+      .filter(x => !q || this.normalizeReconText([(x.row as any).key, x.row.libelle, x.row.banque, x.row.numeroCompte, x.row.nomCompte].join(' ')).includes(q))
       .sort((a, b) => revDate(b.row).localeCompare(revDate(a.row)));
     this.voirToutOpTotalPages = Math.max(1, Math.ceil(this.voirToutOps.length / this.reconPageSize));
     this.voirToutRevTotalPages = Math.max(1, Math.ceil(this.voirToutReleves.length / this.reconPageSize));

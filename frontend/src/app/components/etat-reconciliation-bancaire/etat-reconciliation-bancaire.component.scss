@@ -1,0 +1,113 @@
+// Compléments propres à l'état de réconciliation bancaire.
+// Le socle visuel vient de etat-reconciliations.component.scss (même design que l'état des réconciliations).
+
+.etat-reconciliations-page.etat-bancaire-page {
+  // 6 cartes : total + les 5 statuts
+  .kpis.kpis-6 {
+    grid-template-columns: repeat(6, 1fr);
+
+    @media (max-width: 1280px) {
+      grid-template-columns: repeat(3, 1fr);
+    }
+
+    @media (max-width: 760px) {
+      grid-template-columns: repeat(2, 1fr);
+    }
+
+    @media (max-width: 460px) {
+      grid-template-columns: 1fr;
+    }
+  }
+
+  .kpi.closing .spark i { background: var(--color-warning-bg); }
+  .kpi.done .spark i { background: var(--color-success-bg); }
+  .kpi.done .value { color: var(--color-success-solid); }
+
+  // Légende et pastilles : « en cours de clôture » en ambre, « terminé » en vert plein.
+  .sw-closing { background: var(--amber); }
+  .sw-done { background: var(--color-success-solid); }
+
+  .pill.done {
+    background: var(--color-success-solid);
+    color: #fff;
+    border-color: var(--color-success-solid);
+
+    .sw { background: #fff; }
+  }
+
+  .state-msg.warn {
+    background: var(--color-warning-bg);
+    color: var(--color-warning-text);
+    border: 1px solid var(--color-warning-border, var(--color-warning));
+  }
+
+  // Pastille cliquable (bouton) : mêmes couleurs que .pill, sans le style natif du bouton.
+  .pill-btn {
+    font-family: inherit;
+    cursor: pointer;
+    appearance: none;
+
+    &:hover {
+      filter: brightness(0.96);
+    }
+
+    &:focus-visible {
+      outline: 2px solid var(--color-accent);
+      outline-offset: 2px;
+    }
+
+    .pill-count {
+      font-weight: 600;
+      opacity: 0.75;
+      font-variant-numeric: tabular-nums;
+    }
+  }
+
+  .no-line {
+    color: var(--muted);
+  }
+
+  .bank-tag {
+    display: inline-block;
+    margin-left: 8px;
+    padding: 1px 7px;
+    border-radius: 999px;
+    border: 1px solid var(--border);
+    color: var(--muted);
+    font-size: 10.5px;
+    font-weight: 600;
+    vertical-align: middle;
+  }
+
+  .state-msg.error .ds-btn {
+    margin-left: 10px;
+  }
+
+  .ebq-modal {
+    width: min(820px, 100%);
+
+    .ebq-modal-pill {
+      margin-left: 8px;
+      vertical-align: middle;
+    }
+
+    .ebq-lines {
+      max-height: 50vh;
+      overflow: auto;
+      margin-bottom: 14px;
+      border: 1px solid var(--border);
+      border-radius: 8px;
+
+      th {
+        position: sticky;
+        top: 0;
+        background: var(--color-surface-sunken, var(--card));
+      }
+
+      .num {
+        text-align: right;
+        font-variant-numeric: tabular-nums;
+      }
+    }
+  }
+}

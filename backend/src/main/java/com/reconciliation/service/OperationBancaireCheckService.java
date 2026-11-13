@@ -37,6 +37,8 @@ public class OperationBancaireCheckService {
     private SuiviCompenseOpRepository suiviRepository;
     @Autowired
     private ReleveBancaireRepository releveRepository;
+    @Autowired
+    private OperationBancaireAuditService auditService;
 
     public record CheckRow(Long operationId, String dateOperation, String agence, Double montant,
                            String typeOperation, String status, String banque, String reference) {}
@@ -163,6 +165,9 @@ public class OperationBancaireCheckService {
             if (item.banque() != null && !item.banque().isBlank()) op.setBo(item.banque());
             if (item.reference() != null && !item.reference().isBlank()) op.setReference(item.reference());
             op.setCheckValide(true);
+            auditService.log(op, OperationBancaireAuditService.CONTROLE_BANQUE,
+                    "Contrôle validé" + (item.banque() != null && !item.banque().isBlank() ? " — banque : " + item.banque() : "")
+                            + (item.reference() != null && !item.reference().isBlank() ? " — référence : " + item.reference() : ""));
             toUpdate.add(op);
         }
         operationRepository.saveAll(toUpdate);

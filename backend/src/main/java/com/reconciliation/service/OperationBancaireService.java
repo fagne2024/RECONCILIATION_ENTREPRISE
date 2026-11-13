@@ -32,6 +32,10 @@ public class OperationBancaireService {
     @Autowired
     private PaysFilterService paysFilterService;
 
+    /** Historique des actions par opération (utilisateur, date, détail). */
+    @Autowired
+    private OperationBancaireAuditService auditService;
+
     /** Règles de calcul configurables (Configuration > Calcul) : prioritaire sur les valeurs codées en dur. */
     @Autowired
     private CalculationRuleService calculationRuleService;
@@ -321,6 +325,8 @@ public class OperationBancaireService {
         
         logger.info("✅ Opération bancaire créée avec ID: {} - Traitement sauvegardé: '{}'", 
                    savedEntity.getId(), savedEntity.getTraitement());
+        auditService.log(savedEntity, OperationBancaireAuditService.CREATION, "Opération créée");
+        operationBancaireRepository.save(savedEntity);
         
         return convertToModel(savedEntity);
     }
@@ -341,6 +347,7 @@ public class OperationBancaireService {
         }
         
         String previousStatut = entity.getStatut();
+        java.util.Map<String, String> avant = OperationBancaireAuditService.snapshot(entity);
 
         if (request.getPays() != null) entity.setPays(request.getPays());
         if (request.getCodePays() != null) entity.setCodePays(request.getCodePays());
@@ -376,13 +383,19 @@ public class OperationBancaireService {
         if (request.getTraitement() != null) entity.setTraitement(request.getTraitement());
         if (request.getCommentaire() != null) entity.setCommentaire(request.getCommentaire());
         
+        auditService.logDiff(avant, entity);
         OperationBancaireEntity savedEntity = operationBancaireRepository.save(entity);
-        // Impacter le compte si le statut devient Validée ET que l'impact n'a pas déjà été appliqué
-        if (!"Validée".equalsIgnoreCase(previousStatut) && "Validée".equalsIgnoreCase(savedEntity.getStatut())) {
+        // Impacter le compte si le statut devient Validée (ou Clôturée) ET que l'impact n'a pas déjà été appliqué
+        if (!statutImpactant(previousStatut) && statutImpactant(savedEntity.getStatut())) {
             appliquerImpactSurCompte(savedEntity);
         }
 
         return convertToModel(savedEntity);
+    }
+
+    /** « Validée » et « Clôturée » déclenchent l'impact sur le compte (une seule fois : impactApplique). */
+    private static boolean statutImpactant(String statut) {
+        return "Validée".equalsIgnoreCase(statut) || OperationBancaireAuditService.STATUT_CLOTURE.equalsIgnoreCase(statut);
     }
 
     private void appliquerImpactSurCompte(OperationBancaireEntity ob) {
@@ -455,6 +468,7 @@ public class OperationBancaireService {
         Optional<OperationBancaireEntity> opt = operationBancaireRepository.findById(id);
         if (opt.isEmpty()) return false;
         OperationBancaireEntity e = opt.get();
+        String traitementAvant = e.getTraitement();
         e.setReconStatus(status);
         if (!TRAITEMENT_TERMINE.equalsIgnoreCase(e.getTraitement())) {
             if ("OK".equalsIgnoreCase(status)) {
@@ -462,6 +476,11 @@ public class OperationBancaireService {
             } else if ("KO".equalsIgnoreCase(status) && TRAITEMENT_NIVEAU_GROUP.equalsIgnoreCase(e.getTraitement())) {
                 e.setTraitement(TRAITEMENT_NIVEAU_RECONCILIATION);
             }
+        }
+        if (!java.util.Objects.equals(traitementAvant, e.getTraitement())) {
+            auditService.log(e, OperationBancaireAuditService.STATUT_RECONCILIATION,
+                    "Réconciliation " + status + " : " + (traitementAvant == null ? "—" : traitementAvant)
+                            + " → " + (e.getTraitement() == null ? "—" : e.getTraitement()));
         }
         operationBancaireRepository.save(e);
         return true;
@@ -477,14 +496,39 @@ public class OperationBancaireService {
         int updated = 0;
         for (OperationBancaireEntity entity : operations) {
             String previous = entity.getStatut();
+            java.util.Map<String, String> avant = OperationBancaireAuditService.snapshot(entity);
             entity.setStatut(nouveauStatut);
+            auditService.logDiff(avant, entity);
             OperationBancaireEntity saved = operationBancaireRepository.save(entity);
-            if (!"Validée".equalsIgnoreCase(previous) && "Validée".equalsIgnoreCase(nouveauStatut)) {
+            if (!statutImpactant(previous) && statutImpactant(nouveauStatut)) {
                 appliquerImpactSurCompte(saved);
             }
             updated++;
         }
         return updated;
+    }
+
+    /**
+     * Clôture en lot : le statut ne change pas ; le niveau de traitement passe de « Niveau Group » à « Terminé »
+     * (le statut de réconciliation affiché devient alors « Clôturé »). Les lignes qui ne sont pas au niveau groupe sont ignorées.
+     * @return nombre de lignes clôturées
+     */
+    @Transactional
+    public int bulkCloturer(List<Long> ids) {
+        if (ids == null || ids.isEmpty()) return 0;
+        int cloturees = 0;
+        for (OperationBancaireEntity entity : operationBancaireRepository.findAllById(ids)) {
+            if (!TRAITEMENT_NIVEAU_GROUP.equalsIgnoreCase(entity.getTraitement() == null ? "" : entity.getTraitement().trim())) {
+                continue;
+            }
+            String avant = entity.getTraitement();
+            entity.setTraitement(TRAITEMENT_TERMINE);
+            auditService.log(entity, OperationBancaireAuditService.CLOTURE,
+                    "Clôture : traitement " + avant + " → " + TRAITEMENT_TERMINE + " ; statut de réconciliation : Clôturé");
+            operationBancaireRepository.save(entity);
+            cloturees++;
+        }
+        return cloturees;
     }
 
     // Supprimer une opération bancaire
@@ -653,6 +697,8 @@ public class OperationBancaireService {
 
         model.setTraitement(entity.getTraitement());
         model.setCommentaire(entity.getCommentaire());
+        model.setLastActionUser(entity.getLastActionUser());
+        model.setLastActionAt(entity.getLastActionAt());
         return model;
     }
 }

@@ -85,6 +85,19 @@ public class OperationBancaireEntity {
     @Column(name = "commentaire", length = 1000)
     private String commentaire;
 
+    /** Dernière action effectuée sur la ligne (utilisateur + date), détail dans operation_bancaire_audit. */
+    @Column(name = "last_action_user", length = 255)
+    private String lastActionUser;
+
+    @Column(name = "last_action_at")
+    private LocalDateTime lastActionAt;
+
+    public String getLastActionUser() { return lastActionUser; }
+    public void setLastActionUser(String lastActionUser) { this.lastActionUser = lastActionUser; }
+
+    public LocalDateTime getLastActionAt() { return lastActionAt; }
+    public void setLastActionAt(LocalDateTime lastActionAt) { this.lastActionAt = lastActionAt; }
+
     public String getCommentaire() { return commentaire; }
     public void setCommentaire(String commentaire) { this.commentaire = commentaire; }
     
