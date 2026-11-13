@@ -339,6 +339,42 @@ public class ReleveBancaireController {
         return ResponseEntity.ok(entity);
     }
 
+    /** Met à jour uniquement la date de valeur d'une ligne de relevé (les autres champs sont conservés). */
+    @PutMapping("/{id}/date-valeur")
+    public ResponseEntity<?> updateDateValeur(@PathVariable("id") Long id, @RequestBody java.util.Map<String, String> body) {
+        var opt = repository.findById(id);
+        if (opt.isEmpty()) {
+            return ResponseEntity.notFound().build();
+        }
+        String raw = body == null ? null : body.get("dateValeur");
+        if (raw == null || raw.isBlank()) {
+            return ResponseEntity.badRequest().body(java.util.Map.of("message", "La date de valeur est obligatoire"));
+        }
+        java.time.LocalDate date;
+        try {
+            // Accepte « yyyy-MM-dd » (éventuellement suivi d'une heure)
+            date = java.time.LocalDate.parse(raw.trim().substring(0, Math.min(10, raw.trim().length())));
+        } catch (java.time.format.DateTimeParseException e) {
+            return ResponseEntity.badRequest().body(java.util.Map.of("message", "Date de valeur invalide : " + raw));
+        }
+        var entity = opt.get();
+        entity.setDateValeur(date);
+        // La clé de doublon dépend de la date de valeur quand la ligne n'a pas de libellé : on la recalcule
+        String key = com.reconciliation.service.ReleveBancaireImportService.libelleDedupKey(entity.getLibelle(),
+                com.reconciliation.service.ReleveBancaireImportService.buildDedupKey(
+                        entity.getNumeroCompte(), entity.getDateComptable(), entity.getDateValeur(),
+                        entity.getLibelle(), entity.getMontant()));
+        boolean conflit = repository.findByDedupKeyIn(java.util.Set.of(key)).stream()
+                .anyMatch(other -> !other.getId().equals(id));
+        if (conflit) {
+            return ResponseEntity.status(409).body(java.util.Map.of(
+                    "message", "Une autre ligne du relevé existe déjà avec cette date de valeur"));
+        }
+        entity.setDedupKey(key);
+        repository.save(entity);
+        return ResponseEntity.ok(entity);
+    }
+
     @PutMapping("/{id}/recon-status")
     public ResponseEntity<?> updateReconStatus(@PathVariable("id") Long id, @RequestParam("status") String status) {
         var opt = repository.findById(id);

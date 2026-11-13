@@ -2291,6 +2291,42 @@ export class BanqueComponent implements OnInit {
     });
   }
 
+  // Édition directe de la date de valeur d'une ligne de relevé (clic sur la cellule)
+  editingDateValeurReleveId: number | null = null;
+  dateValeurDraft = '';
+
+  startEditDateValeurReleve(row: ReleveBancaireRow) {
+    if (!row.id) return;
+    this.editingDateValeurReleveId = row.id;
+    this.dateValeurDraft = this.normalizeDateToYmd(row.dateValeur as any) || '';
+  }
+
+  cancelEditDateValeurReleve() {
+    this.editingDateValeurReleveId = null;
+    this.dateValeurDraft = '';
+  }
+
+  saveDateValeurReleve(row: ReleveBancaireRow) {
+    if (this.editingDateValeurReleveId !== row.id) return;
+    const date = this.dateValeurDraft.trim();
+    if (!row.id || !date || date === this.normalizeDateToYmd(row.dateValeur as any)) {
+      this.cancelEditDateValeurReleve();
+      return;
+    }
+    this.releveService.updateDateValeur(row.id, date).subscribe({
+      next: (updated) => {
+        row.dateValeur = (updated?.dateValeur ?? date) as any;
+        this.cancelEditDateValeurReleve();
+      },
+      error: (err) => {
+        console.error('Erreur sauvegarde date de valeur', err);
+        const message = err?.error?.message || '❌ Échec de la sauvegarde de la date de valeur';
+        this.popupService.showError(message);
+        this.cancelEditDateValeurReleve();
+      }
+    });
+  }
+
   // Contrôle de visibilité de la colonne commentaire
   toggleCommentColumn() {
     this.showCommentColumn = !this.showCommentColumn;

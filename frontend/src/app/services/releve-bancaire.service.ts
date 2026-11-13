@@ -86,6 +86,11 @@ export class ReleveBancaireService {
     return this.http.put<ReleveBancaireRow>(`${this.apiUrl}/${id}/commentaire`, { commentaire });
   }
 
+  /** Met à jour uniquement la date de valeur (format yyyy-MM-dd), les autres champs sont conservés. */
+  updateDateValeur(id: number, dateValeur: string): Observable<ReleveBancaireRow> {
+    return this.http.put<ReleveBancaireRow>(`${this.apiUrl}/${id}/date-valeur`, { dateValeur });
+  }
+
   updateReconStatus(id: number, status: 'OK' | 'KO'): Observable<any> {
     return this.http.put(`${this.apiUrl}/${id}/recon-status?status=${encodeURIComponent(status)}`, {});
   }

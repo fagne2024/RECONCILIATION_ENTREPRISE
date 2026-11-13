@@ -443,7 +443,18 @@
                 <td>{{ r.banque || '-' }}</td>
                 <td>{{ r.pays ? paysLabel(r.pays) : '-' }}</td>
                 <td>{{ r.dateComptable ? (r.dateComptable | date:'dd/MM/yyyy') : '-' }}</td>
-                <td>{{ r.dateValeur ? (r.dateValeur | date:'dd/MM/yyyy') : '-' }}</td>
+                <td class="date-valeur-cell">
+                  <ng-container *ngIf="editingDateValeurReleveId !== r.id; else editDateValeurReleve">
+                    <span (click)="startEditDateValeurReleve(r)" [style.cursor]="r.id ? 'pointer' : 'default'" [title]="'BQ.Modifiercetteligne' | translate">
+                      {{ r.dateValeur ? (r.dateValeur | date:'dd/MM/yyyy') : '-' }}
+                    </span>
+                  </ng-container>
+                  <ng-template #editDateValeurReleve>
+                    <input class="ds-input edit-select" type="date" autofocus
+                           [(ngModel)]="dateValeurDraft" [ngModelOptions]="{standalone: true}"
+                           (keydown.enter)="saveDateValeurReleve(r)" (keydown.escape)="cancelEditDateValeurReleve()" (blur)="saveDateValeurReleve(r)">
+                  </ng-template>
+                </td>
                 <td class="libelle-cell" [title]="r.libelle">{{ r.libelle || '-' }}</td>
                 <td class="right"><span class="amount debit">{{ r.debit !== null && r.debit !== undefined ? (r.debit | number:'1.0-0') : '-' }}</span></td>
                 <td class="right"><span class="amount credit">{{ r.credit !== null && r.credit !== undefined ? (r.credit | number:'1.0-0') : '-' }}</span></td>
