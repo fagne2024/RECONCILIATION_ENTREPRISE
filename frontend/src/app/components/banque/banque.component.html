@@ -140,6 +140,7 @@
       <div class="section-content auto-treatment-content">
         <app-file-upload
           [embedTraitementSection]="true"
+          [bankModelsOnly]="true"
           [suppressEmbedSuccessPopup]="true"
           (embedTraitementProgress)="onBankAutoTreatmentProgress($event)"
           (embedTraitementResult)="onBankAutoTreatmentResult($event)">
@@ -193,6 +194,7 @@
         <div *ngIf="showSuiviCompenseAutoTreatment" class="section-content auto-treatment-content">
           <app-file-upload
             [embedTraitementSection]="true"
+            [bankModelsOnly]="true"
             [suppressEmbedSuccessPopup]="true"
             (embedTraitementProgress)="onSuiviCompenseAutoTreatmentProgress($event)"
             (embedTraitementResult)="onSuiviCompenseAutoTreatmentResult($event)">
@@ -341,6 +343,7 @@
         <div *ngIf="showReleveAutoTreatment" class="section-content auto-treatment-content">
           <app-file-upload
             [embedTraitementSection]="true"
+            [bankModelsOnly]="true"
             [suppressEmbedSuccessPopup]="true"
             (embedTraitementProgress)="onReleveAutoTreatmentProgress($event)"
             (embedTraitementResult)="onReleveAutoTreatmentResult($event)">
@@ -1273,6 +1276,7 @@
         <div *ngIf="showOpAutoTreatment" class="section-content auto-treatment-content">
           <app-file-upload
             [embedTraitementSection]="true"
+            [bankModelsOnly]="true"
             [suppressEmbedSuccessPopup]="true"
             (embedTraitementProgress)="onOpAutoTreatmentProgress($event)"
             (embedTraitementResult)="onOpAutoTreatmentResult($event)">

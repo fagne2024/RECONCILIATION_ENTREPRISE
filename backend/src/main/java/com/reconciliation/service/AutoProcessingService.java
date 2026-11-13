@@ -121,6 +121,7 @@ public class AutoProcessingService {
             existing.setFilePattern(model.getFilePattern());
             existing.setFileType(model.getFileType());
             existing.setAutoApply(model.isAutoApply());
+            existing.setBankModel(model.isBankModel());
             existing.setTemplateFile(model.getTemplateFile());
             existing.setReconciliationKeys(model.getReconciliationKeys());
             existing.setReconciliationLogic(model.getReconciliationLogic());
@@ -128,14 +129,14 @@ public class AutoProcessingService {
             existing.setComparisonColumns(model.getComparisonColumns());
             existing.setPreProcessingConfig(model.getPreProcessingConfig());
             existing.setUpdatedAt(LocalDateTime.now());
-            
+
             AutoProcessingModel savedModel = autoProcessingModelRepository.save(existing);
-            
+
             // Mettre à jour les règles de traitement des colonnes si présentes
             if (model.getColumnProcessingRules() != null) {
                 columnProcessingRuleService.saveRulesForModel(savedModel.getModelId(), model.getColumnProcessingRules());
             }
-            
+
             return savedModel;
         }
         return null;
@@ -154,6 +155,7 @@ public class AutoProcessingService {
             existing.setFilePattern(model.getFilePattern());
             existing.setFileType(model.getFileType());
             existing.setAutoApply(model.isAutoApply());
+            existing.setBankModel(model.isBankModel());
             existing.setTemplateFile(model.getTemplateFile());
             existing.setReconciliationKeys(model.getReconciliationKeys());
             existing.setReconciliationLogic(model.getReconciliationLogic());

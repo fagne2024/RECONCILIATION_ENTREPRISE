@@ -264,6 +264,7 @@ public class ModelManagementController {
             model.setFilePattern(modelDTO.getFilePattern());
             model.setFileType(parseFileType(modelDTO.getFileType()));
             model.setAutoApply(modelDTO.isAutoApply());
+            model.setBankModel(modelDTO.isBankModel());
             model.setTemplateFile(modelDTO.getTemplateFile());
             model.setReconciliationKeys(modelDTO.getReconciliationKeys());
             

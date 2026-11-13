@@ -535,6 +535,7 @@ public class AutoProcessingController {
         }
         
         entity.setAutoApply(dto.isAutoApply());
+        entity.setBankModel(dto.isBankModel());
         entity.setTemplateFile(dto.getTemplateFile());
         entity.setReconciliationKeys(dto.getReconciliationKeys());
         entity.setReconciliationLogic(dto.getReconciliationLogic());

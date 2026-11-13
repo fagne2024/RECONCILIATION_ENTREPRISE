@@ -41,9 +41,13 @@ public class AutoProcessingModel {
     @Column(name = "auto_apply")
     private boolean autoApply;
     
+    /** Modèle « banque » : les clés de réconciliation (partenaire / BO) y sont optionnelles. */
+    @Column(name = "bank_model", nullable = false)
+    private boolean bankModel;
+
     @Column(name = "template_file")
     private String templateFile;
-    
+
     @Column(name = "created_at")
     private LocalDateTime createdAt;
     
@@ -159,6 +163,14 @@ public class AutoProcessingModel {
         this.autoApply = autoApply;
     }
     
+    public boolean isBankModel() {
+        return bankModel;
+    }
+
+    public void setBankModel(boolean bankModel) {
+        this.bankModel = bankModel;
+    }
+
     public String getTemplateFile() {
         return templateFile;
     }

@@ -366,6 +366,7 @@ export class AutoProcessingModelsComponent implements OnInit {
       filePattern: ['', Validators.required],
       fileType: ['bo', Validators.required],
       autoApply: [true],
+      bankModel: [false],
       templateFile: [''],
       reconciliationKeys: this.fb.group({
         partnerKeys: [[]],
@@ -1981,6 +1982,7 @@ export class AutoProcessingModelsComponent implements OnInit {
       filePattern: formValue.filePattern,
       fileType: formValue.fileType,
       autoApply: formValue.autoApply,
+      bankModel: !!formValue.bankModel,
       templateFile: formValue.templateFile,
       reconciliationKeys: JSON.parse(JSON.stringify({
         partnerKeys: formValue.reconciliationKeys?.partnerKeys || [],
@@ -2180,6 +2182,7 @@ export class AutoProcessingModelsComponent implements OnInit {
       filePattern: sourceModel.filePattern,
       fileType: sourceModel.fileType,
       autoApply: sourceModel.autoApply,
+      bankModel: !!sourceModel.bankModel,
       templateFile: sourceModel.templateFile,
       reconciliationKeys: reconciliationKeys,
       // Charger les configurations autonomes
@@ -3982,6 +3985,11 @@ export class AutoProcessingModelsComponent implements OnInit {
 
   // ===== MÉTHODES DE VALIDATION =====
 
+  /** Vrai si le modèle en cours d'édition est tagué « banque » (clés de réconciliation optionnelles). */
+  isBankModel(): boolean {
+    return !!this.modelForm.get('bankModel')?.value;
+  }
+
   isFormValid(): boolean {
     // Validation de base du formulaire (en excluant reconciliationKeys pour les partenaires)
     const fileType = this.modelForm.get('fileType')?.value;
@@ -3989,7 +3997,7 @@ export class AutoProcessingModelsComponent implements OnInit {
     
     if (fileType === 'partner') {
       // Pour les partenaires, vérifier manuellement tous les champs sauf reconciliationKeys
-      const fieldsToCheck = ['name', 'filePattern', 'fileType', 'autoApply', 'templateFile', 'logicType', 'expectedRatio', 'logicDescription', 'tolerance'];
+      const fieldsToCheck = ['name', 'filePattern', 'fileType', 'autoApply', 'bankModel', 'templateFile', 'logicType', 'expectedRatio', 'logicDescription', 'tolerance'];
       basicValidation = fieldsToCheck.every(field => this.modelForm.get(field)?.valid);
     } else {
       // Pour les BO, utiliser la validation normale
@@ -4002,6 +4010,11 @@ export class AutoProcessingModelsComponent implements OnInit {
     
     // Pour les fichiers de type 'bo', pas besoin de clés de réconciliation
     if (fileType === 'bo') {
+      return basicValidation;
+    }
+
+    // Modèle tagué « banque » : clés partenaire / BO optionnelles
+    if (this.isBankModel()) {
       return basicValidation;
     }
     

@@ -88,6 +88,8 @@ export class FileUploadComponent implements OnInit, OnDestroy {
 
     /** Section embarquée sur /traitement : panneau « Traitement Automatique » sans UI de réconciliation. */
     @Input() embedTraitementSection = false;
+    /** N'affiche que les modèles tagués « banque » (page /banque). */
+    @Input() bankModelsOnly = false;
     /**
      * En mode embarqué, supprime le popup de succès interne : le composant parent gère
      * l'UX (ex. choix de la destination des données traitées).
@@ -766,7 +768,10 @@ export class FileUploadComponent implements OnInit, OnDestroy {
         try {
             // En /upload-assisted, le bouton "Traitement de fichier" doit lister tous les modèles,
             // même si l'utilisateur n'a pas accès au module de gestion des modèles.
-            this.traitementModels = await this.autoProcessingService.getAllModelsUnrestricted(true);
+            const allModels = await this.autoProcessingService.getAllModelsUnrestricted(true);
+            this.traitementModels = this.bankModelsOnly
+                ? allModels.filter(model => model.bankModel === true)
+                : allModels;
             if (this.traitementFiles.length > 0) {
                 this.suggestTraitementModelFromFiles();
             } else if (this.traitementModelSearch.trim()) {

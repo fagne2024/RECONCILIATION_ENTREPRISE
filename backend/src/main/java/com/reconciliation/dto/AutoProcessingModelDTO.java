@@ -25,6 +25,9 @@ public class AutoProcessingModelDTO {
     @JsonProperty("autoApply")
     private boolean autoApply;
     
+    @JsonProperty("bankModel")
+    private boolean bankModel;
+
     @JsonProperty("templateFile")
     private String templateFile;
     
@@ -62,6 +65,7 @@ public class AutoProcessingModelDTO {
         this.filePattern = entity.getFilePattern();
         this.fileType = entity.getFileType() != null ? entity.getFileType().getValue() : null;
         this.autoApply = entity.isAutoApply();
+        this.bankModel = entity.isBankModel();
         this.templateFile = entity.getTemplateFile();
         this.createdAt = entity.getCreatedAt();
         this.updatedAt = entity.getUpdatedAt();
@@ -145,6 +149,14 @@ public class AutoProcessingModelDTO {
         this.autoApply = autoApply;
     }
     
+    public boolean isBankModel() {
+        return bankModel;
+    }
+
+    public void setBankModel(boolean bankModel) {
+        this.bankModel = bankModel;
+    }
+
     public String getTemplateFile() {
         return templateFile;
     }

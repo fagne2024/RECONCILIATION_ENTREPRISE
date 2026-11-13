@@ -282,6 +282,8 @@ export interface AutoProcessingModel {
   filePattern: string;
   fileType: 'bo' | 'partner' | 'both' | 'operation';
   autoApply: boolean;
+  /** Modèle « banque » : clés partenaire / BO optionnelles. */
+  bankModel?: boolean;
   createdAt?: Date;
   updatedAt?: Date;
   templateFile?: string;
