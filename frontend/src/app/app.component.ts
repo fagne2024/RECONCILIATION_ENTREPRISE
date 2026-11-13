@@ -57,6 +57,7 @@ export class AppComponent implements OnInit {
     '/service-references': 'ROUTE.serviceReferences',
     '/auto-processing-models': 'ROUTE.autoProcessingModels',
     '/banque': 'ROUTE.banque',
+    '/etat-reconciliation-bancaire': 'ROUTE.etatReconciliationBancaire',
     '/comptabilite': 'ROUTE.comptabilite',
     '/reconciliation-report': 'ROUTE.reconciliationReport',
     '/rapport-reconciliation-bo-partenaire': 'ROUTE.rapportBoPartenaire',

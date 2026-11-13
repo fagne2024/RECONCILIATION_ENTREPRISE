@@ -265,6 +265,12 @@ const routes: Routes = [
     data: { module: 'BANQUE', permissions: ['consulter'] }
   },
   {
+    path: 'etat-reconciliation-bancaire',
+    loadComponent: () => import('./components/etat-reconciliation-bancaire/etat-reconciliation-bancaire.component').then(m => m.EtatReconciliationBancaireComponent),
+    canActivate: [AuthGuard, ModuleAccessGuard],
+    data: { module: 'BANQUE', permissions: ['consulter'] }
+  },
+  {
     path: 'comptabilite',
     loadComponent: () => import('./components/comptabilite/comptabilite.component').then(m => m.ComptabiliteComponent),
     canActivate: [AuthGuard, ModuleAccessGuard],

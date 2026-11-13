@@ -64,6 +64,7 @@ export class AppStateService {
         { path: '/ranking', module: 'Classements', permissions: ['consulter'] },
         { path: '/traitement', module: 'Traitement', permissions: ['consulter'] },
         { path: '/banque', module: 'BANQUE', permissions: ['consulter'] },
+        { path: '/etat-reconciliation-bancaire', module: 'BANQUE', permissions: ['consulter'] },
         { path: '/comptabilite', module: 'Comptabilité', permissions: ['consulter'] },
         { path: '/service-references', module: 'Dashboard', permissions: ['consulter'] },
         { path: '/aide' },

@@ -422,8 +422,20 @@ export const APP_NAVIGATION_CATALOG: AppNavigationGroup[] = [
         labelKey: 'NAV.bank',
         route: '/banque',
         moduleName: 'BANQUE',
+        // Droit unique BANQUE conservé malgré deux sous-menus (pas de droits granulaires à réattribuer).
+        accessModuleName: 'BANQUE',
         apiPathPrefixes: ['/api/banque', '/api/releve-bancaire', '/api/operations-bancaires'],
         icon: 'fa-university'
+      },
+      {
+        key: 'banque-etat-reconciliation',
+        label: 'État de réconciliation bancaire',
+        labelKey: 'NAV.etatReconciliationBancaire',
+        route: '/etat-reconciliation-bancaire',
+        moduleName: 'BANQUE',
+        accessModuleName: 'BANQUE',
+        apiPathPrefixes: ['/api/releve-bancaire'],
+        icon: 'fa-clipboard-list'
       }
     ]
   },
