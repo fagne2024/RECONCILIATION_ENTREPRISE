@@ -3385,3 +3385,49 @@
 .releve-missing-popup .form-group { display: flex; flex-direction: column; gap: 4px; margin-top: 12px; }
 .releve-missing-popup .text-danger { color: var(--rd-red, #dc2626); }
 .releve-missing-popup__actions { display: flex; justify-content: flex-end; gap: 8px; margin-top: 20px; }
+
+// Lignes groupées (opération ↔ plusieurs lignes de relevé)
+.recon-groups {
+  margin-bottom: 16px;
+
+  .recon-group {
+    border: 1px solid var(--border-color, #d9dee7);
+    border-radius: 8px;
+    padding: 12px;
+    margin-bottom: 12px;
+  }
+
+  .recon-group-header {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    gap: 12px;
+    margin-bottom: 8px;
+  }
+}
+
+.recon-group-alert,
+.recon-group-ok {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 8px 12px;
+  border-radius: 6px;
+  margin: 8px 0;
+  background: #fff4e0;
+  color: #8a5300;
+
+  &--error {
+    background: #fde8e8;
+    color: #a12020;
+  }
+}
+
+.recon-group-ok {
+  background: #e6f6ea;
+  color: #1f6b34;
+}
+
+.group-cell {
+  white-space: nowrap;
+}

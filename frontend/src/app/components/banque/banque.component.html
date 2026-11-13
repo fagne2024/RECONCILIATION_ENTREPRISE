@@ -680,6 +680,51 @@
           </div>
         </div>
         
+        <!-- Lignes groupées : une opération rattachée à plusieurs lignes de relevé (clé = clé de l'opération) -->
+        <div class="recon-groups" *ngIf="reconGroups.length && (reconView==='operation' || reconView==='releve')">
+          <h4><i class="fas fa-link"></i> {{ 'BQ.grpTitre' | translate }} ({{ reconGroups.length }})</h4>
+          <div class="recon-group" *ngFor="let g of reconGroups; trackBy: trackById">
+            <div class="recon-group-header">
+              <span><strong>{{ 'BQ.Clé' | translate }} :</strong> <code>{{ g.key }}</code></span>
+              <span>{{ 'TBL.reference' | translate }} : {{ g.op.reference || '-' }}</span>
+              <span>{{ 'BQ.grpOperation' | translate }} : <strong>{{ g.montantOp | number:'1.0-0' }}</strong></span>
+              <span>{{ 'BQ.grpReleves' | translate }} : <strong>{{ g.total | number:'1.0-0' }}</strong></span>
+              <span class="badge" [ngClass]="g.statut === 'COMPLET' ? 'status-ok' : g.statut === 'PARTIEL' ? 'status-en-cours' : 'status-ko'">
+                <ng-container *ngIf="g.statut === 'COMPLET'">{{ 'BQ.grpComplet' | translate }}</ng-container>
+                <ng-container *ngIf="g.statut === 'PARTIEL'">{{ 'BQ.grpReste' | translate }} {{ g.restant | number:'1.0-0' }}</ng-container>
+                <ng-container *ngIf="g.statut === 'DEPASSE'">{{ 'BQ.grpDepassement' | translate }} {{ g.depassement | number:'1.0-0' }}</ng-container>
+              </span>
+              <button type="button" class="btn-icon" (click)="openGroupPopup(g.op)" title="{{ 'BQ.grpGerer' | translate }}"><i class="fas fa-edit"></i></button>
+              <button type="button" class="btn-icon btn-danger" (click)="dissolveGroup(g)" title="{{ 'BQ.grpDissocier' | translate }}"><i class="fas fa-unlink"></i></button>
+            </div>
+            <div class="recon-group-alert" *ngIf="g.statut !== 'COMPLET'">
+              <i class="fas fa-exclamation-triangle"></i>
+              <ng-container *ngIf="g.statut === 'PARTIEL'">{{ 'BQ.grpAlertePartiel' | translate:{ restant: (g.restant | number:'1.0-0'), montant: (g.montantOp | number:'1.0-0') } }}</ng-container>
+              <ng-container *ngIf="g.statut === 'DEPASSE'">{{ 'BQ.grpAlerteDepassement' | translate:{ depassement: (g.depassement | number:'1.0-0'), montant: (g.montantOp | number:'1.0-0') } }}</ng-container>
+            </div>
+            <table class="ds-table operations-table">
+              <thead>
+                <tr>
+                  <th>{{ 'BQ.Clé' | translate }}</th>
+                  <th>{{ 'TBL.valueDate' | translate }}</th>
+                  <th>{{ 'TBL.bank' | translate }}</th>
+                  <th>{{ 'TBL.labelNarration' | translate }}</th>
+                  <th class="right">{{ 'TBL.amount' | translate }}</th>
+                </tr>
+              </thead>
+              <tbody>
+                <tr *ngFor="let r of g.releves">
+                  <td><code>{{ g.key }}</code></td>
+                  <td>{{ (r.dateValeur || r.dateComptable) ? ((r.dateValeur || r.dateComptable) | date:'dd/MM/yyyy') : '-' }}</td>
+                  <td>{{ r.banque || '-' }}</td>
+                  <td class="libelle-cell" [title]="r.libelle">{{ r.libelle || '-' }}</td>
+                  <td class="right">{{ getReleveMontantAbs(r) | number:'1.0-0' }}</td>
+                </tr>
+              </tbody>
+            </table>
+          </div>
+        </div>
+
         <table class="ds-table operations-table" *ngIf="reconView==='operation'">
           <thead>
             <tr>
@@ -702,6 +747,7 @@
               <th>{{ 'BQ.BanqueCorrigee' | translate }}</th>
               <th>{{ 'TBL.status' | translate }}</th>
               <th>{{ 'TBL.reconciliationStatus' | translate }}</th>
+              <th>{{ 'BQ.grpColonne' | translate }}</th>
             </tr>
           </thead>
           <tbody>
@@ -722,6 +768,18 @@
               <td>{{ op.statut }}</td>
               <!-- Suspens BO : toujours KO -->
               <td><span class="badge status-ko">KO</span></td>
+              <td class="group-cell">
+                <ng-container *ngIf="$any(op).groupInfo as g">
+                  <span class="badge" [ngClass]="g.statut === 'PARTIEL' ? 'status-en-cours' : 'status-ko'">
+                    <i class="fas fa-exclamation-triangle"></i>
+                    {{ (g.statut === 'PARTIEL' ? 'BQ.grpReste' : 'BQ.grpDepassement') | translate }}
+                    {{ (g.statut === 'PARTIEL' ? g.restant : g.depassement) | number:'1.0-0' }}
+                  </span>
+                </ng-container>
+                <button type="button" class="btn-icon" (click)="openGroupPopup(op)" title="{{ 'BQ.grpRattacher' | translate }}">
+                  <i class="fas fa-link"></i>
+                </button>
+              </td>
             </tr>
           </tbody>
         </table>
@@ -1804,6 +1862,112 @@
           (pageSizeChange)="reconResultSetPageSize($event)">
         </ds-pagination>
         <button type="button" class="ds-btn ds-btn--secondary btn-secondary" (click)="closeReconResult()"><i class="fas fa-times"></i>{{ 'COMMON.actions.close' | translate }}</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Report du commentaire d'une opération sur une ligne de relevé de la même banque -->
+  <div class="modern-popup-overlay" *ngIf="showCommentReportPopup && commentReportOp" (click)="closeCommentReportPopup()">
+    <div class="modern-popup detail-popup" (click)="$event.stopPropagation()">
+      <div class="popup-header">
+        <h2><i class="fas fa-comment-dots"></i> {{ 'BQ.crTitre' | translate }}</h2>
+        <button type="button" class="close-btn" (click)="closeCommentReportPopup()"><i class="fas fa-times"></i></button>
+      </div>
+      <div class="popup-content">
+        <p>
+          {{ 'TBL.bank' | translate }} : <strong>{{ commentReportBanque }}</strong> ·
+          {{ 'TBL.reference' | translate }} : {{ commentReportOp.reference || '-' }} ·
+          {{ 'TBL.amount' | translate }} : <strong>{{ commentReportOp.montant | number:'1.0-0' }}</strong>
+        </p>
+        <p><strong>{{ 'TBL.comment' | translate }} :</strong> {{ commentReportText }}</p>
+        <input class="ds-input" type="text" [(ngModel)]="commentReportSearch" [ngModelOptions]="{standalone: true}" placeholder="{{ 'BQ.Recherche' | translate }}">
+        <div class="empty-row" *ngIf="!commentReportTotalCandidates">{{ 'BQ.crAucun' | translate }}</div>
+        <table class="ds-table operations-table" *ngIf="commentReportTotalCandidates">
+          <thead>
+            <tr>
+              <th style="width:34px;"></th>
+              <th>{{ 'TBL.valueDate' | translate }}</th>
+              <th>{{ 'TBL.accountNumber' | translate }}</th>
+              <th>{{ 'TBL.labelNarration' | translate }}</th>
+              <th class="right">{{ 'TBL.amount' | translate }}</th>
+              <th>{{ 'BQ.crCommentaireActuel' | translate }}</th>
+            </tr>
+          </thead>
+          <tbody>
+            <tr *ngFor="let r of filteredCommentReportCandidates; trackBy: trackById" [class.selected]="commentReportSelectedId === r.id">
+              <td><input type="radio" name="commentReportRow" [checked]="commentReportSelectedId === r.id" (change)="commentReportSelectedId = r.id ?? null"></td>
+              <td>{{ (r.dateValeur || r.dateComptable) ? ((r.dateValeur || r.dateComptable) | date:'dd/MM/yyyy') : '-' }}</td>
+              <td><code>{{ r.numeroCompte || '-' }}</code></td>
+              <td class="libelle-cell" [title]="r.libelle">{{ r.libelle || '-' }}</td>
+              <td class="right">{{ getReleveMontantAbs(r) | number:'1.0-0' }}</td>
+              <td>{{ r.commentaire || '-' }}</td>
+            </tr>
+          </tbody>
+        </table>
+        <p class="muted" *ngIf="commentReportTotalCandidates > filteredCommentReportCandidates.length">{{ 'BQ.crAffinerRecherche' | translate }}</p>
+      </div>
+      <div class="popup-footer">
+        <button type="button" class="ds-btn ds-btn--primary btn-primary" (click)="confirmCommentReport()" [disabled]="commentReportSelectedId === null || commentReportSaving">
+          <i class="fas fa-check"></i> {{ 'BQ.crValider' | translate }}
+        </button>
+        <button type="button" class="ds-btn ds-btn--secondary btn-secondary" (click)="closeCommentReportPopup()">{{ 'BQ.crIgnorer' | translate }}</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Rattacher des lignes de relevé à une opération (lignes groupées) -->
+  <div class="modern-popup-overlay" *ngIf="showGroupPopup && groupPopupOp" (click)="closeGroupPopup()">
+    <div class="modern-popup detail-popup" (click)="$event.stopPropagation()">
+      <div class="popup-header">
+        <h2><i class="fas fa-link"></i> {{ 'BQ.grpPopupTitre' | translate }}</h2>
+        <button type="button" class="close-btn" (click)="closeGroupPopup()"><i class="fas fa-times"></i></button>
+      </div>
+      <div class="popup-content">
+        <p>
+          <strong>{{ 'BQ.Clé' | translate }} :</strong> <code>{{ $any(groupPopupOp).key }}</code> ·
+          {{ 'TBL.reference' | translate }} : {{ groupPopupOp.reference || '-' }} ·
+          {{ 'BQ.grpOperation' | translate }} : <strong>{{ groupPopupOp.montant | number:'1.0-0' }}</strong>
+        </p>
+        <ng-container *ngIf="groupDraft as d">
+          <div class="recon-group-alert" *ngIf="d.count > 0 && d.statut === 'PARTIEL'">
+            <i class="fas fa-exclamation-triangle"></i>
+            {{ 'BQ.grpAlertePartiel' | translate:{ restant: (d.restant | number:'1.0-0'), montant: (d.montantOp | number:'1.0-0') } }}
+          </div>
+          <div class="recon-group-alert recon-group-alert--error" *ngIf="d.statut === 'DEPASSE'">
+            <i class="fas fa-exclamation-triangle"></i>
+            {{ 'BQ.grpAlerteDepassement' | translate:{ depassement: (d.depassement | number:'1.0-0'), montant: (d.montantOp | number:'1.0-0') } }}
+          </div>
+          <div class="recon-group-ok" *ngIf="d.count > 0 && d.statut === 'COMPLET'">
+            <i class="fas fa-check-circle"></i> {{ 'BQ.grpComplet' | translate }}
+          </div>
+          <p>{{ 'BQ.grpSelection' | translate }} : <strong>{{ d.count }}</strong> · {{ 'BQ.grpReleves' | translate }} : <strong>{{ d.total | number:'1.0-0' }}</strong> / {{ d.montantOp | number:'1.0-0' }}</p>
+        </ng-container>
+        <input class="ds-input" type="text" [(ngModel)]="groupSearch" [ngModelOptions]="{standalone: true}" placeholder="{{ 'BQ.Recherche' | translate }}">
+        <div class="empty-row" *ngIf="!filteredGroupCandidates.length">{{ 'BQ.grpAucunReleve' | translate }}</div>
+        <table class="ds-table operations-table" *ngIf="filteredGroupCandidates.length">
+          <thead>
+            <tr>
+              <th style="width:34px;"></th>
+              <th>{{ 'TBL.valueDate' | translate }}</th>
+              <th>{{ 'TBL.bank' | translate }}</th>
+              <th>{{ 'TBL.labelNarration' | translate }}</th>
+              <th class="right">{{ 'TBL.amount' | translate }}</th>
+            </tr>
+          </thead>
+          <tbody>
+            <tr *ngFor="let r of filteredGroupCandidates; trackBy: trackById">
+              <td><input type="checkbox" [checked]="r.id != null && groupSelectedIds.has(r.id)" (change)="toggleGroupCandidate(r)"></td>
+              <td>{{ (r.dateValeur || r.dateComptable) ? ((r.dateValeur || r.dateComptable) | date:'dd/MM/yyyy') : '-' }}</td>
+              <td>{{ r.banque || '-' }}</td>
+              <td class="libelle-cell" [title]="r.libelle">{{ r.libelle || '-' }}</td>
+              <td class="right">{{ getReleveMontantAbs(r) | number:'1.0-0' }}</td>
+            </tr>
+          </tbody>
+        </table>
+      </div>
+      <div class="popup-footer">
+        <button type="button" class="ds-btn ds-btn--primary btn-primary" (click)="confirmGroup()"><i class="fas fa-save"></i> {{ 'COMMON.actions.save' | translate }}</button>
+        <button type="button" class="ds-btn ds-btn--secondary btn-secondary" (click)="closeGroupPopup()">{{ 'COMMON.actions.cancel' | translate }}</button>
       </div>
     </div>
   </div>

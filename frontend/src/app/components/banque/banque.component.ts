@@ -62,6 +62,22 @@ interface ReconResultPair {
   ecart: number;
 }
 
+/**
+ * Groupe « une opération ↔ plusieurs lignes de relevé » : les lignes rattachées portent la clé de l'opération.
+ * PARTIEL : la somme des relevés est inférieure à l'opération (il reste `restant` à compléter) ;
+ * COMPLET : somme égale (groupe rapproché) ; DEPASSE : somme supérieure à l'opération.
+ */
+interface ReconGroup {
+  key: string;
+  op: OperationBancaireDisplay;
+  releves: ReleveBancaireRow[];
+  montantOp: number;
+  total: number;
+  restant: number;
+  depassement: number;
+  statut: 'PARTIEL' | 'COMPLET' | 'DEPASSE';
+}
+
 interface ReconFilters {
   typeOperation: string;
   statut: string;
@@ -554,6 +570,179 @@ export class BanqueComponent implements OnInit {
     if (!keys.length) return;
     const groupToken = token || `GRP-${Date.now().toString(36)}-${Math.random().toString(36).substring(2, 8)}`;
     keys.forEach(k => this.groupTokens.set(k, groupToken));
+  }
+
+  // ===== Lignes groupées : une opération rattachée à plusieurs lignes de relevé =====
+  private static readonly GROUP_LINKS_STORAGE_KEY = 'banque.recon.groupLinks.v1';
+  /** Rattachements manuels : id opération -> ids des lignes de relevé (conservés dans le navigateur). */
+  private groupLinks = new Map<number, number[]>();
+  private groupLinksLoaded = false;
+  reconGroups: ReconGroup[] = [];
+  private groupedCompleteOpIds = new Set<number>();
+  private groupedCompleteReleveIds = new Set<number>();
+  showGroupPopup = false;
+  groupPopupOp: (OperationBancaireDisplay & { key?: string }) | null = null;
+  private groupCandidates: ReleveBancaireRow[] = [];
+  groupSelectedIds = new Set<number>();
+  groupSearch = '';
+
+  private loadGroupLinks(): void {
+    if (this.groupLinksLoaded) return;
+    this.groupLinksLoaded = true;
+    try {
+      const raw = localStorage.getItem(BanqueComponent.GROUP_LINKS_STORAGE_KEY);
+      if (!raw) return;
+      (JSON.parse(raw) as Array<[number, number[]]>).forEach(([opId, ids]) => {
+        if (typeof opId === 'number' && Array.isArray(ids)) {
+          const valid = ids.filter(i => typeof i === 'number');
+          if (valid.length) this.groupLinks.set(opId, valid);
+        }
+      });
+    } catch {}
+  }
+
+  private saveGroupLinks(): void {
+    try {
+      localStorage.setItem(BanqueComponent.GROUP_LINKS_STORAGE_KEY, JSON.stringify(Array.from(this.groupLinks.entries())));
+    } catch {}
+  }
+
+  private computeGroupTotals(op: OperationBancaireDisplay, releves: ReleveBancaireRow[]) {
+    const montantOp = Math.abs(op.montant || 0);
+    const total = releves.reduce((s, r) => s + this.getReleveMontantAbs(r), 0);
+    const ecart = Math.round((montantOp - total) * 100) / 100;
+    const statut: ReconGroup['statut'] = Math.abs(ecart) < 0.01 ? 'COMPLET' : ecart > 0 ? 'PARTIEL' : 'DEPASSE';
+    return { montantOp, total, restant: Math.max(ecart, 0), depassement: Math.max(-ecart, 0), statut };
+  }
+
+  /**
+   * Applique les rattachements à l'issue de la réconciliation : les lignes de relevé rattachées sortent des
+   * suspens et portent la clé de l'opération ; un groupe complet sort aussi l'opération des suspens.
+   */
+  private applyReconGroups(): void {
+    this.loadGroupLinks();
+    this.reconGroups = [];
+    this.groupedCompleteOpIds.clear();
+    this.groupedCompleteReleveIds.clear();
+    (this.leftOnlyOperations || []).forEach(o => { delete (o as any).groupInfo; });
+    if (!this.groupLinks.size) return;
+
+    const revById = new Map<number, ReleveBancaireRow>();
+    (this.rightOnlyReleves || []).forEach(r => { if (r.id != null) revById.set(r.id, r); });
+    const groupedRevIds = new Set<number>();
+
+    this.groupLinks.forEach((ids, opId) => {
+      const op = (this.leftOnlyOperations || []).find(o => o.id === opId);
+      if (!op) return;
+      const releves = ids
+        .map(id => revById.get(id))
+        .filter((r): r is ReleveBancaireRow => !!r && !groupedRevIds.has(r.id as number));
+      if (!releves.length) return;
+      releves.forEach(r => groupedRevIds.add(r.id as number));
+      const group: ReconGroup = {
+        key: (op as any).key || String(opId),
+        op,
+        releves,
+        ...this.computeGroupTotals(op, releves)
+      };
+      this.reconGroups.push(group);
+      (op as any).groupInfo = group;
+      if (group.statut === 'COMPLET') {
+        this.groupedCompleteOpIds.add(opId);
+        releves.forEach(r => this.groupedCompleteReleveIds.add(r.id as number));
+      }
+    });
+
+    this.rightOnlyReleves = (this.rightOnlyReleves || []).filter(r => !groupedRevIds.has(r.id as number));
+    this.leftOnlyOperations = (this.leftOnlyOperations || []).filter(o => !this.groupedCompleteOpIds.has(o.id as number));
+  }
+
+  private getReleveSens(r: ReleveBancaireRow): 'debit' | 'credit' {
+    return (r.debit || 0) > 0 ? 'debit' : 'credit';
+  }
+
+  openGroupPopup(op: OperationBancaireDisplay): void {
+    if (!op?.id) {
+      this.popupService.showWarning('Cette opération ne peut pas être groupée : identifiant manquant.');
+      return;
+    }
+    const existing: ReleveBancaireRow[] = ((op as any).groupInfo as ReconGroup | undefined)?.releves || [];
+    const sens = this.determineOperationSens(op);
+    const seen = new Set<number>();
+    this.groupCandidates = [...existing, ...(this.rightOnlyReleves || [])].filter(r => {
+      if (r.id == null || seen.has(r.id)) return false;
+      seen.add(r.id);
+      return this.getReleveSens(r) === sens;
+    });
+    this.groupSelectedIds = new Set<number>(existing.map(r => r.id as number));
+    this.groupSearch = '';
+    this.groupPopupOp = op;
+    this.showGroupPopup = true;
+  }
+
+  closeGroupPopup(): void {
+    this.showGroupPopup = false;
+    this.groupPopupOp = null;
+    this.groupCandidates = [];
+    this.groupSelectedIds.clear();
+  }
+
+  get filteredGroupCandidates(): ReleveBancaireRow[] {
+    const q = this.normalizeReconText(this.groupSearch);
+    if (!q) return this.groupCandidates;
+    return this.groupCandidates.filter(r => this.normalizeReconText(`${r.libelle || ''}${r.numeroCompte || ''}${r.banque || ''}`).includes(q));
+  }
+
+  toggleGroupCandidate(r: ReleveBancaireRow): void {
+    if (r.id == null) return;
+    if (this.groupSelectedIds.has(r.id)) this.groupSelectedIds.delete(r.id); else this.groupSelectedIds.add(r.id);
+  }
+
+  /** Totaux en direct du groupe en cours de constitution (opération + lignes cochées). */
+  get groupDraft(): (ReturnType<BanqueComponent['computeGroupTotals']> & { count: number }) | null {
+    if (!this.groupPopupOp) return null;
+    const selected = this.groupCandidates.filter(r => r.id != null && this.groupSelectedIds.has(r.id));
+    return { ...this.computeGroupTotals(this.groupPopupOp, selected), count: selected.length };
+  }
+
+  private fmtAmount(n: number): string {
+    return Math.round(n).toLocaleString('fr-FR');
+  }
+
+  confirmGroup(): void {
+    const op = this.groupPopupOp;
+    const draft = this.groupDraft;
+    if (!op?.id || !draft) return;
+    const ids = Array.from(this.groupSelectedIds);
+    if (ids.length) this.groupLinks.set(op.id, ids); else this.groupLinks.delete(op.id);
+    // Une ligne de relevé n'appartient qu'à un seul groupe
+    this.groupLinks.forEach((v, k) => {
+      if (k === op.id) return;
+      const rest = v.filter(i => !ids.includes(i));
+      if (rest.length) this.groupLinks.set(k, rest); else this.groupLinks.delete(k);
+    });
+    this.saveGroupLinks();
+    const key = (op as any).key || '';
+    this.closeGroupPopup();
+    this.reconcile(true);
+    this.updatePagedReconciliationResults();
+    if (!ids.length) return;
+    if (draft.statut === 'PARTIEL') {
+      this.popupService.showWarning(`Il reste ${this.fmtAmount(draft.restant)} à compléter sur ${this.fmtAmount(draft.montantOp)} (clé ${key}).`);
+    } else if (draft.statut === 'DEPASSE') {
+      this.popupService.showWarning(`Le total des lignes du relevé (${this.fmtAmount(draft.total)}) dépasse l'opération de ${this.fmtAmount(draft.depassement)} (clé ${key}).`);
+    } else {
+      this.popupService.showSuccess(`Groupe complet : ${this.fmtAmount(draft.montantOp)} rapprochés (clé ${key}).`);
+    }
+  }
+
+  dissolveGroup(group: ReconGroup): void {
+    const opId = group.op.id;
+    if (opId == null) return;
+    this.groupLinks.delete(opId);
+    this.saveGroupLinks();
+    this.reconcile(true);
+    this.updatePagedReconciliationResults();
   }
 
   // Helpers sélection multi (vue opérations)
@@ -1227,11 +1416,20 @@ export class BanqueComponent implements OnInit {
     return key.replace(/(debit|credit)\d+$/i, (s) => s.replace(/\d+$/, ''));
   }
 
+  /**
+   * Banque retenue pour une opération : la banque corrigée est prioritaire ; dès qu'elle est renseignée,
+   * la colonne banque n'est plus considérée (clé de réconciliation, filtres, recherche, tri).
+   */
+  getOperationBanque(op: { bo?: string | null; banqueCorrigee?: string | null } | null | undefined): string {
+    const corrigee = (op?.banqueCorrigee || '').trim();
+    return corrigee || (op?.bo || '').trim();
+  }
+
   // Dériver une clé de base pour une opération, sans index en fin
   private buildBaseReconKeyForOperation(op: OperationBancaireDisplay): string {
     const date = this.normalizeDateToYmd(op.dateOperation);
     const montantAbs = Math.abs(op.montant || 0);
-    const banque = ((op.bo || '').trim() || '').toUpperCase().replace(/[\s-]/g, '');
+    const banque = this.getOperationBanque(op).toUpperCase().replace(/[\s-]/g, '');
     const sens = this.determineOperationSens(op as OperationBancaireDisplay); // 'debit' | 'credit'
     const dateNoDash = (date || '').replace(/-/g, '');
     const montantDigits = String(montantAbs).replace(/\D/g, '');
@@ -1668,6 +1866,9 @@ export class BanqueComponent implements OnInit {
     try {
       const matchedOpIds = new Set((this.matchedOperations || []).map(op => op.id));
       const matchedReleveIds = new Set((this.matchedReleves || []).map(r => r.id));
+      // Groupes complets (opération ↔ plusieurs relevés) : rapprochés, donc hors suspens
+      this.groupedCompleteOpIds.forEach(id => matchedOpIds.add(id));
+      this.groupedCompleteReleveIds.forEach(id => matchedReleveIds.add(id));
       // Suspens BO : opérations hors correspondance
       const koOps = (this.operations || []).filter(op => !matchedOpIds.has(op.id)).length;
       // Suspens relevé : lignes du batch courant hors correspondance
@@ -2209,11 +2410,96 @@ export class BanqueComponent implements OnInit {
         const fop = this.filteredOperations.find(o => o.id === operation.id);
         if (fop) fop.commentaire = valeur;
         this.cancelEditComment();
+        // Reporter le commentaire sur une ligne de relevé de la même banque
+        this.openCommentReportPopup(operation, valeur);
       },
       error: (err) => {
         console.error('Erreur lors de la mise à jour du commentaire', err);
         this.popupService.showError('❌ Échec de la sauvegarde du commentaire');
         this.cancelEditComment();
+      }
+    });
+  }
+
+  // ----- Report du commentaire d'une opération sur une ligne de relevé de la même banque -----
+  showCommentReportPopup = false;
+  commentReportOp: OperationBancaireDisplay | null = null;
+  commentReportText = '';
+  commentReportSearch = '';
+  commentReportSelectedId: number | null = null;
+  commentReportSaving = false;
+  private commentReportCandidates: ReleveBancaireRow[] = [];
+  private static readonly COMMENT_REPORT_MAX_ROWS = 200;
+
+  private banquesCorrespondent(a: string | null | undefined, b: string | null | undefined): boolean {
+    const x = this.normalizeReconText(a);
+    const y = this.normalizeReconText(b);
+    return !!x && !!y && (x === y || x.includes(y) || y.includes(x));
+  }
+
+  openCommentReportPopup(operation: OperationBancaireDisplay, commentaire: string): void {
+    const banque = this.getOperationBanque(operation);
+    if (!commentaire.trim() || !banque) return;
+    const opMontant = Math.abs(operation.montant || 0);
+    // Relevé filtré sur la banque de l'opération (banque corrigée prioritaire) ; montant identique en tête
+    this.commentReportCandidates = (this.releveAllRows || [])
+      .filter(r => r.id != null && this.banquesCorrespondent(r.banque, banque))
+      .sort((a, b) => {
+        const sa = Math.abs(this.getReleveMontantAbs(a) - opMontant) < 0.01 ? 0 : 1;
+        const sb = Math.abs(this.getReleveMontantAbs(b) - opMontant) < 0.01 ? 0 : 1;
+        return sa - sb;
+      });
+    this.commentReportOp = operation;
+    this.commentReportText = commentaire;
+    this.commentReportSearch = '';
+    this.commentReportSelectedId = null;
+    this.showCommentReportPopup = true;
+  }
+
+  closeCommentReportPopup(): void {
+    this.showCommentReportPopup = false;
+    this.commentReportOp = null;
+    this.commentReportCandidates = [];
+    this.commentReportSelectedId = null;
+  }
+
+  get commentReportBanque(): string {
+    return this.getOperationBanque(this.commentReportOp);
+  }
+
+  get commentReportTotalCandidates(): number {
+    return this.commentReportCandidates.length;
+  }
+
+  get filteredCommentReportCandidates(): ReleveBancaireRow[] {
+    const q = this.normalizeReconText(this.commentReportSearch);
+    const list = q
+      ? this.commentReportCandidates.filter(r =>
+          this.normalizeReconText(`${r.libelle || ''}${r.numeroCompte || ''}${r.nomCompte || ''}${r.commentaire || ''}`).includes(q))
+      : this.commentReportCandidates;
+    return list.slice(0, BanqueComponent.COMMENT_REPORT_MAX_ROWS);
+  }
+
+  confirmCommentReport(): void {
+    const id = this.commentReportSelectedId;
+    if (id == null) {
+      this.popupService.showWarning('Sélectionnez une ligne de relevé.');
+      return;
+    }
+    const commentaire = this.commentReportText;
+    this.commentReportSaving = true;
+    this.releveService.updateCommentaire(id, commentaire).subscribe({
+      next: () => {
+        [this.releveAllRows, this.releveRows].forEach(list =>
+          (list || []).filter(r => r.id === id).forEach(r => { r.commentaire = commentaire; }));
+        this.commentReportSaving = false;
+        this.closeCommentReportPopup();
+        this.popupService.showSuccess('✅ Commentaire reporté sur la ligne de relevé');
+      },
+      error: (err) => {
+        console.error('Erreur report du commentaire sur le relevé', err);
+        this.commentReportSaving = false;
+        this.popupService.showError('❌ Échec du report du commentaire sur le relevé');
       }
     });
   }
@@ -4420,7 +4706,7 @@ export class BanqueComponent implements OnInit {
     const opsWithKey = this.buildKeysWithIndexes(opsFiltered, (op) => {
       const date = this.normalizeDateToYmd(op.dateOperation);
       const montantAbs = Math.abs(op.montant || 0);
-      const banque = ((op.bo || '').trim() || '').toUpperCase();
+      const banque = this.getOperationBanque(op).toUpperCase();
       const sens = this.determineOperationSens(op as OperationBancaireDisplay);
       return { date, montantAbs, banque, sens };
     });
@@ -4526,7 +4812,7 @@ export class BanqueComponent implements OnInit {
         const op = opEntry.op as OperationBancaireDisplay & { sensIndex: string };
         date = this.normalizeDateToYmd(op.dateOperation);
         montantAbs = Math.abs(op.montant || 0);
-        banque = ((op.bo || '').trim() || '').toUpperCase();
+        banque = this.getOperationBanque(op).toUpperCase();
         sensIndex = op.sensIndex;
       } else if (revEntry) {
         const r = revEntry.row as ReleveBancaireRow & { sensIndex: string };
@@ -4583,8 +4869,8 @@ export class BanqueComponent implements OnInit {
       const aDate = a.left?.dateOperation ? new Date(a.left.dateOperation).getTime() : aRightDate;
       const bDate = b.left?.dateOperation ? new Date(b.left.dateOperation).getTime() : bRightDate;
       if (aDate !== bDate) return aDate - bDate;
-      const aBanque = (a.left?.bo || a.right?.banque || '').toString();
-      const bBanque = (b.left?.bo || b.right?.banque || '').toString();
+      const aBanque = ((a.left ? this.getOperationBanque(a.left) : '') || a.right?.banque || '').toString();
+      const bBanque = ((b.left ? this.getOperationBanque(b.left) : '') || b.right?.banque || '').toString();
       if (aBanque !== bBanque) return aBanque.localeCompare(bBanque);
       const aMont = (a.left?.montant ?? a.right?.montant ?? 0) as number;
       const bMont = (b.left?.montant ?? b.right?.montant ?? 0) as number;
@@ -4593,6 +4879,8 @@ export class BanqueComponent implements OnInit {
     this.reconDiffRows = diffs;
     this.leftOnlyOperations = diffs.filter(d => !!d.left).map(d => d.left!) as OperationBancaireDisplay[];
     this.rightOnlyReleves = diffs.filter(d => !!d.right).map(d => d.right!) as ReleveBancaireRow[];
+    // Lignes groupées : rattachements manuels opération ↔ plusieurs lignes de relevé
+    this.applyReconGroups();
 
     console.log('[RECON][DEBUG] reconcile() results:', {
       totalDiffs: diffs.length,
@@ -4716,7 +5004,7 @@ export class BanqueComponent implements OnInit {
       p.op.typeOperation || '',
       p.op.agence || '',
       p.op.reference || '',
-      p.op.bo || '',
+      this.getOperationBanque(p.op),
       Number(p.op.montant || 0),
       p.matchBy === 'REFERENCE' ? 'Référence' : 'Clé',
       p.ecart || 0,
@@ -4967,7 +5255,7 @@ export class BanqueComponent implements OnInit {
       }
       if (!q) return true;
       const haystack = this.normalizeReconText([
-        p.op.reference, p.op.agence, p.op.typeOperation, p.op.bo,
+        p.op.reference, p.op.agence, p.op.typeOperation, this.getOperationBanque(p.op),
         p.rev.libelle, p.rev.banque, p.rev.numeroCompte, p.rev.nomCompte
       ].join(' '));
       return haystack.includes(q);
@@ -5000,7 +5288,7 @@ export class BanqueComponent implements OnInit {
 
   /** Banque d'une paire : celle de l'opération, à défaut celle du relevé. */
   private reconResultBanqueOf(p: ReconResultPair): string {
-    return ((p.op.bo || p.rev.banque || '') + '').trim();
+    return ((this.getOperationBanque(p.op) || p.rev.banque || '') + '').trim();
   }
 
   /** Pays présents dans les résultats (options du filtre). */
@@ -5130,7 +5418,7 @@ export class BanqueComponent implements OnInit {
       }
       const okType = !f.typeOperation || (op.typeOperation || '') === f.typeOperation;
       const okStatut = !f.statut || (op.statut || '') === f.statut;
-      const okBanque = matchBanque(op.bo);
+      const okBanque = matchBanque(this.getOperationBanque(op));
       const okAmount = matchAmount(Math.abs(op.montant || 0));
       const okSearch = [op.nomBeneficiaire, op.reference, op.compteADebiter, op.agence]
         .some(v => matchText(v || ''));
@@ -5169,7 +5457,7 @@ export class BanqueComponent implements OnInit {
       }
       const okType = !f.typeOperation || (op.typeOperation || '') === f.typeOperation;
       const okStatut = !f.statut || (op.statut || '') === f.statut;
-      const okBanque = matchBanque(op.bo);
+      const okBanque = matchBanque(this.getOperationBanque(op));
       const okAmount = matchAmount(Math.abs(op.montant || 0));
       const okSearch = [op.nomBeneficiaire, op.reference, op.compteADebiter, op.agence]
         .some(v => matchText(v || ''));
@@ -5640,7 +5928,7 @@ export class BanqueComponent implements OnInit {
     const revDate = (r: ReleveBancaireRow) => this.normalizeDateToYmd((r.dateValeur || r.dateComptable) as any) || '';
     this.voirToutOps = opSource
       .filter(x => byStatut(x.statut))
-      .filter(x => !q || this.normalizeReconText([x.op.reference, x.op.agence, x.op.typeOperation, x.op.bo, x.op.pays, x.op.compteADebiter].join(' ')).includes(q))
+      .filter(x => !q || this.normalizeReconText([x.op.reference, x.op.agence, x.op.typeOperation, this.getOperationBanque(x.op), x.op.pays, x.op.compteADebiter].join(' ')).includes(q))
       .sort((a, b) => opDate(b.op).localeCompare(opDate(a.op)));
     this.voirToutReleves = revSource
       .filter(x => byStatut(x.statut))
