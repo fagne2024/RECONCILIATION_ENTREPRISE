@@ -1001,7 +1001,8 @@ export class FileUploadComponent implements OnInit, OnDestroy {
             }
         }
 
-        for (const partnerKey of model.reconciliationKeys?.partnerKeys || []) {
+        // Modèle banque : les clés ne servent pas de colonnes de dédoublonnage par défaut.
+        for (const partnerKey of model.bankModel ? [] : (model.reconciliationKeys?.partnerKeys || [])) {
             const match = this.traitementOutputColumns.find(col =>
                 col === partnerKey
                 || this.normalizeColumnName(col) === this.normalizeColumnName(partnerKey)
@@ -1639,6 +1640,11 @@ export class FileUploadComponent implements OnInit, OnDestroy {
                 columnRules,
                 model
             );
+        }
+
+        // Modèle banque : les montants (colonnes texte) sont convertis en nombres avant le résultat.
+        if (model.bankModel) {
+            exportRows = this.modelPreProcessingService.normalizeBankAmountColumns(exportRows);
         }
 
         let { rows: finalExportRows, columns: finalExportColumns } =

@@ -21,7 +21,7 @@ import {
   PARTNER_REFERENCE_KEY_ALIASES
 } from '../utils/reconciliation-key.util';
 import { getOrangeMoneyAliasHeadersForColumn, dedupeBilingualColumnNames } from '../utils/bilingual-column.util';
-import { parseAmountValue } from '../utils/record-amount.util';
+import { parseAmountValue, tryParseAmount } from '../utils/record-amount.util';
 import {
   normalizeColumnKey,
   renameKeyPreservingOrder,
@@ -890,6 +890,11 @@ export class ModelPreProcessingService {
       return [];
     }
 
+    // Modèle banque : les clés de réconciliation ne sont pas prises en compte.
+    if (model.bankModel) {
+      return [];
+    }
+
     const resolved: string[] = [];
     const addCandidates = (candidates: string[]) => {
       for (const candidate of candidates) {
@@ -993,6 +998,11 @@ export class ModelPreProcessingService {
       dedupColumns = this.resolveReconciliationDedupColumnKeys(model, sampleRow);
     }
 
+    // Modèle banque sans colonnes de dédoublonnage choisies : aucune ligne n'est supprimée.
+    if (!dedupColumns.length && model?.bankModel) {
+      return { uniqueRows: rows, duplicatesRemoved: 0, dedupColumns: [] };
+    }
+
     if (!dedupColumns.length) {
       return this.deduplicateRowsByAllColumns(rows);
     }
@@ -1013,6 +1023,11 @@ export class ModelPreProcessingService {
   } {
     if (!rows.length) {
       return { uniqueRows: [], duplicatesRemoved: 0, dedupColumns: [] };
+    }
+
+    // Modèle banque : pas de dédoublonnage sur la clé de réconciliation.
+    if (model.bankModel) {
+      return { uniqueRows: rows, duplicatesRemoved: 0, dedupColumns: [] };
     }
 
     const sampleRow = rows.find(r => Object.keys(r).length > 0) || rows[0];
@@ -2155,6 +2170,38 @@ export class ModelPreProcessingService {
     });
 
     return { rows: filteredRows, columns: keptColumns };
+  }
+
+  /**
+   * Modèles banque : convertit les colonnes montant (texte « -2,531,000 », « 139 474,44 »…)
+   * en nombres (« -2531000 », « 139474.44 ») avant le résultat. Les valeurs non numériques sont conservées.
+   */
+  normalizeBankAmountColumns(rows: Record<string, string>[]): Record<string, string>[] {
+    if (!rows.length) {
+      return rows;
+    }
+    const amountColumns = Object.keys(rows[0]).filter(col =>
+      /^(montant|debit|credit|solde.*|depottotal|totaldesretraits|totalretraits)$/.test(
+        col.normalize('NFD').replace(/[̀-ͯ]/g, '').toLowerCase().replace(/[^a-z0-9]/g, '')
+      )
+    );
+    if (!amountColumns.length) {
+      return rows;
+    }
+    return rows.map(row => {
+      const next = { ...row };
+      for (const col of amountColumns) {
+        const raw = next[col];
+        if (raw === undefined || raw === null || String(raw).trim() === '') {
+          continue;
+        }
+        const parsed = tryParseAmount(raw, { groupedThousands: true });
+        if (parsed !== null) {
+          next[col] = String(parsed);
+        }
+      }
+      return next;
+    });
   }
 
   /** Projette les lignes vers les colonnes finales du modèle (avec repli sur colonnes sources). */
