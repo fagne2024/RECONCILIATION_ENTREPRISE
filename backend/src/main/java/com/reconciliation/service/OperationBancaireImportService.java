@@ -77,6 +77,7 @@ public class OperationBancaireImportService {
                         // Colonne obligatoire en base : la ligne est rejetée seule, sans bloquer le lot
                         throw new IllegalArgumentException("type d'opération manquant");
                     }
+                    typeOperation = resolveTypeOperation(agence, typeOperation);
                     Double montant = getDouble(row, idx.get("montant"));
                     if (montant == null) {
                         // Colonne obligatoire en base : sans ce contrôle, saveAll échouait pour tout le lot
@@ -234,6 +235,23 @@ public class OperationBancaireImportService {
             }
             return max + 1;
         }
+    }
+
+    static final String AGENCE_CODEGU = "CODEGU";
+    static final String TYPE_COMPENSE = "COMPENSE";
+    static final String TYPE_COMPENSE_FOURNISSEUR = "COMPENSE_FOURNISSEUR";
+
+    /**
+     * Règle de chargement : agence CODEGU avec le type d'opération COMPENSE
+     * => le type devient automatiquement COMPENSE_FOURNISSEUR. Sinon le type est inchangé.
+     */
+    static String resolveTypeOperation(String agence, String typeOperation) {
+        if (agence != null && typeOperation != null
+                && AGENCE_CODEGU.equalsIgnoreCase(agence.trim())
+                && TYPE_COMPENSE.equalsIgnoreCase(typeOperation.trim())) {
+            return TYPE_COMPENSE_FOURNISSEUR;
+        }
+        return typeOperation;
     }
 
     /**
