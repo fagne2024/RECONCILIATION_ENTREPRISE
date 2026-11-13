@@ -398,7 +398,38 @@
                     </table>
                 </div>
 
+                <div class="client-volume-mail" *ngIf="clientVolumeMailOpen && clientVolumeView.length > 0">
+                    <p class="client-volume-mail-hint">
+                        {{ 'FU.ClientVolume.MailHint' | translate: { count: clientVolumeView.length } }}
+                    </p>
+                    <label class="client-volume-field">
+                        <span>{{ 'FU.ClientVolume.MailTo' | translate }}</span>
+                        <input type="text" class="ds-input" [(ngModel)]="clientVolumeMailTo" autocomplete="off"
+                               [placeholder]="'FU.ClientVolume.MailPlaceholder' | translate">
+                    </label>
+                    <label class="client-volume-field">
+                        <span>{{ 'FU.ClientVolume.MailCc' | translate }}</span>
+                        <input type="text" class="ds-input" [(ngModel)]="clientVolumeMailCc" autocomplete="off">
+                    </label>
+                    <p class="client-volume-mail-feedback" *ngIf="clientVolumeMailFeedback"
+                       [ngClass]="'is-' + clientVolumeMailFeedback.type" role="status">
+                        {{ clientVolumeMailFeedback.text }}
+                    </p>
+                    <div class="client-volume-mail-actions">
+                        <button type="button" class="ds-btn ds-btn--primary"
+                                [disabled]="!clientVolumeMailValid || clientVolumeMailSending"
+                                (click)="sendClientVolumeMail()">
+                            <i class="fas fa-paper-plane"></i>
+                            {{ (clientVolumeMailSending ? 'FU.ClientVolume.MailSending' : 'FU.ClientVolume.MailSend') | translate }}
+                        </button>
+                    </div>
+                </div>
+
                 <div class="client-volume-actions">
+                    <button type="button" class="ds-btn ds-btn--secondary" *ngIf="clientVolumeView.length > 0"
+                            [attr.aria-expanded]="clientVolumeMailOpen" (click)="toggleClientVolumeMail()">
+                        <i class="fas fa-envelope"></i> {{ 'FU.ClientVolume.MailAlert' | translate }}
+                    </button>
                     <button type="button" class="ds-btn ds-btn--secondary" (click)="clientVolumeStep = 'columns'">{{ 'FU.ClientVolume.ChangeColumns' | translate }}</button>
                     <button type="button" class="ds-btn ds-btn--secondary" *ngIf="clientVolumeView.length > 0" (click)="exportClientVolumeResult()">
                         <i class="fas fa-download"></i> {{ 'FU.ClientVolume.Export' | translate }}

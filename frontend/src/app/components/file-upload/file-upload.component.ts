@@ -40,6 +40,7 @@ import { ReconciliationTabsService } from '../../services/reconciliation-tabs.se
 import { forkJoin, Subscription, firstValueFrom } from 'rxjs';
 import { take } from 'rxjs/operators';
 import { PopupService } from '../../services/popup.service';
+import { I18nService } from '../../services/i18n/i18n.service';
 import { FileWatcherService } from '../../services/file-watcher.service';
 import { ProgressIndicatorService } from '../../services/progress-indicator.service';
 import { ColumnRulesProcessorService } from '../../services/column-rules-processor.service';
@@ -9842,10 +9843,103 @@ export class FileUploadComponent implements OnInit, OnDestroy {
         URL.revokeObjectURL(url);
     }
 
+    // --- Alerte par e-mail (nombre de transactions anormal sur un numéro) ---
+    clientVolumeMailOpen = false;
+    clientVolumeMailTo = '';
+    clientVolumeMailCc = '';
+    clientVolumeMailSending = false;
+    clientVolumeMailFeedback: { type: 'success' | 'error'; text: string } | null = null;
+    private static readonly CLIENT_VOLUME_MAIL_KEY = 'clientVolumeAlertRecipients';
+    private static readonly MAIL_RECIPIENTS_MAX = 20;
+
+    toggleClientVolumeMail(): void {
+        this.clientVolumeMailOpen = !this.clientVolumeMailOpen;
+        this.clientVolumeMailFeedback = null;
+        if (this.clientVolumeMailOpen && !this.clientVolumeMailTo) {
+            try {
+                const saved = JSON.parse(localStorage.getItem(FileUploadComponent.CLIENT_VOLUME_MAIL_KEY) || 'null');
+                if (saved) {
+                    this.clientVolumeMailTo = String(saved.to || '');
+                    this.clientVolumeMailCc = String(saved.cc || '');
+                }
+            } catch {
+                // stockage indisponible : saisie manuelle
+            }
+        }
+    }
+
+    private parseMailRecipients(raw: string): string[] {
+        return (raw || '').split(/[;,\s]+/).map(s => s.trim()).filter(s => s.length > 0);
+    }
+
+    get clientVolumeMailValid(): boolean {
+        const re = /^[^\s@]+@[^\s@]+\.[^\s@]{2,}$/;
+        const to = this.parseMailRecipients(this.clientVolumeMailTo);
+        const cc = this.parseMailRecipients(this.clientVolumeMailCc);
+        return to.length > 0
+            && to.length + cc.length <= FileUploadComponent.MAIL_RECIPIENTS_MAX
+            && [...to, ...cc].every(e => re.test(e));
+    }
+
+    sendClientVolumeMail(): void {
+        if (!this.clientVolumeResult || this.clientVolumeView.length === 0
+            || !this.clientVolumeMailValid || this.clientVolumeMailSending) {
+            return;
+        }
+        this.clientVolumeMailSending = true;
+        this.clientVolumeMailFeedback = null;
+        this.reconciliationService.sendClientVolumeAlert({
+            to: this.parseMailRecipients(this.clientVolumeMailTo),
+            cc: this.parseMailRecipients(this.clientVolumeMailCc),
+            source: this.clientVolumeTarget,
+            serviceFilter: this.clientVolumeServiceFilter || undefined,
+            phoneColumn: this.clientVolumePhoneColumn,
+            amountColumn: this.clientVolumeAmountColumn,
+            minOccurrences: this.clientVolumeRule.minOccurrences,
+            minVolume: this.clientVolumeRule.minVolume,
+            analyzedRows: this.clientVolumeServiceFilter ? this.clientVolumeServiceRows : this.clientVolumeResult.analyzedRows,
+            distinctPhones: this.clientVolumeServiceFilter ? undefined : this.clientVolumeResult.distinctPhones,
+            // Vue affichée (filtre service et tri appliqués)
+            entries: this.clientVolumeView.map(e => ({
+                phone: e.phone,
+                occurrences: e.occurrences,
+                volume: e.volume,
+                services: e.services
+            }))
+        }).subscribe({
+            next: res => {
+                this.clientVolumeMailSending = false;
+                this.clientVolumeMailFeedback = {
+                    type: 'success',
+                    text: I18nService.t('FU.ClientVolume.MailSent', { count: res.recipients })
+                };
+                try {
+                    localStorage.setItem(FileUploadComponent.CLIENT_VOLUME_MAIL_KEY, JSON.stringify({
+                        to: this.clientVolumeMailTo,
+                        cc: this.clientVolumeMailCc
+                    }));
+                } catch {
+                    // stockage indisponible : sans conséquence
+                }
+                this.cd.markForCheck();
+            },
+            error: err => {
+                this.clientVolumeMailSending = false;
+                this.clientVolumeMailFeedback = {
+                    type: 'error',
+                    text: err?.error?.message || I18nService.t('FU.ClientVolume.MailError')
+                };
+                this.cd.markForCheck();
+            }
+        });
+    }
+
     closeClientVolumeCheck(): void {
         this.clientVolumeStep = null;
         this.clientVolumeResult = null;
         this.clientVolumeView = [];
+        this.clientVolumeMailOpen = false;
+        this.clientVolumeMailFeedback = null;
         // Proposer le fichier suivant éventuellement en attente (ex. partenaire après BO).
         if (this.clientVolumeQueue.length > 0) {
             if (this.clientVolumeContinuePending) {

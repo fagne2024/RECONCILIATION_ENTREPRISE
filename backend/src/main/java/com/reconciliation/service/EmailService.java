@@ -91,6 +91,29 @@ public class EmailService {
     }
 
     /**
+     * Alerte « volume par client » (nombre de transactions anormal sur un numéro).
+     * Lève une exception si l'e-mail n'a pas pu partir (SMTP absent ou en erreur).
+     */
+    public void sendClientVolumeAlertEmail(List<String> to, List<String> cc, String subject, String body) {
+        if (fromEmail == null || fromEmail.trim().isEmpty()) {
+            String recipients = String.join(", ", to) + (cc.isEmpty() ? "" : " | Cc : " + String.join(", ", cc));
+            printToConsole(recipients, subject, body);
+            throw new IllegalStateException(
+                "SMTP non configure (spring.mail.username vide) : alerte volume par client"
+                    + " non envoyee — copie imprimee dans la console du backend.");
+        }
+        SimpleMailMessage message = new SimpleMailMessage();
+        message.setFrom(fromEmail);
+        message.setTo(to.toArray(String[]::new));
+        if (!cc.isEmpty()) {
+            message.setCc(cc.toArray(String[]::new));
+        }
+        message.setSubject(subject);
+        message.setText(body);
+        mailSender.send(message);
+    }
+
+    /**
      * Envoie un email avec le mot de passe généré lors de la création d'un utilisateur
      */
     public void sendPasswordEmail(String to, String username, String password) {

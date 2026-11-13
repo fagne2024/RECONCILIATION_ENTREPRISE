@@ -10,6 +10,21 @@ import { EcartBoSummaryPendingLine } from './ecart-bo-summary.service';
 import { fixGarbledCharacters } from '../utils/encoding-fixer';
 import { countryNameFromCode } from '../utils/country-codes.util';
 
+/** Données de l'alerte « volume par client » envoyée par e-mail. */
+export interface ClientVolumeAlertPayload {
+    to: string[];
+    cc: string[];
+    source: 'bo' | 'partner';
+    serviceFilter?: string;
+    phoneColumn?: string;
+    amountColumn?: string;
+    minOccurrences: number;
+    minVolume: number;
+    analyzedRows?: number;
+    distinctPhones?: number;
+    entries: { phone: string; occurrences: number; volume: number; services: string[] }[];
+}
+
 export interface ReconciliationConfig {
     boFile: File;
     partnerFile: File;
@@ -1434,6 +1449,13 @@ export class ReconciliationService implements OnInit, OnDestroy {
         }
         
         return allData;
+    }
+
+    /**
+     * Envoie par e-mail l'alerte « volume par client » (objet et description générés côté serveur).
+     */
+    sendClientVolumeAlert(payload: ClientVolumeAlertPayload): Observable<{ success: boolean; recipients: number }> {
+        return this.http.post<{ success: boolean; recipients: number }>(`${this.apiUrl}/client-volume-alert`, payload);
     }
 
     /**
