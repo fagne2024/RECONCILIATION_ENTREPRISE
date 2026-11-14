@@ -549,6 +549,10 @@
   "BQ": {
     "ReconResultShowKeyHint": "Cliquer pour afficher la clé",
     "crTitre": "Reporter le commentaire sur le relevé",
+    "crTitreOp": "Reporter le commentaire sur une opération",
+    "crAucunOp": "Aucune opération pour cette banque.",
+    "crDateOperation": "Date opération",
+    "crAgence": "Agence",
     "crAucun": "Aucune ligne de relevé pour cette banque.",
     "crCommentaireActuel": "Commentaire actuel",
     "crAffinerRecherche": "Seules les 200 premières lignes sont affichées : affinez la recherche.",

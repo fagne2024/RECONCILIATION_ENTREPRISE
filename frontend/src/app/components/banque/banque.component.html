@@ -344,6 +344,7 @@
           <app-file-upload
             [embedTraitementSection]="true"
             [bankModelsOnly]="true"
+            defaultModelName="OPBANK"
             [suppressEmbedSuccessPopup]="true"
             (embedTraitementProgress)="onReleveAutoTreatmentProgress($event)"
             (embedTraitementResult)="onReleveAutoTreatmentResult($event)">
@@ -377,14 +378,14 @@
             </mat-select>
           </mat-form-field>
           <mat-form-field appearance="fill" class="bq-multi-filter">
-            <mat-select placeholder="{{ 'TBL.bank' | translate }}" [(ngModel)]="releveFilterBanques" multiple (selectionChange)="applyReleveFilters()">
+            <mat-select placeholder="{{ 'TBL.bank' | translate }}" [(ngModel)]="releveFilterBanques" multiple (selectionChange)="onReleveFilterScopeChange()">
               <mat-option>
                 <ngx-mat-select-search [(ngModel)]="releveBanqueSearch" placeholderLabel="Rechercher une banque..." noEntriesFoundLabel="Aucun résultat"></ngx-mat-select-search>
               </mat-option>
               <mat-option *ngFor="let v of releveBanqueFiltered" [value]="v">{{ v }}</mat-option>
             </mat-select>
           </mat-form-field>
-          <select class="ds-select" [(ngModel)]="releveFilterPays" (change)="applyReleveFilters()" title="{{ 'TBL.country' | translate }}">
+          <select class="ds-select" [(ngModel)]="releveFilterPays" (change)="onReleveFilterScopeChange()" title="{{ 'TBL.country' | translate }}">
             <option [ngValue]="''">{{ 'TBL.country' | translate }}</option>
             <option *ngFor="let p of relevePaysOptions" [ngValue]="p">{{ p }}</option>
           </select>
@@ -487,7 +488,7 @@
                   </div>
                 </ng-container>
                 <ng-template #editCommentReleve>
-                  <input class="ds-input edit-select" type="text" maxlength="1000" autofocus
+                  <input class="ds-input edit-select" type="text" maxlength="1000" autofocus list="bqCommentTags"
                          [(ngModel)]="commentDraft" [ngModelOptions]="{standalone: true}"
                          (keydown.enter)="saveCommentReleve(r)" (keydown.escape)="cancelEditComment()" (blur)="saveCommentReleve(r)">
                 </ng-template>
@@ -1371,6 +1372,7 @@
           <app-file-upload
             [embedTraitementSection]="true"
             [bankModelsOnly]="true"
+            defaultModelName="OPGU1"
             [suppressEmbedSuccessPopup]="true"
             (embedTraitementProgress)="onOpAutoTreatmentProgress($event)"
             (embedTraitementResult)="onOpAutoTreatmentResult($event)">
@@ -1583,7 +1585,7 @@
                   <span (click)="startEditCommentOperation(operation)" style="cursor: pointer;" [title]="operation.commentaire || ''">{{ operation.commentaire || '-' }}</span>
                 </ng-container>
                 <ng-template #editCommentOp>
-                  <input class="ds-input edit-select" type="text" maxlength="1000" autofocus
+                  <input class="ds-input edit-select" type="text" maxlength="1000" autofocus list="bqCommentTags"
                          [(ngModel)]="commentDraft" [ngModelOptions]="{standalone: true}"
                          (keydown.enter)="saveCommentOperation(operation)" (keydown.escape)="cancelEditComment()" (blur)="saveCommentOperation(operation)">
                 </ng-template>
@@ -1827,7 +1829,7 @@
           </div>
           <div class="filter-group">
             <label>{{ 'TBL.country' | translate }}</label>
-            <select class="ds-select" [(ngModel)]="reconResultPaysFilter" (change)="onReconResultFilterChange()">
+            <select class="ds-select" [(ngModel)]="reconResultPaysFilter" (change)="onReconResultPaysChange()">
               <option value="">{{ 'FILT.all' | translate }}</option>
               <option *ngFor="let pays of reconResultPaysOptions" [value]="pays">{{ pays }}</option>
             </select>
@@ -1937,23 +1939,33 @@
     </div>
   </div>
 
-  <!-- Report du commentaire d'une opération sur une ligne de relevé de la même banque -->
-  <div class="modern-popup-overlay" *ngIf="showCommentReportPopup && commentReportOp" (click)="closeCommentReportPopup()">
+  <!-- Tags proposés sur les champs commentaire (la saisie libre reste possible) -->
+  <datalist id="bqCommentTags">
+    <option *ngFor="let tag of commentTags" [value]="tag"></option>
+  </datalist>
+
+  <!-- Report d'un commentaire : opération -> ligne de relevé, ou relevé -> opération (même banque) -->
+  <div class="modern-popup-overlay" *ngIf="showCommentReportPopup && (commentReportOp || commentReportReleve)" (click)="closeCommentReportPopup()">
     <div class="modern-popup detail-popup" (click)="$event.stopPropagation()">
       <div class="popup-header">
-        <h2><i class="fas fa-comment-dots"></i> {{ 'BQ.crTitre' | translate }}</h2>
+        <h2><i class="fas fa-comment-dots"></i> {{ (commentReportMode === 'op' ? 'BQ.crTitre' : 'BQ.crTitreOp') | translate }}</h2>
         <button type="button" class="close-btn" (click)="closeCommentReportPopup()"><i class="fas fa-times"></i></button>
       </div>
       <div class="popup-content">
-        <p>
+        <p *ngIf="commentReportOp">
           {{ 'TBL.bank' | translate }} : <strong>{{ commentReportBanque }}</strong> ·
           {{ 'TBL.reference' | translate }} : {{ commentReportOp.reference || '-' }} ·
           {{ 'TBL.amount' | translate }} : <strong>{{ commentReportOp.montant | number:'1.0-0' }}</strong>
         </p>
+        <p *ngIf="commentReportReleve">
+          {{ 'TBL.bank' | translate }} : <strong>{{ commentReportBanque }}</strong> ·
+          {{ 'TBL.labelNarration' | translate }} : {{ commentReportReleve.libelle || '-' }} ·
+          {{ 'TBL.amount' | translate }} : <strong>{{ getReleveMontantAbs(commentReportReleve) | number:'1.0-0' }}</strong>
+        </p>
         <p><strong>{{ 'TBL.comment' | translate }} :</strong> {{ commentReportText }}</p>
         <input class="ds-input" type="text" [(ngModel)]="commentReportSearch" [ngModelOptions]="{standalone: true}" placeholder="{{ 'BQ.Recherche' | translate }}">
-        <div class="empty-row" *ngIf="!commentReportTotalCandidates">{{ 'BQ.crAucun' | translate }}</div>
-        <table class="ds-table operations-table" *ngIf="commentReportTotalCandidates">
+        <div class="empty-row" *ngIf="!commentReportTotalCandidates">{{ (commentReportMode === 'op' ? 'BQ.crAucun' : 'BQ.crAucunOp') | translate }}</div>
+        <table class="ds-table operations-table" *ngIf="commentReportTotalCandidates && commentReportMode === 'op'">
           <thead>
             <tr>
               <th style="width:34px;"></th>
@@ -1975,7 +1987,29 @@
             </tr>
           </tbody>
         </table>
-        <p class="muted" *ngIf="commentReportTotalCandidates > filteredCommentReportCandidates.length">{{ 'BQ.crAffinerRecherche' | translate }}</p>
+        <table class="ds-table operations-table" *ngIf="commentReportTotalCandidates && commentReportMode === 'releve'">
+          <thead>
+            <tr>
+              <th style="width:34px;"></th>
+              <th>{{ 'BQ.crDateOperation' | translate }}</th>
+              <th>{{ 'TBL.reference' | translate }}</th>
+              <th>{{ 'BQ.crAgence' | translate }}</th>
+              <th class="right">{{ 'TBL.amount' | translate }}</th>
+              <th>{{ 'BQ.crCommentaireActuel' | translate }}</th>
+            </tr>
+          </thead>
+          <tbody>
+            <tr *ngFor="let o of filteredCommentReportOpCandidates; trackBy: trackById" [class.selected]="commentReportSelectedId === o.id">
+              <td><input type="radio" name="commentReportRow" [checked]="commentReportSelectedId === o.id" (change)="commentReportSelectedId = o.id ?? null"></td>
+              <td>{{ o.dateOperation ? (o.dateOperation | date:'dd/MM/yyyy') : '-' }}</td>
+              <td class="libelle-cell" [title]="o.reference || ''">{{ o.reference || '-' }}</td>
+              <td>{{ o.agence || '-' }}</td>
+              <td class="right">{{ o.montant | number:'1.0-0' }}</td>
+              <td>{{ o.commentaire || '-' }}</td>
+            </tr>
+          </tbody>
+        </table>
+        <p class="muted" *ngIf="commentReportTotalCandidates > commentReportShownCount">{{ 'BQ.crAffinerRecherche' | translate }}</p>
       </div>
       <div class="popup-footer">
         <button type="button" class="ds-btn ds-btn--primary btn-primary" (click)="confirmCommentReport()" [disabled]="commentReportSelectedId === null || commentReportSaving">
@@ -2347,7 +2381,7 @@
             </div>
             <div class="form-group">
               <label><i class="fas fa-comment"></i>{{ 'BQ.Commentaire' | translate }}</label>
-              <input class="ds-input" type="text" [(ngModel)]="editForm.commentaire" name="commentaire" maxlength="1000" placeholder="{{ 'BQ.Commentaire' | translate }}">
+              <input class="ds-input" type="text" [(ngModel)]="editForm.commentaire" name="commentaire" maxlength="1000" list="bqCommentTags" placeholder="{{ 'BQ.Commentaire' | translate }}">
             </div>
           </div>
 

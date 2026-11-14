@@ -358,6 +358,23 @@ export class EtatReconciliationBancaireComponent implements OnInit {
 
     // ---------------------------------------------------------------- Filtres
 
+    /** Filtre cloisonné : seules les banques du pays choisi sont proposées. */
+    get banquesDuPays(): string[] {
+        if (!this.country) {
+            return this.banques;
+        }
+        return Array.from(new Set(
+            this.allRows.filter(r => r.country === this.country).map(r => r.banque).filter(Boolean)
+        )).sort();
+    }
+
+    onCountryChange(): void {
+        if (this.banque && !this.banquesDuPays.includes(this.banque)) {
+            this.banque = '';
+        }
+        this.onFilterChange();
+    }
+
     onFilterChange(): void {
         this.countryTab = 'ALL';
         this.recompute();

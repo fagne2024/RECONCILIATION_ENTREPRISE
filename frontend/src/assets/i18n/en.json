@@ -549,6 +549,10 @@
   "BQ": {
     "ReconResultShowKeyHint": "Click to show the key",
     "crTitre": "Copy the comment to the statement",
+    "crTitreOp": "Copy the comment to an operation",
+    "crAucunOp": "No operation for this bank.",
+    "crDateOperation": "Operation date",
+    "crAgence": "Agency",
     "crAucun": "No statement line for this bank.",
     "crCommentaireActuel": "Current comment",
     "crAffinerRecherche": "Only the first 200 lines are shown: refine the search.",

@@ -84,7 +84,10 @@
   }
 
   .ebq-modal {
-    width: min(820px, 100%);
+    width: min(1280px, 96vw);
+    max-height: 92vh;
+    display: flex;
+    flex-direction: column;
 
     .ebq-modal-pill {
       margin-left: 8px;
@@ -92,7 +95,9 @@
     }
 
     .ebq-lines {
-      max-height: 50vh;
+      max-height: none;
+      flex: 1 1 auto;
+      min-height: 0;
       overflow: auto;
       margin-bottom: 14px;
       border: 1px solid var(--border);

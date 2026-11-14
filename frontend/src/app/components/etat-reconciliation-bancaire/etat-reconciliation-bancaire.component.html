@@ -75,7 +75,7 @@
         <div class="filters ds-filter-bar">
             <div class="field ds-field">
                 <label for="ebq-country">{{ 'LBL.countryLabel' | translate }}</label>
-                <select id="ebq-country" class="ds-select" [(ngModel)]="country" (change)="onFilterChange()">
+                <select id="ebq-country" class="ds-select" [(ngModel)]="country" (change)="onCountryChange()">
                     <option value="">{{ 'FILT.all' | translate }}</option>
                     <option *ngFor="let c of countries" [ngValue]="c">{{ c }}</option>
                 </select>
@@ -84,7 +84,7 @@
                 <label for="ebq-bank">{{ 'EBQ.col.bank' | translate }}</label>
                 <select id="ebq-bank" class="ds-select" [(ngModel)]="banque" (change)="onFilterChange()">
                     <option value="">{{ 'FILT.all' | translate }}</option>
-                    <option *ngFor="let b of banques" [ngValue]="b">{{ b }}</option>
+                    <option *ngFor="let b of banquesDuPays" [ngValue]="b">{{ b }}</option>
                 </select>
             </div>
             <div class="field ds-field">

@@ -94,6 +94,8 @@ export class FileUploadComponent implements OnInit, OnDestroy {
     @Input() embedTraitementSection = false;
     /** N'affiche que les modèles tagués « banque » (page /banque). */
     @Input() bankModelsOnly = false;
+    /** Nom du modèle présélectionné à l'ouverture du panneau (l'utilisateur peut en changer). */
+    @Input() defaultModelName = '';
     /**
      * En mode embarqué, supprime le popup de succès interne : le composant parent gère
      * l'UX (ex. choix de la destination des données traitées).
@@ -477,6 +479,7 @@ export class FileUploadComponent implements OnInit, OnDestroy {
         this.traitementEnvColumnValue = '';
         this.showEmbedModelsList = false;
         this.resetFileInput(this.traitementFileInputRef);
+        this.applyDefaultTraitementModel();
         this.cd.detectChanges();
     }
 
@@ -767,6 +770,26 @@ export class FileUploadComponent implements OnInit, OnDestroy {
         return dateInput.replace(/-/g, '');
     }
 
+    /** Présélectionne le modèle par défaut (defaultModelName) tant qu'aucun modèle n'est choisi. */
+    private applyDefaultTraitementModel(): void {
+        const norm = (v: string | null | undefined) => (v || '').toUpperCase().replace(/[^A-Z0-9]/g, '');
+        const cible = norm(this.defaultModelName);
+        if (!cible || this.selectedTraitementModelId || this.selectedTraitementModelIds.size) {
+            return;
+        }
+        const model = this.traitementModels.find(m => norm(m.name) === cible)
+            || this.traitementModels.find(m => norm(m.name).includes(cible));
+        if (!model || !this.getTraitementModelId(model)) {
+            return;
+        }
+        if (this.isTraitementMultiModelMode) {
+            this.toggleTraitementModelSelection(model, true);
+        } else {
+            this.selectedTraitementModelId = this.getTraitementModelId(model);
+            this.onTraitementModelSelectionChange();
+        }
+    }
+
     async loadTraitementModels(): Promise<void> {
         this.traitementModelsLoading = true;
         try {
@@ -783,6 +806,7 @@ export class FileUploadComponent implements OnInit, OnDestroy {
             } else if (this.traitementModels.length === 1 && !this.isTraitementMultiModelMode) {
                 this.selectedTraitementModelId = this.getTraitementModelId(this.traitementModels[0]);
             }
+            this.applyDefaultTraitementModel();
         } catch (error) {
             await this.popupService.showError(
                 'Impossible de charger les modèles de traitement.',

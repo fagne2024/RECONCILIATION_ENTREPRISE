@@ -96,6 +96,19 @@ export class OperationBancaireService {
         return this.http.get<OperationBancaireAuditStat[]>(`${this.apiUrl}/audit-summary`, { params: { start, end } });
     }
 
+    /** Notification e-mail de la réconciliation bancaire (OK, validée ou clôturée). */
+    sendReconciliationEmail(payload: {
+        evenement: 'OK' | 'VALIDE' | 'CLOTURE';
+        pays: string;
+        banque: string;
+        nombre: number;
+        details: string;
+        destinataires: string[];
+        copie: string[];
+    }): Observable<{ envoyes: number; total: number }> {
+        return this.http.post<{ envoyes: number; total: number }>(`${this.apiUrl}/send-reconciliation-email`, payload);
+    }
+
     // Clôture en lot : traitement « Niveau Group » → « Terminé » (statut inchangé)
     bulkCloturer(ids: number[]): Observable<number> {
         return this.http.put<number>(`${this.apiUrl}/bulk-cloture`, { ids });

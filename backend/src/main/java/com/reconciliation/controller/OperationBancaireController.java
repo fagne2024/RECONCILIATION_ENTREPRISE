@@ -64,6 +64,100 @@ public class OperationBancaireController {
         return ResponseEntity.ok(operationBancaireService.bulkCloturer(request.getIds()));
     }
 
+    @Autowired
+    private com.reconciliation.service.EmailService emailService;
+
+    private static final java.util.regex.Pattern EMAIL_PATTERN =
+            java.util.regex.Pattern.compile("^[^@\\s,;]+@[^@\\s,;]+\\.[^@\\s,;]+$");
+    private static final int EMAIL_MAX_DESTINATAIRES = 30;
+    private static final int EMAIL_MAX_DETAILS = 4000;
+
+    /** Notification e-mail de la réconciliation bancaire : passage à OK, validation ou clôture. */
+    public static class ReconciliationBancaireEmailRequest {
+        public String evenement;
+        public String pays;
+        public String banque;
+        public Integer nombre;
+        public String details;
+        public List<String> destinataires;
+        public List<String> copie;
+    }
+
+    @PostMapping("/send-reconciliation-email")
+    public ResponseEntity<java.util.Map<String, Object>> sendReconciliationEmail(
+            @RequestBody ReconciliationBancaireEmailRequest request) {
+        String username = RequestContextUtil.getUsernameFromRequest();
+        if (username == null || username.isBlank()) {
+            return ResponseEntity.status(HttpStatus.UNAUTHORIZED).body(java.util.Map.of("message", "Non authentifié"));
+        }
+        String evenement = request.evenement == null ? "" : request.evenement.trim().toUpperCase();
+        String libelle;
+        switch (evenement) {
+            case "OK": libelle = "Réconciliation bancaire OK"; break;
+            case "VALIDE": libelle = "Réconciliation bancaire validée"; break;
+            case "CLOTURE": libelle = "Réconciliation bancaire clôturée"; break;
+            default:
+                return ResponseEntity.badRequest().body(java.util.Map.of("message", "Événement inconnu"));
+        }
+        java.util.Set<String> recipients = new java.util.LinkedHashSet<>();
+        for (List<String> list : java.util.Arrays.asList(request.destinataires, request.copie)) {
+            if (list == null) continue;
+            for (String mail : list) {
+                if (mail != null && EMAIL_PATTERN.matcher(mail.trim()).matches()) {
+                    recipients.add(mail.trim());
+                }
+            }
+        }
+        if (recipients.isEmpty()) {
+            return ResponseEntity.badRequest().body(java.util.Map.of("message", "Aucun destinataire valide"));
+        }
+        if (recipients.size() > EMAIL_MAX_DESTINATAIRES) {
+            return ResponseEntity.badRequest().body(java.util.Map.of("message", "Trop de destinataires"));
+        }
+        String pays = texteCourt(request.pays);
+        String banque = texteCourt(request.banque);
+        String details = request.details == null ? "" : request.details.trim();
+        if (details.length() > EMAIL_MAX_DETAILS) {
+            details = details.substring(0, EMAIL_MAX_DETAILS);
+        }
+        String subject = libelle + (pays.isEmpty() ? "" : " - " + pays) + (banque.isEmpty() ? "" : " - " + banque);
+        StringBuilder body = new StringBuilder("Bonjour,\n\n")
+                .append(libelle).append(".\n\nDétails :\n-------------------\n")
+                .append("Pays : ").append(pays.isEmpty() ? "-" : pays).append('\n')
+                .append("Banque : ").append(banque.isEmpty() ? "-" : banque).append('\n');
+        if (request.nombre != null) {
+            body.append("Nombre de lignes : ").append(request.nombre).append('\n');
+        }
+        if (!details.isEmpty()) {
+            body.append('\n').append(details).append('\n');
+        }
+        body.append("\nDate : ").append(LocalDateTime.now().toString().replace('T', ' ').substring(0, 19))
+                .append("\nPar : ").append(username)
+                .append("\n\nCordialement,\nL'équipe de réconciliation");
+
+        int envoyes = 0;
+        for (String recipient : recipients) {
+            try {
+                emailService.sendControleInterneCommentEmail(recipient, subject, body.toString());
+                envoyes++;
+            } catch (Exception ignored) {
+                // L'échec est journalisé par EmailService ; on poursuit avec les autres destinataires
+            }
+        }
+        if (envoyes == 0) {
+            return ResponseEntity.status(HttpStatus.BAD_GATEWAY)
+                    .body(java.util.Map.of("message", "Aucun e-mail n'a pu être envoyé", "envoyes", 0));
+        }
+        return ResponseEntity.ok(java.util.Map.of("envoyes", envoyes, "total", recipients.size()));
+    }
+
+    /** Valeur d'en-tête : une seule ligne, longueur bornée (évite l'injection dans l'objet du mail). */
+    private static String texteCourt(String value) {
+        if (value == null) return "";
+        String v = value.replaceAll("[\\r\\n\\t]+", " ").trim();
+        return v.length() > 120 ? v.substring(0, 120) : v;
+    }
+
     // Historique des actions d'une opération (utilisateur, date, détail)
     @GetMapping("/{id}/audit-history")
     public ResponseEntity<List<com.reconciliation.dto.OperationBancaireAuditDto>> getAuditHistory(@PathVariable Long id) {

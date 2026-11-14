@@ -12,6 +12,7 @@ import { CompteService } from '../../services/compte.service';
 import { OperationService } from '../../services/operation.service';
 import { OperationServiceApi } from '../../services/operation.service';
 import { ReleveBancaireService } from '../../services/releve-bancaire.service';
+import { NiveauxValidationConfigService } from '../../services/niveaux-validation-config.service';
 import { ReleveBancaireRow, ReleveImportDefaults, ReleveMissingField, ReleveUploadResponse } from '../../models/releve-bancaire.model';
 import { SuiviCompenseOp } from '../../models/suivi-compense-op.model';
 import { SuiviCompenseOpService } from '../../services/suivi-compense-op.service';
@@ -398,8 +399,40 @@ export class BanqueComponent implements OnInit {
     return options.filter(o => o.toLowerCase().includes(q) || (selected || []).includes(o));
   }
   get opAgenceFiltered(): string[] { return this.searchOptions(this.opAgenceOptions, this.opAgenceSearch, this.opFilterAgences); }
-  get releveNumeroCompteFiltered(): string[] { return this.searchOptions(this.releveNumeroCompteOptions, this.releveCompteSearch, this.releveFilterNumeroComptes); }
-  get releveBanqueFiltered(): string[] { return this.searchOptions(this.releveBanqueOptions, this.releveBanqueSearch, this.releveFilterBanques); }
+  get releveNumeroCompteFiltered(): string[] { return this.searchOptions(this.releveCompteFilterOptions, this.releveCompteSearch, this.releveFilterNumeroComptes); }
+  get releveBanqueFiltered(): string[] { return this.searchOptions(this.releveBanqueFilterOptions, this.releveBanqueSearch, this.releveFilterBanques); }
+
+  // ---- Filtres cloisonnés : pays -> banques -> comptes ----
+  private valeursDistinctes(values: unknown[]): string[] {
+    const set = new Set<string>();
+    values.forEach(v => { const s = (v ?? '').toString().trim(); if (s) set.add(s); });
+    return Array.from(set).sort((a, b) => a.localeCompare(b, 'fr'));
+  }
+  /** Lignes de relevé du pays filtré (toutes si aucun pays choisi). */
+  private get relevesDuPaysFiltre(): ReleveBancaireRow[] {
+    const src = this.releveSource;
+    return this.releveFilterPays ? src.filter(r => countriesMatch(r.pays, this.releveFilterPays)) : src;
+  }
+  /** Banques proposées au filtre : uniquement celles du pays choisi. */
+  get releveBanqueFilterOptions(): string[] {
+    if (!this.releveFilterPays) return this.releveBanqueOptions;
+    return this.valeursDistinctes(this.relevesDuPaysFiltre.map(r => r.banque));
+  }
+  /** Comptes proposés au filtre : uniquement ceux du pays et des banques choisis. */
+  get releveCompteFilterOptions(): string[] {
+    if (!this.releveFilterPays && !this.releveFilterBanques.length) return this.releveNumeroCompteOptions;
+    return this.valeursDistinctes(this.relevesDuPaysFiltre
+      .filter(r => !this.releveFilterBanques.length || this.releveFilterBanques.includes((r.banque ?? '').toString().trim()))
+      .map(r => r.numeroCompte));
+  }
+  /** Retire les banques / comptes cochés qui ne correspondent plus au pays (ou aux banques) choisi(s). */
+  onReleveFilterScopeChange(): void {
+    const banques = this.releveBanqueFilterOptions;
+    this.releveFilterBanques = this.releveFilterBanques.filter(b => banques.includes(b));
+    const comptes = this.releveCompteFilterOptions;
+    this.releveFilterNumeroComptes = this.releveFilterNumeroComptes.filter(c => comptes.includes(c));
+    this.applyReleveFilters();
+  }
   get opCompteOptions(): string[] { return this.distinctValues('op.compte', this.operations, o => o.compteADebiter); }
   get opDemandeurOptions(): string[] { return this.distinctValues('op.demandeur', this.operations, o => o.demandeur); }
   get opValideurOptions(): string[] { return this.distinctValues('op.valideur', this.operations, o => o.valideur); }
@@ -914,6 +947,8 @@ export class BanqueComponent implements OnInit {
     try {
       this.isBulkUpdatingOps = true;
       const ids = Array.from(this.selectedOpIds.values());
+      const statutCible = this.selectedOpsTargetStatut;
+      const opsModifiees = this.opsParIds(ids);
       const updated = await this.operationBancaireService.bulkUpdateStatut(ids, this.selectedOpsTargetStatut).toPromise();
       const total = ids.length;
       const failed = Math.max(0, total - (updated || 0));
@@ -927,11 +962,82 @@ export class BanqueComponent implements OnInit {
       // reload
       this.loadOperations();
       this.updatePagedReconciliationResults();
+      if ((updated || 0) > 0 && /valid/i.test(statutCible)) await this.proposerEmailReconciliation('VALIDE', opsModifiees);
     } catch (e) {
       this.popupService.showError('❌ Erreur lors de la mise à jour en masse des statuts');
     } finally {
       this.isBulkUpdatingOps = false;
     }
+  }
+
+  // ----- Notification e-mail au responsable : réconciliation OK, validée ou clôturée -----
+  private niveauxConfigCharges = false;
+
+  /** Destinataires configurés (Niveaux de validation) pour le pays ; repli sur la configuration générale. */
+  private async destinatairesReconEmail(pays: string): Promise<string[]> {
+    if (!this.niveauxConfigCharges) {
+      try { await this.niveauxConfigService.loadFromApi().toPromise(); } catch { /* configuration locale */ }
+      this.niveauxConfigCharges = true;
+    }
+    const config = this.niveauxConfigService.getConfigForPaysSync(pays || 'GNL');
+    const mails: string[] = [...(config.destinatairesEmail || []), ...(config.copieEmail || [])];
+    (config.niveauxTraitement || []).filter(n => n.actif !== false).forEach(n => {
+      mails.push(...(n.destinatairesEmail || []), ...(n.copieEmail || []));
+    });
+    const vus = new Set<string>();
+    return mails.map(m => (m || '').trim()).filter(m => {
+      const k = m.toLowerCase();
+      if (!m.includes('@') || vus.has(k)) return false;
+      vus.add(k);
+      return true;
+    });
+  }
+
+  /** Propose l'envoi d'un e-mail après un passage à OK, une validation ou une clôture. */
+  private async proposerEmailReconciliation(evenement: 'OK' | 'VALIDE' | 'CLOTURE', ops: Array<Partial<OperationBancaireDisplay>>, nombre?: number): Promise<void> {
+    const lignes = (ops || []).filter(o => !!o);
+    const total = nombre ?? lignes.length;
+    if (!total) return;
+    const libelle = evenement === 'OK' ? 'Réconciliation OK' : evenement === 'VALIDE' ? 'Réconciliation validée' : 'Réconciliation clôturée';
+    const paysListe = this.valeursDistinctes(lignes.map(o => { const p = this.getPaysDisplay(o as any); return p === '-' ? '' : p; }));
+    const banques = this.valeursDistinctes(lignes.map(o => this.getOperationBanque(o)));
+    const pays = paysListe.join(', ') || this.reconPays || '';
+    const montant = lignes.reduce((s, o) => s + Math.abs(Number(o.montant) || 0), 0);
+    let defaut: string[] = [];
+    try { defaut = await this.destinatairesReconEmail(paysListe[0] || this.reconPays || ''); } catch { defaut = []; }
+
+    const saisie = await this.popupService.showTextInput(
+      `${libelle} : ${total} ligne(s)${pays ? ' · ' + pays : ''}${banques.length ? ' · ' + banques.join(', ') : ''}.\n\n` +
+      `Envoyer un e-mail au responsable ? Indiquez les adresses séparées par « ; » (Annuler pour ne rien envoyer).`,
+      'E-mail au responsable',
+      defaut.join('; '),
+      'responsable@exemple.com; ...'
+    );
+    if (saisie === null) return;
+    const destinataires = Array.from(new Set(saisie.split(/[;,\s]+/).map(m => m.trim()).filter(m => /^[^@\s]+@[^@\s]+\.[^@\s]+$/.test(m))));
+    if (!destinataires.length) {
+      this.popupService.showWarning('Aucune adresse e-mail valide : aucun e-mail envoyé.');
+      return;
+    }
+    const details = [
+      `Montant total : ${Math.round(montant).toLocaleString('fr-FR')}`,
+      ...lignes.slice(0, 50).map(o => `- ${this.getOperationBanque(o) || '-'} | ${o.reference || '-'} | ${Math.round(Math.abs(Number(o.montant) || 0)).toLocaleString('fr-FR')}`),
+      ...(lignes.length > 50 ? [`… et ${lignes.length - 50} autre(s) ligne(s)`] : [])
+    ].join('\n');
+    try {
+      const res = await this.operationBancaireService.sendReconciliationEmail({
+        evenement, pays, banque: banques.join(', '), nombre: total, details, destinataires, copie: []
+      }).toPromise();
+      this.popupService.showSuccess(`E-mail envoyé à ${res?.envoyes ?? destinataires.length} destinataire(s).`, 'E-mail au responsable');
+    } catch (e) {
+      console.error('Erreur envoi e-mail réconciliation bancaire', e);
+      this.popupService.showError("L'e-mail n'a pas pu être envoyé.", 'E-mail au responsable');
+    }
+  }
+
+  private opsParIds(ids: number[]): OperationBancaireDisplay[] {
+    const set = new Set(ids);
+    return (this.operations || []).filter(o => o.id != null && set.has(o.id as number) && o.source !== 'generale');
   }
 
   /** Clôture les lignes sélectionnées : traitement « Niveau Group » → « Terminé », statut inchangé. */
@@ -944,6 +1050,8 @@ export class BanqueComponent implements OnInit {
     );
     if (!ok) return;
     const ids = Array.from(sel.values());
+    // Seules les lignes au niveau groupe sont réellement clôturées
+    const opsCloturees = this.opsParIds(ids).filter(o => o.traitement === 'Niveau Group');
     try {
       if (source === 'ops') this.isBulkUpdatingOps = true; else this.isBulkUpdatingMain = true;
       const done = (await this.operationBancaireService.bulkCloturer(ids).toPromise()) || 0;
@@ -957,6 +1065,7 @@ export class BanqueComponent implements OnInit {
       else { this.selectAllMainOnPage = false; this.isSelectionModeMain = false; }
       this.loadOperations();
       if (source === 'ops') this.updatePagedReconciliationResults();
+      if (done > 0) await this.proposerEmailReconciliation('CLOTURE', opsCloturees, done);
     } catch (e) {
       this.popupService.showError('Erreur lors de la clôture', 'Erreur');
     } finally {
@@ -1029,6 +1138,8 @@ export class BanqueComponent implements OnInit {
     try {
       this.isBulkUpdatingMain = true;
       const ids = Array.from(this.selectedMainOpIds.values());
+      const statutCible = this.selectedMainTargetStatut;
+      const opsModifiees = this.opsParIds(ids);
       const updated = await this.operationBancaireService.bulkUpdateStatut(ids, this.selectedMainTargetStatut).toPromise();
       const total = ids.length;
       const failed = Math.max(0, total - (updated || 0));
@@ -1040,6 +1151,7 @@ export class BanqueComponent implements OnInit {
       this.selectedMainTargetStatut = '';
       this.isSelectionModeMain = false;
       this.loadOperations();
+      if ((updated || 0) > 0 && /valid/i.test(statutCible)) await this.proposerEmailReconciliation('VALIDE', opsModifiees);
     } catch (e) {
       this.popupService.showError('Erreur lors de la mise à jour en masse des statuts', 'Erreur');
     } finally {
@@ -1334,6 +1446,7 @@ export class BanqueComponent implements OnInit {
         try { this.operationApi.saveReconStatus(key, 'OK').subscribe(); } catch {}
         this.updateEntityStatusesForKey(key, 'OK');
         this.updatePagedReconciliationResults();
+        this.proposerEmailReconciliation('OK', this.opsParCles([key]), 1);
         // Persister reconStatus sur opération et relevé si connus
         // Persistance côté base au niveau des résultats seulement (clé mark-ok déjà enregistrée)
       },
@@ -1671,6 +1784,11 @@ export class BanqueComponent implements OnInit {
   }
 
   // Actions bulk: marquer OK définitif et annuler
+  private opsParCles(keys: string[]): OperationBancaireDisplay[] {
+    const map: Record<string, OperationBancaireDisplay> = (this as any).keyToOp || {};
+    return keys.map(k => map[k]).filter(o => !!o);
+  }
+
   bulkMarkOkDefinitif() {
     const keys = Array.from(this.selectedReconKeys);
     if (!keys.length) { this.popupService.showWarning('Sélectionnez au moins une ligne.'); return; }
@@ -1687,6 +1805,7 @@ export class BanqueComponent implements OnInit {
         try { keys.forEach(k => this.updateEntityStatusesForKey(k, 'OK')); } catch {}
         this.updatePagedReconciliationResults();
         this.clearSelection();
+        this.proposerEmailReconciliation('OK', this.opsParCles(keys), keys.length);
       },
       error: () => {
         keys.forEach(k => this.reconOkKeySet.add(k));
@@ -1781,7 +1900,8 @@ export class BanqueComponent implements OnInit {
     private exportOptimizationService: ExportOptimizationService,
     private popupService: PopupService,
     private calculService: ConfigurationCalculService,
-    private appState: AppStateService
+    private appState: AppStateService,
+    private niveauxConfigService: NiveauxValidationConfigService
   ) { }
 
   private normalizeCountryName(input: string): string {
@@ -2572,6 +2692,23 @@ export class BanqueComponent implements OnInit {
   commentReportSelectedId: number | null = null;
   commentReportSaving = false;
   private commentReportCandidates: ReleveBancaireRow[] = [];
+  /** Sens du report : 'op' = opération vers relevé, 'releve' = relevé vers opération. */
+  commentReportMode: 'op' | 'releve' = 'op';
+  commentReportReleve: ReleveBancaireRow | null = null;
+  private commentReportOpCandidates: OperationBancaireDisplay[] = [];
+
+  /** Tags proposés dans la liste déroulante des commentaires (la saisie libre reste possible). */
+  readonly commentTags: string[] = [
+    'OK_FRAIS_BANCAIRES_AUTRES',
+    'OK_REGUL_BANQUE',
+    'OK_REGUL_COMMENT',
+    'OK_REGUL_DATE',
+    'OK_REGUL_GROUPAGE',
+    'OK_REGUL_MONTANT',
+    'SUSPENS_BO',
+    'SUSPENS_BO_MEMO',
+    'SUSPENS_RLV'
+  ];
   private static readonly COMMENT_REPORT_MAX_ROWS = 200;
 
   private banquesCorrespondent(a: string | null | undefined, b: string | null | undefined): boolean {
@@ -2592,7 +2729,33 @@ export class BanqueComponent implements OnInit {
         const sb = Math.abs(this.getReleveMontantAbs(b) - opMontant) < 0.01 ? 0 : 1;
         return sa - sb;
       });
+    this.commentReportMode = 'op';
+    this.commentReportReleve = null;
+    this.commentReportOpCandidates = [];
     this.commentReportOp = operation;
+    this.commentReportText = commentaire;
+    this.commentReportSearch = '';
+    this.commentReportSelectedId = null;
+    this.showCommentReportPopup = true;
+  }
+
+  /** Report inverse : commentaire saisi sur le relevé, à lier à une opération de la même banque. */
+  openCommentReportPopupFromReleve(row: ReleveBancaireRow, commentaire: string): void {
+    const banque = (row.banque || '').trim();
+    if (!commentaire.trim() || !banque) return;
+    const montant = this.getReleveMontantAbs(row);
+    // Seules les opérations bancaires portent un commentaire modifiable ; montant identique en tête
+    this.commentReportOpCandidates = (this.operations || [])
+      .filter(o => o.id != null && o.source !== 'generale' && this.banquesCorrespondent(this.getOperationBanque(o), banque))
+      .sort((a, b) => {
+        const sa = Math.abs(Math.abs(a.montant || 0) - montant) < 0.01 ? 0 : 1;
+        const sb = Math.abs(Math.abs(b.montant || 0) - montant) < 0.01 ? 0 : 1;
+        return sa - sb;
+      });
+    this.commentReportMode = 'releve';
+    this.commentReportOp = null;
+    this.commentReportCandidates = [];
+    this.commentReportReleve = row;
     this.commentReportText = commentaire;
     this.commentReportSearch = '';
     this.commentReportSelectedId = null;
@@ -2602,16 +2765,35 @@ export class BanqueComponent implements OnInit {
   closeCommentReportPopup(): void {
     this.showCommentReportPopup = false;
     this.commentReportOp = null;
+    this.commentReportReleve = null;
     this.commentReportCandidates = [];
+    this.commentReportOpCandidates = [];
     this.commentReportSelectedId = null;
   }
 
   get commentReportBanque(): string {
-    return this.getOperationBanque(this.commentReportOp);
+    return this.commentReportMode === 'releve'
+      ? (this.commentReportReleve?.banque || '').trim()
+      : this.getOperationBanque(this.commentReportOp);
   }
 
   get commentReportTotalCandidates(): number {
-    return this.commentReportCandidates.length;
+    return this.commentReportMode === 'releve' ? this.commentReportOpCandidates.length : this.commentReportCandidates.length;
+  }
+
+  get commentReportShownCount(): number {
+    return this.commentReportMode === 'releve'
+      ? this.filteredCommentReportOpCandidates.length
+      : this.filteredCommentReportCandidates.length;
+  }
+
+  get filteredCommentReportOpCandidates(): OperationBancaireDisplay[] {
+    const q = this.normalizeReconText(this.commentReportSearch);
+    const list = q
+      ? this.commentReportOpCandidates.filter(o =>
+          this.normalizeReconText(`${o.reference || ''}${o.agence || ''}${o.nomBeneficiaire || ''}${o.commentaire || ''}`).includes(q))
+      : this.commentReportOpCandidates;
+    return list.slice(0, BanqueComponent.COMMENT_REPORT_MAX_ROWS);
   }
 
   get filteredCommentReportCandidates(): ReleveBancaireRow[] {
@@ -2631,6 +2813,24 @@ export class BanqueComponent implements OnInit {
     }
     const commentaire = this.commentReportText;
     this.commentReportSaving = true;
+    if (this.commentReportMode === 'releve') {
+      this.operationBancaireService.updateOperationBancaire(id, { commentaire }).subscribe({
+        next: (updated) => {
+          const valeur = updated.commentaire || commentaire;
+          [this.operations, this.filteredOperations, this.pagedOperations].forEach(list =>
+            (list || []).filter(o => o.id === id && o.source !== 'generale').forEach(o => { o.commentaire = valeur; }));
+          this.commentReportSaving = false;
+          this.closeCommentReportPopup();
+          this.popupService.showSuccess("✅ Commentaire reporté sur l'opération");
+        },
+        error: (err) => {
+          console.error("Erreur report du commentaire sur l'opération", err);
+          this.commentReportSaving = false;
+          this.popupService.showError("❌ Échec du report du commentaire sur l'opération");
+        }
+      });
+      return;
+    }
     this.releveService.updateCommentaire(id, commentaire).subscribe({
       next: () => {
         [this.releveAllRows, this.releveRows].forEach(list =>
@@ -2711,6 +2911,8 @@ export class BanqueComponent implements OnInit {
       next: () => {
         row.commentaire = commentaire;
         this.cancelEditComment();
+        // Lier le commentaire à une opération de la même banque
+        this.openCommentReportPopupFromReleve(row, commentaire);
       },
       error: (err) => {
         console.error('Erreur sauvegarde commentaire', err);
@@ -5554,8 +5756,20 @@ export class BanqueComponent implements OnInit {
   /** Banques présentes dans les résultats (options du filtre). */
   get reconResultBanqueOptions(): string[] {
     const set = new Set<string>();
-    this.reconResultPairs.forEach(p => { const v = this.reconResultBanqueOf(p); if (v) set.add(v); });
+    this.reconResultPairs.forEach(p => {
+      // Filtre cloisonné : seules les banques du pays choisi
+      if (this.reconResultPaysFilter && this.getPaysDisplay(p.op) !== this.reconResultPaysFilter) return;
+      const v = this.reconResultBanqueOf(p);
+      if (v) set.add(v);
+    });
     return Array.from(set).sort((a, b) => a.localeCompare(b, 'fr'));
+  }
+
+  onReconResultPaysChange() {
+    if (this.reconResultBanqueFilter && !this.reconResultBanqueOptions.includes(this.reconResultBanqueFilter)) {
+      this.reconResultBanqueFilter = '';
+    }
+    this.onReconResultFilterChange();
   }
 
   clearReconResultFilters() {
