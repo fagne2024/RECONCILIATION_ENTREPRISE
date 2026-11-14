@@ -170,7 +170,8 @@ function proxyApi(req, res) {
 
   upstream.on('timeout', () => upstream.destroy(new Error('Délai du backend dépassé')));
   upstream.on('error', (err) => {
-    console.error('[Proxy Error]', err.code || '', err.message, 'for', req.method, req.url);
+    console.error('[Proxy Error]', err.code || '', err.message, 'for', req.method, req.url,
+      err.code === 'ECONNREFUSED' ? '(backend arrete ou en cours de demarrage)' : '');
     if (!res.headersSent) {
       res.writeHead(502, { 'Content-Type': 'application/json' });
       res.end(JSON.stringify({ error: 'Proxy error', message: err.message, code: err.code }));
@@ -212,10 +213,10 @@ server.listen(PORT, HOST, () => {
       const p = path.join(dir, d.name);
       if (d.isDirectory()) walk(p);
       else if (COMPRESSIBLE.has(path.extname(p).toLowerCase())) {
-        try { loadEntry(p); } catch (e) { console.warn('[frontend] préchauffage', p, e.message); }
+        try { loadEntry(p); } catch (e) { console.warn('[frontend] prechauffage', p, e.message); }
       }
     });
     walk(DIST_DIR);
-    console.log(`[frontend] ${cache.size} fichiers compressés en ${Date.now() - t0} ms`);
+    console.log(`[frontend] ${cache.size} fichiers compresses en ${Date.now() - t0} ms`);
   });
 });
