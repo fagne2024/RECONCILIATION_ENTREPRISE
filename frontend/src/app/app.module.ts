@@ -1,4 +1,4 @@
-import { NgModule, LOCALE_ID, APP_INITIALIZER } from '@angular/core';
+import { NgModule, LOCALE_ID, APP_INITIALIZER, ErrorHandler } from '@angular/core';
 import { BrowserModule } from '@angular/platform-browser';
 import { FormsModule, ReactiveFormsModule } from '@angular/forms';
 import { CommonModule, registerLocaleData } from '@angular/common';
@@ -7,6 +7,7 @@ import localeEn from '@angular/common/locales/en';
 import { HttpClientModule, HTTP_INTERCEPTORS } from '@angular/common/http';
 import { AuthInterceptor } from './interceptors/auth.interceptor';
 import { GzipRequestInterceptor } from './interceptors/gzip-request.interceptor';
+import { ChunkLoadErrorHandler } from './chunk-load-error.handler';
 import { MatButtonModule } from '@angular/material/button';
 import { MatIconModule } from '@angular/material/icon';
 import { MatFormFieldModule } from '@angular/material/form-field';
@@ -197,6 +198,12 @@ registerLocaleData(localeEn, 'en');
             provide: HTTP_INTERCEPTORS,
             useClass: AuthInterceptor,
             multi: true
+        },
+        {
+            // Onglet resté sur une ancienne version après un déploiement : rechargement
+            // automatique au lieu d'un écran bloqué (ChunkLoadError / 404 sur les chunks).
+            provide: ErrorHandler,
+            useClass: ChunkLoadErrorHandler
         },
         {
             // Après AuthInterceptor : compresse en gzip les gros corps JSON envoyés à l'API.

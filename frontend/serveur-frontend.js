@@ -108,7 +108,14 @@ function serveStatic(req, res) {
   if (!stat || stat.isDirectory()) {
     // Route Angular (SPA) : index.html. Un fichier avec extension absent reste un 404.
     if (path.extname(urlPath) && urlPath !== '/') {
-      res.writeHead(404, { 'Content-Type': 'text/plain; charset=utf-8' }); res.end('Not found'); return;
+      const headers = { 'Content-Type': 'text/plain; charset=utf-8', 'Cache-Control': 'no-store' };
+      // Script/style absent = navigateur qui exécute une ANCIENNE version (onglet ouvert avant
+      // un déploiement, ou main.js/vendor.js de l'ancien `ng serve` en cache) : on vide le cache
+      // HTTP du site pour que le rechargement récupère la version courante.
+      if (/\.(m?js|css)$/i.test(urlPath)) {
+        headers['Clear-Site-Data'] = '"cache"';
+      }
+      res.writeHead(404, headers); res.end('Not found'); return;
     }
     filePath = path.join(DIST_DIR, 'index.html');
   }
