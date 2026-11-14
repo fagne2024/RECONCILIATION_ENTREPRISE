@@ -22,6 +22,9 @@ import { countryDisplayLabel, countriesMatch, normalizeCountryFilterOptions } fr
 import { TranslateModule } from '@ngx-translate/core';
 import { DsPaginationComponent } from '../../shared/ui/pagination/ds-pagination.component';
 import { FileUploadComponent } from '../file-upload/file-upload.component';
+import { MatFormFieldModule } from '@angular/material/form-field';
+import { MatSelectModule } from '@angular/material/select';
+import { NgxMatSelectSearchModule } from 'ngx-mat-select-search';
 
 // Interface locale pour les opérations bancaires avec Date
 interface OperationBancaireDisplay extends Omit<OperationBancaire, 'dateOperation'> {
@@ -275,7 +278,8 @@ const SUIVI_COMPENSE_HEADER_ALIASES: Record<string, string> = {
 @Component({
   selector: 'app-banque',
   standalone: true,
-  imports: [TranslateModule, CommonModule, FormsModule, ReactiveFormsModule, DsPaginationComponent, FileUploadComponent],
+  imports: [TranslateModule, CommonModule, FormsModule, ReactiveFormsModule, DsPaginationComponent, FileUploadComponent,
+    MatFormFieldModule, MatSelectModule, NgxMatSelectSearchModule],
   templateUrl: './banque.component.html',
   styleUrls: ['./banque.component.scss']
 })
@@ -358,6 +362,67 @@ export class BanqueComponent implements OnInit {
   }
   /** Statuts proposés comme cible d'un changement de statut (la clôture passe par le bouton « Clôturer »). */
   statutsList: string[] = ['Validée', 'En attente', 'Rejetée', 'En cours'];
+
+  // --- Valeurs réelles des tableaux, proposées dans les formulaires de modification ---
+  private distinctCache = new Map<string, { src: unknown; len: number; values: string[] }>();
+
+  /** Valeurs distinctes (triées) d'un champ, mises en cache tant que la source ne change pas. */
+  private distinctValues<T>(key: string, source: T[] | null | undefined, pick: (x: T) => unknown): string[] {
+    const src = source || [];
+    const hit = this.distinctCache.get(key);
+    if (hit && hit.src === src && hit.len === src.length) return hit.values;
+    const set = new Set<string>();
+    for (const x of src) {
+      const v = (pick(x) ?? '').toString().trim();
+      if (v) set.add(v);
+    }
+    const values = Array.from(set).sort((a, b) => a.localeCompare(b, 'fr'));
+    this.distinctCache.set(key, { src, len: src.length, values });
+    return values;
+  }
+
+  get opAgenceOptions(): string[] { return this.distinctValues('op.agence', this.operations, o => o.agence); }
+
+  // ---- Filtres à sélection multiple avec recherche (comme le module Comptes) ----
+  opFilterAgences: string[] = [];
+  opAgenceSearch = '';
+  releveFilterNumeroComptes: string[] = [];
+  releveCompteSearch = '';
+  releveFilterBanques: string[] = [];
+  releveBanqueSearch = '';
+
+  /** Options contenant le texte recherché ; les valeurs déjà cochées restent toujours visibles. */
+  private searchOptions(options: string[], search: string, selected: string[]): string[] {
+    const q = (search || '').trim().toLowerCase();
+    if (!q) return options;
+    return options.filter(o => o.toLowerCase().includes(q) || (selected || []).includes(o));
+  }
+  get opAgenceFiltered(): string[] { return this.searchOptions(this.opAgenceOptions, this.opAgenceSearch, this.opFilterAgences); }
+  get releveNumeroCompteFiltered(): string[] { return this.searchOptions(this.releveNumeroCompteOptions, this.releveCompteSearch, this.releveFilterNumeroComptes); }
+  get releveBanqueFiltered(): string[] { return this.searchOptions(this.releveBanqueOptions, this.releveBanqueSearch, this.releveFilterBanques); }
+  get opCompteOptions(): string[] { return this.distinctValues('op.compte', this.operations, o => o.compteADebiter); }
+  get opDemandeurOptions(): string[] { return this.distinctValues('op.demandeur', this.operations, o => o.demandeur); }
+  get opValideurOptions(): string[] { return this.distinctValues('op.valideur', this.operations, o => o.valideur); }
+  get opBanqueOptions(): string[] {
+    const fromOps = this.distinctValues('op.banque', this.operations, o => o.bo);
+    return Array.from(new Set([...fromOps, ...(this.banquesList || [])])).sort((a, b) => a.localeCompare(b, 'fr'));
+  }
+  /** Statuts du formulaire : ceux présents dans les opérations, plus les statuts usuels et le statut courant. */
+  get editStatutOptions(): string[] {
+    const list = new Set<string>([...this.statutsList, ...this.operationStatutOptions]);
+    const cur = this.editForm?.statut;
+    if (cur) list.add(cur);
+    return Array.from(list);
+  }
+
+  private get releveSource(): ReleveBancaireRow[] {
+    return (this.releveAllRows && this.releveAllRows.length ? this.releveAllRows : this.releveRows) || [];
+  }
+  get releveNumeroCompteOptions(): string[] { return this.distinctValues('rv.numero', this.releveSource, r => r.numeroCompte); }
+  get releveNomCompteOptions(): string[] { return this.distinctValues('rv.nom', this.releveSource, r => r.nomCompte); }
+  get releveBanqueOptions(): string[] { return this.distinctValues('rv.banque', this.releveSource, r => r.banque); }
+  get relevePaysCodeOptions(): string[] { return this.distinctValues('rv.pays', this.releveSource, r => r.pays); }
+  get releveDeviseOptions(): string[] { return this.distinctValues('rv.devise', this.releveSource, r => r.devise); }
 
   /** Statuts réellement présents dans le tableau des opérations (filtres). */
   get operationStatutOptions(): string[] {
@@ -2819,7 +2884,11 @@ export class BanqueComponent implements OnInit {
 
     const operationsLabel = 'Opérations bancaires';
     const releveLabel = 'Relevé bancaire';
-    const defaultLabel = defaultDestination === 'releve' ? releveLabel : operationsLabel;
+    // Les colonnes d'un relevé (débit, crédit, date de valeur…) priment sur la destination par défaut
+    // de la section : sinon un relevé part à l'import des opérations (« pays manquant ») sans
+    // passer par le pop-up des informations manquantes.
+    const detected = this.detectTreatedDestination(rows);
+    const defaultLabel = (detected || defaultDestination) === 'releve' ? releveLabel : operationsLabel;
     const lineCount = event.lineCount || rows.length;
 
     const choice = await this.popupService.showSelectInput(
@@ -2838,12 +2907,109 @@ export class BanqueComponent implements OnInit {
     await this.importTreatedRows(rows, destination, event.outputName);
   }
 
+  /**
+   * Déduit la destination des lignes traitées à partir de leurs colonnes : relevé bancaire
+   * (débit/crédit, date de valeur, date comptable, libellé) ou opérations bancaires
+   * (type d'opération, agence, bénéficiaire…). Retourne null si les colonnes ne tranchent pas.
+   */
+  private detectTreatedDestination(rows: Record<string, any>[]): 'operations' | 'releve' | null {
+    const headers = new Set<string>();
+    rows.slice(0, 50).forEach(row => Object.keys(row || {}).forEach(k => headers.add(this.normalizeTreatedHeader(k))));
+    const count = (names: string[]) => names.filter(n => headers.has(n)).length;
+    const releveScore = count(['debit', 'dbit', 'debits'])
+      + count(['credit', 'crdit', 'credits'])
+      + count(['datevaleur', 'datedevaleur', 'valuedate'])
+      + count(['datecomptable', 'accountingdate', 'bookingdate'])
+      + count(['libelle', 'narratif', 'narration', 'labelnarration', 'libellenarration']);
+    const operationScore = count(['typeoperation', 'operationtype', 'transactiontype'])
+      + count(['agence', 'agency', 'codeagence', 'codeproprietaire'])
+      + count(['nombeneficiaire', 'beneficiaire', 'beneficiary', 'beneficiaryname'])
+      + count(['compteadebiter', 'comptedebiter', 'debitaccount', 'accounttodebit'])
+      + count(['modepaiement', 'paymentmode', 'paymentmethod'])
+      + count(['idglpi', 'idticket', 'ticketid', 'glpiid']);
+    if (releveScore >= 2 && operationScore === 0) return 'releve';
+    if (operationScore >= 2 && releveScore === 0) return 'operations';
+    return null;
+  }
+
+  /**
+   * Import des opérations depuis le traitement automatique : si le pays ou le type d'opération
+   * (obligatoires côté backend) manquent sur des lignes, demande la valeur à l'utilisateur et
+   * l'applique aux lignes concernées. Retourne null si l'utilisateur annule.
+   */
+  private async askTreatedOperationMissingValues(rows: Record<string, any>[]): Promise<Record<string, any>[] | null> {
+    const blank = (v: any) => v === null || v === undefined || String(v).trim() === '';
+    const mapped = rows.map(row => this.mapTreatedRowHeaders(row, 'operations'));
+    const paysManquant = (m: Record<string, any>) => blank(m['Pays']) && blank(m['Code Pays']);
+    const typeManquant = (m: Record<string, any>) => blank(m['Type Opération']);
+    const nbPays = mapped.filter(paysManquant).length;
+    const nbType = mapped.filter(typeManquant).length;
+    if (!nbPays && !nbType) return rows;
+
+    let pays = '';
+    if (nbPays) {
+      const saisie = await this.popupService.showTextInput(
+        `Le pays est absent pour ${nbPays.toLocaleString('fr-FR')} ligne(s) sur ${rows.length.toLocaleString('fr-FR')}.\n` +
+        'Merci de le renseigner : la valeur sera appliquée aux lignes concernées.',
+        'Informations manquantes dans les opérations',
+        this.reconPays || '',
+        'Pays (code, ex. ML, SN, CM)'
+      );
+      pays = (saisie || '').trim();
+      if (!pays) return null;
+    }
+
+    let typeOperation = '';
+    if (nbType) {
+      const message =
+        `Le type d'opération est absent pour ${nbType.toLocaleString('fr-FR')} ligne(s) sur ${rows.length.toLocaleString('fr-FR')}.\n` +
+        'Merci de le renseigner : la valeur sera appliquée aux lignes concernées.';
+      const titre = 'Informations manquantes dans les opérations';
+      const types = (this.typesOperation || []).filter(Boolean);
+      const saisie = types.length
+        ? await this.popupService.showAutocompleteInput(message, titre, types, '')
+        : await this.popupService.showTextInput(message, titre, '', 'Type d\'opération');
+      typeOperation = (saisie || '').trim();
+      if (!typeOperation) return null;
+    }
+
+    return rows.map((row, i) => {
+      const out: Record<string, any> = { ...row };
+      if (pays && paysManquant(mapped[i])) {
+        // Retirer les colonnes pays vides d'origine pour que la valeur saisie ne soit pas écrasée
+        Object.keys(out).forEach(k => {
+          if (this.mapTreatedRowHeaders({ [k]: '' }, 'operations')['Pays'] !== undefined) delete out[k];
+        });
+        out['Pays'] = pays;
+      }
+      if (typeOperation && typeManquant(mapped[i])) {
+        Object.keys(out).forEach(k => {
+          if (this.mapTreatedRowHeaders({ [k]: '' }, 'operations')['Type Opération'] !== undefined) delete out[k];
+        });
+        out['Type Opération'] = typeOperation;
+      }
+      return out;
+    });
+  }
+
   private async importTreatedRows(
     rows: Record<string, any>[],
     destination: 'operations' | 'releve',
     outputName: string
   ): Promise<void> {
     try {
+      if (destination === 'operations') {
+        // Pays / type d'opération absents : les demander plutôt que rejeter toutes les lignes
+        const completed = await this.askTreatedOperationMissingValues(rows);
+        if (!completed) {
+          await this.popupService.showWarning(
+            'Import annulé : informations manquantes non renseignées.',
+            'Chargement des opérations'
+          );
+          return;
+        }
+        rows = completed;
+      }
       const file = await this.buildTreatedRowsFile(rows, destination, outputName);
 
       if (destination === 'operations') {
@@ -3284,6 +3450,8 @@ export class BanqueComponent implements OnInit {
     this.releveFilterMontantMax = null;
     this.releveFilterNumeroCompte = '';
     this.releveFilterBanque = '';
+    this.releveFilterNumeroComptes = [];
+    this.releveFilterBanques = [];
     this.releveFilterPays = '';
     this.releveFilterReconStatus = '' as any;
     this.releveFilterDateDebut = '';
@@ -3343,22 +3511,16 @@ export class BanqueComponent implements OnInit {
     // Appliquer tous les filtres
     let filtered = base;
     
-    // Filtre par numéro de compte
-    if (this.releveFilterNumeroCompte && this.releveFilterNumeroCompte.trim()) {
-      const searchTerm = this.releveFilterNumeroCompte.toLowerCase().trim();
-      filtered = filtered.filter((r: any) => 
-        (r.numeroCompte || '').toLowerCase().includes(searchTerm)
-      );
+    // Filtre par numéro de compte (sélection multiple)
+    if (this.releveFilterNumeroComptes.length) {
+      filtered = filtered.filter((r: any) => this.releveFilterNumeroComptes.includes((r.numeroCompte ?? '').toString().trim()));
     }
-    
-    // Filtre par banque
-    if (this.releveFilterBanque && this.releveFilterBanque.trim()) {
-      const searchTerm = this.releveFilterBanque.toLowerCase().trim();
-      filtered = filtered.filter((r: any) => 
-        (r.banque || '').toLowerCase().includes(searchTerm)
-      );
+
+    // Filtre par banque (sélection multiple)
+    if (this.releveFilterBanques.length) {
+      filtered = filtered.filter((r: any) => this.releveFilterBanques.includes((r.banque ?? '').toString().trim()));
     }
-    
+
     // Filtre par pays (colonne pays du relevé)
     if (this.releveFilterPays) {
       filtered = filtered.filter((r: any) => countriesMatch(r.pays, this.releveFilterPays));
@@ -4307,7 +4469,7 @@ export class BanqueComponent implements OnInit {
       const matchReconStatut = !this.operationsReconStatusFilter || this.getOperationNiveauStatus(operation) === this.operationsReconStatusFilter;
       const f = this.filters;
       const matchColonnes =
-        containsFilter(operation.agence, f.agence) &&
+        (!this.opFilterAgences.length || this.opFilterAgences.includes((operation.agence || '').trim())) &&
         containsFilter(operation.reference, f.reference) &&
         containsFilter(operation.idGlpi, f.idGlpi) &&
         (f.montant == null || Number(operation.montant) === Number(f.montant));
@@ -4343,6 +4505,7 @@ export class BanqueComponent implements OnInit {
       idGlpi: ''
     };
     this.operationsReconStatusFilter = '';
+    this.opFilterAgences = [];
     this.filteredOperations = [...this.operations];
     this.currentPage = 1;
     this.updatePagedOperations();
@@ -5110,7 +5273,7 @@ export class BanqueComponent implements OnInit {
   private static readonly RECON_RESULT_EXPORT_HEADERS = [
     'Date', 'Type opération', 'Agence', 'Référence', 'Banque', 'Montant',
     'Correspondance', 'Écart',
-    'Date valeur', 'Compte', 'Banque', 'Libellé', 'Montant', 'Sens'
+    'Date valeur', 'Compte', 'Banque', 'Référence', 'Montant', 'Sens'
   ];
 
   private reconResultFileBase(): string {
@@ -6032,6 +6195,172 @@ export class BanqueComponent implements OnInit {
     const rs = (this.voirToutRevPage - 1) * this.reconPageSize;
     this.pagedVoirToutOps = this.voirToutOps.slice(os, os + this.reconPageSize);
     this.pagedVoirToutReleves = this.voirToutReleves.slice(rs, rs + this.reconPageSize);
+  }
+
+  // =========================
+  // Export Excel de la vue de réconciliation affichée (suspens, correspondances ou « Voir tout »)
+  // =========================
+  exportingReconView = false;
+
+  /** Nombre de lignes exportées pour la vue courante (toutes pages, filtres appliqués). */
+  get reconExportCount(): number {
+    switch (this.reconView) {
+      case 'all': return this.voirToutOps.length + this.voirToutReleves.length;
+      case 'operation': return this.filteredLeftOps.length;
+      case 'releve': return this.filteredRightReleves.length;
+      case 'corr_operation': return this.filteredMatchedOps.length;
+      case 'corr_releve': return this.filteredMatchedReleves.length;
+      default: return 0;
+    }
+  }
+
+  private static readonly RECON_VIEW_OP_HEADERS = [
+    'Clé', 'Pays', 'Date opération', 'Agence', 'Type opération', 'Compte', 'Montant', 'Référence',
+    'ID ticket', 'Banque', 'Banque corrigée', 'Statut', 'Statut rapprochement'
+  ];
+  private static readonly RECON_VIEW_REV_HEADERS = [
+    'Clé', 'N° compte', 'Nom du compte', 'Banque', 'Date comptable', 'Date valeur', 'Référence',
+    'Débit', 'Crédit', 'Montant', 'N° chèque', 'Devise', 'Statut rapprochement'
+  ];
+
+  private reconViewFmtDate(d: unknown): string {
+    const ymd = this.normalizeDateToYmd(d as any);
+    return ymd ? ymd.split('-').reverse().join('/') : '';
+  }
+
+  private reconViewOpRow(op: OperationBancaireDisplay, statut: string): Array<string | number> {
+    return [
+      (op as any).key || '',
+      op.pays || '',
+      this.reconViewFmtDate(op.dateOperation),
+      op.agence || '',
+      op.typeOperation || '',
+      op.compteADebiter || '',
+      Number(op.montant || 0),
+      op.reference || '',
+      op.idGlpi || '',
+      this.getOperationBanque(op) || '',
+      (op as any).banqueCorrigee || '',
+      op.statut || '',
+      statut
+    ];
+  }
+
+  private reconViewRevRow(r: ReleveBancaireRow, statut: string): Array<string | number> {
+    const num = (v: unknown) => (v === null || v === undefined || v === '') ? '' : Number(v);
+    return [
+      (r as any).key || '',
+      r.numeroCompte || '',
+      r.nomCompte || '',
+      r.banque || '',
+      this.reconViewFmtDate(r.dateComptable),
+      this.reconViewFmtDate(r.dateValeur),
+      r.libelle || '',
+      num(r.debit),
+      num(r.credit),
+      num(r.montant),
+      (r as any).numeroCheque || '',
+      r.devise || '',
+      statut
+    ];
+  }
+
+  /** Exporte en Excel toutes les lignes de la vue affichée (pas seulement la page courante). */
+  async exportReconView() {
+    if (this.exportingReconView) return;
+    if (!this.reconExportCount) {
+      this.popupService.showWarning('Aucune ligne à exporter.');
+      return;
+    }
+    this.exportingReconView = true;
+    try {
+      const ExcelJS: any = await import('exceljs');
+      const wb = new (ExcelJS.Workbook || ExcelJS.default.Workbook)();
+      const contexte = `Pays : ${this.reconPays || 'tous'} — Date : ${this.reconDate || 'toutes'}`;
+      const border = { bottom: { style: 'thin', color: { argb: 'FFE3E6EB' } } };
+
+      const addSheet = (name: string, titre: string, headers: string[], rows: Array<Array<string | number>>,
+                        numCols: number[], widths: number[], fillColor: string) => {
+        const ws = wb.addWorksheet(name);
+        ws.mergeCells(1, 1, 1, headers.length);
+        ws.getCell(1, 1).value = titre;
+        ws.getCell(1, 1).font = { bold: true, size: 14, color: { argb: 'FF1F2A44' } };
+        ws.mergeCells(2, 1, 2, headers.length);
+        ws.getCell(2, 1).value = `${contexte} — ${rows.length} ligne(s)`;
+        ws.getCell(2, 1).font = { size: 10, color: { argb: 'FF5B6475' } };
+        const headerRow = ws.getRow(4);
+        headers.forEach((h, i) => {
+          const cell = headerRow.getCell(i + 1);
+          cell.value = h;
+          cell.font = { bold: true, size: 10, color: { argb: 'FF3A4356' } };
+          cell.fill = { type: 'pattern', pattern: 'solid', fgColor: { argb: fillColor } };
+          cell.border = border;
+        });
+        const statutCol = headers.length - 1;
+        rows.forEach((values, idx) => {
+          const row = ws.getRow(5 + idx);
+          values.forEach((v, i) => {
+            const cell = row.getCell(i + 1);
+            cell.value = v;
+            cell.border = border;
+            if (numCols.includes(i)) cell.numFmt = '# ##0;-# ##0';
+            if (i === statutCol) {
+              cell.font = { bold: true, color: { argb: v === 'Suspens' ? 'FFB42318' : 'FF2E7D4F' } };
+            }
+          });
+        });
+        widths.forEach((w, i) => ws.getColumn(i + 1).width = w);
+        ws.views = [{ state: 'frozen', ySplit: 4 }];
+        ws.autoFilter = { from: { row: 4, column: 1 }, to: { row: 4, column: headers.length } };
+      };
+
+      const addOps = (name: string, titre: string, items: Array<{ op: OperationBancaireDisplay; statut: string }>) =>
+        addSheet(name, titre, BanqueComponent.RECON_VIEW_OP_HEADERS,
+          items.map(x => this.reconViewOpRow(x.op, x.statut)), [6],
+          [34, 14, 14, 18, 28, 20, 14, 26, 12, 16, 16, 14, 20], 'FFE8F0FB');
+      const addRevs = (name: string, titre: string, items: Array<{ row: ReleveBancaireRow; statut: string }>) =>
+        addSheet(name, titre, BanqueComponent.RECON_VIEW_REV_HEADERS,
+          items.map(x => this.reconViewRevRow(x.row, x.statut)), [7, 8, 9],
+          [34, 20, 28, 16, 14, 14, 44, 14, 14, 14, 14, 9, 20], 'FFE7F5EC');
+
+      let vue = '';
+      switch (this.reconView) {
+        case 'all':
+          vue = 'tout';
+          addOps('Opérations', 'Réconciliation bancaire — toutes les opérations', this.voirToutOps);
+          addRevs('Relevés', 'Réconciliation bancaire — tous les relevés', this.voirToutReleves);
+          break;
+        case 'operation':
+          vue = 'suspens_bo';
+          addOps('Suspens BO', 'Réconciliation bancaire — suspens BO',
+            this.filteredLeftOps.map(op => ({ op, statut: 'Suspens' })));
+          break;
+        case 'releve':
+          vue = 'suspens_banque';
+          addRevs('Suspens banque', 'Réconciliation bancaire — suspens banque',
+            this.filteredRightReleves.map(row => ({ row, statut: 'Suspens' })));
+          break;
+        case 'corr_operation':
+          vue = 'correspondances_bo';
+          addOps('Correspondances BO', 'Réconciliation bancaire — correspondances BO',
+            this.filteredMatchedOps.map(op => ({ op, statut: 'Correspondance' })));
+          break;
+        default:
+          vue = 'correspondances_banque';
+          addRevs('Correspondances banque', 'Réconciliation bancaire — correspondances banque',
+            this.filteredMatchedReleves.map(row => ({ row, statut: 'Correspondance' })));
+      }
+
+      const pays = (this.reconPays || 'tous_pays').normalize('NFD').replace(/[̀-ͯ]/g, '').replace(/[^A-Za-z0-9]+/g, '_');
+      const buffer = await wb.xlsx.writeBuffer();
+      this.downloadBlob(new Blob([buffer], { type: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet' }),
+        `reconciliation_banque_${vue}_${pays}_${this.reconDate || 'toutes_dates'}.xlsx`);
+    } catch (e) {
+      console.error('[RECON] export Excel de la vue', e);
+      this.popupService.showWarning('Échec de l\'export Excel.');
+    } finally {
+      this.exportingReconView = false;
+    }
   }
 
   reconGoToPage(page: number) {

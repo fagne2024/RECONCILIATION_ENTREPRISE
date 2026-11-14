@@ -36,6 +36,7 @@
     "ng2-charts": "^4.0.0",
     "ngx-mat-select-search": "^4.2.1",
     "papaparse": "^5.4.1",
+    "pdfjs-dist": "^3.11.174",
     "rxjs": "~7.5.0",
     "tslib": "^2.3.0",
     "xlsx": "^0.18.5",

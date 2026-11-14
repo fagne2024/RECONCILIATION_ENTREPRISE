@@ -3,6 +3,7 @@ import { HttpClient } from '@angular/common/http';
 import { firstValueFrom, Observable } from 'rxjs';
 import { tap } from 'rxjs/operators';
 import {
+  mergeBuiltInEquivalences,
   applyColumnNormalizationPlanAsync,
   ColumnNormalizationPlan,
   ModelColumnEquivalence,
@@ -80,13 +81,17 @@ export class ModelNormalizationService {
     rows: Record<string, string>[],
     modelIds: ReadonlyArray<string | null | undefined>,
     yieldFn?: () => Promise<void> | void,
-    templateColumns: readonly string[] = []
+    templateColumns: readonly string[] = [],
+    builtIn?: { equivalences: readonly ModelColumnEquivalence[]; modelColumns: readonly string[] }
   ): Promise<{ rows: Record<string, string>[]; plan: ColumnNormalizationPlan }> {
     const empty: ColumnNormalizationPlan = { renames: [], missing: [], ignored: [] };
     if (!rows?.length) {
       return { rows, plan: empty };
     }
-    const equivalences = await this.getForModels(modelIds);
+    let equivalences = await this.getForModels(modelIds);
+    if (builtIn?.equivalences?.length) {
+      equivalences = mergeBuiltInEquivalences(equivalences, builtIn.equivalences, builtIn.modelColumns);
+    }
     if (!equivalences.length) {
       return { rows, plan: empty };
     }

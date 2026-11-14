@@ -40,6 +40,13 @@ npx jest chemin/vers/fichier.spec.ts     # un seul fichier de test
 ```
 `environment.ts` résout `apiUrl` à l'exécution : `/api` relatif sur localhost/4200 (passe par le proxy), sinon même hôte ; `window.__API_URL__` permet de forcer la valeur.
 
+### Environnement de test complet
+```powershell
+.\start-test-env.ps1   # racine : backend 8086 + frontend 4201 dans deux fenêtres, ouvre le navigateur
+.\stop-test-env.ps1    # arrête les ports 8086 et 4201 (jamais 8085 / 4200)
+```
+Voir `docs/environnement-test.md`.
+
 ### Déploiement
 `.\deploy\deploy-update.ps1 [-BuildFrontend]` construit le jar (sans tests), le copie dans `deploy/` et, en option, construit/synchronise le frontend.
 

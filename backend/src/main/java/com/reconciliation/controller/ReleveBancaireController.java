@@ -404,7 +404,7 @@ public class ReleveBancaireController {
             String[] headers = new String[] {
                 "Numero de compte", "Nom du compte", "Banque", "Pays", "Date comptable", "Date de valeur",
 
-                "Libelle", "Debit", "Credit", "Montant", "Devise"
+                "Reference", "Debit", "Credit", "Montant", "Devise"
             };
             org.apache.poi.ss.usermodel.Row row0 = sheet.createRow(0);
             for (int i = 0; i < headers.length; i++) {

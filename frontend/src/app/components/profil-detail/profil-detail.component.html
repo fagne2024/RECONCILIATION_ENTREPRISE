@@ -245,9 +245,23 @@
 
     <!-- Onglet Modules -->
     <div *ngIf="activeTab === 'modules'" class="tab-content">
+      <div class="navigation-toolbar">
+        <div class="nav-search">
+          <i class="fas fa-search"></i>
+          <input
+            type="text"
+            [(ngModel)]="moduleSearch"
+            placeholder="{{ 'PROF.Rechercherunmodule' | translate }}"
+            (input)="onModuleSearchChange()"
+            class="ds-input search-input">
+          <button type="button" *ngIf="moduleSearch" class="ds-btn ds-btn--secondary btn-clear" (click)="clearModuleSearch()">
+            <i class="fas fa-times"></i>
+          </button>
+        </div>
+      </div>
       <div class="modules-overview">
         <div class="modules-grid">
-          <div *ngFor="let module of paginate(modules, 'modules')" 
+          <div *ngFor="let module of paginate(filteredModules, 'modules')" 
                class="module-card"
                [class.associated]="isModuleAssociated(module)"
                [class.available]="!isModuleAssociated(module)">
@@ -286,10 +300,14 @@
           </div>
         </div>
       </div>
+      <div *ngIf="moduleSearch && filteredModules.length === 0" class="no-data-message">
+        <i class="fas fa-search"></i>
+        <p>{{ 'PROF.Aucunresultatpour' | translate }} «{{ moduleSearch }}»</p>
+      </div>
       <ds-pagination
-        [page]="getCurrentPage(modules, 'modules')"
-        [pageCount]="getPageCount(modules, 'modules')"
-        [totalItems]="modules.length"
+        [page]="getCurrentPage(filteredModules, 'modules')"
+        [pageCount]="getPageCount(filteredModules, 'modules')"
+        [totalItems]="filteredModules.length"
         [pageSize]="pagination.modules.size"
         [pageSizes]="pageSizes"
         [itemLabel]="'PROF.paginationModules' | translate"
@@ -300,8 +318,22 @@
 
     <!-- Onglet Permissions (Vue détaillée par module) -->
     <div *ngIf="activeTab === 'permissions'" class="tab-content">
+      <div class="navigation-toolbar">
+        <div class="nav-search">
+          <i class="fas fa-search"></i>
+          <input
+            type="text"
+            [(ngModel)]="permissionSearch"
+            placeholder="{{ 'PROF.Rechercherunmoduleouunepermission' | translate }}"
+            (input)="onPermissionSearchChange()"
+            class="ds-input search-input">
+          <button type="button" *ngIf="permissionSearch" class="ds-btn ds-btn--secondary btn-clear" (click)="clearPermissionSearch()">
+            <i class="fas fa-times"></i>
+          </button>
+        </div>
+      </div>
       <div class="modules-permissions">
-        <div *ngFor="let module of paginate(getAssociatedModules(), 'permissions')" class="module-card">
+        <div *ngFor="let module of paginate(getFilteredAssociatedModules(), 'permissions')" class="module-card">
           <div class="module-header">
             <h5><i class="fas fa-folder"></i> {{ module.nom }}</h5>
             <span class="module-permissions-count">
@@ -318,7 +350,7 @@
               <i class="fas fa-info-circle"></i>
               <p>{{ 'PROF.Aucunepermissiondisponiblepourcemodule' | translate }}</p>
             </div>
-            <div *ngFor="let permission of getDisplayedPermissions(module)" class="permission-item">
+            <div *ngFor="let permission of getSearchedPermissions(module)" class="permission-item">
               <label class="permission-checkbox">
                 <input type="checkbox"
                   [checked]="hasPermission(module, permission)"
@@ -343,11 +375,11 @@
           </div>
         </div>
 
-        <ng-container *ngIf="getAssociatedModules().length > 0">
+        <ng-container *ngIf="getFilteredAssociatedModules().length > 0">
           <ds-pagination
-        [page]="getCurrentPage(getAssociatedModules(), 'permissions')"
-        [pageCount]="getPageCount(getAssociatedModules(), 'permissions')"
-        [totalItems]="getAssociatedModules().length"
+        [page]="getCurrentPage(getFilteredAssociatedModules(), 'permissions')"
+        [pageCount]="getPageCount(getFilteredAssociatedModules(), 'permissions')"
+        [totalItems]="getFilteredAssociatedModules().length"
         [pageSize]="pagination.permissions.size"
         [pageSizes]="pageSizes"
         [itemLabel]="'PROF.paginationModules' | translate"
@@ -355,6 +387,10 @@
         (pageSizeChange)="onPageSizeChange('permissions', $event)">
       </ds-pagination>
         </ng-container>
+        <div *ngIf="permissionSearch && getAssociatedModules().length > 0 && getFilteredAssociatedModules().length === 0" class="no-data-message">
+          <i class="fas fa-search"></i>
+          <p>{{ 'PROF.Aucunresultatpour' | translate }} «{{ permissionSearch }}»</p>
+        </div>
         <div *ngIf="getAssociatedModules().length === 0" class="no-data-message">
           <i class="fas fa-cube"></i>
           <p>{{ 'PROF.Aucunmoduleassocié' | translate }}</p>

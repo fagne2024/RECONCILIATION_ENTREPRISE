@@ -57,9 +57,22 @@ public class ReleveBancaireImportService {
                 dto.dateComptable = getDate(row, colIndex.get("dateComptable"));
                 dto.dateValeur = getDate(row, colIndex.get("dateValeur"));
                 dto.libelle = getString(row, colIndex.get("libelle"));
+                // Colonne référence présente : elle prime sur le libellé (repli sur le libellé si elle est vide)
+                String reference = getString(row, colIndex.get("reference"));
+                if (reference != null) dto.libelle = reference;
                 dto.debit = getNumber(row, colIndex.get("debit"));
                 dto.credit = getNumber(row, colIndex.get("credit"));
                 dto.montant = getNumber(row, colIndex.get("montant"));
+                // Montant réellement présent dans le fichier (avant le calcul crédit - débit)
+                boolean montantRenseigne = dto.montant != null;
+                // Fichier avec la seule colonne montant : négatif = débit, positif = crédit
+                if (montantRenseigne && dto.debit == null && dto.credit == null) {
+                    if (dto.montant < 0) {
+                        dto.debit = Math.abs(dto.montant);
+                    } else if (dto.montant > 0) {
+                        dto.credit = dto.montant;
+                    }
+                }
                 if (dto.montant == null) {
                     Double d = dto.debit != null ? dto.debit : 0d;
                     Double c = dto.credit != null ? dto.credit : 0d;
@@ -78,7 +91,10 @@ public class ReleveBancaireImportService {
                 dto.banque = getString(row, colIndex.get("banque"));
                 dto.pays = getString(row, colIndex.get("pays"));
 
-                boolean allEmpty = (dto.numeroCompte == null || dto.numeroCompte.isBlank()) && dto.libelle == null && dto.debit == null && dto.credit == null;
+                // Une ligne avec seulement un montant (fichier issu du traitement automatique, sans compte
+                // ni débit/crédit) n'est pas vide : elle doit atteindre le contrôle des champs manquants.
+                boolean allEmpty = (dto.numeroCompte == null || dto.numeroCompte.isBlank()) && dto.libelle == null
+                        && dto.debit == null && dto.credit == null && !montantRenseigne;
                 if (!allEmpty) rows.add(dto);
             }
             int totalRead = rows.size();
@@ -136,13 +152,8 @@ public class ReleveBancaireImportService {
                         }
                     }
                 }
-                if (e.getBanque() == null && dto.nomCompte != null && !dto.nomCompte.isBlank()) {
-                    String candidate = dto.nomCompte.trim().replaceAll("[0-9]", "").replaceAll("\\s+", " ").trim();
-                    if (candidate.length() >= 3) {
-                        e.setBanque(candidate);
-                        dto.banque = candidate;
-                    }
-                }
+                // Pas de repli sur le nom du compte : une banque absente du fichier (et inconnue du
+                // compte) reste vide pour être demandée à l'utilisateur (pop-up des champs manquants).
             } catch (Exception ignore) {}
             // Pays : colonne du fichier (ou valeur saisie), sinon pays du compte, sinon suffixe de la banque
             String pays = resolvePaysCode(dto.pays);
@@ -161,6 +172,14 @@ public class ReleveBancaireImportService {
             } catch (Exception ignore) {}
             e.setPays(pays);
             dto.pays = pays;
+            // Devise absente du fichier : déduite du pays (ex. ML -> XOF, CM -> XAF)
+            if ((dto.devise == null || dto.devise.isBlank()) && pays != null) {
+                String devise = DEVISE_PAR_PAYS.get(pays.trim().toUpperCase());
+                if (devise != null) {
+                    dto.devise = devise;
+                    e.setDevise(devise);
+                }
+            }
             e.setSourceFilename(filename);
             e.setUploadedAt(java.time.LocalDateTime.now());
             // Définir la clé de déduplication stable
@@ -228,6 +247,35 @@ public class ReleveBancaireImportService {
         String lib = normalizeText(libelle);
         long cents = Math.round((montant == null ? 0d : montant) * 100d);
         return String.join("|", num, dc, dv, lib, String.valueOf(cents));
+    }
+
+    /** Devise par code pays, utilisée quand le relevé ne fournit pas la devise. */
+    static final Map<String, String> DEVISE_PAR_PAYS = buildDeviseParPays();
+
+    private static Map<String, String> buildDeviseParPays() {
+        Map<String, String> m = new HashMap<>();
+        // UEMOA
+        for (String p : new String[]{"BJ", "BF", "CI", "GW", "ML", "NE", "SN", "TG"}) m.put(p, "XOF");
+        // CEMAC
+        for (String p : new String[]{"CM", "CF", "TD", "CG", "GQ", "GA"}) m.put(p, "XAF");
+        m.put("GN", "GNF");
+        m.put("CD", "CDF");
+        m.put("NG", "NGN");
+        m.put("GH", "GHS");
+        m.put("GM", "GMD");
+        m.put("SL", "SLE");
+        m.put("LR", "LRD");
+        m.put("MR", "MRU");
+        m.put("MG", "MGA");
+        m.put("RW", "RWF");
+        m.put("BI", "BIF");
+        m.put("KE", "KES");
+        m.put("UG", "UGX");
+        m.put("TZ", "TZS");
+        m.put("MA", "MAD");
+        m.put("TN", "TND");
+        m.put("FR", "EUR");
+        return m;
     }
 
     private static Workbook createWorkbook(String filename, InputStream is) throws Exception {
@@ -306,10 +354,23 @@ public class ReleveBancaireImportService {
 
         m.put("datevaleur", "dateValeur");
 
+        // En-têtes courts des extraits de compte (ex. PDF « Date ! Libelle operation ! Val. ! Debit ! Credit »)
+        m.put("date", "dateComptable");
+        m.put("val", "dateValeur");
+        m.put("valeur", "dateValeur");
+        m.put("dateval", "dateValeur");
+        m.put("libelleoperation", "libelle");
+        m.put("libelledoperation", "libelle");
+        m.put("libelledeloperation", "libelle");
+
         m.put("libelle", "libelle");
         m.put("narratif", "libelle");
         m.put("narration", "libelle");
         m.put("intitule", "libelle");
+
+        // Référence : reportée dans le libellé, en priorité sur la colonne libellé
+        m.put("reference", "reference");
+        m.put("ref", "reference");
 
         m.put("debit", "debit");
         m.put("dbit", "debit");
@@ -429,8 +490,22 @@ public class ReleveBancaireImportService {
         if (idx == null) return null;
         Cell c = row.getCell(idx);
         if (c == null) return null;
-        c.setCellType(CellType.STRING);
-        String s = c.getStringCellValue();
+        String s = null;
+        // Cellule déjà textuelle : lecture directe. Forcer le type STRING vidait les textes « inline »
+        // (t="str") des fichiers générés par le traitement automatique (SheetJS) : libellé perdu.
+        CellType type = c.getCellType();
+        if (type == CellType.STRING || type == CellType.FORMULA) {
+            try { s = c.getStringCellValue(); } catch (Exception ignore) { s = null; }
+        }
+        if (s == null || s.isBlank()) {
+            if (type == CellType.STRING) {
+                String raw = c.toString();
+                s = raw;
+            } else {
+                c.setCellType(CellType.STRING);
+                s = c.getStringCellValue();
+            }
+        }
         return (s != null && !s.isBlank()) ? s.trim() : null;
     }
 
@@ -511,6 +586,12 @@ public class ReleveBancaireImportService {
             // Date ISO suivie éventuellement d'une heure (ex. 2026-11-03 17:33:24.0)
             if (s.matches("^\\d{4}-\\d{2}-\\d{2}.*")) {
                 return LocalDate.parse(s.substring(0, 10), DateTimeFormatter.ofPattern("yyyy-MM-dd"));
+            }
+            // Date sans année (ex. 01/06) : jour/mois complété avec l'année en cours
+            java.util.regex.Matcher jourMois = java.util.regex.Pattern.compile("^(\\d{1,2})[/-](\\d{1,2})$").matcher(s);
+            if (jourMois.matches()) {
+                return LocalDate.of(LocalDate.now().getYear(),
+                        Integer.parseInt(jourMois.group(2)), Integer.parseInt(jourMois.group(1)));
             }
             // Try multiple patterns (case-insensitive)
             // Normaliser multiples espaces/points au besoin

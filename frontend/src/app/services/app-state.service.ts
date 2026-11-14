@@ -766,10 +766,14 @@ private reconciliationProgressSubject = new BehaviorSubject<boolean>(false);
         }
 
         const navContext = findNavigationAccessContextByModuleName(module);
-        if (navContext?.usesGranularAccess) {
+        if (navContext?.usesGranularAccess
+            && this.normalizeModuleName(navContext.accessModuleName) === normalizedModule) {
+            // Nom d'accès d'un sous-menu (« Réconciliation · Mode Manuel ») : droits du sous-menu.
             return this.hasGranularModulePermission(navContext.accessModuleName, permission);
         }
 
+        // Module parent (« Réconciliation ») : un sous-menu coché qui porte l'action suffit,
+        // sinon on retombe sur les droits du module parent lui-même.
         if (this.hasGrantedSubmenuForParentModule(module, permission)) {
             return true;
         }
@@ -1117,8 +1121,28 @@ private reconciliationProgressSubject = new BehaviorSubject<boolean>(false);
             return true;
         }
 
-        return this.isModuleAllowed(candidate.module)
+        return this.isModuleUsable(candidate.module)
             && this.hasAllModulePermissions(candidate.module, candidate.permissions ?? []);
+    }
+
+    /**
+     * Module utilisable : accordé directement, ou au moins un de ses sous-menus
+     * (« Module · Sous-menu ») est coché. Sert aux pages d'étape hors menu
+     * (ex. /reconciliation, /column-selection) d'un parcours ouvert par un sous-menu.
+     */
+    isModuleUsable(module: string): boolean {
+        if (this.isAdmin() || this.isModuleAllowed(module)) {
+            return true;
+        }
+        const normalized = this.normalizeModuleName(module);
+        if (!normalized) {
+            return false;
+        }
+        return getAllNavigationAccessContexts().some(context =>
+            context.usesGranularAccess
+            && this.normalizeModuleName(context.apiModuleName) === normalized
+            && this.hasSubmenuNavigationGrant(context.accessModuleName)
+        );
     }
 
     getNavigationAccessModuleForRoute(route?: string | null): string | null {

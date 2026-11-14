@@ -1,4 +1,5 @@
 import { Component, OnInit, ChangeDetectorRef, AfterViewInit, ViewChild, ViewContainerRef, TemplateRef, inject, OnDestroy } from '@angular/core';
+import { convertPdfFiles, isPdfFile } from '../../utils/pdf-table-extractor.util';
 import { Overlay, OverlayRef } from '@angular/cdk/overlay';
 import { TemplatePortal } from '@angular/cdk/portal';
 import { RowCollection } from '../../traitement/row-collection';
@@ -698,22 +699,36 @@ End Sub`;
     }
   }
 
-  onFileSelected(event: Event) {
+  async onFileSelected(event: Event) {
     const input = event.target as HTMLInputElement;
     if (input.files) {
-      this.addFiles(input.files);
+      const files = Array.from(input.files);
       input.value = '';
+      this.addFiles(await this.convertirPdfSelectionnes(files));
     }
     this.processFiles();
   }
 
-  onDrop(event: DragEvent) {
+  async onDrop(event: DragEvent) {
     event.preventDefault();
-    if (event.dataTransfer && event.dataTransfer.files) {
-      this.addFiles(event.dataTransfer.files);
-    }
+    const dropped = event.dataTransfer && event.dataTransfer.files ? Array.from(event.dataTransfer.files) : [];
     this.removeDragOverStyle();
+    if (dropped.length) {
+      this.addFiles(await this.convertirPdfSelectionnes(dropped));
+    }
     this.processFiles();
+  }
+
+  /** PDF : le tableau est extrait et remplacé par un CSV, qui suit ensuite le circuit normal. */
+  private async convertirPdfSelectionnes(files: File[]): Promise<File[]> {
+    if (!files.some(f => isPdfFile(f))) {
+      return files;
+    }
+    const result = await convertPdfFiles(files);
+    if (result.errors.length) {
+      this.showError('upload', result.errors.join(' '));
+    }
+    return result.files;
   }
 
   onDragOver(event: DragEvent) {
@@ -727,10 +742,10 @@ End Sub`;
     return total > this.SEUIL_TRAITEMENT_SERVEUR_OCTETS;
   }
 
-  addFiles(fileList: FileList) {
+  addFiles(fileList: ArrayLike<File>) {
     const nouveaux: File[] = [];
     for (let i = 0; i < fileList.length; i++) {
-      const file = fileList.item(i);
+      const file = fileList[i];
       if (file && !this.selectedFiles.some(f => f.name === file.name && f.size === file.size)) {
         this.selectedFiles.push(file);
         nouveaux.push(file);
@@ -1526,6 +1541,28 @@ End Sub`;
     });
   }
 
+  /**
+   * Feuille à afficher : celle qui contient le plus de cellules. Un classeur issu d'une
+   * macro de fusion commence souvent par une feuille de journal (nom de fichier, « Réussite »,
+   * plage fusionnée) ; les données sont dans une autre feuille. Le contenu n'est ni filtré
+   * ni modifié. À égalité, la première feuille est conservée.
+   */
+  private pickDataSheetName(workbook: XLSX.WorkBook): string {
+    let best = workbook.SheetNames[0];
+    let bestCells = -1;
+    for (const name of workbook.SheetNames) {
+      const ref = workbook.Sheets[name]?.['!ref'];
+      if (!ref) continue;
+      const r = XLSX.utils.decode_range(ref);
+      const cells = (r.e.r - r.s.r + 1) * (r.e.c - r.s.c + 1);
+      if (cells > bestCells) {
+        best = name;
+        bestCells = cells;
+      }
+    }
+    return best;
+  }
+
   private async readExcelFileOptimized(file: File): Promise<void> {
     try {
       // Afficher un indicateur de progression pour les fichiers volumineux
@@ -1548,7 +1585,7 @@ End Sub`;
       };
 
       const workbook = await this.readExcelFile(file, options);
-      const sheetName = workbook.SheetNames[0];
+      const sheetName = this.pickDataSheetName(workbook);
       const worksheet = workbook.Sheets[sheetName];
       
       // Vérifier si la feuille est vide avant de continuer
@@ -1834,7 +1871,7 @@ End Sub`;
       }
 
       // Traiter seulement la première feuille pour éviter les problèmes de mémoire
-      const firstSheetName = workbook.SheetNames[0];
+      const firstSheetName = this.pickDataSheetName(workbook);
       const worksheet = workbook.Sheets[firstSheetName];
       
       if (!worksheet) {
@@ -3863,7 +3900,8 @@ End Sub`;
       'application/vnd.ms-excel.sheet.macroEnabled.12',
       'application/vnd.ms-excel.sheet.binary.macroEnabled.12'
     ];
-    return [...extensions, ...mimeTypes].join(',');
+    // PDF : accepté en plus, son tableau est converti en CSV à la sélection
+    return [...extensions, '.pdf', 'application/pdf', ...mimeTypes].join(',');
   }
 
   private loadTraitementExtensions(): void {

@@ -18,6 +18,7 @@ production (`Reconciliation_app`).
 Fichiers concernés :
 
 - `backend/src/main/resources/application-test.properties` : configuration du profil `test` ;
+- `start-test-env.ps1` / `stop-test-env.ps1` (racine) : démarrage / arrêt de l'environnement complet ;
 - `backend/start-test.ps1` : démarrage local du backend sur la base TEST ;
 - `frontend/proxy.test.conf.json` : proxy Angular vers le backend de test (port 8086) ;
 - `frontend/package.json` : script `npm run start:test` (frontend sur le port 4201) ;
@@ -27,6 +28,24 @@ Fichiers concernés :
 > `start-test.ps1` refuse de démarrer si l'URL cible exactement cette base.
 
 ## Démarrage local
+
+### Démarrage rapide (backend + frontend)
+
+Depuis la racine du dépôt :
+
+```powershell
+.\start-test-env.ps1          # ouvre une fenêtre backend (8086) et une fenêtre frontend (4201)
+.\stop-test-env.ps1           # arrête les processus des ports 8086 et 4201
+```
+
+Ou double-clic sur `start-test-env.cmd` / `stop-test-env.cmd`.
+
+- Un service déjà démarré (port occupé) n'est pas relancé.
+- Le script attend que les deux ports répondent puis ouvre http://localhost:4201.
+- Options : `-NoBackend`, `-NoFrontend`, `-NoBrowser`, `-TimeoutSeconds 300`.
+- `stop-test-env.ps1` ne touche jamais l'environnement de développement (8085 / 4200).
+
+Le détail des étapes manuelles suit.
 
 ### 1. Prérequis
 

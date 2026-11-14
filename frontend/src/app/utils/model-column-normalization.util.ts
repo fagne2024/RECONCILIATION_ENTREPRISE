@@ -35,6 +35,48 @@ export interface ColumnNormalizationPlan {
   ignored: ColumnRename[];
 }
 
+/**
+ * Équivalences intégrées des modèles bancaires : en-têtes courts des extraits de compte
+ * (ex. PDF « Date ! Libelle operation ! Val. ! Debit ! Credit »). Elles complètent la
+ * configuration de l'entreprise, sans jamais la remplacer.
+ */
+export const BANK_BUILT_IN_EQUIVALENCES: readonly ModelColumnEquivalence[] = [
+  { columnName: 'Date comptable', equivalents: ['Date', 'Date opération', 'Date operation', 'Date mouvement'] },
+  { columnName: 'Date de valeur', equivalents: ['Val.', 'Val', 'Valeur', 'Date valeur', 'Date val.'] },
+  { columnName: 'Référence', equivalents: ['Libelle operation', 'Libellé opération', 'Libellé', 'Libelle'] }
+];
+
+/**
+ * Ajoute aux équivalences configurées les équivalences intégrées, uniquement pour les colonnes
+ * que le modèle possède réellement (`modelColumns`). Les équivalents configurés restent prioritaires.
+ */
+export function mergeBuiltInEquivalences(
+  configured: readonly ModelColumnEquivalence[],
+  builtIn: readonly ModelColumnEquivalence[],
+  modelColumns: readonly string[]
+): ModelColumnEquivalence[] {
+  const merged = configured.map(eq => ({ ...eq, equivalents: [...(eq.equivalents || [])] }));
+  const modelKeys = new Set(modelColumns.map(normalizeHeaderKey));
+  for (const extra of builtIn) {
+    const key = normalizeHeaderKey(extra.columnName);
+    const existing = merged.find(eq => normalizeHeaderKey(eq.columnName) === key);
+    if (!existing && !modelKeys.has(key)) {
+      continue;
+    }
+    const target = existing || { columnName: extra.columnName, equivalents: [] as string[] };
+    const known = new Set(target.equivalents.map(normalizeHeaderKey));
+    for (const equivalent of extra.equivalents) {
+      if (!known.has(normalizeHeaderKey(equivalent))) {
+        target.equivalents.push(equivalent);
+      }
+    }
+    if (!existing) {
+      merged.push(target);
+    }
+  }
+  return merged;
+}
+
 /** Clé de comparaison : casse, accents et espaces ignorés (identique au backend). */
 export function normalizeHeaderKey(header: string): string {
   return normalizeColumnKey(header || '').replace(/\s+/g, '');

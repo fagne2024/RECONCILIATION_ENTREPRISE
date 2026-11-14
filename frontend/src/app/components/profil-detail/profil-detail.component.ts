@@ -67,6 +67,8 @@ export class ProfilDetailComponent implements OnInit {
   expandedInactiveSubmenuGroups = new Set<string>();
   showLegacyModuleGrid = false;
   navMenuSearch = '';
+  moduleSearch = '';
+  permissionSearch = '';
   moduleActionsCache: { [moduleName: string]: ModuleActionDetail[] } = {};
   loadingModuleActionsSet = new Set<string>();
   syncingModuleActionsSet = new Set<string>();
@@ -1062,6 +1064,60 @@ export class ProfilDetailComponent implements OnInit {
 
   onPageSizeChange(list: 'navigation' | 'modules' | 'permissions', size: number): void {
     this.pagination[list] = { page: 1, size };
+  }
+
+  private normalizeSearch(value: string | null | undefined): string {
+    return (value ?? '').normalize('NFD').replace(/[̀-ͯ]/g, '').trim().toLowerCase();
+  }
+
+  /** Onglet Modules : modules dont le nom correspond à la recherche. */
+  get filteredModules(): Module[] {
+    const query = this.normalizeSearch(this.moduleSearch);
+    if (!query) {
+      return this.modules;
+    }
+    return this.modules.filter(module => this.normalizeSearch(module.nom).includes(query));
+  }
+
+  onModuleSearchChange(): void {
+    this.pagination.modules.page = 1;
+  }
+
+  clearModuleSearch(): void {
+    this.moduleSearch = '';
+    this.onModuleSearchChange();
+  }
+
+  /** Onglet Permissions : modules associés dont le nom ou une permission correspond. */
+  getFilteredAssociatedModules(): Module[] {
+    const modules = this.getAssociatedModules();
+    const query = this.normalizeSearch(this.permissionSearch);
+    if (!query) {
+      return modules;
+    }
+    return modules.filter(module =>
+      this.normalizeSearch(module.nom).includes(query)
+      || this.getDisplayedPermissions(module).some(p => this.normalizeSearch(p.nom).includes(query))
+    );
+  }
+
+  /** Permissions affichées d'un module : toutes si le module correspond, sinon celles qui correspondent. */
+  getSearchedPermissions(module: Module): Permission[] {
+    const permissions = this.getDisplayedPermissions(module);
+    const query = this.normalizeSearch(this.permissionSearch);
+    if (!query || this.normalizeSearch(module.nom).includes(query)) {
+      return permissions;
+    }
+    return permissions.filter(p => this.normalizeSearch(p.nom).includes(query));
+  }
+
+  onPermissionSearchChange(): void {
+    this.pagination.permissions.page = 1;
+  }
+
+  clearPermissionSearch(): void {
+    this.permissionSearch = '';
+    this.onPermissionSearchChange();
   }
 
   get filteredNavigationCatalog(): AppNavigationGroup[] {

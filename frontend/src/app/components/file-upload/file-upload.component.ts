@@ -1,4 +1,5 @@
 import { Component, EventEmitter, Input, Output, ChangeDetectorRef, NgZone, OnDestroy, OnInit, ViewChild, ElementRef } from '@angular/core';
+import { convertPdfFiles, isPdfFile } from '../../utils/pdf-table-extractor.util';
 import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
 import { TranslateModule } from '@ngx-translate/core';
@@ -47,6 +48,8 @@ import { ColumnRulesProcessorService } from '../../services/column-rules-process
 import { readCsvFileUltraFast, readCsvContentUltraFast } from '../../utils/fast-csv-reader.util';
 import { findHeaderLineIndexInCsvLines, findHeaderRowIndexInGrid, detectGenericHeaderRowIndex, isMarkerCellValue } from '../../utils/model-header-detection.util';
 import {
+    BANK_BUILT_IN_EQUIVALENCES,
+    mergeBuiltInEquivalences,
     describeColumnNormalization,
     listColumnsOutsideModel,
     templateCoverage
@@ -791,14 +794,26 @@ export class FileUploadComponent implements OnInit, OnDestroy {
         }
     }
 
-    onTraitementFilesSelected(event: Event): void {
+    async onTraitementFilesSelected(event: Event): Promise<void> {
         const input = event.target as HTMLInputElement;
         if (!input.files?.length) {
             return;
         }
-        const newFiles = Array.from(input.files);
-        this.traitementFiles = [...this.traitementFiles, ...newFiles];
+        let newFiles = Array.from(input.files);
         this.resetFileInput(this.traitementFileInputRef);
+        // PDF : le tableau est extrait et remplacé par un CSV, traité ensuite comme tout autre fichier
+        if (newFiles.some(f => isPdfFile(f))) {
+            const result = await convertPdfFiles(newFiles);
+            newFiles = result.files;
+            if (result.errors.length) {
+                await this.popupService.showWarning(result.errors.join(' '), 'Lecture du PDF');
+            }
+            if (!newFiles.length) {
+                this.cd.detectChanges();
+                return;
+            }
+        }
+        this.traitementFiles = [...this.traitementFiles, ...newFiles];
         this.suggestTraitementModelFromFiles();
         this.cd.detectChanges();
     }
@@ -1469,7 +1484,18 @@ export class FileUploadComponent implements OnInit, OnDestroy {
         // Configuration > Normalisation modèle : les en-têtes équivalents aident aussi à localiser
         // la ligne d'en-tête quand le fichier ne porte pas les colonnes par défaut.
         const modelIds = [model.modelId, model.id];
-        const equivalences = await this.modelNormalizationService.getForModels(modelIds);
+        // Modèle banque : les en-têtes courts des extraits de compte (« Date », « Val. »…) sont
+        // reconnus d'office, en complément de la configuration.
+        const bankModelColumns = model.bankModel
+            ? Array.from(new Set([...expectedHeaderColumns, ...(await this.resolveWatchFolderTemplateColumns(model))]))
+            : [];
+        const equivalences = model.bankModel
+            ? mergeBuiltInEquivalences(
+                await this.modelNormalizationService.getForModels(modelIds),
+                BANK_BUILT_IN_EQUIVALENCES,
+                bankModelColumns
+            )
+            : await this.modelNormalizationService.getForModels(modelIds);
         this.assistedHeaderAlternatives = equivalences.length
             ? new Map(equivalences.map(eq => [eq.columnName, eq.equivalents]))
             : undefined;
@@ -1503,7 +1529,8 @@ export class FileUploadComponent implements OnInit, OnDestroy {
             compiled.rows,
             modelIds,
             () => this.yieldToMainThread(true),
-            await this.resolveWatchFolderTemplateColumns(model)
+            await this.resolveWatchFolderTemplateColumns(model),
+            model.bankModel ? { equivalences: BANK_BUILT_IN_EQUIVALENCES, modelColumns: bankModelColumns } : undefined
         );
         const normalizationMessage = describeColumnNormalization(normalization.plan);
         if (normalizationMessage) {
@@ -1653,6 +1680,9 @@ export class FileUploadComponent implements OnInit, OnDestroy {
                 exportRows,
                 projectionColumns.length ? projectionColumns : undefined
             );
+
+        // Dates : toujours au format jj/mm/aaaa dans le fichier produit (jamais « Tue Jan 06 2026 … GMT »).
+        this.normalizeJsDateValuesInRows(finalExportRows);
 
         const dedupResult = this.traitementDedupEnabled && this.traitementDedupColumns.length
             ? this.modelPreProcessingService.deduplicateRowsByConfiguredColumns(
@@ -3665,6 +3695,43 @@ export class FileUploadComponent implements OnInit, OnDestroy {
         }
         this.stripKeyColumnWhitespaceInRange(rows, keyColumns, 0, rows.length);
         return rows;
+    }
+
+    /** Date JS convertie en texte, ex. « Tue Jan 06 2026 00:00:00 GMT+0000 (temps universel coordonné) ». */
+    private static readonly JS_DATE_STRING_RE =
+        /^[A-Z][a-z]{2} ([A-Z][a-z]{2}) (\d{2}) (\d{4}) (\d{2}):(\d{2}):(\d{2}) GMT/;
+    private static readonly JS_DATE_MONTHS: Record<string, string> = {
+        Jan: '01', Feb: '02', Mar: '03', Apr: '04', May: '05', Jun: '06',
+        Jul: '07', Aug: '08', Sep: '09', Oct: '10', Nov: '11', Dec: '12'
+    };
+
+    /**
+     * Remplace, dans les lignes traitées, les objets Date et les dates JS en texte par jj/mm/aaaa
+     * (l'heure est conservée seulement si elle n'est pas minuit). Modifie les lignes en place.
+     */
+    private normalizeJsDateValuesInRows(rows: Record<string, any>[]): void {
+        const pad = (n: number) => String(n).padStart(2, '0');
+        const withTime = (date: string, h: string, m: string, s: string) =>
+            h === '00' && m === '00' && s === '00' ? date : `${date} ${h}:${m}:${s}`;
+        for (const row of rows) {
+            if (!row) continue;
+            for (const key of Object.keys(row)) {
+                const value = row[key];
+                if (value instanceof Date) {
+                    if (isNaN(value.getTime())) continue;
+                    row[key] = withTime(
+                        `${pad(value.getDate())}/${pad(value.getMonth() + 1)}/${value.getFullYear()}`,
+                        pad(value.getHours()), pad(value.getMinutes()), pad(value.getSeconds())
+                    );
+                } else if (typeof value === 'string' && value.length >= 28) {
+                    const m = FileUploadComponent.JS_DATE_STRING_RE.exec(value.trim());
+                    const month = m ? FileUploadComponent.JS_DATE_MONTHS[m[1]] : undefined;
+                    if (m && month) {
+                        row[key] = withTime(`${m[2]}/${month}/${m[3]}`, m[4], m[5], m[6]);
+                    }
+                }
+            }
+        }
     }
 
     private async downloadProcessedTreatmentFile(
