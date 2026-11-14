@@ -6,6 +6,7 @@ import localeFr from '@angular/common/locales/fr';
 import localeEn from '@angular/common/locales/en';
 import { HttpClientModule, HTTP_INTERCEPTORS } from '@angular/common/http';
 import { AuthInterceptor } from './interceptors/auth.interceptor';
+import { GzipRequestInterceptor } from './interceptors/gzip-request.interceptor';
 import { MatButtonModule } from '@angular/material/button';
 import { MatIconModule } from '@angular/material/icon';
 import { MatFormFieldModule } from '@angular/material/form-field';
@@ -195,6 +196,12 @@ registerLocaleData(localeEn, 'en');
         {
             provide: HTTP_INTERCEPTORS,
             useClass: AuthInterceptor,
+            multi: true
+        },
+        {
+            // Après AuthInterceptor : compresse en gzip les gros corps JSON envoyés à l'API.
+            provide: HTTP_INTERCEPTORS,
+            useClass: GzipRequestInterceptor,
             multi: true
         },
         {

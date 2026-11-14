@@ -48,6 +48,21 @@ public class GlobalCorsConfig {
     }
 
     /**
+     * Décompression des corps gzip envoyés par le frontend (lots de réconciliation,
+     * traitements serveur) : en tout début de chaîne, avant tout lecteur du corps.
+     * Plafond décompressé aligné sur la taille maximale d'upload (3 Go).
+     */
+    @Bean
+    public FilterRegistrationBean<com.reconciliation.filter.GzipRequestFilter> gzipRequestFilter(
+            @Value("${app.request.gzip.max-decompressed-bytes:3221225472}") long maxDecompressedBytes) {
+        FilterRegistrationBean<com.reconciliation.filter.GzipRequestFilter> registration = new FilterRegistrationBean<>();
+        registration.setFilter(new com.reconciliation.filter.GzipRequestFilter(maxDecompressedBytes));
+        registration.setOrder(Ordered.HIGHEST_PRECEDENCE + 1);
+        registration.addUrlPatterns("/api/*");
+        return registration;
+    }
+
+    /**
      * Filtre pour gérer l'accès au réseau privé (CORS)
      */
     private static class PrivateNetworkAccessFilter extends OncePerRequestFilter {
