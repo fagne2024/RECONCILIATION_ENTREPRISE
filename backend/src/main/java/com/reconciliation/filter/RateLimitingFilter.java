@@ -220,9 +220,29 @@ public class RateLimitingFilter extends OncePerRequestFilter {
     /**
      * Récupère l'adresse IP réelle du client
      */
-    private String getClientIpAddress(HttpServletRequest request) {
+    String getClientIpAddress(HttpServletRequest request) {
         String ip = request.getRemoteAddr();
+        // Le frontend (4200/4201) relaie /api depuis la même machine : sans cela, tous les
+        // utilisateurs distants partagent la clé « ip:::1 » et donc un seul quota/minute.
+        // On ne fait confiance à X-Forwarded-For que si le pair direct est local (notre
+        // proxy), et on prend la DERNIÈRE adresse : celle ajoutée par le proxy à partir
+        // de la socket, que le client ne peut pas forger (les premières entrées le peuvent).
+        if (isLoopback(ip)) {
+            String forwarded = request.getHeader("X-Forwarded-For");
+            if (forwarded != null && !forwarded.isBlank()) {
+                String[] parts = forwarded.split(",");
+                String last = parts[parts.length - 1].trim();
+                if (!last.isEmpty()) {
+                    return last;
+                }
+            }
+        }
         return ip != null && !ip.isBlank() ? ip : "unknown";
+    }
+
+    private static boolean isLoopback(String ip) {
+        return ip != null && (ip.equals("127.0.0.1") || ip.equals("::1")
+            || ip.equals("0:0:0:0:0:0:0:1") || ip.startsWith("127."));
     }
 
     /**

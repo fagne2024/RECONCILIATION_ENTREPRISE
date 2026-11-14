@@ -7,6 +7,7 @@
     "start-http": "cross-env NODE_OPTIONS=--no-deprecation ng serve",
     "start:test": "cross-env NODE_OPTIONS=--no-deprecation ng serve --proxy-config proxy.test.conf.json --port 4201",
     "build": "cross-env NODE_OPTIONS=--no-deprecation ng build",
+    "serve:dist": "node serveur-frontend.js",
     "watch": "cross-env NODE_OPTIONS=--no-deprecation ng build --watch --configuration development",
     "test": "cross-env NODE_OPTIONS=--no-deprecation ng test",
     "test:jest": "jest",
