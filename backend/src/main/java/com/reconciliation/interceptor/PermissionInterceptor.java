@@ -3,7 +3,6 @@ package com.reconciliation.interceptor;
 import com.reconciliation.annotation.RequiresModule;
 import com.reconciliation.service.EntrepriseModuleService;
 import com.reconciliation.service.PermissionCheckService;
-import com.reconciliation.service.UserLogService;
 import com.reconciliation.tenant.TenantContext;
 import jakarta.servlet.http.HttpServletRequest;
 import jakarta.servlet.http.HttpServletResponse;
@@ -31,9 +30,6 @@ public class PermissionInterceptor implements HandlerInterceptor {
     @Autowired
     private PermissionCheckService permissionCheckService;
     
-    @Autowired
-    private UserLogService userLogService;
-
     @Autowired
     private EntrepriseModuleService entrepriseModuleService;
 
@@ -267,20 +263,10 @@ public class PermissionInterceptor implements HandlerInterceptor {
                     
                     return false;
                 } else {
+                    // Pas de journalisation ici : UserLoggingInterceptor est le point unique
+                    // (il exclut les GET/pollings fréquents ; un insert user_log par requête
+                    // saturait la base pendant le polling de progression).
                     log.trace("Permission accordee user={} {} {}", username, method, path);
-                    
-                    // Logger l'action utilisateur
-                    try {
-                        String moduleName = permissionCheckService.resolveModuleForApiPath(path, method, moduleOverride);
-                        String permissionName = permissionCheckService.resolvePermissionForApiPath(path, method, moduleOverride, permissionOverride);
-                        
-                        if (moduleName != null && permissionName != null) {
-                            userLogService.saveLog(permissionName, moduleName, username);
-                        }
-                    } catch (Exception e) {
-                        // Ne pas bloquer la requête en cas d'erreur de logging
-                        System.err.println("Erreur lors de l'enregistrement du log: " + e.getMessage());
-                    }
                 }
             } catch (Exception e) {
                 log.error("Erreur lors de la vérification des permissions pour {} {} : {}", method, path, e.getMessage());

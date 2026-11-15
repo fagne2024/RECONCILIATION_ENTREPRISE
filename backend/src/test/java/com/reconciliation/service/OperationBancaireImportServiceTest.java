@@ -20,6 +20,13 @@ class OperationBancaireImportServiceTest {
     private static final String HEADER =
             "Type Opération,Montant,Statut,Date Opération,Agence,Référence,ID GLPI,Banque,Banque Corrigée,Mode de Paiement,Demandeur,Valideur,Traitement,Pays";
 
+    /** Service hors Spring : le journal d'audit (injecté en production) est remplacé par un mock. */
+    private static OperationBancaireImportService newService() {
+        OperationBancaireImportService service = new OperationBancaireImportService();
+        ReflectionTestUtils.setField(service, "auditService", mock(OperationBancaireAuditService.class));
+        return service;
+    }
+
     @Test
     void generatesReferencesWithCounterContinuingFromDatabaseAndKeepsOtherColumns() throws Exception {
         OperationBancaireRepository repo = mock(OperationBancaireRepository.class);
@@ -28,7 +35,7 @@ class OperationBancaireImportServiceTest {
         existing.setReference("ONUF6873-20261102APFR4");
         when(repo.findByReferenceStartingWith("ONUF6873-20261102APFR")).thenReturn(List.of(existing));
 
-        OperationBancaireImportService service = new OperationBancaireImportService();
+        OperationBancaireImportService service = newService();
         ReflectionTestUtils.setField(service, "repository", repo);
 
         String csv = String.join("\n",
@@ -70,7 +77,7 @@ class OperationBancaireImportServiceTest {
         OperationBancaireRepository repo = mock(OperationBancaireRepository.class);
         when(repo.findByReferenceStartingWith(eq("ONUF6873-20261102APFR"))).thenReturn(List.of());
 
-        OperationBancaireImportService service = new OperationBancaireImportService();
+        OperationBancaireImportService service = newService();
         ReflectionTestUtils.setField(service, "repository", repo);
 
         String csv = String.join("\n",
@@ -90,7 +97,7 @@ class OperationBancaireImportServiceTest {
         OperationBancaireRepository repo = mock(OperationBancaireRepository.class);
         when(repo.findByReferenceStartingWith(anyString())).thenReturn(List.of());
 
-        OperationBancaireImportService service = new OperationBancaireImportService();
+        OperationBancaireImportService service = newService();
         ReflectionTestUtils.setField(service, "repository", repo);
 
         // En-têtes tels que produits par buildTreatedRowsFile (après alias)
@@ -112,7 +119,7 @@ class OperationBancaireImportServiceTest {
         OperationBancaireRepository repo = mock(OperationBancaireRepository.class);
         when(repo.findByReferenceStartingWith(anyString())).thenReturn(List.of());
 
-        OperationBancaireImportService service = new OperationBancaireImportService();
+        OperationBancaireImportService service = newService();
         ReflectionTestUtils.setField(service, "repository", repo);
 
         String csv = String.join("\n",
@@ -136,7 +143,7 @@ class OperationBancaireImportServiceTest {
         OperationBancaireRepository repo = mock(OperationBancaireRepository.class);
         when(repo.findByReferenceStartingWith(anyString())).thenReturn(List.of());
 
-        OperationBancaireImportService service = new OperationBancaireImportService();
+        OperationBancaireImportService service = newService();
         ReflectionTestUtils.setField(service, "repository", repo);
 
         // Extrait de l'export BO qui faisait échouer tout l'import (montants « 2,000,000 », banque « null »)
@@ -175,7 +182,7 @@ class OperationBancaireImportServiceTest {
         OperationBancaireRepository repo = mock(OperationBancaireRepository.class);
         when(repo.findByReferenceStartingWith(anyString())).thenReturn(List.of());
 
-        OperationBancaireImportService service = new OperationBancaireImportService();
+        OperationBancaireImportService service = newService();
         ReflectionTestUtils.setField(service, "repository", repo);
 
         String csv = String.join("\n",
