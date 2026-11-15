@@ -41,10 +41,12 @@ public class TraitementOperationService {
 
     private final JdbcTemplate jdbc;
     private final ObjectMapper objectMapper;
+    private final TraitementLigneEcriture ecriture;
 
-    public TraitementOperationService(JdbcTemplate jdbc, ObjectMapper objectMapper) {
+    public TraitementOperationService(JdbcTemplate jdbc, ObjectMapper objectMapper, TraitementLigneEcriture ecriture) {
         this.jdbc = jdbc;
         this.objectMapper = objectMapper;
+        this.ecriture = ecriture;
     }
 
     /** Filtre : on garde les lignes dont la colonne vaut une des valeurs listées. */
@@ -244,13 +246,7 @@ public class TraitementOperationService {
     }
 
     private void insererBloc(List<Object[]> bloc) {
-        if (bloc.isEmpty()) {
-            return;
-        }
-        jdbc.batchUpdate(
-                "INSERT INTO traitement_ligne (entreprise_id, lot_id, fichier_id, numero, valeurs_json) VALUES (?, ?, ?, ?, ?)",
-                bloc);
-        bloc.clear();
+        ecriture.inserer(bloc);
     }
 
     private void verifierLot(long lotId, long entrepriseId) {

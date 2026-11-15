@@ -48,10 +48,12 @@ public class TraitementLotService {
 
     private final JdbcTemplate jdbc;
     private final ObjectMapper objectMapper;
+    private final TraitementLigneEcriture ecriture;
 
-    public TraitementLotService(JdbcTemplate jdbc, ObjectMapper objectMapper) {
+    public TraitementLotService(JdbcTemplate jdbc, ObjectMapper objectMapper, TraitementLigneEcriture ecriture) {
         this.jdbc = jdbc;
         this.objectMapper = objectMapper;
+        this.ecriture = ecriture;
     }
 
     /** Crée un lot vide pour l'entreprise courante et renvoie son identifiant. */
@@ -278,13 +280,7 @@ public class TraitementLotService {
     }
 
     private void insererBloc(List<Object[]> bloc) {
-        if (bloc.isEmpty()) {
-            return;
-        }
-        jdbc.batchUpdate(
-                "INSERT INTO traitement_ligne (entreprise_id, lot_id, fichier_id, numero, valeurs_json) VALUES (?, ?, ?, ?, ?)",
-                bloc);
-        bloc.clear();
+        ecriture.inserer(bloc);
     }
 
     private void nettoyerFichierEchoue(long lotId, long fichierId, long entrepriseId) {
