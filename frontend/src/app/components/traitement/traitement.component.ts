@@ -84,6 +84,20 @@ export interface ProcessingPopupState {
   mode: string;
 }
 
+/** Un filtre de la section « Filtrer les lignes » en traitement serveur. */
+interface FiltreServeur {
+  id: number;
+  colonne: string;
+  /** Valeurs distinctes de la colonne dans le lot, avec leur nombre de lignes. */
+  valeurs: { valeur: string; nb: number }[];
+  /** Valeurs cochées (lignes conservées). */
+  selection: string[];
+  recherche: string;
+  chargement: boolean;
+  tronque: boolean;
+  erreur: string;
+}
+
 @Component({
   selector: 'app-traitement',
   templateUrl: './traitement.component.html',
@@ -516,13 +530,14 @@ End Sub`;
   serverPage = 1;
   serverBusy = false;
   serverOp = {
-    filtreColonne: '',
-    filtreValeurs: '',
     dedoublonnerSur: [] as string[],
     colonnesNombre: [] as string[],
     colonnesDate: [] as string[],
     formatDate: 'yyyy-MM-dd'
   };
+  /** Section « Filtrer les lignes » du traitement serveur : valeurs lues côté serveur. */
+  serverFiltres: FiltreServeur[] = [];
+  private prochainFiltreServeur = 1;
 
   constructor(
     private cd: ChangeDetectorRef,
@@ -1131,21 +1146,96 @@ End Sub`;
     }
   }
 
-  /** Applique filtres, dédoublonnage et conversions : crée un nouveau lot côté serveur. */
+  /** Dédoublonnage et conversions : crée un nouveau lot côté serveur. */
   async appliquerOperationServeur(): Promise<void> {
-    if (!this.serverLot || this.serverBusy) {
-      return;
-    }
-    const valeurs = this.serverOp.filtreValeurs.split(';').map(v => v.trim()).filter(v => v !== '');
-    const operation: TraitementOperation = {
-      filtres: this.serverOp.filtreColonne && valeurs.length
-        ? [{ colonne: this.serverOp.filtreColonne, valeurs }]
-        : [],
+    await this.executerOperationServeur({
+      filtres: [],
       dedoublonnerSur: this.serverOp.dedoublonnerSur,
       colonnesNombre: this.serverOp.colonnesNombre,
       colonnesDate: this.serverOp.colonnesDate,
       formatDate: this.serverOp.formatDate
-    };
+    });
+  }
+
+  ajouterFiltreServeur(): void {
+    this.serverFiltres = [...this.serverFiltres, {
+      id: this.prochainFiltreServeur++, colonne: '', valeurs: [], selection: [], recherche: '',
+      chargement: false, tronque: false, erreur: ''
+    }];
+  }
+
+  supprimerFiltreServeur(filtre: FiltreServeur): void {
+    this.serverFiltres = this.serverFiltres.filter(f => f !== filtre);
+  }
+
+  /** Colonne choisie : charge ses valeurs distinctes (avec nombre de lignes) depuis le serveur. */
+  async onColonneFiltreServeur(filtre: FiltreServeur): Promise<void> {
+    filtre.valeurs = [];
+    filtre.selection = [];
+    filtre.recherche = '';
+    filtre.tronque = false;
+    filtre.erreur = '';
+    if (!filtre.colonne || !this.serverLot) {
+      return;
+    }
+    const colonne = filtre.colonne;
+    filtre.chargement = true;
+    try {
+      const r = await this.traitementLotService.valeurs(this.serverLot.lotId, colonne);
+      if (filtre.colonne === colonne) {
+        filtre.valeurs = r.valeurs;
+        filtre.tronque = r.tronque;
+      }
+    } catch (err) {
+      filtre.erreur = this.messageErreurServeur(err);
+    } finally {
+      filtre.chargement = false;
+      this.cd.detectChanges();
+    }
+  }
+
+  valeursAffichees(filtre: FiltreServeur): { valeur: string; nb: number }[] {
+    const q = filtre.recherche.trim().toLowerCase();
+    return q ? filtre.valeurs.filter(v => v.valeur.toLowerCase().includes(q)) : filtre.valeurs;
+  }
+
+  basculerValeurFiltreServeur(filtre: FiltreServeur, valeur: string, coche: boolean): void {
+    const sel = new Set(filtre.selection);
+    if (coche) sel.add(valeur); else sel.delete(valeur);
+    filtre.selection = [...sel];
+  }
+
+  /** Coche (ou décoche) toutes les valeurs affichées par la recherche. */
+  toutCocherFiltreServeur(filtre: FiltreServeur, coche: boolean): void {
+    const sel = new Set(filtre.selection);
+    for (const v of this.valeursAffichees(filtre)) {
+      if (coche) sel.add(v.valeur); else sel.delete(v.valeur);
+    }
+    filtre.selection = [...sel];
+  }
+
+  get filtresServeurPrets(): boolean {
+    return this.serverFiltres.some(f => f.colonne && f.selection.length > 0);
+  }
+
+  /** Garde les lignes dont chaque colonne filtrée vaut une des valeurs cochées (nouveau lot). */
+  async appliquerFiltresServeur(): Promise<void> {
+    const filtres = this.serverFiltres
+      .filter(f => f.colonne && f.selection.length > 0)
+      .map(f => ({ colonne: f.colonne, valeurs: f.selection }));
+    if (!filtres.length) {
+      return;
+    }
+    const ok = await this.executerOperationServeur({ filtres });
+    if (ok) {
+      this.serverFiltres = [];
+    }
+  }
+
+  private async executerOperationServeur(operation: TraitementOperation): Promise<boolean> {
+    if (!this.serverLot || this.serverBusy) {
+      return false;
+    }
     const precedent = this.serverLot.lotId;
     this.serverBusy = true;
     try {
@@ -1160,8 +1250,10 @@ End Sub`;
       this.showSuccess('upload',
         `Opération appliquée : ${res.lignesSorties.toLocaleString()} lignes conservées ` +
         `(${res.doublonsSupprimes.toLocaleString()} doublons, ${res.lignesFiltrees.toLocaleString()} filtrées).`);
+      return true;
     } catch (err) {
       this.showError('upload', this.messageErreurServeur(err));
+      return false;
     } finally {
       this.serverBusy = false;
     }
@@ -1221,8 +1313,9 @@ End Sub`;
     this.serverColumns = [];
     this.serverPage = 1;
     this.serverOp = {
-      filtreColonne: '', filtreValeurs: '', dedoublonnerSur: [], colonnesNombre: [], colonnesDate: [], formatDate: 'yyyy-MM-dd'
+      dedoublonnerSur: [], colonnesNombre: [], colonnesDate: [], formatDate: 'yyyy-MM-dd'
     };
+    this.serverFiltres = [];
     this.columns = [];
     this.selectedFiles = [];
     this.fileProcessStats = [];

@@ -76,6 +76,14 @@ public class TraitementLotController {
         return ResponseEntity.ok(service.lignes(lotId, apresNumero, taille));
     }
 
+    /** Valeurs distinctes d'une colonne du lot, avec leur nombre de lignes (section de filtres). */
+    @GetMapping("/{lotId}/valeurs")
+    public ResponseEntity<Map<String, Object>> valeurs(@PathVariable long lotId,
+                                                       @RequestParam("colonne") String colonne,
+                                                       @RequestParam(value = "limite", defaultValue = "5000") int limite) {
+        return ResponseEntity.ok(service.valeursDistinctes(lotId, colonne, limite));
+    }
+
     /**
      * Applique filtres, dédoublonnage et conversions à un lot. Le résultat est un nouveau lot
      * (le lot source n'est pas modifié).

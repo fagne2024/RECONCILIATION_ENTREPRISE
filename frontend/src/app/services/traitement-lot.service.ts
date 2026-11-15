@@ -48,6 +48,14 @@ export interface TraitementOperation {
   formatDate?: string;
 }
 
+/** Valeurs distinctes d'une colonne du lot (section « Filtrer les lignes »). */
+export interface TraitementValeursColonne {
+  colonne: string;
+  valeurs: { valeur: string; nb: number }[];
+  /** Vrai si la colonne a plus de valeurs distinctes que la limite renvoyée. */
+  tronque: boolean;
+}
+
 export interface TraitementResultatOperation {
   nouveauLotId: number;
   lignesEntree: number;
@@ -83,6 +91,12 @@ export class TraitementLotService {
   lignes(lotId: number, apresNumero: number, taille: number): Promise<TraitementPageLignes> {
     return firstValueFrom(this.http.get<TraitementPageLignes>(`${this.apiUrl}/${lotId}/lignes`, {
       params: { apresNumero: String(apresNumero), taille: String(taille) }
+    }));
+  }
+
+  valeurs(lotId: number, colonne: string): Promise<TraitementValeursColonne> {
+    return firstValueFrom(this.http.get<TraitementValeursColonne>(`${this.apiUrl}/${lotId}/valeurs`, {
+      params: { colonne }
     }));
   }
 

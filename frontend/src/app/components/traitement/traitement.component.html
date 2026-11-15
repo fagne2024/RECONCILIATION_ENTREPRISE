@@ -149,18 +149,59 @@
       <li *ngFor="let f of serverLot.fichiers">{{ f.nom }} — {{ f.nbLignes | number }} lignes</li>
     </ul>
 
+    <fieldset class="srv-ops srv-filtres" [disabled]="serverBusy">
+      <legend><i class="fas fa-filter"></i> {{ 'TRT.FiltrerLesLignes' | translate }}</legend>
+      <p class="srv-filtres-aide">Seules les lignes dont chaque colonne filtrée vaut une des valeurs cochées sont conservées (nouveau lot).</p>
+
+      <div class="srv-filtre" *ngFor="let f of serverFiltres; let i = index">
+        <div class="srv-filtre-tete">
+          <label>{{ 'TRT.Colonne' | translate }}
+            <select class="ds-select" [(ngModel)]="f.colonne" (ngModelChange)="onColonneFiltreServeur(f)">
+              <option value="">{{ 'TRT.--ChoisirUneColonne--' | translate }}</option>
+              <option *ngFor="let col of serverColumns" [value]="col">{{ col }}</option>
+            </select>
+          </label>
+          <button type="button" class="ds-btn ds-btn--danger" (click)="supprimerFiltreServeur(f)" [attr.aria-label]="'Supprimer le filtre ' + (i + 1)">
+            <i class="fas fa-trash"></i>
+          </button>
+        </div>
+
+        <p *ngIf="f.chargement" class="srv-filtre-info"><i class="fas fa-spinner fa-spin"></i> Lecture des valeurs de la colonne…</p>
+        <p *ngIf="f.erreur" class="error-msg" role="alert">{{ f.erreur }}</p>
+
+        <div *ngIf="f.colonne && !f.chargement && !f.erreur">
+          <div class="srv-filtre-outils">
+            <input type="search" class="ds-input" [(ngModel)]="f.recherche" placeholder="Rechercher une valeur…" aria-label="Rechercher une valeur" />
+            <button type="button" class="ds-btn ds-btn--secondary" (click)="toutCocherFiltreServeur(f, true)">Tout cocher</button>
+            <button type="button" class="ds-btn ds-btn--secondary" (click)="toutCocherFiltreServeur(f, false)">Tout décocher</button>
+            <span class="srv-filtre-info">{{ f.selection.length | number }} / {{ f.valeurs.length | number }} valeur(s) cochée(s)</span>
+          </div>
+          <p *ngIf="f.tronque" class="srv-filtre-info">Colonne très variée : seules les {{ f.valeurs.length | number }} premières valeurs distinctes sont proposées.</p>
+          <div class="srv-filtre-valeurs" role="group" [attr.aria-label]="'Valeurs de ' + f.colonne">
+            <label *ngFor="let v of valeursAffichees(f)">
+              <input type="checkbox" class="ds-checkbox" [checked]="f.selection.includes(v.valeur)"
+                     (change)="basculerValeurFiltreServeur(f, v.valeur, $any($event.target).checked)" />
+              <span>{{ v.valeur === '' ? ('TRT.Empty' | translate) : v.valeur }}</span>
+              <small>{{ v.nb | number }}</small>
+            </label>
+            <p *ngIf="!valeursAffichees(f).length" class="srv-filtre-info">Aucune valeur.</p>
+          </div>
+        </div>
+      </div>
+
+      <div class="srv-filtres-actions">
+        <button type="button" class="ds-btn ds-btn--secondary" (click)="ajouterFiltreServeur()">
+          <i class="fas fa-plus"></i> {{ 'TRT.AjouterUnFiltre' | translate }}
+        </button>
+        <button type="button" class="ds-btn ds-btn--primary" (click)="appliquerFiltresServeur()" [disabled]="!filtresServeurPrets">
+          <i class="fas fa-check"></i> {{ 'TRT.AppliquerTousLesFiltres' | translate }}
+        </button>
+      </div>
+    </fieldset>
+
     <fieldset class="srv-ops" [disabled]="serverBusy">
       <legend>Opérations (créent un nouveau lot)</legend>
       <div class="srv-ops-grid">
-        <label>Filtrer la colonne
-          <select [(ngModel)]="serverOp.filtreColonne">
-            <option value="">— aucune —</option>
-            <option *ngFor="let col of serverColumns" [value]="col">{{ col }}</option>
-          </select>
-        </label>
-        <label>Valeurs retenues (séparées par « ; »)
-          <input type="text" [(ngModel)]="serverOp.filtreValeurs" placeholder="OK;KO" />
-        </label>
         <label>Dédoublonner sur
           <select multiple [(ngModel)]="serverOp.dedoublonnerSur">
             <option *ngFor="let col of serverColumns" [value]="col">{{ col }}</option>

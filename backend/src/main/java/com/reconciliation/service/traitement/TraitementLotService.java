@@ -45,6 +45,8 @@ public class TraitementLotService {
     private static final int TAILLE_LOT_INSERTION = 1000;
     private static final int TAILLE_SUPPRESSION = 50000;
     private static final int TAILLE_PAGE_MAX = 5000;
+    /** Nombre maximal de valeurs distinctes renvoyées pour un filtre. */
+    private static final int TAILLE_VALEURS_MAX = 5000;
 
     private final JdbcTemplate jdbc;
     private final ObjectMapper objectMapper;
@@ -183,6 +185,92 @@ public class TraitementLotService {
         page.put("lignes", lignes);
         page.put("curseurSuivant", brutes.size() < limite ? null : dernier);
         return page;
+    }
+
+    /**
+     * Valeurs distinctes d'une colonne du lot, avec leur nombre de lignes, triées par valeur.
+     * Sert à la section « Filtrer les lignes » en traitement serveur (le navigateur n'a pas les
+     * lignes). Une valeur absente ou nulle est rendue par {@code ""}, comme dans le filtre
+     * ({@link TraitementTransformations#appartient}). Au-delà de {@code limite} valeurs
+     * distinctes, les nouvelles valeurs sont ignorées et {@code tronque} vaut {@code true}.
+     */
+    public Map<String, Object> valeursDistinctes(long lotId, String colonne, int limite) {
+        long entrepriseId = entrepriseCourante();
+        verifierLot(lotId, entrepriseId);
+        if (colonne == null || colonne.isEmpty()) {
+            throw new IllegalArgumentException("Colonne obligatoire.");
+        }
+        int max = Math.max(1, Math.min(limite, TAILLE_VALEURS_MAX));
+        Map<String, long[]> compteurs = new java.util.HashMap<>();
+        boolean tronque = false;
+        long curseur = 0;
+        while (true) {
+            List<Map<String, Object>> page = jdbc.queryForList(
+                    "SELECT numero, valeurs_json FROM traitement_ligne "
+                            + "WHERE entreprise_id = ? AND lot_id = ? AND numero > ? ORDER BY numero LIMIT ?",
+                    entrepriseId, lotId, curseur, TAILLE_PAGE_MAX);
+            for (Map<String, Object> b : page) {
+                curseur = ((Number) b.get("numero")).longValue();
+                String valeur = valeurColonne((String) b.get("valeurs_json"), colonne);
+                long[] n = compteurs.get(valeur);
+                if (n != null) {
+                    n[0]++;
+                } else if (compteurs.size() < max) {
+                    compteurs.put(valeur, new long[]{1});
+                } else {
+                    tronque = true;
+                }
+            }
+            if (page.size() < TAILLE_PAGE_MAX) {
+                break;
+            }
+        }
+        List<Map<String, Object>> valeurs = new ArrayList<>(compteurs.size());
+        compteurs.entrySet().stream()
+                .sorted(Map.Entry.comparingByKey(String.CASE_INSENSITIVE_ORDER))
+                .forEach(e -> {
+                    Map<String, Object> item = new LinkedHashMap<>();
+                    item.put("valeur", e.getKey());
+                    item.put("nb", e.getValue()[0]);
+                    valeurs.add(item);
+                });
+        Map<String, Object> reponse = new LinkedHashMap<>();
+        reponse.put("colonne", colonne);
+        reponse.put("valeurs", valeurs);
+        reponse.put("tronque", tronque);
+        return reponse;
+    }
+
+    /**
+     * Valeur d'une colonne dans le JSON d'une ligne, lue en flux (sans construire la ligne
+     * entière), au même format que {@code String.valueOf} sur la valeur désérialisée.
+     */
+    String valeurColonne(String json, String colonne) {
+        try (com.fasterxml.jackson.core.JsonParser p = objectMapper.getFactory().createParser(json)) {
+            if (p.nextToken() != com.fasterxml.jackson.core.JsonToken.START_OBJECT) {
+                return "";
+            }
+            com.fasterxml.jackson.core.JsonToken t;
+            while ((t = p.nextToken()) == com.fasterxml.jackson.core.JsonToken.FIELD_NAME) {
+                boolean cible = colonne.equals(p.currentName());
+                com.fasterxml.jackson.core.JsonToken v = p.nextToken();
+                if (!cible) {
+                    p.skipChildren();
+                    continue;
+                }
+                return switch (v) {
+                    case VALUE_NULL -> "";
+                    case VALUE_STRING -> p.getText();
+                    case VALUE_NUMBER_INT -> String.valueOf(p.getNumberValue());
+                    case VALUE_NUMBER_FLOAT -> String.valueOf(p.getDoubleValue());
+                    case VALUE_TRUE, VALUE_FALSE -> String.valueOf(p.getBooleanValue());
+                    default -> objectMapper.readTree(p).toString();
+                };
+            }
+            return "";
+        } catch (IOException e) {
+            throw new IllegalStateException("Ligne illisible", e);
+        }
     }
 
     /** Supprime le lot, ses fichiers et ses lignes (par blocs, pour ne pas bloquer la table). */
