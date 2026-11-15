@@ -571,7 +571,7 @@
           <input
             type="text"
             [(ngModel)]="destinatairesEmails"
-            placeholder="ex. controle@entreprise.com, audit@entreprise.com"
+            placeholder="{{ 'CIB.ui.exControleEntrepriseComAuditEntreprise' | translate }}"
             class="ci-comment-input"
           />
         </label>
@@ -618,7 +618,7 @@
   <div class="ci-modal" (click)="$event.stopPropagation()" role="dialog" aria-labelledby="ci-ticket-modal-title">
     <div class="ci-modal-header">
       <h3 id="ci-ticket-modal-title">{{ ticketModalTitle }}</h3>
-      <button type="button" class="ci-modal-close" (click)="closeTicketModal()" aria-label="{{ 'COMMON.actions.close' | translate }}">&times;</button>
+      <button type="button" class="ci-modal-close" (click)="closeTicketModal()" [attr.aria-label]="'COMMON.actions.close' | translate">&times;</button>
     </div>
     <div class="ci-modal-body">
       <p class="ci-modal-hint">{{ 'CIB.modal.hint' | translate: { count: ticketModalTicketIds.length } }}</p>

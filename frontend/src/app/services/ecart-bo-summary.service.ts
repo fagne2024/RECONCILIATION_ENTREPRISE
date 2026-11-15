@@ -3,6 +3,7 @@ import { HttpClient, HttpErrorResponse, HttpHeaders, HttpParams } from '@angular
 import { Observable, throwError, timer, firstValueFrom } from 'rxjs';
 import { catchError, switchMap } from 'rxjs/operators';
 import { AppStateService } from './app-state.service';
+import { I18nService } from './i18n/i18n.service';
 
 export interface EcartBoSummary {
   id?: number;
@@ -213,7 +214,7 @@ export class EcartBoSummaryService {
           console.log('DEBUG: Réponse complète:', response);
           resolve({
             count: response.count || 0,
-            message: response.message || 'Données sauvegardées avec succès',
+            message: response.message || I18nService.t('MSG.msg.donneesSauvegardeesAvecSucces'),
             totalReceived: response.totalReceived || summaryData.length,
             duplicates: response.duplicates || 0,
             duplicateRecords: response.duplicateRecords || []

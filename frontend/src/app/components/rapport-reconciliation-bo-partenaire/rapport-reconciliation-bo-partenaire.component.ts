@@ -34,6 +34,7 @@ import {
 import html2canvas from 'html2canvas';
 import { jsPDF } from 'jspdf';
 import * as XLSX from 'xlsx';
+import { I18nService } from '../../services/i18n/i18n.service';
 
 /** Entrées GET /api/result8rec/{id}/audit-history (même modèle que le rapport réconciliation détaillé). */
 interface Result8RecAuditEntry {
@@ -1470,7 +1471,7 @@ export class RapportReconciliationBoPartenaireComponent implements OnInit, OnDes
   buildAuditLigneSubtitle(result8recId: number): string {
     const m = this.metaByResult8RecId.get(result8recId);
     if (!m) {
-      return `Ligne #${result8recId}`;
+      return I18nService.t('RBP.msg.ligne', { p0: result8recId });
     }
     const dateStr = m.date ? this.formatFrShort(m.date) : '—';
     const ag = m.agency && m.agency !== '—' ? m.agency : '—';

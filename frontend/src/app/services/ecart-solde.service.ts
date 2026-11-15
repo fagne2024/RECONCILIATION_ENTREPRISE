@@ -3,6 +3,7 @@ import { HttpClient, HttpHeaders, HttpParams } from '@angular/common/http';
 import { Observable, forkJoin, map } from 'rxjs';
 import { EcartSolde, EcartSoldeUploadResponse, EcartSoldeFilter, FraisAssocie } from '../models/ecart-solde.model';
 import { ConfigurationCalculService } from './configuration-calcul.service';
+import { I18nService } from './i18n/i18n.service';
 
 @Injectable({
   providedIn: 'root'
@@ -183,7 +184,7 @@ export class EcartSoldeService {
             count: response.count || 0,
             duplicates: response.duplicates || 0,
             totalReceived: response.totalReceived || ecartSoldes.length,
-            message: response.message || 'Enregistrements créés avec succès'
+            message: response.message || I18nService.t('MSG.msg.enregistrementsCreesAvecSucces')
           });
         },
         error: (error) => {
@@ -218,7 +219,7 @@ export class EcartSoldeService {
           console.log('DEBUG: Réponse complète:', response);
           resolve({
             count: response.count || 0,
-            message: response.message || 'Données sauvegardées avec succès'
+            message: response.message || I18nService.t('MSG.msg.donneesSauvegardeesAvecSucces')
           });
         },
         error: (error) => {

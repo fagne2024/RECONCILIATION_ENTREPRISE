@@ -167,11 +167,11 @@
                                     </div>
                                     <div class="preview-item">
                                         <span class="preview-label">{{ 'LBL.serviceLabel' | translate }}</span>
-                                        <span class="preview-value">{{ addForm.get('service')?.value || 'Non défini' }}</span>
+                                        <span class="preview-value">{{ addForm.get('service')?.value || ('OPS.notDefined' | translate) }}</span>
                                     </div>
                                     <div class="preview-item">
                                         <span class="preview-label">{{ 'FRS.Client_1' | translate }}</span>
-                                        <span class="preview-value">{{ addForm.get('agence')?.value || 'Non défini' }}</span>
+                                        <span class="preview-value">{{ addForm.get('agence')?.value || ('OPS.notDefined' | translate) }}</span>
                                     </div>
                                 </div>
                             </div>
@@ -217,7 +217,7 @@
                         [disabled]="!addForm.valid || isAdding"
                         (click)="addFraisTransaction()">
                         <i class="fas fa-plus"></i>
-                        {{ isAdding ? 'Ajout en cours...' : 'Ajouter le frais' }}
+                        {{ isAdding ? ('OPS.adding' | translate) : ('FRS.ui.ajouterLeFrais' | translate) }}
                     </button>
                 </div>
             </div>
@@ -231,7 +231,7 @@
                 <h3><i class="fas fa-edit"></i> {{ 'FRS.Modifierlefraisdetransaction' | translate }}{{ editingFrais.id }}</h3>
                 <div class="frais-status">
                     <span class="status-badge" [class]="'status-' + (editingFrais.actif ? 'actif' : 'inactif')">
-                        {{ editingFrais.actif ? 'Actif' : 'Inactif' }}
+                        {{ editingFrais.actif ? ('COMMON.ACTIVE' | translate) : ('FRS.Inactif' | translate) }}
                     </span>
                 </div>
                 <button type="button" class="modal-close" (click)="cancelEdit()">
@@ -343,11 +343,11 @@
                                     </div>
                                     <div class="preview-item">
                                         <span class="preview-label">{{ 'LBL.serviceLabel' | translate }}</span>
-                                        <span class="preview-value">{{ editForm.get('service')?.value || 'Non défini' }}</span>
+                                        <span class="preview-value">{{ editForm.get('service')?.value || ('OPS.notDefined' | translate) }}</span>
                                     </div>
                                     <div class="preview-item">
                                         <span class="preview-label">{{ 'FRS.Client_1' | translate }}</span>
-                                        <span class="preview-value">{{ editForm.get('agence')?.value || 'Non défini' }}</span>
+                                        <span class="preview-value">{{ editForm.get('agence')?.value || ('OPS.notDefined' | translate) }}</span>
                                     </div>
                                 </div>
                             </div>
@@ -393,7 +393,7 @@
                         [disabled]="!editForm.valid || isEditing"
                         (click)="updateFraisTransaction()">
                         <i class="fas fa-check"></i>
-                        {{ isEditing ? 'Mise à jour...' : 'Mettre à jour' }}
+                        {{ isEditing ? ('ACT.updating' | translate) : ('ACT.update' | translate) }}
                     </button>
                 </div>
             </div>
@@ -411,7 +411,7 @@
                         <mat-label>{{ 'TBL.service' | translate }}</mat-label>
                         <mat-select #serviceSelect formControlName="services" multiple (selectionChange)="onServiceChange($event)">
                             <mat-option>
-                                <ngx-mat-select-search [formControl]="serviceSearchCtrl" placeholderLabel="Rechercher un service..." noEntriesFoundLabel="Aucun service trouvé"></ngx-mat-select-search>
+                                <ngx-mat-select-search [formControl]="serviceSearchCtrl" [placeholderLabel]="'SEARCH.service' | translate" [noEntriesFoundLabel]="'SEARCH.noService' | translate"></ngx-mat-select-search>
                             </mat-option>
                             <mat-option *ngFor="let service of filteredServicesList" [value]="service">
                                 {{ service }}
@@ -425,7 +425,7 @@
                         <mat-label>{{ 'TBL.client' | translate }}</mat-label>
                         <mat-select #agenceSelect formControlName="agences" multiple (selectionChange)="onAgenceChange($event)">
                             <mat-option>
-                                <ngx-mat-select-search [formControl]="agenceSearchCtrl" placeholderLabel="Rechercher un client..." noEntriesFoundLabel="Aucun client trouvé"></ngx-mat-select-search>
+                                <ngx-mat-select-search [formControl]="agenceSearchCtrl" [placeholderLabel]="'SEARCH.client' | translate" [noEntriesFoundLabel]="'SEARCH.noClient' | translate"></ngx-mat-select-search>
                             </mat-option>
                             <mat-option *ngFor="let agence of filteredAgencesList" [value]="agence">
                                 {{ agence }}
@@ -439,7 +439,7 @@
                         <mat-label>{{ 'TBL.country' | translate }}</mat-label>
                         <mat-select #paysSelect formControlName="pays" multiple (selectionChange)="onPaysChange($event)">
                             <mat-option>
-                                <ngx-mat-select-search [formControl]="paysSearchCtrl" placeholderLabel="Rechercher un pays..." noEntriesFoundLabel="Aucun pays trouvé"></ngx-mat-select-search>
+                                <ngx-mat-select-search [formControl]="paysSearchCtrl" [placeholderLabel]="'SEARCH.country' | translate" [noEntriesFoundLabel]="'SEARCH.noCountry' | translate"></ngx-mat-select-search>
                             </mat-option>
                             <mat-option *ngFor="let pays of filteredPaysList" [value]="pays">
                                 {{ pays }}
@@ -477,15 +477,15 @@
             <div class="export-buttons" *ngIf="!isLoading && pagedFrais.length > 0">
                 <button type="button" class="ds-btn ds-btn--secondary btn-export btn-csv" (click)="exportToCSV()" [disabled]="isExporting">
                     <i class="fas fa-file-csv"></i>
-                    {{ isExporting ? 'Export en cours...' : 'Exporter CSV' }}
+                    {{ isExporting ? ('TRT.msg.exportInProgress' | translate) : ('BQ.Exportercsv' | translate) }}
                 </button>
                 <button type="button" class="ds-btn ds-btn--secondary btn-export btn-excel" (click)="exportToExcel()" [disabled]="isExporting">
                     <i class="fas fa-file-excel"></i>
-                    {{ isExporting ? 'Export en cours...' : 'Exporter Excel' }}
+                    {{ isExporting ? ('TRT.msg.exportInProgress' | translate) : ('ACT.importFile' | translate) }}
                 </button>
                 <button type="button" class="ds-btn ds-btn--secondary btn-export btn-api" (click)="exportViaAPI()" [disabled]="isExporting">
                     <i class="fas fa-download"></i>
-                    {{ isExporting ? 'Export en cours...' : 'Export API' }}
+                    {{ isExporting ? ('TRT.msg.exportInProgress' | translate) : ('FRS.ui.exportApi' | translate) }}
                 </button>
             </div>
         </div>
@@ -523,7 +523,7 @@
                         <td>{{ frais.agence }}</td>
                         <td>
                             <span class="badge type-{{ frais.typeCalcul?.toLowerCase() || 'nominal' }}">
-                                {{ frais.typeCalcul === 'POURCENTAGE' ? 'Frais en %' : 'Frais fixe' }}
+                                {{ frais.typeCalcul === 'POURCENTAGE' ? ('FRS.ui.fraisEn' | translate) : ('FRS.Fraisfixe' | translate) }}
                             </span>
                         </td>
                         <td>
@@ -537,7 +537,7 @@
                         <td>{{ frais.description || '-' }}</td>
                         <td>
                             <span class="badge status-{{ frais.actif ? 'actif' : 'inactif' }}">
-                                {{ frais.actif ? 'Actif' : 'Inactif' }}
+                                {{ frais.actif ? ('COMMON.ACTIVE' | translate) : ('FRS.Inactif' | translate) }}
                             </span>
                         </td>
                         <td>{{ frais.dateCreation | date:'dd/MM/yyyy HH:mm' }}</td>

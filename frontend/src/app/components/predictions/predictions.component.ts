@@ -3,6 +3,7 @@ import { FormBuilder, FormGroup, Validators } from '@angular/forms';
 import { Router } from '@angular/router';
 import { PredictionService, PredictionRequest, PredictionResponse, PredictionType } from '../../services/prediction.service';
 import { Chart, ChartConfiguration, registerables } from 'chart.js';
+import { I18nService } from '../../services/i18n/i18n.service';
 Chart.register(...registerables);
 
 @Component({
@@ -20,9 +21,9 @@ export class PredictionsComponent implements OnInit {
 
   // Options de méthode de prédiction
   methodesPrediction = [
-    { value: 'moyenne', label: 'Moyenne Simple' },
-    { value: 'tendance', label: 'Tendance Linéaire' },
-    { value: 'saisonnier', label: 'Saisonnier (Jour de la semaine)' }
+    { value: 'moyenne', label: I18nService.t('PRD.ui.methodAverage') },
+    { value: 'tendance', label: I18nService.t('PRD.ui.methodTrend') },
+    { value: 'saisonnier', label: I18nService.t('PRD.ui.methodSeasonal') }
   ];
 
   constructor(
@@ -60,7 +61,7 @@ export class PredictionsComponent implements OnInit {
       this.availableTypes = await this.predictionService.getAvailableTypes().toPromise() || [];
     } catch (error: any) {
       console.error('Erreur lors du chargement des types:', error);
-      this.errorMessage = 'Erreur lors du chargement des types d\'opérations';
+      this.errorMessage = I18nService.t('PRD.errLoadTypes');
     }
   }
 
@@ -95,7 +96,7 @@ export class PredictionsComponent implements OnInit {
       }
     } catch (error: any) {
       console.error('Erreur lors de la génération de la prédiction:', error);
-      this.errorMessage = error.error?.message || error.message || 'Erreur lors de la génération de la prédiction';
+      this.errorMessage = error.error?.message || error.message || I18nService.t('COMMON.msg.erreurLorsDeLaGenerationDe');
     } finally {
       this.isLoading = false;
     }
@@ -167,7 +168,7 @@ export class PredictionsComponent implements OnInit {
             callbacks: {
               label: (context: any) => {
                 if (context.datasetIndex === 0) {
-                  return `Montant: ${context.parsed.y.toLocaleString('fr-FR', { style: 'currency', currency: 'XOF' })}`;
+                  return I18nService.t('COMMON.msg.montant', { p0: context.parsed.y.toLocaleString('fr-FR', { style: 'currency', currency: 'XOF' }) });
                 } else {
                   return `Confiance: ${(context.parsed.y / 1000 * 100).toFixed(1)}%`;
                 }

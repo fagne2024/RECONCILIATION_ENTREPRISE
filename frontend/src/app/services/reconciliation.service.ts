@@ -9,6 +9,7 @@ import { AgencySummaryData } from './reconciliation-summary.service';
 import { EcartBoSummaryPendingLine } from './ecart-bo-summary.service';
 import { fixGarbledCharacters } from '../utils/encoding-fixer';
 import { countryNameFromCode } from '../utils/country-codes.util';
+import { I18nService } from './i18n/i18n.service';
 
 /** Données de l'alerte « volume par client » envoyée par e-mail. */
 export interface ClientVolumeAlertPayload {
@@ -168,7 +169,7 @@ export class ReconciliationService implements OnInit, OnDestroy {
             percentage: 10,
             processed: 0,
             total: 100,
-            step: 'Upload des fichiers...',
+            step: I18nService.t('MSG.msg.uploadDesFichiers'),
             estimatedTimeRemaining: 30000
         });
 
@@ -181,7 +182,7 @@ export class ReconciliationService implements OnInit, OnDestroy {
                         percentage: 20,
                         processed: 0,
                         total: 100,
-                        step: 'Traitement en cours...',
+                        step: I18nService.t('TRT.ProcessingInProgress'),
                         estimatedTimeRemaining: 25000
                     });
                 }),
@@ -220,7 +221,7 @@ export class ReconciliationService implements OnInit, OnDestroy {
             percentage: 5,
             processed: 0,
             total: 100,
-            step: 'Préparation du traitement par chunks...',
+            step: I18nService.t('MSG.msg.preparationDuTraitementParChunks'),
             estimatedTimeRemaining: 60000
         });
 
@@ -233,7 +234,7 @@ export class ReconciliationService implements OnInit, OnDestroy {
                         percentage: 15,
                         processed: 0,
                         total: 100,
-                        step: 'Traitement par chunks en cours...',
+                        step: I18nService.t('MSG.msg.traitementParChunksEnCours'),
                         estimatedTimeRemaining: 45000
                     });
                 }),
@@ -256,7 +257,7 @@ export class ReconciliationService implements OnInit, OnDestroy {
                 percentage: 10,
                 processed: 0,
                 total: 100,
-                step: 'Traitement frontend par chunks...',
+                step: I18nService.t('MSG.msg.traitementFrontendParChunks'),
                 estimatedTimeRemaining: 120000
             });
             
@@ -329,7 +330,7 @@ export class ReconciliationService implements OnInit, OnDestroy {
                 percentage: 100,
                 processed: boData.length,
                 total: boData.length,
-                step: 'Traitement terminé',
+                step: I18nService.t('MSG.msg.traitementTermine'),
                 estimatedTimeRemaining: 0
             });
             
@@ -698,7 +699,7 @@ export class ReconciliationService implements OnInit, OnDestroy {
                         percentage: 100,
                         processed: results.totalBoRecords + results.totalPartnerRecords,
                         total: results.totalBoRecords + results.totalPartnerRecords,
-                        step: 'Terminé',
+                        step: I18nService.t('EBQ.status.done'),
                         estimatedTimeRemaining: 0
                     });
                 }),
@@ -848,7 +849,7 @@ export class ReconciliationService implements OnInit, OnDestroy {
     private withPageTimeout<T>(task: Promise<T>, timeoutMs: number, context?: string): Promise<T> {
         return new Promise<T>((resolve, reject) => {
             const timerId = setTimeout(() => {
-                reject(new Error(`Timeout pagination (${context ?? 'détail'}) après ${Math.round(timeoutMs / 1000)}s`));
+                reject(new Error(I18nService.t('MSG.msg.timeoutPaginationApresS', { p0: context ?? I18nService.t('MSG.msg.detail'), p1: Math.round(timeoutMs / 1000) })));
             }, timeoutMs);
             task.then(
                 (value) => { clearTimeout(timerId); resolve(value); },
@@ -1416,7 +1417,7 @@ export class ReconciliationService implements OnInit, OnDestroy {
                         observer.complete();
                     }
                 } else {
-                    observer.error(new Error('Résultats non trouvés pour le job frontend'));
+                    observer.error(new Error(I18nService.t('MSG.msg.resultatsNonTrouvesPourLeJob')));
                 }
             } catch (error) {
                 observer.error(error);
@@ -1696,7 +1697,7 @@ export class ReconciliationService implements OnInit, OnDestroy {
                         stopPolling();
                         abortCurrentAttempt();
                         subscriber.error(new Error(
-                            'La réconciliation n\'a pas démarré côté serveur après plusieurs tentatives. Actualisez la page puis relancez.'
+                            I18nService.t('MSG.msg.laReconciliationNAPasDemarre')
                         ));
                         return;
                     }
@@ -1713,7 +1714,7 @@ export class ReconciliationService implements OnInit, OnDestroy {
                         percentage: 0,
                         processed: 0,
                         total: 100,
-                        step: 'Relance automatique de la réconciliation...',
+                        step: I18nService.t('MSG.msg.relanceAutomatiqueDeLaReconciliation'),
                         estimatedTimeRemaining: watchdogMs
                     });
                 }
@@ -1831,7 +1832,7 @@ export class ReconciliationService implements OnInit, OnDestroy {
                         percentage: 100,
                         processed: response.totalBoRecords + response.totalPartnerRecords,
                         total: response.totalBoRecords + response.totalPartnerRecords,
-                        step: 'Terminé',
+                        step: I18nService.t('EBQ.status.done'),
                         estimatedTimeRemaining: 0
                     });
                 }),
@@ -2938,7 +2939,7 @@ export class ReconciliationService implements OnInit, OnDestroy {
     private aggregateChunkResults(accumulatedResults: any[], observer: any): void {
         
         if (accumulatedResults.length === 0) {
-            observer.error(new Error('Aucun résultat à agréger'));
+            observer.error(new Error(I18nService.t('MSG.msg.aucunResultatAAgreger')));
             return;
         }
         
@@ -3020,7 +3021,7 @@ export class ReconciliationService implements OnInit, OnDestroy {
                 percentage: 10,
                 processed: 0,
                 total: 100,
-                step: 'Traitement par chunks...',
+                step: I18nService.t('MSG.msg.traitementParChunks'),
                 estimatedTimeRemaining: 120000
             });
             
@@ -3106,7 +3107,7 @@ export class ReconciliationService implements OnInit, OnDestroy {
                 percentage: 100,
                 processed: boData.length,
                 total: boData.length,
-                step: 'Traitement terminé',
+                step: I18nService.t('MSG.msg.traitementTermine'),
                 estimatedTimeRemaining: 0
             });
             
@@ -3206,24 +3207,24 @@ export class ReconciliationService implements OnInit, OnDestroy {
      */
     private handleError = (error: HttpErrorResponse | any): Observable<never> => {
         
-        let errorMessage = 'Une erreur est survenue';
+        let errorMessage = I18nService.t('MSG.msg.uneErreurEstSurvenue');
         
         // Détecter les erreurs de timeout
         if (error.name === 'TimeoutError' || error.message?.includes('timeout') || error.message?.includes('Timeout')) {
-            errorMessage = 'Le délai d\'attente a été dépassé. La réconciliation prend plus de temps que prévu. ' +
-                          'Pour les très gros fichiers, veuillez patienter ou diviser les fichiers en plus petits lots.';
+            errorMessage = I18nService.t('MSG.msg.leDelaiDAttenteAEte') +
+                          I18nService.t('MSG.msg.pourLesTresGrosFichiersVeuillez');
         } else if (error.error instanceof ErrorEvent) {
             // Erreur côté client
-            errorMessage = `Erreur: ${error.error.message}`;
+            errorMessage = I18nService.t('MSG.msg.erreur', { p0: error.error.message });
         } else if (error.status) {
             // Erreur côté serveur
             if (error.status === 504 || error.status === 408) {
-                errorMessage = 'Le serveur a mis trop de temps à répondre. ' +
-                              'Veuillez réessayer ou diviser les fichiers en plus petits lots.';
+                errorMessage = I18nService.t('MSG.msg.leServeurAMisTropDe') +
+                              I18nService.t('MSG.msg.veuillezReessayerOuDiviserLesFichiers');
             } else if (error.status === 429) {
-                errorMessage = 'Trop de requêtes. Le client a automatiquement réessayé, mais le serveur refuse encore la réconciliation. Veuillez patienter quelques instants puis relancer.';
+                errorMessage = I18nService.t('MSG.msg.tropDeRequetesLeClientA');
             } else {
-                errorMessage = `Erreur ${error.status}: ${error.message || 'Erreur serveur'}`;
+                errorMessage = I18nService.t('MSG.msg.erreur2', { p0: error.status, p1: error.message || I18nService.t('IOP.serverError') });
             }
             if (error.error && error.error.message) {
                 errorMessage = error.error.message;
@@ -3235,7 +3236,7 @@ export class ReconciliationService implements OnInit, OnDestroy {
             percentage: 0,
             processed: 0,
             total: 100,
-            step: `Erreur: ${errorMessage}`,
+            step: I18nService.t('MSG.msg.erreur', { p0: errorMessage }),
             estimatedTimeRemaining: 0
         });
         

@@ -1,5 +1,6 @@
 import { Component } from '@angular/core';
 import { CommonModule } from '@angular/common';
+import { TranslateModule } from '@ngx-translate/core';
 import {
   DS_UI,
   DsStatus,
@@ -10,7 +11,7 @@ import {
 @Component({
   selector: 'app-design-system-page',
   standalone: true,
-  imports: [CommonModule, ...DS_UI],
+  imports: [CommonModule, TranslateModule, ...DS_UI],
   templateUrl: './design-system-page.component.html',
   styleUrls: ['./design-system-page.component.scss']
 })

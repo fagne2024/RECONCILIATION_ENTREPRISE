@@ -240,7 +240,7 @@
                                 <mat-label>{{ 'TBL.country' | translate }}</mat-label>
                                 <mat-select #paysSelect formControlName="pays" multiple (selectionChange)="onPaysChange($event)">
                                     <mat-option>
-                                        <ngx-mat-select-search [formControl]="paysSearchCtrl" placeholderLabel="Rechercher un pays..." noEntriesFoundLabel="Aucun pays trouvé"></ngx-mat-select-search>
+                                        <ngx-mat-select-search [formControl]="paysSearchCtrl" [placeholderLabel]="'SEARCH.country' | translate" [noEntriesFoundLabel]="'SEARCH.noCountry' | translate"></ngx-mat-select-search>
                                     </mat-option>
                                     <mat-option *ngFor="let pays of filteredPaysList" [value]="pays">
                                         {{ pays }}
@@ -253,7 +253,7 @@
                                 <mat-label>{{ 'TBL.ownerCode' | translate }}</mat-label>
                                 <mat-select #codeProprietaireSelect formControlName="codeProprietaire" multiple (selectionChange)="onCodeProprietaireChange($event)">
                                     <mat-option>
-                                        <ngx-mat-select-search [formControl]="codeProprietaireSearchCtrl" placeholderLabel="Rechercher un code..." noEntriesFoundLabel="Aucun code trouvé"></ngx-mat-select-search>
+                                        <ngx-mat-select-search [formControl]="codeProprietaireSearchCtrl" [placeholderLabel]="'SEARCH.code' | translate" [noEntriesFoundLabel]="'SEARCH.noCode' | translate"></ngx-mat-select-search>
                                     </mat-option>
                                     <mat-option *ngFor="let code of filteredCodeProprietaireList" [value]="code">
                                         {{ code }}
@@ -266,7 +266,7 @@
                                 <mat-label>{{ 'CPT.Catégorie_1' | translate }}</mat-label>
                                 <mat-select #categorieSelect formControlName="categorie" multiple (selectionChange)="onCategorieChange($event)">
                                     <mat-option>
-                                        <ngx-mat-select-search [formControl]="categorieSearchCtrl" placeholderLabel="Rechercher une catégorie..." noEntriesFoundLabel="Aucune catégorie trouvée"></ngx-mat-select-search>
+                                        <ngx-mat-select-search [formControl]="categorieSearchCtrl" [placeholderLabel]="'SEARCH.category' | translate" [noEntriesFoundLabel]="'SEARCH.noCategory' | translate"></ngx-mat-select-search>
                                     </mat-option>
                                     <mat-option *ngFor="let categorie of filteredCategorieList" [value]="categorie">
                                         <span class="categorie-badge" [ngClass]="getCategorieClass(categorie)">
@@ -281,7 +281,7 @@
                                 <mat-label>{{ 'COMMON.actions.type' | translate }}</mat-label>
                                 <mat-select #typeSelect formControlName="type" multiple (selectionChange)="onTypeChange($event)">
                                     <mat-option>
-                                        <ngx-mat-select-search [formControl]="typeSearchCtrl" placeholderLabel="Rechercher un type..." noEntriesFoundLabel="Aucun type trouvé"></ngx-mat-select-search>
+                                        <ngx-mat-select-search [formControl]="typeSearchCtrl" [placeholderLabel]="'SEARCH.type' | translate" [noEntriesFoundLabel]="'SEARCH.noType' | translate"></ngx-mat-select-search>
                                     </mat-option>
                                     <mat-option *ngFor="let type of filteredTypeList" [value]="type">
                                         {{ type }}
@@ -576,7 +576,7 @@
                             {{ (showSoldesSeulement ? 'CPT.ShowOperations' : 'CPT.ShowBalancesOnly') | translate }}
                         </button>
                         <button type="button" class="ds-btn ds-btn--secondary btn export-btn" (click)="exportReleve()" [disabled]="isExporting"
-                                [title]="getReleveExportIntervalLabel() ? 'Exporter sur l\'intervalle : ' + getReleveExportIntervalLabel() : 'Exporter le relevé (toutes les données chargées)'">
+                                [title]="getReleveExportIntervalLabel() ? ('CPT.ui.exporterSurLIntervalle' | translate) + getReleveExportIntervalLabel() : ('CPT.ui.exporterLeReleveToutesLesDonnees' | translate)">
                             <i class="fas fa-file-excel"></i> {{ 'CPT.Exporterlerelevé' | translate }}
                             <span class="export-interval-hint" *ngIf="getReleveExportIntervalLabel()">({{ getReleveExportIntervalLabel() }})</span>
                         </button>
@@ -834,7 +834,7 @@
                             <table class="ds-table table table-bordered table-hover table-sm">
                                 <thead>
                                     <tr>
-                                        <th>{{ ('CPT.' + (releveSoldeViewMode === 'day' ? 'Date' : 'Period')) | translate }}</th>
+                                        <th>{{ ('CPT.' + (releveSoldeViewMode === 'day' ? ('CPT.Date' | translate) : 'Period')) | translate }}</th>
                                         <th>{{ 'CPT.Soldedouverture_2' | translate }}</th>
                                         <th>{{ 'CPT.Soldedeclôture_2' | translate }}</th>
                                         <th>{{ 'CPT.Variation' | translate }} {{ (releveSoldeViewMode === 'day' ? ('CPT.DailySuffix' | translate) : '') }}</th>
@@ -1292,7 +1292,7 @@
                                 </span>
                               </td>
                               <td class="comment-cell">
-                                <span class="comment-content" [title]="it.commentaire || 'Aucun commentaire'">
+                                <span class="comment-content" [title]="it.commentaire || ('MSG.noComment' | translate)">
                                   {{ it.commentaire || '-' }}
                                 </span>
                               </td>

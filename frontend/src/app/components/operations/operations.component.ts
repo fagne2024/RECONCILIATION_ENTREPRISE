@@ -18,6 +18,7 @@ import { NgxMatSelectSearchModule } from 'ngx-mat-select-search';
 import { normalizeCountryFilterOptions, matchesCountryFilter, countriesMatch } from '../../utils/country-codes.util';
 import { TranslateModule, TranslateService } from '@ngx-translate/core';
 import { DsPaginationComponent } from '../../shared/ui/pagination/ds-pagination.component';
+import { I18nService } from '../../services/i18n/i18n.service';
 
 @Component({
     selector: 'app-operations',
@@ -1711,7 +1712,7 @@ const msg = this.translateKey('OPS.bulkStatusResult', {
 
     async quickBulkCancel() {
         if (!this.hasSelectedOperations) {
-            this.popupService.showWarning('Aucune opération sélectionnée');
+            this.popupService.showWarning(I18nService.t('OPS.noSelection'));
             return;
         }
         
@@ -1731,7 +1732,7 @@ const msg = this.translateKey('OPS.bulkStatusResult', {
 
     async deleteSelectedOperations() {
         if (this.selectedOperationIds.size === 0) {
-            this.popupService.showWarning('Aucune opération sélectionnée');
+            this.popupService.showWarning(I18nService.t('OPS.noSelection'));
             return;
         }
 
@@ -3311,13 +3312,13 @@ const msg = this.translateKey('OPS.bulkStatusResult', {
             case 'EN_ATTENTE':
                 return 'En attente';
             case 'TRAITE':
-                return 'Traité';
+                return I18nService.t('OPS.processed');
             case 'ERREUR':
-                return 'Erreur';
+                return I18nService.t('OPS.OPS.errorTitle');
             case 'Validée':
-                return 'Validée';
+                return I18nService.t('OPS.validated');
             case 'Annulée':
-                return 'Annulée';
+                return I18nService.t('OPS.cancelled');
             default:
                 return 'En attente';
         }
@@ -3713,10 +3714,10 @@ const msg = this.translateKey('OPS.bulkStatusResult', {
         this.isExportingApproClient = true;
         try {
             await this.exportOperationsToExcel(this.approClientOperations, 'Appro');
-            await this.popupService.showSuccess('Export réussi', 'Succès');
+            await this.popupService.showSuccess(I18nService.t('OPS.exportSuccess'), I18nService.t('OPS.successTitle'));
         } catch (error) {
             console.error('Erreur lors de l\'export:', error);
-            await this.popupService.showError('Erreur lors de l\'export', 'Erreur');
+            await this.popupService.showError(I18nService.t('MSG.exportError'), I18nService.t('OPS.OPS.errorTitle'));
         } finally {
             this.isExportingApproClient = false;
         }
@@ -3727,10 +3728,10 @@ const msg = this.translateKey('OPS.bulkStatusResult', {
         this.isExportingCompenseClient = true;
         try {
             await this.exportOperationsToExcel(this.compenseClientOperations, 'Compense');
-            await this.popupService.showSuccess('Export réussi', 'Succès');
+            await this.popupService.showSuccess(I18nService.t('OPS.exportSuccess'), I18nService.t('OPS.successTitle'));
         } catch (error) {
             console.error('Erreur lors de l\'export:', error);
-            await this.popupService.showError('Erreur lors de l\'export', 'Erreur');
+            await this.popupService.showError(I18nService.t('MSG.exportError'), I18nService.t('OPS.OPS.errorTitle'));
         } finally {
             this.isExportingCompenseClient = false;
         }
@@ -3741,10 +3742,10 @@ const msg = this.translateKey('OPS.bulkStatusResult', {
         this.isExportingNivellement = true;
         try {
             await this.exportOperationsToExcel(this.nivellementOperations, 'Nivellement');
-            await this.popupService.showSuccess('Export réussi', 'Succès');
+            await this.popupService.showSuccess(I18nService.t('OPS.exportSuccess'), I18nService.t('OPS.successTitle'));
         } catch (error) {
             console.error('Erreur lors de l\'export:', error);
-            await this.popupService.showError('Erreur lors de l\'export', 'Erreur');
+            await this.popupService.showError(I18nService.t('MSG.exportError'), I18nService.t('OPS.OPS.errorTitle'));
         } finally {
             this.isExportingNivellement = false;
         }
@@ -3755,10 +3756,10 @@ const msg = this.translateKey('OPS.bulkStatusResult', {
         this.isExportingRegularisationSolde = true;
         try {
             await this.exportOperationsToExcel(this.regularisationSoldeOperations, 'Regularisation_Solde');
-            await this.popupService.showSuccess('Export réussi', 'Succès');
+            await this.popupService.showSuccess(I18nService.t('OPS.exportSuccess'), I18nService.t('OPS.successTitle'));
         } catch (error) {
             console.error('Erreur lors de l\'export:', error);
-            await this.popupService.showError('Erreur lors de l\'export', 'Erreur');
+            await this.popupService.showError(I18nService.t('MSG.exportError'), I18nService.t('OPS.OPS.errorTitle'));
         } finally {
             this.isExportingRegularisationSolde = false;
         }

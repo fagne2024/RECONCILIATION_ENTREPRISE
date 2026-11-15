@@ -2,6 +2,7 @@ import { fixCellEncoding } from './encoding-fixer';
 import { normalizeColumnKey } from './row-column.util';
 import { areEquivalentColumnHeaders } from './bilingual-column.util';
 import { KeySuggestionService } from '../services/key-suggestion.service';
+import { I18nService } from '../services/i18n/i18n.service';
 
 /** Taille d'échantillon pour la vérification de format (rapide, indépendant du volume). */
 export const KEY_FORMAT_SAMPLE_SIZE = 300;
@@ -451,7 +452,7 @@ export async function alignReconciliationKeyFormatsAsync(
 
   const yieldEvery = options?.yieldEvery ?? 10000;
   const yieldFn = options?.yieldFn;
-  options?.onProgress?.('Alignement du format des clés de réconciliation...');
+  options?.onProgress?.(I18nService.t('MSG.msg.alignementDuFormatDesClesDe'));
 
   await normalizeKeyColumnBatched(boData, check.boResolvedColumn, yieldEvery, yieldFn);
   await normalizeKeyColumnBatched(partnerData, check.partnerResolvedColumn, yieldEvery, yieldFn);

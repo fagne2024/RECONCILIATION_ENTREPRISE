@@ -239,7 +239,7 @@
             (keyup.enter)="loadByToken()"
             placeholder="{{ 'EBS.Liaisonbopartenaire' | translate }}"
             class="filter-input ds-input"
-            title="Filtrer par token (lien entre lignes BO et Partenaire OK)"
+            title="{{ 'EBS.ui.filtrerParTokenLienEntreLignes' | translate }}"
           >
           <button 
             type="button" 
@@ -296,7 +296,7 @@
                 [checked]="filteredItems.length > 0 && isAllSelectedFiltered"
                 [indeterminate]="someFilteredSelected"
                 (change)="toggleSelectAllFiltered()"
-                title="Tout sélectionner / désélectionner les lignes actionnables"
+                title="{{ 'EBS.ui.toutSelectionnerDeselectionnerLesLignesA' | translate }}"
               >
             </th>
             <th>{{ 'TBL.date' | translate }}</th>
@@ -321,7 +321,7 @@
                 class="ds-checkbox"
                 [checked]="isSelected(item)"
                 (change)="toggleSelection(item)"
-                [title]="item.id ? 'Sélectionner pour suppression' : 'Sélectionner pour sauvegarde'"
+                [title]="item.id ? ('EBS.ui.selectionnerPourSuppression' | translate) : ('EBS.ui.selectionnerPourSauvegarde' | translate)"
               >
               <span *ngIf="!item.id && item.statut !== 'en cours'" class="no-checkbox">—</span>
             </td>
@@ -331,7 +331,7 @@
               <span
                 class="duplicate-badge ds-badge ds-badge--duplicate"
                 *ngIf="item.isDuplicate"
-                [title]="item.duplicateHint || 'Ligne en doublon'">
+                [title]="item.duplicateHint || ('EBS.ui.ligneEnDoublon' | translate)">
                 {{ 'EBS.Doublon' | translate }}
               </span>
             </td>
@@ -339,7 +339,7 @@
             <td>{{ item.pays || '-' }}</td>
             <td>{{ item.env || 'BO' }}</td>
             <td>{{ item.envCode || '—' }}</td>
-            <td class="token-cell" [title]="item.token || 'Lien BO/Partenaire (recherche rapide)'">{{ getTokenDisplay(item.token) }}</td>
+            <td class="token-cell" [title]="item.token || ('EBS.Lienbopartenairerechercherapide' | translate)">{{ getTokenDisplay(item.token) }}</td>
             <td class="nombre-cell ds-num">{{ item.nombre | number:'1.0-0' }}</td>
             <td class="volume-cell ds-num">{{ item.montant | number:'1.0-0' }}</td>
             <td class="statut-cell">
@@ -360,7 +360,7 @@
                   (click)="openEditModal(item)"
                   class="edit-button ds-btn ds-btn--ghost ds-btn--sm ds-btn--icon"
                   title="{{ 'BQ.Modifiercetteligne' | translate }}"
-                  aria-label="{{ 'ACT.edit' | translate }}"
+                  [attr.aria-label]="'ACT.edit' | translate"
                 >
                   <i class="fas fa-pen"></i>
                 </button>
@@ -369,7 +369,7 @@
                   (click)="deleteItem(item)"
                   class="delete-button ds-btn ds-btn--ghost ds-btn--sm ds-btn--icon"
                   title="{{ 'BQ.Supprimercetteligne' | translate }}"
-                  aria-label="{{ 'ACT.delete' | translate }}"
+                  [attr.aria-label]="'ACT.delete' | translate"
                   [disabled]="isDeleting && deletingItemId === item.id"
                   *ngIf="item.id"
                 >
@@ -389,7 +389,7 @@
   <!-- Chargement -->
   <div *ngIf="isLoading" class="loading">
     <div class="spinner"></div>
-    <p>{{ loadingStep || 'Chargement des données...' }}</p>
+    <p>{{ loadingStep || ('MSG.loadingData' | translate) }}</p>
   </div>
 
   <!-- Pagination -->

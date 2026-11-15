@@ -1,5 +1,6 @@
 import { Injectable } from '@angular/core';
 import { FieldTypeDetectionService, FieldTypeInfo, ColumnAnalysis } from './field-type-detection.service';
+import { I18nService } from './i18n/i18n.service';
 
 export interface ExcelColumnInfo {
   columnName: string;
@@ -508,7 +509,7 @@ export class ExcelTypeDetectionService {
           priority: 'high',
           type: 'format',
           action: 'normalizeDates',
-          description: `Normaliser les dates au format ${column.dateFormat || 'DD/MM/YYYY'}`,
+          description: I18nService.t('MSG.msg.normaliserLesDatesAuFormat', { p0: column.dateFormat || 'DD/MM/YYYY' }),
           impact: 'Améliore la cohérence des dates',
           confidence: column.confidence,
           params: { format: column.dateFormat || 'DD/MM/YYYY' }
@@ -521,7 +522,7 @@ export class ExcelTypeDetectionService {
           priority: 'high',
           type: 'format',
           action: 'formatCurrency',
-          description: `Formater les montants en devise ${column.currency || 'XAF'}`,
+          description: I18nService.t('MSG.msg.formaterLesMontantsEnDevise', { p0: column.currency || 'XAF' }),
           impact: 'Améliore la lisibilité des montants',
           confidence: column.confidence,
           params: { currency: column.currency || 'XAF', locale: column.locale || 'fr-FR' }
@@ -534,7 +535,7 @@ export class ExcelTypeDetectionService {
           priority: 'medium',
           type: 'format',
           action: 'normalizeNumbers',
-          description: 'Normaliser les nombres avec séparateurs appropriés',
+          description: I18nService.t('MSG.msg.normaliserLesNombresAvecSeparateursAppro'),
           impact: 'Améliore la cohérence des nombres',
           confidence: column.confidence,
           params: { decimalPlaces: column.decimalPlaces || 2 }
@@ -548,7 +549,7 @@ export class ExcelTypeDetectionService {
             priority: 'medium',
             type: 'clean',
             action: 'trimSpaces',
-            description: 'Nettoyer les espaces et caractères spéciaux',
+            description: I18nService.t('MSG.msg.nettoyerLesEspacesEtCaracteresSpeciaux'),
             impact: 'Améliore la qualité des données textuelles',
             confidence: column.confidence
           });
@@ -563,7 +564,7 @@ export class ExcelTypeDetectionService {
         priority: 'high',
         type: 'validate',
         action: 'fixExcelErrors',
-        description: 'Corriger les erreurs Excel (#N/A, #VALUE!, etc.)',
+        description: I18nService.t('MSG.msg.corrigerLesErreursExcelNA'),
         impact: 'Élimine les erreurs de calcul',
         confidence: 0.9
       });
@@ -575,7 +576,7 @@ export class ExcelTypeDetectionService {
         priority: 'medium',
         type: 'transform',
         action: 'evaluateFormulas',
-        description: 'Évaluer les formules Excel pour obtenir les valeurs',
+        description: I18nService.t('MSG.msg.evaluerLesFormulesExcelPourObtenir'),
         impact: 'Convertit les formules en valeurs',
         confidence: 0.8
       });

@@ -59,6 +59,7 @@ import { SharedModule } from '../../shared/shared.module';
 import { DsPaginationComponent } from '../../shared/ui';
 
 import { TranslateService } from '@ngx-translate/core';
+import { I18nService } from '../../services/i18n/i18n.service';
 
 /** Ligne renvoyée par GET /api/result8rec/{id}/audit-history */
 export interface Result8RecAuditEntry {
@@ -329,7 +330,7 @@ interface AllOkEmailMetrics {
                             (click)="clearDateFilters()" 
                             class="btn-clear-dates ds-btn ds-btn--secondary ds-btn--sm"
                             [title]="'RPT.clearDateFilters' | translate">
-                            🗑️ Effacer dates
+                            {{ 'RPT.ui.effacerDates' | translate }}
                         </button>
                     </div>
                 </div>
@@ -369,7 +370,7 @@ interface AllOkEmailMetrics {
                             class="btn btn-bulk-status ds-btn ds-btn--primary ds-btn--sm" 
                             (click)="applyBulkStatusChange()" 
                             [disabled]="!bulkStatusSelection">
-                            ✅ Appliquer
+                            {{ 'TRT.✅Appliquer' | translate }}
                         </button>
                         <button type="button" 
                             class="btn btn-clear-selection ds-btn ds-btn--secondary ds-btn--sm" 
@@ -388,14 +389,14 @@ interface AllOkEmailMetrics {
                             [(ngModel)]="bulkTraitementSelection" 
                             class="filter-select bulk-status-select ds-select">
                             <option value="">{{ 'RPT.selectProcessing' | translate }}</option>
-                            <option value="__CLEAR__">- (Effacer)</option>
+                            <option value="__CLEAR__">{{ 'RPT.ui.effacer' | translate }}</option>
                             <option *ngFor="let traitement of traitementOptions" [value]="traitement">{{ getTraitementDisplayLabel(traitement) }}</option>
                         </select>
                         <button type="button" 
                             class="btn btn-bulk-status ds-btn ds-btn--primary ds-btn--sm" 
                             (click)="applyBulkTraitementChange()" 
                             [disabled]="!bulkTraitementSelection">
-                            ✅ Appliquer
+                            {{ 'TRT.✅Appliquer' | translate }}
                         </button>
                         <button type="button" 
                             class="btn btn-clear-selection ds-btn ds-btn--secondary ds-btn--sm" 
@@ -437,7 +438,7 @@ interface AllOkEmailMetrics {
                             (click)="clearTicketIdFilter()" 
                             class="btn-clear-dates ds-btn ds-btn--secondary ds-btn--sm"
                             [title]="'RPT.clearTicketFilter' | translate">
-                            🗑️ Effacer
+                            {{ 'RPT.ui.effacer2' | translate }}
                         </button>
                     </div>
                 </div>
@@ -504,7 +505,7 @@ interface AllOkEmailMetrics {
                 <table class="report-table ds-table">
                     <thead>
                         <tr>
-                            <th class="col-expand" title="Historique (sauvegarde, statut, validation)"></th>
+                            <th class="col-expand" title="{{ 'RPT.auditHistory' | translate }}"></th>
                             <th class="col-checkbox">
                                 <input 
                                     type="checkbox"
@@ -552,7 +553,7 @@ interface AllOkEmailMetrics {
                             <td [attr.colspan]="auditHistoryColspan()" class="service-group-header-cell">
                                 <span class="service-group-header-dot"></span>
                                 <span class="service-group-header-label" [title]="item.service">{{ item.service }}</span>
-                                <span class="service-group-header-count">{{ serviceGroupRowCount(item.service) }} agence(s)</span>
+                                <span class="service-group-header-count">{{ 'RPT.ui.agenceS' | translate: { p0: (serviceGroupRowCount(item.service)) } }}</span>
                             </td>
                         </tr>
                         <tr *ngIf="!isServiceGroupHeader(item)" [class.editing-row]="editingRow === item" [class.row-selected]="isRowSelected(item)" [ngClass]="getTraitementRowClass(item)" [class.row-audit-open]="isAuditExpanded(item)">
@@ -868,7 +869,7 @@ interface AllOkEmailMetrics {
 
             <div *ngIf="!filteredReportData || !filteredReportData.length" class="no-data">
                 <div class="no-data-icon">📊</div>
-                <div class="no-data-message">Aucune donnée de réconciliation disponible</div>
+                <div class="no-data-message">{{ 'RPT.noData' | translate }}</div>
             </div>
         </div>
 
@@ -884,9 +885,9 @@ interface AllOkEmailMetrics {
                     <div class="releve-service-title">
                         <div class="releve-service-main">
                             <h4>{{releveData?.service || '-'}}</h4>
-                            <div class="releve-date">Date: {{formatDate(releveData?.date || '')}}</div>
-                            <div class="releve-date" *ngIf="releveData?.country">Pays : {{ releveData.country }}</div>
-                            <div class="releve-date" *ngIf="releveData?.agency">Agence : {{ releveData.agency }}</div>
+                            <div class="releve-date">{{ 'TBL.ui.date' | translate: { p0: (formatDate(releveData?.date || '')) } }}</div>
+                            <div class="releve-date" *ngIf="releveData?.country">{{ 'RPT.ui.pays' | translate: { p0: releveData.country } }}</div>
+                            <div class="releve-date" *ngIf="releveData?.agency">{{ 'RPT.ui.agence' | translate: { p0: releveData.agency } }}</div>
                         </div>
                     <div class="releve-env releve-env-select-wrap" *ngIf="releveData">
                             <label for="releveEnvSelect">{{ 'RPT.environment' | translate }}</label>
@@ -956,7 +957,7 @@ interface AllOkEmailMetrics {
                                         <td>{{ecart.montantTotal | number}}</td>
                                         <td>
                                             <span [class]="(ecart.statut === 'OK' || ecart.statut === 'ok') ? 'statut-ok' : 'statut-en-cours'">
-                                                {{ getDisplayStatus(ecart.statut) || 'En cours' }}
+                                                {{ getDisplayStatus(ecart.statut) || ('RPT.inProgress' | translate) }}
                                             </span>
                                         </td>
                                     </tr>
@@ -998,7 +999,7 @@ interface AllOkEmailMetrics {
                                         <td>{{ecart.montantTotal | number}}</td>
                                         <td>
                                             <span [class]="(ecart.statut === 'OK' || ecart.statut === 'ok') ? 'statut-ok' : 'statut-en-cours'">
-                                                {{ getDisplayStatus(ecart.statut) || 'En cours' }}
+                                                {{ getDisplayStatus(ecart.statut) || ('RPT.inProgress' | translate) }}
                                             </span>
                                         </td>
                                     </tr>
@@ -1021,7 +1022,7 @@ interface AllOkEmailMetrics {
                                 (change)="onReleveManualFileSelected($event)"
                                 style="display: none">
                             <button type="button" class="btn-releve-upload ds-btn ds-btn--secondary ds-btn--sm" (click)="releveManualFileInput.click()" [disabled]="isReleveManualFileLoading">
-                                {{ isReleveManualFileLoading ? '⏳ Chargement...' : '📤 Charger un fichier (CSV / XLS)' }}
+                                {{ isReleveManualFileLoading ? ('RPT.ui.chargement' | translate) : ('RPT.ui.chargerUnFichierCsvXls' | translate) }}
                             </button>
                             <span class="releve-upload-hint">{{ 'RPT.uploadHint' | translate }}</span>
                         </div>
@@ -1072,7 +1073,7 @@ interface AllOkEmailMetrics {
                                 (change)="onReleveAnnuleFileSelected($event)"
                                 style="display: none">
                             <button type="button" class="btn-releve-upload ds-btn ds-btn--secondary ds-btn--sm" (click)="releveAnnuleFileInput.click()" [disabled]="isReleveAnnuleFileLoading">
-                                {{ isReleveAnnuleFileLoading ? '⏳ Chargement...' : '📤 Charger un fichier (CSV / XLS)' }}
+                                {{ isReleveAnnuleFileLoading ? ('RPT.ui.chargement' | translate) : ('RPT.ui.chargerUnFichierCsvXls' | translate) }}
                             </button>
                             <span class="releve-upload-hint">{{ 'RPT.uploadHintCancel' | translate }}</span>
                         </div>
@@ -1123,7 +1124,7 @@ interface AllOkEmailMetrics {
                                 (change)="onReleveRembourseFileSelected($event)"
                                 style="display: none">
                             <button type="button" class="btn-releve-upload ds-btn ds-btn--secondary ds-btn--sm" (click)="releveRembourseFileInput.click()" [disabled]="isReleveRembourseFileLoading">
-                                {{ isReleveRembourseFileLoading ? '⏳ Chargement...' : '📤 Charger un fichier (CSV / XLS)' }}
+                                {{ isReleveRembourseFileLoading ? ('RPT.ui.chargement' | translate) : ('RPT.ui.chargerUnFichierCsvXls' | translate) }}
                             </button>
                             <span class="releve-upload-hint">{{ 'RPT.uploadHint' | translate }}</span>
                         </div>
@@ -1176,7 +1177,7 @@ interface AllOkEmailMetrics {
                                 <span class="releve-final-value">{{getTotalTransactionsPartenaire() | number}}</span>
                             </div>
                             <div class="releve-final-item">
-                                <span class="releve-final-label">📊 Nombre total (Rapport):</span>
+                                <span class="releve-final-label">{{ 'RPT.ui.nombreTotalRapport' | translate }}</span>
                                 <span class="releve-final-value">{{releveData?.totalTransactions || 0 | number}}</span>
                             </div>
                             <div class="releve-final-item">
@@ -8923,7 +8924,7 @@ reportData: ReconciliationReportData[] = [];
             this.popupService.showSuccess(this.translateKey('RPT.export.success', { file: fileName }), this.translateKey('RPT.export.successTitle'));
         } catch (error) {
             console.error('❌ Erreur lors de l\'export Excel:', error);
-            this.popupService.showError('Erreur d\'export', 'Une erreur est survenue lors de l\'export Excel.');
+            this.popupService.showError(I18nService.t('RPT.releve.exportPdfErrorTitle'), I18nService.t('RPT.msg.uneErreurEstSurvenueLorsDe'));
         }
     }
 
@@ -8958,7 +8959,7 @@ reportData: ReconciliationReportData[] = [];
         const date = this.formatDate(item.date || '');
         const service = (item.service || '').trim() || '—';
         const title = `RAPPORT DE RECONCILIATION - ${env} - ${pays} - ${date} - ${service}`;
-        const description = 'Bonjour,\n\nMerci de prendre en charge les écarts constatés.';
+        const description = I18nService.t('RPT.msg.bonjourMerciDePrendreEnCharge');
         return { title, description };
     }
 
@@ -9070,8 +9071,8 @@ reportData: ReconciliationReportData[] = [];
 
     // Afficher un popup pour choisir entre GLPI et BOMETIER
     async showTicketOptionsPopup(ticketId: string): Promise<void> {
-        const message = `Choisissez la plateforme pour ouvrir le ticket ${ticketId}:`;
-        const title = 'Ouvrir le ticket';
+        const message = I18nService.t('RPT.msg.choisissezLaPlateformePourOuvrirLe', { p0: ticketId });
+        const title = I18nService.t('ETA.ticket.title');
         
         // Créer un popup personnalisé avec deux boutons
         const overlay = document.createElement('div');
@@ -9816,7 +9817,7 @@ reportData: ReconciliationReportData[] = [];
             }
             this.dbLoadError = this.resolveDbLoadErrorMessage(err);
             console.error('Erreur chargement rapport base:', err);
-            this.popupService.showError('Chargement du rapport', this.dbLoadError);
+            this.popupService.showError(I18nService.t('RPT.msg.chargementDuRapport'), this.dbLoadError);
         }
     }
 
@@ -10253,7 +10254,7 @@ reportData: ReconciliationReportData[] = [];
             },
             error: (err: HttpErrorResponse) => {
                 console.error('❌ Erreur suppression', err);
-                this.popupService.showError('Erreur de suppression', 'Impossible de supprimer l\'enregistrement');
+                this.popupService.showError(I18nService.t('SOP.shared.popup.deleteError'), I18nService.t('RPT.msg.impossibleDeSupprimerLEnregistrement'));
             }
         });
     }
@@ -10417,7 +10418,7 @@ reportData: ReconciliationReportData[] = [];
         const defaultEnvAll = envOptions.includes(releveNorm) ? releveNorm : 'T-E';
         const selectedEnvAll = await this.popupService.showSelectInput(
             this.translateKey('RPT.bulk.selectEnvMessage', { count: rowsSource.length }),
-            'Environnement pour toutes les lignes',
+            I18nService.t('RPT.msg.environnementPourToutesLesLignes'),
             envOptions,
             defaultEnvAll
         );
@@ -10427,8 +10428,8 @@ reportData: ReconciliationReportData[] = [];
         }
         
         const confirmed = await this.popupService.showConfirm(
-            `Confirmer la sauvegarde de ${rowsSource.length} ligne(s) avec la date ${selectedDate} et l'environnement ${selectedEnvAll} ?`, 
-            'Confirmation de sauvegarde en masse'
+            I18nService.t('RPT.msg.confirmerLaSauvegardeDeLigneS', { p0: rowsSource.length, p1: selectedDate, p2: selectedEnvAll }), 
+            I18nService.t('RPT.msg.confirmationDeSauvegardeEnMasse')
         );
         if (!confirmed) return;
 
@@ -10563,7 +10564,7 @@ reportData: ReconciliationReportData[] = [];
                     for (const c of chunk) {
                         recordSaveFailure(c.payloadItem.agency, c.payloadItem.service, c.payloadItem.country, {
                             status: 0,
-                            error: `Réponse bulk incohérente (${results.length}/${chunk.length})`
+                            error: I18nService.t('RPT.msg.reponseBulkIncoherente', { p0: results.length, p1: chunk.length })
                         } as HttpErrorResponse);
                     }
                     continue;
@@ -10584,7 +10585,7 @@ reportData: ReconciliationReportData[] = [];
                             c.payloadItem.agency,
                             c.payloadItem.service,
                             c.payloadItem.country,
-                            { status: 0, error: `Réponse bulk inattendue: ${JSON.stringify(outcome)}` } as HttpErrorResponse
+                            { status: 0, error: I18nService.t('RPT.msg.reponseBulkInattendue', { p0: JSON.stringify(outcome) }) } as HttpErrorResponse
                         );
                     }
                 }
@@ -11828,7 +11829,7 @@ reportData: ReconciliationReportData[] = [];
             console.log('✅ Traitement mis à jour avec succès');
         } catch (err) {
             console.error('❌ Erreur lors de la mise à jour du traitement', err);
-            this.popupService.showError('Erreur', this.translateKey('RPT.traitement.updateError'));
+            this.popupService.showError(I18nService.t('MSG.error'), this.translateKey('RPT.traitement.updateError'));
         }
     }
 
@@ -11907,8 +11908,8 @@ reportData: ReconciliationReportData[] = [];
         }
 
         // Confirmer le changement avec popup moderne
-        const confirmMessage = `Voulez-vous changer le statut de ${unlockedItems.length} ligne(s) en "${this.bulkStatusSelection}" ?`;
-        const confirmed = await this.popupService.showConfirm(confirmMessage, 'Confirmation de changement de statut');
+        const confirmMessage = I18nService.t('RPT.msg.voulezVousChangerLeStatutDe', { p0: unlockedItems.length, p1: this.bulkStatusSelection });
+        const confirmed = await this.popupService.showConfirm(confirmMessage, I18nService.t('RPT.msg.confirmationDeChangementDeStatut'));
         if (!confirmed) {
             return;
         }
@@ -12013,7 +12014,7 @@ reportData: ReconciliationReportData[] = [];
         }
 
         // Confirmer le changement avec popup moderne
-        const confirmMessage = `Voulez-vous changer le traitement de ${unlockedItems.length} ligne(s) en "${traitementDisplay}" ?`;
+        const confirmMessage = I18nService.t('RPT.msg.voulezVousChangerLeTraitementDe', { p0: unlockedItems.length, p1: traitementDisplay });
         const confirmed = await this.popupService.showConfirm(confirmMessage, 'Confirmation de changement de traitement');
         if (!confirmed) {
             return;
@@ -12077,7 +12078,7 @@ reportData: ReconciliationReportData[] = [];
         if (deletable.length === 0) {
             this.popupService.showWarning(
                 this.translateKey('RPT.bulk.deleteSelectionHint'),
-                'Aucune ligne supprimable'
+                I18nService.t('RPT.msg.aucuneLigneSupprimable')
             );
             return;
         }
@@ -12087,7 +12088,7 @@ reportData: ReconciliationReportData[] = [];
             confirmMessage += this.translateKey('RPT.bulk.deleteConfirmSkipped', { noId: skippedNoId, locked: skippedLocked });
         }
 
-        const confirmed = await this.popupService.showConfirm(confirmMessage, 'Confirmation de suppression multiple');
+        const confirmed = await this.popupService.showConfirm(confirmMessage, I18nService.t('OPS.OPS.bulkDeleteConfirmTitle'));
         if (!confirmed) {
             return;
         }
@@ -12127,7 +12128,7 @@ reportData: ReconciliationReportData[] = [];
         }
         if (errorCount > 0) {
             this.popupService.showError(
-                `${errorCount} suppression(s) en erreur`,
+                I18nService.t('RPT.msg.suppressionSEnErreur', { p0: errorCount }),
                 this.translateKey('RPT.bulk.deletePartialTitle')
             );
         }
@@ -12347,7 +12348,7 @@ reportData: ReconciliationReportData[] = [];
                     console.log('✅ Statut mis à jour avec succès (autres colonnes non modifiées)');
                 } catch (err) {
                     console.error('❌ Erreur lors de la mise à jour du statut', err);
-                    this.popupService.showError('Erreur', this.translateKey('RPT.status.updateError'));
+                    this.popupService.showError(I18nService.t('MSG.error'), this.translateKey('RPT.status.updateError'));
                 }
             })();
         }
@@ -12822,7 +12823,7 @@ reportData: ReconciliationReportData[] = [];
 
         if (!candidateLine) {
             this.popupService.showWarning(
-                `Aucune ligne OK pour ce service, cette date, ce pays et l'environnement « ${this.formatEnvFilterLabel(envNorm)} ».`
+                I18nService.t('RPT.msg.aucuneLigneOkPourCeService', { p0: this.formatEnvFilterLabel(envNorm) })
             );
             this.releveEnv = this.releveEnvLastValid;
             return;
@@ -12942,7 +12943,7 @@ reportData: ReconciliationReportData[] = [];
         if (this.isReleveCdoClosed()) {
             return this.translateKey('RPT.releve.badgeClosed');
         }
-        return '✅ Valider';
+        return I18nService.t('RPT.msg.valider');
     }
 
     isReleveValidateButtonDisabled(): boolean {
@@ -13285,7 +13286,7 @@ reportData: ReconciliationReportData[] = [];
             return true;
         } catch (err) {
             console.error('Erreur lors de la sauvegarde des valeurs manuelles de relevé', err);
-            this.popupService.showError('Erreur', this.translateKey('RPT.releve.manualSaveError'));
+            this.popupService.showError(I18nService.t('MSG.error'), this.translateKey('RPT.releve.manualSaveError'));
             return false;
         } finally {
             this.isSavingReleveManualData = false;
@@ -13348,7 +13349,7 @@ reportData: ReconciliationReportData[] = [];
                 this.translateKey('RPT.releve.loadSuccess')
             );
         } catch (err: any) {
-            this.popupService.showError(err?.message || 'Erreur lors de la lecture du fichier.', 'Erreur');
+            this.popupService.showError(err?.message || I18nService.t('TRT.msg.fileReadError'), I18nService.t('MSG.error'));
         } finally {
             this.isReleveRembourseFileLoading = false;
             input.value = '';
@@ -13384,7 +13385,7 @@ reportData: ReconciliationReportData[] = [];
                 this.translateKey('RPT.releve.loadSuccess')
             );
         } catch (err: any) {
-            this.popupService.showError(err?.message || 'Erreur lors de la lecture du fichier.', 'Erreur');
+            this.popupService.showError(err?.message || I18nService.t('TRT.msg.fileReadError'), I18nService.t('MSG.error'));
         } finally {
             this.isReleveManualFileLoading = false;
             input.value = '';
@@ -13410,7 +13411,7 @@ reportData: ReconciliationReportData[] = [];
                         reject(e);
                     }
                 },
-                error: (err) => reject(new Error(err.message || 'Erreur de lecture CSV'))
+                error: (err) => reject(new Error(err.message || I18nService.t('TSF.readCsvError')))
             });
         });
     }
@@ -13505,7 +13506,7 @@ reportData: ReconciliationReportData[] = [];
             throw new Error(this.translateKey('RPT.releve.unexpectedService', { service: expectedService, lines: this.formatLineNumbers(invalidServiceLines) }));
         }
         if (invalidDateFormatLines.length > 0) {
-            throw new Error(`La colonne BO_date contient des dates invalides (ligne(s) ${this.formatLineNumbers(invalidDateFormatLines)}).`);
+            throw new Error(I18nService.t('RPT.msg.laColonneBoDateContientDes', { p0: this.formatLineNumbers(invalidDateFormatLines) }));
         }
         if (invalidDateLines.length > 0) {
             throw new Error(this.translateKey('RPT.releve.invalidDate', { lines: this.formatLineNumbers(invalidDateLines) }));
@@ -13588,7 +13589,7 @@ reportData: ReconciliationReportData[] = [];
         return new Promise((resolve, reject) => {
             const reader = new FileReader();
             reader.onload = () => resolve(reader.result as ArrayBuffer);
-            reader.onerror = () => reject(new Error('Impossible de lire le fichier.'));
+            reader.onerror = () => reject(new Error(I18nService.t('RPT.msg.impossibleDeLireLeFichier')));
             reader.readAsArrayBuffer(file);
         });
     }
@@ -13987,7 +13988,7 @@ reportData: ReconciliationReportData[] = [];
             this.popupService.showSuccess(this.translateKey('RPT.export.success', { file: fileName }), this.translateKey('RPT.export.successTitle'));
         } catch (error: any) {
             console.error('❌ Erreur lors de l\'export Excel du relevé:', error);
-            this.popupService.showError('Erreur d\'export', `Une erreur est survenue lors de l'export Excel: ${error.message || 'Erreur inconnue'}`);
+            this.popupService.showError(I18nService.t('RPT.releve.exportPdfErrorTitle'), I18nService.t('RPT.msg.uneErreurEstSurvenueLorsDe2', { p0: error.message || I18nService.t('RPT.releve.unknownError') }));
         }
     }
 
@@ -14475,7 +14476,7 @@ reportData: ReconciliationReportData[] = [];
             }
         } catch (error: any) {
             console.error('Erreur lors de la validation:', error);
-            this.popupService.showError(`❌ Erreur lors de la validation: ${error.message || 'Erreur inconnue'}`);
+            this.popupService.showError(I18nService.t('RPT.msg.erreurLorsDeLaValidation', { p0: error.message || I18nService.t('RPT.releve.unknownError') }));
         } finally {
             this.isValidatingReleve = false;
         }

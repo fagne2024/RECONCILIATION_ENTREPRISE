@@ -25,9 +25,9 @@
       </button>
       <button type="button" class="ds-btn ds-btn--secondary nav-btn secondary" (click)="exportLinkedPdf()"
               [disabled]="!canExportLinkedPdf"
-              [title]="'PDF des lignes liees (Token) presentes dans le filtre courant, source principale a gauche, autres sources a droite. Plusieurs groupes par page.'">
+              [title]="('OPL.ui.pdfDesLignesLieesTokenPresentes' | translate)">
         <i class="fas fa-file-pdf"></i>
-        {{ isExportingPdf ? 'Generation...' : 'PDF lignes liees (' + linkedGroupsCount + ')' }}
+        {{ isExportingPdf ? ('PRM.generating' | translate) : ('OPL.ui.pdfLignesLiees' | translate) + linkedGroupsCount + ')' }}
       </button>
       <button type="button" class="ds-btn ds-btn--primary nav-btn primary" (click)="exportOpparts()" [disabled]="filteredOpparts.length === 0">
         <i class="fas fa-download"></i> {{ 'COMMON.actions.export' | translate }}
@@ -194,14 +194,14 @@
               <th>{{ 'OPL.Ligne' | translate }}</th>
               <th>{{ 'OPL.État' | translate }}</th>
               <th>{{ 'TBL.client' | translate }}</th>
-              <th>Type_OP</th>
+              <th>{{ 'OPL.exportHeaderTypeOp' | translate }}</th>
               <th>{{ 'TBL.amount' | translate }}</th>
               <th>{{ 'OPL.DateopérationBO' | translate }}</th>
               <th>{{ 'OPL.DateopérationPart' | translate }}</th>
               <th>{{ 'OPL.DateDemande' | translate }}</th>
               <th>{{ 'TBL.transactionId' | translate }}</th>
               <th>{{ 'TBL.country' | translate }}</th>
-              <th>Source</th>
+              <th>{{ 'OPL.exportHeaderSource' | translate }}</th>
             </tr>
           </thead>
           <tbody>
@@ -251,7 +251,7 @@
         </div>
 
         <div class="filter-group">
-          <label>Type_OP :</label>
+          <label>{{ 'OPL.ui.typeOp' | translate }}</label>
           <select formControlName="typeOp" class="ds-select form-control">
             <option value="">{{ 'FILT.allTypes' | translate }}</option>
             <option *ngFor="let type of typeOps" [value]="type">{{ type }}</option>
@@ -309,7 +309,7 @@
           <label>{{ 'OPL.Token' | translate }}</label>
           <input type="text" formControlName="token" class="ds-input form-control"
                  placeholder="{{ 'OPL.Recherchepartielledansletoken' | translate }}"
-                 title="Filtre sur le token de correspondance (recherche partielle, insensible à la casse).">
+                 title="{{ 'OPL.ui.filtreSurLeTokenDeCorrespondance' | translate }}">
         </div>
       </div>
 
@@ -343,7 +343,7 @@
                  class="ds-input form-control" min="0" step="0.01" placeholder="0">
         </div>
         <label class="match-relaxed" for="matchRelaxedTypes"
-               [title]="'Somme : cherche aussi des combinaisons mêlant plusieurs Types_OP (ex. COMPENSE + AJUSTEMENT_SOLDE = COMPENSE_PART). L\'appariement par paires reste inchangé.'">
+               [title]="('OPL.ui.sommeChercheAussiDesCombinaisonsMelant' | translate)">
           <input id="matchRelaxedTypes" type="checkbox" formControlName="relaxedTypes">
           <span>{{ 'OPL.Sommetypesdifférentsautorisés' | translate }}</span>
         </label>
@@ -391,7 +391,7 @@
           <div class="match-actions">
             <button type="button" class="ds-btn ds-btn--secondary btn btn-sm btn-success" (click)="linkMatchPair(pair)"
                     [disabled]="isPairLinked(pair)">
-              <i class="fas fa-link"></i> {{ isPairLinked(pair) ? 'Liaison...' : 'Lier' }}
+              <i class="fas fa-link"></i> {{ isPairLinked(pair) ? ('OPL.Liaisonencours' | translate) : ('OPL.ui.lier' | translate) }}
             </button>
           </div>
         </div>
@@ -448,7 +448,7 @@
                       (click)="linkAggregateMatch(match)"
                       [disabled]="isAggregateLinked(match)">
                 <i class="fas fa-link"></i>
-                {{ isAggregateLinked(match) ? 'Liaison...' : 'Lier ' + (match.lignes.length + 1) + ' lignes' }}
+                {{ isAggregateLinked(match) ? ('OPL.Liaisonencours' | translate) : ('OPL.ui.lierS2' | translate) + (match.lignes.length + 1) + ('DASH.banqueKpiLignes' | translate) }}
               </button>
             </div>
           </div>
@@ -537,16 +537,16 @@
             </th>
             <th>ID</th>
             <th>{{ 'TBL.client' | translate }}</th>
-            <th>Type_OP</th>
+            <th>{{ 'OPL.exportHeaderTypeOp' | translate }}</th>
             <th>{{ 'TBL.amount' | translate }}</th>
             <th>{{ 'OPL.DateopérationBO' | translate }}</th>
             <th>{{ 'OPL.DateopérationPart' | translate }}</th>
             <th>{{ 'OPL.DateDemande' | translate }}</th>
             <th>{{ 'TBL.transactionId' | translate }}</th>
             <th>{{ 'TBL.country' | translate }}</th>
-            <th>Source</th>
+            <th>{{ 'OPL.exportHeaderSource' | translate }}</th>
             <th>{{ 'TBL.status' | translate }}</th>
-            <th>Token</th>
+            <th>{{ 'OPL.exportHeaderToken' | translate }}</th>
             <th>{{ 'TBL.actions' | translate }}</th>
           </tr>
         </thead>
@@ -584,7 +584,7 @@
               </button>
             </td>
             <td>
-              <span class="token-badge" *ngIf="hasToken(oppart)" [title]="'Token de correspondance : ' + oppart.token">
+              <span class="token-badge" *ngIf="hasToken(oppart)" [title]="('OPL.ui.tokenDeCorrespondance' | translate) + oppart.token">
                 <i class="fas fa-link"></i> {{ oppart.token }}
               </span>
               <span class="token-empty" *ngIf="!hasToken(oppart)">-</span>
@@ -639,7 +639,7 @@
 <div class="modal-overlay" *ngIf="showEditModal">
   <div class="modal-content">
     <div class="modal-header">
-      <h4>{{ editingOppart ? 'Modifier l\'Opération' : 'Nouvelle Opération' }}</h4>
+      <h4>{{ editingOppart ? ('OPL.ui.modifierLOperation' | translate) : ('OPL.Nouvelleopération' | translate) }}</h4>
       <button type="button" class="close-btn" (click)="closeEditModal()" [disabled]="isSaving">
         <i class="fas fa-times"></i>
       </button>
@@ -654,7 +654,7 @@
           </div>
 
           <div class="form-group">
-            <label>Type_OP :</label>
+            <label>{{ 'OPL.ui.typeOp' | translate }}</label>
             <input type="text" formControlName="typeOp" class="ds-input form-control" placeholder="{{ 'OPL.Excashin' | translate }}">
           </div>
         </div>
@@ -730,7 +730,7 @@
       <button type="button" class="ds-btn ds-btn--secondary btn btn-secondary" (click)="closeEditModal()" [disabled]="isSaving">{{ 'COMMON.actions.cancel' | translate }}</button>
       <button type="button" class="ds-btn ds-btn--primary btn btn-primary" (click)="saveOppart()" [disabled]="isSaving || !editForm.valid">
         <i class="fas fa-save"></i>
-        {{ isSaving ? 'Sauvegarde...' : 'Enregistrer' }}
+        {{ isSaving ? ('EBS.Sauvegardeencours' | translate) : ('COMMON.actions.save' | translate) }}
       </button>
     </div>
   </div>
@@ -812,7 +812,7 @@
       <div class="pdf-linked-solde" [class.pdf-solde-ok]="g.solde === 0">
         <span class="pdf-solde-label">{{ 'OPL.Solde' | translate }}{{ g.otherSources.join(' / ') || '—' }} {{ 'OPL.Moins' | translate }} {{ g.mainSource }})</span>
         <span class="pdf-solde-value">
-          {{ g.solde === 0 ? 'Equilibre' : formatMontant(g.solde) }}
+          {{ g.solde === 0 ? ('OPL.ui.equilibre' | translate) : formatMontant(g.solde) }}
         </span>
       </div>
 

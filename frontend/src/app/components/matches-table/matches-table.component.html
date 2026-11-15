@@ -206,8 +206,8 @@
                 type="button"
                 (click)="openSuiviTrxAnnuler(match)"
                 class="create-oppart-row-button ds-btn ds-btn--secondary ds-btn--sm"
-                [title]="'Suivi TRX à annuler'">
-                <i class="fas fa-ban"></i> Suivi TRX à annuler
+                [title]="('NAV.suiviTrxAnnuler' | translate)">
+                <i class="fas fa-ban"></i> {{ 'NAV.suiviTrxAnnuler' | translate }}
               </button>
             </td>
             <td class="key-cell">{{match.key}}</td>
@@ -249,17 +249,17 @@
   <div *ngIf="showSuiviTrxAnnulerPopup" class="oppart-overlay" (click)="closeSuiviTrxAnnulerPopup()">
     <div class="oppart-popup" style="max-width: 1000px;" (click)="$event.stopPropagation()">
       <div class="popup-header oppart-header">
-        <h3>Suivi TRX à annuler</h3>
+        <h3>{{ 'NAV.suiviTrxAnnuler' | translate }}</h3>
         <button (click)="closeSuiviTrxAnnulerPopup()" class="close-btn">×</button>
       </div>
       <div class="oppart-content">
         <div class="oppart-info">
-          <span class="oppart-count">Clé: {{ suiviTrxMatchKey }}</span>
-          <span class="oppart-note">Tous les champs BO et Partenaire sont affichés : vérifiez-les avant d'enregistrer. Côté partenaire, la date, le montant et le téléphone sont détectés automatiquement à partir des autres colonnes (libellés variables selon le modèle).</span>
+          <span class="oppart-count">{{ 'TBL.ui.cle' | translate: { p0: suiviTrxMatchKey } }}</span>
+          <span class="oppart-note">{{ 'TBL.ui.tousLesChampsBoEtPartenaire' | translate }}</span>
         </div>
 
         <div class="oppart-mapping">
-          <div class="mapping-legend">Données BO</div>
+          <div class="mapping-legend">{{ 'TBL.ui.donneesBo' | translate }}</div>
           <div class="mapping-grid">
             <div class="mapping-row" *ngFor="let field of suiviTrxBoFields">
               <label class="mapping-field">
@@ -286,7 +286,7 @@
         </div>
 
         <div class="oppart-mapping">
-          <div class="mapping-legend">Données Partenaire</div>
+          <div class="mapping-legend">{{ 'TBL.ui.donneesPartenaire' | translate }}</div>
           <div class="mapping-grid">
             <div class="mapping-row" *ngFor="let field of suiviTrxPartnerFields">
               <label class="mapping-field">
@@ -302,11 +302,11 @@
         </div>
 
         <div class="oppart-mapping">
-          <div class="mapping-legend">Statut</div>
+          <div class="mapping-legend">{{ 'TBL.status' | translate }}</div>
           <div class="mapping-grid">
             <div class="mapping-row">
               <label class="mapping-field">
-                <span class="mapping-label">Statut</span>
+                <span class="mapping-label">{{ 'TBL.status' | translate }}</span>
               </label>
               <div class="mapping-control">
                 <div class="mapping-source-line">
@@ -318,9 +318,9 @@
         </div>
       </div>
       <div class="oppart-actions">
-        <button (click)="closeSuiviTrxAnnulerPopup()" class="cancel-btn">Annuler</button>
+        <button (click)="closeSuiviTrxAnnulerPopup()" class="cancel-btn">{{ 'COMMON.actions.cancel' | translate }}</button>
         <button (click)="saveSuiviTrxAnnuler()" class="save-oppart-btn" [disabled]="suiviTrxSaving">
-          {{ suiviTrxSaving ? 'Enregistrement…' : 'Enregistrer et ouvrir' }}
+          {{ suiviTrxSaving ? ('ETA.modal.saving' | translate) : ('TBL.ui.enregistrerEtOuvrir' | translate) }}
         </button>
       </div>
     </div>

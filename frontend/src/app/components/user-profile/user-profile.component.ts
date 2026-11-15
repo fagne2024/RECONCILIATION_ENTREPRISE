@@ -7,6 +7,7 @@ import { UserPhotoService } from '../../services/user-photo.service';
 import { User } from '../../models/user.model';
 import { AppStateService } from '../../services/app-state.service';
 import { PopupService } from '../../services/popup.service';
+import { I18nService } from '../../services/i18n/i18n.service';
 
 @Component({
   selector: 'app-user-profile',
@@ -66,9 +67,9 @@ export class UserProfileComponent implements OnInit, OnDestroy {
       },
       error: (error) => {
         console.error('Error loading user info:', error);
-        this.errorMessage = 'Erreur lors du chargement des informations utilisateur';
+        this.errorMessage = I18nService.t('COMMON.msg.erreurLorsDuChargementDesInformations');
         this.isLoading = false;
-        this.popupService.showError('Erreur lors du chargement des informations utilisateur', 'Erreur');
+        this.popupService.showError(I18nService.t('COMMON.msg.erreurLorsDuChargementDesInformations'), I18nService.t('MSG.error'));
       }
     });
   }
@@ -91,17 +92,17 @@ export class UserProfileComponent implements OnInit, OnDestroy {
   async changePassword(): Promise<void> {
     // Validation
     if (!this.passwordForm.currentPassword || !this.passwordForm.newPassword || !this.passwordForm.confirmPassword) {
-      await this.popupService.showError('Veuillez remplir tous les champs', 'Champs requis');
+      await this.popupService.showError(I18nService.t('USR.msg.fillAllFields'), I18nService.t('USR.popup.requiredFieldsTitle'));
       return;
     }
 
     if (this.passwordForm.newPassword !== this.passwordForm.confirmPassword) {
-      await this.popupService.showError('Les nouveaux mots de passe ne correspondent pas', 'Erreur de validation');
+      await this.popupService.showError(I18nService.t('COMMON.msg.lesNouveauxMotsDePasseNe'), I18nService.t('COMMON.msg.erreurDeValidation'));
       return;
     }
 
     if (this.passwordForm.newPassword.length < 6) {
-      await this.popupService.showError('Le nouveau mot de passe doit contenir au moins 6 caractères', 'Erreur de validation');
+      await this.popupService.showError(I18nService.t('COMMON.msg.leNouveauMotDePasseDoit'), I18nService.t('COMMON.msg.erreurDeValidation'));
       return;
     }
 
@@ -112,22 +113,22 @@ export class UserProfileComponent implements OnInit, OnDestroy {
       this.passwordForm.newPassword
     ).subscribe({
       next: async () => {
-        await this.popupService.showSuccess('Mot de passe modifié avec succès', 'Succès');
+        await this.popupService.showSuccess(I18nService.t('COMMON.msg.motDePasseModifieAvecSucces'), I18nService.t('POPUP.success'));
         this.resetPasswordForm();
         this.showPasswordForm = false;
         this.isChangingPassword = false;
       },
       error: async (error) => {
         console.error('Error changing password:', error);
-        const errorMessage = error.error?.error || 'Erreur lors de la modification du mot de passe';
-        await this.popupService.showError(errorMessage, 'Erreur');
+        const errorMessage = error.error?.error || I18nService.t('COMMON.msg.erreurLorsDeLaModificationDu');
+        await this.popupService.showError(errorMessage, I18nService.t('MSG.error'));
         this.isChangingPassword = false;
       }
     });
   }
 
   getProfilName(): string {
-    return this.user?.profil?.nom || 'Non défini';
+    return this.user?.profil?.nom || I18nService.t('OPS.notDefined');
   }
 
   // ------------------------------------------------------------------
@@ -147,17 +148,17 @@ export class UserProfileComponent implements OnInit, OnDestroy {
       return;
     }
     if (!file.type || !file.type.startsWith('image/')) {
-      this.popupService.showError('Veuillez choisir un fichier image (PNG, JPG, GIF ou WEBP).', 'Fichier invalide');
+      this.popupService.showError(I18nService.t('COMMON.msg.veuillezChoisirUnFichierImagePng'), I18nService.t('RPT.releve.invalidFile'));
       return;
     }
     if (file.size > this.maxPhotoBytes) {
-      this.popupService.showError("L'image ne doit pas dépasser 2 Mo.", 'Fichier trop volumineux');
+      this.popupService.showError(I18nService.t('COMMON.msg.lImageNeDoitPasDepasser'), I18nService.t('COMMON.msg.fichierTropVolumineux'));
       return;
     }
 
     const reader = new FileReader();
     reader.onload = () => this.uploadPhoto(String(reader.result || ''));
-    reader.onerror = () => this.popupService.showError('Impossible de lire le fichier sélectionné.', 'Erreur');
+    reader.onerror = () => this.popupService.showError(I18nService.t('COMMON.msg.impossibleDeLireLeFichierSelectionne'), I18nService.t('MSG.error'));
     reader.readAsDataURL(file);
   }
 
@@ -170,12 +171,12 @@ export class UserProfileComponent implements OnInit, OnDestroy {
       next: async (response) => {
         this.photo = response?.photo || dataUrl;
         this.isUploadingPhoto = false;
-        await this.popupService.showSuccess(response?.message || 'Photo de profil mise à jour', 'Succès');
+        await this.popupService.showSuccess(response?.message || I18nService.t('COMMON.msg.photoDeProfilMiseAJour'), I18nService.t('POPUP.success'));
       },
       error: async (error) => {
         this.isUploadingPhoto = false;
-        const message = error?.error?.message || error?.error?.error || "Erreur lors de l'enregistrement de la photo";
-        await this.popupService.showError(message, 'Erreur');
+        const message = error?.error?.message || error?.error?.error || I18nService.t('COMMON.msg.erreurLorsDeLEnregistrementDe');
+        await this.popupService.showError(message, I18nService.t('MSG.error'));
       }
     });
   }
@@ -185,8 +186,8 @@ export class UserProfileComponent implements OnInit, OnDestroy {
       return;
     }
     const confirmed = await this.popupService.showConfirm(
-      'Voulez-vous vraiment supprimer votre photo de profil ?',
-      'Supprimer la photo'
+      I18nService.t('COMMON.msg.voulezVousVraimentSupprimerVotrePhoto'),
+      I18nService.t('COMMON.ui.supprimerLaPhoto')
     );
     if (!confirmed) {
       return;
@@ -196,12 +197,12 @@ export class UserProfileComponent implements OnInit, OnDestroy {
       next: async (response) => {
         this.photo = null;
         this.isUploadingPhoto = false;
-        await this.popupService.showSuccess(response?.message || 'Photo de profil supprimée', 'Succès');
+        await this.popupService.showSuccess(response?.message || I18nService.t('COMMON.msg.photoDeProfilSupprimee'), I18nService.t('POPUP.success'));
       },
       error: async (error) => {
         this.isUploadingPhoto = false;
-        const message = error?.error?.message || error?.error?.error || 'Erreur lors de la suppression de la photo';
-        await this.popupService.showError(message, 'Erreur');
+        const message = error?.error?.message || error?.error?.error || I18nService.t('COMMON.msg.erreurLorsDeLaSuppressionDe');
+        await this.popupService.showError(message, I18nService.t('MSG.error'));
       }
     });
   }

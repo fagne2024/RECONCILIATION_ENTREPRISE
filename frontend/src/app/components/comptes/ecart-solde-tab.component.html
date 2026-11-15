@@ -1,24 +1,24 @@
 <div class="ecart-solde-tab-container">
   <div class="tab-header">
-    <h3>Écarts de Solde - {{ agence }}</h3>
+    <h3>{{ 'TBL.ui.ecartsDeSolde' | translate: { p0: agence } }}</h3>
     <div class="tab-info">
       <span class="date-info" *ngIf="dateTransaction">
-        Date: {{ formatDate(dateTransaction) }}
+        {{ 'TBL.ui.date' | translate: { p0: (formatDate(dateTransaction)) } }}
       </span>
       <span class="count-info">
-        Total: {{ combinedRows.length }} résultat(s)
+        {{ 'TBL.ui.totalResultatS' | translate: { p0: combinedRows.length } }}
         <span *ngIf="revenuJournalierRows.length > 0" class="revenu-info">
-          ({{ filteredEcartSoldes.length }} écart(s) de solde, {{ revenuJournalierRows.length }} revenu(s) journalier)
+          {{ 'TBL.ui.ecartSDeSoldeRevenuS' | translate: { p0: filteredEcartSoldes.length, p1: revenuJournalierRows.length } }}
         </span>
       </span>
       <span class="count-info" *ngIf="combinedRows.length > pageSize">
-        Affichage: {{ (currentPage - 1) * pageSize + 1 }} - {{ Math.min(currentPage * pageSize, combinedRows.length) }} sur {{ combinedRows.length }}
+        {{ 'TBL.ui.affichageSur' | translate: { p0: ((currentPage - 1) * pageSize + 1), p1: (Math.min(currentPage * pageSize, combinedRows.length)), p2: combinedRows.length } }}
       </span>
       <button class="btn btn-success export-btn" 
               (click)="exportEcartSoldes()"
               [disabled]="filteredEcartSoldes.length === 0">
         <i class="fas fa-download"></i>
-        Exporter
+        {{ 'ACT.export' | translate }}
       </button>
     </div>
   </div>
@@ -33,10 +33,10 @@
                  (change)="toggleSelectAll()"
                  [disabled]="isValidatingMass">
           <span class="checkmark"></span>
-          Sélectionner tout
+          {{ 'TBL.ui.selectionnerTout' | translate }}
         </label>
         <span class="selected-count" *ngIf="selectedItems.size > 0">
-          {{ selectedItems.size }} élément(s) sélectionné(s)
+          {{ 'TBL.ui.elementSSelectionneS' | translate: { p0: selectedItems.size } }}
         </span>
       </div>
       <div class="selection-actions" *ngIf="selectedItems.size > 0">
@@ -45,7 +45,7 @@
                 [disabled]="isValidatingMass || selectedItems.size === 0">
           <i class="fas fa-check" *ngIf="!isValidatingMass"></i>
           <i class="fas fa-spinner fa-spin" *ngIf="isValidatingMass"></i>
-          {{ isValidatingMass ? 'Validation...' : 'Valider sélection' }}
+          {{ isValidatingMass ? ('RPT.validating' | translate) : ('OPS.Validersélection' | translate) }}
         </button>
         <button class="btn btn-secondary btn-sm" 
                 (click)="clearSelection()"
@@ -57,7 +57,7 @@
 
   <div class="loading-container" *ngIf="isLoading">
     <div class="spinner"></div>
-    <p>Chargement des écarts de solde...</p>
+    <p>{{ 'TBL.ui.chargementDesEcartsDeSolde' | translate }}</p>
   </div>
 
   <div class="error-container" *ngIf="error">
@@ -70,7 +70,7 @@
   <div class="no-data-container" *ngIf="!isLoading && !error && combinedRows.length === 0">
     <div class="alert alert-info">
       <i class="fas fa-info-circle"></i>
-      Aucun écart de solde ou revenu journalier trouvé pour cette agence et cette date.
+      {{ 'TBL.ui.aucunEcartDeSoldeOuRevenu' | translate }}
     </div>
   </div>
 
@@ -85,10 +85,10 @@
                    [disabled]="isValidatingMass">
           </th>
           <th>{{ 'TBL.transactionId' | translate }}</th>
-          <th>Téléphone Client</th>
+          <th>{{ 'TBL.customerPhone' | translate }}</th>
           <th>{{ 'TBL.amount' | translate }}</th>
           <th>{{ 'TBL.fees' | translate }}</th>
-          <th>Écart</th>
+          <th>{{ 'TBL.gap' | translate }}</th>
           <th>{{ 'TBL.service' | translate }}</th>
           <th>{{ 'TBL.agency' | translate }}</th>
           <th>{{ 'ACT.exportExcel' | translate }}</th>
@@ -96,7 +96,7 @@
           <th>{{ 'TBL.country' | translate }}</th>
           <th>{{ 'TBL.status' | translate }}</th>
           <th>{{ 'TBL.comment' | translate }}</th>
-          <th>Date Import</th>
+          <th>{{ 'TBL.importDate' | translate }}</th>
           <th>{{ 'TBL.actions' | translate }}</th>
         </tr>
       </thead>
@@ -128,7 +128,7 @@
                 </span>
               </div>
               <div *ngIf="!row.data.fraisAssocie" class="no-frais">
-                <span class="no-frais-text">Aucun frais</span>
+                <span class="no-frais-text">{{ 'ESD.noFees' | translate }}</span>
               </div>
             </td>
             <td class="amount-cell ecart-cell">{{ formatMontant(calculateEcart(row.data)) }}</td>
@@ -156,13 +156,13 @@
                 <button *ngIf="row.data.statut === 'EN_ATTENTE'" 
                         class="btn btn-success btn-sm validate-btn" 
                         (click)="validateEcartSolde(row.data)"
-                        title="Valider l'écart de solde">
+                        title="{{ 'TBL.ui.validerLEcartDeSolde' | translate }}">
                   <i class="fas fa-check"></i>
-                  Valider
+                  {{ 'ACT.validate' | translate }}
                 </button>
                 <span *ngIf="row.data.statut === 'TRAITE'" class="status-validated">
                   <i class="fas fa-check-circle"></i>
-                  Validé
+                  {{ 'CIB.badge.validated' | translate }}
                 </span>
               </div>
             </td>
@@ -176,11 +176,11 @@
             <td class="frais-cell">
               <div class="frais-info">
                 <span class="frais-amount">{{ formatMontantFrais(row.data.ecartFrais) }}</span>
-                <span class="frais-type">Écart Frais</span>
+                <span class="frais-type">{{ 'CPT.Écartfrais' | translate }}</span>
               </div>
             </td>
             <td class="amount-cell">-</td>
-            <td class="service-cell">Revenu Journalier</td>
+            <td class="service-cell">{{ 'CPT.Revenujournalier' | translate }}</td>
             <td class="agence-cell">{{ agence }}</td>
             <td class="date-cell">{{ formatDate(row.data.date) }}</td>
             <td class="gu-cell">-</td>
@@ -193,11 +193,7 @@
             <td class="commentaire-cell">
               <div class="commentaire-content">
                 <span class="commentaire-text">
-                  Cashin: {{ formatMontant(row.data.totalCashin) }}, 
-                  Paiement: {{ formatMontant(row.data.totalPaiement) }}, 
-                  Frais Cashin: {{ formatMontant(row.data.fraisCashin) }}, 
-                  Frais Paiement: {{ formatMontant(row.data.fraisPaiement) }}, 
-                  Revenu Total: {{ formatMontant(row.data.revenuTotal) }}
+                  {{ 'TBL.ui.cashinPaiementFraisCashinFraisPaiement' | translate: { p0: (formatMontant(row.data.totalCashin)), p1: (formatMontant(row.data.totalPaiement)), p2: (formatMontant(row.data.fraisCashin)), p3: (formatMontant(row.data.fraisPaiement)), p4: (formatMontant(row.data.revenuTotal)) } }}
                 </span>
               </div>
             </td>
@@ -209,7 +205,7 @@
       <tfoot>
         <tr class="total-row">
           <td colspan="10" class="total-label">
-            <strong>ÉCART TOTAL :</strong>
+            <strong>{{ 'TBL.ui.ecartTotal' | translate }}</strong>
           </td>
           <td colspan="1" class="total-amount">
             <strong>{{ formatTotalEcart() }}</strong>

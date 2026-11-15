@@ -2,20 +2,20 @@
 <div *ngIf="showPerformancePopup" class="performance-popup-overlay">
     <div class="performance-popup">
         <div class="performance-header">
-            <h3><i class="fas fa-tachometer-alt"></i> Performance de la réconciliation</h3>
+            <h3><i class="fas fa-tachometer-alt"></i> {{ 'COMMON.ui.performanceDeLaReconciliation' | translate }}</h3>
         </div>
         <div class="performance-details">
             <div class="performance-item">
                 <i class="fas fa-clock"></i>
-                <span>Temps d'exécution: {{ formatTime(executionTime) }}</span>
+                <span>{{ 'COMMON.ui.tempsDExecution' | translate: { p0: (formatTime(executionTime)) } }}</span>
             </div>
             <div class="performance-item">
                 <i class="fas fa-database"></i>
-                <span>Enregistrements traités: {{ processedRecords | number }}</span>
+                <span>{{ 'COMMON.ui.enregistrementsTraites' | translate: { p0: (processedRecords | number) } }}</span>
             </div>
             <div class="performance-item">
                 <i class="fas fa-tachometer-alt"></i>
-                <span>Vitesse: {{ (processedRecords / (executionTime / 1000)) | number:'1.0-0' }} enregistrements/seconde</span>
+                <span>{{ 'COMMON.ui.vitesseEnregistrementsSeconde' | translate: { p0: ((processedRecords / (executionTime / 1000)) | number:'1.0-0') } }}</span>
             </div>
         </div>
         <button type="button" class="ds-btn ds-btn--secondary close-popup-btn" (click)="closePerformancePopup()">{{ 'COMMON.actions.close' | translate }}</button>
@@ -26,8 +26,8 @@
     <!-- Section de sélection des modes -->
     <div *ngIf="!isLoading && !showProgress && !reconciliationResponse && !error" class="mode-selection-container">
         <div class="mode-selection-header">
-            <h2><i class="fas fa-sync-alt"></i> Réconciliation de Données</h2>
-            <p>Choisissez votre mode de réconciliation préféré</p>
+            <h2><i class="fas fa-sync-alt"></i> {{ 'LNC.sectionTitle' | translate }}</h2>
+            <p>{{ 'LNC.sectionSubtitle' | translate }}</p>
         </div>
         
         <div class="mode-cards-container">
@@ -35,21 +35,21 @@
             <div class="mode-card assisted-mode">
                 <div class="mode-header">
                     <i class="fas fa-magic"></i>
-                    <h3>Mode Assisté</h3>
+                    <h3>{{ 'FU.Modeassisté' | translate }}</h3>
                 </div>
                 <div class="mode-description">
-                    <p>Le système analyse vos fichiers et suggère les meilleures clés de réconciliation.</p>
+                    <p>{{ 'COMMON.ui.leSystemeAnalyseVosFichiersEt' | translate }}</p>
                 </div>
                 <div class="mode-features">
                     <ul>
-                        <li>Analyse automatique des correspondances</li>
-                        <li>Suggestions intelligentes</li>
-                        <li>Validation avant exécution</li>
+                        <li>{{ 'COMMON.ui.analyseAutomatiqueDesCorrespondances' | translate }}</li>
+                        <li>{{ 'COMMON.ui.suggestionsIntelligentes' | translate }}</li>
+                        <li>{{ 'COMMON.ui.validationAvantExecution' | translate }}</li>
                     </ul>
                 </div>
                 <button type="button" class="ds-btn ds-btn--secondary mode-button assisted-button" (click)="startAssistedMode()">
                     <i class="fas fa-play"></i>
-                    Lancer l'analyse
+                    {{ 'COMMON.ui.lancerLAnalyse' | translate }}
                 </button>
             </div>
             
@@ -57,21 +57,21 @@
             <div class="mode-card magic-mode">
                 <div class="mode-header">
                     <i class="fas fa-wand-magic-sparkles"></i>
-                    <h3>Mode Magique</h3>
+                    <h3>{{ 'LNC.magicMode' | translate }}</h3>
                 </div>
                 <div class="mode-description">
-                    <p>Réconciliation en un clic ! Le système trouve automatiquement les meilleures clés et lance la réconciliation.</p>
+                    <p>{{ 'COMMON.ui.reconciliationEnUnClicLeSysteme' | translate }}</p>
                 </div>
                 <div class="mode-features">
                     <ul>
-                        <li>Configuration automatique</li>
-                        <li>Lancement immédiat</li>
-                        <li>Résultats rapides</li>
+                        <li>{{ 'COMMON.ui.configurationAutomatique' | translate }}</li>
+                        <li>{{ 'COMMON.ui.lancementImmediat' | translate }}</li>
+                        <li>{{ 'COMMON.ui.resultatsRapides' | translate }}</li>
                     </ul>
                 </div>
                 <button type="button" class="ds-btn ds-btn--secondary mode-button magic-button" (click)="startMagicMode()">
                     <i class="fas fa-rocket"></i>
-                    Lancer la réconciliation magique
+                    {{ 'COMMON.ui.lancerLaReconciliationMagique' | translate }}
                 </button>
             </div>
         </div>
@@ -80,40 +80,40 @@
     <!-- Contenu par défaut pour le mode magique (quand on arrive via URL avec paramètres) -->
     <div *ngIf="!showProgress && !reconciliationResponse && !error && isLoading" class="default-content">
         <div class="magic-reconciliation-header">
-            <h2>🪄 Réconciliation Magique</h2>
-            <p>Votre réconciliation magique est en cours de préparation...</p>
+            <h2>{{ 'COMMON.ui.reconciliationMagique' | translate }}</h2>
+            <p>{{ 'COMMON.ui.votreReconciliationMagiqueEstEnCours' | translate }}</p>
         </div>
         
         <div class="magic-status">
             <div class="status-card">
                 <i class="fas fa-magic"></i>
-                <h3>Mode Magique Activé</h3>
-                <p>Le système analyse automatiquement vos fichiers et trouve les meilleures clés de réconciliation.</p>
+                <h3>{{ 'COMMON.ui.modeMagiqueActive' | translate }}</h3>
+                <p>{{ 'COMMON.ui.leSystemeAnalyseAutomatiquementVosFichie' | translate }}</p>
             </div>
             
             <div class="status-card">
                 <i class="fas fa-cogs"></i>
-                <h3>Configuration Automatique</h3>
-                <p>Découverte intelligente des colonnes de correspondance en cours...</p>
+                <h3>{{ 'COMMON.ui.configurationAutomatique2' | translate }}</h3>
+                <p>{{ 'COMMON.ui.decouverteIntelligenteDesColonnesDeCorre' | translate }}</p>
             </div>
             
             <div class="status-card">
                 <i class="fas fa-rocket"></i>
-                <h3>Lancement Immédiat</h3>
-                <p>La réconciliation sera lancée automatiquement dès que la configuration sera optimale.</p>
+                <h3>{{ 'COMMON.ui.lancementImmediat2' | translate }}</h3>
+                <p>{{ 'COMMON.ui.laReconciliationSeraLanceeAutomatiquemen' | translate }}</p>
             </div>
         </div>
         
         <div class="loading-indicator">
             <div class="spinner"></div>
-            <p>Initialisation de la réconciliation magique...</p>
+            <p>{{ 'COMMON.ui.initialisationDeLaReconciliationMagique' | translate }}</p>
         </div>
     </div>
 
     <!-- Affichage de la progression avec le composant générique -->
     <app-progress-popup
       *ngIf="showProgress"
-      [title]="'Réconciliation en cours...'"
+      [title]="('RES.reconciling' | translate)"
       [progress]="progressPercentage"
       [step]="progressStep"
       [currentFile]="progressCurrentFile"
@@ -132,9 +132,9 @@
         <!-- Section spéciale pour le mode magique -->
         <div *ngIf="isMagicMode && magicResults" class="magic-results-section">
             <div class="magic-header">
-                <h2>🪄 Réconciliation Magique Terminée</h2>
+                <h2>{{ 'COMMON.ui.reconciliationMagiqueTerminee' | translate }}</h2>
                 <div class="magic-confidence">
-                    <span class="confidence-label">Confiance globale:</span>
+                    <span class="confidence-label">{{ 'COMMON.ui.confianceGlobale' | translate }}</span>
                     <span class="confidence-value" [class]="getConfidenceClass(magicConfidence)">
                         {{ (magicConfidence * 100) | number:'1.0-0' }}%
                     </span>
@@ -143,11 +143,11 @@
 
             <!-- Clé sélectionnée automatiquement -->
             <div *ngIf="magicResults?.selectedKey" class="selected-key-section">
-                <h3><i class="fas fa-key"></i> Clé Sélectionnée Automatiquement</h3>
+                <h3><i class="fas fa-key"></i> {{ 'COMMON.ui.cleSelectionneeAutomatiquement' | translate }}</h3>
                 <div class="selected-key-card">
                     <div class="selected-key-header">
                         <i class="fas fa-star"></i>
-                        <span>Meilleure correspondance détectée</span>
+                        <span>{{ 'COMMON.ui.meilleureCorrespondanceDetectee' | translate }}</span>
                         <span class="selected-confidence" [class]="getConfidenceClass(magicResults.selectedKey.confidence)">
                             {{ (magicResults.selectedKey.confidence * 100) | number:'1.0-0' }}%
                         </span>
@@ -165,30 +165,30 @@
 
             <!-- Résumé de l'analyse -->
             <div *ngIf="magicResults?.analysisSummary" class="analysis-summary-section">
-                <h3><i class="fas fa-chart-bar"></i> Résumé de l'Analyse</h3>
+                <h3><i class="fas fa-chart-bar"></i> {{ 'COMMON.ui.resumeDeLAnalyse' | translate }}</h3>
                 <div class="analysis-summary-grid">
                     <div class="summary-item">
                         <i class="fas fa-columns"></i>
-                        <span>Colonnes analysées: {{ magicResults.analysisSummary.totalColumnsAnalyzed }}</span>
+                        <span>{{ 'COMMON.ui.colonnesAnalysees' | translate: { p0: magicResults.analysisSummary.totalColumnsAnalyzed } }}</span>
                     </div>
                     <div class="summary-item">
                         <i class="fas fa-handshake"></i>
-                        <span>Meilleure correspondance: {{ magicResults.analysisSummary.bestMatchFound }}</span>
+                        <span>{{ 'COMMON.ui.meilleureCorrespondance' | translate: { p0: magicResults.analysisSummary.bestMatchFound } }}</span>
                     </div>
                     <div class="summary-item">
                         <i class="fas fa-shield-alt"></i>
-                        <span>Niveau de confiance: {{ magicResults.analysisSummary.confidenceLevel }}</span>
+                        <span>{{ 'COMMON.ui.niveauDeConfiance' | translate: { p0: magicResults.analysisSummary.confidenceLevel } }}</span>
                     </div>
                     <div class="summary-item">
                         <i class="fas fa-magic"></i>
-                        <span>Transformations appliquées: {{ magicResults.analysisSummary.transformationApplied ? 'Oui' : 'Non' }}</span>
+                        <span>{{ 'COMMON.ui.transformationsAppliquees' | translate: { value: (magicResults.analysisSummary.transformationApplied ? ('BQ.Oui' | translate) : ('BQ.Non' | translate)) } }}</span>
                     </div>
                 </div>
             </div>
 
             <!-- Clés détectées -->
             <div *ngIf="detectedKeys.length > 0" class="detected-keys-section">
-                <h3>🔑 Clés Détectées Automatiquement</h3>
+                <h3>{{ 'COMMON.ui.clesDetecteesAutomatiquement' | translate }}</h3>
                 <div class="keys-grid">
                     <div *ngFor="let key of detectedKeys; let i = index" class="key-card">
                         <div class="key-header">
@@ -204,15 +204,15 @@
                         </div>
                         <div class="key-details">
                             <div class="detail-item">
-                                <span class="label">Similarité des noms:</span>
+                                <span class="label">{{ 'COMMON.ui.similariteDesNoms' | translate }}</span>
                                 <span class="value">{{ (key.nameSimilarity * 100) | number:'1.0-0' }}%</span>
                             </div>
                             <div class="detail-item">
-                                <span class="label">Confiance contenu:</span>
+                                <span class="label">{{ 'COMMON.ui.confianceContenu' | translate }}</span>
                                 <span class="value">{{ (key.contentConfidence * 100) | number:'1.0-0' }}%</span>
                             </div>
                             <div class="detail-item">
-                                <span class="label">Qualité des données:</span>
+                                <span class="label">{{ 'COMMON.ui.qualiteDesDonnees' | translate }}</span>
                                 <span class="value">{{ (key.dataQuality * 100) | number:'1.0-0' }}%</span>
                             </div>
                         </div>
@@ -225,12 +225,12 @@
 
             <!-- Transformations appliquées -->
             <div *ngIf="appliedTransformations.length > 0" class="transformations-section">
-                <h3>🔧 Transformations Appliquées</h3>
+                <h3>{{ 'COMMON.ui.transformationsAppliquees2' | translate }}</h3>
                 <div class="transformations-grid">
                     <div *ngFor="let transform of appliedTransformations" class="transformation-card">
                         <div class="transformation-header">
                             <i class="fas fa-magic"></i>
-                            <span>Transformation détectée</span>
+                            <span>{{ 'COMMON.ui.transformationDetectee' | translate }}</span>
                         </div>
                         <div class="transformation-pair">
                             <span class="bo-column">{{ transform.boColumn }}</span>
@@ -252,15 +252,15 @@
             </div>
         </div>
         <div class="results-header">
-            <h2>Réconciliation terminée</h2>
+            <h2>{{ 'DASH.reconciliationCompleted' | translate }}</h2>
             <div class="execution-summary">
                 <div class="summary-item">
                     <i class="fas fa-clock"></i>
-                    <span>Temps d'exécution: {{ formatTime(executionTime) }}</span>
+                    <span>{{ 'COMMON.ui.tempsDExecution' | translate: { p0: (formatTime(executionTime)) } }}</span>
                 </div>
                 <div class="summary-item">
                     <i class="fas fa-database"></i>
-                    <span>Enregistrements traités: {{ processedRecords | number }}</span>
+                    <span>{{ 'COMMON.ui.enregistrementsTraites' | translate: { p0: (processedRecords | number) } }}</span>
                 </div>
             </div>
         </div>
@@ -277,7 +277,7 @@
             <div class="result-card mismatches">
                 <div class="card-header">
                     <i class="fas fa-exclamation-triangle"></i>
-                    <h3>Différences</h3>
+                    <h3>{{ 'COMMON.ui.differences' | translate }}</h3>
                 </div>
                 <div class="card-value">{{ getSafeValue(reconciliationResponse.totalMismatches) | number }}</div>
             </div>
@@ -285,7 +285,7 @@
             <div class="result-card bo-only">
                 <div class="card-header">
                     <i class="fas fa-file-alt"></i>
-                    <h3>Uniquement BO</h3>
+                    <h3>{{ 'COMMON.ui.uniquementBo' | translate }}</h3>
                 </div>
                 <div class="card-value">{{ getSafeValue(reconciliationResponse.totalBoOnly) | number }}</div>
             </div>
@@ -293,7 +293,7 @@
             <div class="result-card partner-only">
                 <div class="card-header">
                     <i class="fas fa-file-alt"></i>
-                    <h3>Uniquement Partenaire</h3>
+                    <h3>{{ 'COMMON.ui.uniquementPartenaire' | translate }}</h3>
                 </div>
                 <div class="card-value">{{ getSafeValue(reconciliationResponse.totalPartnerOnly) | number }}</div>
             </div>
@@ -304,16 +304,16 @@
     <div *ngIf="error" class="error-container">
         <div class="error-card">
             <i class="fas fa-exclamation-circle"></i>
-            <h3>Réconciliation magique non possible</h3>
+            <h3>{{ 'COMMON.ui.reconciliationMagiqueNonPossible' | translate }}</h3>
             <p>{{ error }}</p>
             <div class="error-actions">
                 <button type="button" class="ds-btn ds-btn--primary btn btn-primary" (click)="goToAssistedMode()">
                     <i class="fas fa-magic"></i>
-                    Utiliser le mode Assisté
+                    {{ 'COMMON.ui.utiliserLeModeAssiste' | translate }}
                 </button>
                 <button type="button" class="ds-btn ds-btn--secondary btn btn-secondary" (click)="goToManualMode()">
                     <i class="fas fa-cogs"></i>
-                    Utiliser le mode Manuel
+                    {{ 'COMMON.ui.utiliserLeModeManuel' | translate }}
                 </button>
             </div>
         </div>

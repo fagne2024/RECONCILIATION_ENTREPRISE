@@ -10,6 +10,7 @@ import { PopupService } from '../../services/popup.service';
 import { PaysService } from '../../services/pays.service';
 import { Pays } from '../../models/pays.model';
 import { normalizeCountryFilterOptions, matchesCountryFilter, countriesMatch } from '../../utils/country-codes.util';
+import { I18nService } from '../../services/i18n/i18n.service';
 
 interface ExportFraisData {
     'ID'?: number | undefined;
@@ -233,7 +234,7 @@ export class FraisComponent implements OnInit, OnDestroy {
         }
 
         if (this.addClients.length === 0) {
-            this.popupService.showWarning('Ajoutez au moins un client');
+            this.popupService.showWarning(I18nService.t('FRS.msg.ajoutezAuMoinsUnClient'));
             return;
         }
 
@@ -271,12 +272,12 @@ export class FraisComponent implements OnInit, OnDestroy {
 
                     if (created > 0) {
                         this.popupService.showSuccess(
-                            created === 1 ? 'Frais de transaction ajouté' : `${created} frais ajoutés (un par client)`
+                            created === 1 ? I18nService.t('FRS.msg.fraisDeTransactionAjoute') : I18nService.t('FRS.msg.fraisAjoutesUnParClient', { p0: created })
                         );
                     }
                     if (failed.length > 0) {
                         const details = failed.map(f => `${f.client} : ${f.message}`).join('\n');
-                        this.popupService.showError(`${failed.length} client(s) non ajouté(s)\n${details}`);
+                        this.popupService.showError(I18nService.t('FRS.msg.clientSNonAjouteS', { p0: failed.length, p1: details }));
                     }
 
                     this.loadFraisTransactions();
@@ -284,7 +285,7 @@ export class FraisComponent implements OnInit, OnDestroy {
                 },
                 error: (err) => {
                     console.error('Erreur lors de l\'ajout', err);
-                    this.popupService.showError('Erreur lors de l\'ajout du frais de transaction');
+                    this.popupService.showError(I18nService.t('FRS.msg.erreurLorsDeLAjoutDu'));
                     this.isAdding = false;
                 }
             })
@@ -313,7 +314,7 @@ export class FraisComponent implements OnInit, OnDestroy {
             this.clientsTouched = true;
         }
         if (duplicates.length > 0) {
-            this.popupService.showInfo(`Client(s) déjà présent(s) : ${duplicates.join(', ')}`);
+            this.popupService.showInfo(I18nService.t('FRS.msg.clientSDejaPresentS', { p0: duplicates.join(', ') }));
         }
     }
 
@@ -340,7 +341,7 @@ export class FraisComponent implements OnInit, OnDestroy {
                 return err.error.message;
             }
         }
-        return err?.message || 'Erreur inconnue';
+        return err?.message || I18nService.t('LNC.unknownError');
     }
     
     editFraisTransaction(frais: FraisTransaction) {
@@ -384,9 +385,9 @@ export class FraisComponent implements OnInit, OnDestroy {
                         console.error('Erreur lors de la mise à jour', err);
                         // Afficher le message d'erreur du backend
                         if (err.error && err.error.error) {
-                            this.popupService.showError('Erreur: ' + err.error.error);
+                            this.popupService.showError(I18nService.t('FRS.msg.erreur') + err.error.error);
                         } else {
-                            this.popupService.showError('Erreur lors de la mise à jour du frais de transaction');
+                            this.popupService.showError(I18nService.t('FRS.msg.erreurLorsDeLaMiseA'));
                         }
                     }
                 })
@@ -395,7 +396,7 @@ export class FraisComponent implements OnInit, OnDestroy {
     }
     
     deleteFraisTransaction(id: number) {
-        if (confirm('Êtes-vous sûr de vouloir supprimer ce frais de transaction ?')) {
+        if (confirm(I18nService.t('FRS.msg.etesVousSurDeVouloirSupprimer'))) {
             this.subscription.add(
                 this.fraisTransactionService.deleteFraisTransaction(id).subscribe({
                     next: () => {
@@ -563,7 +564,7 @@ export class FraisComponent implements OnInit, OnDestroy {
             case 'POURCENTAGE':
                 return 'Frais en pourcentage';
             default:
-                return 'Non défini';
+                return I18nService.t('OPS.notDefined');
         }
     }
     
@@ -581,7 +582,7 @@ export class FraisComponent implements OnInit, OnDestroy {
     
     testFraisCalculation() {
         if (!this.testService || !this.testAgence || !this.testVolumeOperation) {
-            this.popupService.showWarning('Veuillez remplir tous les champs obligatoires');
+            this.popupService.showWarning(I18nService.t('FRS.msg.veuillezRemplirTousLesChampsObligatoires'));
             return;
         }
         
@@ -606,7 +607,7 @@ export class FraisComponent implements OnInit, OnDestroy {
                 },
                 error: (err: any) => {
                     console.error('Erreur lors du test', err);
-                    this.popupService.showError('Erreur lors du test du calcul');
+                    this.popupService.showError(I18nService.t('FRS.msg.erreurLorsDuTestDuCalcul'));
                 }
             })
         );
@@ -617,7 +618,7 @@ export class FraisComponent implements OnInit, OnDestroy {
      */
     exportToCSV() {
         if (!this.filteredFrais || !this.filteredFrais.length) {
-            this.popupService.showInfo('Aucune donnée à exporter', 'Aucune Donnée');
+            this.popupService.showInfo(I18nService.t('MSG.noDataToExport'), I18nService.t('ESD.noData'));
             return;
         }
 
@@ -656,7 +657,7 @@ export class FraisComponent implements OnInit, OnDestroy {
             this.isExporting = false;
         } catch (error) {
             console.error('Erreur lors de l\'export CSV:', error);
-            this.popupService.showError('Erreur lors de l\'export CSV');
+            this.popupService.showError(I18nService.t('FRS.msg.erreurLorsDeLExportCsv'));
             this.isExporting = false;
         }
     }
@@ -666,7 +667,7 @@ export class FraisComponent implements OnInit, OnDestroy {
      */
     exportToExcel() {
         if (!this.filteredFrais || !this.filteredFrais.length) {
-            this.popupService.showInfo('Aucune donnée à exporter', 'Aucune Donnée');
+            this.popupService.showInfo(I18nService.t('MSG.noDataToExport'), I18nService.t('ESD.noData'));
             return;
         }
 
@@ -731,7 +732,7 @@ export class FraisComponent implements OnInit, OnDestroy {
             this.isExporting = false;
         } catch (error) {
             console.error('Erreur lors de l\'export Excel:', error);
-            this.popupService.showError('Erreur lors de l\'export Excel', 'Erreur d\'Export');
+            this.popupService.showError(I18nService.t('FRS.msg.erreurLorsDeLExportExcel'), I18nService.t('OPS.exportDetailsErrorTitle'));
             this.isExporting = false;
         }
     }
@@ -775,13 +776,13 @@ export class FraisComponent implements OnInit, OnDestroy {
                         
                         console.log(`Export réussi: ${response.totalCount} frais exportés`);
                     } else {
-                        this.popupService.showError('Erreur lors de l\'export: ' + (response.error || 'Erreur inconnue'), 'Erreur d\'Export');
+                        this.popupService.showError(I18nService.t('FRS.msg.erreurLorsDeLExport') + (response.error || I18nService.t('LNC.unknownError')), I18nService.t('OPS.exportDetailsErrorTitle'));
                     }
                     this.isExporting = false;
                 },
                 error: (err) => {
                     console.error('Erreur lors de l\'export via API:', err);
-                    this.popupService.showError('Erreur lors de l\'export via API', 'Erreur d\'Export');
+                    this.popupService.showError(I18nService.t('FRS.msg.erreurLorsDeLExportVia'), I18nService.t('OPS.exportDetailsErrorTitle'));
                     this.isExporting = false;
                 }
             })

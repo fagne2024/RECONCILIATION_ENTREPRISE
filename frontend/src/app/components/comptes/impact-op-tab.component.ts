@@ -3,6 +3,7 @@ import { Subscription } from 'rxjs';
 import { ImpactOP } from '../../models/impact-op.model';
 import { ImpactOPService } from '../../services/impact-op.service';
 import { PopupService } from '../../services/popup.service';
+import { I18nService } from '../../services/i18n/i18n.service';
 
 @Component({
   selector: 'app-impact-op-tab',
@@ -157,9 +158,9 @@ export class ImpactOPTabComponent implements OnInit, OnDestroy {
       case 'EN_ATTENTE':
         return 'En attente';
       case 'TRAITE':
-        return 'Traité';
+        return I18nService.t('TBL.statutTraite');
       case 'ERREUR':
-        return 'Erreur';
+        return I18nService.t('TBL.statutErreur');
       default:
         return statut;
     }
@@ -180,7 +181,7 @@ export class ImpactOPTabComponent implements OnInit, OnDestroy {
     }
 
     const confirmed = await this.popupService.showConfirmDialog(
-      `Êtes-vous sûr de vouloir valider cet impact OP ?\n\nType: ${impact.typeOperation}\nMontant: ${this.formatMontant(impact.montant)}`,
+      I18nService.t('TBL.msg.etesVousSurDeVouloirValider4', { p0: impact.typeOperation, p1: this.formatMontant(impact.montant) }),
       'Confirmation de validation'
     );
 
@@ -193,11 +194,11 @@ export class ImpactOPTabComponent implements OnInit, OnDestroy {
             // Mettre à jour le statut localement
             impact.statut = 'TRAITE';
             this.isLoading = false;
-            this.popupService.showSuccess('Impact OP validé avec succès');
+            this.popupService.showSuccess(I18nService.t('TBL.msg.impactOpValideAvecSucces'));
           },
           error: (err: any) => {
             this.isLoading = false;
-            this.popupService.showError('Erreur lors de la validation: ' + err.message);
+            this.popupService.showError(I18nService.t('TBL.msg.erreurLorsDeLaValidation') + err.message);
           }
         })
       );
@@ -249,7 +250,7 @@ export class ImpactOPTabComponent implements OnInit, OnDestroy {
 
   async validateSelectedImpactOPs(): Promise<void> {
     if (this.selectedItems.size === 0) {
-      await this.popupService.showError('Aucun élément sélectionné');
+      await this.popupService.showError(I18nService.t('TBL.msg.aucunElementSelectionne'));
       return;
     }
 
@@ -258,8 +259,8 @@ export class ImpactOPTabComponent implements OnInit, OnDestroy {
     );
 
     const confirmed = await this.popupService.showConfirmDialog(
-      `Êtes-vous sûr de vouloir valider ${selectedImpactOPs.length} impact(s) OP sélectionné(s) ?`,
-      'Confirmation de validation en masse'
+      I18nService.t('TBL.msg.etesVousSurDeVouloirValider5', { p0: selectedImpactOPs.length }),
+      I18nService.t('TBL.msg.confirmationDeValidationEnMasse')
     );
 
     if (confirmed) {
@@ -283,15 +284,15 @@ export class ImpactOPTabComponent implements OnInit, OnDestroy {
         await Promise.all(validationPromises);
         
         if (successCount > 0) {
-          this.popupService.showSuccess(`${successCount} impact(s) OP validé(s) avec succès`);
+          this.popupService.showSuccess(I18nService.t('TBL.msg.impactSOpValideSAvec', { p0: successCount }));
         }
         if (errorCount > 0) {
-          this.popupService.showError(`${errorCount} erreur(s) lors de la validation`);
+          this.popupService.showError(I18nService.t('TBL.msg.erreurSLorsDeLaValidation', { p0: errorCount }));
         }
         
         this.clearSelection();
       } catch (error) {
-        this.popupService.showError('Erreur lors de la validation en masse');
+        this.popupService.showError(I18nService.t('TBL.msg.erreurLorsDeLaValidationEn'));
       } finally {
         this.isValidatingMass = false;
       }

@@ -134,7 +134,7 @@
             <span class="rrbp-kpi-line">
               <span class="rrbp-kpi-label">{{ 'RBP.kpi.boTransactions' | translate }}</span>
               <span class="rrbp-kpi-vals ds-num"
-                >{{ formatNombre(totalBoNombre) }} <span class="sep">·</span> vol {{ formatNombre(totalBoVolume) }}</span
+                >{{ formatNombre(totalBoNombre) }} <span class="sep">·</span> {{ 'RBP.ui.vol' | translate: { p0: (formatNombre(totalBoVolume)) } }}</span
               >
             </span>
           </div>
@@ -148,7 +148,7 @@
             <span class="rrbp-kpi-line">
               <span class="rrbp-kpi-label">{{ 'RBP.kpi.partnerTotal' | translate }}</span>
               <span class="rrbp-kpi-vals ds-num"
-                >{{ formatNombre(totalPartNombre) }} <span class="sep">·</span> vol {{ formatNombre(totalPartVolume) }}</span
+                >{{ formatNombre(totalPartNombre) }} <span class="sep">·</span> {{ 'RBP.ui.vol' | translate: { p0: (formatNombre(totalPartVolume)) } }}</span
               >
             </span>
           </div>
@@ -248,7 +248,7 @@
                 <th rowspan="3" class="col-traitement">{{ 'TBL.processing' | translate }}</th>
                 <th rowspan="3" class="col-statut rrbp-th-statut">{{ 'TBL.status' | translate }}</th>
                 <th colspan="2" class="grp bo">
-                  <div class="rrbp-th-main">BO — {{ selectedEnv === 'ALL' ? ('RBP.th.boAllEnvs' | translate) : selectedEnv }}</div>
+                  <div class="rrbp-th-main">{{ 'RBP.ui.bo' | translate: { p0: (selectedEnv === 'ALL' ? ('RBP.th.boAllEnvs' | translate) : selectedEnv) } }}</div>
                   <div class="rrbp-th-sub" [title]="'RBP.th.boGapsTitle' | translate">
                     {{ statutEcartBoEntete }}
                   </div>
@@ -269,7 +269,7 @@
                 <th rowspan="2" class="sub part">{{ 'TBL.volume' | translate }}</th>
                 <th colspan="2" class="sub decal">J-1</th>
                 <th colspan="2" class="sub decal">J+1</th>
-                <th rowspan="2" class="sub ecart">Nbre</th>
+                <th rowspan="2" class="sub ecart">{{ 'CIB.th.countShort' | translate }}</th>
                 <th rowspan="2" class="sub ecart">{{ 'TBL.volume' | translate }}</th>
                 <th rowspan="2" class="sub ecart">{{ 'RBP.th.taux' | translate }}</th>
               </tr>

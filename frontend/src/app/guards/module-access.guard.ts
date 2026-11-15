@@ -3,6 +3,7 @@ import { ActivatedRouteSnapshot, CanActivate, Router, RouterStateSnapshot } from
 import { AppStateService } from '../services/app-state.service';
 import { PopupService } from '../services/popup.service';
 import { findNavigationAccessContextByRoute } from '../constants/app-navigation-catalog';
+import { I18nService } from '../services/i18n/i18n.service';
 
 @Injectable({
   providedIn: 'root'
@@ -25,8 +26,8 @@ export class ModuleAccessGuard implements CanActivate {
         return true;
       }
       this.popupService.showWarning(
-        `Vous n'avez pas accès au sous-menu « ${navContext.label} ».`,
-        'Accès refusé'
+        I18nService.t('MSG.msg.vousNAvezPasAccesAu', { p0: navContext.label }),
+        I18nService.t('TFA.popups.adminRequired.title')
       );
       this.redirectToFallback();
       return false;
@@ -48,17 +49,17 @@ export class ModuleAccessGuard implements CanActivate {
 
     if (!this.appState.isModuleUsable(requiredModule)) {
       this.popupService.showWarning(
-        `Vous n'avez pas accès au module « ${requiredModule} ».`,
-        'Accès refusé'
+        I18nService.t('MSG.msg.vousNAvezPasAccesAu2', { p0: requiredModule }),
+        I18nService.t('TFA.popups.adminRequired.title')
       );
     } else {
       const missing = requiredPermissions.filter(permission =>
         !this.appState.hasModulePermission(requiredModule, permission)
       );
       const message = missing.length === 1
-        ? `Vous n'avez pas la permission « ${missing[0]} » pour accéder à cette page.`
-        : `Il vous manque les permissions ${missing.map(permission => `« ${permission} »`).join(', ')} pour accéder à cette page.`;
-      this.popupService.showWarning(message, 'Permission refusée');
+        ? I18nService.t('MSG.msg.vousNAvezPasLaPermission', { p0: missing[0] })
+        : I18nService.t('MSG.msg.ilVousManqueLesPermissionsPour', { p0: missing.map(permission => `« ${permission} »`).join(', ') });
+      this.popupService.showWarning(message, I18nService.t('MSG.msg.permissionRefusee'));
     }
 
     this.redirectToFallback();

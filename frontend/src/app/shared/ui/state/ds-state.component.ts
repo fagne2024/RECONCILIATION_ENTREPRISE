@@ -1,12 +1,13 @@
 import { ChangeDetectionStrategy, Component, Input } from '@angular/core';
 import { CommonModule } from '@angular/common';
+import { TranslateModule } from '@ngx-translate/core';
 
 export type DsStateKind = 'empty' | 'loading' | 'error';
 
 const DEFAULTS: Readonly<Record<DsStateKind, { title: string; icon: string }>> = {
-  empty: { title: 'Aucune donnée', icon: 'fa-inbox' },
-  loading: { title: 'Chargement…', icon: 'fa-spinner fa-spin' },
-  error: { title: 'Une erreur est survenue', icon: 'fa-exclamation-triangle' }
+  empty: { title: 'DS.state.empty', icon: 'fa-inbox' },
+  loading: { title: 'DS.state.loading', icon: 'fa-spinner fa-spin' },
+  error: { title: 'DS.state.error', icon: 'fa-exclamation-triangle' }
 };
 
 /**
@@ -17,7 +18,7 @@ const DEFAULTS: Readonly<Record<DsStateKind, { title: string; icon: string }>> =
 @Component({
   selector: 'ds-state',
   standalone: true,
-  imports: [CommonModule],
+  imports: [CommonModule, TranslateModule],
   changeDetection: ChangeDetectionStrategy.OnPush,
   styleUrls: ['./ds-state.component.scss'],
   template: `
@@ -25,7 +26,7 @@ const DEFAULTS: Readonly<Record<DsStateKind, { title: string; icon: string }>> =
          [attr.role]="kind === 'error' ? 'alert' : 'status'"
          [attr.aria-live]="kind === 'error' ? 'assertive' : 'polite'">
       <i class="fas {{ icon || defaults.icon }} state__icon" aria-hidden="true"></i>
-      <p class="state__title">{{ title || defaults.title }}</p>
+      <p class="state__title">{{ title || (defaults.title | translate) }}</p>
       <p *ngIf="message" class="state__message">{{ message }}</p>
       <div class="state__actions"><ng-content></ng-content></div>
     </div>

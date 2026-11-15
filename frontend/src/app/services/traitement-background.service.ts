@@ -1,6 +1,7 @@
 import { Injectable } from '@angular/core';
 import { BehaviorSubject } from 'rxjs';
 import { ExportOptimizationService } from './export-optimization.service';
+import { I18nService } from './i18n/i18n.service';
 
 export interface TraitementBackgroundJobResult {
   outputName: string;
@@ -129,8 +130,8 @@ export class TraitementBackgroundService {
             const current = this._job$.getValue();
             if (current) {
               current.progressMessage =
-                `Téléchargement (${i + 1}/${job.results.length}) : ` +
-                `${progress.current.toLocaleString('fr-FR')} / ${progress.total.toLocaleString('fr-FR')} ligne(s)...`;
+                I18nService.t('MSG.msg.telechargement', { p0: i + 1, p1: job.results.length }) +
+                I18nService.t('MSG.msg.ligneS', { p0: progress.current.toLocaleString('fr-FR'), p1: progress.total.toLocaleString('fr-FR') });
               this._job$.next({ ...current });
             }
           },

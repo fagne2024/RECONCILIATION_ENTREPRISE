@@ -36,7 +36,7 @@
         </div>
         <div class="profil-title-section">
           <h1>{{ profil.nom }}</h1>
-          <p class="profil-description">{{ profil.description || 'Aucune description' }}</p>
+          <p class="profil-description">{{ profil.description || ('PROF.ui.aucuneDescription' | translate) }}</p>
           <div class="profil-meta">
             <span class="meta-item">
               <i class="fas fa-cube"></i>
@@ -182,7 +182,7 @@
                       placeholder="{{ 'PROF.Filtrerparnomlibelléouendpoint' | translate }}">
                   </div>
                   <div class="submenu-actions-header">
-                    <span class="actions-count">{{ getFilteredSubmenuActionDetails(getSubmenuAccessName(group, submenu)).length }} actions</span>
+                    <span class="actions-count">{{ 'PROF.ui.actions' | translate: { p0: (getFilteredSubmenuActionDetails(getSubmenuAccessName(group, submenu)).length) } }}</span>
                     <button type="button" class="ds-btn ds-btn--primary btn btn-sm btn-primary" (click)="selectAllSubmenuActions(getSubmenuAccessName(group, submenu))" [disabled]="isModuleActionsLoading(getSubmenuAccessName(group, submenu)) || isModuleActionsSyncing(getSubmenuAccessName(group, submenu))">
                       <i class="fas" [ngClass]="isModuleActionsSyncing(getSubmenuAccessName(group, submenu)) ? 'fa-spinner fa-spin' : 'fa-check-double'"></i>
                       {{ isModuleActionsSyncing(getSubmenuAccessName(group, submenu)) ? ('PROF.Synchronisation' | translate) : ('PROF.Toutcocher' | translate) }}

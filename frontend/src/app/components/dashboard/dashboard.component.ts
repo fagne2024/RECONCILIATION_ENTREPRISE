@@ -42,6 +42,7 @@ import {
     TraitementKind
 } from '../../shared/result8rec-audit-display';
 import { countriesMatch, countryDisplayLabel, countryNameFromCode, countryNamesFromCodes, normalizeCountryFilterOptions } from '../../utils/country-codes.util';
+import { I18nService } from '../../services/i18n/i18n.service';
 
 export type DashboardMetric = 'volume' | 'transactions' | 'revenu';
 
@@ -581,9 +582,9 @@ export class DashboardComponent implements OnInit, OnDestroy {
     reconciliationSummaryService: string = '';
     reconciliationSummaryServices: string[] = [];
     readonly reconciliationEnvOptions: string[] = ['ALL', ...RECONCILIATION_ENV_OPTIONS];
-    readonly recoValidatedStatusLabel = 'Reconciled';
-    readonly recoValidatedStatusLabelPlural = 'Reconciled';
-    readonly recoValidatedRateLabel = 'Reconciliation rate';
+    get recoValidatedStatusLabel(): string { return I18nService.t('DASH.reco.reconciled'); }
+    get recoValidatedStatusLabelPlural(): string { return I18nService.t('DASH.reco.reconciledPlural'); }
+    get recoValidatedRateLabel(): string { return I18nService.t('DASH.reco.rate'); }
     reconciliationSummaryLoading: boolean = false;
     reconciliationSummaryLoadingMore = false;
     private recoSummaryLoadToken = 0;
@@ -697,7 +698,7 @@ export class DashboardComponent implements OnInit, OnDestroy {
         maintainAspectRatio: false,
         plugins: {
             legend: { position: 'bottom' },
-            title: { display: true, text: 'RÉPARTITION PAR STATUT' },
+            title: { display: true, text: I18nService.t('DASH.ui.chartByStatus') },
             // Évite tout conflit avec chartjs-plugin-datalabels (graphiques métriques détaillées).
             datalabels: { display: false }
         }
@@ -708,7 +709,7 @@ export class DashboardComponent implements OnInit, OnDestroy {
         maintainAspectRatio: false,
         plugins: {
             legend: { position: 'top' },
-            title: { display: true, text: 'ÉVOLUTION PAR JOUR' },
+            title: { display: true, text: I18nService.t('DASH.ui.chartByDay') },
             datalabels: { display: false }
         },
         scales: {
@@ -989,21 +990,21 @@ export class DashboardComponent implements OnInit, OnDestroy {
             return this.recoValidatedStatusLabel;
         }
         if (day.status === 'NON_RECONCILIE') {
-            return 'Not reconciled';
+            return I18nService.t('DASH.reco.notReconciled');
         }
         if (day.status === 'EN_COURS') {
             switch (day.traitementKind) {
                 case 'group':
-                    return 'Closing in progress';
+                    return I18nService.t('DASH.reco.closingInProgress');
                 case 'cdo':
-                    return 'Validation in progress';
+                    return I18nService.t('DASH.reco.validationInProgress');
                 case 'support':
-                    return 'Processing';
+                    return I18nService.t('DASH.reco.processing');
                 default:
-                    return 'In progress...';
+                    return I18nService.t('DASH.reco.inProgress');
             }
         }
-        return 'Not reconciled';
+        return I18nService.t('DASH.reco.notReconciled');
     }
 
     private updateVisibleDaysWindow() {
@@ -1194,10 +1195,10 @@ export class DashboardComponent implements OnInit, OnDestroy {
         this.recoDonutChartData = {
             labels: [
                 this.recoValidatedStatusLabel,
-                'Processing',
-                'Validation in progress',
-                'Closing in progress',
-                'Not reconciled'
+                I18nService.t('DASH.reco.processing'),
+                I18nService.t('DASH.reco.validationInProgress'),
+                I18nService.t('DASH.reco.closingInProgress'),
+                I18nService.t('DASH.reco.notReconciled')
             ],
             datasets: [{
                 data: [
@@ -1222,10 +1223,10 @@ export class DashboardComponent implements OnInit, OnDestroy {
             labels: evolution.labels,
             datasets: [
                 { label: this.recoValidatedStatusLabel, data: evolution.reconcilie, backgroundColor: c.reconcilie, stack: 'stack1' },
-                { label: 'Processing', data: evolution.enCoursSupport, backgroundColor: c.enCoursSupport, stack: 'stack1' },
-                { label: 'Validation in progress', data: evolution.enCoursCdo, backgroundColor: c.enCoursCdo, stack: 'stack1' },
-                { label: 'Closing in progress', data: evolution.enCoursGroup, backgroundColor: c.enCoursGroup, stack: 'stack1' },
-                { label: 'Not reconciled', data: evolution.nonReco, backgroundColor: c.nonReco, stack: 'stack1' }
+                { label: I18nService.t('DASH.reco.processing'), data: evolution.enCoursSupport, backgroundColor: c.enCoursSupport, stack: 'stack1' },
+                { label: I18nService.t('DASH.reco.validationInProgress'), data: evolution.enCoursCdo, backgroundColor: c.enCoursCdo, stack: 'stack1' },
+                { label: I18nService.t('DASH.reco.closingInProgress'), data: evolution.enCoursGroup, backgroundColor: c.enCoursGroup, stack: 'stack1' },
+                { label: I18nService.t('DASH.reco.notReconciled'), data: evolution.nonReco, backgroundColor: c.nonReco, stack: 'stack1' }
             ]
         };
     }
@@ -1897,7 +1898,7 @@ export class DashboardComponent implements OnInit, OnDestroy {
         this.releveStatusError = null;
 
         if (!this.releveStatusCountry || !this.releveStatusService || !this.releveStatusDate) {
-            this.releveStatusError = 'Veuillez sélectionner le pays, le service et la date.';
+            this.releveStatusError = I18nService.t('DASH.msg.veuillezSelectionnerLePaysLeService');
             return;
         }
 
@@ -2154,7 +2155,7 @@ export class DashboardComponent implements OnInit, OnDestroy {
             },
             error: (error) => {
                 console.error('Error loading dashboard data:', error);
-                this.error = 'Erreur lors du chargement des données';
+                this.error = I18nService.t('SRP.loadError');
                 if (manageLoading) {
                     this.loading = false;
                 }
@@ -2592,7 +2593,7 @@ export class DashboardComponent implements OnInit, OnDestroy {
                     this.reconciliationSummaryLoadingMore = !isComplete;
                 } catch (e: unknown) {
                     console.error('Erreur lors du calcul du résumé des réconciliations:', e);
-                    this.reconciliationSummaryError = 'Erreur lors du chargement de l’état des réconciliations.';
+                    this.reconciliationSummaryError = I18nService.t('DASH.msg.erreurLorsDuChargementDeL');
                     this.reconciliationSummaryLoading = false;
                     this.reconciliationSummaryLoadingMore = false;
                 }
@@ -2604,7 +2605,7 @@ export class DashboardComponent implements OnInit, OnDestroy {
                 return;
             }
             console.error('Erreur lors du chargement des données result8rec pour le résumé:', err);
-            this.reconciliationSummaryError = 'Erreur lors du chargement de l’état des réconciliations.';
+            this.reconciliationSummaryError = I18nService.t('DASH.msg.erreurLorsDuChargementDeL');
             this.reconciliationSummaryLoading = false;
             this.reconciliationSummaryLoadingMore = false;
         });
@@ -2688,7 +2689,7 @@ export class DashboardComponent implements OnInit, OnDestroy {
         const s = (startIso || '').trim();
         const e = (endIso || '').trim();
         if (!s || !e) {
-            return { ok: false, message: 'Indiquez une date de début et une date de fin.' };
+            return { ok: false, message: I18nService.t('DASH.msg.indiquezUneDateDeDebutEt') };
         }
         let lo = s;
         let hi = e;
@@ -2698,12 +2699,12 @@ export class DashboardComponent implements OnInit, OnDestroy {
         }
         const days = this.buildCalendarDaysInclusive(lo, hi);
         if (!days.length) {
-            return { ok: false, message: 'Période invalide.' };
+            return { ok: false, message: I18nService.t('DASH.msg.periodeInvalide') };
         }
         if (days.length > this.popupDateRangeMaxDays) {
             return {
                 ok: false,
-                message: `L'intervalle ne peut pas dépasser ${this.popupDateRangeMaxDays} jours.`
+                message: I18nService.t('DASH.msg.lIntervalleNePeutPasDepasser', { p0: this.popupDateRangeMaxDays })
             };
         }
         return { ok: true, start: lo, end: hi };
@@ -2917,7 +2918,7 @@ export class DashboardComponent implements OnInit, OnDestroy {
                     this.recoViewLoadingMore = !isComplete;
                 } catch (e: unknown) {
                     console.error('Erreur vue semaine réconciliations:', e);
-                    this.recoViewError = 'Erreur lors du chargement de la vue semaine.';
+                    this.recoViewError = I18nService.t('DASH.msg.erreurLorsDuChargementDeLa');
                     this.recoViewLoading = false;
                     this.recoViewLoadingMore = false;
                 }
@@ -2929,7 +2930,7 @@ export class DashboardComponent implements OnInit, OnDestroy {
                 return;
             }
             console.error('Erreur chargement result8rec pour vue semaine:', err);
-            this.recoViewError = 'Erreur lors du chargement des données.';
+            this.recoViewError = I18nService.t('DASH.msg.erreurLorsDuChargementDesDonnees');
             this.recoViewLoading = false;
             this.recoViewLoadingMore = false;
         });
@@ -3096,7 +3097,7 @@ export class DashboardComponent implements OnInit, OnDestroy {
         if (this.transactStatsPerService.length >= 2) {
             return [
                 ...this.transactStatsPerService.map(({ service, stats }) => ({ title: service, stats })),
-                { title: 'Total (sélection)', stats: this.transactStats }
+                { title: I18nService.t('DASH.msg.totalSelection'), stats: this.transactStats }
             ];
         }
         return [{ title: null, stats: this.transactStats }];
@@ -3168,7 +3169,7 @@ export class DashboardComponent implements OnInit, OnDestroy {
                             );
                         } catch (e: unknown) {
                             console.error('Erreur statistiques réconciliation (relevé manuel):', e);
-                            this.transactStatsError = 'Erreur lors du calcul des statistiques.';
+                            this.transactStatsError = I18nService.t('DASH.msg.erreurLorsDuCalculDesStatistiques');
                             this.transactStatsLoading = false;
                             this.transactStatsLoadingMore = false;
                             this.transactStatsPerService = [];
@@ -3181,7 +3182,7 @@ export class DashboardComponent implements OnInit, OnDestroy {
                     }
                     manualLoadFailed = true;
                     console.error('Erreur chargement relevé manuel statistiques réconciliation:', err);
-                    this.transactStatsError = 'Erreur lors du chargement des données (rapport ou relevé manuel).';
+                    this.transactStatsError = I18nService.t('DASH.msg.erreurLorsDuChargementDesDonnees2');
                     this.transactStatsLoading = false;
                     this.transactStatsLoadingMore = false;
                     this.transactStatsPerService = [];
@@ -3206,7 +3207,7 @@ export class DashboardComponent implements OnInit, OnDestroy {
                     this.transactStatsLoadingMore = !isComplete;
                 } catch (e: unknown) {
                     console.error('Erreur statistiques réconciliation:', e);
-                    this.transactStatsError = 'Erreur lors du calcul des statistiques.';
+                    this.transactStatsError = I18nService.t('DASH.msg.erreurLorsDuCalculDesStatistiques');
                     this.transactStatsLoading = false;
                     this.transactStatsLoadingMore = false;
                     this.transactStatsPerService = [];
@@ -3219,7 +3220,7 @@ export class DashboardComponent implements OnInit, OnDestroy {
                 return;
             }
             console.error('Erreur chargement result8rec statistiques réconciliation:', err);
-            this.transactStatsError = 'Erreur lors du chargement des données (rapport ou relevé manuel).';
+            this.transactStatsError = I18nService.t('DASH.msg.erreurLorsDuChargementDesDonnees2');
             this.transactStatsLoading = false;
             this.transactStatsLoadingMore = false;
             this.transactStatsPerService = [];
@@ -3695,7 +3696,7 @@ export class DashboardComponent implements OnInit, OnDestroy {
             },
             error: (error) => {
                 console.error('Error loading transaction created stats:', error);
-                this.transactionCreatedError = 'Erreur lors du chargement des statistiques des transactions créées';
+                this.transactionCreatedError = I18nService.t('DASH.msg.erreurLorsDuChargementDesStatistiques');
                 this.transactionCreatedLoading = false;
             }
         });
@@ -3972,7 +3973,7 @@ export class DashboardComponent implements OnInit, OnDestroy {
             metrics: this.dashboardService.getDashboardMetrics(this.metricsPeriod).pipe(
                 catchError((error) => {
                     console.error('Error loading dashboard data:', error);
-                    this.error = 'Erreur lors du chargement des données';
+                    this.error = I18nService.t('SRP.loadError');
                     return of(null);
                 })
             ),
@@ -4000,7 +4001,7 @@ export class DashboardComponent implements OnInit, OnDestroy {
                 catchError((error) => {
                     console.error('Error loading transaction created stats:', error);
                     this.transactionCreatedError =
-                        'Erreur lors du chargement des statistiques des transactions créées';
+                        I18nService.t('DASH.msg.erreurLorsDuChargementDesStatistiques');
                     this.transactionCreatedLoading = false;
                     return of(null);
                 })
@@ -4377,7 +4378,7 @@ export class DashboardComponent implements OnInit, OnDestroy {
         } else {
           label = this.barChartData.labels[chartElement.index] || '';
         }
-        alert('Vous avez cliqué sur : ' + label);
+        alert(I18nService.t('DASH.msg.vousAvezCliqueSur') + label);
       }
     }
 
@@ -4638,7 +4639,7 @@ export class DashboardComponent implements OnInit, OnDestroy {
               };
             });
             
-            this.bannerTitle = '💰 Soldes de tous les comptes';
+            this.bannerTitle = I18nService.t('DASH.msg.soldesDeTousLesComptes');
           } else {
             // Convertir en format pour l'affichage
             this.accountBalances = comptesClients.map(compte => {
@@ -4662,7 +4663,7 @@ export class DashboardComponent implements OnInit, OnDestroy {
               };
             });
             
-            this.bannerTitle = '💰 Soldes des comptes clients';
+            this.bannerTitle = I18nService.t('DASH.msg.soldesDesComptesClients');
           }
           
           // Filtrer les comptes avec solde > 0
@@ -4845,8 +4846,8 @@ export class DashboardComponent implements OnInit, OnDestroy {
         return;
       }
 
-      const message = `Choisissez la plateforme pour ouvrir le ticket ${normalizedTicketId}:`;
-      const title = 'Ouvrir le ticket';
+      const message = I18nService.t('DASH.msg.choisissezLaPlateformePourOuvrirLe', { p0: normalizedTicketId });
+      const title = I18nService.t('ETA.ticket.title');
 
       const overlay = document.createElement('div');
       overlay.className = 'modern-popup-overlay';

@@ -11,6 +11,7 @@ import { LogoService } from '../services/logo.service';
 import { ThemeService } from '../services/theme.service';
 import { BrandingContextService } from '../services/branding-context.service';
 import { ConfigurationCalculService } from '../services/configuration-calcul.service';
+import { I18nService } from '../services/i18n/i18n.service';
 
 @Component({
   selector: 'app-login',
@@ -103,7 +104,7 @@ export class LoginComponent implements OnInit {
           
           const token = response.token || (response.authenticated ? 'cookie' : null);
           if (!token) {
-            this.error = 'Session d\'authentification manquante dans la réponse du serveur.';
+            this.error = I18nService.t('LOGIN.msg.sessionDAuthentificationManquanteDansLa');
             return;
           }
           
@@ -160,10 +161,10 @@ export class LoginComponent implements OnInit {
             if (err.error && err.error.error) {
               this.error = err.error.error;
             } else {
-              this.error = 'Nom d\'utilisateur ou mot de passe incorrect. Veuillez vérifier vos identifiants.';
+              this.error = I18nService.t('LOGIN.msg.nomDUtilisateurOuMotDe');
             }
           } else if (err.status === 0) {
-            this.error = 'Impossible de se connecter au serveur. Vérifiez votre connexion réseau.';
+            this.error = I18nService.t('LOGIN.msg.impossibleDeSeConnecterAuServeur');
           } else if (err.error && typeof err.error === 'string') {
             this.error = err.error;
           } else if (err.error && err.error.message) {
@@ -171,7 +172,7 @@ export class LoginComponent implements OnInit {
           } else if (err.error && err.error.error) {
             this.error = err.error.error;
           } else {
-            this.error = 'Une erreur est survenue lors de la connexion. Veuillez réessayer.';
+            this.error = I18nService.t('LOGIN.msg.uneErreurEstSurvenueLorsDe');
           }
         }
       });
@@ -248,7 +249,7 @@ export class LoginComponent implements OnInit {
       next: (exists) => {
         this.adminExists = exists;
         if (!exists) {
-          this.error = 'L\'utilisateur admin n\'existe pas. Veuillez créer un compte administrateur.';
+          this.error = I18nService.t('LOGIN.msg.lUtilisateurAdminNExistePas');
         }
       },
       error: (err) => {
@@ -282,7 +283,7 @@ export class LoginComponent implements OnInit {
     this.userService.forgotPassword(email).subscribe({
       next: (response: any) => {
         this.loading = false;
-        this.success = response.message || 'Si cette adresse email est associée à un compte, un lien de réinitialisation sera envoyé par email.';
+        this.success = response.message || I18nService.t('LOGIN.msg.siCetteAdresseEmailEstAssociee');
         // Réinitialiser le formulaire après 3 secondes
         setTimeout(() => {
           this.showForgotPassword = false;
@@ -295,7 +296,7 @@ export class LoginComponent implements OnInit {
         if (err.error && err.error.error) {
           this.error = err.error.error;
         } else {
-          this.error = 'Une erreur est survenue. Veuillez réessayer plus tard.';
+          this.error = I18nService.t('LOGIN.msg.uneErreurEstSurvenueVeuillezReessayer');
         }
       }
     });
@@ -314,7 +315,7 @@ export class LoginComponent implements OnInit {
     }
 
     if (!this.preAuthTicket) {
-      this.error = 'Session de connexion expirée. Veuillez vous reconnecter.';
+      this.error = I18nService.t('LOGIN.msg.sessionDeConnexionExpireeVeuillezVous');
       this.backToLogin();
       return;
     }
@@ -333,7 +334,7 @@ export class LoginComponent implements OnInit {
         
         const token = response.token || (response.authenticated ? 'cookie' : null);
         if (!token) {
-          this.error = 'Session d\'authentification manquante dans la réponse du serveur.';
+          this.error = I18nService.t('LOGIN.msg.sessionDAuthentificationManquanteDansLa');
           return;
         }
         
@@ -378,10 +379,10 @@ export class LoginComponent implements OnInit {
       error: (err) => {
         this.loading = false;
         if (err.status === 423 || err.status === 401) {
-          this.error = err.error?.error || 'Code d\'authentification invalide. Veuillez réessayer.';
+          this.error = err.error?.error || I18nService.t('LOGIN.msg.codeDAuthentificationInvalideVeuillezRee');
           this.twoFactorForm.patchValue({ code: '' });
         } else {
-          this.error = 'Une erreur est survenue lors de la vérification du code. Veuillez réessayer.';
+          this.error = I18nService.t('LOGIN.msg.uneErreurEstSurvenueLorsDe2');
         }
       }
     });
@@ -412,7 +413,7 @@ export class LoginComponent implements OnInit {
         // Le message disparaîtra automatiquement
       }, 3000);
     }).catch(() => {
-      this.error = 'Impossible de copier la clé secrète';
+      this.error = I18nService.t('TFA.popups.copySecretError.message');
     });
   }
 

@@ -3,72 +3,72 @@
     <div class="header-top">
       <button type="button" (click)="goBack()" class="ds-btn ds-btn--secondary btn-back">
         <i class="fas fa-arrow-left"></i>{{ 'COMMON.actions.back' | translate }}</button>
-      <h1><i class="fas fa-chart-line"></i> Prédictions des Opérations Bancaires</h1>
+      <h1><i class="fas fa-chart-line"></i> {{ 'COMMON.ui.predictionsDesOperationsBancaires' | translate }}</h1>
     </div>
-    <p class="subtitle">Prédisez les approvisionnements, compensations et niveillements futurs basés sur les données historiques</p>
+    <p class="subtitle">{{ 'COMMON.ui.predisezLesApprovisionnementsCompensatio' | translate }}</p>
   </div>
 
   <!-- Formulaire de prédiction -->
   <div class="prediction-form-card">
-    <h2>Paramètres de Prédiction</h2>
+    <h2>{{ 'COMMON.ui.parametresDePrediction' | translate }}</h2>
     <form [formGroup]="predictionForm" (ngSubmit)="generatePrediction()">
       <div class="form-grid">
         <div class="form-group">
-          <label for="typeOperation">Type d'Opération *</label>
+          <label for="typeOperation">{{ 'PRN.Typedopération' | translate }}</label>
           <select id="typeOperation" formControlName="typeOperation" class="ds-select form-control">
-            <option value="">-- Sélectionner un type --</option>
+            <option value="">{{ 'CPT.Sélectionneruntype_1' | translate }}</option>
             <option *ngFor="let type of availableTypes" [value]="type.value">{{ type.label }}</option>
           </select>
           <div *ngIf="predictionForm.get('typeOperation')?.invalid && predictionForm.get('typeOperation')?.touched" class="error-message">
-            Le type d'opération est requis
+            {{ 'OPS.Letypedopérationestrequis' | translate }}
           </div>
         </div>
 
         <div class="form-group">
-          <label for="horizonJours">Horizon de Prédiction (jours) *</label>
+          <label for="horizonJours">{{ 'COMMON.ui.horizonDePredictionJours' | translate }}</label>
           <input type="number" id="horizonJours" formControlName="horizonJours" class="ds-input form-control" min="1" max="365">
-          <small class="form-text">Nombre de jours à prédire (1-365)</small>
+          <small class="form-text">{{ 'COMMON.ui.nombreDeJoursAPredire1' | translate }}</small>
           <div *ngIf="predictionForm.get('horizonJours')?.invalid && predictionForm.get('horizonJours')?.touched" class="error-message">
-            L'horizon doit être entre 1 et 365 jours
+            {{ 'COMMON.ui.lHorizonDoitEtreEntre1' | translate }}
           </div>
         </div>
 
         <div class="form-group">
-          <label for="periodeAnalyseJours">Période d'Analyse (jours) *</label>
+          <label for="periodeAnalyseJours">{{ 'COMMON.ui.periodeDAnalyseJours' | translate }}</label>
           <input type="number" id="periodeAnalyseJours" formControlName="periodeAnalyseJours" class="ds-input form-control" min="7" max="730">
-          <small class="form-text">Nombre de jours d'historique à analyser (7-730)</small>
+          <small class="form-text">{{ 'COMMON.ui.nombreDeJoursDHistoriqueA' | translate }}</small>
           <div *ngIf="predictionForm.get('periodeAnalyseJours')?.invalid && predictionForm.get('periodeAnalyseJours')?.touched" class="error-message">
-            La période d'analyse doit être entre 7 et 730 jours
+            {{ 'COMMON.ui.laPeriodeDAnalyseDoitEtre' | translate }}
           </div>
         </div>
 
         <div class="form-group">
-          <label for="methodePrediction">Méthode de Prédiction *</label>
+          <label for="methodePrediction">{{ 'COMMON.ui.methodeDePrediction' | translate }}</label>
           <select id="methodePrediction" formControlName="methodePrediction" class="ds-select form-control">
             <option *ngFor="let methode of methodesPrediction" [value]="methode.value">{{ methode.label }}</option>
           </select>
         </div>
 
         <div class="form-group">
-          <label for="codeProprietaire">Agence (optionnel)</label>
-          <input type="text" id="codeProprietaire" formControlName="codeProprietaire" class="ds-input form-control" placeholder="Filtrer par agence">
+          <label for="codeProprietaire">{{ 'COMMON.ui.agenceOptionnel' | translate }}</label>
+          <input type="text" id="codeProprietaire" formControlName="codeProprietaire" class="ds-input form-control" placeholder="{{ 'COMMON.ui.filtrerParAgence' | translate }}">
         </div>
 
         <div class="form-group">
-          <label for="service">Service (optionnel)</label>
-          <input type="text" id="service" formControlName="service" class="ds-input form-control" placeholder="Filtrer par service">
+          <label for="service">{{ 'COMMON.ui.serviceOptionnel' | translate }}</label>
+          <input type="text" id="service" formControlName="service" class="ds-input form-control" placeholder="{{ 'FU.ClientVolume.FilterService' | translate }}">
         </div>
 
         <div class="form-group">
-          <label for="pays">Pays (optionnel)</label>
-          <input type="text" id="pays" formControlName="pays" class="ds-input form-control" placeholder="Filtrer par pays">
+          <label for="pays">{{ 'PRN.Paysoptionnel' | translate }}</label>
+          <input type="text" id="pays" formControlName="pays" class="ds-input form-control" placeholder="{{ 'COMMON.ui.filtrerParPays' | translate }}">
         </div>
       </div>
 
       <div class="form-actions">
         <button type="submit" class="ds-btn ds-btn--primary btn btn-primary" [disabled]="isLoading || predictionForm.invalid">
-          <span *ngIf="!isLoading"><i class="fas fa-magic"></i> Générer la Prédiction</span>
-          <span *ngIf="isLoading"><i class="fas fa-spinner fa-spin"></i> Génération en cours...</span>
+          <span *ngIf="!isLoading"><i class="fas fa-magic"></i> {{ 'COMMON.ui.genererLaPrediction' | translate }}</span>
+          <span *ngIf="isLoading"><i class="fas fa-spinner fa-spin"></i> {{ 'COMMON.ui.generationEnCours' | translate }}</span>
         </button>
       </div>
     </form>
@@ -76,14 +76,14 @@
 
   <!-- Message d'erreur -->
   <div *ngIf="errorMessage" class="alert alert-error">
-    <strong>Erreur:</strong> {{ errorMessage }}
+    <strong>{{ 'PRN.Erreur' | translate }}</strong> {{ errorMessage }}
   </div>
 
   <!-- Résultats de la prédiction -->
   <div *ngIf="predictionResponse" class="prediction-results">
     <div class="results-header">
-      <h2><i class="fas fa-chart-bar"></i> Résultats de la Prédiction</h2>
-      <button type="button" class="ds-btn ds-btn--secondary btn btn-secondary" (click)="exportToCSV()"><i class="fas fa-download"></i> Exporter en CSV</button>
+      <h2><i class="fas fa-chart-bar"></i> {{ 'COMMON.ui.resultatsDeLaPrediction' | translate }}</h2>
+      <button type="button" class="ds-btn ds-btn--secondary btn btn-secondary" (click)="exportToCSV()"><i class="fas fa-download"></i> {{ 'TRT.ExportAsCsv' | translate }}</button>
     </div>
 
     <!-- Statistiques globales -->
@@ -91,7 +91,7 @@
       <div class="stat-card">
         <div class="stat-icon"><i class="fas fa-coins"></i></div>
         <div class="stat-content">
-          <div class="stat-label">Montant Total Prédit</div>
+          <div class="stat-label">{{ 'COMMON.ui.montantTotalPredit' | translate }}</div>
           <div class="stat-value">{{ formatCurrency(predictionResponse.montantTotalPrediction) }}</div>
         </div>
       </div>
@@ -99,7 +99,7 @@
       <div class="stat-card">
         <div class="stat-icon"><i class="fas fa-chart-line"></i></div>
         <div class="stat-content">
-          <div class="stat-label">Montant Moyen/Jour</div>
+          <div class="stat-label">{{ 'COMMON.ui.montantMoyenJour' | translate }}</div>
           <div class="stat-value">{{ formatCurrency(predictionResponse.montantMoyenParJour) }}</div>
         </div>
       </div>
@@ -107,7 +107,7 @@
       <div class="stat-card">
         <div class="stat-icon"><i class="fas fa-chart-bar"></i></div>
         <div class="stat-content">
-          <div class="stat-label">Nombre d'Opérations</div>
+          <div class="stat-label">{{ 'COMMON.ui.nombreDOperations' | translate }}</div>
           <div class="stat-value">{{ predictionResponse.nombreOperationsPredites }}</div>
         </div>
       </div>
@@ -115,7 +115,7 @@
       <div class="stat-card">
         <div class="stat-icon"><i class="fas fa-bullseye"></i></div>
         <div class="stat-content">
-          <div class="stat-label">Confiance</div>
+          <div class="stat-label">{{ 'PRN.Confiance' | translate }}</div>
           <div class="stat-value">{{ formatPercent(predictionResponse.confiance) }}</div>
         </div>
       </div>
@@ -123,7 +123,7 @@
       <div class="stat-card">
         <div class="stat-icon"><i class="fas fa-arrow-down"></i></div>
         <div class="stat-content">
-          <div class="stat-label">Montant Minimum</div>
+          <div class="stat-label">{{ 'COMMON.ui.montantMinimum' | translate }}</div>
           <div class="stat-value">{{ formatCurrency(predictionResponse.montantMin) }}</div>
         </div>
       </div>
@@ -131,7 +131,7 @@
       <div class="stat-card">
         <div class="stat-icon"><i class="fas fa-arrow-up"></i></div>
         <div class="stat-content">
-          <div class="stat-label">Montant Maximum</div>
+          <div class="stat-label">{{ 'COMMON.ui.montantMaximum' | translate }}</div>
           <div class="stat-value">{{ formatCurrency(predictionResponse.montantMax) }}</div>
         </div>
       </div>
@@ -144,49 +144,48 @@
 
     <!-- Analyse des seuils de déclenchement -->
     <div *ngIf="predictionResponse.statistiquesHistoriques?.seuilDeclenchementMoyen !== undefined" class="seuils-section">
-      <h3>🔍 Analyse des Seuils de Déclenchement</h3>
+      <h3>{{ 'COMMON.ui.analyseDesSeuilsDeDeclenchement' | translate }}</h3>
       <p class="section-description">
-        Cette analyse identifie les niveaux de solde qui déclenchent historiquement les opérations.
-        Les prédictions utilisent ces seuils en arrière-plan pour déterminer quand les opérations se produiront.
+        {{ 'COMMON.ui.cetteAnalyseIdentifieLesNiveauxDe' | translate }}
       </p>
       <div class="seuils-grid">
         <div class="seuil-card">
-          <div class="seuil-label">Seuil Moyen de Déclenchement</div>
+          <div class="seuil-label">{{ 'COMMON.ui.seuilMoyenDeDeclenchement' | translate }}</div>
           <div class="seuil-value">{{ formatCurrency(predictionResponse.statistiquesHistoriques.seuilDeclenchementMoyen) }}</div>
           <div class="seuil-description">
-            Solde moyen avant chaque opération historique
+            {{ 'COMMON.ui.soldeMoyenAvantChaqueOperationHistorique' | translate }}
           </div>
         </div>
         
         <div class="seuil-card">
-          <div class="seuil-label">Seuil Minimum</div>
+          <div class="seuil-label">{{ 'COMMON.ui.seuilMinimum' | translate }}</div>
           <div class="seuil-value">{{ formatCurrency(predictionResponse.statistiquesHistoriques.seuilDeclenchementMin) }}</div>
           <div class="seuil-description">
-            Solde minimum observé avant une opération
+            {{ 'COMMON.ui.soldeMinimumObserveAvantUneOperation' | translate }}
           </div>
         </div>
         
         <div class="seuil-card">
-          <div class="seuil-label">Seuil Maximum</div>
+          <div class="seuil-label">{{ 'COMMON.ui.seuilMaximum' | translate }}</div>
           <div class="seuil-value">{{ formatCurrency(predictionResponse.statistiquesHistoriques.seuilDeclenchementMax) }}</div>
           <div class="seuil-description">
-            Solde maximum observé avant une opération
+            {{ 'COMMON.ui.soldeMaximumObserveAvantUneOperation' | translate }}
           </div>
         </div>
         
         <div class="seuil-card">
-          <div class="seuil-label">Écart-Type</div>
+          <div class="seuil-label">{{ 'COMMON.ui.ecartType' | translate }}</div>
           <div class="seuil-value">{{ formatCurrency(predictionResponse.statistiquesHistoriques.seuilDeclenchementEcartType) }}</div>
           <div class="seuil-description">
-            Mesure de la régularité des seuils (plus bas = plus régulier)
+            {{ 'COMMON.ui.mesureDeLaRegulariteDesSeuils' | translate }}
           </div>
         </div>
         
         <div class="seuil-card" *ngIf="predictionResponse.statistiquesHistoriques?.nombreOccurrencesSeuil">
-          <div class="seuil-label">Nombre d'Occurrences Analysées</div>
+          <div class="seuil-label">{{ 'COMMON.ui.nombreDOccurrencesAnalysees' | translate }}</div>
           <div class="seuil-value">{{ predictionResponse.statistiquesHistoriques.nombreOccurrencesSeuil }}</div>
           <div class="seuil-description">
-            Nombre d'opérations utilisées pour calculer les seuils
+            {{ 'COMMON.ui.nombreDOperationsUtiliseesPourCalculer' | translate }}
           </div>
         </div>
       </div>
@@ -199,15 +198,15 @@
 
     <!-- Tableau des prédictions -->
     <div class="table-container">
-      <h3>Prédictions Détaillées par Jour</h3>
+      <h3>{{ 'COMMON.ui.predictionsDetailleesParJour' | translate }}</h3>
       <table class="ds-table predictions-table">
         <thead>
           <tr>
             <th>{{ 'TBL.date' | translate }}</th>
-            <th>Jour de la Semaine</th>
-            <th>Montant Prédit</th>
-            <th>Nombre d'Opérations</th>
-            <th>Confiance</th>
+            <th>{{ 'COMMON.ui.jourDeLaSemaine' | translate }}</th>
+            <th>{{ 'COMMON.ui.montantPredit' | translate }}</th>
+            <th>{{ 'COMMON.ui.nombreDOperations' | translate }}</th>
+            <th>{{ 'PRN.Confiance' | translate }}</th>
           </tr>
         </thead>
         <tbody>

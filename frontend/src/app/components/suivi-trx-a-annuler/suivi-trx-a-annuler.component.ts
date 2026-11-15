@@ -19,6 +19,7 @@ import {
 import { fixGarbledCharacters } from '../../utils/encoding-fixer';
 import { TranslateModule, TranslateService } from '@ngx-translate/core';
 import { DsPaginationComponent } from '../../shared/ui';
+import { I18nService } from '../../services/i18n/i18n.service';
 
 
 /** Enregistrement partenaire indexé pour le rapprochement automatique. */
@@ -191,7 +192,7 @@ export class SuiviTrxAAnnulerComponent implements OnInit, OnDestroy {
           console.error('Erreur lors du chargement du suivi TRX à annuler:', error);
           // On conserve le brouillon éventuel pour ne pas bloquer la saisie.
           this.setMatches([]);
-          this.popupService.showError('Impossible de charger les données enregistrées.');
+          this.popupService.showError(I18nService.t('COMMON.msg.impossibleDeChargerLesDonneesEnregistree'));
         }
       })
     );
@@ -696,7 +697,7 @@ export class SuiviTrxAAnnulerComponent implements OnInit, OnDestroy {
     }
     const id = (this.annulationIdInput || '').trim();
     if (!id) {
-      this.popupService.showWarning('Veuillez saisir un ID d\'annulation');
+      this.popupService.showWarning(I18nService.t('COMMON.msg.veuillezSaisirUnIdDAnnulation'));
       return;
     }
 
@@ -728,7 +729,7 @@ export class SuiviTrxAAnnulerComponent implements OnInit, OnDestroy {
           this.manualReasons.delete(match.key);
           this.pendingDraftMatch = null;
           this.isSavingAnnulation = false;
-          this.popupService.showSuccess('ID d\'annulation enregistré');
+          this.popupService.showSuccess(I18nService.t('COMMON.msg.idDAnnulationEnregistre'));
           this.closeAnnulationPopup();
           this.applyFilters();
           this.cdr.markForCheck();
@@ -736,7 +737,7 @@ export class SuiviTrxAAnnulerComponent implements OnInit, OnDestroy {
         error: (error) => {
           console.error('Erreur lors de l\'enregistrement de l\'ID annulation:', error);
           this.isSavingAnnulation = false;
-          this.popupService.showError('Impossible d\'enregistrer l\'ID d\'annulation.');
+          this.popupService.showError(I18nService.t('COMMON.msg.impossibleDEnregistrerLIdD'));
           this.cdr.markForCheck();
         }
       })
@@ -771,7 +772,7 @@ export class SuiviTrxAAnnulerComponent implements OnInit, OnDestroy {
       return;
     }
     if (!Object.values(this.manualRowForm).some(value => (value || '').trim().length > 0)) {
-      this.popupService.showWarning('Veuillez renseigner au moins un champ avant d\'ajouter la ligne.');
+      this.popupService.showWarning(I18nService.t('COMMON.msg.veuillezRenseignerAuMoinsUnChamp'));
       return;
     }
 
@@ -818,13 +819,13 @@ export class SuiviTrxAAnnulerComponent implements OnInit, OnDestroy {
           this.isSavingManualRow = false;
           this.showManualRowPopup = false;
           this.manualRowForm = this.createEmptyManualRow();
-          this.popupService.showSuccess('Ligne ajoutée au suivi');
+          this.popupService.showSuccess(I18nService.t('COMMON.msg.ligneAjouteeAuSuivi'));
           this.cdr.markForCheck();
         },
         error: (error) => {
           console.error('Erreur lors de l\'ajout manuel d\'une ligne de suivi:', error);
           this.isSavingManualRow = false;
-          this.popupService.showError('Impossible d\'ajouter cette ligne de suivi.');
+          this.popupService.showError(I18nService.t('COMMON.msg.impossibleDAjouterCetteLigneDe'));
           this.cdr.markForCheck();
         }
       })
@@ -909,7 +910,7 @@ export class SuiviTrxAAnnulerComponent implements OnInit, OnDestroy {
     );
     if (pending.length === 0) {
       this.verificationNotice = this.filteredMatches.length > 0
-        ? { type: 'info', message: 'Toutes les lignes disposent déjà d\'un ID d\'annulation.' }
+        ? { type: 'info', message: I18nService.t('COMMON.msg.toutesLesLignesDisposentDejaD') }
         : null;
       this.cdr.markForCheck();
       return;
@@ -989,23 +990,23 @@ export class SuiviTrxAAnnulerComponent implements OnInit, OnDestroy {
 
       const sourceMessage = this.partnerRecordsLoaded
         ? ''
-        : ' Données de réconciliation non chargées : vérification limitée aux lignes de suivi.';
+        : I18nService.t('COMMON.msg.donneesDeReconciliationNonChargeesVerifi');
 
       const manualHint = manual > 0
-        ? ' Utilisez « Saisir ID Annulation » pour les lignes marquées « Manuel ».'
+        ? I18nService.t('COMMON.msg.utilisezSaisirIdAnnulationPourLes')
         : '';
 
       this.verificationNotice = {
         type: completed > 0 && manual === 0 ? 'success' : (completed > 0 ? 'info' : 'warning'),
         message: (parts.length > 0
-          ? `Vérification automatique : ${parts.join(' · ')}.`
-          : 'Vérification automatique terminée.') + sourceMessage + manualHint
+          ? I18nService.t('COMMON.msg.verificationAutomatique', { p0: parts.join(' · ') })
+          : I18nService.t('COMMON.msg.verificationAutomatiqueTerminee')) + sourceMessage + manualHint
       };
     } catch (error) {
       console.error('Erreur lors de la vérification automatique:', error);
       this.verificationNotice = {
         type: 'warning',
-        message: 'La vérification automatique a échoué. Les lignes restent disponibles en saisie manuelle.'
+        message: I18nService.t('COMMON.msg.laVerificationAutomatiqueAEchoueLes')
       };
     } finally {
       this.verificationInProgress = false;
@@ -1307,7 +1308,7 @@ export class SuiviTrxAAnnulerComponent implements OnInit, OnDestroy {
 
   async deleteRow(match: Match): Promise<void> {
     const label = this.getBoValue(match, 'Token') || this.getPartnerValue(match, 'Transaction ID') || 'cette ligne';
-    const confirmed = await this.popupService.showConfirm(`Supprimer le suivi de ${label} ?`);
+    const confirmed = await this.popupService.showConfirm(I18nService.t('COMMON.msg.supprimerLeSuiviDe', { p0: label }));
     if (!confirmed) {
       return;
     }
@@ -1341,11 +1342,11 @@ export class SuiviTrxAAnnulerComponent implements OnInit, OnDestroy {
       this.suiviTrxService.delete(persistedId).subscribe({
         next: () => {
           removeLocally();
-          this.popupService.showSuccess('Suivi supprimé');
+          this.popupService.showSuccess(I18nService.t('COMMON.msg.suiviSupprime'));
         },
         error: (error) => {
           console.error('Erreur lors de la suppression du suivi:', error);
-          this.popupService.showError('Impossible de supprimer ce suivi.');
+          this.popupService.showError(I18nService.t('COMMON.msg.impossibleDeSupprimerCeSuivi'));
         }
       })
     );
@@ -1496,7 +1497,7 @@ export class SuiviTrxAAnnulerComponent implements OnInit, OnDestroy {
           this.isExporting = false;
           if (progress.message.includes('✅')) {
             this.popupService.showSuccess(this.t('MSG.exportSuccess'));
-          } else if (progress.message.includes('Erreur')) {
+          } else if (/erreur|error/i.test(progress.message)) {
             this.popupService.showError(this.t('MSG.exportError'));
           }
           this.cdr.markForCheck();

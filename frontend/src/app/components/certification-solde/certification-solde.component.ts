@@ -34,6 +34,7 @@ import { PaysService } from '../../services/pays.service';
 import { Pays } from '../../models/pays.model';
 import { RECONCILIATION_ENV_OPTIONS } from '../../constants/reconciliation-env-options';
 import { TranslateModule, TranslateService } from '@ngx-translate/core';
+import { I18nService } from '../../services/i18n/i18n.service';
 
 /** Ligne cible d'une réconciliation fichier (liste = compense ou écarts partenaire hors compense). */
 interface RecoLine {
@@ -526,12 +527,12 @@ export class CertificationSoldeComponent implements OnInit, AfterViewInit, OnDes
   getAggregateRangeLabel(row: EcartAggregateRow): string {
     const total = row.details?.length ?? 0;
     if (!total) {
-      return '0 ligne';
+      return I18nService.t('CS.msg.0Ligne');
     }
     const page = this.getAggregatePage(row);
     const start = (page - 1) * this.aggregatePageSize + 1;
     const end = Math.min(page * this.aggregatePageSize, total);
-    return `${start}-${end} sur ${total}`;
+    return I18nService.t('CS.msg.sur', { p0: start, p1: end, p2: total });
   }
 
   setAggregatePage(row: EcartAggregateRow, page: number): void {
@@ -548,9 +549,9 @@ export class CertificationSoldeComponent implements OnInit, AfterViewInit, OnDes
     const de = this.dateCertificationDe;
     const au = this.dateCertificationAu;
     if (de && au) {
-      return de === au ? de : `${de} au ${au}`;
+      return de === au ? de : I18nService.t('CS.msg.au', { p0: de, p1: au });
     }
-    return de ? `à partir du ${de}` : (au ? `jusqu'au ${au}` : 'non renseignée');
+    return de ? I18nService.t('CS.msg.aPartirDu', { p0: de }) : (au ? I18nService.t('CS.msg.jusquAu', { p0: au }) : I18nService.t('CS.msg.nonRenseignee'));
   }
 
   /** Export Excel d'une seule partie d'agrégat, avec toutes ses lignes de détail. */
@@ -567,7 +568,7 @@ export class CertificationSoldeComponent implements OnInit, AfterViewInit, OnDes
       const ws = workbook.addWorksheet(row.label.slice(0, 31));
 
       // Titre : partie auditée, période, contexte d'export.
-      const titre = `Certification de solde — ${row.label}`;
+      const titre = I18nService.t('CS.msg.certificationDeSolde', { p0: row.label });
       this.styleExcelHeaderRow(ws.addRow([titre]));
       ws.mergeCells('A1:I1');
       ws.getCell('A1').font = { bold: true, size: 14, color: { argb: 'FF282E5E' } };
@@ -626,12 +627,12 @@ export class CertificationSoldeComponent implements OnInit, AfterViewInit, OnDes
       const fileName = `${this.buildEcartAggregatesFileBase()}_${row.code}.xlsx`;
       saveAs(new Blob([buffer]), fileName);
       await this.popupService.showSuccess(
-        `${row.label} : ${details.length} ligne(s) exportée(s) dans ${fileName}.`,
+        I18nService.t('CS.msg.ligneSExporteeSDans', { p0: row.label, p1: details.length, p2: fileName }),
         'Export ' + row.label
       );
     } catch (e: any) {
       console.error('Erreur export partie agrégat:', e);
-      await this.popupService.showError(e?.message || `Erreur lors de l'export de ${row.label}.`, 'Erreur d\'export');
+      await this.popupService.showError(e?.message || I18nService.t('CS.msg.erreurLorsDeLExportDe', { p0: row.label }), I18nService.t('RPT.releve.exportPdfErrorTitle'));
     } finally {
       this.exportingAggregateCode = null;
       this.cdr.markForCheck();
@@ -825,7 +826,7 @@ export class CertificationSoldeComponent implements OnInit, AfterViewInit, OnDes
 
   /** Libellé de l'écart compense : Écart BO si total liste > total fichier, sinon Écart partenaire. */
   get compenseEcartLabel(): string {
-    return this.compenseListeAbsTotal > this.compenseFileTotal ? 'Écart BO' : 'Écart partenaire';
+    return this.compenseListeAbsTotal > this.compenseFileTotal ? I18nService.t('RES.boGap') : I18nService.t('CS.msg.ecartPartenaire');
   }
 
   get selectedCompenseAmountCount(): number {
@@ -905,7 +906,7 @@ export class CertificationSoldeComponent implements OnInit, AfterViewInit, OnDes
 
   /** Libellé de l'écart lignes d'écart : Écart BO si total liste > total fichier, sinon Écart partenaire. */
   get ecartEcartLabel(): string {
-    return this.ecartListeTotal > this.ecartFileTotal ? 'Écart BO' : 'Écart partenaire';
+    return this.ecartListeTotal > this.ecartFileTotal ? I18nService.t('RES.boGap') : I18nService.t('CS.msg.ecartPartenaire');
   }
 
   get ecartOkCount(): number {
@@ -942,7 +943,7 @@ export class CertificationSoldeComponent implements OnInit, AfterViewInit, OnDes
 
   async exportToExcel(): Promise<void> {
     if (!this.canExport || !this.computed) {
-      await this.popupService.showWarning('Aucune donnée de certification à exporter.', 'Export impossible');
+      await this.popupService.showWarning(I18nService.t('CS.msg.aucuneDonneeDeCertificationAExporter'), I18nService.t('CS.msg.exportImpossible'));
       return;
     }
 
@@ -1148,10 +1149,10 @@ export class CertificationSoldeComponent implements OnInit, AfterViewInit, OnDes
       const buffer = await workbook.xlsx.writeBuffer();
       const fileName = `${this.buildExportFileBase()}.xlsx`;
       saveAs(new Blob([buffer]), fileName);
-      await this.popupService.showSuccess(`Le fichier ${fileName} a été téléchargé.`, 'Export Excel');
+      await this.popupService.showSuccess(I18nService.t('CS.msg.leFichierAEteTelecharge', { p0: fileName }), 'Export Excel');
     } catch (e: any) {
       console.error('Erreur export Excel certification:', e);
-      await this.popupService.showError(e?.message || 'Erreur lors de l\'export Excel.', 'Erreur d\'export');
+      await this.popupService.showError(e?.message || I18nService.t('CS.msg.erreurLorsDeLExportExcel'), I18nService.t('RPT.releve.exportPdfErrorTitle'));
     } finally {
       this.isExportingExcel = false;
       this.cdr.markForCheck();
@@ -1160,7 +1161,7 @@ export class CertificationSoldeComponent implements OnInit, AfterViewInit, OnDes
 
   async exportCompenseListExcel(): Promise<void> {
     if (!this.compenseLines.length) {
-      await this.popupService.showWarning('Aucune ligne dans la liste des compenses à exporter.', 'Export impossible');
+      await this.popupService.showWarning(I18nService.t('CS.msg.aucuneLigneDansLaListeDes'), I18nService.t('CS.msg.exportImpossible'));
       return;
     }
 
@@ -1218,10 +1219,10 @@ export class CertificationSoldeComponent implements OnInit, AfterViewInit, OnDes
       const ts = new Date().toISOString().replace(/[-:T]/g, '').slice(0, 14);
       const fileName = `Liste-Compense-${ts}.xlsx`;
       saveAs(new Blob([buffer]), fileName);
-      await this.popupService.showSuccess(`Le fichier ${fileName} a été téléchargé.`, 'Export Excel');
+      await this.popupService.showSuccess(I18nService.t('CS.msg.leFichierAEteTelecharge', { p0: fileName }), 'Export Excel');
     } catch (e: any) {
       console.error('Erreur export liste des compenses:', e);
-      await this.popupService.showError(e?.message || 'Erreur lors de l\'export.', 'Erreur d\'export');
+      await this.popupService.showError(e?.message || I18nService.t('RES.dlg.exportError'), I18nService.t('RPT.releve.exportPdfErrorTitle'));
     } finally {
       this.isExportingExcel = false;
       this.cdr.markForCheck();
@@ -1230,7 +1231,7 @@ export class CertificationSoldeComponent implements OnInit, AfterViewInit, OnDes
 
   async exportCompenseRecoExcel(): Promise<void> {
     if (!this.compenseLines.length && !this.compenseRecon.loaded) {
-      await this.popupService.showWarning('Chargez une liste des compenses ou un fichier de montants avant d\'exporter.', 'Export impossible');
+      await this.popupService.showWarning(I18nService.t('CS.msg.chargezUneListeDesCompensesOu'), I18nService.t('CS.msg.exportImpossible'));
       return;
     }
 
@@ -1309,10 +1310,10 @@ export class CertificationSoldeComponent implements OnInit, AfterViewInit, OnDes
       const ts = new Date().toISOString().replace(/[-:T]/g, '').slice(0, 14);
       const fileName = `Reconciliation-Compense-${ts}.xlsx`;
       saveAs(new Blob([buffer]), fileName);
-      await this.popupService.showSuccess(`Le fichier ${fileName} a été téléchargé.`, 'Export Excel');
+      await this.popupService.showSuccess(I18nService.t('CS.msg.leFichierAEteTelecharge', { p0: fileName }), 'Export Excel');
     } catch (e: any) {
       console.error('Erreur export réconciliation des compenses:', e);
-      await this.popupService.showError(e?.message || 'Erreur lors de l\'export.', 'Erreur d\'export');
+      await this.popupService.showError(e?.message || I18nService.t('RES.dlg.exportError'), I18nService.t('RPT.releve.exportPdfErrorTitle'));
     } finally {
       this.isExportingExcel = false;
       this.cdr.markForCheck();
@@ -1321,13 +1322,13 @@ export class CertificationSoldeComponent implements OnInit, AfterViewInit, OnDes
 
   async exportCompenseRecoPdf(): Promise<void> {
     if (!this.compenseLines.length && !this.compenseRecon.loaded) {
-      await this.popupService.showWarning('Chargez une liste des compenses ou un fichier de montants avant d\'exporter.', 'Export impossible');
+      await this.popupService.showWarning(I18nService.t('CS.msg.chargezUneListeDesCompensesOu'), I18nService.t('CS.msg.exportImpossible'));
       return;
     }
 
     const element = this.directCompenseTablesRef?.nativeElement;
     if (!element) {
-      await this.popupService.showError('Section réconciliation des compenses introuvable.', 'Erreur d\'export');
+      await this.popupService.showError(I18nService.t('CS.msg.sectionReconciliationDesCompensesIntrouv'), I18nService.t('RPT.releve.exportPdfErrorTitle'));
       return;
     }
 
@@ -1386,7 +1387,7 @@ export class CertificationSoldeComponent implements OnInit, AfterViewInit, OnDes
       this.cdr.markForCheck();
     } catch (e: any) {
       console.error('Erreur export PDF réconciliation des compenses:', e);
-      await this.popupService.showError(e?.message || 'Erreur lors de l\'export PDF.', 'Erreur d\'export');
+      await this.popupService.showError(e?.message || I18nService.t('CS.msg.erreurLorsDeLExportPdf'), I18nService.t('RPT.releve.exportPdfErrorTitle'));
     } finally {
       this.isExportingPdf = false;
       this.cdr.markForCheck();
@@ -1395,7 +1396,7 @@ export class CertificationSoldeComponent implements OnInit, AfterViewInit, OnDes
 
   async exportEcartAggregates(): Promise<void> {
     if (!this.canExport || !this.computed) {
-      await this.popupService.showWarning('Aucune donnée d’agrégats des écarts à exporter.', 'Export impossible');
+      await this.popupService.showWarning(I18nService.t('CS.msg.aucuneDonneeDAgregatsDesEcarts'), I18nService.t('CS.msg.exportImpossible'));
       return;
     }
 
@@ -1490,10 +1491,10 @@ export class CertificationSoldeComponent implements OnInit, AfterViewInit, OnDes
       const buffer = await workbook.xlsx.writeBuffer();
       const fileName = `${this.buildEcartAggregatesFileBase()}.xlsx`;
       saveAs(new Blob([buffer]), fileName);
-      await this.popupService.showSuccess(`Le fichier ${fileName} a été téléchargé.`, 'Export Agrégats');
+      await this.popupService.showSuccess(I18nService.t('CS.msg.leFichierAEteTelecharge', { p0: fileName }), I18nService.t('CS.msg.exportAgregats'));
     } catch (e: any) {
       console.error('Erreur export agrégats des écarts:', e);
-      await this.popupService.showError(e?.message || 'Erreur lors de l\'export des agrégats.', 'Erreur d\'export');
+      await this.popupService.showError(e?.message || I18nService.t('CS.msg.erreurLorsDeLExportDes'), I18nService.t('RPT.releve.exportPdfErrorTitle'));
     } finally {
       this.isExportingAggregates = false;
       this.cdr.markForCheck();
@@ -1502,13 +1503,13 @@ export class CertificationSoldeComponent implements OnInit, AfterViewInit, OnDes
 
   async exportEcartAggregatesPdf(): Promise<void> {
     if (!this.canExport || !this.computed) {
-      await this.popupService.showWarning('Aucune donnée d’agrégats à exporter en PDF.', 'Export impossible');
+      await this.popupService.showWarning(I18nService.t('CS.msg.aucuneDonneeDAgregatsAExporter'), I18nService.t('CS.msg.exportImpossible'));
       return;
     }
 
     const element = this.aggregatesPanelRef?.nativeElement;
     if (!element) {
-      await this.popupService.showError('Section Agrégats des écarts introuvable.', 'Erreur d\'export');
+      await this.popupService.showError(I18nService.t('CS.msg.sectionAgregatsDesEcartsIntrouvable'), I18nService.t('RPT.releve.exportPdfErrorTitle'));
       return;
     }
 
@@ -1566,7 +1567,7 @@ export class CertificationSoldeComponent implements OnInit, AfterViewInit, OnDes
       this.cdr.markForCheck();
     } catch (e: any) {
       console.error('Erreur export PDF agrégats des écarts:', e);
-      await this.popupService.showError(e?.message || 'Erreur lors de l\'export PDF des agrégats.', 'Erreur d\'export');
+      await this.popupService.showError(e?.message || I18nService.t('CS.msg.erreurLorsDeLExportPdf2'), I18nService.t('RPT.releve.exportPdfErrorTitle'));
     } finally {
       this.isExportingAggregatesPdf = false;
       this.cdr.markForCheck();
@@ -1575,13 +1576,13 @@ export class CertificationSoldeComponent implements OnInit, AfterViewInit, OnDes
 
   async exportToPdf(): Promise<void> {
     if (!this.canExport || !this.computed) {
-      await this.popupService.showWarning('Aucune donnée de certification à exporter.', 'Export impossible');
+      await this.popupService.showWarning(I18nService.t('CS.msg.aucuneDonneeDeCertificationAExporter'), I18nService.t('CS.msg.exportImpossible'));
       return;
     }
 
     const element = this.pdfExportContentRef?.nativeElement;
     if (!element) {
-      await this.popupService.showError('Zone d\'export PDF introuvable.', 'Erreur d\'export');
+      await this.popupService.showError('Zone d\'export PDF introuvable.', I18nService.t('RPT.releve.exportPdfErrorTitle'));
       return;
     }
 
@@ -1597,7 +1598,7 @@ export class CertificationSoldeComponent implements OnInit, AfterViewInit, OnDes
       this.showPdfBlobPreview(blob, `${this.buildExportFileBase()}.pdf`);
     } catch (e: any) {
       console.error('Erreur export PDF certification:', e);
-      await this.popupService.showError(e?.message || 'Erreur lors de l\'export PDF.', 'Erreur d\'export');
+      await this.popupService.showError(e?.message || I18nService.t('CS.msg.erreurLorsDeLExportPdf'), I18nService.t('RPT.releve.exportPdfErrorTitle'));
     } finally {
       this.isExportingPdf = false;
       this.cdr.markForCheck();
@@ -1681,7 +1682,7 @@ export class CertificationSoldeComponent implements OnInit, AfterViewInit, OnDes
       return;
     }
     saveAs(this.pdfPreviewBlob, this.pdfPreviewFileName);
-    void this.popupService.showSuccess(`Le fichier ${this.pdfPreviewFileName} a été téléchargé.`, 'Export PDF');
+    void this.popupService.showSuccess(I18nService.t('CS.msg.leFichierAEteTelecharge', { p0: this.pdfPreviewFileName }), 'Export PDF');
   }
 
   closePdfPreview(): void {
@@ -1861,7 +1862,7 @@ export class CertificationSoldeComponent implements OnInit, AfterViewInit, OnDes
 
   async loadSavedSoldes(): Promise<void> {
     if (!this.numeroCompte?.trim() || !this.isDateRangeValid()) {
-      await this.popupService.showWarning('Renseignez le numéro de compte et la période (du / au).', 'Champs requis');
+      await this.popupService.showWarning(I18nService.t('CS.msg.renseignezLeNumeroDeCompteEt'), I18nService.t('USR.popup.requiredFieldsTitle'));
       return;
     }
     this.isLoadingSoldes = true;
@@ -1879,7 +1880,7 @@ export class CertificationSoldeComponent implements OnInit, AfterViewInit, OnDes
         this.soldeClotureSaisi = true;
       }
       this.recalculateDerived();
-      await this.popupService.showSuccess('Soldes chargés depuis la base.', 'Chargement');
+      await this.popupService.showSuccess(I18nService.t('CS.msg.soldesChargesDepuisLaBase'), I18nService.t('AUTO_DESIGN_SYSTEM_PAGE.ui.chargement'));
     } finally {
       this.isLoadingSoldes = false;
     }
@@ -1900,16 +1901,16 @@ export class CertificationSoldeComponent implements OnInit, AfterViewInit, OnDes
 
   async saveCertification(): Promise<void> {
     if (!this.numeroCompte?.trim() || !this.isDateRangeValid()) {
-      await this.popupService.showWarning('Renseignez le numéro de compte et la période (du / au) pour sauvegarder.', 'Champs requis');
+      await this.popupService.showWarning(I18nService.t('CS.msg.renseignezLeNumeroDeCompteEt2'), I18nService.t('USR.popup.requiredFieldsTitle'));
       return;
     }
     if (this.soldeOuverture == null || this.soldeCloture == null) {
-      await this.popupService.showWarning('Renseignez le solde d\'ouverture et de clôture.', 'Soldes requis');
+      await this.popupService.showWarning(I18nService.t('CS.msg.renseignezLeSoldeDOuvertureEt'), I18nService.t('CS.msg.soldesRequis'));
       return;
     }
 
     if (!this.computed) {
-      await this.popupService.showWarning('Aucun résultat de certification à enregistrer.', 'Sauvegarde');
+      await this.popupService.showWarning(I18nService.t('CS.msg.aucunResultatDeCertificationAEnregistrer'), 'Sauvegarde');
       return;
     }
 
@@ -1943,7 +1944,7 @@ export class CertificationSoldeComponent implements OnInit, AfterViewInit, OnDes
   private async persistCertification(): Promise<void> {
     const resultat = this.buildResultatSnapshot();
     if (!resultat || this.soldeOuverture == null || this.soldeCloture == null) {
-      await this.popupService.showWarning('Aucun résultat de certification à enregistrer.', 'Sauvegarde');
+      await this.popupService.showWarning(I18nService.t('CS.msg.aucunResultatDeCertificationAEnregistrer'), 'Sauvegarde');
       return;
     }
 
@@ -1963,11 +1964,11 @@ export class CertificationSoldeComponent implements OnInit, AfterViewInit, OnDes
         firstValueFrom(this.certificationService.saveResultat(resultat))
       ]);
       await this.popupService.showSuccess(
-        'Certification de solde enregistrée. Elle est consultable via « Certifications enregistrées ».',
+        I18nService.t('CS.msg.certificationDeSoldeEnregistreeElleEst'),
         'Sauvegarde'
       );
     } catch (e: any) {
-      await this.popupService.showError(e?.error?.message || e?.message || 'Erreur lors de la sauvegarde.', 'Erreur');
+      await this.popupService.showError(e?.error?.message || e?.message || I18nService.t('CS.msg.erreurLorsDeLaSauvegarde'), I18nService.t('MSG.error'));
     } finally {
       this.isSaving = false;
     }
@@ -2149,11 +2150,11 @@ export class CertificationSoldeComponent implements OnInit, AfterViewInit, OnDes
     const code = (this.paysFormCode || '').trim().toUpperCase();
     const nom = (this.paysFormNom || '').trim();
     if (!code || !nom) {
-      await this.popupService.showWarning(this.translate.instant('CS.saved.countryRequired'), 'Pays');
+      await this.popupService.showWarning(this.translate.instant('CS.saved.countryRequired'), I18nService.t('CS.saved.country'));
       return;
     }
     if (this.paysOptions.some(p => (p.code || '').toUpperCase() === code)) {
-      await this.popupService.showWarning(`Le pays ${code} existe déjà.`, 'Pays');
+      await this.popupService.showWarning(I18nService.t('CS.msg.lePaysExisteDeja', { p0: code }), I18nService.t('CS.saved.country'));
       return;
     }
     const target = this.paysFormTarget;
@@ -2174,11 +2175,11 @@ export class CertificationSoldeComponent implements OnInit, AfterViewInit, OnDes
         this.saveMetaPays = pays.code;
       }
       this.cancelCreatePaysForm();
-      await this.popupService.showSuccess(this.translate.instant('CS.saved.countryCreated'), 'Pays');
+      await this.popupService.showSuccess(this.translate.instant('CS.saved.countryCreated'), I18nService.t('CS.saved.country'));
     } catch (e: any) {
       await this.popupService.showError(
-        e?.error?.message || e?.message || 'Erreur lors de la création du pays.',
-        'Pays'
+        e?.error?.message || e?.message || I18nService.t('CS.msg.erreurLorsDeLaCreationDu'),
+        I18nService.t('CS.saved.country')
       );
     } finally {
       this.isCreatingPays = false;
@@ -2201,11 +2202,11 @@ export class CertificationSoldeComponent implements OnInit, AfterViewInit, OnDes
         this.savedResultat = { ...this.savedResultat, pays: updated?.pays ?? pays };
       }
       this.savedList = this.savedList.map(row => (row.id === id ? { ...row, pays: updated?.pays ?? pays } : row));
-      await this.popupService.showSuccess(this.translate.instant('CS.saved.countrySaved'), 'Pays');
+      await this.popupService.showSuccess(this.translate.instant('CS.saved.countrySaved'), I18nService.t('CS.saved.country'));
     } catch (e: any) {
       await this.popupService.showError(
-        e?.error?.message || e?.message || 'Impossible de mettre à jour le pays.',
-        'Pays'
+        e?.error?.message || e?.message || I18nService.t('CS.msg.impossibleDeMettreAJourLe'),
+        I18nService.t('CS.saved.country')
       );
     } finally {
       this.isSavingSavedPays = false;
@@ -2248,8 +2249,8 @@ export class CertificationSoldeComponent implements OnInit, AfterViewInit, OnDes
       this.savedTotalElements = 0;
       this.savedTotalPages = 0;
       await this.popupService.showError(
-        e?.error?.message || e?.message || 'Impossible de charger les certifications enregistrées.',
-        'Certifications enregistrées'
+        e?.error?.message || e?.message || I18nService.t('CS.msg.impossibleDeChargerLesCertificationsEnre'),
+        I18nService.t('CS.saved.button')
       );
     } finally {
       this.isLoadingSaved = false;
@@ -2273,8 +2274,8 @@ export class CertificationSoldeComponent implements OnInit, AfterViewInit, OnDes
       this.cancelCreatePaysForm();
     } catch (e: any) {
       await this.popupService.showError(
-        e?.error?.message || e?.message || 'Impossible de charger cette certification.',
-        'Certifications enregistrées'
+        e?.error?.message || e?.message || I18nService.t('CS.msg.impossibleDeChargerCetteCertification'),
+        I18nService.t('CS.saved.button')
       );
     } finally {
       this.isLoadingSaved = false;
@@ -2293,8 +2294,8 @@ export class CertificationSoldeComponent implements OnInit, AfterViewInit, OnDes
   async deleteSaved(row: CertificationResultatSummary): Promise<void> {
     const periode = this.formatPeriodeFr(row.dateDebut, row.dateFin);
     const confirmed = await this.popupService.showConfirm(
-      `Supprimer la certification du compte ${row.numeroCompte} (${periode}) ? Cette action est définitive.`,
-      'Supprimer la certification'
+      I18nService.t('CS.msg.supprimerLaCertificationDuCompteCette', { p0: row.numeroCompte, p1: periode }),
+      I18nService.t('CS.msg.supprimerLaCertification')
     );
     if (!confirmed) {
       return;
@@ -2306,7 +2307,7 @@ export class CertificationSoldeComponent implements OnInit, AfterViewInit, OnDes
       }
       await this.loadSavedCertifications();
     } catch (e: any) {
-      await this.popupService.showError(e?.error?.message || e?.message || 'Erreur lors de la suppression.', 'Erreur');
+      await this.popupService.showError(e?.error?.message || e?.message || I18nService.t('ESD.bulkDeleteErrorMsg'), I18nService.t('MSG.error'));
     }
   }
 
@@ -2327,7 +2328,7 @@ export class CertificationSoldeComponent implements OnInit, AfterViewInit, OnDes
       this.showPdfBlobPreview(blob, fileName);
     } catch (e: any) {
       console.error('Erreur export PDF certification enregistrée:', e);
-      await this.popupService.showError(e?.message || 'Erreur lors de l\'export PDF.', 'Erreur d\'export');
+      await this.popupService.showError(e?.message || I18nService.t('CS.msg.erreurLorsDeLExportPdf'), I18nService.t('RPT.releve.exportPdfErrorTitle'));
     } finally {
       this.isExportingSavedPdf = false;
       this.cdr.markForCheck();
@@ -2348,7 +2349,7 @@ export class CertificationSoldeComponent implements OnInit, AfterViewInit, OnDes
     try {
       const rows = await this.fetchAllSavedForExport();
       if (!rows.length) {
-        await this.popupService.showWarning('Aucune certification à exporter.', 'Export impossible');
+        await this.popupService.showWarning(I18nService.t('CS.msg.aucuneCertificationAExporter'), I18nService.t('CS.msg.exportImpossible'));
         return;
       }
       const pdf = this.buildSavedListPdf(rows);
@@ -2356,7 +2357,7 @@ export class CertificationSoldeComponent implements OnInit, AfterViewInit, OnDes
       this.showPdfBlobPreview(pdf.output('blob'), fileName);
     } catch (e: any) {
       console.error('Erreur export PDF liste des certifications enregistrées:', e);
-      await this.popupService.showError(e?.message || 'Erreur lors de l\'export PDF.', 'Erreur d\'export');
+      await this.popupService.showError(e?.message || I18nService.t('CS.msg.erreurLorsDeLExportPdf'), I18nService.t('RPT.releve.exportPdfErrorTitle'));
     } finally {
       this.isExportingSavedListPdf = false;
       this.cdr.markForCheck();
@@ -2373,7 +2374,7 @@ export class CertificationSoldeComponent implements OnInit, AfterViewInit, OnDes
     try {
       const rows = await this.fetchAllSavedForExport();
       if (!rows.length) {
-        await this.popupService.showWarning('Aucune certification à exporter.', 'Export impossible');
+        await this.popupService.showWarning(I18nService.t('CS.msg.aucuneCertificationAExporter'), I18nService.t('CS.msg.exportImpossible'));
         return;
       }
 
@@ -2463,12 +2464,12 @@ export class CertificationSoldeComponent implements OnInit, AfterViewInit, OnDes
       const fileName = `Certifications-enregistrees-${this.buildSavedListTimestamp()}.xlsx`;
       saveAs(new Blob([buffer]), fileName);
       await this.popupService.showSuccess(
-        `${rows.length} certification(s) exportée(s) dans ${fileName}.`,
+        I18nService.t('CS.msg.certificationSExporteeSDans', { p0: rows.length, p1: fileName }),
         'Export Excel'
       );
     } catch (e: any) {
       console.error('Erreur export Excel liste des certifications enregistrées:', e);
-      await this.popupService.showError(e?.message || 'Erreur lors de l\'export Excel.', 'Erreur d\'export');
+      await this.popupService.showError(e?.message || I18nService.t('CS.msg.erreurLorsDeLExportExcel'), I18nService.t('RPT.releve.exportPdfErrorTitle'));
     } finally {
       this.isExportingSavedListExcel = false;
       this.cdr.markForCheck();
@@ -2783,7 +2784,7 @@ export class CertificationSoldeComponent implements OnInit, AfterViewInit, OnDes
     if (!dateDe || !dateAu) return '—';
     return dateDe === dateAu
       ? this.formatDateFr(dateDe)
-      : `${this.formatDateFr(dateDe)} au ${this.formatDateFr(dateAu)}`;
+      : I18nService.t('CS.msg.au', { p0: this.formatDateFr(dateDe), p1: this.formatDateFr(dateAu) });
   }
 
   formatDateTimeFr(value: string | null | undefined): string {
@@ -2867,7 +2868,7 @@ export class CertificationSoldeComponent implements OnInit, AfterViewInit, OnDes
 
   formatDateRangeLabel(): string {
     if (!this.dateCertificationDe || !this.dateCertificationAu) return '—';
-    return `${this.formatDateFr(this.dateCertificationDe)} au ${this.formatDateFr(this.dateCertificationAu)}`;
+    return I18nService.t('CS.msg.au', { p0: this.formatDateFr(this.dateCertificationDe), p1: this.formatDateFr(this.dateCertificationAu) });
   }
 
   private formatDateInput(date: Date): string {
@@ -2938,8 +2939,8 @@ export class CertificationSoldeComponent implements OnInit, AfterViewInit, OnDes
       const detected = this.detectCompenseColumns(rows);
       if (!detected) {
         await this.popupService.showWarning(
-          'Aucune colonne de montant trouvée dans la liste (Montant, Amount, transaction Montant…).',
-          'Liste Compense'
+          I18nService.t('CS.msg.aucuneColonneDeMontantTrouveeDans'),
+          I18nService.t('CS.msg.listeCompense')
         );
         return;
       }
@@ -2973,7 +2974,7 @@ export class CertificationSoldeComponent implements OnInit, AfterViewInit, OnDes
       this.cdr.markForCheck();
     } catch (e: any) {
       console.error('Erreur chargement liste compense:', e);
-      await this.popupService.showError(e?.message || 'Impossible de lire la liste.', 'Liste Compense');
+      await this.popupService.showError(e?.message || I18nService.t('CS.msg.impossibleDeLireLaListe'), I18nService.t('CS.msg.listeCompense'));
     } finally {
       input.value = '';
     }
@@ -3015,10 +3016,10 @@ export class CertificationSoldeComponent implements OnInit, AfterViewInit, OnDes
           .filter(op => this.isCompenseOppart(op.typeOp));
         if (!toutes.length) {
           await this.popupService.showWarning(
-            `Aucune ligne de compense dans OPPART pour la période ${this.dateCertificationDe || '—'} → `
-            + `${this.dateCertificationAu || '—'} (marge d'un mois avant/après incluse : `
-            + `${rechercheDe || '—'} → ${rechercheAu || '—'}). Aucune ligne de type COMPENSE dans la table `
-            + 'OPPART, toutes périodes confondues.',
+            I18nService.t('CS.msg.aucuneLigneDeCompenseDansOppart', { p0: this.dateCertificationDe || '—' })
+            + I18nService.t('CS.msg.margeDUnMoisAvantApres', { p0: this.dateCertificationAu || '—' })
+            + I18nService.t('CS.msg.aucuneLigneDeTypeCompenseDans', { p0: rechercheDe || '—', p1: rechercheAu || '—' })
+            + I18nService.t('CS.msg.oppartToutesPeriodesConfondues'),
             'OPPART'
           );
           this.cdr.markForCheck();
@@ -3031,11 +3032,11 @@ export class CertificationSoldeComponent implements OnInit, AfterViewInit, OnDes
         dateFilterFrom = jours.length === compenses.length ? (jours[0] || '') : '';
         dateFilterTo = jours.length === compenses.length ? (jours[jours.length - 1] || '') : '';
         await this.popupService.showWarning(
-          `Aucune ligne de compense dans OPPART entre le ${rechercheDe || '—'} et le ${rechercheAu || '—'} `
-          + `(période de certification ${this.dateCertificationDe || '—'} → ${this.dateCertificationAu || '—'} `
-          + 'augmentée du mois précédent et du mois suivant). '
-          + `${compenses.length} ligne(s) existent toutefois à d'autres dates `
-          + `(${dateFilterFrom || '—'} → ${dateFilterTo || '—'}) : elles sont proposées ci-dessous.`,
+          I18nService.t('CS.msg.aucuneLigneDeCompenseDansOppart2', { p0: rechercheDe || '—', p1: rechercheAu || '—' })
+          + I18nService.t('CS.msg.periodeDeCertification', { p0: this.dateCertificationDe || '—', p1: this.dateCertificationAu || '—' })
+          + I18nService.t('CS.msg.augmenteeDuMoisPrecedentEtDu')
+          + I18nService.t('CS.msg.ligneSExistentToutefoisAD', { p0: compenses.length })
+          + I18nService.t('CS.msg.ellesSontProposeesCiDessous', { p0: dateFilterFrom || '—', p1: dateFilterTo || '—' }),
           'OPPART'
         );
       } else {
@@ -3050,7 +3051,7 @@ export class CertificationSoldeComponent implements OnInit, AfterViewInit, OnDes
     } catch (e: any) {
       console.error('Erreur chargement compenses depuis OPPART:', e);
       await this.popupService.showError(
-        e?.message || 'Impossible de charger les compenses depuis OPPART.',
+        e?.message || I18nService.t('CS.msg.impossibleDeChargerLesCompensesDepuis'),
         'OPPART'
       );
       this.isLoadingOppartCompenses = false;
@@ -3061,16 +3062,16 @@ export class CertificationSoldeComponent implements OnInit, AfterViewInit, OnDes
     this.cdr.markForCheck();
 
     const result = await this.popupService.showSelectableListPopup({
-      title: 'Charger depuis OPPART',
-      message: `${compenses.length} compense(s) trouvée(s) dans OPPART`
+      title: I18nService.t('CS.ui.chargerDepuisOppart'),
+      message: I18nService.t('CS.msg.compenseSTrouveeSDansOppart', { p0: compenses.length })
         + (horsCertification > 0
-          ? ` dont ${horsCertification} hors de la période de certification (marge d'un mois avant/après)`
+          ? I18nService.t('CS.msg.dontHorsDeLaPeriodeDe', { p0: horsCertification })
           : '')
         + (horsPeriode
-          ? ' (toutes périodes)'
-          : ` — recherche du ${rechercheDe || '—'} au ${rechercheAu || '—'}`)
-        + '. Ajustez la période ou filtrez par texte, puis sélectionnez les lignes à charger :',
-      columns: ['N° Trans GU', 'Type_OP', 'Client', 'Montant', 'Date'],
+          ? I18nService.t('CS.msg.toutesPeriodes')
+          : I18nService.t('CS.msg.rechercheDuAu', { p0: rechercheDe || '—', p1: rechercheAu || '—' }))
+        + I18nService.t('CS.msg.ajustezLaPeriodeOuFiltrezPar'),
+      columns: ['N° Trans GU', 'Type_OP', 'Client', I18nService.t('COMMON.actions.amount'), 'Date'],
       rows: compenses.map(op => ({
         key: String(op.id),
         date: this.toIsoDay(op.dateOperation),
@@ -3084,8 +3085,8 @@ export class CertificationSoldeComponent implements OnInit, AfterViewInit, OnDes
       })),
       dateFilter: { from: dateFilterFrom, to: dateFilterTo },
       options: [
-        { key: 'liste', label: 'Charger dans la liste des compenses', hint: `${compenses.length} ligne(s) sélectionnée(s) utilisée(s) comme liste`, checked: true },
-        { key: 'fichier', label: 'Charger dans la réconciliation fichier (montants)', hint: 'Les montants des lignes sélectionnées servent au matching', checked: true }
+        { key: 'liste', label: I18nService.t('CS.msg.chargerDansLaListeDesCompenses'), hint: I18nService.t('CS.msg.ligneSSelectionneeSUtiliseeS', { p0: compenses.length }), checked: true },
+        { key: I18nService.t('CS.msg.fichier'), label: I18nService.t('CS.msg.chargerDansLaReconciliationFichierMontan'), hint: I18nService.t('CS.msg.lesMontantsDesLignesSelectionneesServent'), checked: true }
       ],
       confirmLabel: 'Charger',
       requireSelection: true
@@ -3098,9 +3099,9 @@ export class CertificationSoldeComponent implements OnInit, AfterViewInit, OnDes
     const perimeePopup = result.dateFilter || { from: '', to: '' };
     if (!horsPeriode && this.periodeElargieHorsChargement(perimeePopup, rechercheDe, rechercheAu)) {
       await this.popupService.showWarning(
-        'La période choisie dans le popup déborde la période chargée depuis OPPART (période de certification '
-        + '+ mois précédent et mois suivant) : seules les lignes déjà chargées dans le popup sont disponibles.',
-        'Période'
+        I18nService.t('CS.msg.laPeriodeChoisieDansLePopup')
+        + I18nService.t('CS.msg.moisPrecedentEtMoisSuivantSeules'),
+        I18nService.t('CS.saved.period')
       );
     }
 
@@ -3175,8 +3176,8 @@ export class CertificationSoldeComponent implements OnInit, AfterViewInit, OnDes
     const lignes = this.loadedCompenseLines || [];
     if (!lignes.length) {
       await this.popupService.showWarning(
-        'Chargez d’abord la liste des compenses (fichier ou OPPART) avant de vérifier les lignes concernées.',
-        'Compenses'
+        I18nService.t('CS.msg.chargezDAbordLaListeDes'),
+        I18nService.t('CS.msg.compenses')
       );
       return;
     }
@@ -3201,8 +3202,8 @@ export class CertificationSoldeComponent implements OnInit, AfterViewInit, OnDes
 
       if (!gardes.length) {
         await this.popupService.showWarning(
-          'Aucune des lignes concernées n’est au statut OK dans OPPART : la liste est conservée telle quelle.',
-          'Vérification'
+          I18nService.t('CS.msg.aucuneDesLignesConcerneesNEst'),
+          I18nService.t('CS.msg.verification')
         );
         return;
       }
@@ -3213,14 +3214,14 @@ export class CertificationSoldeComponent implements OnInit, AfterViewInit, OnDes
       this.rebuildCompenseMatching();
       if (exclues > 0) {
         await this.popupService.showWarning(
-          `${gardes.length} ligne(s) conservée(s) au statut OK, ${exclues} exclue(s) : statut différent ou introuvable dans OPPART.`,
-          'Vérification'
+          I18nService.t('CS.msg.ligneSConserveeSAuStatut', { p0: gardes.length, p1: exclues }),
+          I18nService.t('CS.msg.verification')
         );
       }
     } catch (e: any) {
       console.error('Erreur verification des lignes concernees:', e);
       await this.popupService.showError(
-        e?.message || 'Impossible de vérifier les lignes concernées dans OPPART.',
+        e?.message || I18nService.t('CS.msg.impossibleDeVerifierLesLignesConcernees'),
         'OPPART'
       );
     } finally {
@@ -3237,15 +3238,15 @@ export class CertificationSoldeComponent implements OnInit, AfterViewInit, OnDes
     const lignes = this.loadedCompenseLines || [];
     if (!lignes.length) {
       await this.popupService.showWarning(
-        'Aucune liste des compenses chargée depuis OPPART.',
-        'Compenses'
+        I18nService.t('CS.msg.aucuneListeDesCompensesChargeeDepuis'),
+        I18nService.t('CS.msg.compenses')
       );
       return;
     }
     if (this.compenseListeSource !== 'oppart') {
       await this.popupService.showWarning(
-        'Cette action n\'est disponible que lorsque la liste des compenses a été chargée depuis OPPART.',
-        'Compenses'
+        I18nService.t('CS.msg.cetteActionNEstDisponibleQue'),
+        I18nService.t('CS.msg.compenses')
       );
       return;
     }
@@ -3256,19 +3257,19 @@ export class CertificationSoldeComponent implements OnInit, AfterViewInit, OnDes
 
     if (!transGus.length) {
       await this.popupService.showWarning(
-        'Aucun N° Trans GU valide dans la liste des compenses.',
-        'Compenses'
+        I18nService.t('CS.msg.aucunNTransGuValideDans'),
+        I18nService.t('CS.msg.compenses')
       );
       return;
     }
 
     const confirmed = await this.popupService.showConfirmDialog(
-      `Lier ${transGus.length} compense(s) dans OPPART ?\n\n` +
+      I18nService.t('CS.msg.lierCompenseSDansOppart', { p0: transGus.length }) +
       `Cela va :\n` +
-      `• Retrouver pour chaque N° Trans GU la ligne BO (COMPENSE_BO) et la ligne Partenaire (COMPENSE_PART/*PARTNER*)\n` +
-      `• Les lier par un token commun (statut → OK)\n\n` +
-      `Les lignes déjà liées seront ignorées.`,
-      'Confirmer la liaison des compenses'
+      I18nService.t('CS.msg.retrouverPourChaqueNTransGu') +
+      I18nService.t('CS.msg.lesLierParUnTokenCommun') +
+      I18nService.t('CS.msg.lesLignesDejaLieesSerontIgnorees'),
+      I18nService.t('CS.msg.confirmerLaLiaisonDesCompenses')
     );
     if (!confirmed) {
       return;
@@ -3280,7 +3281,7 @@ export class CertificationSoldeComponent implements OnInit, AfterViewInit, OnDes
     try {
       const result = await firstValueFrom(this.oppartService.linkCompensesByTransGu(transGus));
       if (!result.success) {
-        await this.popupService.showError(result.details?.[0]?.message || 'Échec de la liaison.', 'OPPART');
+        await this.popupService.showError(result.details?.[0]?.message || I18nService.t('CS.msg.echecDeLaLiaison'), 'OPPART');
         return;
       }
 
@@ -3290,7 +3291,7 @@ export class CertificationSoldeComponent implements OnInit, AfterViewInit, OnDes
       const already = details.filter(d => d.status === 'ALREADY_LINKED').length;
       const skipped = details.filter(d => d.status === 'INCOMPLETE_PAIR' || d.status === 'NOT_FOUND').length;
 
-      let msg = `✅ ${linked} compense(s) liée(s) avec succès.`;
+      let msg = I18nService.t('CS.msg.compenseSLieeSAvecSucces', { p0: linked });
       if (already) msg += `\n⏭ ${already} déjà liées (ignorées).`;
       if (skipped) msg += `\n⚠ ${skipped} ignorées (paire BO/Partenaire introuvable ou incomplète).`;
 
@@ -3303,7 +3304,7 @@ export class CertificationSoldeComponent implements OnInit, AfterViewInit, OnDes
     } catch (e: any) {
       console.error('Erreur liaison compenses dans OPPART:', e);
       await this.popupService.showError(
-        e?.message || 'Impossible de lier les compenses dans OPPART.',
+        e?.message || I18nService.t('CS.msg.impossibleDeLierLesCompensesDans'),
         'OPPART'
       );
     } finally {
@@ -3351,7 +3352,7 @@ export class CertificationSoldeComponent implements OnInit, AfterViewInit, OnDes
         }));
       if (!lines.length) {
         await this.popupService.showWarning(
-          'Aucune ligne de compense trouvée dans OPPART pour la période indiquée.',
+          I18nService.t('CS.msg.aucuneLigneDeCompenseTrouveeDans'),
           'OPPART'
         );
         return;
@@ -3364,13 +3365,13 @@ export class CertificationSoldeComponent implements OnInit, AfterViewInit, OnDes
       this.rebuildCompenseMatching();
       this.cdr.markForCheck();
       await this.popupService.showSuccess(
-        `✅ ${lines.length} compense(s) chargée(s) dans la liste depuis OPPART.`,
+        I18nService.t('CS.msg.compenseSChargeeSDansLa', { p0: lines.length }),
         'OPPART'
       );
     } catch (e: any) {
       console.error('Erreur chargement compenses depuis OPPART:', e);
       await this.popupService.showError(
-        e?.message || 'Impossible de charger les compenses depuis OPPART.',
+        e?.message || I18nService.t('CS.msg.impossibleDeChargerLesCompensesDepuis'),
         'OPPART'
       );
     } finally {
@@ -3410,7 +3411,7 @@ export class CertificationSoldeComponent implements OnInit, AfterViewInit, OnDes
         });
       if (!amounts.length) {
         await this.popupService.showWarning(
-          'Aucun montant de compense trouvé dans OPPART pour la période indiquée.',
+          I18nService.t('CS.msg.aucunMontantDeCompenseTrouveDans'),
           'OPPART'
         );
         return;
@@ -3426,13 +3427,13 @@ export class CertificationSoldeComponent implements OnInit, AfterViewInit, OnDes
       this.rebuildCompenseMatching();
       this.cdr.markForCheck();
       await this.popupService.showSuccess(
-        `✅ ${amounts.length} montant(s) de réconciliation chargé(s) depuis OPPART.`,
+        I18nService.t('CS.msg.montantSDeReconciliationChargeS', { p0: amounts.length }),
         'OPPART'
       );
     } catch (e: any) {
       console.error('Erreur chargement réconciliation fichier depuis OPPART:', e);
       await this.popupService.showError(
-        e?.message || 'Impossible de charger les montants depuis OPPART.',
+        e?.message || I18nService.t('CS.msg.impossibleDeChargerLesMontantsDepuis'),
         'OPPART'
       );
     } finally {
@@ -3478,8 +3479,8 @@ export class CertificationSoldeComponent implements OnInit, AfterViewInit, OnDes
       const detected = this.detectCompenseColumns(rows);
       if (!detected) {
         await this.popupService.showWarning(
-          'Aucune colonne de montant trouvée dans la liste (Montant, Amount, transaction Montant…).',
-          'Liste lignes d’écart'
+          I18nService.t('CS.msg.aucuneColonneDeMontantTrouveeDans'),
+          I18nService.t('CS.msg.listeLignesDEcart')
         );
         return;
       }
@@ -3512,7 +3513,7 @@ export class CertificationSoldeComponent implements OnInit, AfterViewInit, OnDes
       this.cdr.markForCheck();
     } catch (e: any) {
       console.error('Erreur chargement liste lignes d\'écart:', e);
-      await this.popupService.showError(e?.message || 'Impossible de lire la liste.', 'Liste lignes d’écart');
+      await this.popupService.showError(e?.message || I18nService.t('CS.msg.impossibleDeLireLaListe'), I18nService.t('CS.msg.listeLignesDEcart'));
     } finally {
       input.value = '';
     }
@@ -3608,7 +3609,7 @@ export class CertificationSoldeComponent implements OnInit, AfterViewInit, OnDes
       const detected = this.detectCompenseColumns(rows);
       if (!detected) {
         await this.popupService.showWarning(
-          'Aucune colonne de montant trouvée (Montant, Amount, transaction Montant, transaction Amount…).',
+          I18nService.t('CS.msg.aucuneColonneDeMontantTrouveeMontant'),
           contextTitle
         );
         return null;
@@ -3632,7 +3633,7 @@ export class CertificationSoldeComponent implements OnInit, AfterViewInit, OnDes
       };
     } catch (e: any) {
       console.error('Erreur réconciliation fichier:', e);
-      await this.popupService.showError(e?.message || 'Impossible de lire le fichier.', contextTitle);
+      await this.popupService.showError(e?.message || I18nService.t('CS.msg.impossibleDeLireLeFichier'), contextTitle);
       return null;
     } finally {
       input.value = '';

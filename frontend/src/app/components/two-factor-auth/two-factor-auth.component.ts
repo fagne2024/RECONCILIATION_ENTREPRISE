@@ -190,14 +190,14 @@ export class TwoFactorAuthComponent implements OnInit {
     let code: string | undefined;
     if (isSelf) {
       const entered = await this.popupService.showTextInput(
-        'Entrez le code à 6 chiffres de votre application d\'authentification.',
+        I18nService.t('TFA.msg.entrezLeCodeA6Chiffres'),
         'Confirmation 2FA',
         '',
         '000000'
       );
       if (!entered || !/^\d{6}$/.test(entered.trim())) {
         await this.popupService.showError(
-          'Code TOTP requis pour désactiver votre 2FA',
+          I18nService.t('TFA.msg.codeTotpRequisPourDesactiverVotre'),
           I18nService.t('TFA.popups.disableError.title')
         );
         return;

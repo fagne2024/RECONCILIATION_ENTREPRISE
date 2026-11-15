@@ -71,10 +71,10 @@
          [class.proc-popup--error]="processingPopup.status === 'error'">
       <h3 id="proc-popup-title">
         <ng-container [ngSwitch]="processingPopup.status">
-          <span *ngSwitchCase="'running'">Traitement en cours…</span>
-          <span *ngSwitchCase="'success'">✔ Traitement terminé</span>
-          <span *ngSwitchCase="'warning'">⚠ Traitement terminé avec avertissements</span>
-          <span *ngSwitchCase="'error'">✖ Échec du traitement</span>
+          <span *ngSwitchCase="'running'">{{ 'TRT.ui.traitementEnCours' | translate }}</span>
+          <span *ngSwitchCase="'success'">{{ 'TRT.ui.traitementTermine' | translate }}</span>
+          <span *ngSwitchCase="'warning'">{{ 'TRT.ui.traitementTermineAvecAvertissements' | translate }}</span>
+          <span *ngSwitchCase="'error'">{{ 'TRT.ui.echecDuTraitement' | translate }}</span>
         </ng-container>
       </h3>
       <div class="proc-bar" role="progressbar" [attr.aria-valuenow]="processingPopup.progress" aria-valuemin="0" aria-valuemax="100">
@@ -82,13 +82,13 @@
       </div>
       <div class="proc-meta">
         <span>{{ processingPopup.progress | number:'1.0-0' }} %</span>
-        <span>Durée : {{ processingPopup.elapsed }}</span>
+        <span>{{ 'TRT.ui.duree' | translate: { p0: processingPopup.elapsed } }}</span>
       </div>
       <div class="proc-line">
-        Taille : {{ processingPopup.tailleMo }} · Traitement : {{ processingPopup.mode }}
+        {{ 'TRT.ui.tailleTraitement' | translate: { p0: processingPopup.tailleMo, p1: processingPopup.mode } }}
       </div>
       <div *ngIf="processingPopup.totalFiles > 0" class="proc-line">
-        Fichier {{ processingPopup.currentFile }} / {{ processingPopup.totalFiles }}
+        {{ 'TRT.ui.fichier' | translate: { p0: processingPopup.currentFile, p1: processingPopup.totalFiles } }}
       </div>
       <div class="proc-line"><strong>{{ processingPopup.step }}</strong></div>
       <div *ngIf="processingPopup.message" class="proc-line proc-muted">{{ processingPopup.message }}</div>
@@ -97,7 +97,7 @@
         <li *ngFor="let e of processingPopup.errors">{{ e }}</li>
       </ul>
       <div *ngIf="processingPopup.status !== 'running'" class="proc-actions">
-        <button type="button" class="ds-btn ds-btn--primary" (click)="closeProcessingPopup()">Fermer</button>
+        <button type="button" class="ds-btn ds-btn--primary" (click)="closeProcessingPopup()">{{ 'COMMON.actions.close' | translate }}</button>
       </div>
     </div>
   </ng-template>
@@ -138,20 +138,20 @@
   <!-- Traitement serveur : aperçu paginé, opérations et suppression du lot -->
   <section *ngIf="serverLot" class="srv-lot" aria-labelledby="srv-lot-title">
     <div class="srv-lot-head">
-      <h3 id="srv-lot-title">{{ 'TRT.ApercuDesDonneesCombinees' | translate }} — {{ serverLot.nbLignes | number }} lignes, {{ serverLot.nbFichiers }} fichier(s) <small>(lot n° {{ serverLot.lotId }})</small></h3>
+      <h3 id="srv-lot-title">{{ 'TRT.ui.lignesFichierS' | translate: { p0: ('TRT.ApercuDesDonneesCombinees' | translate), p1: (serverLot.nbLignes | number), p2: serverLot.nbFichiers } }} <small>{{ 'TRT.ui.lotN' | translate: { p0: serverLot.lotId } }}</small></h3>
       <div class="srv-export-actions">
-        <button type="button" class="ds-btn ds-btn--secondary" (click)="exporterServeur('csv')" [disabled]="serverBusy">Exporter CSV</button>
-        <button type="button" class="ds-btn ds-btn--secondary" (click)="exporterServeur('xlsx')" [disabled]="serverBusy">Exporter XLSX</button>
-        <button type="button" class="ds-btn ds-btn--secondary" (click)="nouveauTraitementServeur()" [disabled]="serverBusy">Nouveau traitement</button>
+        <button type="button" class="ds-btn ds-btn--secondary" (click)="exporterServeur('csv')" [disabled]="serverBusy">{{ 'TRT.ExporterCSV' | translate }}</button>
+        <button type="button" class="ds-btn ds-btn--secondary" (click)="exporterServeur('xlsx')" [disabled]="serverBusy">{{ 'TRT.ui.exporterXlsx' | translate }}</button>
+        <button type="button" class="ds-btn ds-btn--secondary" (click)="nouveauTraitementServeur()" [disabled]="serverBusy">{{ 'TRT.NouveauTraitement' | translate }}</button>
       </div>
     </div>
     <ul class="srv-files">
-      <li *ngFor="let f of serverLot.fichiers">{{ f.nom }} — {{ f.nbLignes | number }} lignes</li>
+      <li *ngFor="let f of serverLot.fichiers">{{ 'TRT.ui.lignes' | translate: { p0: f.nom, p1: (f.nbLignes | number) } }}</li>
     </ul>
 
     <fieldset class="srv-ops srv-filtres" [disabled]="serverBusy">
       <legend><i class="fas fa-filter"></i> {{ 'TRT.FiltrerLesLignes' | translate }}</legend>
-      <p class="srv-filtres-aide">Seules les lignes dont chaque colonne filtrée vaut une des valeurs cochées sont conservées (nouveau lot).</p>
+      <p class="srv-filtres-aide">{{ 'TRT.ui.seulesLesLignesDontChaqueColonne' | translate }}</p>
 
       <div class="srv-filtre" *ngFor="let f of serverFiltres; let i = index">
         <div class="srv-filtre-tete">
@@ -161,30 +161,30 @@
               <option *ngFor="let col of serverColumns" [value]="col">{{ col }}</option>
             </select>
           </label>
-          <button type="button" class="ds-btn ds-btn--danger" (click)="supprimerFiltreServeur(f)" [attr.aria-label]="'Supprimer le filtre ' + (i + 1)">
+          <button type="button" class="ds-btn ds-btn--danger" (click)="supprimerFiltreServeur(f)" [attr.aria-label]="('TRT.ui.supprimerLeFiltre' | translate) + (i + 1)">
             <i class="fas fa-trash"></i>
           </button>
         </div>
 
-        <p *ngIf="f.chargement" class="srv-filtre-info"><i class="fas fa-spinner fa-spin"></i> Lecture des valeurs de la colonne…</p>
+        <p *ngIf="f.chargement" class="srv-filtre-info"><i class="fas fa-spinner fa-spin"></i> {{ 'TRT.ui.lectureDesValeursDeLaColonne' | translate }}</p>
         <p *ngIf="f.erreur" class="error-msg" role="alert">{{ f.erreur }}</p>
 
         <div *ngIf="f.colonne && !f.chargement && !f.erreur">
           <div class="srv-filtre-outils">
-            <input type="search" class="ds-input" [(ngModel)]="f.recherche" placeholder="Rechercher une valeur…" aria-label="Rechercher une valeur" />
-            <button type="button" class="ds-btn ds-btn--secondary" (click)="toutCocherFiltreServeur(f, true)">Tout cocher</button>
-            <button type="button" class="ds-btn ds-btn--secondary" (click)="toutCocherFiltreServeur(f, false)">Tout décocher</button>
-            <span class="srv-filtre-info">{{ f.selection.length | number }} / {{ f.valeurs.length | number }} valeur(s) cochée(s)</span>
+            <input type="search" class="ds-input" [(ngModel)]="f.recherche" placeholder="{{ 'TRT.ui.rechercherUneValeur' | translate }}" [attr.aria-label]="'TRT.ui.rechercherUneValeur2' | translate" />
+            <button type="button" class="ds-btn ds-btn--secondary" (click)="toutCocherFiltreServeur(f, true)">{{ 'PROF.Toutcocher' | translate }}</button>
+            <button type="button" class="ds-btn ds-btn--secondary" (click)="toutCocherFiltreServeur(f, false)">{{ 'FU.Toutdécocher' | translate }}</button>
+            <span class="srv-filtre-info">{{ 'TRT.ui.valeurSCocheeS' | translate: { p0: (f.selection.length | number), p1: (f.valeurs.length | number) } }}</span>
           </div>
-          <p *ngIf="f.tronque" class="srv-filtre-info">Colonne très variée : seules les {{ f.valeurs.length | number }} premières valeurs distinctes sont proposées.</p>
-          <div class="srv-filtre-valeurs" role="group" [attr.aria-label]="'Valeurs de ' + f.colonne">
+          <p *ngIf="f.tronque" class="srv-filtre-info">{{ 'TRT.ui.colonneTresVarieeSeulesLesPremieres' | translate: { p0: (f.valeurs.length | number) } }}</p>
+          <div class="srv-filtre-valeurs" role="group" [attr.aria-label]="('TRT.ui.valeursDe' | translate) + f.colonne">
             <label *ngFor="let v of valeursAffichees(f)">
               <input type="checkbox" class="ds-checkbox" [checked]="f.selection.includes(v.valeur)"
                      (change)="basculerValeurFiltreServeur(f, v.valeur, $any($event.target).checked)" />
               <span>{{ v.valeur === '' ? ('TRT.Empty' | translate) : v.valeur }}</span>
               <small>{{ v.nb | number }}</small>
             </label>
-            <p *ngIf="!valeursAffichees(f).length" class="srv-filtre-info">Aucune valeur.</p>
+            <p *ngIf="!valeursAffichees(f).length" class="srv-filtre-info">{{ 'TRT.ui.aucuneValeur' | translate }}</p>
           </div>
         </div>
       </div>
@@ -203,28 +203,28 @@
     </fieldset>
 
     <fieldset class="srv-ops" [disabled]="serverBusy">
-      <legend>Opérations (créent un nouveau lot)</legend>
+      <legend>{{ 'TRT.ui.operationsCreentUnNouveauLot' | translate }}</legend>
       <div class="srv-ops-grid">
-        <label>Dédoublonner sur
+        <label>{{ 'TRT.ui.dedoublonnerSur' | translate }}
           <select multiple [(ngModel)]="serverOp.dedoublonnerSur">
             <option *ngFor="let col of serverColumns" [value]="col">{{ col }}</option>
           </select>
         </label>
-        <label>Convertir en nombre
+        <label>{{ 'TRT.ui.convertirEnNombre' | translate }}
           <select multiple [(ngModel)]="serverOp.colonnesNombre">
             <option *ngFor="let col of serverColumns" [value]="col">{{ col }}</option>
           </select>
         </label>
-        <label>Convertir en date (ISO)
+        <label>{{ 'TRT.ui.convertirEnDateIso' | translate }}
           <select multiple [(ngModel)]="serverOp.colonnesDate">
             <option *ngFor="let col of serverColumns" [value]="col">{{ col }}</option>
           </select>
         </label>
-        <label>Format de date
+        <label>{{ 'TRT.ui.formatDeDate' | translate }}
           <input type="text" [(ngModel)]="serverOp.formatDate" />
         </label>
       </div>
-      <button type="button" class="ds-btn ds-btn--primary" (click)="appliquerOperationServeur()">Appliquer</button>
+      <button type="button" class="ds-btn ds-btn--primary" (click)="appliquerOperationServeur()">{{ 'ACT.apply' | translate }}</button>
     </fieldset>
 
     <div class="srv-table-wrap">
@@ -244,9 +244,9 @@
       </table>
     </div>
     <div class="srv-pager">
-      <button type="button" class="ds-btn ds-btn--secondary" (click)="pagePrecedenteServeur()" [disabled]="serverPage <= 1">Précédent</button>
-      <span>Page {{ serverPage }} / {{ serverPageCount }}</span>
-      <button type="button" class="ds-btn ds-btn--secondary" (click)="pageSuivanteServeur()" [disabled]="serverPage >= serverPageCount">Suivant</button>
+      <button type="button" class="ds-btn ds-btn--secondary" (click)="pagePrecedenteServeur()" [disabled]="serverPage <= 1">{{ 'PAG.previous' | translate }}</button>
+      <span>{{ 'TRT.ui.page' | translate: { p0: serverPage, p1: serverPageCount } }}</span>
+      <button type="button" class="ds-btn ds-btn--secondary" (click)="pageSuivanteServeur()" [disabled]="serverPage >= serverPageCount">{{ 'PAG.next' | translate }}</button>
     </div>
   </section>
   <div *ngIf="successMsg.upload" class="success-msg" [innerHTML]="successMsg.upload"></div>
@@ -368,7 +368,7 @@
             </div>
             <div class="file-meta" *ngIf="totalEnergieCompareFile">
               <strong>{{ totalEnergieCompareFile.name }}</strong>
-              <small>{{ (totalEnergieCompareFile.size / 1024) | number:'1.0-0' }} Ko</small>
+              <small>{{ 'TRT.ui.ko' | translate: { p0: ((totalEnergieCompareFile.size / 1024) | number:'1.0-0') } }}</small>
               <div *ngIf="totalEnergieCompareData.length > 0" class="file-info">
                 <span class="info-badge">{{ totalEnergieCompareData.length }} {{ 'TRT.Rows' | translate }}</span>
                 <span class="info-badge">{{ totalEnergieCompareColumns.length }} {{ 'TRT.Columns' | translate }}</span>
@@ -951,7 +951,7 @@
 
         <div class="config-group">
           <label class="form-label">{{ 'TRT.NomColonneIdentifiant' | translate }}</label>
-          <input type="text" [(ngModel)]="multiMergeIdColumnName" placeholder="Jour" class="ds-input" [disabled]="multiMergeIsProcessing">
+          <input type="text" [(ngModel)]="multiMergeIdColumnName" placeholder="{{ 'LBL.day' | translate }}" class="ds-input" [disabled]="multiMergeIsProcessing">
           <small class="helper-text">{{ 'TRT.IdentifiantHelp' | translate }}</small>
         </div>
 
@@ -960,7 +960,7 @@
           <select [(ngModel)]="multiMergeDelimiter" class="ds-select" [disabled]="multiMergeIsProcessing">
             <option value=";">{{ 'TRT.PointVirgule' | translate }} (;)</option>
             <option value=",">{{ 'TRT.SeparateurVirgule' | translate }} (,)</option>
-            <option value="\t">{{ 'TRT.Tabulation' | translate }} (Tab)</option>
+            <option value="\t">{{ 'TRT.ui.tab' | translate: { p0: ('TRT.Tabulation' | translate) } }}</option>
             <option value="|">{{ 'TRT.Pipe' | translate }} (|)</option>
           </select>
         </div>
@@ -1087,21 +1087,20 @@
     <div class="preview-info">
       <p><strong>{{ 'TRT.SeparateurDetecte' | translate }}</strong> <code>{{ detectedDelimiter }}</code></p>
       <p><strong>{{ 'TRT.Colonnes2' | translate }}</strong> {{ csvPreviewColumns.length }}</p>
-      <p><strong>{{ 'TRT.Apercu' | translate }}</strong> {{ csvPreviewRowCount }} {{ 'TRT.Rows' | translate }} (10 premières affichées)</p>
+      <p><strong>{{ 'TRT.Apercu' | translate }}</strong> {{ 'TRT.ui.10PremieresAffichees' | translate: { p0: csvPreviewRowCount, p1: ('TRT.Rows' | translate) } }}</p>
       <div class="csv-batch-files" *ngIf="csvBatchFiles.length">
-        <p><strong>Fichiers du lot :</strong></p>
+        <p><strong>{{ 'TRT.ui.fichiersDuLot' | translate }}</strong></p>
         <div *ngFor="let f of csvBatchFiles" class="csv-batch-file" [class.is-warning]="f.headerSource === 'none'">
-          <strong>{{ f.name }}</strong> — en-tête ligne {{ f.headerLine }}, données à partir de la ligne {{ f.dataStartLine }},
-          {{ f.rowCount }} ligne(s), séparateur <code>{{ f.delimiter === '\t' ? 'tabulation' : f.delimiter }}</code>
+          <strong>{{ f.name }}</strong> {{ 'TRT.ui.enTeteLigneDonneesAPartir' | translate: { p0: f.headerLine, p1: f.dataStartLine, p2: f.rowCount } }} <code>{{ f.delimiter === '\t' ? 'tabulation' : f.delimiter }}</code>
           <span *ngIf="f.headerSource === 'none'" class="row-range-error">
-            En-tête non détecté : la 1re ligne a été prise. Utilisez le paramétrage manuel ci-dessous.
+            {{ 'TRT.ui.enTeteNonDetecteLa1re' | translate }}
           </span>
         </div>
       </div>
       <p>
-        <strong>Détection automatique :</strong>
-        en-tête ligne {{ csvAutoHeaderLine ?? '-' }}, données à partir de la ligne {{ csvAutoDataLine ?? '-' }}
-        <span *ngIf="csvRowRange"> — <strong>paramétrage appliqué :</strong> en-tête ligne {{ csvRowRange.headerLine }}, données à partir de la ligne {{ csvRowRange.dataStartLine }}</span>
+        <strong>{{ 'TRT.ui.detectionAutomatique' | translate }}</strong>
+        {{ 'TRT.ui.enTeteLigneDonneesAPartir2' | translate: { p0: (csvAutoHeaderLine ?? '-'), p1: (csvAutoDataLine ?? '-') } }}
+        <span *ngIf="csvRowRange"> — <strong>{{ 'TRT.ui.parametrageApplique' | translate }}</strong> {{ 'TRT.ui.enTeteLigneDonneesAPartir2' | translate: { p0: csvRowRange.headerLine, p1: csvRowRange.dataStartLine } }}</span>
       </p>
     </div>
 
@@ -1109,44 +1108,44 @@
     <div class="row-range-panel" *ngIf="csvSelectedCount > 1">
       <label class="row-range-toggle">
         <input type="checkbox" [checked]="multiLanguageHeaders" (change)="multiLanguageHeaders = $any($event.target).checked; onBatchLanguageChanged()" />
-        Les fichiers ont des en-têtes en plusieurs langues
+        {{ 'TRT.ui.lesFichiersOntDesEnTetes' | translate }}
       </label>
       <div *ngIf="multiLanguageHeaders" class="row-range-fields">
         <label>
-          Langue des en-têtes retenue
+          {{ 'TRT.ui.langueDesEnTetesRetenue' | translate }}
           <select (change)="batchHeaderLanguage = $any($event.target).value; onBatchLanguageChanged()">
-            <option value="fr" [selected]="batchHeaderLanguage === 'fr'">Français</option>
-            <option value="en" [selected]="batchHeaderLanguage === 'en'">Anglais</option>
+            <option value="fr" [selected]="batchHeaderLanguage === 'fr'">{{ 'TRT.ui.francais' | translate }}</option>
+            <option value="en" [selected]="batchHeaderLanguage === 'en'">{{ 'TRT.ui.anglais' | translate }}</option>
           </select>
         </label>
       </div>
-      <p class="row-range-hint">Sans cette case, la langue est choisie automatiquement (la plus fréquente dans les fichiers).</p>
+      <p class="row-range-hint">{{ 'TRT.ui.sansCetteCaseLaLangueEst' | translate }}</p>
     </div>
 
     <!-- Paramétrage optionnel des lignes -->
     <div class="row-range-panel">
       <label class="row-range-toggle">
         <input type="checkbox" [checked]="csvRowRangeEnabled" (change)="toggleCsvRowRange($any($event.target).checked)" />
-        Paramétrer manuellement l'en-tête et les données (optionnel)
+        {{ 'TRT.ui.parametrerManuellementLEnTeteEt' | translate }}
       </label>
 
       <div *ngIf="csvRowRangeEnabled" class="row-range-fields">
         <label>
-          Ligne d'en-tête
+          {{ 'TRT.ui.ligneDEnTete' | translate }}
           <input type="number" min="1" [value]="csvHeaderLineInput ?? ''"
                  (input)="onCsvRowRangeInput('header', $any($event.target).value)" />
         </label>
         <label>
-          Première ligne de données
+          {{ 'TRT.ui.premiereLigneDeDonnees' | translate }}
           <input type="number" min="1" [value]="csvDataLineInput ?? ''"
                  (input)="onCsvRowRangeInput('data', $any($event.target).value)" />
         </label>
-        <button type="button" class="ds-btn ds-btn--secondary" (click)="applyCsvRowRange()">Appliquer</button>
-        <button type="button" class="ds-btn ds-btn--secondary" (click)="resetCsvRowRange()">Détection automatique</button>
+        <button type="button" class="ds-btn ds-btn--secondary" (click)="applyCsvRowRange()">{{ 'ACT.apply' | translate }}</button>
+        <button type="button" class="ds-btn ds-btn--secondary" (click)="resetCsvRowRange()">{{ 'TRT.ui.detectionAutomatique2' | translate }}</button>
         <p *ngIf="csvRowRangeError" class="row-range-error">{{ csvRowRangeError }}</p>
       </div>
 
-      <p class="row-range-hint" *ngIf="csvRawPreviewLines.length > 0">Lignes brutes de {{ csvFileToProcess?.name }} (dernier fichier chargé)</p>
+      <p class="row-range-hint" *ngIf="csvRawPreviewLines.length > 0">{{ 'TRT.ui.lignesBrutesDeDernierFichierCharge' | translate: { p0: csvFileToProcess?.name } }}</p>
       <div class="row-range-lines" *ngIf="csvRawPreviewLines.length > 0">
         <div class="row-range-line" *ngFor="let line of csvRawPreviewLines"
              [class.is-header]="line.n === (csvRowRange ? csvRowRange.headerLine : csvAutoHeaderLine)"
@@ -1335,43 +1334,43 @@
 
      <!-- Comparaison avec un modèle : colonnes du modèle liées aux colonnes du traitement -->
      <div class="model-compare-panel" *ngIf="comparisonDisplayColumns.length">
-       <h4>Comparer avec un modèle</h4>
+       <h4>{{ 'TRT.ui.comparerAvecUnModele' | translate }}</h4>
        <div class="row-range-fields">
          <label>
-           Modèle
+           {{ 'APM.defaultModelName' | translate }}
            <select (change)="onModelSelectedManually($any($event.target).value)">
-             <option value="" [selected]="!selectedModelId">— aucun —</option>
+             <option value="" [selected]="!selectedModelId">{{ 'TRT.ui.aucun' | translate }}</option>
              <option *ngFor="let m of modelList" [value]="modelKey(m)" [selected]="modelKey(m) === selectedModelId">{{ m.name }}</option>
            </select>
          </label>
-         <span *ngIf="modelColumnsLoading">Chargement des colonnes du modèle…</span>
+         <span *ngIf="modelColumnsLoading">{{ 'TRT.ui.chargementDesColonnesDuModele' | translate }}</span>
          <span class="row-range-hint" *ngIf="modelDetectionMessage">{{ modelDetectionMessage }}</span>
        </div>
 
        <div *ngIf="selectedModelId && modelColumns.length" class="model-link-table">
          <div class="model-link-row model-link-head">
-           <span>Colonne du modèle</span>
-           <span>Colonne du traitement liée</span>
-           <span>État</span>
+           <span>{{ 'TRT.ui.colonneDuModele' | translate }}</span>
+           <span>{{ 'TRT.ui.colonneDuTraitementLiee' | translate }}</span>
+           <span>{{ 'OPL.État' | translate }}</span>
          </div>
          <div class="model-link-row" *ngFor="let m of modelColumns">
            <span>{{ m }}</span>
            <select (change)="onModelLinkChange(m, $any($event.target).value)">
-             <option value="" [selected]="!modelLinks[m]">— non liée —</option>
+             <option value="" [selected]="!modelLinks[m]">{{ 'TRT.ui.nonLiee' | translate }}</option>
              <option *ngFor="let d of comparisonDisplayColumns" [value]="d" [selected]="modelLinks[m] === d">{{ d }}</option>
            </select>
            <span [class.is-linked]="!!modelLinks[m]">
-             {{ !modelLinks[m] ? 'manquante' : (modelLinks[m] === m ? 'identique' : 'liée (nom différent)') }}
+             {{ !modelLinks[m] ? 'manquante' : (modelLinks[m] === m ? 'identique' : ('TRT.ui.lieeNomDifferent' | translate)) }}
            </span>
          </div>
          <p class="row-range-hint">
-           Colonnes du traitement sans lien :
+           {{ 'TRT.ui.colonnesDuTraitementSansLien' | translate }}
            <span *ngFor="let c of unlinkedDisplayColumns" class="model-chip">{{ c }}</span>
-           <span *ngIf="!unlinkedDisplayColumns.length">aucune</span>
+           <span *ngIf="!unlinkedDisplayColumns.length">{{ 'TRT.ui.aucune' | translate }}</span>
          </p>
          <div class="row-range-fields">
-           <button type="button" class="ds-btn ds-btn--secondary" (click)="applyModelLinks()">Appliquer les liens (renommer selon le modèle)</button>
-           <button type="button" class="ds-btn ds-btn--secondary" (click)="resetModelLinks()">Réinitialiser les liens</button>
+           <button type="button" class="ds-btn ds-btn--secondary" (click)="applyModelLinks()">{{ 'TRT.ui.appliquerLesLiensRenommerSelonLe' | translate }}</button>
+           <button type="button" class="ds-btn ds-btn--secondary" (click)="resetModelLinks()">{{ 'TRT.ui.reinitialiserLesLiens' | translate }}</button>
          </div>
          <p *ngIf="modelLinkMessage" class="row-range-hint">{{ modelLinkMessage }}</p>
        </div>
@@ -1751,7 +1750,7 @@
           <mat-label>{{ 'TRT.SelectionnerDesValeurs' | translate }}</mat-label>
           <mat-select #filterValueSelect [(ngModel)]="selectedFilterValues" multiple (selectionChange)="closeMatSelectPanelAfterSelection($event)">
             <mat-option>
-              <ngx-mat-select-search [formControl]="filterValueSearchCtrl" placeholderLabel="Rechercher une valeur..." noEntriesFoundLabel="Aucune valeur trouvée"></ngx-mat-select-search>
+              <ngx-mat-select-search [formControl]="filterValueSearchCtrl" [placeholderLabel]="'SEARCH.value' | translate" [noEntriesFoundLabel]="'SEARCH.noValue' | translate"></ngx-mat-select-search>
             </mat-option>
             <mat-option value="__TOUS__" (click)="selectAllFilterValues()">
               <strong>{{ 'TRT.📋Tous' | translate }}</strong>

@@ -3,11 +3,11 @@
   <div class="analysis-header">
     <h2>
       <i class="fas fa-file-excel icon" aria-hidden="true"></i>
-      Analyse Excel - {{ fileName }}
+      {{ 'LBL.ui.analyseExcel' | translate: { p0: fileName } }}
     </h2>
     <div class="loading-indicator" *ngIf="loading">
       <div class="spinner"></div>
-      <span>Analyse en cours...</span>
+      <span>{{ 'PRM.analyzing' | translate }}</span>
     </div>
   </div>
 
@@ -24,7 +24,7 @@
     <div class="file-info">
       <div class="card">
         <div class="card-header">
-          <h3>Informations du fichier</h3>
+          <h3>{{ 'LBL.ui.informationsDuFichier' | translate }}</h3>
         </div>
         <div class="card-content">
           <div class="info-grid">
@@ -32,13 +32,13 @@
               <strong>{{ 'LBL.typeLabel' | translate }}</strong> {{ getAnalysis()?.fileType?.toUpperCase() || 'N/A' }}
             </div>
             <div class="info-item">
-              <strong>Lignes:</strong> {{ getAnalysis()?.totalRows?.toLocaleString('fr-FR') || '0' }}
+              <strong>{{ 'LBL.ui.lignes' | translate }}</strong> {{ getAnalysis()?.totalRows?.toLocaleString('fr-FR') || '0' }}
             </div>
             <div class="info-item">
-              <strong>Colonnes:</strong> {{ getAnalysis()?.totalColumns || '0' }}
+              <strong>{{ 'LBL.ui.colonnes' | translate }}</strong> {{ getAnalysis()?.totalColumns || '0' }}
             </div>
             <div class="info-item">
-              <strong>Feuilles:</strong> {{ getAnalysis()?.sheetCount || '0' }}
+              <strong>{{ 'LBL.ui.feuilles' | translate }}</strong> {{ getAnalysis()?.sheetCount || '0' }}
             </div>
           </div>
         </div>
@@ -49,12 +49,12 @@
     <div class="data-quality">
       <div class="card">
         <div class="card-header">
-          <h3>Qualité des données</h3>
+          <h3>{{ 'LBL.ui.qualiteDesDonnees' | translate }}</h3>
         </div>
         <div class="card-content">
           <div class="quality-metrics">
             <div class="quality-item">
-              <div class="quality-label">Complétude</div>
+              <div class="quality-label">{{ 'LBL.ui.completude' | translate }}</div>
               <div class="quality-bar">
                 <div class="quality-fill" 
                      [style.width.%]="(getAnalysis()?.dataQuality?.completeness || 0) * 100"
@@ -64,7 +64,7 @@
               <div class="quality-value">{{ ((getAnalysis()?.dataQuality?.completeness || 0) * 100).toFixed(1) }}%</div>
             </div>
             <div class="quality-item">
-              <div class="quality-label">Cohérence</div>
+              <div class="quality-label">{{ 'LBL.ui.coherence' | translate }}</div>
               <div class="quality-bar">
                 <div class="quality-fill" 
                      [style.width.%]="(getAnalysis()?.dataQuality?.consistency || 0) * 100"
@@ -74,7 +74,7 @@
               <div class="quality-value">{{ ((getAnalysis()?.dataQuality?.consistency || 0) * 100).toFixed(1) }}%</div>
             </div>
             <div class="quality-item">
-              <div class="quality-label">Précision</div>
+              <div class="quality-label">{{ 'LBL.ui.precision' | translate }}</div>
               <div class="quality-bar">
                 <div class="quality-fill" 
                      [style.width.%]="(getAnalysis()?.dataQuality?.accuracy || 0) * 100"
@@ -87,7 +87,7 @@
           
           <!-- Problèmes détectés -->
           <div class="issues-section" *ngIf="getAnalysis()?.dataQuality?.issues?.length">
-            <h4>Problèmes détectés:</h4>
+            <h4>{{ 'LBL.ui.problemesDetectes' | translate }}</h4>
             <ul class="issues-list">
               <li *ngFor="let issue of getAnalysis()?.dataQuality?.issues">
                 <i class="fas fa-exclamation-triangle icon" aria-hidden="true"></i>
@@ -103,7 +103,7 @@
     <div class="columns-analysis">
       <div class="card">
         <div class="card-header">
-          <h3>Analyse des colonnes</h3>
+          <h3>{{ 'LBL.ui.analyseDesColonnes' | translate }}</h3>
         </div>
         <div class="card-content">
           <div class="columns-grid">
@@ -120,22 +120,22 @@
               </div>
               <div class="column-stats">
                 <div class="stat-item">
-                  <span class="stat-label">Confiance:</span>
+                  <span class="stat-label">{{ 'LBL.ui.confiance' | translate }}</span>
                   <span class="stat-value" 
                         [style.color]="getConfidenceColor(column.confidence)">
                     {{ (column.confidence * 100).toFixed(0) }}%
                   </span>
                 </div>
                 <div class="stat-item">
-                  <span class="stat-label">Valeurs:</span>
+                  <span class="stat-label">{{ 'LBL.ui.valeurs' | translate }}</span>
                   <span class="stat-value">{{ column.totalCount }}</span>
                 </div>
                 <div class="stat-item">
-                  <span class="stat-label">Uniques:</span>
+                  <span class="stat-label">{{ 'LBL.ui.uniques' | translate }}</span>
                   <span class="stat-value">{{ column.uniqueCount }}</span>
                 </div>
                 <div class="stat-item">
-                  <span class="stat-label">Nulles:</span>
+                  <span class="stat-label">{{ 'LBL.ui.nulles' | translate }}</span>
                   <span class="stat-value">{{ column.nullCount }}</span>
                 </div>
               </div>
@@ -144,11 +144,11 @@
               <div class="excel-properties" *ngIf="column.hasFormulas || column.hasErrors">
                 <div class="property-item" *ngIf="column.hasFormulas">
                   <i class="fas fa-wrench icon" aria-hidden="true"></i>
-                  <span>Formules</span>
+                  <span>{{ 'LBL.ui.formules' | translate }}</span>
                 </div>
                 <div class="property-item" *ngIf="column.hasErrors">
                   <i class="fas fa-times-circle icon" aria-hidden="true"></i>
-                  <span>Erreurs</span>
+                  <span>{{ 'LBL.ui.erreurs' | translate }}</span>
                 </div>
               </div>
             </div>
@@ -161,41 +161,41 @@
     <div class="column-details" *ngIf="hasSelectedColumn()">
       <div class="card">
         <div class="card-header">
-          <h3>Détails: {{ getSelectedColumn()?.columnName }}</h3>
+          <h3>{{ 'LBL.ui.details' | translate: { p0: (getSelectedColumn()?.columnName) } }}</h3>
         </div>
         <div class="card-content">
           <div class="details-grid">
             <div class="detail-section">
-              <h4>Informations générales</h4>
+              <h4>{{ 'LBL.ui.informationsGenerales' | translate }}</h4>
               <div class="detail-item">
-                <strong>Type détecté:</strong> {{ getSelectedColumn()?.type }}
+                <strong>{{ 'LBL.ui.typeDetecte' | translate }}</strong> {{ getSelectedColumn()?.type }}
               </div>
               <div class="detail-item">
-                <strong>Confiance:</strong> {{ ((getSelectedColumn()?.confidence || 0) * 100).toFixed(1) }}%
+                <strong>{{ 'LBL.ui.confiance' | translate }}</strong> {{ ((getSelectedColumn()?.confidence || 0) * 100).toFixed(1) }}%
               </div>
               <div class="detail-item">
-                <strong>Format suggéré:</strong> {{ getSelectedColumn()?.format || 'Non spécifié' }}
+                <strong>{{ 'LBL.ui.formatSuggere' | translate }}</strong> {{ getSelectedColumn()?.format || ('OPS.notSpecified' | translate) }}
               </div>
               <div class="detail-item" *ngIf="getSelectedColumn()?.currency">
-                <strong>Devise:</strong> {{ getSelectedColumn()?.currency }}
+                <strong>{{ 'LBL.ui.devise' | translate }}</strong> {{ getSelectedColumn()?.currency }}
               </div>
             </div>
             
             <div class="detail-section">
-              <h4>Statistiques</h4>
+              <h4>{{ 'NAV.statistics' | translate }}</h4>
               <div class="detail-item" *ngIf="getSelectedColumn()?.minValue !== undefined">
-                <strong>Min:</strong> {{ formatValue(getSelectedColumn()?.minValue) }}
+                <strong>{{ 'LBL.ui.min' | translate }}</strong> {{ formatValue(getSelectedColumn()?.minValue) }}
               </div>
               <div class="detail-item" *ngIf="getSelectedColumn()?.maxValue !== undefined">
-                <strong>Max:</strong> {{ formatValue(getSelectedColumn()?.maxValue) }}
+                <strong>{{ 'LBL.ui.max' | translate }}</strong> {{ formatValue(getSelectedColumn()?.maxValue) }}
               </div>
               <div class="detail-item" *ngIf="getSelectedColumn()?.averageValue !== undefined">
-                <strong>Moyenne:</strong> {{ formatValue(getSelectedColumn()?.averageValue) }}
+                <strong>{{ 'LBL.ui.moyenne' | translate }}</strong> {{ formatValue(getSelectedColumn()?.averageValue) }}
               </div>
             </div>
             
             <div class="detail-section">
-              <h4>Valeurs d'exemple</h4>
+              <h4>{{ 'LBL.ui.valeursDExemple' | translate }}</h4>
               <div class="sample-values">
                 <span class="sample-value" *ngFor="let value of getSelectedColumn()?.sampleValues?.slice(0, 5)">
                   {{ formatValue(value) }}
@@ -211,7 +211,7 @@
     <div class="recommendations">
       <div class="card">
         <div class="card-header">
-          <h3>Recommandations de formatage</h3>
+          <h3>{{ 'LBL.ui.recommandationsDeFormatage' | translate }}</h3>
         </div>
         <div class="card-content">
           <div class="recommendations-list">
@@ -233,7 +233,7 @@
                 <div class="recommendation-description">{{ recommendation.description }}</div>
                 <div class="recommendation-impact">{{ recommendation.impact }}</div>
                 <div class="recommendation-confidence">
-                  Confiance: {{ (recommendation.confidence * 100).toFixed(0) }}%
+                  {{ 'LBL.ui.confiance2' | translate: { p0: ((recommendation.confidence * 100).toFixed(0)) } }}
                 </div>
               </div>
               <div class="recommendation-actions">

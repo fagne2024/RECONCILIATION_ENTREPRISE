@@ -1,3 +1,4 @@
+import { I18nService } from '../services/i18n/i18n.service';
 /**
  * Stockage compact des lignes de traitement.
  *
@@ -189,7 +190,7 @@ export class CompactRowStore {
 
   private assertIndex(index: number): void {
     if (!Number.isInteger(index) || index < 0 || index >= this.packed.length) {
-      throw new RangeError(`Index de ligne hors limites : ${index} (taille ${this.packed.length})`);
+      throw new RangeError(I18nService.t('MSG.msg.indexDeLigneHorsLimitesTaille', { p0: index, p1: this.packed.length }));
     }
   }
 

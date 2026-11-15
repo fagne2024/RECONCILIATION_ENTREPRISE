@@ -1,9 +1,11 @@
 import { CommonModule } from '@angular/common';
+import { TranslateModule } from '@ngx-translate/core';
 import { Component } from '@angular/core';
 import { FormBuilder, FormGroup, ReactiveFormsModule, Validators } from '@angular/forms';
 import { Router, RouterModule } from '@angular/router';
 import { UserService } from '../../services/user.service';
 import { AppStateService } from '../../services/app-state.service';
+import { I18nService } from '../../services/i18n/i18n.service';
 
 /**
  * Écran de changement de mot de passe OBLIGATOIRE.
@@ -16,7 +18,7 @@ import { AppStateService } from '../../services/app-state.service';
 @Component({
   selector: 'app-password-change-required',
   standalone: true,
-  imports: [CommonModule, ReactiveFormsModule, RouterModule],
+  imports: [CommonModule, ReactiveFormsModule, RouterModule, TranslateModule],
   templateUrl: './password-change-required.component.html',
   styleUrls: ['./password-change-required.component.scss']
 })
@@ -73,7 +75,7 @@ export class PasswordChangeRequiredComponent {
       },
       error: (err) => {
         this.loading = false;
-        this.error = err.error?.error || 'Impossible de modifier le mot de passe. Vérifiez vos informations.';
+        this.error = err.error?.error || I18nService.t('AUTO_PASSWORD_CHANGE_REQUIRED.msg.impossibleDeModifierLeMotDe');
       }
     });
   }

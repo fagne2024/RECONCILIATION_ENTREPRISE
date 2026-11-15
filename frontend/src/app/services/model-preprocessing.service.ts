@@ -39,6 +39,7 @@ import {
   finalizeRemoveCharactersCell,
   isMsisdnPreserveColumn
 } from '../utils/text-cell.util';
+import { I18nService } from './i18n/i18n.service';
 
 /** Aligné sur COLUMN_RULES_SYNC_THRESHOLD : pas de micro-lots ni yield en dessous. */
 const PREPROCESS_INLINE_THRESHOLD = 20000;
@@ -108,7 +109,7 @@ export class ModelPreProcessingService {
       switch (sectionId) {
         case 'rowFilters':
           if (config.rowFilters?.length) {
-            await options?.onProgress?.('Filtres du modèle...', 0, result.length);
+            await options?.onProgress?.(I18nService.t('MSG.msg.filtresDuModele'), 0, result.length);
             await options?.yieldFn?.();
             result = await this.applyRowFiltersAsync(result, config.rowFilters, batchSize, options);
             if (!result.length) {
@@ -306,7 +307,7 @@ export class ModelPreProcessingService {
     }
 
     const macroBatch = rows.length > 50000 ? batchSize : Math.min(batchSize, 2000);
-    const progressMessage = 'Formatage du modèle...';
+    const progressMessage = I18nService.t('MSG.msg.formatageDuModele');
 
     for (let start = 0; start < rows.length; start += macroBatch) {
       const macroEnd = Math.min(start + macroBatch, rows.length);
@@ -618,7 +619,7 @@ export class ModelPreProcessingService {
       return rows;
     }
 
-    const message = 'Renommage des en-têtes...';
+    const message = I18nService.t('MSG.msg.renommageDesEnTetes');
     const total = rows.length;
     const progressInterval = total > 50000 ? 10000 : total > 10000 ? 5000 : total;
     const processingBatch = total > 50000
@@ -771,7 +772,7 @@ export class ModelPreProcessingService {
             next.push(row);
           }
         }
-        await options?.onProgress?.('Filtres du modèle...', end, filtered.length);
+        await options?.onProgress?.(I18nService.t('MSG.msg.filtresDuModele'), end, filtered.length);
         await options?.yieldFn?.();
       }
       filtered = next;
@@ -1677,66 +1678,66 @@ export class ModelPreProcessingService {
     const parts: string[] = [];
 
     if (filters.length) {
-      parts.push(`${filters.length} filtre(s) de lignes`);
+      parts.push(I18nService.t('MSG.msg.filtreSDeLignes', { p0: filters.length }));
     }
     if (formats.length) {
-      parts.push(`${formats.length} action(s) de formatage`);
+      parts.push(I18nService.t('MSG.msg.actionSDeFormatage', { p0: formats.length }));
     }
     if (concatRules.length) {
-      parts.push(`${concatRules.length} concaténation(s) de colonnes`);
+      parts.push(I18nService.t('MSG.msg.concatenationSDeColonnes', { p0: concatRules.length }));
     }
     if (mathRules.length) {
-      parts.push(`${mathRules.length} calcul(s) de colonnes`);
+      parts.push(I18nService.t('MSG.msg.calculSDeColonnes', { p0: mathRules.length }));
     }
     if (valueMappings.length) {
-      parts.push(`${valueMappings.length} renommage(s) de valeurs`);
+      parts.push(I18nService.t('MSG.msg.renommageSDeValeurs', { p0: valueMappings.length }));
     }
     if (columnRenameRules.length) {
-      parts.push(`${columnRenameRules.length} renommage(s) d'en-têtes`);
+      parts.push(I18nService.t('MSG.msg.renommageSDEnTetes', { p0: columnRenameRules.length }));
     }
     if (this.isEnvColumnEnabled(config)) {
-      parts.push(`colonne ${ENV_COLUMN_NAME}`);
+      parts.push(I18nService.t('MSG.pp.envColumn', { name: ENV_COLUMN_NAME }));
     }
     if (this.isExportColumnFilterEnabled(config)) {
       const kept = config?.exportColumnFilter?.keptColumns?.length ?? 0;
       parts.push(kept > 0
-        ? `export : ${kept} colonne(s) conservée(s)`
-        : 'filtrage colonnes export');
+        ? I18nService.t('MSG.msg.exportColonneSConserveeS', { p0: kept })
+        : I18nService.t('MSG.msg.filtrageColonnesExport'));
     }
 
     const detailLines: string[] = [];
     filters.forEach(filter => {
-      detailLines.push(`• Filtre : ${filter.column} → ${filter.selectedValues.join(', ')}`);
+      detailLines.push(I18nService.t('MSG.msg.filtre', { p0: filter.column, p1: filter.selectedValues.join(', ') }));
     });
     formats.forEach(action => {
-      detailLines.push(`• Format : ${this.describeFormatAction(action)}`);
+      detailLines.push(I18nService.t('MSG.msg.format', { p0: this.describeFormatAction(action) }));
     });
     concatRules.forEach(rule => {
       const separatorLabel = rule.separator === ' '
-        ? 'espace'
+        ? I18nService.t('MSG.pp.space')
         : `« ${rule.separator} »`;
       detailLines.push(
-        `• Concaténation : ${rule.sourceColumns.join(' + ')} → ${rule.targetColumn} (séparateur ${separatorLabel})`
+        I18nService.t('MSG.msg.concatenationSeparateur', { p0: rule.sourceColumns.join(' + '), p1: rule.targetColumn, p2: separatorLabel })
       );
     });
     mathRules.forEach(rule => {
       const operator = rule.operation === 'subtract' ? '−' : '+';
       detailLines.push(
-        `• Calcul : ${rule.sourceColumnA} ${operator} ${rule.sourceColumnB} → ${rule.targetColumn}`
+        I18nService.t('MSG.msg.calcul', { p0: rule.sourceColumnA, p1: operator, p2: rule.sourceColumnB, p3: rule.targetColumn })
       );
     });
     valueMappings.forEach(mapping => {
       const conditionColumn = (mapping.conditionColumn ?? '').trim();
       const conditionValue = (mapping.conditionValue ?? '').trim();
       const conditionSuffix = conditionColumn && conditionValue
-        ? ` [si ${conditionColumn} = « ${conditionValue} »]`
+        ? I18nService.t('MSG.pp.condEquals', { column: conditionColumn, value: conditionValue })
         : '';
       detailLines.push(
-        `• Renommage : ${mapping.column} — « ${mapping.fromValue} » → « ${mapping.toValue} »${conditionSuffix}`
+        I18nService.t('MSG.msg.renommage', { p0: mapping.column, p1: mapping.fromValue, p2: mapping.toValue, p3: conditionSuffix })
       );
     });
     columnRenameRules.forEach(rule => {
-      detailLines.push(`• En-tête : ${rule.sourceColumn} → ${rule.targetColumn}`);
+      detailLines.push(I18nService.t('MSG.msg.enTete', { p0: rule.sourceColumn, p1: rule.targetColumn }));
     });
     const envValue = this.getActiveEnvColumnValue(config);
     if (envValue) {
@@ -1746,8 +1747,8 @@ export class ModelPreProcessingService {
       const kept = config?.exportColumnFilter?.keptColumns || [];
       detailLines.push(
         kept.length
-          ? `• Export : ${kept.length} colonne(s) — ${kept.join(', ')}`
-          : `• Export : toutes les colonnes du catalogue`
+          ? I18nService.t('MSG.msg.exportColonneS', { p0: kept.length, p1: kept.join(', ') })
+          : I18nService.t('MSG.msg.exportToutesLesColonnesDuCatalogue')
       );
     }
 
@@ -1775,10 +1776,10 @@ export class ModelPreProcessingService {
 
     const removed = rowsBefore - rowsAfter;
     const filterInfo = removed > 0
-      ? `${removed} ligne(s) exclue(s) par les filtres`
-      : 'aucune ligne exclue par les filtres';
+      ? I18nService.t('MSG.msg.ligneSExclueSParLes', { p0: removed })
+      : I18nService.t('MSG.msg.aucuneLigneExclueParLesFiltres');
 
-    return `${summary.summaryText} appliqués (${filterInfo}).\n${summary.detailText}`;
+    return I18nService.t('MSG.msg.appliques', { p0: summary.summaryText, p1: filterInfo, p2: summary.detailText });
   }
 
   private describeFormatAction(action: ModelFormatAction): string {
@@ -1787,33 +1788,33 @@ export class ModelPreProcessingService {
 
     switch (action.type) {
       case 'removeSpecialStrings':
-        return `${columns} — supprimer « ${action.specialStringToRemove ?? ''} » (${action.specialStringRemovalMode ?? 'all'})${conditionSuffix}`;
+        return I18nService.t('MSG.msg.supprimer', { p0: columns, p1: action.specialStringToRemove ?? '', p2: action.specialStringRemovalMode ?? 'all', p3: conditionSuffix });
       case 'removeCharacters': {
-        const mode = action.removeCharMode === 'keep' ? 'conserver' : 'supprimer';
+        const mode = action.removeCharMode === 'keep' ? I18nService.t('MSG.pp.keep') : I18nService.t('MSG.msg.supprimer2');
         const position = action.removeCharPosition === 'end'
-          ? 'fin'
+          ? I18nService.t('MSG.pp.end')
           : action.removeCharPosition === 'specific'
-            ? `position ${action.removeCharSpecificPosition ?? 1}`
-            : 'début';
+            ? I18nService.t('MSG.pp.position', { n: action.removeCharSpecificPosition ?? 1 })
+            : I18nService.t('MSG.msg.debut');
         const leadingZeroSuffix = action.leadingZeroMode === 'keep'
-          ? ', zéro initial conservé'
+          ? I18nService.t('MSG.msg.zeroInitialConserve')
           : action.leadingZeroMode === 'strip'
-            ? ', zéro initial supprimé'
+            ? I18nService.t('MSG.msg.zeroInitialSupprime')
             : '';
-        return `${columns} — ${mode} ${action.removeCharCount ?? 1} caractère(s) depuis la ${position}${leadingZeroSuffix}${conditionSuffix}`;
+        return I18nService.t('MSG.msg.caractereSDepuisLa', { p0: columns, p1: mode, p2: action.removeCharCount ?? 1, p3: position, p4: leadingZeroSuffix, p5: conditionSuffix });
       }
       case 'removeNumbers':
-        return `${columns} — supprimer les chiffres${conditionSuffix}`;
+        return I18nService.t('MSG.msg.supprimerLesChiffres', { p0: columns, p1: conditionSuffix });
       case 'removeIndicatif':
-        return `${columns} — supprimer indicatif (${action.indicatifType ?? 'international'})${conditionSuffix}`;
+        return I18nService.t('MSG.msg.supprimerIndicatif', { p0: columns, p1: action.indicatifType ?? 'international', p2: conditionSuffix });
       case 'removeDecimals':
-        return `${columns} — supprimer décimales (séparateur ${action.decimalSeparator ?? ','})${conditionSuffix}`;
+        return I18nService.t('MSG.msg.supprimerDecimalesSeparateur', { p0: columns, p1: action.decimalSeparator ?? ',', p2: conditionSuffix });
       case 'keepLastDigits':
-        return `${columns} — garder ${action.keepLastDigitsCount ?? 3} derniers chiffres${conditionSuffix}`;
+        return I18nService.t('MSG.msg.garderDerniersChiffres', { p0: columns, p1: action.keepLastDigitsCount ?? 3, p2: conditionSuffix });
       case 'removeZeroDecimals':
-        return `${columns} — supprimer .0 en fin de valeur${conditionSuffix}`;
+        return I18nService.t('MSG.msg.supprimer0EnFinDeValeur', { p0: columns, p1: conditionSuffix });
       case 'removeSpaces':
-        return `${columns} — supprimer espaces (${action.removeSpacesType ?? 'all'})${conditionSuffix}`;
+        return I18nService.t('MSG.msg.supprimerEspaces', { p0: columns, p1: action.removeSpacesType ?? 'all', p2: conditionSuffix });
       default:
         return `${columns}${conditionSuffix}`;
     }
@@ -1825,8 +1826,8 @@ export class ModelPreProcessingService {
     }
     const values = (action.conditionValue ?? '').trim();
     return values.includes(',')
-      ? ` [si ${action.conditionColumn} ∈ { ${values} }]`
-      : ` [si ${action.conditionColumn} = « ${values} »]`;
+      ? I18nService.t('MSG.pp.condIn', { column: action.conditionColumn, values })
+      : I18nService.t('MSG.pp.condEquals', { column: action.conditionColumn, value: values });
   }
 
   /** Colonnes nécessaires en entrée / conservées en sortie pour le mode assisté. */

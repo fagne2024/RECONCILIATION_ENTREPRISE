@@ -2,6 +2,7 @@ import { Component, OnInit, OnDestroy } from '@angular/core';
 import { Router } from '@angular/router';
 import { Subscription } from 'rxjs';
 import { DashboardReconciliationService, CountryServiceMetrics, DashboardStatusFilter } from '../../services/dashboard-reconciliation.service';
+import { I18nService } from '../../services/i18n/i18n.service';
 
 // Interface supprimée car elle est maintenant dans le service
 
@@ -120,7 +121,7 @@ export class DashboardReconciliationComponent implements OnInit, OnDestroy {
                 },
                 error: (error) => {
                     console.error('❌ Erreur lors du chargement des données:', error);
-                    this.error = 'Erreur lors du chargement des données de réconciliation';
+                    this.error = I18nService.t('LBL.msg.erreurLorsDuChargementDesDonnees');
                     this.loading = false;
                 }
             })

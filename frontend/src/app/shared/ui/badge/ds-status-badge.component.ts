@@ -1,5 +1,6 @@
 import { ChangeDetectionStrategy, Component, Input } from '@angular/core';
 import { CommonModule } from '@angular/common';
+import { TranslateModule } from '@ngx-translate/core';
 
 /**
  * Statuts visuels. Le composant n'en déduit aucun : la page fournit le statut
@@ -22,26 +23,26 @@ interface StatusDefinition {
 }
 
 export const DS_STATUS_DEFINITIONS: Readonly<Record<DsStatus, StatusDefinition>> = {
-  'matched': { label: 'Rapproché', icon: 'fa-check' },
-  'amount-gap': { label: 'Écart de montant', icon: 'fa-exclamation-circle' },
-  'missing-statement': { label: 'Absent du relevé', icon: 'fa-file-invoice' },
-  'missing-bo': { label: 'Absent du BO', icon: 'fa-database' },
-  'duplicate': { label: 'Doublon', icon: 'fa-clone' },
-  'done': { label: 'Traité', icon: 'fa-check-circle' },
-  'in-progress': { label: 'En cours', icon: 'fa-sync-alt' },
-  'pending': { label: 'En attente', icon: 'fa-clock' },
-  'failed': { label: 'Erreur', icon: 'fa-times-circle' }
+  'matched': { label: 'DS.status.matched', icon: 'fa-check' },
+  'amount-gap': { label: 'DS.status.amountGap', icon: 'fa-exclamation-circle' },
+  'missing-statement': { label: 'DS.status.missingStatement', icon: 'fa-file-invoice' },
+  'missing-bo': { label: 'DS.status.missingBo', icon: 'fa-database' },
+  'duplicate': { label: 'DS.status.duplicate', icon: 'fa-clone' },
+  'done': { label: 'DS.status.done', icon: 'fa-check-circle' },
+  'in-progress': { label: 'DS.status.inProgress', icon: 'fa-sync-alt' },
+  'pending': { label: 'DS.status.pending', icon: 'fa-clock' },
+  'failed': { label: 'DS.status.failed', icon: 'fa-times-circle' }
 };
 
 @Component({
   selector: 'ds-status-badge',
   standalone: true,
-  imports: [CommonModule],
+  imports: [CommonModule, TranslateModule],
   changeDetection: ChangeDetectionStrategy.OnPush,
   template: `
     <span class="ds-badge ds-badge--{{ status }}">
       <i *ngIf="showIcon" class="fas {{ definition.icon }}" aria-hidden="true"></i>
-      <span>{{ label || definition.label }}</span>
+      <span>{{ label || (definition.label | translate) }}</span>
     </span>
   `
 })

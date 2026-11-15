@@ -1,5 +1,6 @@
 import { Component, Input, OnInit, OnChanges, SimpleChanges } from '@angular/core';
 import { ExcelTypeDetectionService, ExcelFileAnalysis, ExcelColumnInfo, ExcelFormattingRecommendation } from '../../services/excel-type-detection.service';
+import { I18nService } from '../../services/i18n/i18n.service';
 
 @Component({
   selector: 'app-excel-analysis',
@@ -44,7 +45,7 @@ export class ExcelAnalysisComponent implements OnInit, OnChanges {
       console.log('✅ Analyse Excel terminée:', this.analysis);
     } catch (error) {
       console.error('❌ Erreur lors de l\'analyse Excel:', error);
-      this.error = 'Erreur lors de l\'analyse du fichier Excel';
+      this.error = I18nService.t('LBL.msg.erreurLorsDeLAnalyseDu');
     } finally {
       this.loading = false;
     }
@@ -98,7 +99,7 @@ export class ExcelAnalysisComponent implements OnInit, OnChanges {
     console.log('🔧 Application de la recommandation:', recommendation);
     // Ici on pourrait implémenter l'application automatique des recommandations
     // Pour l'instant, on affiche juste un message
-    alert(`Recommandation appliquée: ${recommendation.description}`);
+    alert(I18nService.t('LBL.msg.recommandationAppliquee', { p0: recommendation.description }));
   }
 
   getRecommendationIcon(type: string): string {

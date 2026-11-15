@@ -230,7 +230,7 @@
                 (click)="openSuiviIdPopup(record)"
                 class="create-suivi-id-button ds-btn ds-btn--secondary ds-btn--sm"
                 [disabled]="isSavingSuiviId"
-                [title]="hasSuiviId(record) ? 'Modifier ou récupérer l\'ID d\'annulation' : 'Saisir ou récupérer l\'ID d\'annulation'">
+                [title]="hasSuiviId(record) ? ('TBL.ui.modifierOuRecupererLIdD' | translate) : ('TBL.ui.saisirOuRecupererLIdD' | translate)">
                 <i class="fas" [ngClass]="hasSuiviId(record) ? 'fa-check-circle' : 'fa-plus'"></i> ID
               </button>
             </td>
@@ -490,50 +490,49 @@
   <div *ngIf="showSuiviIdPopup" class="oppart-overlay suivi-id-overlay" (click)="closeSuiviIdPopup()">
     <div class="oppart-popup suivi-id-popup" (click)="$event.stopPropagation()">
       <div class="popup-header oppart-header">
-        <h3>ID Annulation</h3>
+        <h3>{{ 'TBL.ui.idAnnulation' | translate }}</h3>
         <button type="button" (click)="closeSuiviIdPopup()" class="close-btn">×</button>
       </div>
 
       <div class="oppart-content">
         <div class="suivi-id-note">
-          L'ID est enregistré dans <strong>Suivi TRX à annuler</strong> avec les informations de cet écart partenaire.
-          Le statut passe automatiquement à <strong>OK</strong>.
+          {{ 'TBL.ui.lIdEstEnregistreDans' | translate }} <strong>{{ 'NAV.suiviTrxAnnuler' | translate }}</strong> {{ 'TBL.ui.avecLesInformationsDeCetEcart' | translate }} <strong>OK</strong>.
         </div>
 
         <div class="suivi-id-grid">
           <label>
-            <span>Transaction ID</span>
+            <span>{{ 'TBL.ui.transactionId' | translate }}</span>
             <input type="text" [value]="suiviIdFields.transactionId || '—'" readonly>
           </label>
           <label>
-            <span>Téléphone</span>
+            <span>{{ 'TBL.phone' | translate }}</span>
             <input type="text" [value]="suiviIdFields.telephone || '—'" readonly>
           </label>
           <label>
-            <span>Montant</span>
+            <span>{{ 'TBL.amount' | translate }}</span>
             <input type="text" [value]="suiviIdFields.montant || '—'" readonly>
           </label>
           <label>
-            <span>Date</span>
+            <span>{{ 'TBL.date' | translate }}</span>
             <input type="text" [value]="suiviIdFields.date || '—'" readonly>
           </label>
         </div>
 
         <div class="suivi-id-recover" *ngIf="suiviIdCandidates.length > 0 || suiviIdFieldOptions.length > 0">
           <div class="suivi-id-recover-head">
-            <span class="suivi-id-recover-title">Récupérer un ID existant</span>
+            <span class="suivi-id-recover-title">{{ 'TBL.ui.recupererUnIdExistant' | translate }}</span>
             <button
               type="button"
               class="suivi-id-refresh"
               (click)="refreshSuiviIdCandidates()"
               [disabled]="isSavingSuiviId"
-              title="Actualiser la recherche dans les données existantes">
-              <i class="fas fa-sync-alt"></i> Actualiser
+              title="{{ 'TBL.ui.actualiserLaRechercheDansLesDonnees' | translate }}">
+              <i class="fas fa-sync-alt"></i> {{ 'ACT.refresh' | translate }}
             </button>
           </div>
 
           <div class="suivi-id-candidates" *ngIf="suiviIdCandidates.length > 0">
-            <span class="suivi-id-recover-label">Trouvé dans les données :</span>
+            <span class="suivi-id-recover-label">{{ 'TBL.ui.trouveDansLesDonnees' | translate }}</span>
             <div class="suivi-id-chips">
               <button
                 type="button"
@@ -541,7 +540,7 @@
                 *ngFor="let candidate of suiviIdCandidates"
                 (click)="useSuiviIdCandidate(candidate)"
                 [disabled]="isSavingSuiviId"
-                [title]="'Utiliser l\'ID ' + candidate.id + ' (' + candidate.source + ')'">
+                [title]="('TBL.ui.utiliserLId' | translate) + candidate.id + ' (' + candidate.source + ')'">
                 <span class="suivi-id-chip-value">{{ candidate.id }}</span>
                 <span class="suivi-id-chip-source">{{ candidate.source }}</span>
               </button>
@@ -550,14 +549,14 @@
 
           <div class="suivi-id-picker" *ngIf="suiviIdFieldOptions.length > 0">
             <label class="suivi-id-recover-label" for="suiviIdFieldSelect">
-              Ou utiliser la valeur d'un champ de la ligne :
+              {{ 'TBL.ui.ouUtiliserLaValeurDUn' | translate }}
             </label>
             <div class="suivi-id-picker-row">
               <select
                 id="suiviIdFieldSelect"
                 [(ngModel)]="suiviIdSelectedField"
                 [disabled]="isSavingSuiviId">
-                <option value="">— Choisir un champ —</option>
+                <option value="">{{ 'TBL.ui.choisirUnChamp' | translate }}</option>
                 <option *ngFor="let option of suiviIdFieldOptions" [value]="option.key">
                   [{{ option.source }}] {{ option.label }} : {{ shortSuiviIdValue(option.value) }}
                 </option>
@@ -567,41 +566,41 @@
                 class="suivi-id-use-field"
                 (click)="useSuiviIdFieldValue()"
                 [disabled]="isSavingSuiviId || !suiviIdSelectedField">
-                Utiliser
+                {{ 'TBL.ui.utiliser' | translate }}
               </button>
             </div>
           </div>
         </div>
 
         <p class="suivi-id-hint" *ngIf="suiviIdCandidates.length === 0 && suiviIdFieldOptions.length === 0">
-          Aucun ID n'a pu être récupéré automatiquement : saisissez-le manuellement ci-dessous.
+          {{ 'TBL.ui.aucunIdNAPuEtre' | translate }}
         </p>
 
         <label class="suivi-id-input-row">
-          <span>ID Annulation <em>*</em> <small class="suivi-id-input-hint">(saisie manuelle)</small></span>
+          <span>{{ 'TBL.ui.idAnnulation' | translate }} <em>*</em> <small class="suivi-id-input-hint">{{ 'TBL.ui.saisieManuelle' | translate }}</small></span>
           <input
             type="text"
             [(ngModel)]="suiviIdValue"
             [disabled]="isSavingSuiviId"
-            placeholder="Saisir ou récupérer l'ID d'annulation">
+            placeholder="{{ 'TBL.ui.saisirOuRecupererLIdD2' | translate }}">
         </label>
 
         <p class="suivi-id-hint" *ngIf="suiviIdRecord && hasSuiviId(suiviIdRecord)">
-          Un ID d'annulation existe déjà pour cette transaction : la valeur sera mise à jour.
+          {{ 'TBL.ui.unIdDAnnulationExisteDeja' | translate }}
         </p>
         <p class="suivi-id-hint" *ngIf="suiviIdRecord && !suiviIdFields.transactionId && !suiviIdFields.telephone && !suiviIdFields.montant">
-          Aucun téléphone, montant ou Transaction ID détecté : la ligne sera enregistrée avec les informations disponibles.
+          {{ 'TBL.ui.aucunTelephoneMontantOuTransactionId' | translate }}
         </p>
       </div>
 
       <div class="oppart-actions">
-        <button type="button" (click)="closeSuiviIdPopup()" class="cancel-btn" [disabled]="isSavingSuiviId">Annuler</button>
+        <button type="button" (click)="closeSuiviIdPopup()" class="cancel-btn" [disabled]="isSavingSuiviId">{{ 'COMMON.actions.cancel' | translate }}</button>
         <button
           type="button"
           (click)="saveSuiviId()"
           class="save-oppart-btn"
           [disabled]="isSavingSuiviId || !suiviIdValue.trim()">
-          {{ isSavingSuiviId ? 'Enregistrement…' : 'Enregistrer' }}
+          {{ isSavingSuiviId ? ('ETA.modal.saving' | translate) : ('COMMON.actions.save' | translate) }}
         </button>
       </div>
     </div>

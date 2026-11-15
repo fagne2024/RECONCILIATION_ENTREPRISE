@@ -1,3 +1,4 @@
+import { I18nService } from './i18n/i18n.service';
 ﻿import { Injectable } from '@angular/core';
 
 export interface KeySuggestion {
@@ -206,7 +207,7 @@ export class KeySuggestionService {
                     type: type === 'suffix' ? 'remove_suffix' : 
                           type === 'prefix' ? 'remove_prefix' : 'remove_pattern',
                     pattern: pattern,
-                    description: `Supprimer le ${type} "${pattern}" des valeurs BO`
+                    description: I18nService.t('MSG.msg.supprimerLeDesValeursBo', { p0: type, p1: pattern })
                 };
             }
             return null;
@@ -246,7 +247,7 @@ export class KeySuggestionService {
             return {
                 type: 'format_transform',
                 pattern: 'remove_punctuation',
-                description: `Supprimer toute la ponctuation et caractères spéciaux`
+                description: I18nService.t('MSG.msg.supprimerTouteLaPonctuationEtCaracteres')
             };
         }
         
@@ -291,7 +292,7 @@ export class KeySuggestionService {
             return {
                 type: 'format_transform',
                 pattern: 'extract_segment',
-                description: `Extraire des segments numériques ou alphanumériques`
+                description: I18nService.t('MSG.msg.extraireDesSegmentsNumeriquesOuAlphanume')
             };
         }
         
@@ -697,7 +698,7 @@ export class KeySuggestionService {
                             const combinedTransformation = {
                                 type: 'multi_step' as const,
                                 pattern: `${bestPattern} + ${addPattern}`,
-                                description: `${bestDesc} puis ${addDesc}`,
+                                description: I18nService.t('MSG.msg.puis', { p0: bestDesc, p1: addDesc }),
                                 steps: [...bestSteps, transform.name]
                             };
                             
@@ -776,7 +777,7 @@ export class KeySuggestionService {
             return {
                 type: 'format_transform',
                 pattern: 'extract_id',
-                description: `Extraire l'ID numérique (${(extractIdScore * 100).toFixed(0)}% des valeurs)`
+                description: I18nService.t('MSG.msg.extraireLIdNumeriqueDesValeurs', { p0: (extractIdScore * 100).toFixed(0) })
             };
         }
         
@@ -784,7 +785,7 @@ export class KeySuggestionService {
             return {
                 type: 'format_transform',
                 pattern: 'extract_transaction',
-                description: `Extraire le code de transaction (${(extractTransactionScore * 100).toFixed(0)}% des valeurs)`
+                description: I18nService.t('MSG.msg.extraireLeCodeDeTransactionDes', { p0: (extractTransactionScore * 100).toFixed(0) })
             };
         }
         
@@ -792,7 +793,7 @@ export class KeySuggestionService {
             return {
                 type: 'format_transform',
                 pattern: 'extract_numeric',
-                description: `Extraire les chiffres (${(extractNumericScore * 100).toFixed(0)}% des valeurs)`
+                description: I18nService.t('MSG.msg.extraireLesChiffresDesValeurs', { p0: (extractNumericScore * 100).toFixed(0) })
             };
         }
         
@@ -837,7 +838,7 @@ export class KeySuggestionService {
             return {
                 type: 'case_transform',
                 pattern: 'to_lower',
-                description: `Convertir en minuscules (${(upperToLowerScore * 100).toFixed(0)}% des valeurs)`
+                description: I18nService.t('MSG.msg.convertirEnMinusculesDesValeurs', { p0: (upperToLowerScore * 100).toFixed(0) })
             };
         }
         
@@ -845,7 +846,7 @@ export class KeySuggestionService {
             return {
                 type: 'case_transform',
                 pattern: 'to_upper',
-                description: `Convertir en majuscules (${(lowerToUpperScore * 100).toFixed(0)}% des valeurs)`
+                description: I18nService.t('MSG.msg.convertirEnMajusculesDesValeurs', { p0: (lowerToUpperScore * 100).toFixed(0) })
             };
         }
         
@@ -853,7 +854,7 @@ export class KeySuggestionService {
             return {
                 type: 'case_transform',
                 pattern: 'normalize',
-                description: `Normaliser (supprimer caractères spéciaux, ${(normalizeScore * 100).toFixed(0)}% des valeurs)`
+                description: I18nService.t('MSG.msg.normaliserSupprimerCaracteresSpeciauxDes', { p0: (normalizeScore * 100).toFixed(0) })
             };
         }
         
@@ -932,7 +933,7 @@ export class KeySuggestionService {
             return {
                 type: 'format_transform',
                 pattern: bestTransform.key,
-                description: `${descriptions[bestTransform.key as keyof typeof descriptions]} (${(bestTransform.score * 100).toFixed(0)}% des valeurs)`
+                description: I18nService.t('MSG.msg.desValeurs', { p0: descriptions[bestTransform.key as keyof typeof descriptions], p1: (bestTransform.score * 100).toFixed(0) })
             };
         }
         
@@ -1559,7 +1560,7 @@ export class KeySuggestionService {
             return {
                 type: 'format_transform',
                 pattern: bestTransform.key,
-                description: `${descriptions[bestTransform.key as keyof typeof descriptions]} (${(bestTransform.score * 100).toFixed(0)}% des valeurs)`
+                description: I18nService.t('MSG.msg.desValeurs', { p0: descriptions[bestTransform.key as keyof typeof descriptions], p1: (bestTransform.score * 100).toFixed(0) })
             };
         }
         
@@ -1626,7 +1627,7 @@ export class KeySuggestionService {
             return {
                 type: 'format_transform',
                 pattern: bestTransform.key,
-                description: `${descriptions[bestTransform.key as keyof typeof descriptions]} (${(bestTransform.score * 100).toFixed(0)}% des valeurs)`
+                description: I18nService.t('MSG.msg.desValeurs', { p0: descriptions[bestTransform.key as keyof typeof descriptions], p1: (bestTransform.score * 100).toFixed(0) })
             };
         }
         
@@ -1697,7 +1698,7 @@ export class KeySuggestionService {
             return {
                 type: 'multi_step',
                 pattern: bestTransform.name,
-                description: `Transformation multi-étapes: ${bestTransform.name} (${(bestScore * 100).toFixed(0)}% des valeurs)`
+                description: I18nService.t('MSG.msg.transformationMultiEtapesDesValeurs', { p0: bestTransform.name, p1: (bestScore * 100).toFixed(0) })
             };
         }
         

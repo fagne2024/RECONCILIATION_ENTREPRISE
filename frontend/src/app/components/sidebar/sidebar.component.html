@@ -1,7 +1,7 @@
 <div class="sidebar">
     <div class="logo-container" [ngStyle]="logoAlign">
         <div class="logo-media" [ngStyle]="logoPadding">
-            <img *ngIf="logoUrl && !logoBroken" [src]="logoUrl" alt="Logo" class="logo-img" [ngStyle]="logoStyle" (error)="onLogoError()">
+            <img *ngIf="logoUrl && !logoBroken" [src]="logoUrl" alt="{{ 'NAV.logo' | translate }}" class="logo-img" [ngStyle]="logoStyle" (error)="onLogoError()">
             <i *ngIf="!logoUrl || logoBroken" class="fas fa-sync-alt logo-icon"></i>
         </div>
         <h2 class="title">{{ 'NAV.brand' | translate }}</h2>
@@ -78,7 +78,7 @@
         <div class="sidebar-user-info" *ngIf="getUsername()" (click)="goToProfile()" (keydown.enter)="goToProfile()" (keydown.space)="$event.preventDefault(); goToProfile()" role="button" tabindex="0">
             <div class="user-info-content">
                 <div class="user-avatar">
-                    <img *ngIf="userPhoto" [src]="userPhoto" alt="Photo de profil" class="user-avatar-img">
+                    <img *ngIf="userPhoto" [src]="userPhoto" alt="{{ 'NAV.ui.photoDeProfil' | translate }}" class="user-avatar-img">
                     <i *ngIf="!userPhoto" class="fas fa-user-circle"></i>
                 </div>
                 <div class="user-details">

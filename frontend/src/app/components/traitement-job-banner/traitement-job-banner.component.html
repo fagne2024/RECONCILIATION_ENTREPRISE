@@ -16,16 +16,16 @@
   <div class="trt-job-body">
     <div class="trt-job-title">
       <ng-container *ngIf="job.status === 'running' && !isDownloading">
-        Traitement en cours — {{ job.modelName }}
+        {{ 'AUTO_TRAITEMENT_JOB_BANNER.ui.traitementEnCours' | translate: { p0: job.modelName } }}
       </ng-container>
       <ng-container *ngIf="isDownloading">
-        Téléchargement en cours — {{ job.modelName }}
+        {{ 'AUTO_TRAITEMENT_JOB_BANNER.ui.telechargementEnCours' | translate: { p0: job.modelName } }}
       </ng-container>
       <ng-container *ngIf="job.status === 'done' && !isDownloading">
-        Traitement terminé — {{ job.modelName }}
+        {{ 'AUTO_TRAITEMENT_JOB_BANNER.ui.traitementTermine' | translate: { p0: job.modelName } }}
       </ng-container>
       <ng-container *ngIf="job.status === 'error'">
-        Échec du traitement — {{ job.modelName }}
+        {{ 'AUTO_TRAITEMENT_JOB_BANNER.ui.echecDuTraitement' | translate: { p0: job.modelName } }}
       </ng-container>
     </div>
 
@@ -35,7 +35,7 @@
 
     <div class="trt-job-msg" *ngIf="job.status === 'done' && !isDownloading && job.results.length && !job.progressMessage">
       <span *ngFor="let r of job.results; let last = last">
-        {{ r.outputName }} ({{ r.lineCount.toLocaleString('fr-FR') }} ligne(s))<span *ngIf="!last"> · </span>
+        {{ 'AUTO_TRAITEMENT_JOB_BANNER.ui.ligneS' | translate: { p0: r.outputName, p1: (r.lineCount.toLocaleString('fr-FR')) } }}<span *ngIf="!last"> · </span>
       </span>
     </div>
 
@@ -50,15 +50,15 @@
       type="button"
       class="ds-btn ds-btn--primary ds-btn--sm trt-job-btn is-primary"
       (click)="download()"
-      title="Télécharger le(s) fichier(s) produit(s)">
+      title="{{ 'AUTO_TRAITEMENT_JOB_BANNER.ui.telechargerLeSFichierSProduit' | translate }}">
       <i class="fas fa-download"></i>
-      Télécharger
+      {{ 'CS.Télécharger' | translate }}
     </button>
     <button
       type="button"
       class="ds-btn ds-btn--ghost ds-btn--sm trt-job-btn is-ghost"
       (click)="clear()"
-      title="Masquer">
+      title="{{ 'ACT.hide' | translate }}">
       <i class="fas fa-times"></i>
     </button>
   </div>

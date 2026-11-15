@@ -12,6 +12,7 @@ import { ServiceReferenceService } from '../../services/service-reference.servic
 import { ModernPopupComponent, PopupConfig } from '../modern-popup/modern-popup.component';
 import { ServiceReferencesDashboardPanelComponent } from './service-references-dashboard-panel.component';
 import { TranslateModule } from '@ngx-translate/core';
+import { I18nService } from '../../services/i18n/i18n.service';
 
 type ImportPayload = ServiceReferencePayload & { rowNumber: number };
 
@@ -221,8 +222,8 @@ export class ServiceReferencesComponent implements OnInit, OnDestroy {
                 console.error('Error while loading references', error);
                 const msg = error?.error?.message || error?.message;
                 this.errorMessage = error?.status === 429 || (typeof msg === 'string' && msg.includes('Trop de requêtes'))
-                    ? (typeof msg === 'string' ? msg : 'Too many requests. Please try again later.')
-                    : 'Unable to load the repository. Please try again.';
+                    ? (typeof msg === 'string' ? msg : I18nService.t('TBL.msg.tooManyRequestsPleaseTryAgain'))
+                    : I18nService.t('TBL.msg.unableToLoadTheRepositoryPlease');
                 this.isLoading = false;
             }
         });
@@ -446,7 +447,7 @@ export class ServiceReferencesComponent implements OnInit, OnDestroy {
                         this.normalizePayload(payload)
                     )
                 );
-                this.successMessage = 'Reference updated successfully.';
+                this.successMessage = I18nService.t('TBL.msg.referenceUpdatedSuccessfully');
             } else {
                 const normalized = this.normalizePayload(payload);
                 const existing = this.findReferenceByPaysAndCodeService(
@@ -457,18 +458,18 @@ export class ServiceReferencesComponent implements OnInit, OnDestroy {
                     await firstValueFrom(
                         this.serviceReferenceService.update(existing.id, normalized)
                     );
-                    this.successMessage = 'Reference updated successfully.';
+                    this.successMessage = I18nService.t('TBL.msg.referenceUpdatedSuccessfully');
                 } else {
                     await firstValueFrom(this.serviceReferenceService.create(normalized));
-                    this.successMessage = 'Reference added successfully.';
+                    this.successMessage = I18nService.t('TBL.msg.referenceAddedSuccessfully');
                 }
             }
-            await this.showSuccessPopup(this.successMessage || 'Operation successful');
+            await this.showSuccessPopup(this.successMessage || I18nService.t('TBL.msg.operationSuccessful'));
             this.startCreate();
             this.loadReferences();
         } catch (error) {
             console.error('Error while saving', error);
-            this.errorMessage = this.extractErrorMessage(error) || 'Failed to save.';
+            this.errorMessage = this.extractErrorMessage(error) || I18nService.t('TBL.msg.failedToSave');
             this.errorDetails = [];
             await this.showErrorPopup(this.errorMessage);
         } finally {
@@ -482,8 +483,8 @@ export class ServiceReferencesComponent implements OnInit, OnDestroy {
         }
 
         const confirmed = await ModernPopupComponent.showPopup({
-            title: 'Delete this reference?',
-            message: `The reference ${reference.codeReco} (${reference.serviceLabel}) will be permanently deleted.`,
+            title: I18nService.t('TBL.msg.deleteThisReference'),
+            message: I18nService.t('TBL.msg.theReferenceWillBePermanentlyDeleted', { p0: reference.codeReco, p1: reference.serviceLabel }),
             type: 'confirm',
             showCancelButton: true,
             cancelText: 'Cancel',
@@ -498,12 +499,12 @@ export class ServiceReferencesComponent implements OnInit, OnDestroy {
         this.isLoading = true;
         try {
             await firstValueFrom(this.serviceReferenceService.delete(reference.id));
-            this.successMessage = 'Reference deleted.';
+            this.successMessage = I18nService.t('TBL.msg.referenceDeleted');
             await this.showSuccessPopup(this.successMessage);
             this.loadReferences();
         } catch (error) {
             console.error('Error while deleting', error);
-            this.errorMessage = this.extractErrorMessage(error) || 'Unable to delete the reference.';
+            this.errorMessage = this.extractErrorMessage(error) || I18nService.t('TBL.msg.unableToDeleteTheReference');
             this.errorDetails = [];
             this.isLoading = false;
             await this.showErrorPopup(this.errorMessage);
@@ -517,11 +518,11 @@ export class ServiceReferencesComponent implements OnInit, OnDestroy {
         const n = this.selectedCount;
         const confirmed = await ModernPopupComponent.showPopup({
             title: 'Bulk delete',
-            message: `Delete ${n} selected reference(s)? This action is irreversible.`,
+            message: I18nService.t('TBL.msg.deleteSelectedReferenceSThisAction', { p0: n }),
             type: 'confirm',
             showCancelButton: true,
             cancelText: 'Cancel',
-            confirmText: 'Delete all'
+            confirmText: I18nService.t('SRP.card.deleteAll')
         });
         if (!confirmed) {
             return;
@@ -535,7 +536,7 @@ export class ServiceReferencesComponent implements OnInit, OnDestroy {
             const ids = Array.from(this.selectedReferences);
             const result = await firstValueFrom(this.serviceReferenceService.deleteBatch(ids));
             if (result.deletedCount === 0 && (result.errors?.length ?? 0) > 0) {
-                this.errorMessage = 'No reference could be deleted.';
+                this.errorMessage = I18nService.t('TBL.msg.noReferenceCouldBeDeleted');
                 this.errorDetails = result.errors;
                 this.isLoading = false;
                 await this.showErrorPopup(this.errorMessage);
@@ -544,19 +545,19 @@ export class ServiceReferencesComponent implements OnInit, OnDestroy {
             this.clearSelection();
             if (result.errors?.length) {
                 this.errorDetails = result.errors;
-                this.successMessage = `${result.deletedCount} reference(s) deleted. Some rows failed (see the details below the table).`;
+                this.successMessage = I18nService.t('TBL.msg.referenceSDeletedSomeRowsFailed', { p0: result.deletedCount });
                 await ModernPopupComponent.showWarning(
-                    `${result.deletedCount} deleted. ${result.errors.length} error(s) — details displayed on the page.`,
+                    I18nService.t('TBL.msg.deletedErrorSDetailsDisplayedOn', { p0: result.deletedCount, p1: result.errors.length }),
                     'Partial deletion'
                 );
             } else {
-                this.successMessage = `${result.deletedCount} reference(s) deleted.`;
+                this.successMessage = I18nService.t('TBL.msg.referenceSDeleted', { p0: result.deletedCount });
                 await this.showSuccessPopup(this.successMessage);
             }
             this.loadReferences();
         } catch (error) {
             console.error('Error while bulk deleting', error);
-            this.errorMessage = this.extractErrorMessage(error) || 'Unable to delete the selection.';
+            this.errorMessage = this.extractErrorMessage(error) || I18nService.t('TBL.msg.unableToDeleteTheSelection');
             this.errorDetails = [];
             this.isLoading = false;
             await this.showErrorPopup(this.errorMessage);
@@ -573,7 +574,7 @@ export class ServiceReferencesComponent implements OnInit, OnDestroy {
     async exportReferences(): Promise<void> {
         const rows = this.referencesToExport;
         if (!rows.length) {
-            await this.showErrorPopup('No reference to export with the current filters.');
+            await this.showErrorPopup(I18nService.t('TBL.msg.noReferenceToExportWithThe'));
             return;
         }
 
@@ -626,11 +627,11 @@ export class ServiceReferencesComponent implements OnInit, OnDestroy {
             link.click();
             window.URL.revokeObjectURL(url);
 
-            this.successMessage = `${rows.length} reference(s) exported.`;
+            this.successMessage = I18nService.t('TBL.msg.referenceSExported', { p0: rows.length });
             await this.showSuccessPopup(this.successMessage);
         } catch (error) {
             console.error('Error while exporting', error);
-            this.errorMessage = 'Unable to export the repository.';
+            this.errorMessage = I18nService.t('TBL.msg.unableToExportTheRepository');
             await this.showErrorPopup(this.errorMessage);
         } finally {
             this.isExporting = false;
@@ -684,7 +685,7 @@ export class ServiceReferencesComponent implements OnInit, OnDestroy {
         try {
             const payloads = await this.parseFile(file);
             if (!payloads.length) {
-                this.errorMessage = 'The file does not contain any valid row.';
+                this.errorMessage = I18nService.t('TBL.msg.theFileDoesNotContainAny');
                 await this.showErrorPopup(this.errorMessage);
                 return;
             }
@@ -712,7 +713,7 @@ export class ServiceReferencesComponent implements OnInit, OnDestroy {
                         failures.push(...result.errors);
                     }
                 } catch (error) {
-                    const message = this.extractErrorMessage(error) || 'Unknown error';
+                    const message = this.extractErrorMessage(error) || I18nService.t('TBL.msg.unknownError');
                     const from = offset + 1;
                     const to = Math.min(offset + IMPORT_CHUNK, batchItems.length);
                     failures.push(`Row batch ${from}–${to}: ${message}`);
@@ -741,19 +742,19 @@ export class ServiceReferencesComponent implements OnInit, OnDestroy {
                 }
                 this.successMessage = parts.join(' ');
                 if (failures.length) {
-                    this.errorMessage = `${failures.length} problem(s) — open the details below for each row.`;
+                    this.errorMessage = I18nService.t('TBL.msg.problemSOpenTheDetailsBelow', { p0: failures.length });
                 }
                 await this.showSuccessPopup(this.successMessage);
                 this.loadReferences();
             } else if (skippedDuplicates.length || failures.length) {
                 this.errorMessage = skippedDuplicates.length && !failures.length
-                    ? 'No reference imported: all rows have an empty service code.'
-                    : `Import failed or partial: ${failures.length} error(s).`;
+                    ? I18nService.t('TBL.msg.noReferenceImportedAllRowsHave')
+                    : I18nService.t('TBL.msg.importFailedOrPartialErrorS', { p0: failures.length });
                 await this.showErrorPopup(this.errorMessage);
             }
         } catch (error) {
             console.error('Error during import', error);
-            this.errorMessage = this.extractErrorMessage(error) || 'Import failed. Check the file format.';
+            this.errorMessage = this.extractErrorMessage(error) || I18nService.t('TBL.msg.importFailedCheckTheFileFormat');
             await this.showErrorPopup(this.errorMessage);
         } finally {
             this.isImporting = false;
@@ -912,11 +913,11 @@ export class ServiceReferencesComponent implements OnInit, OnDestroy {
 
     getRangeLabel(): string {
         if (!this.filteredReferences.length) {
-            return 'No row';
+            return I18nService.t('SRP.card.noRow');
         }
         const start = (this.pageIndex - 1) * this.pageSize + 1;
         const end = Math.min(this.filteredReferences.length, start + this.pageSize - 1);
-        return `Showing ${start}-${end} / ${this.filteredReferences.length} row(s)`;
+        return I18nService.t('SRP.card.showingRows', { p0: start, p1: end, p2: this.filteredReferences.length });
     }
 
     private cleanString(value: any): string {
@@ -948,7 +949,7 @@ export class ServiceReferencesComponent implements OnInit, OnDestroy {
 
     private extractErrorMessage(error: any): string {
         if (!error) {
-            return 'Unknown error';
+            return I18nService.t('TBL.msg.unknownError2');
         }
         if (typeof error === 'string') {
             return error;
@@ -979,12 +980,12 @@ export class ServiceReferencesComponent implements OnInit, OnDestroy {
         if (error.message) {
             return error.message;
         }
-        return 'Unknown error';
+        return I18nService.t('TBL.msg.unknownError2');
     }
 
     private async showSuccessPopup(message: string) {
         const config: PopupConfig = {
-            title: 'Success',
+            title: I18nService.t('TBL.msg.success'),
             message,
             type: 'success',
             showCancelButton: false,

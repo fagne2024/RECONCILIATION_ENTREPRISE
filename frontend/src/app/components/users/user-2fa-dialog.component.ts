@@ -1,6 +1,7 @@
 import { Component, Inject, OnInit } from '@angular/core';
 import { FormBuilder, FormGroup, Validators } from '@angular/forms';
 import { TwoFactorAuthService } from '../../services/two-factor-auth.service';
+import { I18nService } from '../../services/i18n/i18n.service';
 
 @Component({
   selector: 'app-user-2fa-dialog',
@@ -55,7 +56,7 @@ export class User2FADialogComponent implements OnInit {
       },
       error: (err) => {
         this.loading = false;
-        this.error = 'Erreur lors du chargement du statut du 2FA';
+        this.error = I18nService.t('TFA.popups.loadError.message');
         console.error('Error loading 2FA status:', err);
       }
     });
@@ -81,11 +82,11 @@ export class User2FADialogComponent implements OnInit {
         this.otpAuthUrl = response.otpAuthUrl;
         this.showQRCode = true;
         this.showValidationForm = true;
-        this.success = 'Scannez le QR code avec Google Authenticator, puis entrez un code pour activer le 2FA';
+        this.success = I18nService.t('TFA.popups.setupSuccess.message');
       },
       error: (err) => {
         this.loading = false;
-        this.error = err.error?.error || 'Erreur lors de la génération de la clé secrète';
+        this.error = err.error?.error || I18nService.t('TFA.popups.setupError.message');
         console.error('Error setting up 2FA:', err);
       }
     });
@@ -105,7 +106,7 @@ export class User2FADialogComponent implements OnInit {
     this.twoFactorService.enable2FA(this.username, code).subscribe({
       next: (response) => {
         this.loading = false;
-        this.success = response.message || 'Authentification à deux facteurs activée avec succès';
+        this.success = response.message || I18nService.t('TFA.popups.enableSuccess.message');
         this.is2FAEnabled = true;
         this.hasSecret = true;
         this.showQRCode = false;
@@ -118,7 +119,7 @@ export class User2FADialogComponent implements OnInit {
       },
       error: (err) => {
         this.loading = false;
-        this.error = err.error?.error || 'Code invalide. Veuillez réessayer.';
+        this.error = err.error?.error || I18nService.t('TFA.popups.enableError.message');
         this.validationForm.patchValue({ code: '' });
         console.error('Error enabling 2FA:', err);
       }
@@ -129,7 +130,7 @@ export class User2FADialogComponent implements OnInit {
    * Désactive le 2FA
    */
   disable2FA() {
-    if (!confirm(`Êtes-vous sûr de vouloir désactiver l'authentification à deux facteurs pour "${this.username}" ?`)) {
+    if (!confirm(I18nService.t('TFA.msg.etesVousSurDeVouloirDesactiver', { p0: this.username }))) {
       return;
     }
     
@@ -140,7 +141,7 @@ export class User2FADialogComponent implements OnInit {
     this.twoFactorService.disable2FA(this.username).subscribe({
       next: (response) => {
         this.loading = false;
-        this.success = response.message || 'Authentification à deux facteurs désactivée';
+        this.success = response.message || I18nService.t('TFA.popups.disableSuccess.message');
         this.is2FAEnabled = false;
         this.hasSecret = false;
         this.showQRCode = false;
@@ -153,7 +154,7 @@ export class User2FADialogComponent implements OnInit {
       },
       error: (err) => {
         this.loading = false;
-        this.error = err.error?.error || 'Erreur lors de la désactivation du 2FA';
+        this.error = err.error?.error || I18nService.t('TFA.popups.disableError.message');
         console.error('Error disabling 2FA:', err);
       }
     });
@@ -180,12 +181,12 @@ export class User2FADialogComponent implements OnInit {
     if (!this.secret) return;
     
     navigator.clipboard.writeText(this.secret).then(() => {
-      this.success = 'Clé secrète copiée dans le presse-papiers';
+      this.success = I18nService.t('TFA.popups.copySecretSuccess.message');
       setTimeout(() => {
         this.success = null;
       }, 3000);
     }).catch(() => {
-      this.error = 'Impossible de copier la clé secrète';
+      this.error = I18nService.t('TFA.popups.copySecretError.message');
     });
   }
 
@@ -196,12 +197,12 @@ export class User2FADialogComponent implements OnInit {
     if (!this.otpAuthUrl) return;
     
     navigator.clipboard.writeText(this.otpAuthUrl).then(() => {
-      this.success = 'URL copiée dans le presse-papiers';
+      this.success = I18nService.t('TFA.popups.copyUrlSuccess.message');
       setTimeout(() => {
         this.success = null;
       }, 3000);
     }).catch(() => {
-      this.error = 'Impossible de copier l\'URL';
+      this.error = I18nService.t('TFA.popups.copyUrlError.message');
     });
   }
 

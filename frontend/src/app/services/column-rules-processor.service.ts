@@ -4,6 +4,7 @@ import {
   applyColumnProcessingRulesAsync,
   resolveColumnRulesBatchSize
 } from '../utils/column-processing.util';
+import { I18nService } from './i18n/i18n.service';
 
 /** Au-delà de ce seuil, les règles s'exécutent dans un Web Worker pour ne pas bloquer l'UI. */
 const WORKER_THRESHOLD = 15000;
@@ -67,7 +68,7 @@ export class ColumnRulesProcessorService {
           return;
         }
         if (payload?.type === 'error') {
-          finish(() => reject(new Error(payload.message || 'Erreur worker règles')));
+          finish(() => reject(new Error(payload.message || I18nService.t('MSG.msg.erreurWorkerRegles'))));
         }
       };
 

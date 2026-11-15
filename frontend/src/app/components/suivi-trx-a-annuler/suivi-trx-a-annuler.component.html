@@ -10,15 +10,15 @@
     <div class="header-actions">
       <button class="btn btn-add-row" (click)="openManualRowPopup()" [disabled]="isLoading">
         <i class="fas fa-plus"></i>
-        Ajouter une ligne
+        {{ 'ACT.addRow' | translate }}
       </button>
       <button class="btn btn-verify" (click)="runAutoVerification()" [disabled]="verificationInProgress || isLoading">
         <i class="fas" [ngClass]="verificationInProgress ? 'fa-spinner fa-spin' : 'fa-magic'"></i>
-        {{ verificationInProgress ? 'Vérification…' : 'Vérifier automatiquement' }}
+        {{ verificationInProgress ? ('COMMON.ui.verification' | translate) : ('COMMON.ui.verifierAutomatiquement' | translate) }}
       </button>
       <button class="btn btn-template" (click)="downloadTemplate()" [disabled]="isExporting">
         <i class="fas fa-file-download"></i>
-        Télécharger le modèle
+        {{ 'ACT.downloadModel' | translate }}
       </button>
       <!-- Menu Export -->
       <div class="export-menu-container">
@@ -63,7 +63,7 @@
     <i class="fas"
        [ngClass]="verificationNotice.type === 'success' ? 'fa-check-circle' : (verificationNotice.type === 'warning' ? 'fa-exclamation-triangle' : 'fa-info-circle')"></i>
     <span class="verification-banner-text">{{ verificationNotice.message }}</span>
-    <button type="button" class="verification-banner-close" (click)="dismissVerificationNotice()" title="Fermer">×</button>
+    <button type="button" class="verification-banner-close" (click)="dismissVerificationNotice()" title="{{ 'COMMON.actions.close' | translate }}">×</button>
   </div>
 
   <!-- Indicateur de chargement -->
@@ -83,12 +83,12 @@
         <thead>
           <tr class="header-row">
             <th colspan="9" class="group-header bo-group">BO</th>
-            <th colspan="8" class="group-header partner-group">Partenaire</th>
+            <th colspan="8" class="group-header partner-group">{{ 'FU.Partner' | translate }}</th>
           </tr>
           <tr class="column-headers">
             <th *ngFor="let col of boDisplayColumns" class="th bo-col">{{ col }}</th>
             <th *ngFor="let col of partnerDisplayColumns" class="th partner-col">{{ col }}</th>
-            <th class="th partner-col">Action</th>
+            <th class="th partner-col">{{ 'COMMON.actions.action' | translate }}</th>
           </tr>
         </thead>
         <tbody>
@@ -103,10 +103,10 @@
                   'bo-statut-echec': getBoValue(match, col) === 'Echec',
                   'bo-statut-annulee': getBoValue(match, col) === 'Annulée'
                 }"
-                aria-label="Statut BO">
-                <option value="" disabled hidden>Non renseigné</option>
-                <option value="Echec">Echec</option>
-                <option value="Annulée">Annulée</option>
+                [attr.aria-label]="'COMMON.ui.statutBo' | translate">
+                <option value="" disabled hidden>{{ 'COMMON.ui.nonRenseigne' | translate }}</option>
+                <option value="Echec">{{ 'COMMON.ui.echec' | translate }}</option>
+                <option value="Annulée">{{ 'OPS.cancelled' | translate }}</option>
               </select>
               <ng-template #boText>{{ getBoValue(match, col) }}</ng-template>
             </td>
@@ -124,21 +124,21 @@
                   'statut-part-succes': getPartnerValue(match, col) === 'Succès',
                   'statut-part-annulee': getPartnerValue(match, col) === 'Annulée'
                 }"
-                aria-label="Statut Part">
-                <option value="" disabled hidden>Non renseigné</option>
-                <option value="Succès">Succès</option>
-                <option value="Annulée">Annulée</option>
+                [attr.aria-label]="'COMMON.ui.statutPart' | translate">
+                <option value="" disabled hidden>{{ 'COMMON.ui.nonRenseigne' | translate }}</option>
+                <option value="Succès">{{ 'OPS.successTitle' | translate }}</option>
+                <option value="Annulée">{{ 'OPS.cancelled' | translate }}</option>
               </select>
               <ng-template #partnerText>{{ getPartnerValue(match, col) }}</ng-template>
             </td>
             <td class="td partner-col action-col">
               <button type="button" class="btn-annulation" (click)="openAnnulationPopup(match)">
-                <i class="fas fa-edit"></i> Saisir ID Annulation
+                <i class="fas fa-edit"></i> {{ 'COMMON.ui.saisirIdAnnulation' | translate }}
               </button>
               <span class="manual-badge" *ngIf="isManualRow(match)" [title]="getManualReason(match)">
-                <i class="fas fa-hand-pointer"></i> Manuel
+                <i class="fas fa-hand-pointer"></i> {{ 'OPP.manual' | translate }}
               </span>
-              <button type="button" class="btn-delete-row" (click)="deleteRow(match)" title="Supprimer le suivi">
+              <button type="button" class="btn-delete-row" (click)="deleteRow(match)" title="{{ 'COMMON.ui.supprimerLeSuivi' | translate }}">
                 <i class="fas fa-trash"></i>
               </button>
             </td>
@@ -149,10 +149,10 @@
     
     <!-- Contrôles de défilement horizontal -->
     <div class="table-scroll-controls" *ngIf="tableScrollMax > 0">
-      <button class="scroll-btn" (click)="scrollTableLeft()" [disabled]="tableScrollLeft <= 0" title="Défiler vers la gauche">
+      <button class="scroll-btn" (click)="scrollTableLeft()" [disabled]="tableScrollLeft <= 0" title="{{ 'COMMON.ui.defilerVersLaGauche' | translate }}">
         <i class="fas fa-chevron-left"></i>
       </button>
-      <button class="scroll-btn" (click)="scrollTableRight()" [disabled]="tableScrollLeft >= tableScrollMax - 5" title="Défiler vers la droite">
+      <button class="scroll-btn" (click)="scrollTableRight()" [disabled]="tableScrollLeft >= tableScrollMax - 5" title="{{ 'COMMON.ui.defilerVersLaDroite' | translate }}">
         <i class="fas fa-chevron-right"></i>
       </button>
     </div>
@@ -161,9 +161,9 @@
   <!-- Message si aucun résultat -->
   <div class="no-results" *ngIf="!isLoading && displayedMatches.length === 0">
     <i class="fas fa-inbox"></i>
-    <p>Aucun suivi enregistré.</p>
+    <p>{{ 'COMMON.ui.aucunSuiviEnregistre' | translate }}</p>
     <p class="no-results-hint">
-      Utilisez « Ajouter une ligne » pour créer un suivi manuellement, ou depuis la page Correspondances via « Suivi TRX à annuler ».
+      {{ 'COMMON.ui.utilisezAjouterUneLignePourCreer' | translate }}
     </p>
   </div>
 
@@ -175,21 +175,21 @@
       [totalItems]="displayedMatches.length"
       [pageSize]="pageSize"
       [pageSizes]="[10, 20, 50, 100]"
-      itemLabel="lignes"
+      [itemLabel]="'TBL.lines' | translate"
       (pageChange)="goToPage($event)"
       (pageSizeChange)="onPageSizeChange($event)">
     </ds-pagination>
   </div>
 
   <!-- Bouton retour en haut -->
-  <button class="scroll-top-btn" *ngIf="showScrollTopBtn" (click)="scrollToTop()" title="Retour en haut">
+  <button class="scroll-top-btn" *ngIf="showScrollTopBtn" (click)="scrollToTop()" title="{{ 'TBL.backToTop' | translate }}">
     <i class="fas fa-arrow-up"></i>
   </button>
 
   <!-- Indicateur d'export en cours -->
   <div class="export-overlay" *ngIf="isExporting">
     <div class="export-modal">
-      <h3>{{ 'COMMON.actions.export' | translate }} en cours</h3>
+      <h3>{{ 'COMMON.ui.enCours' | translate: { p0: ('COMMON.actions.export' | translate) } }}</h3>
       <div class="export-progress-bar-container">
         <div class="export-progress-bar" [style.width.%]="exportProgress.percentage"></div>
       </div>
@@ -206,39 +206,39 @@
          (click)="$event.stopPropagation()">
       <div class="popup-header oppart-header">
         <div class="manual-row-heading">
-          <h3 id="manual-row-title">Ajouter une ligne</h3>
+          <h3 id="manual-row-title">{{ 'ACT.addRow' | translate }}</h3>
           <p class="manual-row-subtitle">
-            Renseignez les informations BO et/ou partenaire. Au moins un champ est nécessaire.
+            {{ 'COMMON.ui.renseignezLesInformationsBoEtOu' | translate }}
           </p>
         </div>
-        <button type="button" (click)="closeManualRowPopup()" class="close-btn" [disabled]="isSavingManualRow" aria-label="Fermer">×</button>
+        <button type="button" (click)="closeManualRowPopup()" class="close-btn" [disabled]="isSavingManualRow" [attr.aria-label]="'COMMON.actions.close' | translate">×</button>
       </div>
       <div class="oppart-content">
         <section class="manual-row-section">
           <h4 class="manual-row-section-title"><i class="fas fa-building"></i> BO</h4>
           <div class="manual-row-grid">
             <label class="manual-row-field">
-              <span class="manual-row-label">Date</span>
-              <input type="text" class="mapping-manual-input" [(ngModel)]="manualRowForm.boDate" maxlength="64" placeholder="JJ/MM/AAAA">
+              <span class="manual-row-label">{{ 'COMMON.actions.date' | translate }}</span>
+              <input type="text" class="mapping-manual-input" [(ngModel)]="manualRowForm.boDate" maxlength="64" placeholder="{{ 'COMMON.ui.jjMmAaaa' | translate }}">
             </label>
             <label class="manual-row-field">
-              <span class="manual-row-label">Agence</span>
+              <span class="manual-row-label">{{ 'BQ.crAgence' | translate }}</span>
               <input type="text" class="mapping-manual-input" [(ngModel)]="manualRowForm.boAgence" maxlength="255">
             </label>
             <label class="manual-row-field">
-              <span class="manual-row-label">Service</span>
+              <span class="manual-row-label">{{ 'OPS.exportColumnService' | translate }}</span>
               <input type="text" class="mapping-manual-input" [(ngModel)]="manualRowForm.boService" maxlength="255">
             </label>
             <label class="manual-row-field">
-              <span class="manual-row-label">Montant</span>
-              <input type="text" class="mapping-manual-input" [(ngModel)]="manualRowForm.boMontant" maxlength="128" placeholder="Ex. 1 000,50">
+              <span class="manual-row-label">{{ 'COMMON.actions.amount' | translate }}</span>
+              <input type="text" class="mapping-manual-input" [(ngModel)]="manualRowForm.boMontant" maxlength="128" placeholder="{{ 'COMMON.ui.ex100050' | translate }}">
             </label>
             <label class="manual-row-field">
-              <span class="manual-row-label">Token</span>
+              <span class="manual-row-label">{{ 'BQ.Token' | translate }}</span>
               <input type="text" class="mapping-manual-input" [(ngModel)]="manualRowForm.boToken" maxlength="255">
             </label>
             <label class="manual-row-field">
-              <span class="manual-row-label">Pays</span>
+              <span class="manual-row-label">{{ 'OPP.field.pays.label' | translate }}</span>
               <input type="text" class="mapping-manual-input" [(ngModel)]="manualRowForm.boPays" maxlength="128">
             </label>
             <label class="manual-row-field">
@@ -246,69 +246,69 @@
               <input type="text" class="mapping-manual-input" [(ngModel)]="manualRowForm.boEnv" maxlength="64">
             </label>
             <label class="manual-row-field">
-              <span class="manual-row-label">Telephone</span>
-              <input type="text" class="mapping-manual-input" [(ngModel)]="manualRowForm.boTelephone" maxlength="64" placeholder="Ex. 07 00 00 00 00">
+              <span class="manual-row-label">{{ 'TBL.phone' | translate }}</span>
+              <input type="text" class="mapping-manual-input" [(ngModel)]="manualRowForm.boTelephone" maxlength="64" placeholder="{{ 'COMMON.ui.ex0700000000' | translate }}">
             </label>
             <label class="manual-row-field">
-              <span class="manual-row-label">Statut BO</span>
+              <span class="manual-row-label">{{ 'COMMON.ui.statutBo' | translate }}</span>
               <select class="mapping-manual-input manual-row-select" [(ngModel)]="manualRowForm.boStatut">
-                <option value="">Non renseigné</option>
-                <option value="Echec">Echec</option>
-                <option value="Annulée">Annulée</option>
+                <option value="">{{ 'COMMON.ui.nonRenseigne' | translate }}</option>
+                <option value="Echec">{{ 'COMMON.ui.echec' | translate }}</option>
+                <option value="Annulée">{{ 'OPS.cancelled' | translate }}</option>
               </select>
             </label>
           </div>
         </section>
 
         <section class="manual-row-section">
-          <h4 class="manual-row-section-title"><i class="fas fa-handshake"></i> Partenaire</h4>
+          <h4 class="manual-row-section-title"><i class="fas fa-handshake"></i> {{ 'FU.Partner' | translate }}</h4>
           <div class="manual-row-grid">
             <label class="manual-row-field">
-              <span class="manual-row-label">Transaction ID</span>
+              <span class="manual-row-label">{{ 'COMMON.ui.transactionId' | translate }}</span>
               <input type="text" class="mapping-manual-input" [(ngModel)]="manualRowForm.partnerTransactionId" maxlength="255">
             </label>
             <label class="manual-row-field">
-              <span class="manual-row-label">Date</span>
-              <input type="text" class="mapping-manual-input" [(ngModel)]="manualRowForm.partnerDate" maxlength="64" placeholder="JJ/MM/AAAA">
+              <span class="manual-row-label">{{ 'COMMON.actions.date' | translate }}</span>
+              <input type="text" class="mapping-manual-input" [(ngModel)]="manualRowForm.partnerDate" maxlength="64" placeholder="{{ 'COMMON.ui.jjMmAaaa' | translate }}">
             </label>
             <label class="manual-row-field">
-              <span class="manual-row-label">Montant</span>
-              <input type="text" class="mapping-manual-input" [(ngModel)]="manualRowForm.partnerMontant" maxlength="128" placeholder="Ex. 1 000,50">
+              <span class="manual-row-label">{{ 'COMMON.actions.amount' | translate }}</span>
+              <input type="text" class="mapping-manual-input" [(ngModel)]="manualRowForm.partnerMontant" maxlength="128" placeholder="{{ 'COMMON.ui.ex100050' | translate }}">
             </label>
             <label class="manual-row-field">
-              <span class="manual-row-label">ID Annulation</span>
+              <span class="manual-row-label">{{ 'COMMON.ui.idAnnulation' | translate }}</span>
               <input type="text" class="mapping-manual-input" [(ngModel)]="manualRowForm.idAnnulation" maxlength="255">
             </label>
             <label class="manual-row-field">
-              <span class="manual-row-label">Telephone</span>
-              <input type="text" class="mapping-manual-input" [(ngModel)]="manualRowForm.partnerTelephone" maxlength="64" placeholder="Ex. 07 00 00 00 00">
+              <span class="manual-row-label">{{ 'TBL.phone' | translate }}</span>
+              <input type="text" class="mapping-manual-input" [(ngModel)]="manualRowForm.partnerTelephone" maxlength="64" placeholder="{{ 'COMMON.ui.ex0700000000' | translate }}">
             </label>
             <label class="manual-row-field">
-              <span class="manual-row-label">Statut Part</span>
+              <span class="manual-row-label">{{ 'COMMON.ui.statutPart' | translate }}</span>
               <select class="mapping-manual-input manual-row-select" [(ngModel)]="manualRowForm.statutPart">
-                <option value="">Non renseigné</option>
-                <option value="Succès">Succès</option>
-                <option value="Annulée">Annulée</option>
+                <option value="">{{ 'COMMON.ui.nonRenseigne' | translate }}</option>
+                <option value="Succès">{{ 'OPS.successTitle' | translate }}</option>
+                <option value="Annulée">{{ 'OPS.cancelled' | translate }}</option>
               </select>
             </label>
           </div>
           <div class="manual-row-computed">
-            <span class="manual-row-label">Statut traitement</span>
+            <span class="manual-row-label">{{ 'COMMON.ui.statutTraitement' | translate }}</span>
             <span class="manual-row-status"
                   [ngClass]="manualStatutTraitement === 'OK' ? 'manual-row-status-ok' : 'manual-row-status-pending'">
               {{ manualStatutTraitement }}
             </span>
             <span class="manual-row-hint">
-              Calculé automatiquement : OK si un ID Annulation est renseigné, sinon En cours.
+              {{ 'COMMON.ui.calculeAutomatiquementOkSiUnId' | translate }}
             </span>
           </div>
         </section>
       </div>
       <div class="oppart-actions">
-        <button type="button" (click)="closeManualRowPopup()" class="cancel-btn" [disabled]="isSavingManualRow">Annuler</button>
+        <button type="button" (click)="closeManualRowPopup()" class="cancel-btn" [disabled]="isSavingManualRow">{{ 'COMMON.actions.cancel' | translate }}</button>
         <button type="button" (click)="saveManualRow()" class="save-oppart-btn" [disabled]="isSavingManualRow">
           <i class="fas" [ngClass]="isSavingManualRow ? 'fa-spinner fa-spin' : 'fa-plus'"></i>
-          {{ isSavingManualRow ? 'Enregistrement…' : 'Ajouter la ligne' }}
+          {{ isSavingManualRow ? ('ETA.modal.saving' | translate) : ('COMMON.ui.ajouterLaLigne' | translate) }}
         </button>
       </div>
     </div>
@@ -318,12 +318,12 @@
   <div class="oppart-overlay" *ngIf="showAnnulationPopup" (click)="closeAnnulationPopup()">
     <div class="oppart-popup" style="max-width: 500px;" (click)="$event.stopPropagation()">
       <div class="popup-header oppart-header">
-        <h3>Saisir ID Annulation</h3>
+        <h3>{{ 'COMMON.ui.saisirIdAnnulation' | translate }}</h3>
         <button (click)="closeAnnulationPopup()" class="close-btn">×</button>
       </div>
       <div class="oppart-content">
         <div class="oppart-info">
-          <span class="oppart-note" *ngIf="!annulationPopupNotice">Saisir l'ID d'annulation pour cette transaction.</span>
+          <span class="oppart-note" *ngIf="!annulationPopupNotice">{{ 'COMMON.ui.saisirLIdDAnnulationPour' | translate }}</span>
           <span class="annulation-manual-notice" *ngIf="annulationPopupNotice">
             <i class="fas fa-info-circle"></i> {{ annulationPopupNotice }}
           </span>
@@ -331,14 +331,14 @@
         <div class="oppart-mapping">
           <div class="mapping-row">
             <label class="mapping-field">
-              <span class="mapping-label">ID Annulation</span>
+              <span class="mapping-label">{{ 'COMMON.ui.idAnnulation' | translate }}</span>
             </label>
             <div class="mapping-control">
               <div class="mapping-source-line">
                 <input
                   type="text"
                   [(ngModel)]="annulationIdInput"
-                  placeholder="ID Annulation"
+                  placeholder="{{ 'COMMON.ui.idAnnulation' | translate }}"
                   class="mapping-manual-input"
                   style="flex: 1;"
                 >
@@ -348,9 +348,9 @@
         </div>
       </div>
       <div class="oppart-actions">
-        <button (click)="closeAnnulationPopup()" class="cancel-btn" [disabled]="isSavingAnnulation">Annuler</button>
+        <button (click)="closeAnnulationPopup()" class="cancel-btn" [disabled]="isSavingAnnulation">{{ 'COMMON.actions.cancel' | translate }}</button>
         <button (click)="saveAnnulationId()" class="save-oppart-btn" [disabled]="isSavingAnnulation">
-          {{ isSavingAnnulation ? 'Enregistrement…' : 'Enregistrer' }}
+          {{ isSavingAnnulation ? ('ETA.modal.saving' | translate) : ('COMMON.actions.save' | translate) }}
         </button>
       </div>
     </div>

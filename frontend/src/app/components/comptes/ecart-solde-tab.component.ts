@@ -4,6 +4,7 @@ import { EcartSolde } from '../../models/ecart-solde.model';
 import { Subscription } from 'rxjs';
 import { PopupService } from '../../services/popup.service';
 import * as XLSX from 'xlsx';
+import { I18nService } from '../../services/i18n/i18n.service';
 
 @Component({
   selector: 'app-ecart-solde-tab',
@@ -63,7 +64,7 @@ export class EcartSoldeTabComponent implements OnInit, OnDestroy, OnChanges {
 
   loadEcartSoldes(): void {
     if (!this.agence) {
-      this.error = 'Agence non spécifiée';
+      this.error = I18nService.t('TBL.msg.agenceNonSpecifiee');
       return;
     }
 
@@ -78,7 +79,7 @@ export class EcartSoldeTabComponent implements OnInit, OnDestroy, OnChanges {
           this.isLoading = false;
         },
         error: (err: any) => {
-          this.error = 'Erreur lors du chargement des écarts de solde: ' + err.message;
+          this.error = I18nService.t('TBL.msg.erreurLorsDuChargementDesEcarts') + err.message;
           this.isLoading = false;
         }
       })
@@ -325,12 +326,12 @@ export class EcartSoldeTabComponent implements OnInit, OnDestroy, OnChanges {
 
   async validateEcartSolde(ecart: EcartSolde): Promise<void> {
     if (!ecart.id) {
-      await this.popupService.showError('ID de l\'écart de solde manquant');
+      await this.popupService.showError(I18nService.t('ESD.missingId'));
       return;
     }
 
     const confirmed = await this.popupService.showConfirmDialog(
-      `Êtes-vous sûr de vouloir valider cet écart de solde ?\n\nID Transaction: ${ecart.idTransaction}\nMontant: ${this.formatMontant(ecart.montant)}\nService: ${ecart.service || 'N/A'}`,
+      I18nService.t('TBL.msg.etesVousSurDeVouloirValider2', { p0: ecart.idTransaction, p1: this.formatMontant(ecart.montant), p2: ecart.service || 'N/A' }),
       'Confirmation de validation'
     );
 
@@ -343,11 +344,11 @@ export class EcartSoldeTabComponent implements OnInit, OnDestroy, OnChanges {
             // Mettre à jour le statut localement
             ecart.statut = 'TRAITE';
             this.isLoading = false;
-            this.popupService.showSuccess('Écart de solde validé avec succès');
+            this.popupService.showSuccess(I18nService.t('TBL.msg.ecartDeSoldeValideAvecSucces'));
           },
           error: (err: any) => {
             this.isLoading = false;
-            this.popupService.showError('Erreur lors de la validation: ' + err.message);
+            this.popupService.showError(I18nService.t('TBL.msg.erreurLorsDeLaValidation') + err.message);
           }
         })
       );
@@ -399,7 +400,7 @@ export class EcartSoldeTabComponent implements OnInit, OnDestroy, OnChanges {
 
   async validateSelectedEcartSoldes(): Promise<void> {
     if (this.selectedItems.size === 0) {
-      await this.popupService.showError('Aucun élément sélectionné');
+      await this.popupService.showError(I18nService.t('TBL.msg.aucunElementSelectionne'));
       return;
     }
 
@@ -408,8 +409,8 @@ export class EcartSoldeTabComponent implements OnInit, OnDestroy, OnChanges {
     );
 
     const confirmed = await this.popupService.showConfirmDialog(
-      `Êtes-vous sûr de vouloir valider ${selectedEcartSoldes.length} écart(s) de solde sélectionné(s) ?`,
-      'Confirmation de validation en masse'
+      I18nService.t('TBL.msg.etesVousSurDeVouloirValider3', { p0: selectedEcartSoldes.length }),
+      I18nService.t('TBL.msg.confirmationDeValidationEnMasse')
     );
 
     if (confirmed) {
@@ -433,15 +434,15 @@ export class EcartSoldeTabComponent implements OnInit, OnDestroy, OnChanges {
         await Promise.all(validationPromises);
         
         if (successCount > 0) {
-          this.popupService.showSuccess(`${successCount} écart(s) de solde validé(s) avec succès`);
+          this.popupService.showSuccess(I18nService.t('TBL.msg.ecartSDeSoldeValideS', { p0: successCount }));
         }
         if (errorCount > 0) {
-          this.popupService.showError(`${errorCount} erreur(s) lors de la validation`);
+          this.popupService.showError(I18nService.t('TBL.msg.erreurSLorsDeLaValidation', { p0: errorCount }));
         }
         
         this.clearSelection();
       } catch (error) {
-        this.popupService.showError('Erreur lors de la validation en masse');
+        this.popupService.showError(I18nService.t('TBL.msg.erreurLorsDeLaValidationEn'));
       } finally {
         this.isValidatingMass = false;
       }
@@ -450,7 +451,7 @@ export class EcartSoldeTabComponent implements OnInit, OnDestroy, OnChanges {
 
   exportEcartSoldes(): void {
     if (this.filteredEcartSoldes.length === 0) {
-      alert('Aucune donnée à exporter');
+      alert(I18nService.t('MSG.noDataToExport'));
       return;
     }
 

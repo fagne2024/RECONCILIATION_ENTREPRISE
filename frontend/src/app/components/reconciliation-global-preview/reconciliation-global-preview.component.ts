@@ -5,6 +5,7 @@ import { Subscription } from 'rxjs';
 import { ChartConfiguration, ChartData, ChartType } from 'chart.js';
 import { BaseChartDirective } from 'ng2-charts';
 import ChartDataLabels from 'chartjs-plugin-datalabels';
+import { I18nService } from '../../services/i18n/i18n.service';
 
 export interface ReconciliationReportData {
     id?: number;
@@ -123,7 +124,7 @@ export class ReconciliationGlobalPreviewComponent implements OnInit, OnDestroy {
     barChartData: ChartData<'bar'> = {
         labels: [],
         datasets: [{
-            label: 'Montant (K CM)',
+            label: I18nService.t('LBL.ui.amountKcm'),
             data: [],
             backgroundColor: '#3b82f6',
             borderRadius: 8
@@ -218,13 +219,13 @@ export class ReconciliationGlobalPreviewComponent implements OnInit, OnDestroy {
         labels: [],
         datasets: [
             {
-                label: 'En cours',
+                label: I18nService.t('LBL.ui.chartInProgress'),
                 data: [],
                 backgroundColor: '#f59e0b',
                 borderRadius: 8
             },
             {
-                label: 'Résolus',
+                label: I18nService.t('LBL.ui.chartResolved'),
                 data: [],
                 backgroundColor: '#3b82f6',
                 borderRadius: 8
@@ -268,7 +269,7 @@ export class ReconciliationGlobalPreviewComponent implements OnInit, OnDestroy {
             this.http.get<any[]>(url, { headers }).subscribe({
                 next: (rows: any[]) => {
                     if (!Array.isArray(rows) || rows.length === 0) {
-                        this.error = 'Aucune donnée disponible';
+                        this.error = I18nService.t('STA.noData');
                         this.loading = false;
                         return;
                     }
@@ -297,7 +298,7 @@ export class ReconciliationGlobalPreviewComponent implements OnInit, OnDestroy {
                 },
                 error: (error) => {
                     console.error('Erreur lors du chargement des données:', error);
-                    this.error = 'Erreur lors du chargement des données';
+                    this.error = I18nService.t('SRP.loadError');
                     this.loading = false;
                 }
             })
@@ -448,7 +449,7 @@ export class ReconciliationGlobalPreviewComponent implements OnInit, OnDestroy {
         this.barChartData = {
             labels: this.topPartners.map(p => p.partner),
             datasets: [{
-                label: 'Montant (K CM)',
+                label: I18nService.t('LBL.ui.amountKcm'),
                 data: this.topPartners.map(p => p.amount / 1000),
                 backgroundColor: '#3b82f6',
                 borderRadius: 8
@@ -507,13 +508,13 @@ export class ReconciliationGlobalPreviewComponent implements OnInit, OnDestroy {
             labels: groupedArray.map(([partner]) => partner),
             datasets: [
                 {
-                    label: 'En cours',
+                    label: I18nService.t('LBL.ui.chartInProgress'),
                     data: groupedArray.map(([, data]) => data['En cours']),
                     backgroundColor: '#f59e0b',
                     borderRadius: 8
                 },
                 {
-                    label: 'Résolus',
+                    label: I18nService.t('LBL.ui.chartResolved'),
                     data: groupedArray.map(([, data]) => data['Résolus']),
                     backgroundColor: '#3b82f6',
                     borderRadius: 8

@@ -7,6 +7,7 @@ import { Subscription } from 'rxjs';
 import { Router } from '@angular/router';
 import { AgencySummaryService } from '../../services/agency-summary.service';
 import * as ExcelJS from 'exceljs';
+import { I18nService } from '../../services/i18n/i18n.service';
 // @ts-ignore
 import * as FileSaver from 'file-saver';
 import { MatSelect } from '@angular/material/select';
@@ -258,9 +259,9 @@ export class StatsComponent implements OnInit, OnDestroy {
             },
             error: async (error) => {
                 console.error('Erreur lors du chargement des données:', error);
-                this.errorMessage = 'Erreur lors du chargement des données';
+                this.errorMessage = I18nService.t('SRP.loadError');
                 this.isLoading = false;
-                await this.showErrorMessage('Erreur lors du chargement des données');
+                await this.showErrorMessage(I18nService.t('SRP.loadError'));
             }
         });
     }
@@ -508,7 +509,7 @@ export class StatsComponent implements OnInit, OnDestroy {
                 label: 'Nouveau',
                 pct: null,
                 barWidth: 0,
-                hint: 'Aucune date de référence',
+                hint: I18nService.t('STA.msg.aucuneDateDeReference'),
                 captionDash: true,
                 volJ1Fmt: '',
                 deltaFmt: null
@@ -977,16 +978,16 @@ export class StatsComponent implements OnInit, OnDestroy {
 
     formatReportPeriodLabel(): string {
         if (!this.reportDateKeys.length) {
-            return 'Aucune période disponible';
+            return I18nService.t('SRP.noPeriod');
         }
 
         if (this.reportDateKeys.length === 1) {
-            return `Période : ${this.reportDateKeys[0].split('-').reverse().join('/')}`;
+            return I18nService.t('STA.msg.periode', { p0: this.reportDateKeys[0].split('-').reverse().join('/') });
         }
 
         const start = this.reportDateKeys[0].split('-').reverse().join('/');
         const end = this.reportDateKeys[this.reportDateKeys.length - 1].split('-').reverse().join('/');
-        return `Période du ${start} au ${end}`;
+        return I18nService.t('STA.msg.periodeDuAu', { p0: start, p1: end });
     }
 
     isTodayReportDate(dateKey: string): boolean {
@@ -1020,7 +1021,7 @@ export class StatsComponent implements OnInit, OnDestroy {
     }
 
     private async promptCustomFileName(defaultBaseName: string, extension: 'xlsx' | 'pdf'): Promise<string | null> {
-        const fileName = prompt(`Entrez le nom du fichier (sans l'extension .${extension}) :`, defaultBaseName);
+        const fileName = prompt(I18nService.t('STA.msg.entrezLeNomDuFichierSans', { p0: extension }), defaultBaseName);
 
         if (fileName === null) {
             return null;
@@ -1039,7 +1040,7 @@ export class StatsComponent implements OnInit, OnDestroy {
 
     async exportAgencyReportExcel(): Promise<void> {
         if (!this.visibleReportRows.length) {
-            await this.showErrorMessage('Aucune donnée disponible pour exporter le rapport agence en Excel');
+            await this.showErrorMessage(I18nService.t('SRP.exportNoDataExcel'));
             return;
         }
 
@@ -1130,10 +1131,10 @@ export class StatsComponent implements OnInit, OnDestroy {
             });
             FileSaver.saveAs(blob, fileName);
 
-            await this.showSuccessMessage(`Le fichier ${fileName} a été téléchargé.`);
+            await this.showSuccessMessage(I18nService.t('STA.msg.leFichierAEteTelecharge', { p0: fileName }));
         } catch (error) {
             console.error('Erreur lors de l\'export Excel du rapport agence:', error);
-            await this.showErrorMessage('Erreur lors de l\'export Excel du rapport agence');
+            await this.showErrorMessage(I18nService.t('SRP.exportErrorExcel'));
         } finally {
             this.isLoading = false;
         }
@@ -1142,7 +1143,7 @@ export class StatsComponent implements OnInit, OnDestroy {
     async exportAgencyReportPdf(): Promise<void> {
         const element = document.getElementById('agency-report-section') as HTMLElement | null;
         if (!element || !this.visibleReportRows.length) {
-            await this.showErrorMessage('Aucune donnée disponible pour exporter le rapport agence en PDF');
+            await this.showErrorMessage(I18nService.t('SRP.exportNoDataPdf'));
             return;
         }
 
@@ -1213,10 +1214,10 @@ export class StatsComponent implements OnInit, OnDestroy {
             }
 
             pdf.save(fileName);
-            await this.showSuccessMessage(`Le fichier ${fileName} a été téléchargé.`);
+            await this.showSuccessMessage(I18nService.t('STA.msg.leFichierAEteTelecharge', { p0: fileName }));
         } catch (error) {
             console.error('Erreur lors de l\'export PDF du rapport agence:', error);
-            await this.showErrorMessage('Erreur lors de l\'export PDF du rapport agence');
+            await this.showErrorMessage(I18nService.t('SRP.exportErrorPdf'));
         } finally {
             element.style.overflow = originalOverflow;
             if (tableScroll) {
@@ -1547,7 +1548,7 @@ export class StatsComponent implements OnInit, OnDestroy {
         try {
             const hasData = this.getAggregatedStats().length > 0;
             if (!hasData) {
-                await this.showErrorMessage('Aucune donnée à exporter');
+                await this.showErrorMessage(I18nService.t('MSG.noDataToExport'));
                 return;
             }
 
@@ -1565,7 +1566,7 @@ export class StatsComponent implements OnInit, OnDestroy {
             if (sheets.includes('week')) {
                 const weekRows = this.buildPeriodExportRows('week');
                 if (sheets.length === 1 && !weekRows.length) {
-                    await this.showErrorMessage('Aucune donnée à exporter par semaine');
+                    await this.showErrorMessage(I18nService.t('STA.msg.aucuneDonneeAExporterParSemaine'));
                     return;
                 }
                 if (weekRows.length) {
@@ -1576,7 +1577,7 @@ export class StatsComponent implements OnInit, OnDestroy {
             if (sheets.includes('month')) {
                 const monthRows = this.buildPeriodExportRows('month');
                 if (sheets.length === 1 && !monthRows.length) {
-                    await this.showErrorMessage('Aucune donnée à exporter par mois');
+                    await this.showErrorMessage(I18nService.t('STA.msg.aucuneDonneeAExporterParMois'));
                     return;
                 }
                 if (monthRows.length) {
@@ -1586,7 +1587,7 @@ export class StatsComponent implements OnInit, OnDestroy {
             }
 
             if (workbook.worksheets.length === 0) {
-                await this.showErrorMessage('Aucune feuille à exporter');
+                await this.showErrorMessage(I18nService.t('STA.msg.aucuneFeuilleAExporter'));
                 return;
             }
 
@@ -1595,10 +1596,10 @@ export class StatsComponent implements OnInit, OnDestroy {
                 type: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet'
             });
             FileSaver.saveAs(blob, fileName);
-            await this.showSuccessMessage(`Fichier exporté : ${fileName}`);
+            await this.showSuccessMessage(I18nService.t('STA.msg.fichierExporte', { p0: fileName }));
         } catch (error) {
             console.error('Erreur lors de l\'export:', error);
-            await this.showErrorMessage('Erreur lors de l\'export des données');
+            await this.showErrorMessage(I18nService.t('OPS.exportDetailsError'));
         } finally {
             this.isLoading = false;
         }
@@ -1607,7 +1608,7 @@ export class StatsComponent implements OnInit, OnDestroy {
     private async promptExportFileName(defaultBase: string): Promise<string | null> {
         const timestamp = new Date().toISOString().slice(0, 10);
         const defaultFileName = `${defaultBase}_${timestamp}`;
-        const fileName = prompt(`Nom du fichier (sans .xlsx) :`, defaultFileName);
+        const fileName = prompt(I18nService.t('STA.msg.nomDuFichierSansXlsx'), defaultFileName);
         if (fileName === null) {
             return null;
         }
@@ -1677,21 +1678,21 @@ export class StatsComponent implements OnInit, OnDestroy {
      * Supprime une statistique avec confirmation moderne
      */
     async deleteSummary(summary: any) {
-        const confirmMessage = `Êtes-vous sûr de vouloir supprimer cette statistique ?\n\n` +
+        const confirmMessage = I18nService.t('STA.msg.etesVousSurDeVouloirSupprimer') +
             `Client: ${summary.agency}\n` +
             `Service: ${summary.service}\n` +
-            `Pays: ${summary.country}\n` +
+            I18nService.t('STA.msg.pays', { p0: summary.country }) +
             `Date: ${this.formatDateWithTime(summary.date)}\n` +
             `Volume: ${summary.totalVolume.toLocaleString('fr-FR')}\n` +
-            `Transactions: ${summary.recordCount}`;
+            I18nService.t('STA.msg.transactions', { p0: summary.recordCount });
 
         const config: PopupConfig = {
-            title: 'Confirmation de suppression',
+            title: I18nService.t('APM.confirmDeleteTitle'),
             message: confirmMessage,
             type: 'confirm',
             showCancelButton: true,
-            cancelText: 'Annuler',
-            confirmText: 'Supprimer'
+            cancelText: I18nService.t('COMMON.actions.cancel'),
+            confirmText: I18nService.t('ACT.delete')
         };
 
         try {
@@ -1706,19 +1707,19 @@ export class StatsComponent implements OnInit, OnDestroy {
                     );
                     await Promise.all(deletePromises);
                 } else {
-                    throw new Error('Aucun ID trouvé pour cette statistique');
+                    throw new Error(I18nService.t('STA.msg.aucunIdTrouvePourCetteStatistique'));
                 }
                 
                 // Recharger les données après suppression
                 this.loadData();
                 
                 // Afficher un message de succès
-                await this.showSuccessMessage('Statistique supprimée avec succès');
+                await this.showSuccessMessage(I18nService.t('STA.msg.statistiqueSupprimeeAvecSucces'));
                 
                 console.log('Statistique supprimée avec succès');
             } catch (error) {
                 console.error('Erreur lors de la suppression:', error);
-                await this.showErrorMessage('Erreur lors de la suppression de la statistique');
+                await this.showErrorMessage(I18nService.t('STA.msg.erreurLorsDeLaSuppressionDe'));
             } finally {
                 this.isLoading = false;
             }
@@ -1733,7 +1734,7 @@ export class StatsComponent implements OnInit, OnDestroy {
      */
     private async showSuccessMessage(message: string) {
         const config: PopupConfig = {
-            title: 'Succès',
+            title: I18nService.t('POPUP.success'),
             message: message,
             type: 'success',
             showCancelButton: false,
@@ -1747,7 +1748,7 @@ export class StatsComponent implements OnInit, OnDestroy {
      */
     private async showErrorMessage(message: string) {
         const config: PopupConfig = {
-            title: 'Erreur',
+            title: I18nService.t('MSG.error'),
             message: message,
             type: 'error',
             showCancelButton: false,
@@ -1827,21 +1828,21 @@ export class StatsComponent implements OnInit, OnDestroy {
      */
     async deleteSelectedSummaries() {
         if (this.selectedSummaries.size === 0) {
-            await this.showErrorMessage('Aucune statistique sélectionnée');
+            await this.showErrorMessage(I18nService.t('STA.msg.aucuneStatistiqueSelectionnee'));
             return;
         }
 
         const selectedArray = Array.from(this.selectedSummaries);
-        const confirmMessage = `Êtes-vous sûr de vouloir supprimer ${selectedArray.length} statistique(s) sélectionnée(s) ?\n\n` +
-            `Cette action est irréversible.`;
+        const confirmMessage = I18nService.t('STA.msg.etesVousSurDeVouloirSupprimer2', { p0: selectedArray.length }) +
+            I18nService.t('PLT.acc.deleteNote');
 
         const config: PopupConfig = {
-            title: 'Confirmation de suppression multiple',
+            title: I18nService.t('OPS.OPS.bulkDeleteConfirmTitle'),
             message: confirmMessage,
             type: 'confirm',
             showCancelButton: true,
-            cancelText: 'Annuler',
-            confirmText: 'Supprimer tout'
+            cancelText: I18nService.t('COMMON.actions.cancel'),
+            confirmText: I18nService.t('STA.msg.supprimerTout')
         };
 
         try {
@@ -1856,7 +1857,7 @@ export class StatsComponent implements OnInit, OnDestroy {
                             this.agencySummaryService.deleteSummary(id, 'Statistiques').toPromise()
                         ));
                     } else {
-                        throw new Error('Aucun ID trouvé pour cette statistique');
+                        throw new Error(I18nService.t('STA.msg.aucunIdTrouvePourCetteStatistique'));
                     }
                 });
                 
@@ -1870,12 +1871,12 @@ export class StatsComponent implements OnInit, OnDestroy {
                 this.loadData();
                 
                 // Afficher un message de succès
-                await this.showSuccessMessage(`${selectedArray.length} statistique(s) supprimée(s) avec succès`);
+                await this.showSuccessMessage(I18nService.t('STA.msg.statistiqueSSupprimeeSAvecSucces', { p0: selectedArray.length }));
                 
                 console.log('Statistiques supprimées avec succès');
             } catch (error) {
                 console.error('Erreur lors de la suppression:', error);
-                await this.showErrorMessage('Erreur lors de la suppression des statistiques');
+                await this.showErrorMessage(I18nService.t('STA.msg.erreurLorsDeLaSuppressionDes'));
             } finally {
                 this.isLoading = false;
             }

@@ -15,6 +15,7 @@ import { ConfigurationCalculService } from '../../services/configuration-calcul.
 import { ImpactOP } from '../../models/impact-op.model';
 import { OperationCreateRequest } from '../../models/operation.model';
 import { fixGarbledCharacters } from '../../utils/encoding-fixer';
+import { I18nService } from '../../services/i18n/i18n.service';
 
 @Component({
   selector: 'app-ecart-partenaire',
@@ -508,7 +509,7 @@ export class EcartPartenaireComponent implements OnInit, OnDestroy {
   async createOperationFromPartnerRecord(record: Record<string, string>): Promise<void> {
     try {
       if (!this.isPartnerRecordEligible(record)) {
-        await this.popupService.showWarning('❌ Données insuffisantes pour créer une opération');
+        await this.popupService.showWarning(I18nService.t('TBL.msg.donneesInsuffisantesPourCreerUneOperatio'));
         return;
       }
 
@@ -525,7 +526,7 @@ export class EcartPartenaireComponent implements OnInit, OnDestroy {
       const { agency } = this.getPartnerOnlyAgencyAndService(record);
       const codeProprietaire = (this.getFromRecord(record, ['Agence','agency','Code propriétaire','Code proprietaire','codeProprietaire','code_proprietaire']) || agency || '').trim();
       if (!codeProprietaire) {
-        await this.popupService.showWarning('Code propriétaire introuvable pour cette ligne');
+        await this.popupService.showWarning(I18nService.t('MSG.ownerCodeNotFound'));
         return;
       }
 
@@ -540,19 +541,19 @@ export class EcartPartenaireComponent implements OnInit, OnDestroy {
           || this.toIsoLocalDate(new Date().toISOString());
 
       const dateInput = await this.popupService.showDateInput(
-          'Sélectionnez la date d\'opération pour cette création Import OP.',
-          'Créer OP - Date d\'opération',
+          I18nService.t('MSG.selectDateForImportOp'),
+          I18nService.t('MSG.createOpDateTitle'),
           defaultDateCandidate
       );
 
       if (dateInput === null) {
-        await this.popupService.showInfo('Création de l\'opération annulée.');
+        await this.popupService.showInfo(I18nService.t('MSG.operationCancelled'));
         return;
       }
 
       const normalizedDate = this.toIsoLocalDate(dateInput || defaultDateCandidate);
       if (!/^\d{4}-\d{2}-\d{2}$/.test(normalizedDate)) {
-        await this.popupService.showWarning('Date d\'opération invalide. Création annulée.');
+        await this.popupService.showWarning(I18nService.t('MSG.invalidDateOpCancelled'));
         return;
       }
 
@@ -582,21 +583,21 @@ export class EcartPartenaireComponent implements OnInit, OnDestroy {
       
       // Demander la banque via autocomplétion (avec "ECOBANK CM" par défaut)
       const banqueInput = await this.popupService.showAutocompleteInput(
-          'Banque (code propriétaire) :', 
-          'Créer OP', 
+          I18nService.t('MSG.bankLabel'), 
+          I18nService.t('MSG.createOpDialogTitle'), 
           banqueCodes, 
           'ECOBANK CM'
       );
       const banque = (banqueInput || '').trim();
       if (!banque) {
-        await this.popupService.showWarning('Banque obligatoire');
+        await this.popupService.showWarning(I18nService.t('MSG.bankRequired'));
         return;
       }
 
       // Demander le type de référence (Standard/Cross Border/Nivellement)
       const referenceTypeInput = await this.popupService.showSelectInput(
-          'Type de référence :', 
-          'Sélectionner le type', 
+          I18nService.t('MSG.referenceTypeLabel'), 
+          I18nService.t('MSG.referenceTypeTitle'), 
           ['STANDARD', 'CROSS_BORDER', 'NIVELLEMENT'], 
           'STANDARD'
       );
@@ -610,7 +611,7 @@ export class EcartPartenaireComponent implements OnInit, OnDestroy {
 
       const comptes = await firstValueFrom(this.compteService.getComptesByCodeProprietaire(codeProprietaire));
       if (!comptes || !comptes.length) {
-        await this.popupService.showError(`Aucun compte trouvé pour le code propriétaire: ${codeProprietaire}`);
+        await this.popupService.showError(I18nService.t('TBL.msg.aucunCompteTrouvePourLeCode', { p0: codeProprietaire }));
         return;
       }
       const compteId = comptes[0].id!;
@@ -628,19 +629,19 @@ export class EcartPartenaireComponent implements OnInit, OnDestroy {
       await new Promise<void>((resolve, reject) => {
           this.operationService.createOperation(payload).subscribe({
               next: async () => { 
-                  await this.popupService.showSuccess('Opération créée'); 
+                  await this.popupService.showSuccess(I18nService.t('MSG.operationCreated')); 
                   resolve(); 
               },
               error: async (err) => { 
                   console.error(err); 
-                  await this.popupService.showError("Échec de création de l'opération"); 
+                  await this.popupService.showError(I18nService.t('MSG.opCreationFailed')); 
                   reject(err); 
               }
           });
       });
     } catch (e) {
       console.error(e);
-      await this.popupService.showError('Erreur lors de la création de l\'opération');
+      await this.popupService.showError(I18nService.t('MSG.opCreationError'));
     }
   }
 
@@ -715,14 +716,14 @@ export class EcartPartenaireComponent implements OnInit, OnDestroy {
         : this.filteredPartnerOnly;
 
     if (sourceRecords.length === 0) {
-      this.popupService.showWarning('❌ Aucune ligne sélectionnée pour la sauvegarde.');
+      this.popupService.showWarning(I18nService.t('RES.dlg.noRowSelectedToSave'));
       return;
     }
 
     this.isSavingEcartPartnerToImpactOP = true;
     try {
       const dateInput = await this.popupService.showDateInput(
-        'Sélectionnez la date d\'opération à appliquer pour les Import OP générés.',
+        I18nService.t('SV.selectDateImportOp'),
         'Date Import OP',
         this.selectedPartnerImportOpDate || new Date().toISOString().split('T')[0]
       );
@@ -802,12 +803,12 @@ export class EcartPartenaireComponent implements OnInit, OnDestroy {
       }
 
       if (successCount > 0) {
-        this.popupService.showSuccess(`✅ ${successCount} Import OP créés avec succès !`);
+        this.popupService.showSuccess(I18nService.t('TBL.msg.importOpCreesAvecSucces', { p0: successCount }));
       } else {
-        this.popupService.showError('❌ Aucun Import OP n\'a pu être créé.');
+        this.popupService.showError(I18nService.t('TBL.msg.aucunImportOpNAPu'));
       }
     } catch (error: any) {
-      this.popupService.showError(`❌ Erreur: ${error.message || 'Erreur inconnue'}`);
+      this.popupService.showError(I18nService.t('TBL.msg.erreur', { p0: error.message || I18nService.t('TBL.msg.unknownError') }));
     } finally {
       this.isSavingEcartPartnerToImpactOP = false;
     }
@@ -815,13 +816,13 @@ export class EcartPartenaireComponent implements OnInit, OnDestroy {
 
   async exportResults(): Promise<void> {
     if (!this.filteredPartnerOnly || this.filteredPartnerOnly.length === 0) {
-      this.popupService.showWarning('Aucun écart Partenaire à exporter');
+      this.popupService.showWarning(I18nService.t('TBL.msg.aucunEcartPartenaireAExporter'));
       return;
     }
 
     this.isExporting = true;
     this.exportProgress = 0;
-    this.exportMessage = 'Préparation de l\'export...';
+    this.exportMessage = I18nService.t('MSG.exportPreparing');
     this.cdr.markForCheck();
 
     try {
@@ -829,7 +830,7 @@ export class EcartPartenaireComponent implements OnInit, OnDestroy {
       const isLargeDataset = totalRecords > 5000;
 
       // Étape 1: Collecter les colonnes
-      this.exportMessage = 'Collecte des colonnes...';
+      this.exportMessage = I18nService.t('TBL.msg.collecteDesColonnes');
       this.cdr.markForCheck();
       
       const allColumns = new Set<string>();
@@ -846,7 +847,7 @@ export class EcartPartenaireComponent implements OnInit, OnDestroy {
       const columns = Array.from(allColumns).sort();
 
       // Étape 2: Transformer les données par chunks
-      this.exportMessage = 'Transformation des données...';
+      this.exportMessage = I18nService.t('TBL.msg.transformationDesDonnees');
       this.cdr.markForCheck();
 
       const rows: any[] = [];
@@ -867,14 +868,14 @@ export class EcartPartenaireComponent implements OnInit, OnDestroy {
         });
 
         this.exportProgress = Math.round(((i + chunk.length) / totalRecords) * 50);
-        this.exportMessage = `Transformation: ${Math.min(i + chunk.length, totalRecords).toLocaleString()}/${totalRecords.toLocaleString()} écarts Partenaire`;
+        this.exportMessage = I18nService.t('TBL.msg.transformationEcartsPartenaire', { p0: Math.min(i + chunk.length, totalRecords).toLocaleString(), p1: totalRecords.toLocaleString() });
         this.cdr.markForCheck();
 
         await new Promise(resolve => setTimeout(resolve, 0));
       }
 
       // Étape 3: Exporter avec le service optimisé
-      this.exportMessage = 'Génération du fichier Excel...';
+      this.exportMessage = I18nService.t('TBL.msg.generationDuFichierExcel');
       this.exportProgress = 50;
       this.cdr.markForCheck();
 
@@ -894,11 +895,11 @@ export class EcartPartenaireComponent implements OnInit, OnDestroy {
         if (progress.isComplete) {
           this.isExporting = false;
           if (progress.message.includes('✅')) {
-            this.exportMessage = 'Export terminé avec succès !';
-            this.popupService.showSuccess('Export réussi !');
-          } else if (progress.message.includes('Erreur')) {
-            this.exportMessage = 'Erreur lors de l\'export';
-            this.popupService.showError('Erreur lors de l\'export');
+            this.exportMessage = I18nService.t('OPS.exportDetailsSuccess');
+            this.popupService.showSuccess(I18nService.t('MSG.exportSuccess'));
+          } else if (/erreur|error/i.test(progress.message)) {
+            this.exportMessage = I18nService.t('MSG.exportError');
+            this.popupService.showError(I18nService.t('MSG.exportError'));
           }
           this.cdr.markForCheck();
         }
@@ -921,8 +922,8 @@ export class EcartPartenaireComponent implements OnInit, OnDestroy {
     } catch (error) {
       console.error('Erreur lors de l\'export:', error);
       this.isExporting = false;
-      this.exportMessage = 'Erreur lors de l\'export';
-      this.popupService.showError('Erreur lors de l\'export des écarts Partenaire');
+      this.exportMessage = I18nService.t('MSG.exportError');
+      this.popupService.showError(I18nService.t('MSG.exportPartnerError'));
       this.cdr.markForCheck();
     }
   }

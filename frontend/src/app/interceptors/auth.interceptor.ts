@@ -7,6 +7,7 @@ import { AppStateService } from '../services/app-state.service';
 import { UserLogService } from '../services/user-log.service';
 import { PopupService } from '../services/popup.service';
 import { findNavigationAccessContextByRoute } from '../constants/app-navigation-catalog';
+import { I18nService } from '../services/i18n/i18n.service';
 
 @Injectable()
 export class AuthInterceptor implements HttpInterceptor {
@@ -126,11 +127,11 @@ export class AuthInterceptor implements HttpInterceptor {
     const message =
       error.error?.message ||
       error.error?.error ||
-      'Vous n\'avez pas la permission nécessaire pour effectuer cette action avec votre profil.';
+      I18nService.t('MSG.msg.vousNAvezPasLaPermission2');
 
     this.permissionPopupOpen = true;
     this.popupService
-      .showWarning(message, 'Permission refusée')
+      .showWarning(message, I18nService.t('MSG.msg.permissionRefusee'))
       .finally(() => {
         this.permissionPopupOpen = false;
       });

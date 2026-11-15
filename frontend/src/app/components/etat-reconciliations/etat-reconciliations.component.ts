@@ -31,6 +31,7 @@ import {
 import { TranslateModule, TranslateService } from '@ngx-translate/core';
 import { forkJoin, of } from 'rxjs';
 import { catchError } from 'rxjs/operators';
+import { I18nService } from '../../services/i18n/i18n.service';
 
 type RecoSummaryStatus = 'RECONCILIE' | 'NON_RECONCILIE' | 'EN_COURS' | 'NON_RECONCILIE';
 
@@ -1911,7 +1912,7 @@ export class EtatReconciliationsComponent implements OnInit {
         const s = (startIso || '').trim();
         const e = (endIso || '').trim();
         if (!s || !e) {
-            return { ok: false, message: 'Indiquez une date de début et une date de fin.' };
+            return { ok: false, message: I18nService.t('ETA.msg.indiquezUneDateDeDebutEt') };
         }
         let lo = s;
         let hi = e;
@@ -1921,12 +1922,12 @@ export class EtatReconciliationsComponent implements OnInit {
         }
         const days = this.buildCalendarDaysInclusive(lo, hi);
         if (!days.length) {
-            return { ok: false, message: 'Période invalide.' };
+            return { ok: false, message: I18nService.t('ETA.msg.periodeInvalide') };
         }
         if (days.length > this.popupDateRangeMaxDays) {
             return {
                 ok: false,
-                message: `L'intervalle ne peut pas dépasser ${this.popupDateRangeMaxDays} jours.`
+                message: I18nService.t('ETA.msg.lIntervalleNePeutPasDepasser', { p0: this.popupDateRangeMaxDays })
             };
         }
         return { ok: true, start: lo, end: hi };
@@ -1952,7 +1953,7 @@ export class EtatReconciliationsComponent implements OnInit {
     /** Libellé option ENV (popup / cohérence avec le bloc principal). */
     formatRecoViewEnvOptionLabel(env: string): string {
         if (env === 'ALL') {
-            return 'Tous les ENV';
+            return I18nService.t('ETA.allEnvs');
         }
         if (env === 'TOTAL') {
             return 'T-E';
@@ -2140,7 +2141,7 @@ export class EtatReconciliationsComponent implements OnInit {
                     this.recoViewLoadingMore = !isComplete;
                 } catch (e: unknown) {
                     console.error('Erreur vue semaine réconciliations:', e);
-                    this.recoViewError = 'Erreur lors du chargement de la vue semaine.';
+                    this.recoViewError = I18nService.t('ETA.msg.erreurLorsDuChargementDeLa');
                     this.recoViewLoading = false;
                     this.recoViewLoadingMore = false;
                 }
@@ -2152,7 +2153,7 @@ export class EtatReconciliationsComponent implements OnInit {
                 return;
             }
             console.error('Erreur chargement result8rec pour vue semaine:', err);
-            this.recoViewError = 'Erreur lors du chargement des données.';
+            this.recoViewError = I18nService.t('ETA.msg.erreurLorsDuChargementDesDonnees');
             this.recoViewLoading = false;
             this.recoViewLoadingMore = false;
         });
@@ -2319,7 +2320,7 @@ export class EtatReconciliationsComponent implements OnInit {
         if (this.transactStatsPerService.length >= 2) {
             return [
                 ...this.transactStatsPerService.map(({ service, stats }) => ({ title: service, stats })),
-                { title: 'Total (sélection)', stats: this.transactStats }
+                { title: I18nService.t('ETA.msg.totalSelection'), stats: this.transactStats }
             ];
         }
         return [{ title: null, stats: this.transactStats }];
@@ -2391,7 +2392,7 @@ export class EtatReconciliationsComponent implements OnInit {
                             );
                         } catch (e: unknown) {
                             console.error('Erreur statistiques réconciliation (relevé manuel):', e);
-                            this.transactStatsError = 'Erreur lors du calcul des statistiques.';
+                            this.transactStatsError = I18nService.t('ETA.msg.erreurLorsDuCalculDesStatistiques');
                             this.transactStatsLoading = false;
                             this.transactStatsLoadingMore = false;
                             this.transactStatsPerService = [];
@@ -2404,7 +2405,7 @@ export class EtatReconciliationsComponent implements OnInit {
                     }
                     manualLoadFailed = true;
                     console.error('Erreur chargement relevé manuel statistiques réconciliation:', err);
-                    this.transactStatsError = 'Erreur lors du chargement des données (rapport ou relevé manuel).';
+                    this.transactStatsError = I18nService.t('ETA.msg.erreurLorsDuChargementDesDonnees2');
                     this.transactStatsLoading = false;
                     this.transactStatsLoadingMore = false;
                     this.transactStatsPerService = [];
@@ -2429,7 +2430,7 @@ export class EtatReconciliationsComponent implements OnInit {
                     this.transactStatsLoadingMore = !isComplete;
                 } catch (e: unknown) {
                     console.error('Erreur statistiques réconciliation:', e);
-                    this.transactStatsError = 'Erreur lors du calcul des statistiques.';
+                    this.transactStatsError = I18nService.t('ETA.msg.erreurLorsDuCalculDesStatistiques');
                     this.transactStatsLoading = false;
                     this.transactStatsLoadingMore = false;
                     this.transactStatsPerService = [];
@@ -2442,7 +2443,7 @@ export class EtatReconciliationsComponent implements OnInit {
                 return;
             }
             console.error('Erreur chargement result8rec statistiques réconciliation:', err);
-            this.transactStatsError = 'Erreur lors du chargement des données (rapport ou relevé manuel).';
+            this.transactStatsError = I18nService.t('ETA.msg.erreurLorsDuChargementDesDonnees2');
             this.transactStatsLoading = false;
             this.transactStatsLoadingMore = false;
             this.transactStatsPerService = [];

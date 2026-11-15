@@ -193,7 +193,7 @@
             <td class="niveau-emails-cell">
               <div class="niveau-emails" *ngIf="hasNiveauEmails(niveau); else noNiveauEmails">
                 <span class="email-chip" *ngFor="let email of (niveau.destinatairesEmail || [])">{{ email }}</span>
-                <span class="email-cc" *ngIf="niveau.copieEmail?.length">CC : {{ getNiveauCopieLabel(niveau) }}</span>
+                <span class="email-cc" *ngIf="niveau.copieEmail?.length">{{ 'NIVEAUX.ui.cc' | translate: { p0: (getNiveauCopieLabel(niveau)) } }}</span>
                 <span class="auto-email-badge" *ngIf="niveau.envoiAutomatiqueEmail" title="{{ 'NIVEAUX.ENVOI_AUTOMATIQUE' | translate }}">
                   <i class="fa fa-bolt"></i> {{ 'NIVEAUX.ENVOI_AUTO_BADGE' | translate }}
                 </span>

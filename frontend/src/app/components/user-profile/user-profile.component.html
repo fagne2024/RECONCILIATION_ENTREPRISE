@@ -1,6 +1,6 @@
 <div class="user-profile-container">
   <div class="header">
-    <h2><i class="fas fa-user-circle"></i> Mon Profil</h2>
+    <h2><i class="fas fa-user-circle"></i> {{ 'COMMON.ui.monProfil' | translate }}</h2>
     <button type="button" class="ds-btn ds-btn--ghost btn-close" (click)="closeProfile()" title="{{ 'COMMON.actions.close' | translate }}">
       <i class="fas fa-times"></i>
     </button>
@@ -13,7 +13,7 @@
 
   <!-- Chargement -->
   <div *ngIf="isLoading" class="loading-container">
-    <i class="fas fa-spinner fa-spin"></i> Chargement des informations...
+    <i class="fas fa-spinner fa-spin"></i> {{ 'COMMON.ui.chargementDesInformations' | translate }}
   </div>
 
   <!-- Informations utilisateur -->
@@ -21,7 +21,7 @@
     <div class="profile-card">
       <div class="profile-header">
         <div class="profile-avatar" [class.has-photo]="photo">
-          <img *ngIf="photo" [src]="photo" alt="Photo de profil">
+          <img *ngIf="photo" [src]="photo" alt="{{ 'COMMON.ui.photoDeProfil' | translate }}">
           <i *ngIf="!photo" class="fas fa-user-circle"></i>
 
           <div class="avatar-overlay">
@@ -30,7 +30,7 @@
               class="ds-btn ds-btn--ghost avatar-btn"
               (click)="photoInput.click()"
               [disabled]="isUploadingPhoto"
-              title="Changer la photo">
+              title="{{ 'COMMON.ui.changerLaPhoto' | translate }}">
               <i class="fas" [class.fa-camera]="!isUploadingPhoto" [class.fa-spinner]="isUploadingPhoto" [class.fa-spin]="isUploadingPhoto"></i>
             </button>
             <button
@@ -39,7 +39,7 @@
               class="ds-btn ds-btn--ghost avatar-btn avatar-btn-danger"
               (click)="removePhoto()"
               [disabled]="isUploadingPhoto"
-              title="Supprimer la photo">
+              title="{{ 'COMMON.ui.supprimerLaPhoto' | translate }}">
               <i class="fas fa-trash"></i>
             </button>
           </div>
@@ -63,7 +63,7 @@
         <div class="detail-item">
           <div class="detail-label">
             <i class="fas fa-user"></i>
-            <span>Nom d'utilisateur</span>
+            <span>{{ 'PLT.acc.editUsername' | translate }}</span>
           </div>
           <div class="detail-value">{{ user.username }}</div>
         </div>
@@ -71,7 +71,7 @@
         <div class="detail-item">
           <div class="detail-label">
             <i class="fas fa-id-badge"></i>
-            <span>Profil</span>
+            <span>{{ 'OPS.Profil' | translate }}</span>
           </div>
           <div class="detail-value">{{ getProfilName() }}</div>
         </div>
@@ -79,11 +79,11 @@
         <div class="detail-item" *ngIf="user.enabled2FA !== undefined">
           <div class="detail-label">
             <i class="fas fa-shield-alt"></i>
-            <span>Authentification à deux facteurs</span>
+            <span>{{ 'COMMON.ui.authentificationADeuxFacteurs' | translate }}</span>
           </div>
           <div class="detail-value">
             <span [class]="user.enabled2FA ? 'badge-enabled' : 'badge-disabled'">
-              {{ user.enabled2FA ? 'Activé' : 'Désactivé' }}
+              {{ user.enabled2FA ? ('TFA.status.enabled' | translate) : ('TFA.status.disabled' | translate) }}
             </span>
           </div>
         </div>
@@ -93,14 +93,14 @@
     <!-- Section changement de mot de passe -->
     <div class="password-section">
       <div class="section-header">
-        <h3><i class="fas fa-key"></i> Changer le mot de passe</h3>
+        <h3><i class="fas fa-key"></i> {{ 'COMMON.ui.changerLeMotDePasse' | translate }}</h3>
         <button 
           type="button"
           class="ds-btn ds-btn--secondary btn btn-secondary" 
           (click)="togglePasswordForm()"
           [class.active]="showPasswordForm">
           <i class="fas" [class.fa-chevron-down]="!showPasswordForm" [class.fa-chevron-up]="showPasswordForm"></i>
-          {{ showPasswordForm ? 'Masquer' : 'Afficher' }}
+          {{ showPasswordForm ? ('ACT.hide' | translate) : ('ACT.show' | translate) }}
         </button>
       </div>
 
@@ -108,7 +108,7 @@
         <form (ngSubmit)="changePassword()" #passwordFormRef="ngForm">
           <div class="form-group">
             <label class="ds-label" for="currentPassword">
-              <i class="fas fa-lock"></i> Mot de passe actuel *
+              <i class="fas fa-lock"></i> {{ 'COMMON.ui.motDePasseActuel' | translate }}
             </label>
             <input 
               type="password" 
@@ -117,13 +117,13 @@
               [(ngModel)]="passwordForm.currentPassword"
               required
               class="ds-input form-control"
-              placeholder="Entrez votre mot de passe actuel"
+              placeholder="{{ 'COMMON.ui.entrezVotreMotDePasseActuel' | translate }}"
               [disabled]="isChangingPassword">
           </div>
 
           <div class="form-group">
             <label class="ds-label" for="newPassword">
-              <i class="fas fa-key"></i> Nouveau mot de passe *
+              <i class="fas fa-key"></i> {{ 'COMMON.ui.nouveauMotDePasse' | translate }}
             </label>
             <input 
               type="password" 
@@ -133,13 +133,13 @@
               required
               minlength="6"
               class="ds-input form-control"
-              placeholder="Entrez votre nouveau mot de passe (min. 6 caractères)"
+              placeholder="{{ 'COMMON.ui.entrezVotreNouveauMotDePasse' | translate }}"
               [disabled]="isChangingPassword">
           </div>
 
           <div class="form-group">
             <label class="ds-label" for="confirmPassword">
-              <i class="fas fa-check-circle"></i> Confirmer le nouveau mot de passe *
+              <i class="fas fa-check-circle"></i> {{ 'COMMON.ui.confirmerLeNouveauMotDePasse' | translate }}
             </label>
             <input 
               type="password" 
@@ -149,7 +149,7 @@
               required
               minlength="6"
               class="ds-input form-control"
-              placeholder="Confirmez votre nouveau mot de passe"
+              placeholder="{{ 'COMMON.ui.confirmezVotreNouveauMotDePasse' | translate }}"
               [disabled]="isChangingPassword">
           </div>
 
@@ -159,7 +159,7 @@
               class="ds-btn ds-btn--primary btn btn-primary"
               [disabled]="isChangingPassword || !passwordFormRef.valid">
               <i class="fas fa-save"></i>
-              {{ isChangingPassword ? 'Modification en cours...' : 'Modifier le mot de passe' }}
+              {{ isChangingPassword ? ('SOP.shared.edit.inProgress' | translate) : ('COMMON.ui.modifierLeMotDePasse' | translate) }}
             </button>
             <button 
               type="button" 

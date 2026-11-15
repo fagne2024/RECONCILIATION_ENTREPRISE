@@ -21,7 +21,7 @@
       <button type="button" class="ds-btn ds-btn--secondary nav-btn secondary" (click)="exportToPdf()" [disabled]="!data || isExporting">
         <i class="fas fa-file-pdf" *ngIf="!isExporting"></i>
         <i class="fas fa-spinner fa-spin" *ngIf="isExporting"></i>
-        {{ isExporting ? 'Export...' : 'Export PDF' }}
+        {{ isExporting ? ('ACT.exporting' | translate) : ('CIB.export.pdf' | translate) }}
       </button>
       <button type="button" class="ds-btn ds-btn--secondary nav-btn secondary" (click)="goToCalcul()" *ngIf="canEditFormules">
         <i class="fas fa-calculator"></i>
@@ -50,7 +50,7 @@
         <mat-form-field appearance="fill" class="fi-field">
           <mat-select #agenceSelect [(ngModel)]="selectedAgence" (selectionChange)="onFilterChange()" placeholder="{{ 'RDL.Sélectionner' | translate }}">
             <mat-option>
-              <ngx-mat-select-search [formControl]="agenceSearchCtrl" placeholderLabel="Rechercher..." noEntriesFoundLabel="Aucun résultat"></ngx-mat-select-search>
+              <ngx-mat-select-search [formControl]="agenceSearchCtrl" [placeholderLabel]="'SEARCH.generic' | translate" [noEntriesFoundLabel]="'SEARCH.noResult' | translate"></ngx-mat-select-search>
             </mat-option>
             <mat-option [value]="">{{ 'RDL.Touteslesagences' | translate }}</mat-option>
             <mat-option *ngFor="let agency of filteredAgencies" [value]="agency">{{ agency }}</mat-option>
@@ -62,7 +62,7 @@
         <mat-form-field appearance="fill" class="fi-field">
           <mat-select #paysSelect [(ngModel)]="selectedPays" multiple (selectionChange)="onFilterChange()" placeholder="{{ 'RDL.Sélectionner' | translate }}">
             <mat-option>
-              <ngx-mat-select-search [formControl]="paysSearchCtrl" placeholderLabel="Rechercher..." noEntriesFoundLabel="Aucun résultat"></ngx-mat-select-search>
+              <ngx-mat-select-search [formControl]="paysSearchCtrl" [placeholderLabel]="'SEARCH.generic' | translate" [noEntriesFoundLabel]="'SEARCH.noResult' | translate"></ngx-mat-select-search>
             </mat-option>
             <mat-option *ngFor="let country of filteredCountries" [value]="country">{{ country }}</mat-option>
           </mat-select>
@@ -386,7 +386,7 @@
     <div class="modal-footer">
       <button type="button" class="ds-btn ds-btn--secondary btn btn-secondary" (click)="closeFluxModal()">{{ 'COMMON.actions.cancel' | translate }}</button>
       <button type="button" class="ds-btn ds-btn--primary btn btn-primary" (click)="saveFlux()" [disabled]="isSavingFlux">
-        {{ isSavingFlux ? 'Enregistrement...' : 'Enregistrer' }}
+        {{ isSavingFlux ? ('RPT.savingEntries' | translate) : ('COMMON.actions.save' | translate) }}
       </button>
     </div>
   </div>
@@ -420,7 +420,7 @@
     <div class="modal-footer">
       <button type="button" class="ds-btn ds-btn--secondary btn btn-secondary" (click)="closeParamsModal()">{{ 'COMMON.actions.cancel' | translate }}</button>
       <button type="button" class="ds-btn ds-btn--primary btn btn-primary" (click)="saveParams()" [disabled]="isSavingParams">
-        {{ isSavingParams ? 'Enregistrement...' : 'Enregistrer' }}
+        {{ isSavingParams ? ('RPT.savingEntries' | translate) : ('COMMON.actions.save' | translate) }}
       </button>
     </div>
   </div>

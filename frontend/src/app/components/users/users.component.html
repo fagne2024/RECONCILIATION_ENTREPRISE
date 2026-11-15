@@ -104,7 +104,7 @@
                     <small>
                       <ng-container *ngIf="user.email; else noEmail">{{ user.email }}</ng-container>
                       <ng-template #noEmail><a (click)="openEditDrawer(user)">{{ 'USR.table.addEmail' | translate }}</a></ng-template>
-                      · ID {{ user.id }}
+                      {{ 'USR.ui.id' | translate: { p0: user.id } }}
                     </small>
                   </div>
                 </div>

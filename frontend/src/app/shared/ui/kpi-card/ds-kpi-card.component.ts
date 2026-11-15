@@ -1,5 +1,6 @@
 import { ChangeDetectionStrategy, Component, Input } from '@angular/core';
 import { CommonModule } from '@angular/common';
+import { TranslateModule } from '@ngx-translate/core';
 
 export type DsTone = 'neutral' | 'accent' | 'success' | 'warning' | 'error' | 'info' | 'duplicate';
 
@@ -8,7 +9,7 @@ const NUMBER_FORMAT = new Intl.NumberFormat('fr-FR', { maximumFractionDigits: 2 
 @Component({
   selector: 'ds-kpi-card',
   standalone: true,
-  imports: [CommonModule],
+  imports: [CommonModule, TranslateModule],
   changeDetection: ChangeDetectionStrategy.OnPush,
   styleUrls: ['./ds-kpi-card.component.scss'],
   template: `
@@ -22,7 +23,7 @@ const NUMBER_FORMAT = new Intl.NumberFormat('fr-FR', { maximumFractionDigits: 2 
         <span *ngIf="!loading && unit" class="kpi__unit">{{ unit }}</span>
         <ng-template #skeleton>
           <span class="kpi__skeleton" aria-hidden="true"></span>
-          <span class="ds-visually-hidden">Chargement</span>
+          <span class="ds-visually-hidden">{{ 'AUTO_DESIGN_SYSTEM_PAGE.ui.chargement' | translate }}</span>
         </ng-template>
       </div>
       <div *ngIf="hint" class="kpi__hint">{{ hint }}</div>

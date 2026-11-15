@@ -142,7 +142,7 @@ export class ProfilDetailComponent implements OnInit {
       next: (profils) => {
         this.profil = profils.find(p => p.id === id) || null;
         if (!this.profil) {
-          this.showToast('Profil non trouvé', 'error');
+          this.showToast(I18nService.t('PROF.msg.profilNonTrouve'), 'error');
           this.router.navigate(['/profils']);
           return;
         }
@@ -156,7 +156,7 @@ export class ProfilDetailComponent implements OnInit {
       },
       error: (error) => {
         console.error('Erreur chargement profil:', error);
-        this.showToast('Erreur lors du chargement du profil', 'error');
+        this.showToast(I18nService.t('PROF.msg.erreurLorsDuChargementDuProfil'), 'error');
         this.isLoading = false;
       }
     });
@@ -363,7 +363,7 @@ export class ProfilDetailComponent implements OnInit {
         this.isSavingPermissions = false;
         if (!hasError) {
           this.pendingPermissionChanges = [];
-          this.showToast('Modifications sauvegardées avec succès', 'success');
+          this.showToast(I18nService.t('PROF.msg.modificationsSauvegardeesAvecSucces'), 'success');
           this.loadProfilPermissions(profilId);
         }
       }
@@ -382,7 +382,7 @@ export class ProfilDetailComponent implements OnInit {
         error: (error) => {
           console.error('Erreur batch ajout permissions:', error);
           hasError = true;
-          this.showToast(this.extractErrorMessage(error, 'Erreur lors de la sauvegarde des ajouts'), 'error');
+          this.showToast(this.extractErrorMessage(error, I18nService.t('PROF.msg.erreurLorsDeLaSauvegardeDes')), 'error');
           checkComplete();
         }
       });
@@ -398,7 +398,7 @@ export class ProfilDetailComponent implements OnInit {
           error: (error) => {
             console.error('Erreur suppression permission:', error);
             hasError = true;
-            this.showToast(this.extractErrorMessage(error, 'Erreur lors de la sauvegarde des suppressions'), 'error');
+            this.showToast(this.extractErrorMessage(error, I18nService.t('PROF.msg.erreurLorsDeLaSauvegardeDes2')), 'error');
             checkComplete();
           }
         });
@@ -417,7 +417,7 @@ export class ProfilDetailComponent implements OnInit {
 
   goBack(): void {
     if (this.hasPendingChanges) {
-      const confirmed = confirm('Vous avez des modifications non sauvegardées. Voulez-vous vraiment quitter ?');
+      const confirmed = confirm(I18nService.t('PROF.msg.vousAvezDesModificationsNonSauvegardees'));
       if (!confirmed) return;
     }
     this.router.navigate(['/profils']);
@@ -591,13 +591,13 @@ export class ProfilDetailComponent implements OnInit {
           this.loadModuleActionsForDisplay(moduleName, module);
         }
         this.syncingModuleActionsSet.delete(moduleName);
-        this.showToast(result.message || 'Actions synchronisées', 'success');
+        this.showToast(result.message || I18nService.t('PROF.msg.actionsSynchronisees'), 'success');
         this.cd.detectChanges();
       },
       error: (error) => {
         console.error(`Erreur synchronisation actions ${moduleName}:`, error);
         this.syncingModuleActionsSet.delete(moduleName);
-        this.showToast('Impossible de synchroniser les actions', 'error');
+        this.showToast(I18nService.t('PROF.msg.impossibleDeSynchroniserLesActions'), 'error');
       }
     });
   }
@@ -659,7 +659,7 @@ export class ProfilDetailComponent implements OnInit {
     }
     const permission = this.findPermissionForAction(module, actionName);
     if (!permission?.id) {
-      this.showToast(`L'action "${this.getActionLabel(actionName)}" n'est pas encore enregistrée`, 'error');
+      this.showToast(I18nService.t('PROF.msg.lActionNEstPasEncore', { p0: this.getActionLabel(actionName) }), 'error');
       (event.target as HTMLInputElement).checked = false;
       return;
     }
@@ -741,7 +741,7 @@ export class ProfilDetailComponent implements OnInit {
         },
         error: () => {
           this.syncingModuleActionsSet.delete(moduleName);
-          this.showToast('Synchronisation requise avant la sélection', 'error');
+          this.showToast(I18nService.t('PROF.msg.synchronisationRequiseAvantLaSelection'), 'error');
         }
       });
       return;
@@ -877,7 +877,7 @@ export class ProfilDetailComponent implements OnInit {
       },
       error: (error) => {
         console.error(`Impossible de créer le module « ${moduleName} »:`, error);
-        this.showToast(`Le module « ${moduleName} » est introuvable`, 'error');
+        this.showToast(I18nService.t('PROF.msg.leModuleEstIntrouvable', { p0: moduleName }), 'error');
       }
     });
   }
@@ -1394,7 +1394,7 @@ export class ProfilDetailComponent implements OnInit {
         next: () => this.loadAllProfilPays(),
         error: (err) => {
           console.error('Erreur association pays:', err);
-          this.showToast('Erreur lors de l\'association du pays', 'error');
+          this.showToast(I18nService.t('PROF.msg.erreurLorsDeLAssociationDu'), 'error');
           (event.target as HTMLInputElement).checked = false;
         }
       });
@@ -1403,7 +1403,7 @@ export class ProfilDetailComponent implements OnInit {
         next: () => this.loadAllProfilPays(),
         error: (err) => {
           console.error('Erreur dissociation pays:', err);
-          this.showToast('Erreur lors de la dissociation du pays', 'error');
+          this.showToast(I18nService.t('PROF.msg.erreurLorsDeLaDissociationDu'), 'error');
           (event.target as HTMLInputElement).checked = true;
         }
       });
@@ -1413,8 +1413,8 @@ export class ProfilDetailComponent implements OnInit {
   getProfilPaysLabel(): string {
     if (!this.selectedProfilForPays) return '';
     const count = this.profilPays.filter(pp => pp.profil?.id === this.selectedProfilForPays!.id).length;
-    if (count === 0) return 'Aucun pays';
-    if (count === this.pays.length) return 'Tous les pays';
+    if (count === 0) return I18nService.t('PROF.Aucunpays');
+    if (count === this.pays.length) return I18nService.t('DASH.banqueAllCountries');
     const codes = this.profilPays
       .filter(pp => pp.profil?.id === this.selectedProfilForPays!.id)
       .map(pp => pp.pays?.code)

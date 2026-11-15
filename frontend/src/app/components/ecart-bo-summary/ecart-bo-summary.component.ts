@@ -26,6 +26,7 @@ import {
 import { SharedModule } from '../../shared/shared.module';
 import { TranslateModule } from '@ngx-translate/core';
 import { DsPaginationComponent } from '../../shared/ui';
+import { I18nService } from '../../services/i18n/i18n.service';
 
 export interface EcartBoSummaryItem {
   id?: number; // ID si l'item est sauvegardé
@@ -279,7 +280,7 @@ export class EcartBoSummaryComponent implements OnInit, OnDestroy {
         if (prefill) {
           this.popupService
             .showSuccess(
-              'Données prêtes. Le formulaire Écart BO Summary sera prérempli ; vous pouvez modifier et ajouter la ligne.'
+              I18nService.t('EBS.msg.donneesPretesLeFormulaireEcartBo')
             )
             .then(() => {
               this.openAddModalWithPrefill(prefill);
@@ -292,12 +293,12 @@ export class EcartBoSummaryComponent implements OnInit, OnDestroy {
 
   get envPreloadHint(): string {
     if (this.prefillBuffer) {
-      return `Les correspondances sélectionnées (${this.prefillBuffer.nombre.toLocaleString('fr-FR')} transactions) seront préparées pour sauvegarde.`;
+      return I18nService.t('EBS.msg.lesCorrespondancesSelectionneesTransacti', { p0: this.prefillBuffer.nombre.toLocaleString('fr-FR') });
     }
     if (this.pendingLinesBuffer && this.pendingLinesBuffer.length > 0) {
-      return `${this.pendingLinesBuffer.length} ligne(s) en attente depuis les écarts BO.`;
+      return I18nService.t('EBS.msg.ligneSEnAttenteDepuisLes', { p0: this.pendingLinesBuffer.length });
     }
-    return 'Les écarts issus de la réconciliation en cours vont être chargés dans le tableau.';
+    return I18nService.t('EBS.msg.lesEcartsIssusDeLaReconciliation');
   }
 
   /**
@@ -314,7 +315,7 @@ export class EcartBoSummaryComponent implements OnInit, OnDestroy {
       this.pendingLinesBuffer = null;
       this.applyPendingLinesFromEcartBo(lines);
       this.popupService.showSuccess(
-        `${lines.length} ligne(s) prêtes (ENV : ${this.sessionDefaultEnvCode || 'T-E / non renseigné'}). Utilisez « Sauvegarder » pour enregistrer.`
+        I18nService.t('EBS.msg.ligneSPretesEnvUtilisezSauvegarder', { p0: lines.length, p1: this.sessionDefaultEnvCode || I18nService.t('EBS.msg.tENonRenseigne') })
       );
     } else if (this.response && prefill) {
       // Depuis /matches : ne pas agréger les milliers d'écarts BO — uniquement la ligne de correspondances.
@@ -334,7 +335,7 @@ export class EcartBoSummaryComponent implements OnInit, OnDestroy {
     if (prefill) {
       this.popupService
         .showSuccess(
-          'Données prêtes. Le formulaire Écart BO Summary sera prérempli ; vous pouvez modifier et ajouter la ligne.'
+          I18nService.t('EBS.msg.donneesPretesLeFormulaireEcartBo')
         )
         .then(() => {
           this.openAddModalWithPrefill(prefill);
@@ -500,7 +501,7 @@ export class EcartBoSummaryComponent implements OnInit, OnDestroy {
   loadByToken(): void {
     const t = this.selectedToken?.trim();
     if (!t) {
-      this.popupService.showWarning('❌ Saisissez un token pour rechercher.');
+      this.popupService.showWarning(I18nService.t('EBS.msg.saisissezUnTokenPourRechercher'));
       return;
     }
     this.isLoading = true;
@@ -514,11 +515,11 @@ export class EcartBoSummaryComponent implements OnInit, OnDestroy {
       next: (savedData) => {
         this.applySavedDataToSummary(savedData);
         this.applyFilters();
-        this.popupService.showSuccess(`✅ ${this.summaryItems.length} ligne(s) trouvée(s) pour le token.`);
+        this.popupService.showSuccess(I18nService.t('EBS.msg.ligneSTrouveeSPourLe', { p0: this.summaryItems.length }));
       },
       error: (err) => {
         console.error('Erreur recherche par token:', err);
-        this.popupService.showError('❌ Erreur lors de la recherche par token.');
+        this.popupService.showError(I18nService.t('EBS.msg.erreurLorsDeLaRecherchePar'));
       }
     });
   }
@@ -579,7 +580,7 @@ export class EcartBoSummaryComponent implements OnInit, OnDestroy {
               this.applyFilters();
             } catch (processingError) {
               console.error('Erreur lors du traitement des données sauvegardées:', processingError);
-              this.popupService.showError('❌ Erreur lors du traitement des données sauvegardées.');
+              this.popupService.showError(I18nService.t('EBS.msg.erreurLorsDuTraitementDesDonnees'));
             } finally {
               this.isLoading = false;
               this.cdr.markForCheck();
@@ -621,7 +622,7 @@ export class EcartBoSummaryComponent implements OnInit, OnDestroy {
     void this.buildSummaryItemsFromReconciliationResponseAsync()
       .catch(error => {
         console.error('Erreur lors du chargement des écarts de réconciliation:', error);
-        this.popupService.showError('❌ Erreur lors du chargement des écarts.');
+        this.popupService.showError(I18nService.t('EBS.msg.erreurLorsDuChargementDesEcarts'));
       })
       .finally(() => {
         this.isLoading = false;
@@ -1252,7 +1253,7 @@ export class EcartBoSummaryComponent implements OnInit, OnDestroy {
   }
 
   getDuplicateCriteriaText(): string {
-    return 'date, agence, service, pays, plateforme (BO/Partenaire), ENV, nombre de transactions et montant total';
+    return I18nService.t('EBS.msg.dateAgenceServicePaysPlateformeBo');
   }
 
   private getDuplicateCriteriaBullets(): string {
@@ -1296,10 +1297,10 @@ export class EcartBoSummaryComponent implements OnInit, OnDestroy {
     });
 
     if (dup.message?.includes('lot envoyé')) {
-      return `Doublon dans votre sélection — ${line}`;
+      return I18nService.t('EBS.msg.doublonDansVotreSelection', { p0: line });
     }
     if (dup.idExistant) {
-      return `Déjà enregistré (n° ${dup.idExistant}) — ${line}`;
+      return I18nService.t('EBS.msg.dejaEnregistreN', { p0: dup.idExistant, p1: line });
     }
     return line;
   }
@@ -1319,11 +1320,11 @@ export class EcartBoSummaryComponent implements OnInit, OnDestroy {
     action: 'ajout' | 'modification'
   ): void {
     void this.popupService.showWarning(
-      `Impossible de ${action === 'ajout' ? 'ajouter' : 'enregistrer'} cette ligne : ` +
-      `une entrée identique existe déjà.\n\n` +
-      `Ligne en conflit :\n${this.formatSummaryItemDuplicateLine(existing)}\n\n` +
-      `Un doublon correspond à la même combinaison :\n${this.getDuplicateCriteriaBullets()}`,
-      'Doublon détecté'
+      I18nService.t('EBS.msg.impossibleDeCetteLigne', { p0: action === 'ajout' ? I18nService.t('EBS.msg.ajouter') : I18nService.t('EBS.msg.enregistrer') }) +
+      I18nService.t('EBS.msg.uneEntreeIdentiqueExisteDeja') +
+      I18nService.t('EBS.msg.ligneEnConflit', { p0: this.formatSummaryItemDuplicateLine(existing) }) +
+      I18nService.t('EBS.msg.unDoublonCorrespondALaMeme', { p0: this.getDuplicateCriteriaBullets() }),
+      I18nService.t('RPT.duplicate.title')
     );
   }
 
@@ -2044,7 +2045,7 @@ export class EcartBoSummaryComponent implements OnInit, OnDestroy {
 
     // Validation
     if (!this.editForm.agence || !this.editForm.service || !this.editForm.pays) {
-      this.popupService.showWarning('❌ Veuillez remplir tous les champs obligatoires.');
+      this.popupService.showWarning(I18nService.t('EBS.msg.veuillezRemplirTousLesChampsObligatoires'));
       return;
     }
 
@@ -2150,12 +2151,12 @@ export class EcartBoSummaryComponent implements OnInit, OnDestroy {
       // Réappliquer les filtres après modification
       this.applyFilters();
 
-      this.popupService.showSuccess('✅ Ligne modifiée avec succès !');
+      this.popupService.showSuccess(I18nService.t('EBS.msg.ligneModifieeAvecSucces'));
       this.closeEditModal();
     } catch (error: any) {
       console.error('Erreur lors de la modification:', error);
       this.popupService.showError(
-        `❌ Erreur: ${this.extractHttpErrorMessage(error, 'Erreur inconnue lors de la modification')}`
+        I18nService.t('EBS.msg.erreur', { p0: this.extractHttpErrorMessage(error, I18nService.t('EBS.msg.erreurInconnueLorsDeLaModification')) })
       );
     } finally {
       this.isUpdating = false;
@@ -2171,12 +2172,12 @@ export class EcartBoSummaryComponent implements OnInit, OnDestroy {
     const saveScopeLabel = selectedSavableItems.length > 0 ? 'sélectionnée(s)' : 'affichée(s) sur la page courante';
 
     if (hasSelection && selectedSavableItems.length === 0) {
-      this.popupService.showWarning('❌ La sélection en cours ne contient aucune ligne à enregistrer.');
+      this.popupService.showWarning(I18nService.t('EBS.msg.laSelectionEnCoursNeContient'));
       return;
     }
 
     if (itemsToSave.length === 0) {
-      this.popupService.showWarning('❌ Aucune ligne non enregistrée à sauvegarder.');
+      this.popupService.showWarning(I18nService.t('EBS.msg.aucuneLigneNonEnregistreeASauvegarder'));
       return;
     }
 
@@ -2186,8 +2187,8 @@ export class EcartBoSummaryComponent implements OnInit, OnDestroy {
     const defaultDate = yesterday.toISOString().split('T')[0];
     
     const selectedDate = await this.popupService.showDateInput(
-      `Veuillez sélectionner la date à appliquer aux ${itemsToSave.length} ligne(s) ${saveScopeLabel} :`,
-      'Sélection de la date pour la sauvegarde',
+      I18nService.t('EBS.msg.veuillezSelectionnerLaDateAAppliquer', { p0: itemsToSave.length, p1: saveScopeLabel }),
+      I18nService.t('EBS.msg.selectionDeLaDatePourLa'),
       defaultDate
     );
 
@@ -2196,8 +2197,8 @@ export class EcartBoSummaryComponent implements OnInit, OnDestroy {
     }
 
     const confirmed = await this.popupService.showConfirm(
-      `📋 ${itemsToSave.length} ligne(s) ${saveScopeLabel} seront sauvegardées avec la date ${selectedDate}. Continuer ?`,
-      'Confirmation de sauvegarde'
+      I18nService.t('EBS.msg.ligneSSerontSauvegardeesAvecLa', { p0: itemsToSave.length, p1: saveScopeLabel, p2: selectedDate }),
+      I18nService.t('SV.confirmTitle')
     );
 
     if (!confirmed) return;
@@ -2217,10 +2218,10 @@ export class EcartBoSummaryComponent implements OnInit, OnDestroy {
 
     if (inBatchDuplicates > 0) {
       const proceedWithDedup = await this.popupService.showConfirm(
-        `${inBatchDuplicates} doublon(s) dans votre sélection.\n\n` +
-        `Deux lignes sont considérées identiques si elles ont la même ${this.getDuplicateCriteriaText()}.\n\n` +
-        `Seules ${dedupedItemsToSave.length} ligne(s) unique(s) seront envoyées à la sauvegarde. Continuer ?`,
-        'Doublons dans la sélection'
+        I18nService.t('EBS.msg.doublonSDansVotreSelection', { p0: inBatchDuplicates }) +
+        I18nService.t('EBS.msg.deuxLignesSontConsidereesIdentiquesSi', { p0: this.getDuplicateCriteriaText() }) +
+        I18nService.t('EBS.msg.seulesLigneSUniqueSSeront', { p0: dedupedItemsToSave.length }),
+        I18nService.t('EBS.msg.doublonsDansLaSelection')
       );
       if (!proceedWithDedup) {
         return;
@@ -2229,10 +2230,10 @@ export class EcartBoSummaryComponent implements OnInit, OnDestroy {
 
     if (dedupedItemsToSave.length === 0) {
       await this.popupService.showWarning(
-        `Toutes les lignes sélectionnées sont des doublons.\n\n` +
-        `Critères : ${this.getDuplicateCriteriaText()}.\n\n` +
-        `Modifiez ou supprimez les lignes en double avant de sauvegarder.`,
-        'Aucune ligne unique à enregistrer'
+        I18nService.t('EBS.msg.toutesLesLignesSelectionneesSontDes') +
+        I18nService.t('EBS.msg.criteres', { p0: this.getDuplicateCriteriaText() }) +
+        I18nService.t('EBS.msg.modifiezOuSupprimezLesLignesEn'),
+        I18nService.t('EBS.msg.aucuneLigneUniqueAEnregistrer')
       );
       return;
     }
@@ -2260,7 +2261,7 @@ export class EcartBoSummaryComponent implements OnInit, OnDestroy {
       }));
 
       if (serviceSummaryData.length === 0) {
-        this.popupService.showWarning('❌ Aucune donnée valide trouvée pour la sauvegarde.');
+        this.popupService.showWarning(I18nService.t('SV.noValidData'));
         return;
       }
 
@@ -2369,7 +2370,7 @@ export class EcartBoSummaryComponent implements OnInit, OnDestroy {
       
       // Construire le message de résultat avec les informations sur les doublons
       if (result.duplicates > 0) {
-        let message = `${result.duplicates} doublon(s) n'ont pas été enregistrés.\n\n`;
+        let message = I18nService.t('EBS.msg.doublonSNOntPasEte', { p0: result.duplicates });
         message += `Résumé :\n`;
         message += `  • ${savedItems.length} ligne(s) créée(s)\n`;
         message += `  • ${result.duplicates} doublon(s) refusé(s)\n`;
@@ -2382,10 +2383,10 @@ export class EcartBoSummaryComponent implements OnInit, OnDestroy {
         });
         message += `\n\nCritères appliqués :\n${this.getDuplicateCriteriaBullets()}`;
 
-        await this.popupService.showWarning(message, 'Doublons lors de la sauvegarde');
+        await this.popupService.showWarning(message, I18nService.t('EBS.msg.doublonsLorsDeLaSauvegarde'));
       } else {
         const count = savedItems.length;
-        const message = `✅ ${count} ligne(s) ${saveScopeLabel} sauvegardée(s) avec succès !`;
+        const message = I18nService.t('EBS.msg.ligneSSauvegardeeSAvecSucces', { p0: count, p1: saveScopeLabel });
         await this.popupService.showSuccess(message);
       }
 
@@ -2400,7 +2401,7 @@ export class EcartBoSummaryComponent implements OnInit, OnDestroy {
       this.cdr.markForCheck();
     } catch (error: any) {
       console.error('Erreur lors de la sauvegarde:', error);
-      this.popupService.showError(`❌ Erreur: ${error.message || 'Erreur inconnue lors de la sauvegarde'}`);
+      this.popupService.showError(I18nService.t('EBS.msg.erreur', { p0: error.message || I18nService.t('EBS.msg.erreurInconnueLorsDeLaSauvegarde') }));
     } finally {
       this.isSaving = false;
       this.cdr.markForCheck();
@@ -2469,17 +2470,17 @@ export class EcartBoSummaryComponent implements OnInit, OnDestroy {
   async addItem(): Promise<void> {
     // Validation
     if (!this.addForm.agence || !this.addForm.service || !this.addForm.pays) {
-      this.popupService.showWarning('❌ Veuillez remplir tous les champs obligatoires.');
+      this.popupService.showWarning(I18nService.t('EBS.msg.veuillezRemplirTousLesChampsObligatoires'));
       return;
     }
 
     if (this.addForm.nombre < 0) {
-      this.popupService.showWarning('❌ Le nombre de transactions doit être positif.');
+      this.popupService.showWarning(I18nService.t('EBS.msg.leNombreDeTransactionsDoitEtre'));
       return;
     }
 
     if (!this.addForm.date) {
-      this.popupService.showWarning('❌ La date est obligatoire.');
+      this.popupService.showWarning(I18nService.t('EBS.msg.laDateEstObligatoire'));
       return;
     }
 
@@ -2529,7 +2530,7 @@ export class EcartBoSummaryComponent implements OnInit, OnDestroy {
 
       if (result.count === 0 && result.duplicates > 0) {
         const dup = result.duplicateRecords?.[0];
-        let message = `Cette ligne n'a pas été ajoutée : elle existe déjà en base.\n\n`;
+        let message = I18nService.t('EBS.msg.cetteLigneNAPasEte');
         if (dup) {
           message += `${this.formatDuplicateRecordSummary(dup)}\n\n`;
         } else {
@@ -2545,14 +2546,14 @@ export class EcartBoSummaryComponent implements OnInit, OnDestroy {
           })}\n\n`;
         }
         message += `Critères de doublon :\n${this.getDuplicateCriteriaBullets()}`;
-        await this.popupService.showWarning(message, 'Doublon — ligne non ajoutée');
+        await this.popupService.showWarning(message, I18nService.t('EBS.msg.doublonLigneNonAjoutee'));
         return;
       }
 
       if (result.count === 0) {
         await this.popupService.showWarning(
-          'Aucune ligne n\'a été enregistrée. Vérifiez les données saisies.',
-          'Ajout non effectué'
+          I18nService.t('EBS.msg.aucuneLigneNAEteEnregistree'),
+          I18nService.t('EBS.msg.ajoutNonEffectue')
         );
         return;
       }
@@ -2560,11 +2561,11 @@ export class EcartBoSummaryComponent implements OnInit, OnDestroy {
       // Recharger les données sauvegardées pour afficher la nouvelle ligne
       this.loadSavedSummaryData();
 
-      await this.popupService.showSuccess('Ligne ajoutée et sauvegardée avec succès !');
+      await this.popupService.showSuccess(I18nService.t('EBS.msg.ligneAjouteeEtSauvegardeeAvecSucces'));
       this.closeAddModal();
     } catch (error: any) {
       console.error('Erreur lors de l\'ajout:', error);
-      this.popupService.showError(`❌ Erreur: ${error.message || 'Erreur inconnue lors de l\'ajout'}`);
+      this.popupService.showError(I18nService.t('EBS.msg.erreur', { p0: error.message || I18nService.t('EBS.msg.erreurInconnueLorsDeLAjout') }));
     } finally {
       this.isAdding = false;
       this.cdr.markForCheck();
@@ -2573,21 +2574,21 @@ export class EcartBoSummaryComponent implements OnInit, OnDestroy {
 
   async deleteItem(item: EcartBoSummaryItem): Promise<void> {
     if (!item.id) {
-      this.popupService.showWarning('❌ Cette ligne ne peut pas être supprimée car elle n\'a pas d\'ID.');
+      this.popupService.showWarning(I18nService.t('EBS.msg.cetteLigneNePeutPasEtre'));
       return;
     }
 
     // Demander confirmation avec popup moderne
-    const message = `Êtes-vous sûr de vouloir supprimer cette ligne ?\n\n` +
+    const message = I18nService.t('EBS.msg.etesVousSurDeVouloirSupprimer') +
       `📅 Date: ${item.date || '-'}\n` +
       `🏢 Agence: ${item.agence}\n` +
       `🔧 Service: ${item.service}\n` +
-      `🌍 Pays: ${item.pays}\n` +
+      I18nService.t('EBS.msg.pays', { p0: item.pays }) +
       `📊 Nombre: ${item.nombre}`;
     
     const confirmed = await ModernPopupComponent.showConfirm(
       message,
-      '🗑️ Confirmation de suppression'
+      I18nService.t('EBS.msg.confirmationDeSuppression')
     );
     
     if (!confirmed) {
@@ -2609,10 +2610,10 @@ export class EcartBoSummaryComponent implements OnInit, OnDestroy {
       // Réappliquer les filtres
       this.applyFilters();
       
-      this.popupService.showSuccess('✅ Ligne supprimée avec succès !');
+      this.popupService.showSuccess(I18nService.t('EBS.msg.ligneSupprimeeAvecSucces'));
     } catch (error: any) {
       console.error('Erreur lors de la suppression:', error);
-      this.popupService.showError(`❌ Erreur: ${error.message || 'Erreur inconnue lors de la suppression'}`);
+      this.popupService.showError(I18nService.t('EBS.msg.erreur', { p0: error.message || I18nService.t('EBS.msg.erreurInconnueLorsDeLaSuppression') }));
     } finally {
       this.isDeleting = false;
       this.deletingItemId = null;
@@ -2691,13 +2692,13 @@ export class EcartBoSummaryComponent implements OnInit, OnDestroy {
   async deleteSelected(): Promise<void> {
     const itemsToDelete = this.getSelectedDeletableItems();
     if (itemsToDelete.length === 0) {
-      this.popupService.showWarning('Aucune ligne sélectionnée.');
+      this.popupService.showWarning(I18nService.t('EBS.msg.aucuneLigneSelectionnee'));
       return;
     }
     const count = itemsToDelete.length;
     const confirmed = await ModernPopupComponent.showConfirm(
-      `Êtes-vous sûr de vouloir supprimer les ${count} ligne(s) sélectionnée(s) ?`,
-      '🗑️ Suppression en masse'
+      I18nService.t('EBS.msg.etesVousSurDeVouloirSupprimer2', { p0: count }),
+      I18nService.t('EBS.msg.suppressionEnMasse')
     );
     if (!confirmed) return;
 
@@ -2725,9 +2726,9 @@ export class EcartBoSummaryComponent implements OnInit, OnDestroy {
       }
       this.applyFilters();
       if (errorCount === 0) {
-        this.popupService.showSuccess(`✅ ${successCount} ligne(s) supprimée(s) avec succès.`);
+        this.popupService.showSuccess(I18nService.t('EBS.msg.ligneSSupprimeeSAvecSucces', { p0: successCount }));
       } else {
-        this.popupService.showWarning(`${successCount} supprimée(s), ${errorCount} erreur(s).`);
+        this.popupService.showWarning(I18nService.t('EBS.msg.supprimeeSErreurS', { p0: successCount, p1: errorCount }));
       }
     } finally {
       this.isBulkDeleting = false;
@@ -2740,7 +2741,7 @@ export class EcartBoSummaryComponent implements OnInit, OnDestroy {
    */
   exportData(): void {
     if (this.filteredItems.length === 0) {
-      this.popupService.showWarning('❌ Aucune donnée à exporter.');
+      this.popupService.showWarning(I18nService.t('EBS.msg.aucuneDonneeAExporter'));
       return;
     }
 
@@ -2805,10 +2806,10 @@ export class EcartBoSummaryComponent implements OnInit, OnDestroy {
       document.body.removeChild(a);
       URL.revokeObjectURL(url);
       
-      this.popupService.showSuccess(`✅ Export réussi: ${fileName} (${this.filteredItems.length} ligne(s))`);
+      this.popupService.showSuccess(I18nService.t('EBS.msg.exportReussiLigneS', { p0: fileName, p1: this.filteredItems.length }));
     } catch (error: any) {
       console.error('Erreur lors de l\'export:', error);
-      this.popupService.showError(`❌ Erreur lors de l'export: ${error.message || 'Erreur inconnue'}`);
+      this.popupService.showError(I18nService.t('EBS.msg.erreurLorsDeLExport', { p0: error.message || I18nService.t('LNC.unknownError') }));
     } finally {
       this.isExporting = false;
       this.cdr.markForCheck();

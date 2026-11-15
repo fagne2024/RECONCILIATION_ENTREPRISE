@@ -71,6 +71,7 @@ import { AppStateService, UserPaysScope } from '../../services/app-state.service
 import { NiveauxValidationConfigService } from '../../services/niveaux-validation-config.service';
 import { ProfilService } from '../../services/profil.service';
 import { countriesMatch, countryDisplayLabel, normalizeCountryFilterOptions } from '../../utils/country-codes.util';
+import { I18nService } from '../../services/i18n/i18n.service';
 
 
 
@@ -1522,7 +1523,7 @@ private profilService: ProfilService
 
   get envValidationLabel(): string {
 
-    return this.selectedEnv === 'ALL' ? 'tous ENV' : this.selectedEnv;
+    return this.selectedEnv === 'ALL' ? I18nService.t('RBP.th.boAllEnvs') : this.selectedEnv;
 
   }
 
@@ -1587,7 +1588,7 @@ private profilService: ProfilService
     // Vérifier autorisation via config niveaux de validation
     const canValidate = await this.canUserValidateNextLevel(this.selectedCountry, 'Niveau Support');
     if (!canValidate) {
-      this.popupService.showError('Vous n\'avez pas le profil requis pour valider');
+      this.popupService.showError(I18nService.t('CIB.msg.vousNAvezPasLeProfil'));
       return;
     }
 
@@ -1799,7 +1800,7 @@ private profilService: ProfilService
     // Vérifier autorisation via config niveaux de validation
     this.canUserValidateNextLevel(this.selectedCountry, 'Niveau Support').then(canValidate => {
       if (!canValidate) {
-        this.popupService.showError('Vous n\'avez pas le profil requis pour valider');
+        this.popupService.showError(I18nService.t('CIB.msg.vousNAvezPasLeProfil'));
         return;
       }
 

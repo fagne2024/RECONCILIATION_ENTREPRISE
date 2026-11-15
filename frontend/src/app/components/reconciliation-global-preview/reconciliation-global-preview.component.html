@@ -1,15 +1,15 @@
 <div class="global-preview-container">
     <div class="page-header">
         <div class="breadcrumb">
-            <button type="button" class="breadcrumb-link ds-btn ds-btn--ghost ds-btn--sm" (click)="goBack()">← Retour au tableau de bord</button>
+            <button type="button" class="breadcrumb-link ds-btn ds-btn--ghost ds-btn--sm" (click)="goBack()">{{ 'LBL.ui.retourAuTableauDeBord' | translate }}</button>
         </div>
     </div>
     
     <div class="preview-content">
         <!-- Header -->
         <div class="preview-header">
-            <h1><i class="fas fa-chart-bar"></i> Aperçu Global de Réconciliation</h1>
-            <p class="subtitle">Date: {{ currentDate }} • Niveau Group</p>
+            <h1><i class="fas fa-chart-bar"></i> {{ 'LBL.ui.apercuGlobalDeReconciliation' | translate }}</h1>
+            <p class="subtitle">{{ 'LBL.ui.dateNiveauGroup' | translate: { p0: currentDate } }}</p>
         </div>
         
         <!-- Loading -->
@@ -22,15 +22,15 @@
         <div *ngIf="error && !loading" class="error-container">
             <div class="error-icon"><i class="fas fa-times-circle"></i></div>
             <div class="error-message">{{ error }}</div>
-            <button type="button" class="retry-btn ds-btn ds-btn--secondary" (click)="loadReportData()"><i class="fas fa-sync-alt"></i> Réessayer</button>
+            <button type="button" class="retry-btn ds-btn ds-btn--secondary" (click)="loadReportData()"><i class="fas fa-sync-alt"></i> {{ 'COMMON.actions.retry' | translate }}</button>
         </div>
         
         <!-- Filtres -->
         <div *ngIf="!loading && !error" class="filters-container ds-filter-bar">
             <div class="filters-header">
-                <h3>🔍 Filtres</h3>
+                <h3>{{ 'LBL.ui.filtres' | translate }}</h3>
                 <button type="button" class="toggle-filters-btn ds-btn ds-btn--secondary ds-btn--sm" (click)="showFilters = !showFilters">
-                    {{ showFilters ? 'Masquer' : 'Afficher' }} les filtres
+                    {{ (showFilters ? 'LBL.ui.masquerLesFiltres' : 'LBL.ui.afficherLesFiltres') | translate }}
                 </button>
             </div>
             
@@ -41,7 +41,7 @@
                         type="text" 
                         [(ngModel)]="selectedService" 
                         (input)="onFilterChange()"
-                        placeholder="Tapez pour rechercher un service..."
+                        placeholder="{{ 'LBL.ui.tapezPourRechercherUnService' | translate }}"
                         class="filter-input ds-input"
                         list="service-list">
                     <datalist id="service-list">
@@ -55,7 +55,7 @@
                         type="text" 
                         [(ngModel)]="selectedCountry" 
                         (input)="onFilterChange()"
-                        placeholder="Tapez pour rechercher un pays..."
+                        placeholder="{{ 'LBL.ui.tapezPourRechercherUnPays' | translate }}"
                         class="filter-input ds-input"
                         list="country-list">
                     <datalist id="country-list">
@@ -69,7 +69,7 @@
                         type="text" 
                         [(ngModel)]="selectedAgency" 
                         (input)="onFilterChange()"
-                        placeholder="Tapez pour rechercher une agence..."
+                        placeholder="{{ 'LBL.ui.tapezPourRechercherUneAgence' | translate }}"
                         class="filter-input ds-input"
                         list="agency-list">
                     <datalist id="agency-list">
@@ -99,7 +99,7 @@
                     <button type="button" 
                             (click)="resetFilters()" 
                             class="reset-filters-btn ds-btn ds-btn--secondary ds-btn--sm">
-                        <i class="fas fa-sync-alt"></i> Réinitialiser
+                        <i class="fas fa-sync-alt"></i> {{ 'COMMON.actions.reset' | translate }}
                     </button>
                 </div>
             </div>
@@ -112,7 +112,7 @@
                 <div class="kpi-card kpi-blue">
                     <div class="kpi-icon"><i class="fas fa-coins"></i></div>
                     <div class="kpi-content">
-                        <div class="kpi-label">Montant Total</div>
+                        <div class="kpi-label">{{ 'LBL.ui.montantTotal' | translate }}</div>
                         <div class="kpi-value ds-num">{{ formatAmount(totalAmount) }}</div>
                     </div>
                 </div>
@@ -120,7 +120,7 @@
                 <div class="kpi-card kpi-green">
                     <div class="kpi-icon"><i class="fas fa-check-circle"></i></div>
                     <div class="kpi-content">
-                        <div class="kpi-label">Taux de Réussite</div>
+                        <div class="kpi-label">{{ 'LBL.ui.tauxDeReussite' | translate }}</div>
                         <div class="kpi-value ds-num">{{ successRate.toFixed(1) }}%</div>
                     </div>
                 </div>
@@ -128,7 +128,7 @@
                 <div class="kpi-card kpi-orange">
                     <div class="kpi-icon"><i class="fas fa-clock"></i></div>
                     <div class="kpi-content">
-                        <div class="kpi-label">Écarts en Cours</div>
+                        <div class="kpi-label">{{ 'LBL.ui.ecartsEnCours' | translate }}</div>
                         <div class="kpi-value ds-num">{{ pendingDiscrepancies }}</div>
                     </div>
                 </div>
@@ -136,7 +136,7 @@
                 <div class="kpi-card kpi-blue-light">
                     <div class="kpi-icon"><i class="fas fa-check-double"></i></div>
                     <div class="kpi-content">
-                        <div class="kpi-label">Écarts Résolus</div>
+                        <div class="kpi-label">{{ 'LBL.ui.ecartsResolus' | translate }}</div>
                         <div class="kpi-value ds-num">{{ resolvedDiscrepancies }}</div>
                     </div>
                 </div>
@@ -154,7 +154,7 @@
             <div class="charts-grid">
                 <!-- Top Partenaires -->
                 <div class="chart-card">
-                    <h2 class="chart-title">Top Partenaires (Services) par Montant</h2>
+                    <h2 class="chart-title">{{ 'LBL.ui.topPartenairesServicesParMontant' | translate }}</h2>
                     <div class="chart-container">
                         <canvas baseChart
                                 [data]="barChartData"
@@ -167,7 +167,7 @@
                 
                 <!-- Statut de Réconciliation -->
                 <div class="chart-card">
-                    <h2 class="chart-title">Statut de Réconciliation</h2>
+                    <h2 class="chart-title">{{ 'LBL.ui.statutDeReconciliation' | translate }}</h2>
                     <div class="chart-container">
                         <canvas baseChart
                                 [data]="pieChartData"
@@ -188,7 +188,7 @@
             
             <!-- Écarts par Partenaire -->
             <div *ngIf="stackedBarChartData.labels && stackedBarChartData.labels.length > 0" class="chart-card full-width">
-                <h2 class="chart-title">Détails des Écarts par Partenaire (Service)</h2>
+                <h2 class="chart-title">{{ 'LBL.ui.detailsDesEcartsParPartenaireService' | translate }}</h2>
                 <div class="chart-container">
                     <canvas baseChart
                             [data]="stackedBarChartData"

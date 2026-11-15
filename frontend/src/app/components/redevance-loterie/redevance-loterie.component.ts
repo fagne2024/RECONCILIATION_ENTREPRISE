@@ -10,6 +10,7 @@ import ChartDataLabels from 'chartjs-plugin-datalabels';
 import html2canvas from 'html2canvas';
 import { jsPDF } from 'jspdf';
 import { TranslateModule } from '@ngx-translate/core';
+import { I18nService } from '../../services/i18n/i18n.service';
 
 @Component({
   selector: 'app-redevance-loterie',
@@ -191,7 +192,7 @@ export class RedevanceLoterieComponent implements OnInit {
         this.isLoading = false;
       },
       error: (err) => {
-        this.errorMessage = err?.error?.message || 'Erreur lors du chargement';
+        this.errorMessage = err?.error?.message || I18nService.t('RDL.msg.erreurLorsDuChargement');
         this.data = null;
         this.isLoading = false;
       }
@@ -398,7 +399,7 @@ export class RedevanceLoterieComponent implements OnInit {
       return RedevanceLoterieComponent.AGENCE_DISPLAY_NAMES[this.selectedAgence]
         ?? this.selectedAgence;
     }
-    return 'Les clients';
+    return I18nService.t('RDL.msg.lesClients');
   }
 
   get isNegative(): boolean {

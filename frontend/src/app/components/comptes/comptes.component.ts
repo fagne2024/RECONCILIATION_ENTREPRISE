@@ -23,6 +23,7 @@ import { FraisTransaction } from '../../models/frais-transaction.model';
 import { PopupService } from '../../services/popup.service';
 import { ConfigurationCalculService } from '../../services/configuration-calcul.service';
 import { normalizeCountryFilterOptions, matchesCountryFilter, countriesMatch } from '../../utils/country-codes.util';
+import { I18nService } from '../../services/i18n/i18n.service';
 
 type DailySolde = {
     date: string;
@@ -532,7 +533,7 @@ export class ComptesComponent implements OnInit, OnDestroy {
                         this.isAdding = false;
                         
                         // Extraire le message d'erreur du backend
-                        let errorMessage = 'Erreur lors de l\'ajout du compte.';
+                        let errorMessage = I18nService.t('CPT.msg.erreurLorsDeLAjoutDu');
                         if (error.error) {
                             if (error.error.message) {
                                 errorMessage = error.error.message;
@@ -547,7 +548,7 @@ export class ComptesComponent implements OnInit, OnDestroy {
                         
                         // Vérifier si c'est une erreur de permission (403)
                         if (error.status === 403) {
-                            errorMessage = errorMessage || 'Vous n\'avez pas la permission pour exécuter cette action.';
+                            errorMessage = errorMessage || I18nService.t('CPT.msg.vousNAvezPasLaPermission');
                         }
                         
                         this.popupService.showError(errorMessage);
@@ -598,7 +599,7 @@ export class ComptesComponent implements OnInit, OnDestroy {
     }
 
     async deleteCompte(id: number) {
-        const confirmed = await this.popupService.showConfirm('Êtes-vous sûr de vouloir supprimer ce compte ?');
+        const confirmed = await this.popupService.showConfirm(I18nService.t('CPT.msg.etesVousSurDeVouloirSupprimer'));
         if (confirmed) {
             this.subscription.add(
                 this.compteService.deleteCompte(id).subscribe({
@@ -610,16 +611,16 @@ export class ComptesComponent implements OnInit, OnDestroy {
                             this.updateFilteredLists();
                             this.updatePagedComptes();
                             this.calculateStats();
-                            this.popupService.showSuccess('Suppression réussie', response.message);
+                            this.popupService.showSuccess(I18nService.t('PROF.Suppressionréussie'), response.message);
                         } else {
-                            this.popupService.showError('Suppression impossible', response.message);
+                            this.popupService.showError(I18nService.t('PROF.Suppressionimpossible'), response.message);
                         }
                     },
                     error: (error) => {
                         console.error('Erreur lors de la suppression:', error);
                         
                         // Extraire le message d'erreur du backend
-                        let errorMessage = 'Erreur lors de la suppression du compte.';
+                        let errorMessage = I18nService.t('PLT.acc.errDelete');
                         if (error.error) {
                             if (error.error.message) {
                                 errorMessage = error.error.message;
@@ -634,7 +635,7 @@ export class ComptesComponent implements OnInit, OnDestroy {
                         
                         // Vérifier si c'est une erreur de permission (403)
                         if (error.status === 403) {
-                            errorMessage = errorMessage || 'Vous n\'avez pas la permission pour exécuter cette action.';
+                            errorMessage = errorMessage || I18nService.t('CPT.msg.vousNAvezPasLaPermission');
                         }
                         
                         this.popupService.showError(errorMessage);
@@ -733,7 +734,7 @@ export class ComptesComponent implements OnInit, OnDestroy {
                 error: (error) => {
                     console.error('Erreur lors de l\'actualisation des comptes:', error);
                     this.isLoading = false;
-                    this.popupService.showError('Erreur lors de l\'actualisation des comptes.');
+                    this.popupService.showError(I18nService.t('CPT.msg.erreurLorsDeLActualisationDes'));
                 }
             })
         );
@@ -1090,8 +1091,8 @@ export class ComptesComponent implements OnInit, OnDestroy {
         const { dateDebut, dateFin } = this.getExportDateFilters();
         if (!dateDebut && !dateFin) return '';
         if (dateDebut && dateFin) return `${dateDebut} → ${dateFin}`;
-        if (dateDebut) return `à partir du ${dateDebut}`;
-        return `jusqu'au ${dateFin}`;
+        if (dateDebut) return I18nService.t('CPT.msg.aPartirDu', { p0: dateDebut });
+        return I18nService.t('CPT.msg.jusquAu', { p0: dateFin });
     }
 
     private getReleveExportFileSuffix(): string {
@@ -1119,17 +1120,17 @@ export class ComptesComponent implements OnInit, OnDestroy {
     applyReleveDateInterval(): void {
         if (this.showAllDataReleve) {
             this.popupService.showWarning(
-                'Désactivez « Voir plus » pour filtrer l\'affichage par intervalle, ou renseignez Du/Au pour limiter l\'export uniquement.',
-                'Intervalle de dates'
+                I18nService.t('CPT.msg.desactivezVoirPlusPourFiltrerL'),
+                I18nService.t('CPT.msg.intervalleDeDates')
             );
             return;
         }
         if (!this.releveDateDebutCustom && !this.releveDateFinCustom) {
-            this.popupService.showWarning('Indiquez au moins une date de début ou de fin.', 'Intervalle de dates');
+            this.popupService.showWarning(I18nService.t('CPT.msg.indiquezAuMoinsUneDateDe'), I18nService.t('CPT.msg.intervalleDeDates'));
             return;
         }
         if (this.releveDateDebutCustom && this.releveDateFinCustom && this.releveDateDebutCustom > this.releveDateFinCustom) {
-            this.popupService.showWarning('La date de début doit être antérieure ou égale à la date de fin.', 'Intervalle invalide');
+            this.popupService.showWarning(I18nService.t('CPT.msg.laDateDeDebutDoitEtre'), 'Intervalle invalide');
             return;
         }
         this.releveDateDebut = 'custom';
@@ -1176,7 +1177,7 @@ export class ComptesComponent implements OnInit, OnDestroy {
 
     private getReleveExportFilterInfo(): string {
         const interval = this.getReleveExportIntervalLabel();
-        let filterInfo = interval ? `Période: ${interval}` : 'Historique complet';
+        let filterInfo = interval ? I18nService.t('CPT.msg.periode', { p0: interval }) : I18nService.t('CPT.msg.historiqueComplet');
         if (this.releveTypeOperation) {
             filterInfo += ` | Type: ${this.getOperationTypeLabel(this.releveTypeOperation)}`;
         }
@@ -1442,7 +1443,7 @@ export class ComptesComponent implements OnInit, OnDestroy {
                         this.isEditing = false;
                         
                         // Extraire le message d'erreur du backend
-                        let errorMessage = 'Erreur lors de la mise à jour du compte.';
+                        let errorMessage = I18nService.t('CPT.msg.erreurLorsDeLaMiseA');
                         if (error.error) {
                             if (error.error.message) {
                                 errorMessage = error.error.message;
@@ -1457,7 +1458,7 @@ export class ComptesComponent implements OnInit, OnDestroy {
                         
                         // Vérifier si c'est une erreur de permission (403)
                         if (error.status === 403) {
-                            errorMessage = errorMessage || 'Vous n\'avez pas la permission pour exécuter cette action.';
+                            errorMessage = errorMessage || I18nService.t('CPT.msg.vousNAvezPasLaPermission');
                         }
                         
                         this.popupService.showError(errorMessage);
@@ -2298,7 +2299,7 @@ export class ComptesComponent implements OnInit, OnDestroy {
             const d = new Date(s + 'T12:00:00');
             return `${String(d.getDate()).padStart(2, '0')}/${String(d.getMonth() + 1).padStart(2, '0')}/${d.getFullYear()}`;
         };
-        return `Semaine du ${fmt(dateStrStart)} - ${fmt(dateStrEnd)}`;
+        return I18nService.t('CPT.msg.semaineDu', { p0: fmt(dateStrStart), p1: fmt(dateStrEnd) });
     }
 
     /** Libellé de mois (ex. "Février 2025") */
@@ -2460,27 +2461,27 @@ export class ComptesComponent implements OnInit, OnDestroy {
         const exportSoldes = this.getReleveSoldesForExport();
 
         if (this.showSoldesSeulement && exportSoldes.length === 0) {
-            await this.popupService.showWarning('Aucun solde à exporter pour cet intervalle.', 'Export impossible');
+            await this.popupService.showWarning(I18nService.t('CPT.msg.aucunSoldeAExporterPourCet'), I18nService.t('CPT.msg.exportImpossible'));
             return;
         }
         if (!this.showSoldesSeulement && exportOps.length === 0) {
             const hint = this.getReleveExportIntervalLabel()
-                ? `Aucune opération entre ${this.getReleveExportIntervalLabel()}.`
-                : 'Aucune opération à exporter.';
-            await this.popupService.showWarning(hint, 'Export impossible');
+                ? I18nService.t('CPT.msg.aucuneOperationEntre', { p0: this.getReleveExportIntervalLabel() })
+                : I18nService.t('CPT.msg.aucuneOperationAExporter');
+            await this.popupService.showWarning(hint, I18nService.t('CPT.msg.exportImpossible'));
             return;
         }
 
         if (this.showAllDataReleve && !this.releveDateDebutCustom && !this.releveDateFinCustom) {
             const confirmAll = await this.popupService.showConfirm(
-                'Aucun intervalle Du/Au n\'est défini : l\'export inclura toutes les opérations chargées. Renseignez Du et Au pour limiter l\'export à une période.',
-                'Exporter tout l\'historique ?'
+                I18nService.t('CPT.msg.aucunIntervalleDuAuNEst'),
+                I18nService.t('CPT.msg.exporterToutLHistorique')
             );
             if (!confirmAll) return;
         }
 
         if (this.releveDateDebutCustom && this.releveDateFinCustom && this.releveDateDebutCustom > this.releveDateFinCustom) {
-            await this.popupService.showWarning('La date de début doit être antérieure ou égale à la date de fin.', 'Intervalle invalide');
+            await this.popupService.showWarning(I18nService.t('CPT.msg.laDateDeDebutDoitEtre'), 'Intervalle invalide');
             return;
         }
 
@@ -2495,7 +2496,7 @@ export class ComptesComponent implements OnInit, OnDestroy {
             }
         } catch (error) {
             console.error("Erreur lors de l'export du relevé :", error);
-            await this.popupService.showError('Une erreur est survenue lors de l\'export du relevé.', 'Erreur d\'export');
+            await this.popupService.showError(I18nService.t('CPT.msg.uneErreurEstSurvenueLorsDe'), I18nService.t('RPT.releve.exportPdfErrorTitle'));
         } finally {
             this.isExporting = false;
         }
@@ -3400,12 +3401,12 @@ export class ComptesComponent implements OnInit, OnDestroy {
           .subscribe({
             next: (response) => {
               console.log('✅ Solde BO enregistré avec succès:', response);
-              this.popupService.showSuccess('Solde BO enregistré !');
+              this.popupService.showSuccess(I18nService.t('CPT.msg.soldeBoEnregistre'));
               this.closeSoldeBoModal();
             },
             error: (error) => {
               console.error('❌ Erreur lors de l\'enregistrement du solde BO:', error);
-              this.popupService.showError(`Erreur lors de l'enregistrement : ${error.message || error.error?.message || 'Erreur inconnue'}`);
+              this.popupService.showError(I18nService.t('CPT.msg.erreurLorsDeLEnregistrement', { p0: error.message || error.error?.message || I18nService.t('LNC.unknownError') }));
             }
           });
       } else {
@@ -3414,7 +3415,7 @@ export class ComptesComponent implements OnInit, OnDestroy {
           dernierSoldeBo: this.dernierSoldeBo,
           dateSoldeBo: this.dateSoldeBo
         });
-        this.popupService.showWarning('Veuillez remplir tous les champs requis');
+        this.popupService.showWarning(I18nService.t('SEE.requiredFields'));
       }
     }
 
@@ -3544,7 +3545,7 @@ export class ComptesComponent implements OnInit, OnDestroy {
             },
             error: (err: Error) => {
                 console.error(err);
-                this.popupService.showError(`Impossible de lire le fichier CSV : ${err.message || 'erreur inconnue'}`);
+                this.popupService.showError(I18nService.t('CPT.msg.impossibleDeLireLeFichierCsv', { p0: err.message || I18nService.t('COMMON.errors.unknown') }));
             }
         });
     }
@@ -3560,10 +3561,10 @@ export class ComptesComponent implements OnInit, OnDestroy {
                 this.processSoldeBoBulkRows(json);
             } catch (e) {
                 console.error(e);
-                this.popupService.showError('Impossible de lire le fichier Excel (vérifiez le format du modèle).');
+                this.popupService.showError(I18nService.t('CPT.msg.impossibleDeLireLeFichierExcel'));
             }
         };
-        reader.onerror = () => this.popupService.showError('Erreur de lecture du fichier.');
+        reader.onerror = () => this.popupService.showError(I18nService.t('CPT.msg.erreurDeLectureDuFichier'));
         reader.readAsArrayBuffer(file);
     }
 
@@ -3605,8 +3606,8 @@ export class ComptesComponent implements OnInit, OnDestroy {
         if (!parsed.length) {
             const hint = validationErrors.length
                 ? validationErrors.slice(0, 8).join('\n')
-                : 'Colonnes attendues : Date, Numéro de compte, Montant (CSV séparateur ; ou Excel).';
-            this.popupService.showError(`Aucune ligne importable.\n${hint}`);
+                : I18nService.t('CPT.msg.colonnesAttenduesDateNumeroDeCompte');
+            this.popupService.showError(I18nService.t('CPT.msg.aucuneLigneImportable', { p0: hint }));
             return;
         }
 
@@ -3626,7 +3627,7 @@ export class ComptesComponent implements OnInit, OnDestroy {
                             const msg =
                                 httpErr?.error?.message ||
                                 httpErr?.message ||
-                                'erreur réseau ou serveur';
+                                I18nService.t('CPT.msg.erreurReseauOuServeur');
                             apiErrors.push(`Ligne ${item.line} (${item.numero}) : ${msg}`);
                             return EMPTY;
                         })
@@ -3644,7 +3645,7 @@ export class ComptesComponent implements OnInit, OnDestroy {
                     if (fail === 0 && validationErrors.length === 0) {
                         this.popupService.showSuccess(parts.join('. ') + '.');
                     } else if (ok > 0) {
-                        this.popupService.showWarning(parts.join('. ') + '. Détail dans la console (F12).');
+                        this.popupService.showWarning(parts.join('. ') + I18nService.t('CPT.msg.detailDansLaConsoleF12'));
                         console.warn('[Import soldes BO]', apiErrors);
                     } else {
                         this.popupService.showError(parts.join('. ') + '.');
@@ -3670,12 +3671,12 @@ export class ComptesComponent implements OnInit, OnDestroy {
 
     saveClosingOverride() {
       if (!this.selectedCompte || !this.closingOverrideDate) {
-        this.popupService.showWarning('Aucun compte ou date sélectionné');
+        this.popupService.showWarning(I18nService.t('CPT.msg.aucunCompteOuDateSelectionne'));
         return;
       }
       const value = this.closingOverrideValue !== null ? Number(this.closingOverrideValue) : NaN;
       if (isNaN(value)) {
-        this.popupService.showWarning('Veuillez saisir un solde valide');
+        this.popupService.showWarning(I18nService.t('CPT.msg.veuillezSaisirUnSoldeValide'));
         return;
       }
 
@@ -3688,13 +3689,13 @@ export class ComptesComponent implements OnInit, OnDestroy {
               solde.closingManual = value;
             }
             this.closingOverrideValue = value;
-            this.popupService.showSuccess('Solde de clôture mis à jour.');
+            this.popupService.showSuccess(I18nService.t('CPT.msg.soldeDeClotureMisAJour'));
             this.closingOverrideLoading = false;
             this.closeClosingOverrideModal();
           },
           error: (error) => {
             console.error('Erreur lors de la sauvegarde du solde manuel:', error);
-            this.popupService.showError(`Impossible d'enregistrer : ${error.message || 'Erreur inconnue'}`);
+            this.popupService.showError(I18nService.t('CPT.msg.impossibleDEnregistrer', { p0: error.message || I18nService.t('LNC.unknownError') }));
             this.closingOverrideLoading = false;
           }
         });
@@ -3712,13 +3713,13 @@ export class ComptesComponent implements OnInit, OnDestroy {
             if (solde) {
               solde.closingManual = undefined;
             }
-            this.popupService.showSuccess('Correction supprimée.');
+            this.popupService.showSuccess(I18nService.t('CPT.msg.correctionSupprimee'));
             this.closingOverrideLoading = false;
             this.closeClosingOverrideModal();
           },
           error: (error) => {
             console.error('Erreur lors de la suppression du solde manuel:', error);
-            this.popupService.showError(`Impossible de supprimer : ${error.message || 'Erreur inconnue'}`);
+            this.popupService.showError(I18nService.t('CPT.msg.impossibleDeSupprimer', { p0: error.message || I18nService.t('LNC.unknownError') }));
             this.closingOverrideLoading = false;
           }
         });
@@ -4167,7 +4168,7 @@ export class ComptesComponent implements OnInit, OnDestroy {
     // Exporter les données d'écart frais vers Excel
     exportEcartFrais(): void {
         if (!this.ecartFraisItems || this.ecartFraisItems.length === 0) {
-            this.popupService.showError('Aucune donnée à exporter');
+            this.popupService.showError(I18nService.t('MSG.noDataToExport'));
             return;
         }
 
@@ -4250,10 +4251,10 @@ export class ComptesComponent implements OnInit, OnDestroy {
             const date = this.formatDate(this.ecartFraisDate).split(' ')[0].replace(/\//g, '-');
             const fileName = `Ecart_Frais_${this.ecartFraisAgence}_${date}.xlsx`;
             saveAs(blob, fileName);
-            this.popupService.showSuccess(`Exportation réussie: ${fileName}`);
+            this.popupService.showSuccess(I18nService.t('CPT.msg.exportationReussie', { p0: fileName }));
         }).catch((error: any) => {
             console.error('Erreur lors de l\'exportation:', error);
-            this.popupService.showError('Erreur lors de l\'exportation des données');
+            this.popupService.showError(I18nService.t('CPT.msg.erreurLorsDeLExportationDes'));
         }).finally(() => {
             this.isExporting = false;
         });
@@ -4403,12 +4404,7 @@ export class ComptesComponent implements OnInit, OnDestroy {
         const totalLignes = this.revenuJournalierData.length;
         const totalEcart = this.getTotalEcartFraisJournalier();
         
-        this.revenuJournalierDebugInfo = `
-            Compte: ${compte} | 
-            Agence utilisée: ${agence} | 
-            Lignes: ${totalLignes} | 
-            Total écart: ${totalEcart.toFixed(2)} FCFA
-        `;
+        this.revenuJournalierDebugInfo = I18nService.t('CPT.msg.compteAgenceUtiliseeLignesTotalEcart', { p0: compte, p1: agence, p2: totalLignes, p3: totalEcart.toFixed(2) });
     }
 
     // ===== MÉTHODES POUR L'ONGLET CONTROL REVENU =====
@@ -5065,7 +5061,7 @@ export class ComptesComponent implements OnInit, OnDestroy {
 
     exportDateViewData(): void {
         if (this.dateViewData.length === 0) {
-            this.popupService.showWarning('Aucune donnée à exporter');
+            this.popupService.showWarning(I18nService.t('MSG.noDataToExport'));
             return;
         }
 
@@ -5139,22 +5135,22 @@ export class ComptesComponent implements OnInit, OnDestroy {
             document.body.removeChild(link);
             URL.revokeObjectURL(url);
 
-            this.popupService.showSuccess('Export terminé avec succès !');
+            this.popupService.showSuccess(I18nService.t('OPS.exportDetailsSuccess'));
         } catch (error) {
             console.error('Erreur lors de l\'export:', error);
-            this.popupService.showError('Erreur lors de l\'export des données');
+            this.popupService.showError(I18nService.t('OPS.exportDetailsError'));
         }
     }
 
     exportControlRevenu(controle: any): void {
         // TODO: Implémenter l'export du contrôle
         console.log('Exporter le contrôle:', controle);
-        this.popupService.showInfo(`Export du contrôle du ${controle.date} en cours...`);
+        this.popupService.showInfo(I18nService.t('CPT.msg.exportDuControleDuEnCours', { p0: controle.date }));
     }
 
     exportControlRevenuData(): void {
         if (this.controlRevenuDataFiltered.length === 0) {
-            this.popupService.showWarning('Aucune donnée à exporter');
+            this.popupService.showWarning(I18nService.t('MSG.noDataToExport'));
             return;
         }
 
@@ -5236,7 +5232,7 @@ export class ComptesComponent implements OnInit, OnDestroy {
             console.log('Export Control Revenu réussi:', exportData.length, 'lignes exportées');
         } catch (error) {
             console.error('Erreur lors de l\'export Control Revenu:', error);
-            this.popupService.showError('Erreur lors de l\'export. Veuillez réessayer.');
+            this.popupService.showError(I18nService.t('CPT.msg.erreurLorsDeLExportVeuillez'));
         }
     }
 } 

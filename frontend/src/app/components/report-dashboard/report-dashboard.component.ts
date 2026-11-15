@@ -2,6 +2,7 @@ import { Component, OnInit, OnDestroy } from '@angular/core';
 import { Router } from '@angular/router';
 import { HttpClient, HttpErrorResponse, HttpHeaders } from '@angular/common/http';
 import { Subscription } from 'rxjs';
+import { I18nService } from '../../services/i18n/i18n.service';
 // Interface pour les données de rapport
 interface ReconciliationReportData {
     id?: number;
@@ -32,12 +33,12 @@ import { ReconciliationReportService, PilotReportFilters } from '../../services/
             <!-- En-tête avec navigation -->
             <div class="dashboard-header">
                 <div class="header-content">
-                    <h1>📊 Tableau de Bord des Rapports</h1>
-                    <p>Analyse avancée des données de réconciliation</p>
+                    <h1>{{ 'RDB.ui.tableauDeBordDesRapports' | translate }}</h1>
+                    <p>{{ 'RDB.ui.analyseAvanceeDesDonneesDeReconciliation' | translate }}</p>
                 </div>
                 <div class="header-actions">
                     <button class="btn btn-back" (click)="goBack()">
-                        ← Retour
+                        {{ 'RDB.ui.retour' | translate }}
                     </button>
                 </div>
             </div>
@@ -45,18 +46,18 @@ import { ReconciliationReportService, PilotReportFilters } from '../../services/
             <!-- Filtres avancés -->
             <div class="advanced-filters">
                 <div class="filters-header">
-                    <h3>🔍 Filtres Avancés</h3>
+                    <h3>{{ 'RDB.ui.filtresAvances' | translate }}</h3>
                 </div>
                 
                 <div class="filters-grid">
                     <!-- Filtre Agence -->
                     <div class="filter-group">
-                        <label>🏢 Agence</label>
+                        <label>{{ 'RDB.ui.agence' | translate }}</label>
                         <select 
                             [(ngModel)]="selectedAgency" 
                             (change)="applyFilters()"
                             class="filter-select">
-                            <option value="">Toutes les agences</option>
+                            <option value="">{{ 'FILT.allAgencies' | translate }}</option>
                             <option *ngFor="let agency of availableAgencies" [value]="agency">
                                 {{agency}}
                             </option>
@@ -65,12 +66,12 @@ import { ReconciliationReportService, PilotReportFilters } from '../../services/
 
                     <!-- Filtre Service -->
                     <div class="filter-group">
-                        <label>⚙️ Service</label>
+                        <label>{{ 'RDB.ui.service' | translate }}</label>
                         <select 
                             [(ngModel)]="selectedService" 
                             (change)="applyFilters()"
                             class="filter-select">
-                            <option value="">Tous les services</option>
+                            <option value="">{{ 'FILT.allServices' | translate }}</option>
                             <option *ngFor="let service of availableServices" [value]="service">
                                 {{service}}
                             </option>
@@ -79,18 +80,18 @@ import { ReconciliationReportService, PilotReportFilters } from '../../services/
 
                     <!-- Filtre Période -->
                     <div class="filter-group">
-                        <label>📅 Période</label>
+                        <label>{{ 'RDB.ui.periode' | translate }}</label>
                         <select 
                             [(ngModel)]="selectedPeriod" 
                             (change)="onPeriodChange()"
                             [disabled]="showAllDataReport"
                             class="filter-select">
-                            <option value="day">Aujourd'hui</option>
-                            <option value="week">Cette semaine</option>
-                            <option value="month">Ce mois</option>
-                            <option value="lastMonth">Le mois dernier</option>
-                            <option value="year">Cette année</option>
-                            <option value="custom">Période personnalisée</option>
+                            <option value="day">{{ 'DASH.lastActivityToday' | translate }}</option>
+                            <option value="week">{{ 'RNK.periodWeek' | translate }}</option>
+                            <option value="month">{{ 'OPS.Cemois' | translate }}</option>
+                            <option value="lastMonth">{{ 'RNK.periodLastMonth' | translate }}</option>
+                            <option value="year">{{ 'OPS.Cetteannée' | translate }}</option>
+                            <option value="custom">{{ 'CPT.Périodepersonnalisée' | translate }}</option>
                         </select>
                     </div>
                     
@@ -98,13 +99,13 @@ import { ReconciliationReportService, PilotReportFilters } from '../../services/
                     <div class="filter-group">
                         <button type="button" (click)="toggleShowAllDataReport()" class="btn-show-more" [class.active]="showAllDataReport">
                             <i class="fas" [ngClass]="showAllDataReport ? 'fa-eye-slash' : 'fa-eye'"></i>
-                            {{ showAllDataReport ? 'Voir moins' : 'Voir plus' }}
+                            {{ showAllDataReport ? ('ACT.showLess' | translate) : ('ACT.showMore' | translate) }}
                         </button>
                     </div>
 
                     <!-- Date personnalisée -->
                     <div class="filter-group" *ngIf="selectedPeriod === 'custom'">
-                        <label>📆 Date de début</label>
+                        <label>{{ 'RDB.ui.dateDeDebut' | translate }}</label>
                         <input 
                             type="date" 
                             [(ngModel)]="customStartDate" 
@@ -112,7 +113,7 @@ import { ReconciliationReportService, PilotReportFilters } from '../../services/
                             class="filter-date">
                     </div>
                     <div class="filter-group" *ngIf="selectedPeriod === 'custom'">
-                        <label>📆 Date de fin</label>
+                        <label>{{ 'RDB.ui.dateDeFin' | translate }}</label>
                         <input 
                             type="date" 
                             [(ngModel)]="customEndDate" 
@@ -126,7 +127,7 @@ import { ReconciliationReportService, PilotReportFilters } from '../../services/
                     <div class="indicator-content">
                         <span class="indicator-icon">📅</span>
                         <span class="indicator-text">
-                            Période sélectionnée : {{formatDate(customStartDate)}} - {{formatDate(customEndDate)}}
+                            {{ 'RDB.ui.periodeSelectionnee' | translate: { p0: (formatDate(customStartDate)), p1: (formatDate(customEndDate)) } }}
                         </span>
                     </div>
                 </div>
@@ -134,29 +135,29 @@ import { ReconciliationReportService, PilotReportFilters } from '../../services/
                 <!-- Actions des filtres -->
                 <div class="filter-actions">
                     <button class="btn btn-report" (click)="generatePilotReport()" [disabled]="isGeneratingReport">
-                        🧾 {{ isGeneratingReport ? 'Génération...' : 'Générer rapport (Markdown)' }}
+                        🧾 {{ isGeneratingReport ? ('PRM.generating' | translate) : ('RDB.ui.genererRapportMarkdown' | translate) }}
                     </button>
                     <button class="btn btn-report-secondary" (click)="downloadPilotReport()" [disabled]="!pilotReportMarkdown">
-                        ⬇️ Télécharger (.md)
+                        {{ 'RDB.ui.telechargerMd' | translate }}
                     </button>
                     <button class="btn btn-clear" (click)="clearFilters()">
-                        🗑️ Effacer les filtres
+                        {{ 'RDB.ui.effacerLesFiltres' | translate }}
                     </button>
                     <button class="btn btn-export" (click)="exportReport()" [disabled]="!filteredData.length">
-                        📊 Exporter le rapport
+                        {{ 'RDB.ui.exporterLeRapport' | translate }}
                     </button>
                 </div>
             
             <!-- Aperçu du rapport -->
             <div class="report-preview" *ngIf="pilotReportMarkdown">
                 <div class="preview-header">
-                    <div class="preview-title">🧾 Aperçu rapport généré</div>
+                    <div class="preview-title">{{ 'RDB.ui.apercuRapportGenere' | translate }}</div>
                     <div class="preview-actions">
                         <button class="btn btn-preview-toggle" (click)="toggleReportPreview()">
-                            {{ showPilotReportPreview ? 'Masquer' : 'Afficher' }}
+                            {{ showPilotReportPreview ? ('ACT.hide' | translate) : ('ACT.show' | translate) }}
                         </button>
                         <button class="btn btn-preview-copy" (click)="copyPilotReportToClipboard()">
-                            📋 Copier
+                            {{ 'RDB.ui.copier' | translate }}
                         </button>
                     </div>
                 </div>
@@ -167,75 +168,75 @@ import { ReconciliationReportService, PilotReportFilters } from '../../services/
             <!-- Métriques principales -->
             <div class="metrics-section">
                 <div class="metrics-grid">
-                    <div class="metric-card primary" [title]="'Total transactions: ' + (getTotalTransactions() | number)">
+                    <div class="metric-card primary" [title]="('RDB.ui.totalTransactions' | translate) + (getTotalTransactions() | number)">
                         <div class="metric-icon">📈</div>
                         <div class="metric-content">
-                            <div class="metric-title">Total Transactions</div>
+                            <div class="metric-title">{{ 'CPT.Totaltransactions_1' | translate }}</div>
                             <div class="metric-value">{{getTotalTransactionsFormatted()}}</div>
-                            <div class="metric-subtitle">Sur {{getDateRange()}}</div>
+                            <div class="metric-subtitle">{{ 'RDB.ui.sur' | translate: { p0: (getDateRange()) } }}</div>
                         </div>
                     </div>
                     
-                    <div class="metric-card success" [title]="'Volume total: ' + (getTotalVolume() | number) + ' FCFA'">
+                    <div class="metric-card success" [title]="('FRS.Volumetotal' | translate) + (getTotalVolume() | number) + ' FCFA'">
                         <div class="metric-icon">💰</div>
                         <div class="metric-content">
-                            <div class="metric-title">Volume Total</div>
+                            <div class="metric-title">{{ 'RES.volumeTotal' | translate }}</div>
                             <div class="metric-value">{{getTotalVolumeFormatted()}}</div>
-                            <div class="metric-subtitle">Taux global: {{getGlobalMatchRate()}}%</div>
+                            <div class="metric-subtitle">{{ 'RDB.ui.tauxGlobal' | translate: { p0: (getGlobalMatchRate()) } }}</div>
                         </div>
                     </div>
                     
                     <div class="metric-card info">
                         <div class="metric-icon">🏢</div>
                         <div class="metric-content">
-                            <div class="metric-title">Agences</div>
+                            <div class="metric-title">{{ 'PRN.Agences' | translate }}</div>
                             <div class="metric-value">{{getUniqueAgencies()}}</div>
-                            <div class="metric-subtitle">{{getUniqueServices()}} services</div>
+                            <div class="metric-subtitle">{{ 'RDB.ui.services' | translate: { p0: (getUniqueServices()) } }}</div>
                         </div>
                     </div>
                     
                     <div class="metric-card warning">
                         <div class="metric-icon">📊</div>
                         <div class="metric-content">
-                            <div class="metric-title">Performance</div>
+                            <div class="metric-title">{{ 'RDB.ui.performance' | translate }}</div>
                             <div class="metric-value">{{getAveragePerformance()}}%</div>
-                            <div class="metric-subtitle">Taux moyen</div>
+                            <div class="metric-subtitle">{{ 'RPT.avgRate' | translate }}</div>
                         </div>
                     </div>
                     
                     <div class="metric-card danger">
                         <div class="metric-icon">⚠️</div>
                         <div class="metric-content">
-                            <div class="metric-title">Écarts BO</div>
+                            <div class="metric-title">{{ 'NAV.ecartBo' | translate }}</div>
                             <div class="metric-value">{{getTotalBoOnly() | number}}</div>
-                            <div class="metric-subtitle">{{getBoOnlyRate()}}% du total</div>
+                            <div class="metric-subtitle">{{ 'RDB.ui.duTotal' | translate: { p0: (getBoOnlyRate()) } }}</div>
                         </div>
                     </div>
                     
                     <div class="metric-card danger">
                         <div class="metric-icon">🔴</div>
                         <div class="metric-content">
-                            <div class="metric-title">Écarts Partenaire</div>
+                            <div class="metric-title">{{ 'NAV.ecartPartner' | translate }}</div>
                             <div class="metric-value">{{getTotalPartnerOnly() | number}}</div>
-                            <div class="metric-subtitle">{{getPartnerOnlyRate()}}% du total</div>
+                            <div class="metric-subtitle">{{ 'RDB.ui.duTotal' | translate: { p0: (getPartnerOnlyRate()) } }}</div>
                         </div>
                     </div>
                     
                     <div class="metric-card danger">
                         <div class="metric-icon">❌</div>
                         <div class="metric-content">
-                            <div class="metric-title">Incohérences</div>
+                            <div class="metric-title">{{ 'RPT.mismatches' | translate }}</div>
                             <div class="metric-value">{{getTotalMismatches() | number}}</div>
-                            <div class="metric-subtitle">{{getMismatchRate()}}% du total</div>
+                            <div class="metric-subtitle">{{ 'RDB.ui.duTotal' | translate: { p0: (getMismatchRate()) } }}</div>
                         </div>
                     </div>
                     
                     <div class="metric-card info">
                         <div class="metric-icon">⏳</div>
                         <div class="metric-content">
-                            <div class="metric-title">Lignes EN COURS</div>
+                            <div class="metric-title">{{ 'RDB.ui.lignesEnCours' | translate }}</div>
                             <div class="metric-value">{{getEnCoursCount() | number}}</div>
-                            <div class="metric-subtitle">{{getEnCoursRate()}}% du total</div>
+                            <div class="metric-subtitle">{{ 'RDB.ui.duTotal' | translate: { p0: (getEnCoursRate()) } }}</div>
                         </div>
                     </div>
                 </div>
@@ -247,22 +248,22 @@ import { ReconciliationReportService, PilotReportFilters } from '../../services/
                     <!-- Répartition par Service -->
                     <div class="chart-container">
                         <div class="chart-header">
-                            <h3>📊 Répartition par Service</h3>
+                            <h3>{{ 'RDB.ui.repartitionParService' | translate }}</h3>
                             <div class="chart-controls">
                                 <div class="search-box">
                                     <input 
                                         type="text" 
                                         [(ngModel)]="serviceSearchTerm" 
                                         (input)="filterServices()"
-                                        placeholder="Rechercher un service..."
+                                        placeholder="{{ 'OPS.searchService' | translate }}"
                                         class="search-input">
                                 </div>
                                 <div class="sort-controls">
                                     <select [(ngModel)]="serviceSortBy" (change)="sortServices()" class="sort-select">
-                                        <option value="transactions">Trier par transactions</option>
-                                        <option value="volume">Trier par volume</option>
-                                        <option value="matchRate">Trier par taux de correspondance</option>
-                                        <option value="name">Trier par nom</option>
+                                        <option value="transactions">{{ 'RDB.ui.trierParTransactions' | translate }}</option>
+                                        <option value="volume">{{ 'RDB.ui.trierParVolume' | translate }}</option>
+                                        <option value="matchRate">{{ 'RDB.ui.trierParTauxDeCorrespondance' | translate }}</option>
+                                        <option value="name">{{ 'SBL.sortByName' | translate }}</option>
                                     </select>
                                 </div>
                             </div>
@@ -278,8 +279,8 @@ import { ReconciliationReportService, PilotReportFilters } from '../../services/
                                     <div class="service-progress" [style.width.%]="service.matchRate"></div>
                                 </div>
                                 <div class="service-stats">
-                                    <span>{{service.transactions | number}} transactions</span>
-                                    <span>{{service.volume | number}} volume</span>
+                                    <span>{{ 'RDB.ui.transactions' | translate: { p0: (service.transactions | number) } }}</span>
+                                    <span>{{ 'RDB.ui.volume' | translate: { p0: (service.volume | number) } }}</span>
                                 </div>
                             </div>
                         </div>
@@ -290,17 +291,16 @@ import { ReconciliationReportService, PilotReportFilters } from '../../services/
                                 class="pagination-btn" 
                                 [disabled]="currentServicePage === 1"
                                 (click)="goToServicePage(currentServicePage - 1)">
-                                ← Précédent
+                                {{ 'LBL.ui.precedent' | translate }}
                             </button>
                             <span class="pagination-info">
-                                Page {{currentServicePage}} sur {{totalServicePages}} 
-                                ({{filteredServices.length}} service{{filteredServices.length > 1 ? 's' : ''}})
+                                {{ 'RDB.ui.pageSurService' | translate: { p0: currentServicePage, p1: totalServicePages, p2: filteredServices.length, p3: (filteredServices.length > 1 ? 's' : '') } }}
                             </span>
                             <button 
                                 class="pagination-btn" 
                                 [disabled]="currentServicePage === totalServicePages"
                                 (click)="goToServicePage(currentServicePage + 1)">
-                                Suivant →
+                                {{ 'LBL.ui.suivant' | translate }}
                             </button>
                         </div>
                     </div>
@@ -308,22 +308,22 @@ import { ReconciliationReportService, PilotReportFilters } from '../../services/
                     <!-- Performance par Agence -->
                     <div class="chart-container">
                         <div class="chart-header">
-                            <h3>🏢 Performance par Agence</h3>
+                            <h3>{{ 'RDB.ui.performanceParAgence' | translate }}</h3>
                             <div class="chart-controls">
                                 <div class="search-box">
                                     <input 
                                         type="text" 
                                         [(ngModel)]="agencySearchTerm" 
                                         (input)="filterAgencies()"
-                                        placeholder="Rechercher une agence..."
+                                        placeholder="{{ 'RPT.searchAgency' | translate }}"
                                         class="search-input">
                                 </div>
                                 <div class="sort-controls">
                                     <select [(ngModel)]="agencySortBy" (change)="sortAgencies()" class="sort-select">
-                                        <option value="transactions">Trier par transactions</option>
-                                        <option value="volume">Trier par volume</option>
-                                        <option value="matchRate">Trier par performance</option>
-                                        <option value="name">Trier par nom</option>
+                                        <option value="transactions">{{ 'RDB.ui.trierParTransactions' | translate }}</option>
+                                        <option value="volume">{{ 'RDB.ui.trierParVolume' | translate }}</option>
+                                        <option value="matchRate">{{ 'RDB.ui.trierParPerformance' | translate }}</option>
+                                        <option value="name">{{ 'SBL.sortByName' | translate }}</option>
                                     </select>
                                 </div>
                             </div>
@@ -337,11 +337,11 @@ import { ReconciliationReportService, PilotReportFilters } from '../../services/
                                 </div>
                                 <div class="agency-stats">
                                     <div class="stat">
-                                        <span class="stat-label">Transactions:</span>
+                                        <span class="stat-label">{{ 'RDB.ui.transactions2' | translate }}</span>
                                         <span class="stat-value">{{agency.transactions | number}}</span>
                                     </div>
                                     <div class="stat">
-                                        <span class="stat-label">Volume:</span>
+                                        <span class="stat-label">{{ 'RES.volume' | translate }}</span>
                                         <span class="stat-value">{{agency.volume | number}}</span>
                                     </div>
                                 </div>
@@ -354,17 +354,16 @@ import { ReconciliationReportService, PilotReportFilters } from '../../services/
                                 class="pagination-btn" 
                                 [disabled]="currentAgencyPage === 1"
                                 (click)="goToAgencyPage(currentAgencyPage - 1)">
-                                ← Précédent
+                                {{ 'LBL.ui.precedent' | translate }}
                             </button>
                             <span class="pagination-info">
-                                Page {{currentAgencyPage}} sur {{totalAgencyPages}} 
-                                ({{filteredAgencies.length}} agence{{filteredAgencies.length > 1 ? 's' : ''}})
+                                {{ 'RDB.ui.pageSurAgence' | translate: { p0: currentAgencyPage, p1: totalAgencyPages, p2: filteredAgencies.length, p3: (filteredAgencies.length > 1 ? 's' : '') } }}
                             </span>
                             <button 
                                 class="pagination-btn" 
                                 [disabled]="currentAgencyPage === totalAgencyPages"
                                 (click)="goToAgencyPage(currentAgencyPage + 1)">
-                                Suivant →
+                                {{ 'LBL.ui.suivant' | translate }}
                             </button>
                         </div>
                     </div>
@@ -373,52 +372,52 @@ import { ReconciliationReportService, PilotReportFilters } from '../../services/
                 <!-- Analyse des écarts -->
                 <div class="charts-grid">
                     <div class="chart-container">
-                        <h3>⚠️ Analyse des Écarts</h3>
+                        <h3>{{ 'RDB.ui.analyseDesEcarts' | translate }}</h3>
                         <div class="gaps-info">
                             <span class="info-icon">ℹ️</span>
-                            <span class="info-text">Écarts comptabilisés uniquement pour les lignes avec statut "EN COURS"</span>
+                            <span class="info-text">{{ 'RDB.ui.ecartsComptabilisesUniquementPourLesLign' | translate }}</span>
                         </div>
                         <div class="gaps-analysis">
                             <div class="gap-item">
                                 <div class="gap-header">
-                                    <span class="gap-title">Écarts BO</span>
+                                    <span class="gap-title">{{ 'NAV.ecartBo' | translate }}</span>
                                     <span class="gap-count danger">{{getTotalBoOnly() | number}}</span>
                                 </div>
                                 <div class="gap-bar">
                                     <div class="gap-progress bo-gap" [style.width.%]="getBoOnlyRate()"></div>
                                 </div>
-                                <div class="gap-percentage">{{getBoOnlyRate()}}% du total</div>
+                                <div class="gap-percentage">{{ 'RDB.ui.duTotal' | translate: { p0: (getBoOnlyRate()) } }}</div>
                             </div>
                             
                             <div class="gap-item">
                                 <div class="gap-header">
-                                    <span class="gap-title">Écarts Partenaire</span>
+                                    <span class="gap-title">{{ 'NAV.ecartPartner' | translate }}</span>
                                     <span class="gap-count danger">{{getTotalPartnerOnly() | number}}</span>
                                 </div>
                                 <div class="gap-bar">
                                     <div class="gap-progress partner-gap" [style.width.%]="getPartnerOnlyRate()"></div>
                                 </div>
-                                <div class="gap-percentage">{{getPartnerOnlyRate()}}% du total</div>
+                                <div class="gap-percentage">{{ 'RDB.ui.duTotal' | translate: { p0: (getPartnerOnlyRate()) } }}</div>
                             </div>
                             
                             <div class="gap-item">
                                 <div class="gap-header">
-                                    <span class="gap-title">Incohérences</span>
+                                    <span class="gap-title">{{ 'RPT.mismatches' | translate }}</span>
                                     <span class="gap-count danger">{{getTotalMismatches() | number}}</span>
                                 </div>
                                 <div class="gap-bar">
                                     <div class="gap-progress mismatch-gap" [style.width.%]="getMismatchRate()"></div>
                                 </div>
-                                <div class="gap-percentage">{{getMismatchRate()}}% du total</div>
+                                <div class="gap-percentage">{{ 'RDB.ui.duTotal' | translate: { p0: (getMismatchRate()) } }}</div>
                             </div>
                         </div>
                     </div>
                     
                     <div class="chart-container">
-                        <h3>📊 Répartition des Écarts par Service</h3>
+                        <h3>{{ 'RDB.ui.repartitionDesEcartsParService' | translate }}</h3>
                         <div class="gaps-info">
                             <span class="info-icon">ℹ️</span>
-                            <span class="info-text">Analyse basée sur les lignes "EN COURS" uniquement</span>
+                            <span class="info-text">{{ 'RDB.ui.analyseBaseeSurLesLignesEn' | translate }}</span>
                         </div>
                         <div class="service-gaps-chart">
                             <div *ngFor="let service of getServiceGapsBreakdown()" class="service-gap-item">
@@ -428,15 +427,15 @@ import { ReconciliationReportService, PilotReportFilters } from '../../services/
                                 </div>
                                 <div class="service-gap-stats">
                                     <div class="gap-stat">
-                                        <span class="gap-stat-label">Écarts BO:</span>
+                                        <span class="gap-stat-label">{{ 'RES.boGapsCount' | translate }}</span>
                                         <span class="gap-stat-value">{{service.boOnly | number}}</span>
                                     </div>
                                     <div class="gap-stat">
-                                        <span class="gap-stat-label">Écarts Partenaire:</span>
+                                        <span class="gap-stat-label">{{ 'RES.partnerGapsCount' | translate }}</span>
                                         <span class="gap-stat-value">{{service.partnerOnly | number}}</span>
                                     </div>
                                     <div class="gap-stat">
-                                        <span class="gap-stat-label">Incohérences:</span>
+                                        <span class="gap-stat-label">{{ 'RDB.ui.incoherences' | translate }}</span>
                                         <span class="gap-stat-value">{{service.mismatches | number}}</span>
                                     </div>
                                 </div>
@@ -1437,7 +1436,7 @@ export class ReportDashboardComponent implements OnInit, OnDestroy {
             const endDate = new Date(this.customEndDate);
             
             if (startDate > endDate) {
-                this.popupService.showError('Erreur de dates', 'La date de début doit être antérieure à la date de fin');
+                this.popupService.showError(I18nService.t('RDB.msg.erreurDeDates'), I18nService.t('RNK.dateStartAfterEnd'));
                 this.customEndDate = '';
                 return;
             }
@@ -1769,7 +1768,7 @@ export class ReportDashboardComponent implements OnInit, OnDestroy {
     }
 
     getDateRange(): string {
-        if (this.filteredData.length === 0) return 'Aucune donnée';
+        if (this.filteredData.length === 0) return I18nService.t('CPT.Aucunedonnée');
         
         const dates = this.filteredData.map(item => new Date(item.date));
         const minDate = new Date(Math.min(...dates.map(d => d.getTime())));
@@ -1942,14 +1941,14 @@ export class ReportDashboardComponent implements OnInit, OnDestroy {
 
     async exportReport() {
         if (this.filteredData.length === 0) {
-            this.popupService.showError('Erreur', 'Aucune donnée à exporter');
+            this.popupService.showError(I18nService.t('MSG.error'), I18nService.t('MSG.noDataToExport'));
             return;
         }
 
         try {
             // Confirmation avant export
             const confirmed = await this.popupService.showConfirm(
-                `Exporter ${this.filteredData.length} ligne(s) vers Excel ?`, 
+                I18nService.t('RDB.msg.exporterLigneSVersExcel', { p0: this.filteredData.length }), 
                 'Confirmation d\'export'
             );
             if (!confirmed) return;
@@ -1968,10 +1967,10 @@ export class ReportDashboardComponent implements OnInit, OnDestroy {
                 true // Inclure le résumé
             );
 
-            this.popupService.showSuccess('Export réussi', 'Le fichier Excel a été généré avec succès');
+            this.popupService.showSuccess(I18nService.t('OPS.exportSuccess'), I18nService.t('RDB.msg.leFichierExcelAEteGenere'));
         } catch (error) {
             console.error('Erreur export:', error);
-            this.popupService.showError('Erreur d\'export', 'Impossible de générer le fichier Excel');
+            this.popupService.showError(I18nService.t('RPT.releve.exportPdfErrorTitle'), I18nService.t('RDB.msg.impossibleDeGenererLeFichierExcel'));
         }
     }
 
@@ -2074,12 +2073,12 @@ export class ReportDashboardComponent implements OnInit, OnDestroy {
             next: (md: string) => {
                 this.pilotReportMarkdown = md || '';
                 this.showPilotReportPreview = true;
-                this.popupService.showSuccess('Rapport généré', 'Le rapport Markdown a été généré avec succès');
+                this.popupService.showSuccess(I18nService.t('RDB.msg.rapportGenere'), I18nService.t('RDB.msg.leRapportMarkdownAEteGenere'));
                 this.isGeneratingReport = false;
             },
             error: (err: any) => {
                 console.error('Erreur génération rapport:', err);
-                this.popupService.showError('Erreur', 'Impossible de générer le rapport');
+                this.popupService.showError(I18nService.t('MSG.error'), I18nService.t('RDB.msg.impossibleDeGenererLeRapport'));
                 this.isGeneratingReport = false;
             }
         });
@@ -2104,9 +2103,9 @@ export class ReportDashboardComponent implements OnInit, OnDestroy {
         try {
             if (!this.pilotReportMarkdown) return;
             await navigator.clipboard.writeText(this.pilotReportMarkdown);
-            this.popupService.showSuccess('Copié', 'Le rapport a été copié dans le presse-papiers');
+            this.popupService.showSuccess(I18nService.t('TFA.popups.copySecretSuccess.title'), I18nService.t('RDB.msg.leRapportAEteCopieDans'));
         } catch (e) {
-            this.popupService.showError('Erreur', 'Copie impossible (droits navigateur)');
+            this.popupService.showError(I18nService.t('MSG.error'), I18nService.t('RDB.msg.copieImpossibleDroitsNavigateur'));
         }
     }
 }

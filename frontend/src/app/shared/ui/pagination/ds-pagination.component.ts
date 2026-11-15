@@ -1,5 +1,7 @@
 import { ChangeDetectionStrategy, Component, EventEmitter, Input, Output } from '@angular/core';
 import { CommonModule } from '@angular/common';
+import { TranslateModule } from '@ngx-translate/core';
+import { I18nService } from '../../../services/i18n/i18n.service';
 
 const INTEGER_FORMAT = new Intl.NumberFormat('fr-FR');
 
@@ -10,36 +12,36 @@ const INTEGER_FORMAT = new Intl.NumberFormat('fr-FR');
 @Component({
   selector: 'ds-pagination',
   standalone: true,
-  imports: [CommonModule],
+  imports: [CommonModule, TranslateModule],
   changeDetection: ChangeDetectionStrategy.OnPush,
   styleUrls: ['./ds-pagination.component.scss'],
   template: `
     <nav class="pg" [attr.aria-label]="ariaLabel">
       <p *ngIf="rangeLabel" class="pg__range ds-num">{{ rangeLabel }}</p>
       <label *ngIf="pageSizes?.length" class="pg__size">
-        <span class="pg__size-label">Par page</span>
+        <span class="pg__size-label">{{ 'PLT.aud.perPage' | translate }}</span>
         <select class="ds-select" [value]="pageSize || pageSizes[0]" (change)="onPageSize($event)">
           <option *ngFor="let size of pageSizes" [value]="size">{{ size }}</option>
         </select>
       </label>
       <div class="pg__controls">
         <button type="button" class="ds-btn ds-btn--secondary ds-btn--sm ds-btn--icon"
-                [disabled]="isFirst" (click)="go(1)" aria-label="Première page">
+                [disabled]="isFirst" (click)="go(1)" [attr.aria-label]="'PAG.first' | translate">
           <i class="fas fa-angle-double-left" aria-hidden="true"></i>
         </button>
         <button type="button" class="ds-btn ds-btn--secondary ds-btn--sm"
                 [disabled]="isFirst" (click)="go(page - 1)">
           <i class="fas fa-angle-left" aria-hidden="true"></i>
-          <span class="pg__label">Précédent</span>
+          <span class="pg__label">{{ 'PAG.previous' | translate }}</span>
         </button>
-        <span class="pg__status ds-num" aria-live="polite">Page {{ safePage }} sur {{ safeCount }}</span>
+        <span class="pg__status ds-num" aria-live="polite">{{ 'LBL.ui.pageSur' | translate: { p0: safePage, p1: safeCount } }}</span>
         <button type="button" class="ds-btn ds-btn--secondary ds-btn--sm"
                 [disabled]="isLast" (click)="go(page + 1)">
-          <span class="pg__label">Suivant</span>
+          <span class="pg__label">{{ 'PAG.next' | translate }}</span>
           <i class="fas fa-angle-right" aria-hidden="true"></i>
         </button>
         <button type="button" class="ds-btn ds-btn--secondary ds-btn--sm ds-btn--icon"
-                [disabled]="isLast" (click)="go(safeCount)" aria-label="Dernière page">
+                [disabled]="isLast" (click)="go(safeCount)" [attr.aria-label]="'PAG.last' | translate">
           <i class="fas fa-angle-double-right" aria-hidden="true"></i>
         </button>
       </div>
@@ -84,7 +86,7 @@ export class DsPaginationComponent {
     }
     const start = (this.safePage - 1) * this.pageSize + 1;
     const end = Math.min(this.safePage * this.pageSize, this.totalItems);
-    return `${INTEGER_FORMAT.format(start)}–${INTEGER_FORMAT.format(end)} sur ${INTEGER_FORMAT.format(this.totalItems)} ${this.itemLabel}`;
+    return I18nService.t('PAG.msg.sur', { p0: INTEGER_FORMAT.format(start), p1: INTEGER_FORMAT.format(end), p2: INTEGER_FORMAT.format(this.totalItems), p3: this.itemLabel });
   }
 
   go(target: number): void {

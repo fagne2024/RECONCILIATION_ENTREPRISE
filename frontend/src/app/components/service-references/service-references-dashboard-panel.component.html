@@ -1,6 +1,6 @@
 <div class="sr-dash" [class.sr-dash--compact]="compactLayout">
     <div *ngIf="panelLoading" class="sr-dash-loading">
-        Loading data…
+        {{ 'FILT.ui.loadingData' | translate }}
     </div>
 
     <ng-container *ngIf="!panelLoading">
@@ -10,8 +10,8 @@
                     *ngIf="!compactLayout"
                     type="button"
                     class="ds-btn ds-btn--secondary sr-dash-card-menu"
-                    title="More options"
-                    aria-label="More options"
+                    title="{{ 'FILT.ui.moreOptions' | translate }}"
+                    [attr.aria-label]="'FILT.ui.moreOptions' | translate"
                 >
                     <i class="fas fa-ellipsis-v"></i>
                 </button>
@@ -22,31 +22,30 @@
             <div class="sr-dash-card sr-dash-card--blue">
                 <span class="sr-dash-card-title">{{ cardReconciliableTitle }}</span>
                 <strong class="sr-dash-card-value ds-num">{{ cardReconciliableValue | number:'1.0-0' }}{{ cardValueSuffix }}</strong>
-                <span class="sr-dash-card-sub">{{ cardReconciliablePercent }}% of {{ cardPercentBasisLabel }}</span>
+                <span class="sr-dash-card-sub">{{ 'FILT.ui.of' | translate: { p0: cardReconciliablePercent, p1: cardPercentBasisLabel } }}</span>
             </div>
             <div class="sr-dash-card sr-dash-card--green">
                 <span class="sr-dash-card-title">{{ cardReconcilieTitle }}</span>
                 <strong class="sr-dash-card-value ds-num">{{ cardReconcilieValue | number:'1.0-0' }}{{ cardValueSuffix }}</strong>
-                <span class="sr-dash-card-sub">{{ cardReconciliePercent }}% of {{ cardReconciliePercentBasisLabel }}</span>
+                <span class="sr-dash-card-sub">{{ 'FILT.ui.of' | translate: { p0: cardReconciliePercent, p1: cardReconciliePercentBasisLabel } }}</span>
             </div>
             <div class="sr-dash-card sr-dash-card--red">
                 <span class="sr-dash-card-title">{{ cardNonReconciliableTitle }}</span>
                 <strong class="sr-dash-card-value ds-num">{{ cardNonReconciliableValue | number:'1.0-0' }}{{ cardValueSuffix }}</strong>
-                <span class="sr-dash-card-sub">{{ cardNonReconciliablePercent }}% of {{ cardPercentBasisLabel }}</span>
+                <span class="sr-dash-card-sub">{{ 'FILT.ui.of' | translate: { p0: cardNonReconciliablePercent, p1: cardPercentBasisLabel } }}</span>
             </div>
         </div>
 
         <p class="sr-dash-import-hint" *ngIf="showImportHint">
-            Import (top button): <strong>.csv</strong> / <strong>.tsv</strong> files allowed; columns
-            <strong>{{ 'TBL.country' | translate }}</strong> + <strong>Service Code</strong> are sufficient (Service and RECO Code = service code if missing).
-            Existing references (same country + service code) are <strong>updated</strong>.
+            {{ 'FILT.ui.importTopButton' | translate }} <strong>.csv</strong> / <strong>.tsv</strong> {{ 'FILT.ui.filesAllowedColumns' | translate }}
+            <strong>{{ 'TBL.country' | translate }}</strong> + <strong>{{ 'FILT.ui.serviceCode' | translate }}</strong> {{ 'FILT.ui.areSufficientServiceAndRecoCode' | translate }} <strong>{{ 'FILT.ui.updated' | translate }}</strong>.
         </p>
 
         <!-- Filtres compacts — une seule ligne -->
         <div class="sr-fbar" *ngIf="compactLayout">
-            <span class="sr-fbar-label">Filters:</span>
+            <span class="sr-fbar-label">{{ 'FILT.ui.filters' | translate }}</span>
             <mat-form-field appearance="fill" class="sr-fsel sr-fsel--aff">
-                    <mat-label>Display</mat-label>
+                    <mat-label>{{ 'CPT.Affichage' | translate }}</mat-label>
                 <mat-select [(ngModel)]="displayMode" (selectionChange)="onDisplayModeChange()">
                     <mat-option *ngFor="let opt of displayModeOptions" [value]="opt.value">{{ opt.label }}</mat-option>
                 </mat-select>
@@ -68,8 +67,8 @@
                     <mat-option>
                         <ngx-mat-select-search
                             [formControl]="paysSearchCtrl"
-                            placeholderLabel="Search..."
-                            noEntriesFoundLabel="No country"
+                            [placeholderLabel]="'SEARCH.generic' | translate"
+                            [noEntriesFoundLabel]="'SEARCH.noCountry' | translate"
                         ></ngx-mat-select-search>
                     </mat-option>
                     <mat-option *ngFor="let p of filteredPaysOptions" [value]="p">{{ p }}</mat-option>
@@ -85,8 +84,8 @@
                     <mat-option>
                         <ngx-mat-select-search
                             [formControl]="serviceTypeSearchCtrl"
-                            placeholderLabel="Search..."
-                            noEntriesFoundLabel="No type"
+                            [placeholderLabel]="'SEARCH.generic' | translate"
+                            [noEntriesFoundLabel]="'SEARCH.noType' | translate"
                         ></ngx-mat-select-search>
                     </mat-option>
                     <mat-option *ngFor="let t of filteredServiceTypeOptions" [value]="t">{{ t }}</mat-option>
@@ -97,13 +96,13 @@
                     [(ngModel)]="selectedOperateurs"
                     multiple
                     (selectionChange)="onDashboardFilterChange()"
-                        placeholder="All operators"
+                        placeholder="{{ 'FILT.ui.allOperators' | translate }}"
                 >
                     <mat-option>
                         <ngx-mat-select-search
                             [formControl]="operateurSearchCtrl"
-                            placeholderLabel="Search..."
-                            noEntriesFoundLabel="No operator"
+                            [placeholderLabel]="'SEARCH.generic' | translate"
+                            [noEntriesFoundLabel]="'SEARCH.noOperator' | translate"
                         ></ngx-mat-select-search>
                     </mat-option>
                     <mat-option *ngFor="let o of filteredOperateurOptions" [value]="o">{{ o }}</mat-option>
@@ -114,13 +113,13 @@
                     [(ngModel)]="selectedReseaux"
                     multiple
                     (selectionChange)="onDashboardFilterChange()"
-                    placeholder="All networks"
+                    placeholder="{{ 'FILT.ui.allNetworks' | translate }}"
                 >
                     <mat-option>
                         <ngx-mat-select-search
                             [formControl]="reseauSearchCtrl"
-                            placeholderLabel="Search..."
-                            noEntriesFoundLabel="No network"
+                            [placeholderLabel]="'SEARCH.generic' | translate"
+                            [noEntriesFoundLabel]="'SEARCH.noNetwork' | translate"
                         ></ngx-mat-select-search>
                     </mat-option>
                     <mat-option *ngFor="let rs of filteredReseauOptions" [value]="rs">{{ rs }}</mat-option>
@@ -132,7 +131,7 @@
                 class="ds-btn ds-btn--secondary sr-btn-det"
                 (click)="onOpenDetailsClick()"
             >
-                Open details
+                {{ 'FILT.ui.openDetails' | translate }}
             </button>
         </div>
 
@@ -141,7 +140,7 @@
             <div class="filters-container">
             <div class="filter-group">
                 <mat-form-field appearance="fill" class="filter-select">
-                <mat-label>Display</mat-label>
+                <mat-label>{{ 'CPT.Affichage' | translate }}</mat-label>
                     <mat-select [(ngModel)]="displayMode" (selectionChange)="onDisplayModeChange()">
                         <mat-option *ngFor="let opt of displayModeOptions" [value]="opt.value">{{ opt.label }}</mat-option>
                     </mat-select>
@@ -167,8 +166,8 @@
                         <mat-option>
                             <ngx-mat-select-search
                                 [formControl]="paysSearchCtrl"
-                                placeholderLabel="Search for a country..."
-                                noEntriesFoundLabel="No country found"
+                                [placeholderLabel]="'SEARCH.country' | translate"
+                                [noEntriesFoundLabel]="'SEARCH.noCountry' | translate"
                             ></ngx-mat-select-search>
                         </mat-option>
                         <mat-option *ngFor="let p of filteredPaysOptions" [value]="p">{{ p }}</mat-option>
@@ -177,7 +176,7 @@
             </div>
             <div class="filter-group">
                 <mat-form-field appearance="fill" class="filter-select">
-                    <mat-label>Service type</mat-label>
+                    <mat-label>{{ 'FILT.ui.serviceType' | translate }}</mat-label>
                     <mat-select
                         [(ngModel)]="selectedServiceTypes"
                         multiple
@@ -187,8 +186,8 @@
                         <mat-option>
                             <ngx-mat-select-search
                                 [formControl]="serviceTypeSearchCtrl"
-                                placeholderLabel="Search for a type..."
-                                noEntriesFoundLabel="No type found"
+                                [placeholderLabel]="'SEARCH.type' | translate"
+                                [noEntriesFoundLabel]="'SEARCH.noType' | translate"
                             ></ngx-mat-select-search>
                         </mat-option>
                         <mat-option *ngFor="let t of filteredServiceTypeOptions" [value]="t">{{ t }}</mat-option>
@@ -202,13 +201,13 @@
                         [(ngModel)]="selectedOperateurs"
                         multiple
                         (selectionChange)="onDashboardFilterChange()"
-                    placeholder="All operators"
+                    placeholder="{{ 'FILT.ui.allOperators' | translate }}"
                     >
                         <mat-option>
                             <ngx-mat-select-search
                                 [formControl]="operateurSearchCtrl"
-                                placeholderLabel="Search for an operator..."
-                                noEntriesFoundLabel="No operator found"
+                                [placeholderLabel]="'SEARCH.operator' | translate"
+                                [noEntriesFoundLabel]="'SEARCH.noOperator' | translate"
                             ></ngx-mat-select-search>
                         </mat-option>
                         <mat-option *ngFor="let o of filteredOperateurOptions" [value]="o">{{ o }}</mat-option>
@@ -217,18 +216,18 @@
             </div>
             <div class="filter-group">
                 <mat-form-field appearance="fill" class="filter-select">
-                    <mat-label>Network</mat-label>
+                    <mat-label>{{ 'FILT.ui.network' | translate }}</mat-label>
                     <mat-select
                         [(ngModel)]="selectedReseaux"
                         multiple
                         (selectionChange)="onDashboardFilterChange()"
-                    placeholder="All networks"
+                    placeholder="{{ 'FILT.ui.allNetworks' | translate }}"
                     >
                         <mat-option>
                             <ngx-mat-select-search
                                 [formControl]="reseauSearchCtrl"
-                                placeholderLabel="Search for a network..."
-                                noEntriesFoundLabel="No network found"
+                                [placeholderLabel]="'SEARCH.network' | translate"
+                                [noEntriesFoundLabel]="'SEARCH.noNetwork' | translate"
                             ></ngx-mat-select-search>
                         </mat-option>
                         <mat-option *ngFor="let rs of filteredReseauOptions" [value]="rs">{{ rs }}</mat-option>
@@ -244,8 +243,8 @@
                     <div class="sr-dash-col-head-left">
                         <span class="sr-dash-col-icon sr-dash-col-icon--ok"><i class="fas fa-check"></i></span>
                         <div>
-                            <h3 class="sr-dash-col-title">Reconcilable</h3>
-                            <p class="sr-dash-col-meta">{{ dashboardReconciliableCount }} service(s)</p>
+                            <h3 class="sr-dash-col-title">{{ 'FILT.ui.reconcilable' | translate }}</h3>
+                            <p class="sr-dash-col-meta">{{ 'FILT.ui.serviceS' | translate: { p0: dashboardReconciliableCount } }}</p>
                         </div>
                     </div>
                     <span class="sr-dash-col-badge sr-dash-col-badge--green">{{ dashboardReconciliablePercent }}%</span>
@@ -270,7 +269,7 @@
                         </section>
                     </ng-container>
                     <ng-template #emptyRec>
-                        <p class="sr-dash-empty">No reconcilable service for these filters.</p>
+                        <p class="sr-dash-empty">{{ 'FILT.ui.noReconcilableServiceForTheseFilters' | translate }}</p>
                     </ng-template>
                 </div>
             </div>
@@ -285,8 +284,8 @@
                     <div class="sr-dash-col-head-left">
                         <span class="sr-dash-col-icon sr-dash-col-icon--ko"><i class="fas fa-times"></i></span>
                         <div>
-                            <h3 class="sr-dash-col-title">Not reconcilable</h3>
-                            <p class="sr-dash-col-meta">{{ dashboardNonReconciliableCount }} service(s)</p>
+                            <h3 class="sr-dash-col-title">{{ 'FILT.ui.notReconcilable' | translate }}</h3>
+                            <p class="sr-dash-col-meta">{{ 'FILT.ui.serviceS' | translate: { p0: dashboardNonReconciliableCount } }}</p>
                         </div>
                     </div>
                     <span class="sr-dash-col-badge sr-dash-col-badge--red">{{ dashboardNonReconciliablePercent }}%</span>
@@ -311,7 +310,7 @@
                         </section>
                     </ng-container>
                     <ng-template #emptyNon>
-                        <p class="sr-dash-empty">No non-reconcilable service for these filters.</p>
+                        <p class="sr-dash-empty">{{ 'FILT.ui.noNonReconcilableServiceForThese' | translate }}</p>
                     </ng-template>
                 </div>
             </div>

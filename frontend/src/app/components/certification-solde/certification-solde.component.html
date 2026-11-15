@@ -15,10 +15,10 @@
         <i class="fas fa-list"></i> {{ 'CS.Listedescompenses' | translate }}
       </button>
       <button type="button" class="nav-btn secondary" (click)="exportToExcel()" [disabled]="!canExport || isExportingExcel || isExportingPdf">
-        <i class="fas fa-file-excel"></i> {{ isExportingExcel ? 'Export…' : 'Exporter Excel' }}
+        <i class="fas fa-file-excel"></i> {{ isExportingExcel ? ('CS.saved.exporting' | translate) : ('CS.saved.exportExcel' | translate) }}
       </button>
       <button type="button" class="nav-btn secondary" (click)="exportToPdf()" [disabled]="!canExport || isExportingExcel || isExportingPdf">
-        <i class="fas fa-file-pdf"></i> {{ isExportingPdf ? 'Export…' : 'Exporter PDF' }}
+        <i class="fas fa-file-pdf"></i> {{ isExportingPdf ? ('CS.saved.exporting' | translate) : ('CS.saved.exportPdf' | translate) }}
       </button>
       <button type="button" class="nav-btn secondary" (click)="startNewCertification()">
         <i class="fas fa-file-upload"></i> {{ 'CS.Nouvellecertification' | translate }}
@@ -27,7 +27,7 @@
         <i class="fas fa-folder-open"></i> {{ 'CS.saved.button' | translate }}
       </button>
       <button type="button" class="nav-btn primary" (click)="saveCertification()" [disabled]="isSaving || !hasResults">
-        <i class="fas fa-save"></i> {{ isSaving ? 'Enregistrement...' : 'Enregistrer' }}
+        <i class="fas fa-save"></i> {{ isSaving ? ('RPT.savingEntries' | translate) : ('CS.saveMeta.confirm' | translate) }}
       </button>
     </div>
   </nav>
@@ -115,7 +115,7 @@
             <label class="compense-file-input">
               <input type="file" accept=".csv,.txt,.tsv,.xls,.xlsx" (change)="onCompenseListeFileSelected($event)">
               <i class="fas fa-table"></i>
-              <span>{{ compenseListeFileName && compenseListeSource === 'file' ? compenseListeFileName : 'Charger la liste des compenses' }}</span>
+              <span>{{ compenseListeFileName && compenseListeSource === 'file' ? compenseListeFileName : ('CS.ui.chargerLaListeDesCompenses' | translate) }}</span>
             </label>
             <button
               type="button"
@@ -124,7 +124,7 @@
               [disabled]="isLoadingOppartCompenses || isLoadingOppartCompenseFile"
               title="{{ 'CS.Chargerlalistedescompensesetoulesmontantsderéconciliationdepuislatableoppart' | translate }}">
               <i class="fas" [ngClass]="(isLoadingOppartCompenses || isLoadingOppartCompenseFile) ? 'fa-spinner fa-spin' : 'fa-database'"></i>
-              {{ (isLoadingOppartCompenses || isLoadingOppartCompenseFile) ? 'Chargement depuis OPPART…' : 'Charger depuis OPPART' }}
+              {{ (isLoadingOppartCompenses || isLoadingOppartCompenseFile) ? ('CS.ui.chargementDepuisOppart' | translate) : ('CS.ui.chargerDepuisOppart' | translate) }}
             </button>
             <button
               type="button"
@@ -133,16 +133,16 @@
               [disabled]="isVerifyingCompenses"
               title="{{ 'CS.Vérifierdansoppartleslignesconcernéesdelalistedescompensesparntransguetneconserverquecellesdonttoutelacorrespondanceestaustatutok' | translate }}">
               <i class="fas" [ngClass]="isVerifyingCompenses ? 'fa-spinner fa-spin' : 'fa-magnifying-glass'"></i>
-              {{ isVerifyingCompenses ? 'Vérification…' : 'Vérifier et charger les lignes OK' }}
+              {{ isVerifyingCompenses ? ('CS.ui.verification' | translate) : ('CS.ui.verifierEtChargerLesLignesOk' | translate) }}
             </button>
             <button
               type="button"
               class="oppart-load-btn"
               (click)="lierCompensesDansOppart()"
               [disabled]="isLinkingCompenses || compenseListeSource !== 'oppart' || !loadedCompenseLines?.length"
-              title="Lie les lignes BO et Partenaire dans OPPART pour chaque N° Trans GU de la liste (génère token, statut OK)">
+              title="{{ 'CS.ui.lieLesLignesBoEtPartenaire' | translate }}">
               <i class="fas" [ngClass]="isLinkingCompenses ? 'fa-spinner fa-spin' : 'fa-link'"></i>
-              {{ isLinkingCompenses ? 'Liaison…' : 'Lier les compenses dans OPPART' }}
+              {{ isLinkingCompenses ? ('CS.ui.liaison' | translate) : ('CS.ui.lierLesCompensesDansOppart' | translate) }}
             </button>
             <div class="reco-list-meta" *ngIf="compenseListeLoaded || (compenseRecon.loaded && compenseFileSource === 'oppart')">
               <span class="statut-badge" [class.ok]="true">{{ 'CS.OPPART' | translate }} {{ compenseLines.length | number:'1.0-0' }} {{ 'CS.Lignes' | translate }} {{ compenseRecon.amounts.length | number:'1.0-0' }} {{ 'CS.Montants' | translate }}</span>
@@ -162,7 +162,7 @@
             <label class="compense-file-input">
               <input type="file" accept=".csv,.txt,.tsv,.xls,.xlsx" (change)="onCompenseFileSelected($event)">
               <i class="fas fa-upload"></i>
-              <span>{{ compenseRecon.fileName && compenseFileSource === 'file' ? compenseRecon.fileName : 'Charger un fichier' }}</span>
+              <span>{{ compenseRecon.fileName && compenseFileSource === 'file' ? compenseRecon.fileName : ('CS.ui.chargerUnFichier' | translate) }}</span>
             </label>
           </div>
 
@@ -221,7 +221,7 @@
               <div class="fichier-block-actions" *ngIf="compenseLines.length">
                 <button type="button" class="cta-btn sm ds-btn ds-btn--secondary ds-btn--sm" (click)="exportCompenseListExcel()" [disabled]="isExportingExcel">
                   <i class="fas fa-file-excel"></i>
-                  {{ isExportingExcel ? 'Export en cours…' : 'Exporter Excel' }}
+                  {{ isExportingExcel ? ('CS.ui.exportEnCours' | translate) : ('CS.saved.exportExcel' | translate) }}
                 </button>
               </div>
             </div>
@@ -269,11 +269,11 @@
               <div class="fichier-block-actions" *ngIf="compenseRecon.loaded && compenseRecon.amounts.length">
                 <button type="button" class="cta-btn sm ds-btn ds-btn--secondary ds-btn--sm" (click)="exportCompenseRecoPdf()" [disabled]="isExportingPdf">
                   <i class="fas fa-file-pdf"></i>
-                  {{ isExportingPdf ? 'Export en cours…' : 'Exporter PDF' }}
+                  {{ isExportingPdf ? ('CS.ui.exportEnCours' | translate) : ('CS.saved.exportPdf' | translate) }}
                 </button>
                 <button type="button" class="cta-btn sm ds-btn ds-btn--secondary ds-btn--sm" (click)="exportCompenseRecoExcel()" [disabled]="isExportingExcel">
                   <i class="fas fa-file-excel"></i>
-                  {{ isExportingExcel ? 'Export en cours…' : 'Exporter Excel' }}
+                  {{ isExportingExcel ? ('CS.ui.exportEnCours' | translate) : ('CS.saved.exportExcel' | translate) }}
                 </button>
               </div>
             </div>
@@ -302,7 +302,7 @@
                     <td>{{ r.dateOperation ? formatDateCell(r.dateOperation) : '—' }}</td>
                     <td>{{ r.client || '—' }}</td>
                     <td [class.text-danger]="!r.trouve">
-                      {{ r.trouve ? ('Statut ' + r.statut + ' sur la correspondance' + (r.token ? ' ' + r.token : '')) : r.motif }}
+                      {{ r.trouve ? (('CS.ui.statutPrefix' | translate) + r.statut + ('CS.ui.surLaCorrespondance' | translate) + (r.token ? ' ' + r.token : '')) : r.motif }}
                     </td>
                   </tr>
                 </tbody>
@@ -362,7 +362,7 @@
             [(ngModel)]="reconciliationTitle"
             maxlength="80"
             placeholder="{{ 'CS.Titredelaréconciliation' | translate }}"
-            title="Titre utilisé dans les exports Excel et PDF"
+            title="{{ 'CS.ui.titreUtiliseDansLesExportsExcel' | translate }}"
           />
         </div>
         <h1>{{ 'CS.Certificationde' | translate }} <em>{{ 'CS.Solde' | translate }}</em></h1>
@@ -504,11 +504,11 @@
           <span class="aggregates-actions">
             <button type="button" class="btn-export-aggregates ds-btn ds-btn--secondary ds-btn--sm" (click)="exportEcartAggregates()"
                     [disabled]="isExportingAggregates || isLoadingDetail">
-              <i class="fas fa-file-excel"></i> {{ isExportingAggregates ? 'Export…' : 'Excel' }}
+              <i class="fas fa-file-excel"></i> {{ isExportingAggregates ? ('CS.saved.exporting' | translate) : 'Excel' }}
             </button>
             <button type="button" class="btn-export-aggregates pdf ds-btn ds-btn--secondary ds-btn--sm" (click)="exportEcartAggregatesPdf()"
                     [disabled]="isExportingAggregatesPdf || isLoadingDetail">
-              <i class="fas fa-file-pdf"></i> {{ isExportingAggregatesPdf ? 'Export…' : 'PDF' }}
+              <i class="fas fa-file-pdf"></i> {{ isExportingAggregatesPdf ? ('CS.saved.exporting' | translate) : 'PDF' }}
             </button>
           </span>
         </div>
@@ -551,7 +551,7 @@
                       <button type="button" class="btn-export-part"
                               (click)="exportAggregatePart(row)"
                               [disabled]="exportingAggregateCode === row.code || isLoadingDetail"
-                              [title]="'Exporter les ' + row.details.length + ' ligne(s) de ' + row.label + ' au format Excel'">
+                              [title]="('CS.ui.exporterLes' | translate) + row.details.length + ('CS.ui.ligneSDe' | translate) + row.label + ('CS.ui.auFormatExcel' | translate)">
                         <i class="fas" [ngClass]="exportingAggregateCode === row.code ? 'fa-spinner fa-spin' : 'fa-file-excel'"></i>
                         {{ 'COMMON.actions.export' | translate }}
                       </button>
@@ -649,7 +649,7 @@
         <span class="panel-header-actions">
           <button type="button" class="link-btn ds-btn ds-btn--ghost ds-btn--sm" (click)="toggleCompenseSection()">
             <i class="fas" [ngClass]="compenseSectionVisible ? 'fa-eye-slash' : 'fa-eye'"></i>
-            {{ compenseSectionVisible ? 'Masquer' : 'Afficher' }} {{ 'CS.Compense' | translate }}
+            {{ compenseSectionVisible ? ('ACT.hide' | translate) : ('ACT.show' | translate) }} {{ 'CS.Compense' | translate }}
           </button>
         </span>
       </div>
@@ -705,7 +705,7 @@
           <label class="compense-file-input">
             <input type="file" accept=".csv,.txt,.tsv,.xls,.xlsx" (change)="onCompenseListeFileSelected($event)">
             <i class="fas fa-table"></i>
-            <span>{{ compenseListeFileName && compenseListeSource === 'file' ? compenseListeFileName : 'Charger la liste des compenses' }}</span>
+            <span>{{ compenseListeFileName && compenseListeSource === 'file' ? compenseListeFileName : ('CS.ui.chargerLaListeDesCompenses' | translate) }}</span>
           </label>
           <button
             type="button"
@@ -714,7 +714,7 @@
             [disabled]="isLoadingOppartCompenses || isLoadingOppartCompenseFile"
             title="{{ 'CS.Chargerlalistedescompensesetoulesmontantsderéconciliationdepuislatableoppart' | translate }}">
             <i class="fas" [ngClass]="(isLoadingOppartCompenses || isLoadingOppartCompenseFile) ? 'fa-spinner fa-spin' : 'fa-database'"></i>
-            {{ (isLoadingOppartCompenses || isLoadingOppartCompenseFile) ? 'Chargement depuis OPPART…' : 'Charger depuis OPPART' }}
+            {{ (isLoadingOppartCompenses || isLoadingOppartCompenseFile) ? ('CS.ui.chargementDepuisOppart' | translate) : ('CS.ui.chargerDepuisOppart' | translate) }}
           </button>
           <button
             type="button"
@@ -723,16 +723,16 @@
             [disabled]="isVerifyingCompenses"
             title="{{ 'CS.Vérifierdansoppartleslignesconcernéesdelalistedescompensesparntransguetneconserverquecellesdonttoutelacorrespondanceestaustatutok' | translate }}">
             <i class="fas" [ngClass]="isVerifyingCompenses ? 'fa-spinner fa-spin' : 'fa-magnifying-glass'"></i>
-            {{ isVerifyingCompenses ? 'Vérification…' : 'Vérifier et charger les lignes OK' }}
+            {{ isVerifyingCompenses ? ('CS.ui.verification' | translate) : ('CS.ui.verifierEtChargerLesLignesOk' | translate) }}
           </button>
           <button
             type="button"
             class="oppart-load-btn"
             (click)="lierCompensesDansOppart()"
             [disabled]="isLinkingCompenses || compenseListeSource !== 'oppart' || !loadedCompenseLines?.length"
-            title="Lie les lignes BO et Partenaire dans OPPART pour chaque N° Trans GU de la liste (génère token, statut OK)">
+            title="{{ 'CS.ui.lieLesLignesBoEtPartenaire' | translate }}">
             <i class="fas" [ngClass]="isLinkingCompenses ? 'fa-spinner fa-spin' : 'fa-link'"></i>
-            {{ isLinkingCompenses ? 'Liaison…' : 'Lier les compenses dans OPPART' }}
+            {{ isLinkingCompenses ? ('CS.ui.liaison' | translate) : ('CS.ui.lierLesCompensesDansOppart' | translate) }}
           </button>
           <div class="reco-list-meta" *ngIf="compenseListeLoaded || (compenseRecon.loaded && compenseFileSource === 'oppart')">
             <span class="statut-badge ok">{{ 'CS.OPPART' | translate }} {{ compenseLines.length | number:'1.0-0' }} {{ 'CS.Lignes' | translate }} {{ compenseRecon.amounts.length | number:'1.0-0' }} {{ 'CS.Montants' | translate }}</span>
@@ -748,7 +748,7 @@
           <label class="compense-file-input">
             <input type="file" accept=".csv,.txt,.tsv,.xls,.xlsx" (change)="onCompenseFileSelected($event)">
             <i class="fas fa-upload"></i>
-            <span>{{ compenseRecon.fileName && compenseFileSource === 'file' ? compenseRecon.fileName : 'Charger un fichier' }}</span>
+            <span>{{ compenseRecon.fileName && compenseFileSource === 'file' ? compenseRecon.fileName : ('CS.ui.chargerUnFichier' | translate) }}</span>
           </label>
           <div class="reco-list-meta" *ngIf="compenseRecon.loaded && compenseFileSource === 'oppart'">
             <span class="statut-badge ok">{{ 'CS.Montantschargésdepuisoppart' | translate }} {{ compenseRecon.amounts.length | number:'1.0-0' }}</span>
@@ -860,7 +860,7 @@
           <td>{{ s.agence }}</td>
           <td>{{ s.count | number:'1.0-0' }}</td>
           <td>{{ s.volume | number:'1.0-0' }}</td>
-          <td [title]="s.fraisConfigExact ? 'Configuration /frais du couple service + client' : 'Aucune configuration /frais pour ce couple service + client'">
+          <td [title]="s.fraisConfigExact ? ('CS.ui.configurationFraisDuCoupleServiceClient' | translate) : ('CS.ui.aucuneConfigurationFraisPourCeCouple' | translate)">
             {{ s.frais ? (s.frais | number:'1.0-2') : '-' }}
             <i class="fas fa-exclamation-triangle text-warning" *ngIf="!s.fraisConfigExact"></i>
           </td>
@@ -945,7 +945,7 @@
             <tr class="pdf-subheader-row">
               <th colspan="4">
                 {{ 'CS.Listedescompenses' | translate }}
-                — {{ compenseListeLoaded ? (compenseListeFileName || 'Fichier') : 'Liste calculée' }}
+                — {{ compenseListeLoaded ? (compenseListeFileName || ('PROGRESS.file' | translate)) : ('CS.ui.listeCalculee' | translate) }}
               </th>
             </tr>
             <tr>
@@ -979,7 +979,7 @@
         <table class="pdf-data-table pdf-detail-table pdf-compense-table" *ngIf="compenseRecon.loaded && compensePartnerLines.length">
           <thead>
             <tr class="pdf-subheader-row">
-              <th colspan="4">{{ 'TBL.partner' | translate }} — {{ compenseRecon.fileName || 'Fichier des montants' }}</th>
+              <th colspan="4">{{ 'TBL.partner' | translate }} — {{ compenseRecon.fileName || ('CS.ui.fichierDesMontants' | translate) }}</th>
             </tr>
             <tr>
               <th>{{ 'TBL.agency' | translate }}</th>
@@ -1107,7 +1107,7 @@
           <tr class="pdf-ecart-frais" *ngIf="computed.fraisAttendu != null && computed.oppartOperationBreakdown.hasData">
             <td>
               {{ 'CS.Écartfrais' | translate }}
-              <br><small class="derived-formula">Frais attendus − Frais facturés (OPPART)</small>
+              <br><small class="derived-formula">{{ 'CS.ui.fraisAttendusFraisFacturesOppart' | translate }}</small>
             </td>
             <td>{{ formatNumber(ecartFrais) }}</td>
           </tr>
@@ -1555,7 +1555,7 @@
                 <tr class="pdf-ecart-frais" *ngIf="r.ecartFrais != null">
                   <td>
                     {{ 'CS.Écartfrais' | translate }}
-                    <br><small class="derived-formula">Frais attendus − Frais facturés (OPPART)</small>
+                    <br><small class="derived-formula">{{ 'CS.ui.fraisAttendusFraisFacturesOppart' | translate }}</small>
                   </td>
                   <td>{{ formatNumber(r.ecartFrais) }}</td>
                 </tr>
@@ -1638,7 +1638,7 @@
             <span class="pdf-preview-filename">{{ pdfPreviewFileName }}</span>
           </div>
         </div>
-        <button type="button" class="pdf-preview-close" (click)="closePdfPreview()" aria-label="{{ 'CS.Fermerlaperçu' | translate }}perçu' | translate }}">
+        <button type="button" class="pdf-preview-close" (click)="closePdfPreview()" [attr.aria-label]="'CS.Fermerlaperçu' | translate">
           <i class="fas fa-times"></i>
         </button>
       </div>

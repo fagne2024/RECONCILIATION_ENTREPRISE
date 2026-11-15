@@ -346,9 +346,9 @@
             <td>{{ impact.commentaire || '-' }}</td>
             <td>
               <div class="action-buttons">
-                <button type="button" class="ds-btn ds-btn--primary btn btn-sm btn-primary" (click)="createOperationFromImpact(impact)" [disabled]="!isImpactEligible(impact)" title="{{ 'ACT.createOp' | translate }}">
+                <button type="button" class="ds-btn ds-btn--primary btn btn-sm btn-primary" (click)="createOperationFromImpact(impact)" [disabled]="!isImpactEligible(impact)" title="{{ 'IOP.createOp' | translate }}">
                   <i class="fas fa-plus-circle"></i>
-                  <span class="btn-label">{{ 'ACT.createOp' | translate }}</span>
+                  <span class="btn-label">{{ 'IOP.createOp' | translate }}</span>
                 </button>
                 <button type="button" class="ds-btn ds-btn--secondary btn btn-sm btn-success" (click)="saveImpactOP(impact)" title="{{ 'COMMON.actions.save' | translate }}">
                   <i class="fas fa-save"></i>

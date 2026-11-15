@@ -2,7 +2,7 @@
   <div class="dialog-header">
     <h2>
       <i class="fas fa-shield-alt"></i>
-      Configuration 2FA pour {{ username }}
+      {{ 'COMMON.ui.configuration2faPour' | translate: { p0: username } }}
     </h2>
     <button type="button" class="ds-btn ds-btn--secondary close-btn" (click)="close()" title="{{ 'COMMON.actions.close' | translate }}">
       <i class="fas fa-times"></i>
@@ -26,12 +26,12 @@
       <div class="status-header">
         <i class="fas fa-shield-alt" [class.enabled]="is2FAEnabled" [class.disabled]="!is2FAEnabled"></i>
         <div class="status-info">
-          <h3>Statut : {{ is2FAEnabled ? 'Activé' : 'Désactivé' }}</h3>
+          <h3>{{ 'TFA.ui.statusLabel' | translate: { status: (is2FAEnabled ? ('TFA.status.enabled' | translate) : ('TFA.status.disabled' | translate)) } }}</h3>
           <p *ngIf="is2FAEnabled" class="status-description">
-            L'authentification à deux facteurs est activée pour cet utilisateur.
+            {{ 'COMMON.ui.lAuthentificationADeuxFacteursEst' | translate }}
           </p>
           <p *ngIf="!is2FAEnabled" class="status-description">
-            L'authentification à deux facteurs n'est pas activée.
+            {{ 'COMMON.ui.lAuthentificationADeuxFacteursN' | translate }}
           </p>
         </div>
       </div>
@@ -44,7 +44,7 @@
           (click)="setup2FA()" 
           [disabled]="loading">
           <i class="fas fa-shield-alt"></i>
-          Activer le 2FA
+          {{ 'TFA.actions.enable' | translate }}
         </button>
 
         <button type="button" 
@@ -53,7 +53,7 @@
           (click)="disable2FA()" 
           [disabled]="loading">
           <i class="fas fa-lock-open"></i>
-          Désactiver le 2FA
+          {{ 'TFA.actions.disable' | translate }}
         </button>
 
         <button type="button" 
@@ -62,7 +62,7 @@
           (click)="setup2FA()" 
           [disabled]="loading">
           <i class="fas fa-sync-alt"></i>
-          Régénérer la clé
+          {{ 'TFA.actions.regenerate' | translate }}
         </button>
       </div>
     </div>
@@ -71,22 +71,22 @@
     <div class="setup-card" *ngIf="showQRCode">
       <h3>
         <i class="fas fa-qrcode"></i>
-        Configuration du 2FA
+        {{ 'TFA.setup.title' | translate }}
       </h3>
 
       <div class="instructions">
         <ol>
-          <li>Téléchargez et installez <strong>Google Authenticator</strong> sur votre téléphone</li>
-          <li>Ouvrez Google Authenticator et cliquez sur <strong>"+"</strong> > <strong>"Scanner un code QR"</strong></li>
-          <li>Scannez le QR code ci-dessous avec votre téléphone</li>
-          <li>Entrez le code à 6 chiffres affiché dans Google Authenticator pour activer le 2FA</li>
+          <li>{{ 'COMMON.ui.telechargezEtInstallez' | translate }} <strong>Google Authenticator</strong> {{ 'COMMON.ui.surVotreTelephone' | translate }}</li>
+          <li>{{ 'COMMON.ui.ouvrezGoogleAuthenticatorEtCliquezSur' | translate }} <strong>"+"</strong> > <strong>{{ 'COMMON.ui.scannerUnCodeQr' | translate }}</strong></li>
+          <li>{{ 'TFA.setup.steps.scan' | translate }}</li>
+          <li>{{ 'TFA.setup.steps.enter' | translate }}</li>
         </ol>
       </div>
 
       <!-- QR Code -->
       <div class="qr-code-container" *ngIf="qrCodeBase64">
-        <img [src]="qrCodeBase64" alt="QR Code 2FA" class="qr-code-image">
-        <p class="qr-code-hint">Scannez ce code avec Google Authenticator</p>
+        <img [src]="qrCodeBase64" alt="{{ 'COMMON.ui.qrCode2fa' | translate }}" class="qr-code-image">
+        <p class="qr-code-hint">{{ 'TFA.setup.qrHint' | translate }}</p>
       </div>
 
       <!-- Clé secrète et URL OTP (pour saisie manuelle) -->
@@ -94,32 +94,30 @@
         <details>
           <summary>
             <i class="fas fa-info-circle"></i>
-            Saisie manuelle (si le scan ne fonctionne pas)
+            {{ 'LOGIN.twoFactor.manualEntry' | translate }}
           </summary>
           
           <div class="secret-details">
             <div class="secret-item">
-              <label>Clé secrète :</label>
+              <label>{{ 'TFA.setup.secretLabel' | translate }}</label>
               <div class="secret-value">
                 <code>{{ secret }}</code>
-                <button type="button" class="ds-btn ds-btn--secondary btn-icon" (click)="copySecret()" title="Copier la clé">
+                <button type="button" class="ds-btn ds-btn--secondary btn-icon" (click)="copySecret()" title="{{ 'TFA.setup.copySecretTooltip' | translate }}">
                   <i class="fas fa-copy"></i>
                 </button>
               </div>
             </div>
 
             <div class="secret-item">
-              <label>URL OTP Auth :</label>
+              <label>{{ 'TFA.setup.otpUrlLabel' | translate }}</label>
               <div class="secret-value">
                 <code class="url-code">{{ otpAuthUrl }}</code>
-                <button type="button" class="ds-btn ds-btn--secondary btn-icon" (click)="copyOtpAuthUrl()" title="Copier l'URL">
+                <button type="button" class="ds-btn ds-btn--secondary btn-icon" (click)="copyOtpAuthUrl()" title="{{ 'TFA.setup.copyUrlTooltip' | translate }}">
                   <i class="fas fa-copy"></i>
                 </button>
               </div>
               <p class="hint">
-                Dans Google Authenticator : "+" > "Saisir une clé" > 
-                Nom: "Reconciliation App - {{ username }}" > 
-                Clé: copiez la clé secrète ci-dessus
+                {{ 'COMMON.ui.dansGoogleAuthenticatorSaisirUneCle' | translate: { p0: username } }}
               </p>
             </div>
           </div>
@@ -131,16 +129,16 @@
     <div class="validation-card" *ngIf="showValidationForm">
       <h3>
         <i class="fas fa-key"></i>
-        Valider l'activation
+        {{ 'TFA.validation.title' | translate }}
       </h3>
 
       <p class="validation-instructions">
-        Ouvrez Google Authenticator et entrez le code à 6 chiffres actuellement affiché.
+        {{ 'TFA.validation.instructions' | translate }}
       </p>
 
       <form [formGroup]="validationForm" (ngSubmit)="enable2FA()">
         <div class="form-group">
-          <label>Code d'authentification</label>
+          <label>{{ 'TFA.validation.label' | translate }}</label>
           <input 
             type="text" 
             formControlName="code" 
@@ -150,12 +148,12 @@
             autocomplete="off"
             class="ds-input form-control code-input"
             required>
-          <small class="form-text">Entrez le code à 6 chiffres depuis Google Authenticator</small>
+          <small class="form-text">{{ 'TFA.validation.hint' | translate }}</small>
           <div *ngIf="validationForm.get('code')?.hasError('required') && validationForm.get('code')?.touched" class="error-text">
-            Le code est requis
+            {{ 'LOGIN.twoFactor.codeRequired' | translate }}
           </div>
           <div *ngIf="validationForm.get('code')?.hasError('pattern') && validationForm.get('code')?.touched" class="error-text">
-            Le code doit contenir exactement 6 chiffres
+            {{ 'LOGIN.twoFactor.codePattern' | translate }}
           </div>
         </div>
 
@@ -166,7 +164,7 @@
             [disabled]="validationForm.invalid || loading">
             <i class="fas fa-check" *ngIf="!loading"></i>
             <i class="fas fa-spinner fa-spin" *ngIf="loading"></i>
-            {{ loading ? 'Activation...' : 'Activer le 2FA' }}
+            {{ loading ? ('TFA.actions.validating' | translate) : ('TFA.actions.enable' | translate) }}
           </button>
 
           <button 

@@ -31,6 +31,7 @@ import {
   normalizePartnerTransactionId
 } from '../../utils/partner-fields.util';
 import { TranslateModule, TranslateService } from '@ngx-translate/core';
+import { I18nService } from '../../services/i18n/i18n.service';
 
 /** Ligne éditable de la table de création OPPART. */
 interface OppartDraftRowUI {
@@ -1124,7 +1125,7 @@ export class EcartPartnerTableComponent implements OnInit, OnDestroy {
       return;
     }
     if (!idAnnulation) {
-      this.popupService.showWarning('Veuillez saisir l\'ID d\'annulation.');
+      this.popupService.showWarning(I18nService.t('TBL.msg.veuillezSaisirLIdDAnnulation'));
       return;
     }
 
@@ -1166,12 +1167,12 @@ export class EcartPartnerTableComponent implements OnInit, OnDestroy {
       this.suiviIdCandidates = [];
       this.suiviIdFieldOptions = [];
       this.suiviIdSelectedField = '';
-      this.popupService.showSuccess('ID d\'annulation enregistré dans le suivi (statut OK).');
+      this.popupService.showSuccess(I18nService.t('TBL.msg.idDAnnulationEnregistreDansLe'));
     } catch (error: any) {
       console.error('Erreur lors de l\'enregistrement de l\'ID d\'annulation:', error);
       const detail = error?.error?.message || error?.message || '';
       this.popupService.showError(
-        'Impossible d\'enregistrer l\'ID d\'annulation.' + (detail ? '\n' + detail : '')
+        I18nService.t('TBL.msg.impossibleDEnregistrerLIdD') + (detail ? '\n' + detail : '')
       );
     } finally {
       this.isSavingSuiviId = false;
@@ -1830,7 +1831,7 @@ export class EcartPartnerTableComponent implements OnInit, OnDestroy {
     }).filter(r => r.client !== '' || r.typeOp !== '' || r.idTransaction !== '' || r.pays !== '' || r.montant !== 0);
 
     if (!payload.length) {
-      this.popupService.showWarning('❌ Aucune ligne OPPART valide (toutes les lignes sont vides).');
+      this.popupService.showWarning(I18nService.t('TBL.msg.aucuneLigneOppartValideToutesLes'));
       return;
     }
 
@@ -1906,7 +1907,7 @@ export class EcartPartnerTableComponent implements OnInit, OnDestroy {
 
   private getPartnerOnlyDate(record: Record<string, string>): string {
     const dateColumn = this.findDateColumn(record);
-    return dateColumn ? record[dateColumn] || 'Non spécifié' : 'Non spécifié';
+    return dateColumn ? record[dateColumn] || I18nService.t('OPS.notSpecified') : I18nService.t('OPS.notSpecified');
   }
 
   private findDateColumn(data: Record<string, string>): string | null {

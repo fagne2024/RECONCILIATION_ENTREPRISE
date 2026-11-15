@@ -231,7 +231,7 @@ export class ModernPopupComponent implements OnInit, OnDestroy {
   }
 
   // Popup avec champ texte (input)
-  static showTextInput(message: string, title: string = 'Saisie', defaultValue: string = '', placeholder: string = ''): Promise<string | null> {
+  static showTextInput(message: string, title: string = I18nService.t('COMMON.ui.dialogInput'), defaultValue: string = '', placeholder: string = ''): Promise<string | null> {
     return new Promise((resolve) => {
       const overlay = document.createElement('div');
       overlay.className = 'modern-popup-overlay ds-dialog';

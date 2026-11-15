@@ -181,7 +181,7 @@ export class ReconciliationComponent implements OnInit, OnDestroy {
                 clearScheduledPoll();
                 this.showProgress = false;
                 this.isLoading = false;
-                this.error = `Délai d'attente dépassé pour la réconciliation (60 minutes). Le processus prend plus de temps que prévu. Veuillez réessayer avec des fichiers plus petits ou contacter le support technique.`;
+                this.error = I18nService.t('COMMON.msg.delaiDAttenteDepassePourLa');
                 this.cd.detectChanges();
                 return;
             }
@@ -249,7 +249,7 @@ export class ReconciliationComponent implements OnInit, OnDestroy {
                         this.isLoading = false;
                         
                         // Message d'erreur adaptatif selon le type d'erreur
-                        let errorMessage = `Impossible de suivre la progression de la réconciliation après ${maxConsecutiveErrors} tentatives. `;
+                        let errorMessage = I18nService.t('COMMON.msg.impossibleDeSuivreLaProgressionDe', { p0: maxConsecutiveErrors });
                         if (error.status === 0 || error.message?.includes('network') || error.message?.includes('Network')) {
                             errorMessage += `Problème de connexion réseau détecté. Vérifiez votre connexion et réessayez. `;
                         } else if (error.status >= 500) {
@@ -303,7 +303,7 @@ export class ReconciliationComponent implements OnInit, OnDestroy {
                         reconciliationResult = results;
                     } else {
                         console.error('❌ Aucun résultat valide reçu du backend');
-                        this.error = 'Aucun résultat de réconciliation valide reçu du serveur';
+                        this.error = I18nService.t('COMMON.msg.aucunResultatDeReconciliationValideRecu');
                         this.isLoading = false;
                         this.cd.detectChanges();
                         return;
@@ -362,7 +362,7 @@ export class ReconciliationComponent implements OnInit, OnDestroy {
                     }
                     
                     // Après maxRetries tentatives, afficher l'erreur
-                    let errorMessage = `Impossible de récupérer les résultats de la réconciliation après ${retryCount} tentative(s). `;
+                    let errorMessage = I18nService.t('COMMON.msg.impossibleDeRecupererLesResultatsDe', { p0: retryCount });
                     if (error.status === 0 || error.message?.includes('network') || error.message?.includes('Network')) {
                         errorMessage += `Problème de connexion réseau détecté. Vérifiez votre connexion et réessayez. `;
                     } else if (error.status === 404) {
@@ -532,7 +532,7 @@ export class ReconciliationComponent implements OnInit, OnDestroy {
                 stack: error instanceof Error ? error.stack : 'N/A',
                 name: error instanceof Error ? error.name : 'N/A'
             });
-            this.error = 'Erreur lors de la lecture des fichiers: ' + (error instanceof Error ? error.message : I18nService.t('COMMON.errors.unknown'));
+            this.error = I18nService.t('COMMON.msg.erreurLorsDeLaLectureDes') + (error instanceof Error ? error.message : I18nService.t('COMMON.errors.unknown'));
             this.cd.detectChanges();
         }
     }
@@ -651,7 +651,7 @@ export class ReconciliationComponent implements OnInit, OnDestroy {
                                 
                                 if (data.length === 0) {
                                     console.warn('⚠️ [PARSE_CSV] Aucune donnée trouvée dans le fichier');
-                                    reject(new Error('Fichier CSV vide ou invalide'));
+                                    reject(new Error(I18nService.t('COMMON.msg.fichierCsvVideOuInvalide')));
                                     return;
                                 }
                                 
@@ -682,7 +682,7 @@ export class ReconciliationComponent implements OnInit, OnDestroy {
                                 const errorDuration = ((errorTime - loadStartTime) / 1000).toFixed(2);
                                 console.error(`❌ [PARSE_CSV] Erreur lors du traitement des résultats après ${errorDuration}s:`, error);
                                 console.error(`❌ [PARSE_CSV] Stack trace:`, error instanceof Error ? error.stack : 'N/A');
-                                reject(new Error(`Erreur lors du traitement des résultats: ${error}`));
+                                reject(new Error(I18nService.t('COMMON.msg.erreurLorsDuTraitementDesResultats', { p0: error })));
                             }
                         },
                         error: (error) => {
@@ -695,13 +695,13 @@ export class ReconciliationComponent implements OnInit, OnDestroy {
                                 type: error.type,
                                 row: error.row
                             });
-                            reject(new Error(`Erreur lors du parsing CSV: ${error.message}`));
+                            reject(new Error(I18nService.t('COMMON.msg.erreurLorsDuParsingCsv', { p0: error.message })));
                         }
                     });
                     
                 } catch (error) {
                     console.error(`❌ Erreur lors du parsing du fichier ${file.name}:`, error);
-                    reject(new Error(`Erreur lors du parsing du fichier ${file.name}: ${error}`));
+                    reject(new Error(I18nService.t('COMMON.msg.erreurLorsDuParsingDuFichier', { p0: file.name, p1: error })));
                 }
             };
             
@@ -713,7 +713,7 @@ export class ReconciliationComponent implements OnInit, OnDestroy {
                     error: error,
                     target: (error.target as FileReader)?.error
                 });
-                reject(new Error(`Erreur lors de la lecture du fichier ${file.name}`));
+                reject(new Error(I18nService.t('COMMON.msg.erreurLorsDeLaLectureDu', { p0: file.name })));
             };
             
             // Lire avec UTF-8 (le plus courant), avec fallback automatique si nécessaire
@@ -723,7 +723,7 @@ export class ReconciliationComponent implements OnInit, OnDestroy {
                 console.log(`✅ [PARSE_CSV] FileReader.readAsText appelé avec succès`);
             } catch (error) {
                 console.error(`❌ [PARSE_CSV] Erreur lors de l'appel à readAsText:`, error);
-                reject(new Error(`Erreur lors de la lecture du fichier ${file.name}: ${error}`));
+                reject(new Error(I18nService.t('COMMON.msg.erreurLorsDeLaLectureDu2', { p0: file.name, p1: error })));
             }
         });
     }
@@ -786,7 +786,7 @@ export class ReconciliationComponent implements OnInit, OnDestroy {
                     reader.readAsText(chunk, 'UTF-8');
                 } catch (error) {
                     console.error(`❌ [PARSE_LARGE] Erreur lors de la lecture du chunk ${chunkNumber}:`, error);
-                    reject(new Error(`Erreur lors de la lecture du chunk ${chunkNumber}: ${error}`));
+                    reject(new Error(I18nService.t('COMMON.msg.erreurLorsDeLaLectureDu3', { p0: chunkNumber, p1: error })));
                 }
             };
             
@@ -903,7 +903,7 @@ export class ReconciliationComponent implements OnInit, OnDestroy {
                         error: error instanceof Error ? error.message : String(error),
                         stack: error instanceof Error ? error.stack : 'N/A'
                     });
-                    reject(new Error(`Erreur lors du parsing du chunk ${chunkNumber}: ${error}`));
+                    reject(new Error(I18nService.t('COMMON.msg.erreurLorsDuParsingDuChunk', { p0: chunkNumber, p1: error })));
                 }
             };
             
@@ -917,7 +917,7 @@ export class ReconciliationComponent implements OnInit, OnDestroy {
                     fileSize: file.size,
                     error: (error.target as FileReader)?.error
                 });
-                reject(new Error(`Erreur lors de la lecture du chunk ${chunkNumber}: ${error}`));
+                reject(new Error(I18nService.t('COMMON.msg.erreurLorsDeLaLectureDu3', { p0: chunkNumber, p1: error })));
             };
             
             // Démarrer la lecture du premier chunk
@@ -1026,7 +1026,7 @@ export class ReconciliationComponent implements OnInit, OnDestroy {
                     const rawRows = results.data as any[][];
                     
                     if (rawRows.length === 0) {
-                        reject(new Error('Aucune donnée trouvée'));
+                        reject(new Error(I18nService.t('TBL.ui.noDataFound')));
                         return;
                     }
                     
@@ -1052,7 +1052,7 @@ export class ReconciliationComponent implements OnInit, OnDestroy {
                     resolve(data);
                 },
                 error: (error) => {
-                    reject(new Error(`Erreur lors du parsing: ${error.message}`));
+                    reject(new Error(I18nService.t('COMMON.msg.erreurLorsDuParsing', { p0: error.message })));
                 }
             });
         });
@@ -1088,7 +1088,7 @@ export class ReconciliationComponent implements OnInit, OnDestroy {
             const analysisResponse = await this.reconciliationService.analyzeReconciliationKeys(formData).toPromise();
             
             if (!analysisResponse || !analysisResponse.suggestions || analysisResponse.suggestions.length === 0) {
-                throw new Error('Aucune suggestion de clé trouvée lors de l\'analyse');
+                throw new Error(I18nService.t('LNC.noKeySuggestionFound'));
             }
             
             // Trouver la suggestion avec le plus haut score de confiance
@@ -1121,17 +1121,17 @@ export class ReconciliationComponent implements OnInit, OnDestroy {
                     // on peut directement charger les résultats
                     this.loadReconciliationResults(null);
                 } else {
-                    throw new Error('Aucune réponse reçue lors de la réconciliation');
+                    throw new Error(I18nService.t('COMMON.msg.aucuneReponseRecueLorsDeLa'));
                 }
             } else {
                 console.warn('⚠️ Confiance insuffisante:', bestSuggestion.confidence);
-                this.error = `Échec de la détection automatique : Confiance insuffisante (${(bestSuggestion.confidence * 100).toFixed(1)}%). Veuillez utiliser le Mode Assisté pour choisir les clés manuellement.`;
+                this.error = I18nService.t('COMMON.msg.echecDeLaDetectionAutomatiqueConfiance', { p0: (bestSuggestion.confidence * 100).toFixed(1) });
                 this.isLoading = false;
             }
             
         } catch (error) {
             console.error('❌ Erreur lors du démarrage du mode magique:', error);
-            this.error = 'Erreur lors du démarrage du mode magique: ' + (error instanceof Error ? error.message : I18nService.t('COMMON.errors.unknown'));
+            this.error = I18nService.t('COMMON.msg.erreurLorsDuDemarrageDuMode') + (error instanceof Error ? error.message : I18nService.t('COMMON.errors.unknown'));
             this.isLoading = false;
         } finally {
             this.cd.detectChanges();
@@ -1211,7 +1211,7 @@ export class ReconciliationComponent implements OnInit, OnDestroy {
     private handleReconciliationError(payload: any): void {
         console.error('❌ Erreur de réconciliation:', payload);
         
-        this.error = payload.error || 'Une erreur est survenue lors de la réconciliation';
+        this.error = payload.error || I18nService.t('COMMON.msg.uneErreurEstSurvenueLorsDe');
         this.isLoading = false;
         this.showProgress = false;
         
@@ -1259,7 +1259,7 @@ export class ReconciliationComponent implements OnInit, OnDestroy {
                 },
                 error: (error) => {
                     console.error('❌ Erreur lors du démarrage de la réconciliation:', error);
-                    this.handleError('Erreur lors du démarrage de la réconciliation: ' + error.message);
+                    this.handleError(I18nService.t('COMMON.msg.erreurLorsDuDemarrageDeLa') + error.message);
                 }
             });
     }
@@ -1284,7 +1284,7 @@ export class ReconciliationComponent implements OnInit, OnDestroy {
                     },
                     error: (error) => {
                         console.error('❌ Erreur lors de l\'annulation:', error);
-                        this.handleError('Erreur lors de l\'annulation: ' + error.message);
+                        this.handleError(I18nService.t('COMMON.msg.erreurLorsDeLAnnulation') + error.message);
                     }
                 });
         }
@@ -1356,7 +1356,7 @@ export class ReconciliationComponent implements OnInit, OnDestroy {
      * Obtient le statut de connexion pour l'affichage
      */
     getConnectionStatusText(): string {
-        return 'Connecté (HTTP)';
+        return I18nService.t('COMMON.msg.connecteHttp');
     }
 
     /**

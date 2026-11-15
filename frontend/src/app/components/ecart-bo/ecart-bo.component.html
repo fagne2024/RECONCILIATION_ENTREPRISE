@@ -1,12 +1,12 @@
 <div class="page-header">
     <div class="breadcrumb">
-        <a (click)="goBack()" class="breadcrumb-link">← Retour aux Résultats</a>
+        <a (click)="goBack()" class="breadcrumb-link">{{ 'TBL.ui.retourAuxResultats' | translate }}</a>
     </div>
 </div>
 
 <div class="ecart-bo-container">
     <div class="header">
-        <h2><i class="fas fa-exclamation-triangle"></i> Écarts BO ({{getBoEcartCount() | number:'1.0-0'}})</h2>
+        <h2><i class="fas fa-exclamation-triangle"></i> {{ 'TBL.ui.ecartsBo' | translate: { p0: (getBoEcartCount() | number:'1.0-0') } }}</h2>
     </div>
 
     <div class="search-section">
@@ -14,35 +14,35 @@
             type="text" 
             [(ngModel)]="searchKey" 
             (input)="onSearch()"
-            placeholder="Rechercher dans toutes les colonnes (montant, date, agence, service...)"
+            placeholder="{{ 'TBL.ui.rechercherDansToutesLesColonnesMontant' | translate }}"
             class="search-input"
         >
         <button (click)="showColumnSelector = !showColumnSelector" class="column-button">
-            <i class="fas fa-cog"></i> Colonnes
+            <i class="fas fa-cog"></i> {{ 'TRT.Colonnes' | translate }}
         </button>
         <button (click)="toggleColumnReorderMode()" class="reorder-button" [class.active]="isColumnReorderMode">
-            <ng-container *ngIf="isColumnReorderMode"><i class="fas fa-check-circle"></i> Fin réorganisation</ng-container>
-            <ng-container *ngIf="!isColumnReorderMode"><i class="fas fa-sync-alt"></i> Réorganiser</ng-container>
+            <ng-container *ngIf="isColumnReorderMode"><i class="fas fa-check-circle"></i> {{ 'TBL.ui.finReorganisation' | translate }}</ng-container>
+            <ng-container *ngIf="!isColumnReorderMode"><i class="fas fa-sync-alt"></i> {{ 'TBL.ui.reorganiser' | translate }}</ng-container>
         </button>
         <label style="display:flex;align-items:center;gap:6px;">
             <input type="checkbox" [checked]="allBoSelectedOnPage" (change)="toggleSelectAllBoOnPage($event)">
-            <span>Sélectionner la page</span>
+            <span>{{ 'BQ.Sélectionnerlapage' | translate }}</span>
         </label>
         <button (click)="exportResults()" class="export-button" [disabled]="isExporting || !filteredBoOnly.length">
-            <ng-container *ngIf="isExporting"><i class="fas fa-clock"></i> Export en cours...</ng-container>
-            <ng-container *ngIf="!isExporting"><i class="fas fa-download"></i> Exporter les ECART BO</ng-container>
+            <ng-container *ngIf="isExporting"><i class="fas fa-clock"></i> {{ 'TRT.msg.exportInProgress' | translate }}</ng-container>
+            <ng-container *ngIf="!isExporting"><i class="fas fa-download"></i> {{ 'TBL.ui.exporterLesEcartBo' | translate }}</ng-container>
         </button>
         <button (click)="saveEcartBoToEcartSolde()" class="save-button" [disabled]="isSavingEcartBo">
-            <i class="fas fa-save"></i> {{ isSavingEcartBo ? 'Sauvegarde...' : 'Sauvegarder dans Ecart Solde' }}
+            <i class="fas fa-save"></i> {{ isSavingEcartBo ? ('EBS.Sauvegardeencours' | translate) : ('TBL.ui.sauvegarderDansEcartSolde' | translate) }}
         </button>
         <button (click)="saveEcartBoToTrxSf()" class="save-button" [disabled]="isSavingEcartBoToTrxSf">
-            <i class="fas fa-save"></i> {{ isSavingEcartBoToTrxSf ? 'Sauvegarde...' : 'Sauvegarder dans TRX SF' }}
+            <i class="fas fa-save"></i> {{ isSavingEcartBoToTrxSf ? ('EBS.Sauvegardeencours' | translate) : ('TBL.ui.sauvegarderDansTrxSf' | translate) }}
         </button>
     </div>
 
     <!-- Sélecteur de colonnes -->
     <div *ngIf="showColumnSelector" class="column-selector-panel">
-        <h4><i class="fas fa-eye"></i> Sélection des colonnes</h4>
+        <h4><i class="fas fa-eye"></i> {{ 'ROUTE.columnSelection' | translate }}</h4>
         <div class="column-list">
             <label *ngFor="let col of allColumns" class="column-checkbox">
                 <input 
@@ -55,10 +55,10 @@
         </div>
         <div class="column-selector-actions">
             <button (click)="showAllColumns()">
-                Tout afficher
+                {{ 'TRT.ShowAll' | translate }}
             </button>
             <button (click)="hideAllColumns()">
-                Tout masquer
+                {{ 'TRT.HideAll' | translate }}
             </button>
         </div>
     </div>
@@ -66,7 +66,7 @@
     <!-- Indicateur de progression de l'export -->
     <div *ngIf="isExporting" class="export-progress-overlay">
         <div class="export-progress-card">
-            <h3><i class="fas fa-download"></i> Export en cours</h3>
+            <h3><i class="fas fa-download"></i> {{ 'TBL.ui.exportEnCours' | translate }}</h3>
             <div class="export-progress-bar">
                 <div class="export-progress-fill" [style.width.%]="exportProgress"></div>
             </div>
@@ -74,16 +74,16 @@
                 {{ exportProgress }}% - {{ exportMessage }}
             </div>
             <div class="export-progress-details">
-                {{ filteredBoOnly.length | number }} écarts BO à exporter
+                {{ 'TBL.ui.ecartsBoAExporter' | translate: { p0: (filteredBoOnly.length | number) } }}
             </div>
         </div>
     </div>
 
     <div class="volume-summary">
-        <h4><i class="fas fa-chart-bar"></i> Résumé des volumes</h4>
+        <h4><i class="fas fa-chart-bar"></i> {{ 'RES.volumeSummary' | translate }}</h4>
         <div class="volume-grid">
             <div class="volume-card">
-                <div class="volume-label">Volume total BO</div>
+                <div class="volume-label">{{ 'EBT.totalVolumeBo' | translate }}</div>
                 <div class="volume-value">{{calculateTotalVolumeBoOnly() | number:'1.0-0'}}</div>
             </div>
             <div class="volume-card">
@@ -91,7 +91,7 @@
                 <div class="volume-value">
                     {{ filteredBoOnly.length | number }}
                     <span *ngIf="searchKey && getSearchResultsCount() !== getTotalResultsCount()" class="filtered-badge">
-                        (filtré)
+                        {{ 'TBL.ui.filtre' | translate }}
                     </span>
                 </div>
             </div>
@@ -113,20 +113,20 @@
             class="btn pagination-btn" 
             [disabled]="boOnlyPage === 1"
             (click)="goToPage(boOnlyPage - 1)">
-            ← Précédent
+            {{ 'TBL.ui.precedent' | translate }}
         </button>
-        <span>Page {{boOnlyPage}} / {{getTotalPages()}}</span>
+        <span>{{ 'TBL.ui.page' | translate: { p0: boOnlyPage, p1: (getTotalPages()) } }}</span>
         <button 
             class="btn pagination-btn" 
             [disabled]="boOnlyPage === getTotalPages()"
             (click)="goToPage(boOnlyPage + 1)">
-            Suivant →
+            {{ 'TBL.ui.suivant' | translate }}
         </button>
     </div>
 
     <div *ngIf="isLoading" class="loading">
         <div class="spinner"></div>
-        <p>Chargement des écarts BO... {{loadProgress}}%</p>
+        <p>{{ 'TBL.ui.chargementDesEcartsBo' | translate: { p0: loadProgress } }}</p>
         <div class="progress-bar" *ngIf="loadProgress > 0">
             <div class="progress" [style.width.%]="loadProgress"></div>
         </div>
@@ -138,7 +138,7 @@
                 <thead>
                     <tr>
                         <th class="table-header select-column">
-                            <div class="header-content">Sélection</div>
+                            <div class="header-content">{{ 'POPUP.select' | translate }}</div>
                         </th>
                         <th 
                             *ngFor="let col of getVisibleColumns(); let i = index"
@@ -176,6 +176,6 @@
     </div>
 
     <div *ngIf="!isLoading && getVisibleColumns().length === 0" class="no-columns-message">
-        <p><i class="fas fa-exclamation-triangle"></i> Aucune colonne visible. Veuillez sélectionner au moins une colonne à afficher.</p>
+        <p><i class="fas fa-exclamation-triangle"></i> {{ 'TBL.ui.aucuneColonneVisibleVeuillezSelectionner' | translate }}</p>
     </div>
 </div>

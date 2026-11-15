@@ -8,6 +8,7 @@ import { catchError, map, finalize } from 'rxjs/operators';
 import { NavigationLabelsService, NavigationLabel, NavigationLabelAudit } from '../../services/navigation-labels.service';
 import { PopupService } from '../../services/popup.service';
 import { APP_NAVIGATION_CATALOG, AppNavigationGroup, AppNavigationSubmenu } from '../../constants/app-navigation-catalog';
+import { I18nService } from '../../services/i18n/i18n.service';
 
 interface RenameableEntity {
   id: string;
@@ -87,7 +88,7 @@ export class ConfigurationRenommerComponent implements OnInit, OnDestroy {
   modulesConfig: ModuleConfig[] = [
     {
       key: 'services',
-      label: 'Services',
+      label: I18nService.t('NAV.ui.renServices'),
       apiEndpoint: '/api/services',
       idField: 'id',
       titleField: 'nom',
@@ -98,7 +99,7 @@ export class ConfigurationRenommerComponent implements OnInit, OnDestroy {
     },
     {
       key: 'comptes',
-      label: 'Comptes',
+      label: I18nService.t('NAV.ui.renComptes'),
       apiEndpoint: '/api/comptes',
       idField: 'id',
       titleField: 'nom',
@@ -109,7 +110,7 @@ export class ConfigurationRenommerComponent implements OnInit, OnDestroy {
     },
     {
       key: 'operations',
-      label: 'Opérations',
+      label: I18nService.t('NAV.ui.renOperations'),
       apiEndpoint: '/api/operations',
       idField: 'id',
       titleField: 'nom',
@@ -120,7 +121,7 @@ export class ConfigurationRenommerComponent implements OnInit, OnDestroy {
     },
     {
       key: 'frais',
-      label: 'Frais',
+      label: I18nService.t('NAV.ui.renFrais'),
       apiEndpoint: '/api/frais',
       idField: 'id',
       titleField: 'nom',
@@ -131,7 +132,7 @@ export class ConfigurationRenommerComponent implements OnInit, OnDestroy {
     },
     {
       key: 'commissions',
-      label: 'Commissions',
+      label: I18nService.t('NAV.ui.renCommissions'),
       apiEndpoint: '/api/commission',
       idField: 'id',
       titleField: 'nom',
@@ -142,7 +143,7 @@ export class ConfigurationRenommerComponent implements OnInit, OnDestroy {
     },
     {
       key: 'banque',
-      label: 'Banque',
+      label: I18nService.t('NAV.ui.renBanque'),
       apiEndpoint: '/api/banque',
       idField: 'id',
       titleField: 'nom',
@@ -153,7 +154,7 @@ export class ConfigurationRenommerComponent implements OnInit, OnDestroy {
     },
     {
       key: 'redevance',
-      label: 'Redevance Loterie',
+      label: I18nService.t('NAV.ui.renRedevance'),
       apiEndpoint: '/api/redevance/config',
       idField: 'id',
       titleField: 'nom',
@@ -164,7 +165,7 @@ export class ConfigurationRenommerComponent implements OnInit, OnDestroy {
     },
     {
       key: 'niveaux-validation',
-      label: 'Niveaux Validation',
+      label: I18nService.t('NAV.ui.renNiveaux'),
       apiEndpoint: '/api/config/niveaux-validation',
       idField: 'id',
       titleField: 'valeur',
@@ -264,8 +265,8 @@ export class ConfigurationRenommerComponent implements OnInit, OnDestroy {
 
   discardAllNav(): void {
     this.popupService.showConfirm(
-      this.translate.instant('CFG.RENOMMER.DISCARD_ALL_CONFIRM') || 'Êtes-vous sûr de vouloir annuler toutes les modifications de navigation ?',
-      this.translate.instant('CFG.RENOMMER.DISCARD_ALL_TITLE') || 'Annuler les modifications'
+      this.translate.instant('CFG.RENOMMER.DISCARD_ALL_CONFIRM') || I18nService.t('CFG.msg.etesVousSurDeVouloirAnnuler'),
+      this.translate.instant('CFG.RENOMMER.DISCARD_ALL_TITLE') || I18nService.t('CFG.RENOMMER.DISCARD')
     ).then(confirmed => {
       if (confirmed) {
         this.navItems.forEach(e => this.discardNavChanges(e));
@@ -327,19 +328,19 @@ export class ConfigurationRenommerComponent implements OnInit, OnDestroy {
     if (versionIndex >= 0 && versionIndex < this.historyItems.length) {
       const version = this.historyItems[versionIndex];
       this.popupService.showConfirm(
-        this.translate.instant('CFG.RENOMMER.HISTORY_RESTORE_CONFIRM') || `Restaurer la version du ${version.formattedDate} ? Cette action écrasera les modifications actuelles.`,
-        this.translate.instant('CFG.RENOMMER.HISTORY_RESTORE_TITLE') || 'Restaurer cette version'
+        this.translate.instant('CFG.RENOMMER.HISTORY_RESTORE_CONFIRM') || I18nService.t('CFG.msg.restaurerLaVersionDuCetteAction', { p0: version.formattedDate }),
+        this.translate.instant('CFG.RENOMMER.HISTORY_RESTORE_TITLE') || I18nService.t('CFG.RENOMMER.HISTORY_RESTORE_THIS')
       ).then(confirmed => {
         if (confirmed) {
           this.navLabels.restoreVersion(this.selectedHistoryLabelId, versionIndex).subscribe({
             next: () => {
-              this.showToast('Version restaurée avec succès', 'success');
+              this.showToast(I18nService.t('CFG.msg.versionRestaureeAvecSucces'), 'success');
               this.loadHistory(this.selectedHistoryLabelId);
               this.loadNavigationItems();
             },
             error: (err) => {
               console.error('Erreur restauration:', err);
-              this.showToast('Erreur lors de la restauration', 'error');
+              this.showToast(I18nService.t('CFG.msg.erreurLorsDeLaRestauration'), 'error');
             }
           });
         }
@@ -399,10 +400,10 @@ export class ConfigurationRenommerComponent implements OnInit, OnDestroy {
       catchError(err => {
         console.error(`Erreur chargement module ${this.selectedModule}:`, err);
         const msg = err.status === 404 
-          ? `Module non trouvé: ${this.selectedModule}`
+          ? I18nService.t('CFG.msg.moduleNonTrouve', { p0: this.selectedModule })
           : err.status === 403
-            ? 'Accès refusé'
-            : `Erreur ${err.status}: ${err.message || 'Erreur serveur'}`;
+            ? I18nService.t('TFA.popups.adminRequired.title')
+            : I18nService.t('CFG.msg.erreur', { p0: err.status, p1: err.message || I18nService.t('IOP.serverError') });
         this.showToast(msg, 'error');
         return of([]);
       }),
@@ -700,7 +701,7 @@ export class ConfigurationRenommerComponent implements OnInit, OnDestroy {
       if (this.saveResults.success > 0 && this.saveResults.errors === 0) {
         this.popupService.showSuccess(
           this.translate.instant('CFG.RENOMMER.SAVE_SUCCESS', { count: this.saveResults.success }) || 
-          `${this.saveResults.success} élément(s) sauvegardé(s) avec succès`
+          I18nService.t('CFG.msg.elementSSauvegardeSAvecSucces', { p0: this.saveResults.success })
         );
       } else if (this.saveResults.success > 0 && this.saveResults.errors > 0) {
         this.popupService.showWarning(
@@ -708,12 +709,12 @@ export class ConfigurationRenommerComponent implements OnInit, OnDestroy {
             success: this.saveResults.success, 
             errors: this.saveResults.errors 
           }) || 
-          `${this.saveResults.success} sauvegardé(s), ${this.saveResults.errors} erreur(s)`
+          I18nService.t('CFG.msg.sauvegardeSErreurS', { p0: this.saveResults.success, p1: this.saveResults.errors })
         );
       } else if (this.saveResults.errors > 0) {
         this.popupService.showError(
           this.translate.instant('CFG.RENOMMER.SAVE_ERROR', { count: this.saveResults.errors }) || 
-          `${this.saveResults.errors} erreur(s) lors de la sauvegarde`
+          I18nService.t('CFG.msg.erreurSLorsDeLaSauvegarde', { p0: this.saveResults.errors })
         );
       }
     });
@@ -729,8 +730,8 @@ export class ConfigurationRenommerComponent implements OnInit, OnDestroy {
 
   discardAll(): void {
     this.popupService.showConfirm(
-      this.translate.instant('CFG.RENOMMER.DISCARD_ALL_CONFIRM') || 'Êtes-vous sûr de vouloir annuler toutes les modifications ?',
-      this.translate.instant('CFG.RENOMMER.DISCARD_ALL_TITLE') || 'Annuler les modifications'
+      this.translate.instant('CFG.RENOMMER.DISCARD_ALL_CONFIRM') || I18nService.t('CFG.RENOMMER.DISCARD_ALL_CONFIRM'),
+      this.translate.instant('CFG.RENOMMER.DISCARD_ALL_TITLE') || I18nService.t('CFG.RENOMMER.DISCARD')
     ).then(confirmed => {
       if (confirmed) {
         this.entities.forEach(e => this.discardChanges(e));

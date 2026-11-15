@@ -531,7 +531,7 @@ export class FileUploadComponent implements OnInit, OnDestroy {
                 this.selectedTraitementModelIds.clear();
                 this.selectedTraitementModelId = '';
                 this.traitementAutoSelectedModelHint =
-                    `Aucun modèle ne correspond à « ${query} ».`;
+                    I18nService.t('FU.msg.aucunModeleNeCorrespondA', { p0: query });
             }
             return;
         }
@@ -553,7 +553,7 @@ export class FileUploadComponent implements OnInit, OnDestroy {
         this.selectedTraitementModelId = bestId;
         this.syncTraitementEnvColumnFromModel();
         const preSummary = this.modelPreProcessingService.getPreProcessingSummary(best.preProcessingConfig);
-        let hint = `Modèle sélectionné : ${best.name} (pattern ${best.filePattern})`;
+        let hint = I18nService.t('FU.msg.modeleSelectionnePattern', { p0: best.name, p1: best.filePattern });
         if (preSummary.summaryText) {
             hint += ` — ${preSummary.summaryText} configurés`;
         }
@@ -581,18 +581,18 @@ export class FileUploadComponent implements OnInit, OnDestroy {
         const total = this.selectedTraitementModelIds.size;
         if (total === 0) {
             this.traitementAutoSelectedModelHint =
-                `Aucun modèle sélectionné pour « ${query} ».`;
+                I18nService.t('FU.msg.aucunModeleSelectionnePour', { p0: query });
         } else if (total === 1) {
             const model = filtered[0];
             const preSummary = this.modelPreProcessingService.getPreProcessingSummary(model.preProcessingConfig);
-            let hint = `Modèle sélectionné : ${model.name} (pattern ${model.filePattern})`;
+            let hint = I18nService.t('FU.msg.modeleSelectionnePattern', { p0: model.name, p1: model.filePattern });
             if (preSummary.summaryText) {
                 hint += ` — ${preSummary.summaryText} configurés`;
             }
             this.traitementAutoSelectedModelHint = hint;
         } else {
             this.traitementAutoSelectedModelHint =
-                `${total} modèle(s) sélectionné(s) pour « ${query} ».`;
+                I18nService.t('FU.msg.modeleSSelectionneSPour', { p0: total, p1: query });
         }
     }
 
@@ -792,7 +792,7 @@ export class FileUploadComponent implements OnInit, OnDestroy {
         }
         // La liste est repliée par défaut en mode embarqué : rendre la présélection visible
         if (!this.traitementFiles.length) {
-            this.traitementAutoSelectedModelHint = `Modèle sélectionné par défaut : ${model.name}`;
+            this.traitementAutoSelectedModelHint = I18nService.t('FU.msg.modeleSelectionneParDefaut', { p0: model.name });
         }
     }
 
@@ -815,8 +815,8 @@ export class FileUploadComponent implements OnInit, OnDestroy {
             this.applyDefaultTraitementModel();
         } catch (error) {
             await this.popupService.showError(
-                'Impossible de charger les modèles de traitement.',
-                'Erreur'
+                I18nService.t('FU.msg.impossibleDeChargerLesModelesDe'),
+                I18nService.t('MSG.error')
             );
         } finally {
             this.traitementModelsLoading = false;
@@ -836,7 +836,7 @@ export class FileUploadComponent implements OnInit, OnDestroy {
             const result = await convertPdfFiles(newFiles);
             newFiles = result.files;
             if (result.errors.length) {
-                await this.popupService.showWarning(result.errors.join(' '), 'Lecture du PDF');
+                await this.popupService.showWarning(result.errors.join(' '), I18nService.t('FU.msg.lectureDuPdf'));
             }
             if (!newFiles.length) {
                 this.cd.detectChanges();
@@ -870,7 +870,7 @@ export class FileUploadComponent implements OnInit, OnDestroy {
         const detected = this.detectTraitementModelFromFiles(this.traitementFiles);
         if (!detected?.id) {
             this.traitementAutoSelectedModelHint = this.traitementFiles.length
-                ? 'Aucun modèle ne correspond au nom des fichiers sélectionnés — choisissez-le manuellement.'
+                ? I18nService.t('FU.msg.aucunModeleNeCorrespondAuNom')
                 : '';
             return;
         }
@@ -884,7 +884,7 @@ export class FileUploadComponent implements OnInit, OnDestroy {
         }
 
         const preSummary = this.modelPreProcessingService.getPreProcessingSummary(detected.preProcessingConfig);
-        let hint = `Modèle détecté automatiquement : ${detected.name} (pattern ${detected.filePattern})`;
+        let hint = I18nService.t('FU.msg.modeleDetecteAutomatiquementPattern', { p0: detected.name, p1: detected.filePattern });
         if (preSummary.summaryText) {
             hint += ` — ${preSummary.summaryText} configurés`;
         }
@@ -899,8 +899,8 @@ export class FileUploadComponent implements OnInit, OnDestroy {
         }
         const fileNames = this.traitementFiles.map(f => f.name).join(', ');
         this.traitementAutoSelectedModelHint =
-            `${this.traitementFiles.length} fichier(s) chargé(s) (${fileNames}). ` +
-            `Cochez un ou plusieurs modèles : chacun sera appliqué sur le(s) même(s) fichier(s) et produira un téléchargement.`;
+            I18nService.t('FU.msg.fichierSChargeS', { p0: this.traitementFiles.length, p1: fileNames }) +
+            I18nService.t('FU.msg.cochezUnOuPlusieursModelesChacun');
     }
 
     private detectTraitementModelFromFiles(files: File[]): AutoProcessingModel | null {
@@ -1268,7 +1268,7 @@ export class FileUploadComponent implements OnInit, OnDestroy {
 
         if (this.traitementEnvColumnEnabled && !this.traitementEnvColumnValue) {
             await this.popupService.showWarning(
-                `Veuillez choisir une valeur pour la colonne ${ENV_COLUMN_NAME}.`,
+                I18nService.t('FU.msg.veuillezChoisirUneValeurPourLa', { p0: ENV_COLUMN_NAME }),
                 'Colonne ENV'
             );
             return;
@@ -1276,8 +1276,8 @@ export class FileUploadComponent implements OnInit, OnDestroy {
 
         if (this.traitementDedupEnabled && !this.traitementDedupColumns.length) {
             await this.popupService.showWarning(
-                'Activez la suppression de doublons uniquement après avoir coché au moins une colonne clé.',
-                'Suppression de doublons'
+                I18nService.t('FU.msg.activezLaSuppressionDeDoublonsUniquement'),
+                I18nService.t('FU.Suppressiondedoublons')
             );
             return;
         }
@@ -1289,7 +1289,7 @@ export class FileUploadComponent implements OnInit, OnDestroy {
 
         const model = this.selectedTraitementModels[0];
         if (!model?.id) {
-            await this.popupService.showError('Veuillez sélectionner un modèle de traitement.', 'Modèle requis');
+            await this.popupService.showError(I18nService.t('FU.msg.veuillezSelectionnerUnModeleDeTraitement'), I18nService.t('FU.msg.modeleRequis'));
             return;
         }
 
@@ -1301,11 +1301,11 @@ export class FileUploadComponent implements OnInit, OnDestroy {
         const models = this.selectedTraitementModels;
         const files = [...this.traitementFiles];
         if (!models.length) {
-            await this.popupService.showError('Sélectionnez au moins un modèle de traitement.', 'Modèle requis');
+            await this.popupService.showError(I18nService.t('FU.msg.selectionnezAuMoinsUnModeleDe'), I18nService.t('FU.msg.modeleRequis'));
             return;
         }
         if (!files.length) {
-            await this.popupService.showError('Ajoutez au moins un fichier à traiter.', 'Fichier requis');
+            await this.popupService.showError(I18nService.t('FU.msg.ajoutezAuMoinsUnFichierA'), I18nService.t('FU.msg.fichierRequis'));
             return;
         }
 
@@ -1322,7 +1322,7 @@ export class FileUploadComponent implements OnInit, OnDestroy {
             for (let i = 0; i < models.length; i++) {
                 const model = models[i];
                 await this.updateTraitementProgress(
-                    `Modèle ${i + 1}/${models.length} — ${model.name} (${files.length} fichier(s))...`
+                    I18nService.t('FU.msg.modeleFichierS', { p0: i + 1, p1: models.length, p2: model.name, p3: files.length })
                 );
 
                 const result = await this.runAssistedFileTreatmentForModel(model, files);
@@ -1344,34 +1344,34 @@ export class FileUploadComponent implements OnInit, OnDestroy {
             if (!successes.length) {
                 this.traitementBackgroundService.failTraitement(
                     skipped.length
-                        ? `Aucun fichier produit. ${skipped.join(' ; ')}`
-                        : 'Aucun fichier produit.'
+                        ? I18nService.t('FU.msg.aucunFichierProduit', { p0: skipped.join(' ; ') })
+                        : I18nService.t('FU.msg.aucunFichierProduit2')
                 );
                 if (!this.traitementViewDestroyed) {
                     await this.popupService.showWarning(
                         skipped.length
-                            ? `Aucun fichier produit.\n\n${skipped.join('\n')}`
-                            : 'Aucun fichier produit.',
+                            ? I18nService.t('FU.msg.aucunFichierProduit3', { p0: skipped.join('\n') })
+                            : I18nService.t('FU.msg.aucunFichierProduit2'),
                         'Traitement multiple'
                     );
                 }
                 return;
             }
 
-            let message = `${successes.length} fichier(s) téléchargé(s) :\n${successes.join('\n')}`;
+            let message = I18nService.t('FU.msg.fichierSTelechargeS', { p0: successes.length, p1: successes.join('\n') });
             if (skipped.length) {
                 message += `\n\nNon produit(s) :\n${skipped.join('\n')}`;
             }
             this.resetTraitementPanel();
             if (!this.traitementViewDestroyed && !this.suppressEmbedSuccessPopup) {
-                await this.popupService.showSuccess(message, 'Traitement multiple terminé');
+                await this.popupService.showSuccess(message, I18nService.t('FU.msg.traitementMultipleTermine'));
             }
         } catch (error: any) {
-            this.traitementBackgroundService.failTraitement(error?.message || 'Erreur lors du traitement multiple.');
+            this.traitementBackgroundService.failTraitement(error?.message || I18nService.t('FU.msg.erreurLorsDuTraitementMultiple'));
             if (!this.traitementViewDestroyed) {
                 await this.popupService.showError(
-                    `Erreur lors du traitement multiple : ${error?.message || error}`,
-                    'Erreur'
+                    I18nService.t('FU.msg.erreurLorsDuTraitementMultiple2', { p0: error?.message || error }),
+                    I18nService.t('MSG.error')
                 );
             }
         } finally {
@@ -1399,7 +1399,7 @@ export class FileUploadComponent implements OnInit, OnDestroy {
         try {
             const result = await this.runAssistedFileTreatmentForModel(model, files);
             if (!result.success) {
-                this.traitementBackgroundService.failTraitement(result.warningMessage || 'Traitement sans résultat.');
+                this.traitementBackgroundService.failTraitement(result.warningMessage || I18nService.t('FU.msg.traitementSansResultat'));
                 if (result.warningMessage && !this.traitementViewDestroyed) {
                     await this.popupService.showWarning(result.warningMessage, 'Traitement');
                 }
@@ -1413,7 +1413,7 @@ export class FileUploadComponent implements OnInit, OnDestroy {
                 ? `\n\n${result.preProcessingResultMessage}`
                 : '';
             const duplicateInfo = (result.duplicatesRemoved ?? 0) > 0
-                ? `\n${result.duplicatesRemoved} doublon(s) ignoré(s).`
+                ? I18nService.t('FU.msg.doublonSIgnoreS', { p0: result.duplicatesRemoved })
                 : '';
 
             if (this.embedTraitementSection) {
@@ -1430,8 +1430,8 @@ export class FileUploadComponent implements OnInit, OnDestroy {
                 });
                 if (!this.traitementViewDestroyed && !this.suppressEmbedSuccessPopup) {
                     await this.popupService.showSuccess(
-                        `Fichier traité et téléchargé (${result.outputName}).${duplicateSummary}${preProcessingSuccess}`,
-                        'Traitement terminé'
+                        I18nService.t('FU.msg.fichierTraiteEtTelecharge', { p0: result.outputName, p1: duplicateSummary, p2: preProcessingSuccess }),
+                        I18nService.t('FU.msg.traitementTermine')
                     );
                 }
                 return;
@@ -1443,11 +1443,11 @@ export class FileUploadComponent implements OnInit, OnDestroy {
 
             const defaultSide = model.fileType === 'partner' ? 'Partenaire' : 'BO (Back Office)';
             const sideChoice = await this.popupService.showSelectInput(
-                `${files.length > 1 ? files.length + ' fichier(s) fusionnés' : 'Fichier traité'}.\n` +
-                `${(result.lineCount ?? 0).toLocaleString('fr-FR')} ligne(s) unique(s).${duplicateInfo}\n` +
-                `Fichier produit : ${result.outputName}.\n` +
-                `Assigner ce fichier à quel emplacement pour la réconciliation ?`,
-                'Destination BO ou Partenaire',
+                `${files.length > 1 ? files.length + I18nService.t('FU.msg.fichierSFusionnes') : I18nService.t('FU.msg.fichierTraite')}.\n` +
+                I18nService.t('FU.msg.ligneSUniqueS', { p0: (result.lineCount ?? 0).toLocaleString('fr-FR'), p1: duplicateInfo }) +
+                I18nService.t('FU.msg.fichierProduit', { p0: result.outputName }) +
+                I18nService.t('FU.msg.assignerCeFichierAQuelEmplacement'),
+                I18nService.t('FU.msg.destinationBoOuPartenaire'),
                 ['BO (Back Office)', 'Partenaire'],
                 defaultSide
             );
@@ -1458,7 +1458,7 @@ export class FileUploadComponent implements OnInit, OnDestroy {
 
             const side: 'bo' | 'partner' = sideChoice.startsWith('BO') ? 'bo' : 'partner';
             this.closeTraitementModal(true, { keepProcessing: true });
-            await this.updateTraitementProgress('Assignation du fichier en cours...', { force: true });
+            await this.updateTraitementProgress(I18nService.t('FU.msg.assignationDuFichierEnCours'), { force: true });
             await this.assignProcessedTreatmentDataAsync(
                 result.exportRows,
                 result.outputName!,
@@ -1471,21 +1471,21 @@ export class FileUploadComponent implements OnInit, OnDestroy {
             await this.yieldToMainThread(true);
             if (!this.traitementViewDestroyed) {
                 await this.popupService.showSuccess(
-                    `Fichier traité et téléchargé (${result.outputName}).${duplicateSummary}${preProcessingSuccess}` +
+                    I18nService.t('FU.msg.fichierTraiteEtTelecharge', { p0: result.outputName, p1: duplicateSummary, p2: preProcessingSuccess }) +
                     (bothReady
-                        ? '\n\nBO et Partenaire sont prêts : vous pouvez lancer la réconciliation.'
-                        : '\n\nChargez ou traitez l\'autre fichier (BO ou Partenaire) puis lancez la réconciliation.'),
-                    'Traitement terminé'
+                        ? I18nService.t('FU.msg.boEtPartenaireSontPretsVous')
+                        : I18nService.t('FU.msg.chargezOuTraitezLAutreFichier')),
+                    I18nService.t('FU.msg.traitementTermine')
                 );
             }
         } catch (error: any) {
             perf.end('Traitement échoué', { erreur: error?.message || String(error) });
-            this.traitementBackgroundService.failTraitement(error?.message || 'Erreur lors du traitement.');
+            this.traitementBackgroundService.failTraitement(error?.message || I18nService.t('FU.msg.erreurLorsDuTraitement'));
             if (!this.traitementViewDestroyed) {
                 this.closeTraitementModal(true);
                 await this.popupService.showError(
-                    `Erreur lors du traitement : ${error?.message || error}`,
-                    'Erreur'
+                    I18nService.t('FU.msg.erreurLorsDuTraitement2', { p0: error?.message || error }),
+                    I18nService.t('MSG.error')
                 );
             }
         } finally {
@@ -1541,14 +1541,14 @@ export class FileUploadComponent implements OnInit, OnDestroy {
         }
 
         await this.updateTraitementProgress(
-            `Lecture terminée (${compiled.rows.length.toLocaleString('fr-FR')} ligne(s)) — ${model.name}...`
+            I18nService.t('FU.msg.lectureTermineeLigneS', { p0: compiled.rows.length.toLocaleString('fr-FR'), p1: model.name })
         );
         console.error('[DIAG-TRAITEMENT] APRÈS LECTURE:', compiled.rows.length);
 
         if (!compiled.rows.length) {
             return {
                 success: false,
-                warningMessage: 'Aucune donnée lisible dans les fichiers sélectionnés.'
+                warningMessage: I18nService.t('FU.msg.aucuneDonneeLisibleDansLesFichiers')
             };
         }
         // Colonnes par défaut absentes : chaque en-tête équivalent configuré est renommé avec le
@@ -1576,7 +1576,7 @@ export class FileUploadComponent implements OnInit, OnDestroy {
                 workingRows,
                 inputColumns,
                 (done, total) => this.updateTraitementProgress(
-                    `${model.name} — colonnes : ${done.toLocaleString('fr-FR')} / ${total.toLocaleString('fr-FR')}...`
+                    I18nService.t('FU.msg.colonnes', { p0: model.name, p1: done.toLocaleString('fr-FR'), p2: total.toLocaleString('fr-FR') })
                 )
             );
             console.error('[DIAG-TRAITEMENT] APRÈS ENRICHISSEMENT:', workingRows.length);
@@ -1626,14 +1626,14 @@ export class FileUploadComponent implements OnInit, OnDestroy {
             if (!workingRows.length) {
                 return {
                     success: false,
-                    warningMessage: 'Aucune ligne restante après pré-traitement du modèle.'
+                    warningMessage: I18nService.t('FU.msg.aucuneLigneRestanteApresPreTraitement')
                 };
             }
             console.error('[DIAG-TRAITEMENT] APRÈS PRÉ-TRAITEMENT:', workingRows.length);
         }
 
         await this.updateTraitementProgress(
-            `${model.name} — règles sur ${workingRows.length.toLocaleString('fr-FR')} ligne(s)...`,
+            I18nService.t('FU.msg.reglesSurLigneS', { p0: model.name, p1: workingRows.length.toLocaleString('fr-FR') }),
             { skipYield: workingRows.length <= 20000 }
         );
 
@@ -1645,7 +1645,7 @@ export class FileUploadComponent implements OnInit, OnDestroy {
                     ? undefined
                     : async (done, total) => {
                         await this.updateTraitementProgress(
-                            `${model.name} — règles : ${done.toLocaleString('fr-FR')} / ${total.toLocaleString('fr-FR')}...`,
+                            I18nService.t('FU.msg.regles', { p0: model.name, p1: done.toLocaleString('fr-FR'), p2: total.toLocaleString('fr-FR') }),
                             { skipYield: true }
                         );
                     },
@@ -1654,7 +1654,7 @@ export class FileUploadComponent implements OnInit, OnDestroy {
             : workingRows;
 
         if (!processed?.length) {
-            return { success: false, warningMessage: 'Aucun résultat après application des règles.' };
+            return { success: false, warningMessage: I18nService.t('FU.msg.aucunResultatApresApplicationDesRegles') };
         }
         console.error('[DIAG-TRAITEMENT] APRÈS RÈGLES:', processed.length);
 
@@ -1665,7 +1665,7 @@ export class FileUploadComponent implements OnInit, OnDestroy {
         if (useColumnFilter && this.traitementColumnFilterEnabled && this.traitementOutputColumns.length > 0 && exportColumns.length === 0) {
             return {
                 success: false,
-                warningMessage: 'Sélectionnez au moins une colonne à conserver dans le fichier final.'
+                warningMessage: I18nService.t('FU.msg.selectionnezAuMoinsUneColonneA')
             };
         }
 
@@ -1684,7 +1684,7 @@ export class FileUploadComponent implements OnInit, OnDestroy {
                 );
                 const ignored = listColumnsOutsideModel(Object.keys(mergedRows[0] ?? {}), projectionColumns);
                 if (ignored.length) {
-                    ignoredColumnsMessage = `Colonnes hors modèle ignorées (${ignored.length}) : ${ignored.join(', ')}`;
+                    ignoredColumnsMessage = I18nService.t('FU.msg.colonnesHorsModeleIgnorees', { p0: ignored.length, p1: ignored.join(', ') });
                     console.info(`[Colonnes du modèle] ${model.name} — ${ignoredColumnsMessage}`);
                 }
             }
@@ -1727,7 +1727,7 @@ export class FileUploadComponent implements OnInit, OnDestroy {
         finalExportRows = dedupResult.uniqueRows;
 
         if (!finalExportRows.length) {
-            return { success: false, warningMessage: 'Aucune ligne unique après déduplication.' };
+            return { success: false, warningMessage: I18nService.t('FU.msg.aucuneLigneUniqueApresDeduplication') };
         }
 
         const outputName = this.buildProcessedOutputFileName(model);
@@ -1735,15 +1735,15 @@ export class FileUploadComponent implements OnInit, OnDestroy {
 
         if (dedupResult.duplicatesRemoved > 0) {
             await this.updateTraitementProgress(
-                `${model.name} — ${dedupResult.duplicatesRemoved.toLocaleString('fr-FR')} doublon(s) retiré(s)` +
+                I18nService.t('FU.msg.doublonSRetireS', { p0: model.name, p1: dedupResult.duplicatesRemoved.toLocaleString('fr-FR') }) +
                 (dedupResult.dedupColumns.length
-                    ? ` (clé : ${dedupResult.dedupColumns.join(', ')})`
+                    ? I18nService.t('FU.msg.cle', { p0: dedupResult.dedupColumns.join(', ') })
                     : ''),
                 { skipYield: true }
             );
         }
 
-        await this.updateTraitementProgress(`Téléchargement : ${outputName}`);
+        await this.updateTraitementProgress(I18nService.t('FU.msg.telechargement', { p0: outputName }));
         await this.downloadProcessedTreatmentFile(finalExportRows, outputName, {
             skipNormalize: true,
             columns: finalExportColumns.length ? finalExportColumns : undefined
@@ -1812,11 +1812,11 @@ export class FileUploadComponent implements OnInit, OnDestroy {
 
     getTraitementActionLabel(): string {
         if (this.isTraitementMultiModelMode && this.selectedTraitementModelIds.size > 1) {
-            return `Traiter ${this.selectedTraitementModelIds.size} modèles`;
+            return I18nService.t('FU.msg.traiterModeles', { p0: this.selectedTraitementModelIds.size });
         }
         return this.traitementFiles.length > 1
-            ? 'Compiler et appliquer le traitement'
-            : 'Appliquer le traitement';
+            ? I18nService.t('FU.msg.compilerEtAppliquerLeTraitement')
+            : I18nService.t('FU.msg.appliquerLeTraitement');
     }
 
     /** Chronomètre console pour diagnostiquer les lenteurs du traitement assisté. */
@@ -1862,10 +1862,10 @@ export class FileUploadComponent implements OnInit, OnDestroy {
 
         const parsed = await this.readAssistedTreatmentFileRows(file, expectedHeaderColumns);
         const headerInfo = parsed.headerLine >= 0
-            ? `, en-tête ligne ${parsed.headerLine + 1}`
+            ? I18nService.t('FU.msg.enTeteLigne', { p0: parsed.headerLine + 1 })
             : '';
         const removedInfo = parsed.removedLines > 0
-            ? `, ${parsed.removedLines} ligne(s) ignorée(s)`
+            ? I18nService.t('FU.msg.ligneSIgnoreeS', { p0: parsed.removedLines })
             : '';
 
         return {
@@ -1911,17 +1911,17 @@ export class FileUploadComponent implements OnInit, OnDestroy {
                 const file = files[i];
                 const fileSizeMB = (file.size / (1024 * 1024)).toFixed(1);
                 this.setTraitementProgressNoUi(
-                    `Fusion ultra-rapide ${i + 1}/${files.length} : ${file.name} (${fileSizeMB} Mo)`
+                    I18nService.t('FU.msg.fusionUltraRapideMo', { p0: i + 1, p1: files.length, p2: file.name, p3: fileSizeMB })
                 );
 
                 const parsed = await this.readAssistedTreatmentFileRows(file, expectedHeaderColumns);
                 if (parsed.rows.length) {
                     this.appendRowsSafely(compiled, parsed.rows);
                     const headerInfo = parsed.headerLine >= 0
-                        ? `, en-tête ligne ${parsed.headerLine + 1}`
+                        ? I18nService.t('FU.msg.enTeteLigne', { p0: parsed.headerLine + 1 })
                         : '';
                     const removedInfo = parsed.removedLines > 0
-                        ? `, ${parsed.removedLines} ligne(s) ignorée(s)`
+                        ? I18nService.t('FU.msg.ligneSIgnoreeS', { p0: parsed.removedLines })
                         : '';
                     loadedNames.push(`${file.name} (${parsed.rows.length}${headerInfo}${removedInfo})`);
                 }
@@ -2334,7 +2334,7 @@ export class FileUploadComponent implements OnInit, OnDestroy {
         return new Promise((resolve, reject) => {
             const reader = new FileReader();
             reader.onload = (e: ProgressEvent<FileReader>) => resolve(e.target?.result as string);
-            reader.onerror = () => reject(new Error('Erreur lors de la lecture du fichier'));
+            reader.onerror = () => reject(new Error(I18nService.t('FU.msg.erreurLorsDeLaLectureDu')));
             reader.readAsText(file, 'utf-8');
         });
     }
@@ -2448,7 +2448,7 @@ export class FileUploadComponent implements OnInit, OnDestroy {
 
             if (processedDataRows % yieldEvery === 0) {
                 this.setTraitementProgressNoUi(
-                    `${progressLabel} : ${processedDataRows.toLocaleString('fr-FR')} / ${dataRowCount.toLocaleString('fr-FR')} ligne(s)...`
+                    I18nService.t('FU.msg.ligneS', { p0: progressLabel, p1: processedDataRows.toLocaleString('fr-FR'), p2: dataRowCount.toLocaleString('fr-FR') })
                 );
                 await this.yieldToMainThread(true);
             }
@@ -2456,7 +2456,7 @@ export class FileUploadComponent implements OnInit, OnDestroy {
 
         if (processedDataRows > 0) {
             this.setTraitementProgressNoUi(
-                `${progressLabel} : ${processedDataRows.toLocaleString('fr-FR')} / ${dataRowCount.toLocaleString('fr-FR')} ligne(s) — finalisation...`
+                I18nService.t('FU.msg.ligneSFinalisation', { p0: progressLabel, p1: processedDataRows.toLocaleString('fr-FR'), p2: dataRowCount.toLocaleString('fr-FR') })
             );
             await this.yieldToMainThread(true);
         }
@@ -2558,7 +2558,7 @@ export class FileUploadComponent implements OnInit, OnDestroy {
 
         for (let i = 1; i < sheetNames.length; i++) {
             const sheetName = sheetNames[i];
-            this.setTraitementProgressNoUi(`Fusion feuille ${i + 1}/${sheetNames.length} : ${sheetName}`);
+            this.setTraitementProgressNoUi(I18nService.t('FU.msg.fusionFeuille', { p0: i + 1, p1: sheetNames.length, p2: sheetName }));
 
             const sheet = workbook.Sheets?.[sheetName];
             if (!sheet) {
@@ -2816,7 +2816,7 @@ export class FileUploadComponent implements OnInit, OnDestroy {
 
             if (processedDataRows % yieldEvery === 0) {
                 this.setTraitementProgressNoUi(
-                    `${progressLabel} : ${processedDataRows.toLocaleString('fr-FR')} / ${dataRowCount.toLocaleString('fr-FR')} ligne(s)...`
+                    I18nService.t('FU.msg.ligneS', { p0: progressLabel, p1: processedDataRows.toLocaleString('fr-FR'), p2: dataRowCount.toLocaleString('fr-FR') })
                 );
                 await this.yieldToMainThread(true);
             }
@@ -3575,12 +3575,12 @@ export class FileUploadComponent implements OnInit, OnDestroy {
         let working = data;
         if (!this.shouldSkipCsvNormalize(this.autoPartnerSourceFormat)) {
             working = await this.normalizeDataAsync(working, (done, total) => {
-                this.processingMessage = `${progressPrefix} — normalisation : ${done.toLocaleString('fr-FR')} / ${total.toLocaleString('fr-FR')}...`;
+                this.processingMessage = I18nService.t('FU.msg.normalisation', { p0: progressPrefix, p1: done.toLocaleString('fr-FR'), p2: total.toLocaleString('fr-FR') });
                 this.cd.detectChanges();
             });
         }
         await this.convertDebitCreditToNumberAsync(working, (done, total) => {
-            this.processingMessage = `${progressPrefix} — finalisation : ${done.toLocaleString('fr-FR')} / ${total.toLocaleString('fr-FR')}...`;
+            this.processingMessage = I18nService.t('FU.msg.finalisation', { p0: progressPrefix, p1: done.toLocaleString('fr-FR'), p2: total.toLocaleString('fr-FR') });
             this.cd.detectChanges();
         });
         await this.yieldToMainThread(true);
@@ -3596,16 +3596,16 @@ export class FileUploadComponent implements OnInit, OnDestroy {
         let partner = partnerData;
 
         if (!this.shouldSkipCsvNormalize(this.autoBoSourceFormat)) {
-            onProgress('Normalisation du fichier BO...');
+            onProgress(I18nService.t('FU.msg.normalisationDuFichierBo'));
             bo = await this.normalizeDataAsync(bo, (done, total) => {
-                onProgress(`Normalisation BO : ${done.toLocaleString('fr-FR')} / ${total.toLocaleString('fr-FR')}...`);
+                onProgress(I18nService.t('FU.msg.normalisationBo', { p0: done.toLocaleString('fr-FR'), p1: total.toLocaleString('fr-FR') }));
             });
         }
 
         if (!this.shouldSkipCsvNormalize(this.autoPartnerSourceFormat)) {
-            onProgress('Normalisation du fichier Partenaire...');
+            onProgress(I18nService.t('FU.msg.normalisationDuFichierPartenaire'));
             partner = await this.normalizeDataAsync(partner, (done, total) => {
-                onProgress(`Normalisation Partenaire : ${done.toLocaleString('fr-FR')} / ${total.toLocaleString('fr-FR')}...`);
+                onProgress(I18nService.t('FU.msg.normalisationPartenaire', { p0: done.toLocaleString('fr-FR'), p1: total.toLocaleString('fr-FR') }));
             });
         }
 
@@ -3773,7 +3773,7 @@ export class FileUploadComponent implements OnInit, OnDestroy {
         if (!options?.skipNormalize && data.length > 3000) {
             exportRows = await this.normalizeDataAsync(data, async (done, total) => {
                 await this.updateTraitementProgress(
-                    `Préparation export : ${done.toLocaleString('fr-FR')} / ${total.toLocaleString('fr-FR')} ligne(s)...`
+                    I18nService.t('FU.msg.preparationExportLigneS', { p0: done.toLocaleString('fr-FR'), p1: total.toLocaleString('fr-FR') })
                 );
             });
         } else if (!options?.skipNormalize) {
@@ -3788,7 +3788,7 @@ export class FileUploadComponent implements OnInit, OnDestroy {
             chunkSize: exportRows.length > 100000 ? 5000 : exportRows.length > 20000 ? 2000 : 1000,
             onProgress: async (progress: { current: number; total: number }) => {
                 await this.updateTraitementProgress(
-                    `Téléchargement : ${progress.current.toLocaleString('fr-FR')} / ${progress.total.toLocaleString('fr-FR')} ligne(s)...`
+                    I18nService.t('FU.msg.telechargementLigneS', { p0: progress.current.toLocaleString('fr-FR'), p1: progress.total.toLocaleString('fr-FR') })
                 );
             },
             yieldFn: () => this.yieldToMainThread(true)
@@ -4032,7 +4032,7 @@ export class FileUploadComponent implements OnInit, OnDestroy {
             return this.readAssistedTreatmentExcelFile(file, expectedHeaderColumns);
         }
 
-        return Promise.reject(new Error('Format non supporté. Utilisez CSV ou Excel.'));
+        return Promise.reject(new Error(I18nService.t('FU.msg.formatNonSupporteUtilisezCsvOu')));
     }
 
     /**
@@ -4054,7 +4054,7 @@ export class FileUploadComponent implements OnInit, OnDestroy {
             onProgress: (processed, total) => {
                 if (processed % 2500 === 0) {
                     this.setTraitementProgressNoUi(
-                        `Lecture CSV : ${processed.toLocaleString('fr-FR')} / ${total.toLocaleString('fr-FR')} ligne(s)...`
+                        I18nService.t('FU.msg.lectureCsvLigneS', { p0: processed.toLocaleString('fr-FR'), p1: total.toLocaleString('fr-FR') })
                     );
                 }
             },
@@ -4084,15 +4084,15 @@ export class FileUploadComponent implements OnInit, OnDestroy {
             const data = new Uint8Array(arrayBuffer);
             this.setTraitementProgressNoUi(
                 fileSizeMB > 5
-                    ? `Analyse Excel (${fileSizeMB.toFixed(0)} Mo) — veuillez patienter...`
-                    : `Analyse Excel : ${file.name}...`
+                    ? I18nService.t('FU.msg.analyseExcelMoVeuillezPatienter', { p0: fileSizeMB.toFixed(0) })
+                    : I18nService.t('FU.msg.analyseExcel', { p0: file.name })
             );
             await this.yieldToMainThread();
 
             const xlsxStart = performance.now();
             const workbook = await this.readAssistedXlsxWorkbook(data, fileSizeMB);
             if (!workbook.SheetNames?.length) {
-                throw new Error('Aucune feuille Excel trouvée');
+                throw new Error(I18nService.t('FU.msg.aucuneFeuilleExcelTrouvee'));
             }
 
             await this.yieldToMainThread();
@@ -4405,7 +4405,7 @@ export class FileUploadComponent implements OnInit, OnDestroy {
         if (isLargeFile) {
             this.isProcessingLargeFile = true;
             this.processingProgress = 0;
-            this.processingMessage = `Analyse du fichier ${file.name}...`;
+            this.processingMessage = I18nService.t('FU.msg.analyseDuFichier', { p0: file.name });
             this.processingCancelled = false;
             this.processingAbortController = new AbortController();
             
@@ -4470,7 +4470,7 @@ export class FileUploadComponent implements OnInit, OnDestroy {
         }).catch((error) => {
                 
                 if (this.processingCancelled) {
-                    this.processingMessage = 'Traitement annulé';
+                    this.processingMessage = I18nService.t('FU.msg.traitementAnnule');
                 } else {
                     
                     // Fallback vers le traitement standard
@@ -4496,7 +4496,7 @@ export class FileUploadComponent implements OnInit, OnDestroy {
         if (this.processingAbortController) {
             this.processingCancelled = true;
             this.processingAbortController.abort();
-            this.processingMessage = 'Annulation en cours...';
+            this.processingMessage = I18nService.t('FU.msg.annulationEnCours');
         }
     }
 
@@ -4547,12 +4547,12 @@ export class FileUploadComponent implements OnInit, OnDestroy {
 
     // Afficher une notification de traitement automatique
     private showProcessingNotification(result: ProcessingResult): void {
-        const message = `✅ Traitement automatique appliqué!\n\n` +
-                       `📁 Fichier: ${result.fileName}\n` +
-                       `🤖 Modèle: ${result.modelId}\n` +
-                       `⚡ Temps: ${result.processingTime}ms\n` +
-                       `📊 Lignes traitées: ${result.processedData.length}\n\n` +
-                       `Les données ont été automatiquement traitées selon le modèle configuré.`;
+        const message = I18nService.t('FU.msg.traitementAutomatiqueApplique') +
+                       I18nService.t('FU.msg.fichier', { p0: result.fileName }) +
+                       I18nService.t('FU.msg.modele', { p0: result.modelId }) +
+                       I18nService.t('FU.msg.tempsMs', { p0: result.processingTime }) +
+                       I18nService.t('FU.msg.lignesTraitees', { p0: result.processedData.length }) +
+                       I18nService.t('FU.msg.lesDonneesOntEteAutomatiquementTraitees');
         
         this.popupService.showSuccess(message, 'Traitement Automatique');
     }
@@ -4744,12 +4744,12 @@ export class FileUploadComponent implements OnInit, OnDestroy {
 
     // Méthode pour afficher une notification de filtrage Orange Money
     private showOrangeMoneyFilterNotification(result: any): void {
-        const message = `🎯 Filtrage Orange Money automatique appliqué!\n\n` +
-                       `📁 Fichier: ${result.fileName}\n` +
-                       `🤖 Modèle: ${result.modelId}\n` +
-                       `✅ Lignes avec "Succès": ${result.filteredRowsCount}\n` +
-                       `📊 Total initial: ${result.processedData.length + (result.totalRowsCount - result.filteredRowsCount)} lignes\n\n` +
-                       `Seules les lignes avec le statut "Succès" ont été conservées pour la réconciliation.`;
+        const message = I18nService.t('FU.msg.filtrageOrangeMoneyAutomatiqueApplique') +
+                       I18nService.t('FU.msg.fichier', { p0: result.fileName }) +
+                       I18nService.t('FU.msg.modele', { p0: result.modelId }) +
+                       I18nService.t('FU.msg.lignesAvecSucces', { p0: result.filteredRowsCount }) +
+                       I18nService.t('FU.msg.totalInitialLignes', { p0: result.processedData.length + (result.totalRowsCount - result.filteredRowsCount) }) +
+                       I18nService.t('FU.msg.seulesLesLignesAvecLeStatut');
         
         // Vous pouvez remplacer alert par une notification plus élégante
         this.popupService.showInfo(message);
@@ -4784,12 +4784,12 @@ export class FileUploadComponent implements OnInit, OnDestroy {
 
     // Méthode pour afficher une notification de filtrage Orange Money pour le file upload
     private showOrangeMoneyFilterNotificationForFileUpload(fileName: string, fileType: string, originalCount: number, filteredCount: number): void {
-        const message = `🎯 Filtrage Orange Money automatique appliqué!\n\n` +
-                       `📁 Fichier: ${fileName}\n` +
+        const message = I18nService.t('FU.msg.filtrageOrangeMoneyAutomatiqueApplique') +
+                       I18nService.t('FU.msg.fichier', { p0: fileName }) +
                        `📂 Type: ${fileType}\n` +
-                       `✅ Lignes avec "Succès": ${filteredCount}\n` +
-                       `📊 Total initial: ${originalCount} lignes\n\n` +
-                       `Seules les lignes avec le statut "Succès" ont été conservées.`;
+                       I18nService.t('FU.msg.lignesAvecSucces', { p0: filteredCount }) +
+                       I18nService.t('FU.msg.totalInitialLignes', { p0: originalCount }) +
+                       I18nService.t('FU.msg.seulesLesLignesAvecLeStatut2');
         
         this.popupService.showInfo(message, 'Filtrage Orange Money');
     }
@@ -4970,7 +4970,7 @@ export class FileUploadComponent implements OnInit, OnDestroy {
         } else if (this.isExcelFile(fileName)) {
             this.parseXLSX(file, isBo);
         } else {
-            this.errorMessage = `Format de fichier non supporté: ${file.name}. Formats supportés: CSV, XLS, XLSX, XLSM, XLSB, XLT, XLTX, XLTM`;
+            this.errorMessage = I18nService.t('FU.msg.formatDeFichierNonSupporteFormats', { p0: file.name });
         }
     }
 
@@ -5114,7 +5114,7 @@ export class FileUploadComponent implements OnInit, OnDestroy {
                     }
                     this.processingProgress = total > 0 ? Math.round((processed / total) * 100) : 0;
                     this.processingMessage =
-                        `Lecture ${file.name} : ${processed.toLocaleString('fr-FR')} / ${total.toLocaleString('fr-FR')} ligne(s)...`;
+                        I18nService.t('FU.msg.lectureLigneS', { p0: file.name, p1: processed.toLocaleString('fr-FR'), p2: total.toLocaleString('fr-FR') });
                     this.cd.detectChanges();
                 },
                 yieldFn: () => this.yieldToMainThread(true)
@@ -5440,7 +5440,7 @@ export class FileUploadComponent implements OnInit, OnDestroy {
         
         // Activer l'indicateur de progression
         this.isProcessingLargeFile = true;
-        this.processingMessage = 'Traitement du fichier volumineux...';
+        this.processingMessage = I18nService.t('FU.msg.traitementDuFichierVolumineux');
         this.processingProgress = 0;
         
         // Détecter le délimiteur et les en-têtes
@@ -5474,7 +5474,7 @@ export class FileUploadComponent implements OnInit, OnDestroy {
             // Mettre à jour la progression
             const progress = Math.min(100, (i / lines.length) * 100);
             this.processingProgress = Math.round(progress);
-            this.processingMessage = `Traitement: ${data.length} lignes traitées sur ${lines.length - 1}`;
+            this.processingMessage = I18nService.t('FU.msg.traitementLignesTraiteesSur', { p0: data.length, p1: lines.length - 1 });
             
             
             // Petite pause pour permettre l'affichage de la progression
@@ -5722,7 +5722,7 @@ export class FileUploadComponent implements OnInit, OnDestroy {
                 // Conversion en tableau de tableaux pour analyse
                 const jsonData = XLSX.utils.sheet_to_json(worksheet, { header: 1 }) as any[][];
                 if (jsonData.length === 0) {
-                    this.errorMessage = 'Le fichier Excel est vide ou ne contient pas de données';
+                    this.errorMessage = I18nService.t('FU.msg.leFichierExcelEstVideOu');
                     return;
                 }
                 
@@ -5868,11 +5868,11 @@ export class FileUploadComponent implements OnInit, OnDestroy {
                 }
                 
             } catch (error) {
-                this.errorMessage = `Erreur lors de la lecture du fichier Excel: ${error}`;
+                this.errorMessage = I18nService.t('FU.msg.erreurLorsDeLaLectureDu2', { p0: error });
             }
         };
         reader.onerror = (e) => {
-            this.errorMessage = 'Erreur lors de la lecture du fichier';
+            this.errorMessage = I18nService.t('FU.msg.erreurLorsDeLaLectureDu');
         };
         reader.readAsArrayBuffer(file);
     }
@@ -6029,11 +6029,11 @@ export class FileUploadComponent implements OnInit, OnDestroy {
         const fileNameLower = fileName.toLowerCase();
         if (fileNameLower.endsWith('.xls')) return 'Excel 97-2003 (.xls)';
         if (fileNameLower.endsWith('.xlsx')) return 'Excel 2007+ (.xlsx)';
-        if (fileNameLower.endsWith('.xlsm')) return 'Excel avec macros (.xlsm)';
+        if (fileNameLower.endsWith('.xlsm')) return I18nService.t('FU.msg.excelAvecMacrosXlsm');
         if (fileNameLower.endsWith('.xlsb')) return 'Excel binaire (.xlsb)';
         if (fileNameLower.endsWith('.xlt')) return 'Template Excel 97-2003 (.xlt)';
         if (fileNameLower.endsWith('.xltx')) return 'Template Excel 2007+ (.xltx)';
-        if (fileNameLower.endsWith('.xltm')) return 'Template Excel avec macros (.xltm)';
+        if (fileNameLower.endsWith('.xltm')) return I18nService.t('FU.msg.templateExcelAvecMacrosXltm');
         return 'Format Excel inconnu';
     }
 
@@ -6478,14 +6478,14 @@ export class FileUploadComponent implements OnInit, OnDestroy {
     // Méthode pour confirmer la sélection des agences (TRXBO)
     confirmAgencySelection(): void {
         if (this.selectedAgencies.length === 0) {
-            this.errorMessage = 'Veuillez sélectionner au moins une agence.';
+            this.errorMessage = I18nService.t('FU.msg.veuillezSelectionnerAuMoinsUneAgence');
             return;
         }
 
         
         // Filtrer les données pour ne garder que les lignes des agences sélectionnées
         if (!this.agencyColumn || !this.agencySelectionData || this.agencySelectionData.length === 0) {
-            this.errorMessage = 'Erreur: colonne Agence non trouvée.';
+            this.errorMessage = I18nService.t('FU.msg.erreurColonneAgenceNonTrouvee');
             return;
         }
         
@@ -6507,7 +6507,7 @@ export class FileUploadComponent implements OnInit, OnDestroy {
                 // Afficher la sélection des services (mode manuel)
                 this.showManualServiceSelectionStep();
             } else {
-                this.errorMessage = 'Erreur lors de l\'extraction des services.';
+                this.errorMessage = I18nService.t('FU.msg.erreurLorsDeLExtractionDes');
             }
         } else {
             if (this.extractServicesFromTRXBO(filteredData)) {
@@ -6520,7 +6520,7 @@ export class FileUploadComponent implements OnInit, OnDestroy {
                 // Afficher la sélection des services
                 this.showServiceSelectionStep();
             } else {
-                this.errorMessage = 'Erreur lors de l\'extraction des services.';
+                this.errorMessage = I18nService.t('FU.msg.erreurLorsDeLExtractionDes');
             }
         }
     }
@@ -6547,11 +6547,11 @@ export class FileUploadComponent implements OnInit, OnDestroy {
 
     confirmPartnerAgencySelection(): void {
         if (this.partnerSelectedAgencies.length === 0) {
-            this.errorMessage = 'Veuillez sélectionner au moins une agence.';
+            this.errorMessage = I18nService.t('FU.msg.veuillezSelectionnerAuMoinsUneAgence');
             return;
         }
         if (!this.partnerAgencyColumn || !this.partnerAgencySelectionData?.length || !this.partnerServiceColumn) {
-            this.errorMessage = 'Erreur : données agence partenaire incomplètes.';
+            this.errorMessage = I18nService.t('FU.msg.erreurDonneesAgencePartenaireIncompletes');
             return;
         }
 
@@ -6592,11 +6592,11 @@ export class FileUploadComponent implements OnInit, OnDestroy {
         if (!this.partnerAvailableAgencies?.length) {
             const source = this.partnerAgencySelectionData?.length ? this.partnerAgencySelectionData : [];
             if (!source.length) {
-                this.errorMessage = 'Aucune donnée disponible pour continuer.';
+                this.errorMessage = I18nService.t('FU.msg.aucuneDonneeDisponiblePourContinuer');
                 return;
             }
             if (!this.partnerServiceColumn) {
-                this.errorMessage = 'Colonne service/type introuvable.';
+                this.errorMessage = I18nService.t('FU.msg.colonneServiceTypeIntrouvable');
                 return;
             }
             const services = [...new Set(
@@ -6675,7 +6675,7 @@ export class FileUploadComponent implements OnInit, OnDestroy {
         if (!this.availableAgencies || this.availableAgencies.length === 0) {
             const sourceData = this.agencySelectionData && this.agencySelectionData.length > 0 ? this.agencySelectionData : [];
             if (sourceData.length === 0) {
-                this.errorMessage = 'Aucune donnée disponible pour continuer.';
+                this.errorMessage = I18nService.t('FU.msg.aucuneDonneeDisponiblePourContinuer');
                 return;
             }
             if (this.reconciliationMode === 'manual') {
@@ -6684,7 +6684,7 @@ export class FileUploadComponent implements OnInit, OnDestroy {
                     this.cd.detectChanges();
                     this.showManualServiceSelectionStep();
                 } else {
-                    this.errorMessage = 'Erreur lors de l\'extraction des services.';
+                    this.errorMessage = I18nService.t('FU.msg.erreurLorsDeLExtractionDes');
                 }
             } else {
                 if (this.extractServicesFromTRXBO(sourceData)) {
@@ -6692,7 +6692,7 @@ export class FileUploadComponent implements OnInit, OnDestroy {
                     this.cd.detectChanges();
                     this.showServiceSelectionStep();
                 } else {
-                    this.errorMessage = 'Erreur lors de l\'extraction des services.';
+                    this.errorMessage = I18nService.t('FU.msg.erreurLorsDeLExtractionDes');
                 }
             }
         } else {
@@ -6778,7 +6778,7 @@ export class FileUploadComponent implements OnInit, OnDestroy {
     // Méthode pour confirmer la sélection des services
     confirmServiceSelection(): void {
         if (this.selectedServices.length === 0) {
-            this.errorMessage = 'Veuillez sélectionner au moins un service.';
+            this.errorMessage = I18nService.t('FU.msg.veuillezSelectionnerAuMoinsUnService');
             return;
         }
 
@@ -6823,7 +6823,7 @@ export class FileUploadComponent implements OnInit, OnDestroy {
         if (!this.availableServices || this.availableServices.length === 0) {
             const sourceData = this.serviceSelectionData && this.serviceSelectionData.length > 0 ? this.serviceSelectionData : [];
             if (sourceData.length === 0) {
-                this.errorMessage = 'Aucune donnée disponible pour continuer.';
+                this.errorMessage = I18nService.t('FU.msg.aucuneDonneeDisponiblePourContinuer');
                 return;
             }
             if (this.autoStatusColumn && sourceData.length > 0) {
@@ -6871,7 +6871,7 @@ export class FileUploadComponent implements OnInit, OnDestroy {
 
     confirmAutoStatusSelection(): void {
         if (this.autoSelectedStatuses.length === 0) {
-            this.errorMessage = 'Veuillez sélectionner au moins un statut.';
+            this.errorMessage = I18nService.t('FU.msg.veuillezSelectionnerAuMoinsUnStatut');
             return;
         }
 
@@ -6893,7 +6893,7 @@ export class FileUploadComponent implements OnInit, OnDestroy {
             const sourceData = this.autoStatusSelectionData && this.autoStatusSelectionData.length > 0
                 ? this.autoStatusSelectionData : [];
             if (sourceData.length === 0) {
-                this.errorMessage = 'Aucune donnée disponible pour continuer.';
+                this.errorMessage = I18nService.t('FU.msg.aucuneDonneeDisponiblePourContinuer');
                 return;
             }
             this.autoBoData = sourceData;
@@ -7062,13 +7062,13 @@ export class FileUploadComponent implements OnInit, OnDestroy {
             return;
         }
         if (this.partnerSelectedServices.length === 0) {
-            this.errorMessage = 'Veuillez sélectionner au moins un service/type.';
+            this.errorMessage = I18nService.t('FU.msg.veuillezSelectionnerAuMoinsUnService2');
             return;
         }
 
         
         if (!this.partnerServiceColumn || !this.partnerServiceSelectionData || this.partnerServiceSelectionData.length === 0) {
-            this.errorMessage = 'Erreur: colonne service/type non trouvée.';
+            this.errorMessage = I18nService.t('FU.msg.erreurColonneServiceTypeNonTrouvee');
             return;
         }
 
@@ -7229,13 +7229,13 @@ export class FileUploadComponent implements OnInit, OnDestroy {
             return;
         }
         if (this.partnerSelectedStatuses.length === 0) {
-            this.errorMessage = 'Veuillez sélectionner au moins un statut.';
+            this.errorMessage = I18nService.t('FU.msg.veuillezSelectionnerAuMoinsUnStatut');
             return;
         }
 
         
         if (!this.partnerStatusColumn || !this.partnerStatusSelectionData || this.partnerStatusSelectionData.length === 0) {
-            this.errorMessage = 'Erreur: colonne statut non trouvée.';
+            this.errorMessage = I18nService.t('FU.msg.erreurColonneStatutNonTrouvee');
             return;
         }
 
@@ -7332,13 +7332,13 @@ export class FileUploadComponent implements OnInit, OnDestroy {
             return;
         }
         if (this.partnerSelectedPayments.length === 0) {
-            this.errorMessage = 'Veuillez sélectionner au moins un paiement.';
+            this.errorMessage = I18nService.t('FU.msg.veuillezSelectionnerAuMoinsUnPaiement');
             return;
         }
 
         
         if (!this.partnerPaymentColumn || !this.partnerPaymentSelectionData || this.partnerPaymentSelectionData.length === 0) {
-            this.errorMessage = 'Erreur: colonne Paiement non trouvée.';
+            this.errorMessage = I18nService.t('FU.msg.erreurColonnePaiementNonTrouvee');
             return;
         }
 
@@ -7540,7 +7540,7 @@ export class FileUploadComponent implements OnInit, OnDestroy {
                 this.parseAutoXLSX(file, isBo);
             }
         } else {
-            this.popupService.showError('Format de fichier non supporté. Veuillez choisir un fichier CSV ou Excel (.xls, .xlsx, .xlsm, .xlsb, .xlt, .xltx, .xltm)', 'Format Non Supporté');
+            this.popupService.showError(I18nService.t('FU.msg.formatDeFichierNonSupporteVeuillez'), I18nService.t('TSF.formatNotSupported'));
         }
     }
 
@@ -7565,7 +7565,7 @@ export class FileUploadComponent implements OnInit, OnDestroy {
                     }
                     this.processingProgress = total > 0 ? Math.round((processed / total) * 100) : 0;
                     this.processingMessage =
-                        `Lecture ${file.name} : ${processed.toLocaleString('fr-FR')} / ${total.toLocaleString('fr-FR')} ligne(s)...`;
+                        I18nService.t('FU.msg.lectureLigneS', { p0: file.name, p1: processed.toLocaleString('fr-FR'), p2: total.toLocaleString('fr-FR') });
                     this.cd.detectChanges();
                 },
                 yieldFn: () => this.yieldToMainThread(true)
@@ -7589,7 +7589,7 @@ export class FileUploadComponent implements OnInit, OnDestroy {
                 await this.convertDebitCreditToNumberAsync(data, (done, total) => {
                     if (showProgress) {
                         this.processingMessage =
-                            `Finalisation partenaire : ${done.toLocaleString('fr-FR')} / ${total.toLocaleString('fr-FR')}...`;
+                            I18nService.t('FU.msg.finalisationPartenaire', { p0: done.toLocaleString('fr-FR'), p1: total.toLocaleString('fr-FR') });
                         this.cd.detectChanges();
                     }
                 });
@@ -7624,7 +7624,7 @@ export class FileUploadComponent implements OnInit, OnDestroy {
         
         if (fileSizeMB > 5) {
             this.progressIndicatorService.showProgress(
-                'Lecture du fichier Excel en cours...',
+                I18nService.t('FU.msg.lectureDuFichierExcelEnCours'),
                 file.name,
                 file.size
             );
@@ -7656,7 +7656,7 @@ export class FileUploadComponent implements OnInit, OnDestroy {
                     if (fileSizeMB > 5) {
                         this.progressIndicatorService.hideProgress();
                     }
-                    this.popupService.showError('Impossible de lire la feuille Excel. Vérifiez que le fichier n\'est pas corrompu.', 'Erreur de lecture Excel');
+                    this.popupService.showError(I18nService.t('FU.msg.impossibleDeLireLaFeuilleExcel'), I18nService.t('TSF.readExcelError'));
                     return;
                 }
 
@@ -7665,7 +7665,7 @@ export class FileUploadComponent implements OnInit, OnDestroy {
                     if (fileSizeMB > 5) {
                         this.progressIndicatorService.hideProgress();
                     }
-                    this.popupService.showError('Le fichier Excel semble être vide. Veuillez vérifier le fichier et réessayer.', 'Fichier Excel vide');
+                    this.popupService.showError(I18nService.t('FU.msg.leFichierExcelSembleEtreVide'), I18nService.t('FU.msg.fichierExcelVide'));
                     return;
                 }
 
@@ -7695,15 +7695,11 @@ export class FileUploadComponent implements OnInit, OnDestroy {
                     // Pour les très gros fichiers, suggérer des solutions alternatives
                     if (fileSizeMB > 50) {
                         this.popupService.showError(
-                            `Le fichier Excel (${fileSizeMB.toFixed(1)} MB) est très volumineux et ne peut pas être traité entièrement. 
-                            Suggestions : 
-                            1. Divisez le fichier en plusieurs parties plus petites
-                            2. Supprimez les colonnes non nécessaires
-                            3. Utilisez un fichier CSV à la place si possible`,
-                            'Fichier trop volumineux'
+                            I18nService.t('FU.msg.leFichierExcelMbEstTres', { p0: fileSizeMB.toFixed(1) }),
+                            I18nService.t('FU.msg.fichierTropVolumineux')
                         );
                     } else {
-                        this.popupService.showError('Aucune donnée trouvée dans le fichier Excel. Veuillez vérifier que le fichier contient des données.', 'Aucune donnée');
+                        this.popupService.showError(I18nService.t('FU.msg.aucuneDonneeTrouveeDansLeFichier'), I18nService.t('CPT.Aucunedonnée'));
                     }
                     return;
                 }
@@ -7712,7 +7708,7 @@ export class FileUploadComponent implements OnInit, OnDestroy {
                 // Pour les très gros fichiers, informer l'utilisateur de la limitation
                 if (fileSizeMB > 50 && jsonData.length === 10000) {
                     this.progressIndicatorService.updateMessage(
-                        'Fichier très volumineux détecté. Traitement des 10,000 premières lignes seulement...'
+                        I18nService.t('FU.msg.fichierTresVolumineuxDetecteTraitementDe')
                     );
                 }
                 
@@ -7750,7 +7746,7 @@ export class FileUploadComponent implements OnInit, OnDestroy {
                             const progress = ((i - 1) / jsonData.length * 100);
                             this.progressIndicatorService.updateProgress(
                                 progress,
-                                `Traitement des données: ${progress.toFixed(1)}%`
+                                I18nService.t('FU.msg.traitementDesDonnees', { p0: progress.toFixed(1) })
                             );
                         }
                     }
@@ -7796,7 +7792,7 @@ export class FileUploadComponent implements OnInit, OnDestroy {
                             const progress = ((i - headerRowIndex - 1) / (jsonData.length - headerRowIndex - 1) * 100);
                             this.progressIndicatorService.updateProgress(
                                 progress,
-                                `Traitement des données: ${progress.toFixed(1)}%`
+                                I18nService.t('FU.msg.traitementDesDonnees', { p0: progress.toFixed(1) })
                             );
                         }
                     }
@@ -7829,7 +7825,7 @@ export class FileUploadComponent implements OnInit, OnDestroy {
                 
                 // Masquer l'indicateur de progression
                 if (fileSizeMB > 5) {
-                    this.progressIndicatorService.updateProgress(100, 'Traitement terminé avec succès !');
+                    this.progressIndicatorService.updateProgress(100, I18nService.t('PROGRESS.ui.traitementTermineAvecSucces'));
                     setTimeout(() => {
                         this.progressIndicatorService.hideProgress();
                     }, 1500);
@@ -7862,7 +7858,7 @@ export class FileUploadComponent implements OnInit, OnDestroy {
         const fileSizeMB = file.size / (1024 * 1024);
         
         this.progressIndicatorService.showProgress(
-            'Lecture du fichier Excel volumineux...',
+            I18nService.t('FU.msg.lectureDuFichierExcelVolumineux'),
             file.name,
             file.size
         );
@@ -7894,7 +7890,7 @@ export class FileUploadComponent implements OnInit, OnDestroy {
             
             // Vérifier si les feuilles sont chargées
             if (!workbook.Sheets || workbook.SheetNames.length === 0) {
-                throw new Error('Aucune feuille chargée dans le workbook');
+                throw new Error(I18nService.t('FU.msg.aucuneFeuilleChargeeDansLeWorkbook'));
             }
             
             let firstSheetName = workbook.SheetNames[0];
@@ -7915,7 +7911,7 @@ export class FileUploadComponent implements OnInit, OnDestroy {
             }
 
             if (!worksheet) {
-                throw new Error('Impossible de lire la feuille Excel');
+                throw new Error(I18nService.t('FU.msg.impossibleDeLireLaFeuilleExcel2'));
             }
 
             // Lecture limitée des données avec fallback
@@ -7937,7 +7933,7 @@ export class FileUploadComponent implements OnInit, OnDestroy {
             }
 
             if (!jsonData || jsonData.length === 0) {
-                throw new Error('Aucune donnée trouvée dans le fichier');
+                throw new Error(I18nService.t('FU.msg.aucuneDonneeTrouveeDansLeFichier2'));
             }
 
 
@@ -8002,7 +7998,7 @@ export class FileUploadComponent implements OnInit, OnDestroy {
             // Forcer la détection des changements pour mettre à jour la vue
             this.cd.detectChanges();
             
-            this.progressIndicatorService.updateProgress(100, 'Traitement terminé avec succès !');
+            this.progressIndicatorService.updateProgress(100, I18nService.t('PROGRESS.ui.traitementTermineAvecSucces'));
             
             setTimeout(() => {
                 this.progressIndicatorService.hideProgress();
@@ -8034,7 +8030,7 @@ export class FileUploadComponent implements OnInit, OnDestroy {
                 const workbook = XLSX.read(data, minimalOptions);
                 
                 if (!workbook.Sheets || workbook.SheetNames.length === 0) {
-                    throw new Error('Aucune feuille chargée en fallback');
+                    throw new Error(I18nService.t('FU.msg.aucuneFeuilleChargeeEnFallback'));
                 }
                 
                 if (workbook.SheetNames.length > 0) {
@@ -8080,7 +8076,7 @@ export class FileUploadComponent implements OnInit, OnDestroy {
                                 this.handleAutoPartnerSelectionFlow();
                             }
 
-                            this.progressIndicatorService.updateProgress(100, 'Traitement réussi en mode fallback !');
+                            this.progressIndicatorService.updateProgress(100, I18nService.t('FU.msg.traitementReussiEnModeFallback'));
                             
                             setTimeout(() => {
                                 this.progressIndicatorService.hideProgress();
@@ -8094,7 +8090,7 @@ export class FileUploadComponent implements OnInit, OnDestroy {
                     }
                 }
                 
-                throw new Error('Fallback ultime échoué');
+                throw new Error(I18nService.t('FU.msg.fallbackUltimeEchoue'));
                 
             } catch (fallbackError) {
                 // Dernière tentative avec la méthode de fallback ultime
@@ -8218,7 +8214,7 @@ export class FileUploadComponent implements OnInit, OnDestroy {
                                     this.handleAutoPartnerSelectionFlow();
                                 }
 
-                                this.progressIndicatorService.updateProgress(100, 'Lecture réussie avec méthode alternative !');
+                                this.progressIndicatorService.updateProgress(100, I18nService.t('FU.msg.lectureReussieAvecMethodeAlternative'));
                                 
                                 setTimeout(() => {
                                     this.progressIndicatorService.hideProgress();
@@ -8236,23 +8232,13 @@ export class FileUploadComponent implements OnInit, OnDestroy {
                 }
             }
             
-            throw new Error('Toutes les approches de lecture ont échoué');
+            throw new Error(I18nService.t('FU.msg.toutesLesApprochesDeLectureOnt'));
             
         } catch (error) {
             this.progressIndicatorService.hideProgress();
             this.popupService.showError(
-                `Impossible de traiter ce fichier Excel de ${fileSizeMB.toFixed(1)} MB. 
-                
-                Le fichier semble avoir un format ou une structure qui empêche sa lecture par la bibliothèque XLSX.
-                
-                Solutions recommandées :
-                1. Ouvrez le fichier dans Excel et sauvegardez-le au format CSV
-                2. Divisez le fichier en plusieurs parties plus petites
-                3. Vérifiez que le fichier n'est pas protégé par mot de passe
-                4. Essayez de supprimer les colonnes non nécessaires
-                
-                Si le problème persiste, le fichier pourrait être corrompu.`,
-                'Fichier non lisible'
+                I18nService.t('FU.msg.impossibleDeTraiterCeFichierExcel', { p0: fileSizeMB.toFixed(1) }),
+                I18nService.t('FU.msg.fichierNonLisible')
             );
         }
     }
@@ -8374,8 +8360,8 @@ export class FileUploadComponent implements OnInit, OnDestroy {
         }
 
         throw new Error(
-            `Aucun modèle de réconciliation trouvé pour les fichiers ${boFileName || 'BO'} et ${partnerFileName || 'Partenaire'}. ` +
-            `Veuillez configurer un modèle de traitement automatique dans la section "Modèles de Traitement".`
+            I18nService.t('FU.msg.aucunModeleDeReconciliationTrouvePour', { p0: boFileName || 'BO', p1: partnerFileName || 'Partenaire' }) +
+            I18nService.t('FU.msg.veuillezConfigurerUnModeleDeTraitement')
         );
     }
 
@@ -9024,7 +9010,7 @@ export class FileUploadComponent implements OnInit, OnDestroy {
         }
         return {
             rows: kept.rows,
-            message: `Colonnes hors modèle ignorées (${ignored.length}) : ${ignored.join(', ')}`
+            message: I18nService.t('FU.msg.colonnesHorsModeleIgnorees', { p0: ignored.length, p1: ignored.join(', ') })
         };
     }
 
@@ -9038,15 +9024,15 @@ export class FileUploadComponent implements OnInit, OnDestroy {
 
     getAutoProceedButtonLabel(): string {
         if (this.isAssistedReconciliationActive()) {
-            return 'Réconciliation en cours — voir la progression';
+            return I18nService.t('LNC.magicLaunchButtonRunning');
         }
         if (this.certificationMode) {
-            return 'Lancer la certification';
+            return I18nService.t('FU.msg.lancerLaCertification');
         }
         if (this.assistedOnly) {
-            return 'Lancer la réconciliation';
+            return I18nService.t('FU.StartReconciliation');
         }
-        return '🔄 Lancer la Réconciliation Automatique';
+        return I18nService.t('FU.msg.lancerLaReconciliationAutomatique');
     }
 
     async onAutoProceed(): Promise<void> {
@@ -9116,7 +9102,7 @@ export class FileUploadComponent implements OnInit, OnDestroy {
                 // Afficher les résultats de la détection
 
                 // Afficher un message informatif pour le modèle
-                const detectionMessage = `✅ Clés trouvées via modèle (${keyDetectionResult.modelId}) - Confiance: ${Math.round(keyDetectionResult.confidence * 100)}%`;
+                const detectionMessage = I18nService.t('FU.msg.clesTrouveesViaModeleConfiance', { p0: keyDetectionResult.modelId, p1: Math.round(keyDetectionResult.confidence * 100) });
 
                 // Traiter les données
                 let processedBoData = this.autoBoData;
@@ -9176,7 +9162,7 @@ export class FileUploadComponent implements OnInit, OnDestroy {
                         );
                         if (similarColumns.length > 0) {
                         }
-                        throw new Error(`Colonne clé BO "${boKeyColumn}" introuvable dans les données. Colonnes disponibles: ${boColumns.join(', ')}`);
+                        throw new Error(I18nService.t('FU.msg.colonneCleBoIntrouvableDansLes', { p0: boKeyColumn, p1: boColumns.join(', ') }));
                     }
                 }
                 
@@ -9191,7 +9177,7 @@ export class FileUploadComponent implements OnInit, OnDestroy {
                         );
                         if (similarColumns.length > 0) {
                         }
-                        throw new Error(`Colonne clé Partner "${partnerKeyColumn}" introuvable dans les données. Colonnes disponibles: ${partnerColumns.join(', ')}`);
+                        throw new Error(I18nService.t('FU.msg.colonneClePartnerIntrouvableDansLes', { p0: partnerKeyColumn, p1: partnerColumns.join(', ') }));
                     }
                 }
                     
@@ -9222,7 +9208,7 @@ export class FileUploadComponent implements OnInit, OnDestroy {
                 try {
                     const jsonTest = JSON.stringify(reconciliationRequest);
                 } catch (error) {
-                    throw new Error('Erreur: Les données ne peuvent pas être sérialisées en JSON. Vérifiez la structure des données.');
+                    throw new Error(I18nService.t('FU.msg.erreurLesDonneesNePeuventPas'));
                 }
             } else {
             }
@@ -9303,7 +9289,7 @@ export class FileUploadComponent implements OnInit, OnDestroy {
                                 this.reconciliationProgressSubscription.unsubscribe();
                             }
                             
-                            this.errorMessage = `Erreur lors de la réconciliation automatique: ${error.message}`;
+                            this.errorMessage = I18nService.t('FU.msg.erreurLorsDeLaReconciliationAutomatique', { p0: error.message });
                         }
                     });
 
@@ -9314,12 +9300,12 @@ export class FileUploadComponent implements OnInit, OnDestroy {
 
                 const bo = this.getResolvedAutoBoFileName() || 'BO';
                 const partner = this.getResolvedAutoPartnerFileName() || 'Partenaire';
-                const message = error?.message?.includes('Aucun modèle de réconciliation trouvé')
-                    ? `Réconciliation impossible : aucun modèle trouvé pour ${bo} et ${partner}.\n\n` +
-                      `Configurez un modèle dans « Modèles de Traitement » ou utilisez « Traitement de fichier » pour assigner le bon modèle.`
-                    : (error?.message || 'Erreur lors de la détection des clés de réconciliation.');
+                const message = error?.message?.includes(I18nService.t('FU.msg.veuillezConfigurerUnModeleDeTraitement'))
+                    ? I18nService.t('FU.msg.reconciliationImpossibleAucunModeleTrouv', { p0: bo, p1: partner }) +
+                      I18nService.t('FU.msg.configurezUnModeleDansModelesDe')
+                    : (error?.message || I18nService.t('FU.msg.erreurLorsDeLaDetectionDes'));
 
-                await this.popupService.showError(message, 'Réconciliation impossible');
+                await this.popupService.showError(message, I18nService.t('FU.msg.reconciliationImpossible'));
             }
     }
 
@@ -9366,7 +9352,7 @@ export class FileUploadComponent implements OnInit, OnDestroy {
 
     confirmManualServiceSelection(): void {
         if (this.manualSelectedServices.length === 0) {
-            this.errorMessage = 'Veuillez sélectionner au moins un service.';
+            this.errorMessage = I18nService.t('FU.msg.veuillezSelectionnerAuMoinsUnService');
             return;
         }
 
@@ -9420,7 +9406,7 @@ export class FileUploadComponent implements OnInit, OnDestroy {
             const sourceData = this.manualServiceSelectionData && this.manualServiceSelectionData.length > 0
                 ? this.manualServiceSelectionData : [];
             if (sourceData.length === 0) {
-                this.errorMessage = 'Aucune donnée disponible pour continuer.';
+                this.errorMessage = I18nService.t('FU.msg.aucuneDonneeDisponiblePourContinuer');
                 return;
             }
             if (this.manualStatusColumn && sourceData.length > 0) {
@@ -9462,7 +9448,7 @@ export class FileUploadComponent implements OnInit, OnDestroy {
         
         // Vérifier si le fichier partenaire est uploadé
         if (!this.partnerFile) {
-            this.errorMessage = 'Veuillez d\'abord uploader le fichier partenaire avant de continuer.';
+            this.errorMessage = I18nService.t('FU.msg.veuillezDAbordUploaderLeFichier');
             return;
         }
         
@@ -9560,13 +9546,13 @@ export class FileUploadComponent implements OnInit, OnDestroy {
     // Méthode pour confirmer la sélection des statuts (mode manuel)
     confirmManualStatusSelection(): void {
         if (this.manualSelectedStatuses.length === 0) {
-            this.errorMessage = 'Veuillez sélectionner au moins un statut.';
+            this.errorMessage = I18nService.t('FU.msg.veuillezSelectionnerAuMoinsUnStatut');
             return;
         }
 
         
         if (!this.manualStatusColumn || !this.manualStatusSelectionData || this.manualStatusSelectionData.length === 0) {
-            this.errorMessage = 'Erreur: colonne statut non trouvée.';
+            this.errorMessage = I18nService.t('FU.msg.erreurColonneStatutNonTrouvee');
             return;
         }
         
@@ -9592,7 +9578,7 @@ export class FileUploadComponent implements OnInit, OnDestroy {
             const sourceData = this.manualStatusSelectionData && this.manualStatusSelectionData.length > 0
                 ? this.manualStatusSelectionData : [];
             if (sourceData.length === 0) {
-                this.errorMessage = 'Aucune donnée disponible pour continuer.';
+                this.errorMessage = I18nService.t('FU.msg.aucuneDonneeDisponiblePourContinuer');
                 return;
             }
             this.boData = sourceData;
@@ -9663,8 +9649,8 @@ export class FileUploadComponent implements OnInit, OnDestroy {
     goToModelConfiguration(): void {
         if (!this.canAccessModelConfiguration()) {
             void this.popupService.showWarning(
-                'La configuration des modèles est réservée aux utilisateurs ayant accès au module « Modèles de traitement ». Contactez un administrateur.',
-                'Accès refusé'
+                I18nService.t('FU.msg.laConfigurationDesModelesEstReservee'),
+                I18nService.t('TFA.popups.adminRequired.title')
             );
             return;
         }
@@ -9672,25 +9658,7 @@ export class FileUploadComponent implements OnInit, OnDestroy {
     }
 
     showModelHelp(): void {
-        const helpMessage = `📚 Aide - Configuration des Modèles de Réconciliation
-
-🔧 Pour configurer un modèle de réconciliation :
-
-1. Allez dans "Modèles de Traitement" 
-2. Cliquez sur "Créer un nouveau modèle"
-3. Configurez :
-   - Nom du modèle (ex: "Oppart")
-   - Pattern de fichier (ex: "*OPPART*.xls")
-   - Type: "partner"
-   - Clés de réconciliation :
-     * Partner Keys: ["Numero Trans GU"]
-     * BO Keys: ["Numero Trans GU"]
-
-💡 Exemple pour vos fichiers :
-   - Modèle "Oppart" : Pattern "*OPPART*.xls", Type "partner"
-   - Modèle "TRXBO" : Pattern "*TRXBO*.xls", Type "bo"
-
-✅ Une fois configuré, la réconciliation automatique utilisera ces modèles.`;
+        const helpMessage = I18nService.t('FU.msg.aideConfigurationDesModelesDeReconciliat');
 
         this.popupService.showInfo(helpMessage);
     }

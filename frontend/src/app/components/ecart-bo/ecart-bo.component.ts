@@ -12,6 +12,7 @@ import { PopupService } from '../../services/popup.service';
 import { ExportOptimizationService } from '../../services/export-optimization.service';
 import { EcartSolde } from '../../models/ecart-solde.model';
 import { fixGarbledCharacters } from '../../utils/encoding-fixer';
+import { I18nService } from '../../services/i18n/i18n.service';
 
 @Component({
   selector: 'app-ecart-bo',
@@ -457,7 +458,7 @@ export class EcartBoComponent implements OnInit, OnDestroy {
   async saveEcartBoToEcartSolde(): Promise<void> {
     const sourceRecords = this.getBoRecordsForAction();
     if (sourceRecords.length === 0) {
-      this.popupService.showWarning('❌ Aucune ligne sélectionnée pour la sauvegarde.');
+      this.popupService.showWarning(I18nService.t('RES.dlg.noRowSelectedToSave'));
       return;
     }
 
@@ -493,21 +494,21 @@ export class EcartBoComponent implements OnInit, OnDestroy {
       );
 
       if (validRecords.length === 0) {
-        this.popupService.showWarning('❌ Aucune donnée valide trouvée pour la sauvegarde.');
+        this.popupService.showWarning(I18nService.t('SV.noValidData'));
         return;
       }
 
       const confirmed = await this.popupService.showConfirm(
-        `📋 ${validRecords.length} enregistrements valides seront sauvegardés. Continuer ?`,
+        I18nService.t('TBL.msg.enregistrementsValidesSerontSauvegardesC', { p0: validRecords.length }),
         'Confirmation'
       );
 
       if (!confirmed) return;
 
       const result = await this.ecartSoldeService.createMultipleEcartSoldes(validRecords);
-      this.popupService.showSuccess(`✅ ${result.count} enregistrements créés avec succès !`);
+      this.popupService.showSuccess(I18nService.t('TBL.msg.enregistrementsCreesAvecSucces', { p0: result.count }));
     } catch (error: any) {
-      this.popupService.showError(`❌ Erreur: ${error.message || 'Erreur inconnue'}`);
+      this.popupService.showError(I18nService.t('TBL.msg.erreur', { p0: error.message || I18nService.t('TBL.msg.unknownError') }));
     } finally {
       this.isSavingEcartBo = false;
     }
@@ -516,16 +517,16 @@ export class EcartBoComponent implements OnInit, OnDestroy {
   async saveEcartBoToTrxSf(): Promise<void> {
     const sourceRecords = this.getBoRecordsForAction();
     if (sourceRecords.length === 0) {
-      this.popupService.showWarning('❌ Aucune ligne sélectionnée pour la sauvegarde.');
+      this.popupService.showWarning(I18nService.t('RES.dlg.noRowSelectedToSave'));
       return;
     }
 
     this.isSavingEcartBoToTrxSf = true;
     try {
       // Implémentation similaire à saveEcartBoToEcartSolde mais pour TRX SF
-      this.popupService.showInfo('Fonctionnalité en cours de développement');
+      this.popupService.showInfo(I18nService.t('TBL.msg.fonctionnaliteEnCoursDeDeveloppement'));
     } catch (error: any) {
-      this.popupService.showError(`❌ Erreur: ${error.message || 'Erreur inconnue'}`);
+      this.popupService.showError(I18nService.t('TBL.msg.erreur', { p0: error.message || I18nService.t('TBL.msg.unknownError') }));
     } finally {
       this.isSavingEcartBoToTrxSf = false;
     }
@@ -533,13 +534,13 @@ export class EcartBoComponent implements OnInit, OnDestroy {
 
   async exportResults(): Promise<void> {
     if (!this.filteredBoOnly || this.filteredBoOnly.length === 0) {
-      this.popupService.showWarning('Aucun écart BO à exporter');
+      this.popupService.showWarning(I18nService.t('TBL.msg.aucunEcartBoAExporter'));
       return;
     }
 
     this.isExporting = true;
     this.exportProgress = 0;
-    this.exportMessage = 'Préparation de l\'export...';
+    this.exportMessage = I18nService.t('MSG.exportPreparing');
     this.cdr.markForCheck();
 
     try {
@@ -547,7 +548,7 @@ export class EcartBoComponent implements OnInit, OnDestroy {
       const isLargeDataset = totalRecords > 5000;
 
       // Étape 1: Collecter les colonnes
-      this.exportMessage = 'Collecte des colonnes...';
+      this.exportMessage = I18nService.t('TBL.msg.collecteDesColonnes');
       this.cdr.markForCheck();
       
       const allColumns = new Set<string>();
@@ -564,7 +565,7 @@ export class EcartBoComponent implements OnInit, OnDestroy {
       const columns = Array.from(allColumns).sort();
 
       // Étape 2: Transformer les données par chunks
-      this.exportMessage = 'Transformation des données...';
+      this.exportMessage = I18nService.t('TBL.msg.transformationDesDonnees');
       this.cdr.markForCheck();
 
       const rows: any[] = [];
@@ -585,14 +586,14 @@ export class EcartBoComponent implements OnInit, OnDestroy {
         });
 
         this.exportProgress = Math.round(((i + chunk.length) / totalRecords) * 50);
-        this.exportMessage = `Transformation: ${Math.min(i + chunk.length, totalRecords).toLocaleString()}/${totalRecords.toLocaleString()} écarts BO`;
+        this.exportMessage = I18nService.t('TBL.msg.transformationEcartsBo', { p0: Math.min(i + chunk.length, totalRecords).toLocaleString(), p1: totalRecords.toLocaleString() });
         this.cdr.markForCheck();
 
         await new Promise(resolve => setTimeout(resolve, 0));
       }
 
       // Étape 3: Exporter avec le service optimisé
-      this.exportMessage = 'Génération du fichier Excel...';
+      this.exportMessage = I18nService.t('TBL.msg.generationDuFichierExcel');
       this.exportProgress = 50;
       this.cdr.markForCheck();
 
@@ -612,11 +613,11 @@ export class EcartBoComponent implements OnInit, OnDestroy {
         if (progress.isComplete) {
           this.isExporting = false;
           if (progress.message.includes('✅')) {
-            this.exportMessage = 'Export terminé avec succès !';
-            this.popupService.showSuccess('Export réussi !');
-          } else if (progress.message.includes('Erreur')) {
-            this.exportMessage = 'Erreur lors de l\'export';
-            this.popupService.showError('Erreur lors de l\'export');
+            this.exportMessage = I18nService.t('OPS.exportDetailsSuccess');
+            this.popupService.showSuccess(I18nService.t('MSG.exportSuccess'));
+          } else if (/erreur|error/i.test(progress.message)) {
+            this.exportMessage = I18nService.t('MSG.exportError');
+            this.popupService.showError(I18nService.t('MSG.exportError'));
           }
           this.cdr.markForCheck();
         }
@@ -639,8 +640,8 @@ export class EcartBoComponent implements OnInit, OnDestroy {
     } catch (error) {
       console.error('Erreur lors de l\'export:', error);
       this.isExporting = false;
-      this.exportMessage = 'Erreur lors de l\'export';
-      this.popupService.showError('Erreur lors de l\'export des écarts BO');
+      this.exportMessage = I18nService.t('MSG.exportError');
+      this.popupService.showError(I18nService.t('MSG.exportBoError'));
       this.cdr.markForCheck();
     }
   }

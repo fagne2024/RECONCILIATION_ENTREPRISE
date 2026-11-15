@@ -1,13 +1,15 @@
 import { CommonModule } from '@angular/common';
+import { TranslateModule } from '@ngx-translate/core';
 import { Component, OnInit } from '@angular/core';
 import { FormBuilder, FormGroup, ReactiveFormsModule, Validators } from '@angular/forms';
 import { ActivatedRoute, Router, RouterModule } from '@angular/router';
 import { UserService } from '../services/user.service';
+import { I18nService } from '../services/i18n/i18n.service';
 
 @Component({
   selector: 'app-reset-password',
   standalone: true,
-  imports: [CommonModule, ReactiveFormsModule, RouterModule],
+  imports: [CommonModule, ReactiveFormsModule, RouterModule, TranslateModule],
   templateUrl: './reset-password.component.html',
   styleUrls: ['./reset-password.component.scss']
 })
@@ -39,7 +41,7 @@ export class ResetPasswordComponent implements OnInit {
   ngOnInit(): void {
     this.token = this.route.snapshot.queryParamMap.get('token');
     if (!this.token) {
-      this.error = 'Lien de réinitialisation invalide. Veuillez refaire une demande.';
+      this.error = I18nService.t('AUTO_RESET_PASSWORD.msg.lienDeReinitialisationInvalideVeuillezRe');
     }
   }
 
@@ -62,13 +64,13 @@ export class ResetPasswordComponent implements OnInit {
     this.userService.resetPasswordWithToken(this.token, this.resetPasswordForm.value.newPassword).subscribe({
       next: (response: any) => {
         this.loading = false;
-        this.success = response.message || 'Mot de passe réinitialisé avec succès. Vous pouvez vous connecter.';
+        this.success = response.message || I18nService.t('AUTO_RESET_PASSWORD.msg.motDePasseReinitialiseAvecSucces');
         this.resetPasswordForm.reset();
         setTimeout(() => this.router.navigate(['/login']), 4000);
       },
       error: (err) => {
         this.loading = false;
-        this.error = err.error?.error || 'Impossible de réinitialiser le mot de passe. Le lien est peut-être expiré.';
+        this.error = err.error?.error || I18nService.t('AUTO_RESET_PASSWORD.msg.impossibleDeReinitialiserLeMotDe');
       }
     });
   }

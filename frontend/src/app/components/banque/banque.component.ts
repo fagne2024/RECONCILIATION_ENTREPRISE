@@ -26,6 +26,7 @@ import { FileUploadComponent } from '../file-upload/file-upload.component';
 import { MatFormFieldModule } from '@angular/material/form-field';
 import { MatSelectModule } from '@angular/material/select';
 import { NgxMatSelectSearchModule } from 'ngx-mat-select-search';
+import { I18nService } from '../../services/i18n/i18n.service';
 
 // Interface locale pour les opérations bancaires avec Date
 interface OperationBancaireDisplay extends Omit<OperationBancaire, 'dateOperation'> {
@@ -814,7 +815,7 @@ export class BanqueComponent implements OnInit {
 
   openGroupPopup(op: OperationBancaireDisplay): void {
     if (!op?.id) {
-      this.popupService.showWarning('Cette opération ne peut pas être groupée : identifiant manquant.');
+      this.popupService.showWarning(I18nService.t('TBL.msg.cetteOperationNePeutPasEtre'));
       return;
     }
     const existing: ReleveBancaireRow[] = ((op as any).groupInfo as ReconGroup | undefined)?.releves || [];
@@ -879,11 +880,11 @@ export class BanqueComponent implements OnInit {
     this.updatePagedReconciliationResults();
     if (!ids.length) return;
     if (draft.statut === 'PARTIEL') {
-      this.popupService.showWarning(`Il reste ${this.fmtAmount(draft.restant)} à compléter sur ${this.fmtAmount(draft.montantOp)} (clé ${key}).`);
+      this.popupService.showWarning(I18nService.t('TBL.msg.ilResteACompleterSurCle', { p0: this.fmtAmount(draft.restant), p1: this.fmtAmount(draft.montantOp), p2: key }));
     } else if (draft.statut === 'DEPASSE') {
-      this.popupService.showWarning(`Le total des lignes du relevé (${this.fmtAmount(draft.total)}) dépasse l'opération de ${this.fmtAmount(draft.depassement)} (clé ${key}).`);
+      this.popupService.showWarning(I18nService.t('TBL.msg.leTotalDesLignesDuReleve', { p0: this.fmtAmount(draft.total), p1: this.fmtAmount(draft.depassement), p2: key }));
     } else {
-      this.popupService.showSuccess(`Groupe complet : ${this.fmtAmount(draft.montantOp)} rapprochés (clé ${key}).`);
+      this.popupService.showSuccess(I18nService.t('TBL.msg.groupeCompletRapprochesCle', { p0: this.fmtAmount(draft.montantOp), p1: key }));
     }
   }
 
@@ -936,12 +937,12 @@ export class BanqueComponent implements OnInit {
   }
 
   async bulkChangeSelectedOpsStatus() {
-    if (!this.hasSelectedOps) { this.popupService.showWarning('Aucune opération sélectionnée'); return; }
-    if (!this.selectedOpsTargetStatut) { this.popupService.showWarning('Choisissez un statut cible'); return; }
+    if (!this.hasSelectedOps) { this.popupService.showWarning(I18nService.t('OPS.noSelection')); return; }
+    if (!this.selectedOpsTargetStatut) { this.popupService.showWarning(I18nService.t('TBL.msg.choisissezUnStatutCible')); return; }
     const count = this.selectedOpIds.size;
     const ok = await this.popupService.showConfirm(
-      `Changer le statut de ${count} opération(s) vers "${this.selectedOpsTargetStatut}" ?`,
-      'Confirmation changement de statut'
+      I18nService.t('TBL.msg.changerLeStatutDeOperationS', { p0: count, p1: this.selectedOpsTargetStatut }),
+      I18nService.t('OPS.OPS.changeStatusConfirmTitle')
     );
     if (!ok) return;
     try {
@@ -952,8 +953,8 @@ export class BanqueComponent implements OnInit {
       const updated = await this.operationBancaireService.bulkUpdateStatut(ids, this.selectedOpsTargetStatut).toPromise();
       const total = ids.length;
       const failed = Math.max(0, total - (updated || 0));
-      const msg = `Statut cible: "${this.selectedOpsTargetStatut}"\nMises à jour: ${updated}/${total}${failed > 0 ? `\nEchecs: ${failed}` : ''}`;
-      this.popupService.showSuccess(msg, 'Changement de statut (bulk)');
+      const msg = I18nService.t('TBL.msg.statutCibleMisesAJour', { p0: this.selectedOpsTargetStatut, p1: updated, p2: total, p3: failed > 0 ? I18nService.t('TBL.msg.echecs', { p0: failed }) : '' });
+      this.popupService.showSuccess(msg, I18nService.t('TBL.msg.changementDeStatutBulk'));
       // reset
       this.selectedOpIds.clear();
       this.selectAllOpsOnPage = false;
@@ -964,7 +965,7 @@ export class BanqueComponent implements OnInit {
       this.updatePagedReconciliationResults();
       if ((updated || 0) > 0 && /valid/i.test(statutCible)) await this.proposerEmailReconciliation('VALIDE', opsModifiees);
     } catch (e) {
-      this.popupService.showError('❌ Erreur lors de la mise à jour en masse des statuts');
+      this.popupService.showError(I18nService.t('TBL.msg.erreurLorsDeLaMiseA'));
     } finally {
       this.isBulkUpdatingOps = false;
     }
@@ -1007,16 +1008,16 @@ export class BanqueComponent implements OnInit {
     try { defaut = await this.destinatairesReconEmail(paysListe[0] || this.reconPays || ''); } catch { defaut = []; }
 
     const saisie = await this.popupService.showTextInput(
-      `${libelle} : ${total} ligne(s)${pays ? ' · ' + pays : ''}${banques.length ? ' · ' + banques.join(', ') : ''}.\n\n` +
-      `Envoyer un e-mail au responsable ? Indiquez les adresses séparées par « ; » (Annuler pour ne rien envoyer).`,
-      'E-mail au responsable',
+      I18nService.t('TBL.msg.ligneS', { p0: libelle, p1: total, p2: pays ? ' · ' + pays : '', p3: banques.length ? ' · ' + banques.join(', ') : '' }) +
+      I18nService.t('TBL.msg.envoyerUnEMailAuResponsable'),
+      I18nService.t('TBL.msg.eMailAuResponsable'),
       defaut.join('; '),
       'responsable@exemple.com; ...'
     );
     if (saisie === null) return;
     const destinataires = Array.from(new Set(saisie.split(/[;,\s]+/).map(m => m.trim()).filter(m => /^[^@\s]+@[^@\s]+\.[^@\s]+$/.test(m))));
     if (!destinataires.length) {
-      this.popupService.showWarning('Aucune adresse e-mail valide : aucun e-mail envoyé.');
+      this.popupService.showWarning(I18nService.t('TBL.msg.aucuneAdresseEMailValideAucun'));
       return;
     }
     const details = [
@@ -1028,10 +1029,10 @@ export class BanqueComponent implements OnInit {
       const res = await this.operationBancaireService.sendReconciliationEmail({
         evenement, pays, banque: banques.join(', '), nombre: total, details, destinataires, copie: []
       }).toPromise();
-      this.popupService.showSuccess(`E-mail envoyé à ${res?.envoyes ?? destinataires.length} destinataire(s).`, 'E-mail au responsable');
+      this.popupService.showSuccess(I18nService.t('TBL.msg.eMailEnvoyeADestinataireS', { p0: res?.envoyes ?? destinataires.length }), I18nService.t('TBL.msg.eMailAuResponsable'));
     } catch (e) {
       console.error('Erreur envoi e-mail réconciliation bancaire', e);
-      this.popupService.showError("L'e-mail n'a pas pu être envoyé.", 'E-mail au responsable');
+      this.popupService.showError(I18nService.t('ETA.mail.sendFailed'), I18nService.t('TBL.msg.eMailAuResponsable'));
     }
   }
 
@@ -1043,10 +1044,10 @@ export class BanqueComponent implements OnInit {
   /** Clôture les lignes sélectionnées : traitement « Niveau Group » → « Terminé », statut inchangé. */
   async cloturerSelection(source: 'ops' | 'main') {
     const sel = source === 'ops' ? this.selectedOpIds : this.selectedMainOpIds;
-    if (!sel.size) { this.popupService.showWarning('Aucune opération sélectionnée'); return; }
+    if (!sel.size) { this.popupService.showWarning(I18nService.t('OPS.noSelection')); return; }
     const ok = await this.popupService.showConfirm(
-      `Clôturer ${sel.size} opération(s) ?\n\nSeules les lignes au niveau « Niveau Group » passent à « Terminé » (statut de réconciliation : Clôturé).`,
-      'Confirmation de clôture'
+      I18nService.t('TBL.msg.cloturerOperationSSeulesLesLignes', { p0: sel.size }),
+      I18nService.t('TBL.msg.confirmationDeCloture')
     );
     if (!ok) return;
     const ids = Array.from(sel.values());
@@ -1057,8 +1058,8 @@ export class BanqueComponent implements OnInit {
       const done = (await this.operationBancaireService.bulkCloturer(ids).toPromise()) || 0;
       const ignorees = Math.max(0, ids.length - done);
       this.popupService.showSuccess(
-        `Clôturées : ${done}/${ids.length}${ignorees > 0 ? `\nIgnorées (pas au niveau groupe) : ${ignorees}` : ''}`,
-        'Clôture'
+        I18nService.t('TBL.msg.cloturees', { p0: done, p1: ids.length, p2: ignorees > 0 ? I18nService.t('TBL.msg.ignoreesPasAuNiveauGroupe', { p0: ignorees }) : '' }),
+        I18nService.t('BQ.audit.cloture')
       );
       sel.clear();
       if (source === 'ops') { this.selectAllOpsOnPage = false; this.isSelectionModeOps = false; }
@@ -1067,7 +1068,7 @@ export class BanqueComponent implements OnInit {
       if (source === 'ops') this.updatePagedReconciliationResults();
       if (done > 0) await this.proposerEmailReconciliation('CLOTURE', opsCloturees, done);
     } catch (e) {
-      this.popupService.showError('Erreur lors de la clôture', 'Erreur');
+      this.popupService.showError(I18nService.t('TBL.msg.erreurLorsDeLaCloture'), I18nService.t('TBL.statutErreur'));
     } finally {
       this.isBulkUpdatingOps = false; this.isBulkUpdatingMain = false;
     }
@@ -1127,12 +1128,12 @@ export class BanqueComponent implements OnInit {
   get hasSelectedMainOps(): boolean { return this.selectedMainOpIds.size > 0; }
 
   async bulkChangeSelectedMainStatus() {
-    if (!this.hasSelectedMainOps) { this.popupService.showWarning('Aucune opération sélectionnée'); return; }
-    if (!this.selectedMainTargetStatut) { this.popupService.showWarning('Choisissez un statut cible'); return; }
+    if (!this.hasSelectedMainOps) { this.popupService.showWarning(I18nService.t('OPS.noSelection')); return; }
+    if (!this.selectedMainTargetStatut) { this.popupService.showWarning(I18nService.t('TBL.msg.choisissezUnStatutCible')); return; }
     const count = this.selectedMainOpIds.size;
     const ok = await this.popupService.showConfirm(
-      `Changer le statut de ${count} opération(s) vers "${this.selectedMainTargetStatut}" ?`,
-      'Confirmation changement de statut'
+      I18nService.t('TBL.msg.changerLeStatutDeOperationS', { p0: count, p1: this.selectedMainTargetStatut }),
+      I18nService.t('OPS.OPS.changeStatusConfirmTitle')
     );
     if (!ok) return;
     try {
@@ -1143,8 +1144,8 @@ export class BanqueComponent implements OnInit {
       const updated = await this.operationBancaireService.bulkUpdateStatut(ids, this.selectedMainTargetStatut).toPromise();
       const total = ids.length;
       const failed = Math.max(0, total - (updated || 0));
-      const msg = `Statut cible: "${this.selectedMainTargetStatut}"\nMises à jour: ${updated}/${total}${failed > 0 ? `\nEchecs: ${failed}` : ''}`;
-      this.popupService.showSuccess(msg, 'Changement de statut (bulk)');
+      const msg = I18nService.t('TBL.msg.statutCibleMisesAJour', { p0: this.selectedMainTargetStatut, p1: updated, p2: total, p3: failed > 0 ? I18nService.t('TBL.msg.echecs', { p0: failed }) : '' });
+      this.popupService.showSuccess(msg, I18nService.t('TBL.msg.changementDeStatutBulk'));
       // reset + reload
       this.selectedMainOpIds.clear();
       this.selectAllMainOnPage = false;
@@ -1153,7 +1154,7 @@ export class BanqueComponent implements OnInit {
       this.loadOperations();
       if ((updated || 0) > 0 && /valid/i.test(statutCible)) await this.proposerEmailReconciliation('VALIDE', opsModifiees);
     } catch (e) {
-      this.popupService.showError('Erreur lors de la mise à jour en masse des statuts', 'Erreur');
+      this.popupService.showError(I18nService.t('TBL.msg.erreurLorsDeLaMiseA2'), I18nService.t('TBL.statutErreur'));
     } finally {
       this.isBulkUpdatingMain = false;
     }
@@ -1162,13 +1163,13 @@ export class BanqueComponent implements OnInit {
   isBulkDeletingMain = false;
 
   async bulkDeleteSelectedMainOps() {
-    if (!this.hasSelectedMainOps) { this.popupService.showWarning('Aucune opération sélectionnée'); return; }
+    if (!this.hasSelectedMainOps) { this.popupService.showWarning(I18nService.t('OPS.noSelection')); return; }
     // Lignes affichées (liste filtrée) dont l'identifiant est coché, comme le montre la sélection à l'écran.
     const targets = (this.filteredOperations || []).filter(op => this.isMainOpSelected(op));
-    if (!targets.length) { this.popupService.showWarning('Aucune opération sélectionnée'); return; }
+    if (!targets.length) { this.popupService.showWarning(I18nService.t('OPS.noSelection')); return; }
     const ok = await this.popupService.showConfirmDialog(
-      `⚠️ Supprimer ${targets.length} opération(s) bancaire(s) ?\n\nCette action est irréversible.`,
-      'Confirmation de suppression'
+      I18nService.t('TBL.msg.supprimerOperationSBancaireSCette', { p0: targets.length }),
+      I18nService.t('APM.confirmDeleteTitle')
     );
     if (!ok) return;
     this.isBulkDeletingMain = true;
@@ -1193,9 +1194,9 @@ export class BanqueComponent implements OnInit {
     }
     const failed = targets.length - deleted;
     if (failed > 0) {
-      this.popupService.showError(`${deleted}/${targets.length} opération(s) supprimée(s) — ${failed} échec(s)`);
+      this.popupService.showError(I18nService.t('TBL.msg.operationSSupprimeeSEchecS', { p0: deleted, p1: targets.length, p2: failed }));
     } else {
-      this.popupService.showSuccess(`✅ ${deleted} opération(s) bancaire(s) supprimée(s)`);
+      this.popupService.showSuccess(I18nService.t('TBL.msg.operationSBancaireSSupprimeeS', { p0: deleted }));
       this.selectedMainOpIds.clear();
       this.selectAllMainOnPage = false;
       this.isSelectionModeMain = false;
@@ -1242,11 +1243,11 @@ export class BanqueComponent implements OnInit {
   deselectAllReleve() { this.selectedReleveIds.clear(); }
 
   async bulkDeleteSelectedReleve() {
-    if (!this.hasSelectedReleve) { this.popupService.showWarning('Aucune ligne de relevé sélectionnée'); return; }
+    if (!this.hasSelectedReleve) { this.popupService.showWarning(I18nService.t('TBL.msg.aucuneLigneDeReleveSelectionnee')); return; }
     const ids = Array.from(this.selectedReleveIds.values());
     const ok = await this.popupService.showConfirmDialog(
-      `⚠️ Supprimer ${ids.length} ligne(s) de relevé ?\n\nCette action est irréversible.`,
-      'Confirmation de suppression'
+      I18nService.t('TBL.msg.supprimerLigneSDeReleveCette', { p0: ids.length }),
+      I18nService.t('APM.confirmDeleteTitle')
     );
     if (!ok) return;
     this.isBulkDeletingReleve = true;
@@ -1264,9 +1265,9 @@ export class BanqueComponent implements OnInit {
     }
     const failed = ids.length - deleted;
     if (failed > 0) {
-      this.popupService.showError(`${deleted}/${ids.length} ligne(s) supprimée(s) — ${failed} échec(s)`);
+      this.popupService.showError(I18nService.t('TBL.msg.ligneSSupprimeeSEchecS', { p0: deleted, p1: ids.length, p2: failed }));
     } else {
-      this.popupService.showSuccess(`✅ ${deleted} ligne(s) de relevé supprimée(s)`);
+      this.popupService.showSuccess(I18nService.t('TBL.msg.ligneSDeReleveSupprimeeS', { p0: deleted }));
       this.isSelectionModeReleve = false;
     }
     this.loadLatestReleveBatch();
@@ -1310,10 +1311,10 @@ export class BanqueComponent implements OnInit {
   deselectAllSuivi() { this.selectedSuiviIds.clear(); }
 
   async bulkDeleteSelectedSuivi() {
-    if (!this.hasSelectedSuivi) { this.popupService.showWarning('Aucune ligne du suivi compense sélectionnée'); return; }
+    if (!this.hasSelectedSuivi) { this.popupService.showWarning(I18nService.t('TBL.msg.aucuneLigneDuSuiviCompenseSelectionnee')); return; }
     const ids = Array.from(this.selectedSuiviIds.values());
     const ok = await this.popupService.showConfirmDialog(
-      `Supprimer ${ids.length} ligne(s) du suivi compense OP ?`,
+      I18nService.t('TBL.msg.supprimerLigneSDuSuiviCompense', { p0: ids.length }),
       'Confirmation'
     );
     if (!ok) return;
@@ -1332,9 +1333,9 @@ export class BanqueComponent implements OnInit {
     }
     const failed = ids.length - deleted;
     if (failed > 0) {
-      this.popupService.showError(`${deleted}/${ids.length} ligne(s) supprimée(s) — ${failed} échec(s)`);
+      this.popupService.showError(I18nService.t('TBL.msg.ligneSSupprimeeSEchecS', { p0: deleted, p1: ids.length, p2: failed }));
     } else {
-      this.popupService.showSuccess(`${deleted} ligne(s) du suivi compense supprimée(s)`);
+      this.popupService.showSuccess(I18nService.t('TBL.msg.ligneSDuSuiviCompenseSupprimee', { p0: deleted }));
       this.isSelectionModeSuivi = false;
     }
     this.loadSuiviCompense();
@@ -1504,7 +1505,7 @@ export class BanqueComponent implements OnInit {
 
   startEditTraitement(operation: OperationBancaireDisplay) {
     if (!this.canEditTraitement(operation)) {
-      this.popupService.showWarning('Seul un administrateur peut modifier le traitement d\'une opération « Terminé ».');
+      this.popupService.showWarning(I18nService.t('TBL.msg.seulUnAdministrateurPeutModifierLe'));
       return;
     }
     this.editingOperation = operation;
@@ -1538,7 +1539,7 @@ export class BanqueComponent implements OnInit {
       error: (err) => {
         console.error('Erreur lors de la mise à jour du traitement', err);
         if (err && err.status === 403) {
-          this.popupService.showError('❌ Seul un administrateur peut modifier le traitement d\'une opération « Terminé ».');
+          this.popupService.showError(I18nService.t('TBL.msg.seulUnAdministrateurPeutModifierLe2'));
         }
         // Restaurer la valeur précédente en cas d'erreur
         const originalOp = this.operations.find(op => op.id === operation.id);
@@ -1791,7 +1792,7 @@ export class BanqueComponent implements OnInit {
 
   bulkMarkOkDefinitif() {
     const keys = Array.from(this.selectedReconKeys);
-    if (!keys.length) { this.popupService.showWarning('Sélectionnez au moins une ligne.'); return; }
+    if (!keys.length) { this.popupService.showWarning(I18nService.t('TBL.msg.selectionnezAuMoinsUneLigne')); return; }
     this.operationApi.markOkBulk(keys).subscribe({
       next: () => {
         keys.forEach(k => this.reconOkKeySet.add(k));
@@ -1854,7 +1855,7 @@ export class BanqueComponent implements OnInit {
 
   bulkUnmarkOk() {
     const keys = Array.from(this.selectedReconKeys);
-    if (!keys.length) { this.popupService.showWarning('Sélectionnez au moins une ligne.'); return; }
+    if (!keys.length) { this.popupService.showWarning(I18nService.t('TBL.msg.selectionnezAuMoinsUneLigne')); return; }
     this.operationApi.unmarkOkBulk(keys).subscribe({
       next: () => {
         keys.forEach(k => this.reconOkKeySet.delete(k));
@@ -2055,7 +2056,7 @@ export class BanqueComponent implements OnInit {
       },
       error: (err) => {
         console.error('Erreur chargement comptes Banque', err);
-        this.comptesBanqueError = 'Erreur lors du chargement des comptes Banque';
+        this.comptesBanqueError = I18nService.t('TBL.msg.erreurLorsDuChargementDesComptes');
         this.loadingComptesBanque = false;
       }
     });
@@ -2678,7 +2679,7 @@ export class BanqueComponent implements OnInit {
       },
       error: (err) => {
         console.error('Erreur lors de la mise à jour du commentaire', err);
-        this.popupService.showError('❌ Échec de la sauvegarde du commentaire');
+        this.popupService.showError(I18nService.t('TBL.msg.echecDeLaSauvegardeDuCommentaire'));
         this.cancelEditComment();
       }
     });
@@ -2808,7 +2809,7 @@ export class BanqueComponent implements OnInit {
   confirmCommentReport(): void {
     const id = this.commentReportSelectedId;
     if (id == null) {
-      this.popupService.showWarning('Sélectionnez une ligne de relevé.');
+      this.popupService.showWarning(I18nService.t('TBL.msg.selectionnezUneLigneDeReleve'));
       return;
     }
     const commentaire = this.commentReportText;
@@ -2821,12 +2822,12 @@ export class BanqueComponent implements OnInit {
             (list || []).filter(o => o.id === id && o.source !== 'generale').forEach(o => { o.commentaire = valeur; }));
           this.commentReportSaving = false;
           this.closeCommentReportPopup();
-          this.popupService.showSuccess("✅ Commentaire reporté sur l'opération");
+          this.popupService.showSuccess(I18nService.t('TBL.msg.commentaireReporteSurLOperation'));
         },
         error: (err) => {
           console.error("Erreur report du commentaire sur l'opération", err);
           this.commentReportSaving = false;
-          this.popupService.showError("❌ Échec du report du commentaire sur l'opération");
+          this.popupService.showError(I18nService.t('TBL.msg.echecDuReportDuCommentaireSur'));
         }
       });
       return;
@@ -2837,12 +2838,12 @@ export class BanqueComponent implements OnInit {
           (list || []).filter(r => r.id === id).forEach(r => { r.commentaire = commentaire; }));
         this.commentReportSaving = false;
         this.closeCommentReportPopup();
-        this.popupService.showSuccess('✅ Commentaire reporté sur la ligne de relevé');
+        this.popupService.showSuccess(I18nService.t('TBL.msg.commentaireReporteSurLaLigneDe'));
       },
       error: (err) => {
         console.error('Erreur report du commentaire sur le relevé', err);
         this.commentReportSaving = false;
-        this.popupService.showError('❌ Échec du report du commentaire sur le relevé');
+        this.popupService.showError(I18nService.t('TBL.msg.echecDuReportDuCommentaireSur2'));
       }
     });
   }
@@ -2874,7 +2875,7 @@ export class BanqueComponent implements OnInit {
     this.cancelEditBanqueCorrigee();
     // Les opérations générales ont leur propre table : la banque corrigée n'existe que sur les bancaires
     if (operation.source === 'generale') {
-      this.popupService.showWarning('La banque corrigée ne peut pas être modifiée sur cette ligne.');
+      this.popupService.showWarning(I18nService.t('TBL.msg.laBanqueCorrigeeNePeutPas'));
       return;
     }
     this.operationBancaireService.updateOperationBancaire(operation.id, { banqueCorrigee: valeur }).subscribe({
@@ -2888,7 +2889,7 @@ export class BanqueComponent implements OnInit {
       },
       error: (err) => {
         console.error('Erreur lors de la mise à jour de la banque corrigée', err);
-        this.popupService.showError('❌ Échec de la sauvegarde de la banque corrigée');
+        this.popupService.showError(I18nService.t('TBL.msg.echecDeLaSauvegardeDeLa'));
       }
     });
   }
@@ -2916,7 +2917,7 @@ export class BanqueComponent implements OnInit {
       },
       error: (err) => {
         console.error('Erreur sauvegarde commentaire', err);
-        this.popupService.showError('❌ Échec de la sauvegarde du commentaire');
+        this.popupService.showError(I18nService.t('TBL.msg.echecDeLaSauvegardeDuCommentaire'));
         this.cancelEditComment();
       }
     });
@@ -2951,7 +2952,7 @@ export class BanqueComponent implements OnInit {
       },
       error: (err) => {
         console.error('Erreur sauvegarde date de valeur', err);
-        const message = err?.error?.message || '❌ Échec de la sauvegarde de la date de valeur';
+        const message = err?.error?.message || I18nService.t('TBL.msg.echecDeLaSauvegardeDeLa2');
         this.popupService.showError(message);
         this.cancelEditDateValeurReleve();
       }
@@ -3012,8 +3013,8 @@ export class BanqueComponent implements OnInit {
     const rows = Array.isArray(event?.rows) ? event.rows : [];
     if (!rows.length) {
       await this.popupService.showWarning(
-        'Le traitement automatique n’a produit aucune ligne exploitable.',
-        'Suivi compense OP'
+        I18nService.t('TBL.msg.leTraitementAutomatiqueNAProduit'),
+        I18nService.t('TBL.ui.suiviCompenseOp')
       );
       return;
     }
@@ -3025,23 +3026,23 @@ export class BanqueComponent implements OnInit {
       const duplicates = Number(res?.duplicatesIgnored ?? 0);
       if (!saved) {
         await this.popupService.showWarning(
-          `Aucune ligne n’a été enregistrée (${totalRead.toLocaleString('fr-FR')} ligne(s) lue(s)).\n` +
-          'Vérifiez que les colonnes du modèle correspondent au suivi compense OP.',
-          'Suivi compense OP'
+          I18nService.t('TBL.msg.aucuneLigneNAEteEnregistree', { p0: totalRead.toLocaleString('fr-FR') }) +
+          I18nService.t('TBL.msg.verifiezQueLesColonnesDuModele'),
+          I18nService.t('TBL.ui.suiviCompenseOp')
         );
         return;
       }
       await this.popupService.showSuccess(
-        `${saved.toLocaleString('fr-FR')} ligne(s) chargée(s) sur ${totalRead.toLocaleString('fr-FR')} lue(s)` +
-        `${duplicates ? ` — ${duplicates} doublon(s) ignoré(s)` : ''}.`,
-        'Suivi compense OP'
+        I18nService.t('TBL.msg.ligneSChargeeSSurLue', { p0: saved.toLocaleString('fr-FR'), p1: totalRead.toLocaleString('fr-FR') }) +
+        `${duplicates ? I18nService.t('TBL.msg.doublonSIgnoreS', { p0: duplicates }) : ''}.`,
+        I18nService.t('TBL.ui.suiviCompenseOp')
       );
       this.loadSuiviCompense();
     } catch (err: any) {
       console.error('[SUIVI COMPENSE AUTO TREATMENT] Import failed', err);
       await this.popupService.showError(
-        `Impossible de charger les données traitées : ${err?.error?.error || err?.message || 'erreur inconnue'}`,
-        'Suivi compense OP'
+        I18nService.t('TBL.msg.impossibleDeChargerLesDonneesTraitees', { p0: err?.error?.error || err?.message || I18nService.t('COMMON.errors.unknown') }),
+        I18nService.t('TBL.ui.suiviCompenseOp')
       );
     }
   }
@@ -3078,7 +3079,7 @@ export class BanqueComponent implements OnInit {
     const rows = Array.isArray(event?.rows) ? event.rows : [];
     if (!rows.length) {
       await this.popupService.showWarning(
-        'Le traitement automatique n’a produit aucune ligne exploitable.',
+        I18nService.t('TBL.msg.leTraitementAutomatiqueNAProduit'),
         'Traitement automatique'
       );
       return;
@@ -3094,9 +3095,9 @@ export class BanqueComponent implements OnInit {
     const lineCount = event.lineCount || rows.length;
 
     const choice = await this.popupService.showSelectInput(
-      `${lineCount.toLocaleString('fr-FR')} ligne(s) traitée(s) avec le modèle « ${event.modelName} ».\n\n` +
-      'Où souhaitez-vous charger ces données ?',
-      'Charger les données traitées',
+      I18nService.t('TBL.msg.ligneSTraiteeSAvecLe', { p0: lineCount.toLocaleString('fr-FR'), p1: event.modelName }) +
+      I18nService.t('TBL.msg.ouSouhaitezVousChargerCesDonnees'),
+      I18nService.t('TBL.msg.chargerLesDonneesTraitees'),
       [operationsLabel, releveLabel],
       defaultLabel
     );
@@ -3151,11 +3152,11 @@ export class BanqueComponent implements OnInit {
     let pays = '';
     if (nbPays) {
       const saisie = await this.popupService.showTextInput(
-        `Le pays est absent pour ${nbPays.toLocaleString('fr-FR')} ligne(s) sur ${rows.length.toLocaleString('fr-FR')}.\n` +
-        'Merci de le renseigner : la valeur sera appliquée aux lignes concernées.',
-        'Informations manquantes dans les opérations',
+        I18nService.t('TBL.msg.lePaysEstAbsentPourLigne', { p0: nbPays.toLocaleString('fr-FR'), p1: rows.length.toLocaleString('fr-FR') }) +
+        I18nService.t('TBL.msg.merciDeLeRenseignerLaValeur'),
+        I18nService.t('TBL.msg.informationsManquantesDansLesOperations'),
         this.reconPays || '',
-        'Pays (code, ex. ML, SN, CM)'
+        I18nService.t('TBL.ui.paysCodeExMlSnCm')
       );
       pays = (saisie || '').trim();
       if (!pays) return null;
@@ -3164,13 +3165,13 @@ export class BanqueComponent implements OnInit {
     let typeOperation = '';
     if (nbType) {
       const message =
-        `Le type d'opération est absent pour ${nbType.toLocaleString('fr-FR')} ligne(s) sur ${rows.length.toLocaleString('fr-FR')}.\n` +
-        'Merci de le renseigner : la valeur sera appliquée aux lignes concernées.';
-      const titre = 'Informations manquantes dans les opérations';
+        I18nService.t('TBL.msg.leTypeDOperationEstAbsent', { p0: nbType.toLocaleString('fr-FR'), p1: rows.length.toLocaleString('fr-FR') }) +
+        I18nService.t('TBL.msg.merciDeLeRenseignerLaValeur');
+      const titre = I18nService.t('TBL.msg.informationsManquantesDansLesOperations');
       const types = (this.typesOperation || []).filter(Boolean);
       const saisie = types.length
         ? await this.popupService.showAutocompleteInput(message, titre, types, '')
-        : await this.popupService.showTextInput(message, titre, '', 'Type d\'opération');
+        : await this.popupService.showTextInput(message, titre, '', I18nService.t('MSG.opTypeTitle'));
       typeOperation = (saisie || '').trim();
       if (!typeOperation) return null;
     }
@@ -3205,8 +3206,8 @@ export class BanqueComponent implements OnInit {
         const completed = await this.askTreatedOperationMissingValues(rows);
         if (!completed) {
           await this.popupService.showWarning(
-            'Import annulé : informations manquantes non renseignées.',
-            'Chargement des opérations'
+            I18nService.t('TBL.msg.importAnnuleInformationsManquantesNonRen'),
+            I18nService.t('TBL.msg.chargementDesOperations')
           );
           return;
         }
@@ -3223,26 +3224,26 @@ export class BanqueComponent implements OnInit {
 
         if (!saved) {
           const errorDetails = Array.isArray(res?.errors) && res.errors.length
-            ? `\n\nDétail :\n${res.errors.slice(0, 5).join('\n')}`
+            ? I18nService.t('TBL.msg.detail', { p0: res.errors.slice(0, 5).join('\n') })
             : '';
           const receivedColumns = Object.keys(rows[0] || {});
           const columnsInfo = receivedColumns.length
-            ? `\n\nColonnes reçues du traitement : ${receivedColumns.join(', ')}`
+            ? I18nService.t('TBL.msg.colonnesRecuesDuTraitement', { p0: receivedColumns.join(', ') })
             : '';
           await this.popupService.showWarning(
-            `Aucune opération n’a été enregistrée (${totalRead.toLocaleString('fr-FR')} ligne(s) lue(s)).\n` +
-            'Vérifiez que les colonnes du modèle de traitement correspondent au format d’import des opérations.' +
+            I18nService.t('TBL.msg.aucuneOperationNAEteEnregistree', { p0: totalRead.toLocaleString('fr-FR') }) +
+            I18nService.t('TBL.msg.verifiezQueLesColonnesDuModele2') +
             errorDetails + columnsInfo,
-            'Chargement des opérations'
+            I18nService.t('TBL.msg.chargementDesOperations')
           );
           return;
         }
 
         await this.popupService.showSuccess(
-          `${saved.toLocaleString('fr-FR')} opération(s) bancaire(s) chargée(s) sur ${totalRead.toLocaleString('fr-FR')} lue(s)` +
-          `${errors ? ` — ${errors} avertissement(s)` : ''}` +
-          `${opbDuplicates ? ` — ${opbDuplicates} doublon(s) ignoré(s)` : ''}.`,
-          'Opérations chargées'
+          I18nService.t('TBL.msg.operationSBancaireSChargeeS', { p0: saved.toLocaleString('fr-FR'), p1: totalRead.toLocaleString('fr-FR') }) +
+          `${errors ? I18nService.t('TBL.msg.avertissementS', { p0: errors }) : ''}` +
+          `${opbDuplicates ? I18nService.t('TBL.msg.doublonSIgnoreS', { p0: opbDuplicates }) : ''}.`,
+          I18nService.t('TBL.msg.operationsChargees')
         );
         this.showOperations = true;
         this.activeSection = 'operations';
@@ -3264,8 +3265,8 @@ export class BanqueComponent implements OnInit {
           const provided = await this.askReleveMissingValues(missing);
           if (!provided) {
             await this.popupService.showWarning(
-              `Import annulé : ${this.describeMissingFields(missing)} non renseigné(s).`,
-              'Chargement du relevé'
+              I18nService.t('TBL.msg.importAnnuleNonRenseigneS', { p0: this.describeMissingFields(missing) }),
+              I18nService.t('TBL.msg.chargementDuReleve')
             );
             return;
           }
@@ -3281,18 +3282,18 @@ export class BanqueComponent implements OnInit {
           ? `\nColonnes non reconnues : ${res.unmappedHeaders.join(', ')}`
           : '';
         await this.popupService.showWarning(
-          `Aucune ligne de relevé n’a été enregistrée (${totalRead.toLocaleString('fr-FR')} ligne(s) lue(s)).` +
-          `${duplicates ? ` ${duplicates} doublon(s) ignoré(s).` : ''}${unmapped}\n` +
-          'Vérifiez que les colonnes du modèle de traitement correspondent au format d’import du relevé.',
-          'Chargement du relevé'
+          I18nService.t('TBL.msg.aucuneLigneDeReleveNA', { p0: totalRead.toLocaleString('fr-FR') }) +
+          `${duplicates ? I18nService.t('TBL.msg.doublonSIgnoreS2', { p0: duplicates }) : ''}${unmapped}\n` +
+          I18nService.t('TBL.msg.verifiezQueLesColonnesDuModele3'),
+          I18nService.t('TBL.msg.chargementDuReleve')
         );
         return;
       }
 
       await this.popupService.showSuccess(
-        `${saved.toLocaleString('fr-FR')} ligne(s) de relevé chargée(s) sur ${totalRead.toLocaleString('fr-FR')} lue(s)` +
-        `${duplicates ? ` — ${duplicates} doublon(s) ignoré(s)` : ''}.`,
-        'Relevé chargé'
+        I18nService.t('TBL.msg.ligneSDeReleveChargeeS', { p0: saved.toLocaleString('fr-FR'), p1: totalRead.toLocaleString('fr-FR') }) +
+        `${duplicates ? I18nService.t('TBL.msg.doublonSIgnoreS', { p0: duplicates }) : ''}.`,
+        I18nService.t('TBL.msg.releveCharge')
       );
       this.showOperations = false;
       this.activeSection = 'rapports';
@@ -3300,8 +3301,8 @@ export class BanqueComponent implements OnInit {
     } catch (err: any) {
       console.error('[BANK AUTO TREATMENT] Import failed', err);
       await this.popupService.showError(
-        `Impossible de charger les données traitées : ${err?.error?.message || err?.message || 'erreur inconnue'}`,
-        'Chargement des données'
+        I18nService.t('TBL.msg.impossibleDeChargerLesDonneesTraitees', { p0: err?.error?.message || err?.message || I18nService.t('COMMON.errors.unknown') }),
+        I18nService.t('TBL.msg.chargementDesDonnees')
       );
     }
   }
@@ -3330,7 +3331,7 @@ export class BanqueComponent implements OnInit {
     }
 
     if (!headers.length) {
-      throw new Error('Aucune colonne exploitable dans les données traitées.');
+      throw new Error(I18nService.t('TBL.msg.aucuneColonneExploitableDansLesDonnees'));
     }
 
     const aoa = [
@@ -3517,7 +3518,7 @@ export class BanqueComponent implements OnInit {
 
   saveCreateOperation() {
     if (!this.isCreateOperationFormValid()) {
-      this.popupService.showError('❌ Veuillez remplir tous les champs obligatoires');
+      this.popupService.showError(I18nService.t('TBL.msg.veuillezRemplirTousLesChampsObligatoires'));
       return;
     }
 
@@ -3557,15 +3558,15 @@ export class BanqueComponent implements OnInit {
     // Afficher la ligne ajoutée : toutes les lignes du relevé, page 1
     this.releveSelectedBatchId = 'ALL';
     this.refreshRelevesFromApiWithFilters();
-    this.popupService.showSuccess('✅ Ligne ajoutée au relevé bancaire.');
+    this.popupService.showSuccess(I18nService.t('TBL.msg.ligneAjouteeAuReleveBancaire'));
   }
 
   private onReleveCreateError(err: any) {
     console.error('❌ Erreur lors de la création de la ligne de relevé:', err);
     const detail = typeof err?.error === 'string' ? err.error : (err?.message || '');
     const message = err?.status === 409
-      ? '❌ Cette ligne de relevé existe déjà (doublon).'
-      : '❌ Erreur lors de l\'ajout de la ligne au relevé' + (detail ? ' : ' + detail : '');
+      ? I18nService.t('TBL.msg.cetteLigneDeReleveExisteDeja')
+      : I18nService.t('TBL.msg.erreurLorsDeLAjoutDe') + (detail ? ' : ' + detail : '');
     this.popupService.showError(message);
     this.creatingOperation = false;
   }
@@ -3813,7 +3814,7 @@ export class BanqueComponent implements OnInit {
     this.releveSelectedFile = input.files && input.files.length ? input.files[0] : null;
     if (this.releveSelectedFile) {
       this.releveMessageKind = 'info';
-      this.releveMessage = `Fichier sélectionné: ${this.releveSelectedFile.name}`;
+      this.releveMessage = I18nService.t('TBL.msg.fichierSelectionne', { p0: this.releveSelectedFile.name });
     }
   }
 
@@ -3897,8 +3898,8 @@ export class BanqueComponent implements OnInit {
     this.releveBatchId = null;
     this.releveRows = [];
     this.releveMessageKind = 'info';
-    this.releveMessage = 'Import en cours...';
-    this.openImportPopup('Import du relevé bancaire');
+    this.releveMessage = I18nService.t('OPL.Importencours');
+    this.openImportPopup(I18nService.t('TBL.msg.importDuReleveBancaire'));
     let defaults: ReleveImportDefaults | undefined;
     try {
       for (;;) {
@@ -3915,17 +3916,17 @@ export class BanqueComponent implements OnInit {
           if (!provided) {
             this.releveUploading = false;
             this.releveMessageKind = 'info';
-            this.releveMessage = `Import annulé : ${this.describeMissingFields(missing)} non renseigné(s).`;
+            this.releveMessage = I18nService.t('TBL.msg.importAnnuleNonRenseigneS', { p0: this.describeMissingFields(missing) });
             return;
           }
           defaults = { ...defaults, ...provided };
-          this.openImportPopup('Import du relevé bancaire');
+          this.openImportPopup(I18nService.t('TBL.msg.importDuReleveBancaire'));
         }
       }
     } catch {
       this.releveUploading = false;
       this.releveMessageKind = 'error';
-      this.releveMessage = 'Import du relevé bancaire échoué';
+      this.releveMessage = I18nService.t('TBL.msg.importDuReleveBancaireEchoue');
       this.totalReleveLignes = 0;
     }
     this.finishImportPopup(this.releveMessage, this.releveMessageKind);
@@ -3940,8 +3941,8 @@ export class BanqueComponent implements OnInit {
     }));
     this.releveUploading = false;
     this.releveMessageKind = 'success';
-    const baseMsg = `Fichier importé avec succès (${res.count} lignes).`;
-    const dupMsg = res.duplicatesIgnored ? ` ${res.duplicatesIgnored} doublon(s) ignoré(s).` : '';
+    const baseMsg = I18nService.t('TBL.msg.fichierImporteAvecSuccesLignes', { p0: res.count });
+    const dupMsg = res.duplicatesIgnored ? I18nService.t('TBL.msg.doublonSIgnoreS2', { p0: res.duplicatesIgnored }) : '';
     this.releveMessage = `${baseMsg}${dupMsg} Batch: ${this.releveBatchId}`;
     // Mettre à jour le compteur des lignes de relevé (batch importé)
     this.totalReleveLignes = this.releveRows.length;
@@ -4056,7 +4057,7 @@ export class BanqueComponent implements OnInit {
       },
       error: () => {
         this.suiviCompenseLoading = false;
-        this.popupService.showError('Impossible de charger le suivi compense OP');
+        this.popupService.showError(I18nService.t('TBL.msg.impossibleDeChargerLeSuiviCompense'));
       }
     });
   }
@@ -4066,7 +4067,7 @@ export class BanqueComponent implements OnInit {
     this.suiviCompenseSelectedFile = input.files && input.files.length ? input.files[0] : null;
     if (this.suiviCompenseSelectedFile) {
       this.suiviCompenseMessageKind = 'info';
-      this.suiviCompenseMessage = `Fichier sélectionné: ${this.suiviCompenseSelectedFile.name}`;
+      this.suiviCompenseMessage = I18nService.t('TBL.msg.fichierSelectionne', { p0: this.suiviCompenseSelectedFile.name });
     }
   }
 
@@ -4074,8 +4075,8 @@ export class BanqueComponent implements OnInit {
     if (!this.suiviCompenseSelectedFile) return;
     this.suiviCompenseUploading = true;
     this.suiviCompenseMessageKind = 'info';
-    this.suiviCompenseMessage = 'Import en cours...';
-    this.openImportPopup('Import du suivi compense OP');
+    this.suiviCompenseMessage = I18nService.t('OPL.Importencours');
+    this.openImportPopup(I18nService.t('TBL.msg.importDuSuiviCompenseOp'));
     from(this.suiviCompenseService.uploadWithProgress(this.suiviCompenseSelectedFile, pct => this.onImportUploadProgress(pct)))
       .pipe(finalize(() => this.finishImportPopup(this.suiviCompenseMessage, this.suiviCompenseMessageKind)))
       .subscribe({
@@ -4083,14 +4084,14 @@ export class BanqueComponent implements OnInit {
         this.suiviCompenseUploading = false;
         this.suiviCompenseMessageKind = 'success';
         const suiviDup = Number(res?.duplicatesIgnored ?? 0);
-        this.suiviCompenseMessage = `Fichier importé (${res.saved} ligne(s) sur ${res.totalRead} lue(s))${suiviDup ? `, ${suiviDup} doublon(s) ignoré(s)` : ''}.`;
+        this.suiviCompenseMessage = I18nService.t('TBL.msg.fichierImporteLigneSSurLue', { p0: res.saved, p1: res.totalRead, p2: suiviDup ? I18nService.t('TBL.msg.doublonSIgnoreS3', { p0: suiviDup }) : '' });
         this.suiviCompenseSelectedFile = null;
         this.loadSuiviCompense();
       },
       error: (err) => {
         this.suiviCompenseUploading = false;
         this.suiviCompenseMessageKind = 'error';
-        this.suiviCompenseMessage = err?.error?.error || 'Import du suivi compense OP échoué';
+        this.suiviCompenseMessage = err?.error?.error || I18nService.t('TBL.msg.importDuSuiviCompenseOpEchoue');
       }
     });
   }
@@ -4106,7 +4107,7 @@ export class BanqueComponent implements OnInit {
         window.URL.revokeObjectURL(url);
       },
       error: () => {
-        this.popupService.showError('Impossible de télécharger le modèle du suivi compense OP');
+        this.popupService.showError(I18nService.t('TBL.msg.impossibleDeTelechargerLeModeleDu'));
       }
     });
   }
@@ -4114,11 +4115,11 @@ export class BanqueComponent implements OnInit {
   deleteSuiviCompense(row: SuiviCompenseOp) {
     if (!row.id) return;
     const id = row.id;
-    this.popupService.showConfirmDialog('Supprimer cette ligne du suivi compense OP ?', 'Confirmation').then(confirmed => {
+    this.popupService.showConfirmDialog(I18nService.t('TBL.msg.supprimerCetteLigneDuSuiviCompense'), 'Confirmation').then(confirmed => {
       if (!confirmed) return;
       this.suiviCompenseService.delete(id).subscribe({
         next: () => this.loadSuiviCompense(),
-        error: () => this.popupService.showError('Suppression impossible')
+        error: () => this.popupService.showError(I18nService.t('PROF.Suppressionimpossible'))
       });
     });
   }
@@ -4134,7 +4135,7 @@ export class BanqueComponent implements OnInit {
         window.URL.revokeObjectURL(url);
       },
       error: () => {
-        this.popupService.showError('Impossible de télécharger le modèle de relevé');
+        this.popupService.showError(I18nService.t('TBL.msg.impossibleDeTelechargerLeModeleDe'));
       }
     });
   }
@@ -4143,7 +4144,7 @@ export class BanqueComponent implements OnInit {
   exportReleveCSV() {
     const rows = this.filteredReleveRowsForImport || [];
     if (!rows.length) {
-      this.popupService.showWarning('Aucune ligne de relevé à exporter.');
+      this.popupService.showWarning(I18nService.t('TBL.msg.aucuneLigneDeReleveAExporter'));
       return;
     }
 
@@ -4283,7 +4284,7 @@ export class BanqueComponent implements OnInit {
         // Afficher un message explicite en cas d'échec
         try {
           this.releveMessageKind = 'error';
-          this.releveMessage = 'Impossible de charger les relevés. Vérifiez la connexion à l\'API.';
+          this.releveMessage = I18nService.t('TBL.msg.impossibleDeChargerLesRelevesVerifiez');
         } catch {}
         console.warn('Erreur chargement /releve-bancaire/list', err);
         this.releveRows = [];
@@ -4297,7 +4298,7 @@ export class BanqueComponent implements OnInit {
 
   openReleveEdit(row: ReleveBancaireRow) {
     if (!row || !row.id) {
-      this.popupService.showError('Cette ligne ne peut pas être modifiée car son identifiant est manquant. Réimportez si nécessaire.');
+      this.popupService.showError(I18nService.t('TBL.msg.cetteLigneNePeutPasEtre'));
       return;
     }
     this.selectedReleve = row;
@@ -4363,11 +4364,11 @@ export class BanqueComponent implements OnInit {
       next: () => {
         this.closeReleveEdit();
         this.loadLatestReleveBatch();
-        this.popupService.showSuccess('✅ Ligne de relevé mise à jour');
+        this.popupService.showSuccess(I18nService.t('TBL.msg.ligneDeReleveMiseAJour'));
       },
       error: (err) => {
         console.error('Erreur MAJ relevé', err);
-        this.popupService.showError('❌ Échec de la mise à jour du relevé');
+        this.popupService.showError(I18nService.t('TBL.msg.echecDeLaMiseAJour'));
       }
     });
   }
@@ -4387,7 +4388,7 @@ export class BanqueComponent implements OnInit {
       },
       error: (err) => {
         console.error('Erreur sauvegarde commentaire', err);
-        this.popupService.showError('❌ Échec de la sauvegarde du commentaire');
+        this.popupService.showError(I18nService.t('TBL.msg.echecDeLaSauvegardeDuCommentaire'));
       }
     });
   }
@@ -4395,11 +4396,11 @@ export class BanqueComponent implements OnInit {
   // Suppression d'une ligne de relevé
   deleteReleveRow(row: ReleveBancaireRow) {
     if (!row.id) {
-      this.popupService.showError('❌ Impossible de supprimer cette ligne');
+      this.popupService.showError(I18nService.t('TBL.msg.impossibleDeSupprimerCetteLigne'));
       return;
     }
 
-    this.popupService.showConfirmDialog('⚠️ Êtes-vous sûr de vouloir supprimer cette ligne de relevé ?\n\nCette action est irréversible.', 'Confirmation de suppression').then(confirmed => {
+    this.popupService.showConfirmDialog(I18nService.t('TBL.msg.etesVousSurDeVouloirSupprimer'), I18nService.t('APM.confirmDeleteTitle')).then(confirmed => {
       if (confirmed) {
       console.log('🗑️ Suppression relevé:', { id: row.id, row: row });
       
@@ -4414,11 +4415,11 @@ export class BanqueComponent implements OnInit {
           // Mettre à jour la liste filtrée
           this.loadLatestReleveBatch();
           
-          this.popupService.showSuccess('✅ Ligne de relevé supprimée');
+          this.popupService.showSuccess(I18nService.t('TBL.msg.ligneDeReleveSupprimee'));
         },
         error: (err) => {
           console.error('Erreur suppression relevé', err);
-          this.popupService.showError('❌ Échec de la suppression du relevé');
+          this.popupService.showError(I18nService.t('TBL.msg.echecDeLaSuppressionDuReleve'));
         }
       });
       }
@@ -4447,7 +4448,7 @@ export class BanqueComponent implements OnInit {
       .map(o => o.typeOperation as string))].sort();
     this.checkPopup = {
       visible: true, step: 'types', types, type: '', result: null, applying: false,
-      message: types.length ? '' : 'Aucune opération bancaire à contrôler.'
+      message: types.length ? '' : I18nService.t('TBL.msg.aucuneOperationBancaireAControler')
     };
   }
 
@@ -4463,7 +4464,7 @@ export class BanqueComponent implements OnInit {
     this.checkPopup = { ...this.checkPopup, step: 'loading', type, result: null, message: '' };
     this.operationBancaireService.check(type).subscribe({
       next: (result) => { this.checkPopup = { ...this.checkPopup, step: 'results', result }; },
-      error: () => { this.checkPopup = { ...this.checkPopup, step: 'error', message: 'Le check a échoué.' }; }
+      error: () => { this.checkPopup = { ...this.checkPopup, step: 'error', message: I18nService.t('TBL.msg.leCheckAEchoue') }; }
     });
   }
 
@@ -4485,10 +4486,10 @@ export class BanqueComponent implements OnInit {
           rows
         } : null;
         this.checkPopup = { ...this.checkPopup, applying: false, result,
-          message: `${res.updated} opération(s) validée(s) : banque et référence reportées.` };
+          message: I18nService.t('TBL.msg.operationSValideeSBanqueEt', { p0: res.updated }) };
         this.loadOperations();
       },
-      error: () => { this.checkPopup = { ...this.checkPopup, applying: false, message: 'La validation a échoué.' }; }
+      error: () => { this.checkPopup = { ...this.checkPopup, applying: false, message: I18nService.t('TBL.msg.laValidationAEchoue') }; }
     });
   }
 
@@ -4616,7 +4617,7 @@ export class BanqueComponent implements OnInit {
     this.opbSelectedFile = input.files && input.files.length ? input.files[0] : null;
     if (this.opbSelectedFile) {
       this.opbMessageKind = 'info';
-      this.opbMessage = `Fichier sélectionné: ${this.opbSelectedFile.name}`;
+      this.opbMessage = I18nService.t('TBL.msg.fichierSelectionne', { p0: this.opbSelectedFile.name });
     }
   }
 
@@ -4624,8 +4625,8 @@ export class BanqueComponent implements OnInit {
     if (!this.opbSelectedFile) return;
     this.opbUploading = true;
     this.opbMessageKind = 'info';
-    this.opbMessage = 'Import des opérations en cours...';
-    this.openImportPopup('Import des opérations bancaires');
+    this.opbMessage = I18nService.t('TBL.msg.importDesOperationsEnCours');
+    this.openImportPopup(I18nService.t('TBL.msg.importDesOperationsBancaires'));
     from(this.operationBancaireService.uploadWithProgress(this.opbSelectedFile, pct => this.onImportUploadProgress(pct)))
       .pipe(finalize(() => this.finishImportPopup(this.opbMessage, this.opbMessageKind)))
       .subscribe({
@@ -4634,13 +4635,13 @@ export class BanqueComponent implements OnInit {
         const errs = (res && Array.isArray(res.errors)) ? res.errors.length : 0;
         this.opbMessageKind = 'success';
         const opbDup = Number(res?.duplicatesIgnored ?? 0);
-        this.opbMessage = `Import terminé. Lues: ${res.totalRead || 0}, enregistrées: ${res.saved || 0}${opbDup ? `, doublons ignorés: ${opbDup}` : ''}${errs ? `, erreurs: ${errs}` : ''}`;
+        this.opbMessage = I18nService.t('TBL.msg.importTermineLuesEnregistrees', { p0: res.totalRead || 0, p1: res.saved || 0, p2: opbDup ? I18nService.t('TBL.msg.doublonsIgnores', { p0: opbDup }) : '', p3: errs ? I18nService.t('TBL.msg.erreurs', { p0: errs }) : '' });
         this.loadOperations();
       },
       error: () => {
         this.opbUploading = false;
         this.opbMessageKind = 'error';
-        this.opbMessage = 'Échec de l\'import des opérations bancaires';
+        this.opbMessage = I18nService.t('TBL.msg.echecDeLImportDesOperations');
       }
     });
   }
@@ -4656,7 +4657,7 @@ export class BanqueComponent implements OnInit {
         window.URL.revokeObjectURL(url);
       },
       error: () => {
-        this.popupService.showError('Impossible de télécharger le modèle');
+        this.popupService.showError(I18nService.t('TBL.msg.impossibleDeTelechargerLeModele'));
       }
     });
   }
@@ -5438,7 +5439,7 @@ export class BanqueComponent implements OnInit {
 
   openReconResult() {
     if (!this.reconPays) {
-      this.popupService.showWarning('Veuillez choisir un pays.');
+      this.popupService.showWarning(I18nService.t('TBL.msg.veuillezChoisirUnPays'));
       return;
     }
     // Toujours recalculer sur les données chargées : pas besoin d'avoir cliqué sur « Réconcilier »
@@ -5551,7 +5552,7 @@ export class BanqueComponent implements OnInit {
         `${this.reconResultFileBase()}.xlsx`);
     } catch (e) {
       console.error('[RECON] export Excel du résultat', e);
-      this.popupService.showWarning('Échec de l\'export Excel.');
+      this.popupService.showWarning(I18nService.t('TBL.msg.echecDeLExportExcel'));
     } finally {
       this.exportingReconResult = '';
     }
@@ -5675,7 +5676,7 @@ export class BanqueComponent implements OnInit {
       pdf.save(`${this.reconResultFileBase()}.pdf`);
     } catch (e) {
       console.error('[RECON] export PDF du résultat', e);
-      this.popupService.showWarning('Échec de l\'export PDF.');
+      this.popupService.showWarning(I18nService.t('TBL.msg.echecDeLExportPdf'));
     } finally {
       this.exportingReconResult = '';
     }
@@ -5796,7 +5797,7 @@ export class BanqueComponent implements OnInit {
 
   openCorrespondance() {
     if (!this.matchedPairs.length) {
-      this.popupService.showWarning('Aucune correspondance trouvée.');
+      this.popupService.showWarning(I18nService.t('TBL.msg.aucuneCorrespondanceTrouvee'));
       return;
     }
     this.showCorrespondancePopup = true;
@@ -5805,16 +5806,16 @@ export class BanqueComponent implements OnInit {
   // Affichage: convertir 'debit1' -> 'Débit1', 'credit2' -> 'Crédit2'
   formatSensIndex(sensIndex: string): string {
     if (!sensIndex) return '';
-    if (sensIndex.startsWith('debit')) return 'Débit' + sensIndex.replace('debit', '');
-    if (sensIndex.startsWith('credit')) return 'Crédit' + sensIndex.replace('credit', '');
+    if (sensIndex.startsWith('debit')) return I18nService.t('TBL.debit') + sensIndex.replace('debit', '');
+    if (sensIndex.startsWith('credit')) return I18nService.t('TBL.credit') + sensIndex.replace('credit', '');
     return sensIndex;
   }
 
   // Etiquette (sans index)
   formatSensSimple(sensIndex?: string | null): string {
     if (!sensIndex) return '-';
-    if (sensIndex.startsWith('debit')) return 'Débit';
-    if (sensIndex.startsWith('credit')) return 'Crédit';
+    if (sensIndex.startsWith('debit')) return I18nService.t('TBL.debit');
+    if (sensIndex.startsWith('credit')) return I18nService.t('TBL.credit');
     return '-';
   }
 
@@ -6276,13 +6277,13 @@ export class BanqueComponent implements OnInit {
     }
 
     if (totalItems === 0) {
-      return 'Aucun résultat - Prêt pour la réconciliation';
+      return I18nService.t('TBL.msg.aucunResultatPretPourLaReconciliation');
     }
 
     const startItem = (currentPage - 1) * pageSize + 1;
     const endItem = Math.min(currentPage * pageSize, totalItems);
     
-    return `Affichage de ${startItem} à ${endItem} sur ${totalItems} résultat${totalItems > 1 ? 's' : ''}`;
+    return I18nService.t('TBL.msg.affichageDeASurResultat', { p0: startItem, p1: endItem, p2: totalItems, p3: totalItems > 1 ? 's' : '' });
   }
 
   // =========================
@@ -6483,14 +6484,14 @@ export class BanqueComponent implements OnInit {
   async exportReconView() {
     if (this.exportingReconView) return;
     if (!this.reconExportCount) {
-      this.popupService.showWarning('Aucune ligne à exporter.');
+      this.popupService.showWarning(I18nService.t('TBL.msg.aucuneLigneAExporter'));
       return;
     }
     this.exportingReconView = true;
     try {
       const ExcelJS: any = await import('exceljs');
       const wb = new (ExcelJS.Workbook || ExcelJS.default.Workbook)();
-      const contexte = `Pays : ${this.reconPays || 'tous'} — Date : ${this.reconDate || 'toutes'}`;
+      const contexte = I18nService.t('TBL.msg.paysDate', { p0: this.reconPays || I18nService.t('TBL.msg.tous'), p1: this.reconDate || I18nService.t('TBL.msg.toutes') });
       const border = { bottom: { style: 'thin', color: { argb: 'FFE3E6EB' } } };
 
       const addSheet = (name: string, titre: string, headers: string[], rows: Array<Array<string | number>>,
@@ -6571,7 +6572,7 @@ export class BanqueComponent implements OnInit {
         `reconciliation_banque_${vue}_${pays}_${this.reconDate || 'toutes_dates'}.xlsx`);
     } catch (e) {
       console.error('[RECON] export Excel de la vue', e);
-      this.popupService.showWarning('Échec de l\'export Excel.');
+      this.popupService.showWarning(I18nService.t('TBL.msg.echecDeLExportExcel'));
     } finally {
       this.exportingReconView = false;
     }
@@ -6746,7 +6747,7 @@ export class BanqueComponent implements OnInit {
         // Vérifier si le statut passe à "Validée" pour ajouter l'info d'impact
         const previousStatut = this.selectedOperation.statut || '';
         const newStatut = this.editForm.statut || '';
-        let message = '✅ Opération bancaire modifiée avec succès';
+        let message = I18nService.t('TBL.msg.operationBancaireModifieeAvecSucces');
         
         if (!previousStatut.toLowerCase().includes('validée') && newStatut.toLowerCase().includes('validée')) {
           const type = (this.editForm.typeOperation || '').toLowerCase();
@@ -6773,7 +6774,7 @@ export class BanqueComponent implements OnInit {
       },
       error: (error) => {
         console.error('Erreur lors de la modification:', error);
-        this.popupService.showError('❌ Erreur lors de la modification de l\'opération bancaire');
+        this.popupService.showError(I18nService.t('TBL.msg.erreurLorsDeLaModificationDe'));
       }
     });
   }
@@ -6783,7 +6784,7 @@ export class BanqueComponent implements OnInit {
 
     // Confirmation avant validation
     this.popupService.showConfirmDialog(
-      `Êtes-vous sûr de vouloir valider cette opération bancaire ?\n\nType: ${operation.typeOperation}\nAgence: ${operation.agence}\nMontant: ${operation.montant} FCFA`,
+      I18nService.t('TBL.msg.etesVousSurDeVouloirValider', { p0: operation.typeOperation, p1: operation.agence, p2: operation.montant }),
       'Confirmation de validation'
     ).then(confirmed => {
       if (!confirmed) return;
@@ -6816,7 +6817,7 @@ export class BanqueComponent implements OnInit {
           const type = (operation.typeOperation || '').toLowerCase();
           const montant = operation.montant || 0;
           const compte = operation.compteADebiter || '';
-          let message = '✅ Opération bancaire validée avec succès';
+          let message = I18nService.t('TBL.msg.operationBancaireValideeAvecSucces');
           
           // Vérifier si l'impact a déjà été appliqué (depuis l'opération mise à jour)
           if (updatedOperation.impactApplique) {
@@ -6836,7 +6837,7 @@ export class BanqueComponent implements OnInit {
         },
         error: (error) => {
           console.error('Erreur lors de la validation:', error);
-          this.popupService.showError('❌ Erreur lors de la validation de l\'opération bancaire');
+          this.popupService.showError(I18nService.t('TBL.msg.erreurLorsDeLaValidationDe'));
         }
       });
     });
@@ -6844,9 +6845,9 @@ export class BanqueComponent implements OnInit {
 
   deleteOperation(operation: OperationBancaireDisplay) {
     const id = operation.id;
-    const confirmMessage = `Êtes-vous sûr de vouloir supprimer cette opération bancaire ?\n\nType: ${operation.typeOperation}\nAgence: ${operation.agence}\nMontant: ${operation.montant} FCFA`;
+    const confirmMessage = I18nService.t('TBL.msg.etesVousSurDeVouloirSupprimer2', { p0: operation.typeOperation, p1: operation.agence, p2: operation.montant });
 
-    this.popupService.showConfirmDialog(confirmMessage, 'Confirmation de suppression').then(confirmed => {
+    this.popupService.showConfirmDialog(confirmMessage, I18nService.t('APM.confirmDeleteTitle')).then(confirmed => {
       if (confirmed) {
       // Chaque ligne est supprimée dans sa propre table : les identifiants des deux tables peuvent se confondre.
       const request$ = operation.source === 'generale'
@@ -6858,12 +6859,12 @@ export class BanqueComponent implements OnInit {
             console.log('Opération bancaire supprimée avec succès');
             this.loadOperations();
             this.loadDashboardStats(); // Mettre à jour le compteur de tickets
-            this.popupService.showSuccess('✅ Opération bancaire supprimée avec succès');
+            this.popupService.showSuccess(I18nService.t('TBL.msg.operationBancaireSupprimeeAvecSucces'));
           }
         },
         error: (error) => {
           console.error('Erreur lors de la suppression de l\'opération bancaire:', error);
-          this.popupService.showError('❌ Erreur lors de la suppression de l\'opération bancaire');
+          this.popupService.showError(I18nService.t('TBL.msg.erreurLorsDeLaSuppressionDe'));
         }
       });
       }
@@ -6911,15 +6912,15 @@ export class BanqueComponent implements OnInit {
 
   // Afficher un popup pour choisir entre GLPI et BOMETIER (ouvrir un ticket existant)
   showTicketOptionsPopup(ticketId: string): void {
-    const message = `Choisissez la plateforme pour ouvrir le ticket ${ticketId}:`;
-    const title = 'Ouvrir le ticket';
+    const message = I18nService.t('TBL.msg.choisissezLaPlateformePourOuvrirLe', { p0: ticketId });
+    const title = I18nService.t('ETA.ticket.title');
     this.showTicketChoiceOverlay(title, message, () => this.openGlpiTicket(ticketId), () => this.openBometierTicket(ticketId));
   }
 
   // Afficher un popup pour choisir où créer un nouveau ticket (GLPI ou BOMETIER)
   showTicketCreateOptionsPopup(): void {
-    const message = 'Choisissez la plateforme pour créer un nouveau ticket :';
-    const title = 'Créer un ticket';
+    const message = I18nService.t('RPT.ticket.createMessage');
+    const title = I18nService.t('RPT.ticket.createTitle');
     this.showTicketChoiceOverlay(title, message, () => this.openGlpiCreate(), () => this.openBometierCreate());
   }
 

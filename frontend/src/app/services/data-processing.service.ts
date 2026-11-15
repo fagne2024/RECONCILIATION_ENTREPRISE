@@ -10,6 +10,7 @@ import {
   ColumnAnalysis,
   ProcessingRecommendation
 } from '../types/data-processing.types';
+import { I18nService } from './i18n/i18n.service';
 
 @Injectable({
   providedIn: 'root'
@@ -126,7 +127,7 @@ export class DataProcessingService {
       console.error('❌ Erreur Web Worker:', error);
       this.handleError({
         type: 'worker',
-        message: 'Erreur dans le Web Worker',
+        message: I18nService.t('MSG.msg.erreurDansLeWebWorker'),
         details: error
       });
     };
@@ -141,7 +142,7 @@ export class DataProcessingService {
     // Réinitialiser les états
     this.resetStates();
     this._isProcessing.next(true);
-    this._processingMessage.next('🚀 Initialisation du traitement ultra-rapide...');
+    this._processingMessage.next(I18nService.t('MSG.msg.initialisationDuTraitementUltraRapide'));
     
     try {
       if (this.isWorkerInitialized && this.worker) {
@@ -155,7 +156,7 @@ export class DataProcessingService {
       console.error('❌ Erreur lors du traitement des fichiers:', error);
       this.handleError({
         type: 'file',
-        message: 'Erreur lors du traitement des fichiers',
+        message: I18nService.t('MSG.msg.erreurLorsDuTraitementDesFichiers'),
         details: error
       });
     }
@@ -165,7 +166,7 @@ export class DataProcessingService {
    * Traitement avec Web Worker
    */
   private async processFilesWithWorker(files: File[]): Promise<void> {
-    if (!this.worker) throw new Error('Web Worker non disponible');
+    if (!this.worker) throw new Error(I18nService.t('MSG.msg.webWorkerNonDisponible'));
     
     return new Promise((resolve, reject) => {
       // Écouter la completion
@@ -205,7 +206,7 @@ export class DataProcessingService {
     
     for (let i = 0; i < files.length; i++) {
       const file = files[i];
-      this._processingMessage.next(`📁 Traitement du fichier ${i + 1}/${files.length}: ${file.name}`);
+      this._processingMessage.next(I18nService.t('MSG.msg.traitementDuFichier', { p0: i + 1, p1: files.length, p2: file.name }));
       
       try {
         await this.processSingleFileSynchronously(file, i, files.length);
@@ -213,7 +214,7 @@ export class DataProcessingService {
         console.error(`❌ Erreur lors du traitement de ${file.name}:`, error);
         this.handleError({
           type: 'file',
-          message: `Erreur lors du traitement de ${file.name}`,
+          message: I18nService.t('MSG.msg.erreurLorsDuTraitementDe', { p0: file.name }),
           file: file.name,
           details: error
         });
@@ -234,7 +235,7 @@ export class DataProcessingService {
     } else if (fileName.endsWith('.xls') || fileName.endsWith('.xlsx')) {
       await this.processExcelFileSynchronously(file);
     } else {
-      throw new Error('Format de fichier non supporté');
+      throw new Error(I18nService.t('MSG.msg.formatDeFichierNonSupporte'));
     }
   }
   
@@ -279,7 +280,7 @@ export class DataProcessingService {
               current: processedRows,
               total: lines.length - 1,
               percentage: (processedRows / (lines.length - 1)) * 100,
-              message: `Traitement CSV: ${processedRows.toLocaleString()} lignes`
+              message: I18nService.t('MSG.msg.traitementCsvLignes', { p0: processedRows.toLocaleString() })
             });
           }
           
@@ -353,7 +354,7 @@ export class DataProcessingService {
               current: processedRows,
               total: dataRows.length,
               percentage: (processedRows / dataRows.length) * 100,
-              message: `Traitement Excel: ${processedRows.toLocaleString()} lignes`
+              message: I18nService.t('MSG.msg.traitementExcelLignes', { p0: processedRows.toLocaleString() })
             });
           }
           
@@ -410,7 +411,7 @@ export class DataProcessingService {
       current: data.totalRows || 0,
       total: data.totalRows || 0,
       percentage: 100,
-      message: `✅ Traitement terminé: ${(data.totalRows || 0).toLocaleString()} lignes`
+      message: I18nService.t('MSG.msg.traitementTermineLignes', { p0: (data.totalRows || 0).toLocaleString() })
     });
     
     console.log('✅ Traitement terminé avec succès');
@@ -591,19 +592,19 @@ export class DataProcessingService {
       if (column.uniqueValues < 10 && column.columnName.toLowerCase().includes('montant')) {
         recommendations.push({
           type: 'warning',
-          message: `Colonne "${column.columnName}" a peu de valeurs uniques (${column.uniqueValues})`,
+          message: I18nService.t('MSG.msg.colonneAPeuDeValeursUniques', { p0: column.columnName, p1: column.uniqueValues }),
           suggestion: 'Vérifiez si cette colonne contient des données numériques'
         });
       } else if (column.uniqueValues === 1) {
         recommendations.push({
           type: 'info',
-          message: `Colonne "${column.columnName}" a une seule valeur unique`,
+          message: I18nService.t('MSG.msg.colonneAUneSeuleValeurUnique', { p0: column.columnName }),
           suggestion: 'Cette colonne pourrait être supprimée'
         });
       } else if (column.nullValues > rows.length * 0.5) {
         recommendations.push({
           type: 'warning',
-          message: `Colonne "${column.columnName}" a beaucoup de valeurs nulles (${column.nullValues}/${rows.length})`,
+          message: I18nService.t('MSG.msg.colonneABeaucoupDeValeursNulles', { p0: column.columnName, p1: column.nullValues, p2: rows.length }),
           suggestion: 'Vérifiez la qualité des données'
         });
       }

@@ -8,6 +8,7 @@ import { PartnerConditionalKeysService } from './partner-conditional-keys.servic
 import { ReconciliationResponse } from '../models/reconciliation-response.model';
 import { bruteForceReconciliationKeyMatch } from '../utils/reconciliation-key.util';
 import { AutoDiscoveryReconciliationService, ReconciliationPlan, ColumnProfile } from './auto-discovery-reconciliation.service';
+import { I18nService } from './i18n/i18n.service';
 
 export interface MagicServiceMatch {
   /** Libellé canonique côté partenaire (ex. CASHINOMCI). */
@@ -97,7 +98,7 @@ class MagicMultiServiceProgressTracker {
     const activeCount = this.finished.size + this.running.size;
 
     this.onProgress?.({
-      step: `Service ${serviceIndex}/${this.totalServices} « ${service} » — ${normalizedStep || 'En cours...'}`,
+      step: `Service ${serviceIndex}/${this.totalServices} « ${service} » — ${normalizedStep || I18nService.t('ETA.status.inProgress')}`,
       current: Math.min(Math.max(activeCount, this.finished.size), this.totalServices),
       total: this.totalServices,
       percentage: rounded
@@ -135,7 +136,7 @@ export class MagicReconciliationService {
     onProgress?: (p: MagicReconciliationProgress) => void
   ): Promise<MagicReconciliationResult> {
     if (!partners.length) {
-      throw new Error('Aucun fichier partenaire sélectionné.');
+      throw new Error(I18nService.t('MSG.msg.aucunFichierPartenaireSelectionne'));
     }
     if (partners.length === 1) {
       const models = await this.loadTraitementModels();
@@ -173,7 +174,7 @@ export class MagicReconciliationService {
       MAGIC_PARTNER_CONCURRENCY,
       async (partner, i) => {
         onProgress?.({
-          step: `Partenaire ${i + 1}/${partners.length} : ${partner.fileName} — En cours`,
+          step: I18nService.t('MSG.msg.partenaireEnCours', { p0: i + 1, p1: partners.length, p2: partner.fileName }),
           current: i + 1,
           total: partners.length
         });
@@ -200,7 +201,7 @@ export class MagicReconciliationService {
 
     if (partners.length > 1) {
       onProgress?.({
-        step: 'Finalisation multi-partenaire...',
+        step: I18nService.t('MSG.msg.finalisationMultiPartenaire'),
         current: partners.length,
         total: partners.length,
         percentage: 99
@@ -239,13 +240,13 @@ export class MagicReconciliationService {
     if (!allSummaries.length) {
       throw new Error(
         warnings.length
-          ? `Aucune réconciliation réussie.\n${warnings.join('\n')}`
-          : 'Aucune réconciliation réussie.'
+          ? I18nService.t('MSG.msg.aucuneReconciliationReussie', { p0: warnings.join('\n') })
+          : I18nService.t('MSG.msg.aucuneReconciliationReussie2')
       );
     }
 
     onProgress?.({
-      step: 'Réconciliation terminée',
+      step: I18nService.t('DASH.reconciliationCompleted'),
       current: partners.length,
       total: partners.length,
       percentage: 100
@@ -272,7 +273,7 @@ export class MagicReconciliationService {
     onProgress?: (p: MagicReconciliationProgress) => void,
     preloadedModels?: AutoProcessingModel[]
   ): Promise<MagicReconciliationResult> {
-    onProgress?.({ step: `Analyse de ${partnerFileName}...` });
+    onProgress?.({ step: I18nService.t('MSG.msg.analyseDe', { p0: partnerFileName }) });
 
     const models = preloadedModels ?? await this.loadTraitementModels();
     const boModel = this.findModelForFile(models, boFileName, 'bo');
@@ -281,22 +282,22 @@ export class MagicReconciliationService {
     let keyResult: { boKeyColumn: string; partnerKeyColumn: string; modelId?: string; model?: AutoProcessingModel; discoveryPlan?: any } | null = null;
     let mode: 'pattern' | 'discovery' = 'discovery';
 
-    onProgress?.({ step: `Recherche des clés pour ${partnerFileName}...` });
+    onProgress?.({ step: I18nService.t('MSG.msg.rechercheDesClesPour', { p0: partnerFileName }) });
     keyResult = this.resolveKeysFromModels(models, boFileName, partnerFileName, boData, partnerData);
     if (keyResult) {
       mode = 'pattern';
     }
 
     if (!keyResult) {
-      onProgress?.({ step: `Détection automatique des clés pour ${partnerFileName}...` });
+      onProgress?.({ step: I18nService.t('MSG.msg.detectionAutomatiqueDesClesPour', { p0: partnerFileName }) });
       keyResult = this.discoverKeysFromColumns(boData, partnerData);
       mode = 'discovery';
     }
 
     if (!keyResult) {
       throw new Error(
-        'Impossible de déterminer les colonnes clés entre les fichiers BO et Partenaire. ' +
-        'Utilisez le mode Assisté pour configurer manuellement les clés.'
+        I18nService.t('MSG.msg.impossibleDeDeterminerLesColonnesCles') +
+        I18nService.t('MSG.msg.utilisezLeModeAssistePourConfigurer')
       );
     }
 
@@ -358,10 +359,10 @@ export class MagicReconciliationService {
 
     onProgress?.({
       step: serviceMatches.length > 1
-        ? `Réconciliation par service (${serviceMatches.length} communs) — En cours`
+        ? I18nService.t('MSG.msg.reconciliationParServiceCommunsEnCours', { p0: serviceMatches.length })
         : serviceMatches.length === 1
-          ? `Réconciliation du service « ${serviceMatches[0].partnerService} » — En cours`
-          : 'Lancement de la réconciliation — En cours',
+          ? I18nService.t('MSG.msg.reconciliationDuServiceEnCours', { p0: serviceMatches[0].partnerService })
+          : I18nService.t('MSG.msg.lancementDeLaReconciliationEnCours'),
       current: 0,
       total: Math.max(serviceMatches.length, 1)
     });
@@ -391,8 +392,8 @@ export class MagicReconciliationService {
 
     if (serviceColumns && serviceMatches.length === 0) {
       throw new Error(
-        'Aucun service commun trouvé entre les fichiers BO et Partenaire. ' +
-        'Vérifiez que les colonnes de service/type se correspondent (égalité ou inclusion, ex. CASHINOMCIPART2 ↔ CASHINOMCI).'
+        I18nService.t('MSG.msg.aucunServiceCommunTrouveEntreLes') +
+        I18nService.t('MSG.msg.verifiezQueLesColonnesDeService')
       );
     }
 
@@ -413,7 +414,7 @@ export class MagicReconciliationService {
     );
 
     onProgress?.({
-      step: 'Réconciliation terminée',
+      step: I18nService.t('DASH.reconciliationCompleted'),
       current: 1,
       total: 1,
       percentage: 100
@@ -472,7 +473,7 @@ export class MagicReconciliationService {
       async (match, i) => {
         const service = match.partnerService;
         const serviceIndex = i + 1;
-        serviceProgress.report(serviceIndex, service, 'En cours');
+        serviceProgress.report(serviceIndex, service, I18nService.t('MSG.inProgress'));
 
         const boServiceSet = new Set(match.boServices);
         const boSlice = boData.filter(row => boServiceSet.has((row[boServiceCol] || '').trim()));
@@ -480,7 +481,7 @@ export class MagicReconciliationService {
           this.serviceValuesMatch((row[partnerServiceCol] || '').trim(), match.partnerService)
         );
         if (!boSlice.length && !partnerSlice.length) {
-          serviceProgress.report(serviceIndex, service, 'Aucune donnée', 100);
+          serviceProgress.report(serviceIndex, service, I18nService.t('CPT.Aucunedonnée'), 100);
           return null;
         }
 
@@ -495,12 +496,12 @@ export class MagicReconciliationService {
           (step, percentage) => serviceProgress.report(serviceIndex, service, step, percentage)
         );
 
-        serviceProgress.report(serviceIndex, service, 'Réconciliation terminée', 100);
+        serviceProgress.report(serviceIndex, service, I18nService.t('DASH.reconciliationCompleted'), 100);
         return { match, result };
       }
     );
 
-    serviceProgress.reportFinalization('Agrégation des résultats...', 99);
+    serviceProgress.reportFinalization(I18nService.t('MSG.msg.agregationDesResultats'), 99);
 
     for (const entry of serviceResults) {
       if (!entry) {
@@ -525,7 +526,7 @@ export class MagicReconciliationService {
       this.appendReconcileResult(merged, result, service, partnerFileName);
     }
 
-    serviceProgress.reportFinalization('Réconciliation terminée', 100);
+    serviceProgress.reportFinalization(I18nService.t('DASH.reconciliationCompleted'), 100);
 
     return { response: merged, summaries };
   }

@@ -1,20 +1,20 @@
 <div class="dashboard-reconciliation-container">
     <div class="page-header">
         <div class="breadcrumb">
-            <a routerLink="/reconciliation-report" class="breadcrumb-link">← Retour au Rapport</a>
+            <a routerLink="/reconciliation-report" class="breadcrumb-link">{{ 'SEE.backToReport' | translate }}</a>
         </div>
     </div>
     
     <div class="dashboard-header">
         <div class="header-top">
             <div class="header-title-section">
-                <h2><i class="fas fa-chart-line"></i> Tableau de bord de Réconciliation</h2>
-                <p class="subtitle">Vue d'ensemble des pourcentages de correspondance par service et par pays</p>
-                <p class="subtitle-small">Données réelles de la table result8rec</p>
+                <h2><i class="fas fa-chart-line"></i> {{ 'LBL.ui.tableauDeBordDeReconciliation' | translate }}</h2>
+                <p class="subtitle">{{ 'LBL.ui.vueDEnsembleDesPourcentagesDe' | translate }}</p>
+                <p class="subtitle-small">{{ 'LBL.ui.donneesReellesDeLaTableResult8rec' | translate }}</p>
             </div>
             <div class="header-actions">
-                <button type="button" class="btn-preview-global ds-btn ds-btn--primary" (click)="goToGlobalPreview()" title="Afficher l'aperçu global avec graphiques">
-                    <i class="fas fa-chart-bar"></i> Aperçu Global
+                <button type="button" class="btn-preview-global ds-btn ds-btn--primary" (click)="goToGlobalPreview()" title="{{ 'LBL.ui.afficherLApercuGlobalAvecGraphiques' | translate }}">
+                    <i class="fas fa-chart-bar"></i> {{ 'LBL.ui.apercuGlobal' | translate }}
                 </button>
             </div>
         </div>
@@ -27,33 +27,33 @@
                     <span class="summary-value ds-num">{{ countryServiceData.length }}</span>
                 </div>
                 <div class="summary-item">
-                    <span class="summary-label">Services:</span>
+                    <span class="summary-label">{{ 'LBL.ui.services' | translate }}</span>
                     <span class="summary-value ds-num">{{ getTotalServicesCount() }}</span>
                 </div>
                 <div class="summary-item">
-                    <span class="summary-label">Services uniques:</span>
+                    <span class="summary-label">{{ 'LBL.ui.servicesUniques' | translate }}</span>
                     <span class="summary-value ds-num">{{ getAllUniqueServices().length }}</span>
                 </div>
             </div>
             <div class="period-and-voir-plus">
-                <span *ngIf="!showAllData" class="period-badge">Données du mois en cours</span>
-                <span *ngIf="showAllData" class="period-badge period-badge-all">Toutes les données</span>
-                <button *ngIf="!showAllData" type="button" class="btn-voir-plus ds-btn ds-btn--secondary ds-btn--sm" (click)="showAllDataClick()" title="Afficher toutes les données">
-                    Voir plus
+                <span *ngIf="!showAllData" class="period-badge">{{ 'LBL.ui.donneesDuMoisEnCours' | translate }}</span>
+                <span *ngIf="showAllData" class="period-badge period-badge-all">{{ 'LBL.ui.toutesLesDonnees' | translate }}</span>
+                <button *ngIf="!showAllData" type="button" class="btn-voir-plus ds-btn ds-btn--secondary ds-btn--sm" (click)="showAllDataClick()" title="{{ 'OPS.showAllData' | translate }}">
+                    {{ 'ACT.showMore' | translate }}
                 </button>
-                <button *ngIf="showAllData" type="button" class="btn-voir-mois ds-btn ds-btn--secondary ds-btn--sm" (click)="showMonthDataClick()" title="Revenir aux données du mois en cours">
-                    Voir mois en cours
+                <button *ngIf="showAllData" type="button" class="btn-voir-mois ds-btn ds-btn--secondary ds-btn--sm" (click)="showMonthDataClick()" title="{{ 'LBL.ui.revenirAuxDonneesDuMoisEn' | translate }}">
+                    {{ 'LBL.ui.voirMoisEnCours' | translate }}
                 </button>
             </div>
         </div>
 
         <div *ngIf="!loading && !error && countryServiceData && countryServiceData.length > 0" class="status-view-toggle">
-            <span class="status-view-label">Vue :</span>
+            <span class="status-view-label">{{ 'CPT.Vue' | translate }}</span>
             <button type="button"
                     class="status-pill"
                     [class.active]="statusView === 'encours'"
                     (click)="changeStatusView('encours')">
-                <i class="fas fa-sync-alt"></i> En cours
+                <i class="fas fa-sync-alt"></i> {{ 'MSG.inProgress' | translate }}
             </button>
             <button type="button"
                     class="status-pill"
@@ -61,17 +61,17 @@
                     (click)="changeStatusView('traite')">{{ 'LBL.helpPage' | translate }}</button>
         </div>
         <p *ngIf="isTraiteView()" class="status-view-hint">
-            Affichage des statuts OK avec répartition des écarts BO / Partenaire calculée à partir des commentaires.
+            {{ 'LBL.ui.affichageDesStatutsOkAvecRepartition' | translate }}
         </p>
     </div>
 
     <!-- Toggle Filtres -->
     <div *ngIf="!loading && !error && countryServiceData && countryServiceData.length > 0" class="filters-toggle">
         <div class="filters-toggle-inner">
-            <h3>🔍 Filtres</h3>
+            <h3>{{ 'LBL.ui.filtres' | translate }}</h3>
             <button type="button" class="toggle-btn ds-btn ds-btn--secondary ds-btn--sm" [class.active]="showFilters" (click)="showFilters = !showFilters">
                 <span class="toggle-icon">▾</span>
-                {{ showFilters ? 'Masquer' : 'Afficher' }}
+                {{ showFilters ? ('ACT.hide' | translate) : ('ACT.show' | translate) }}
             </button>
         </div>
     </div>
@@ -79,13 +79,13 @@
     <!-- Filtres -->
     <div *ngIf="showFilters && !loading && !error && countryServiceData && countryServiceData.length > 0" class="filters-container ds-filter-bar">
         <div class="filters-header">
-            <h3>🔍 Filtres</h3>
+            <h3>{{ 'LBL.ui.filtres' | translate }}</h3>
         </div>
         <div class="filters-content">
             <div class="filter-group">
                 <label class="filter-label">{{ 'LBL.countryLabel' | translate }}</label>
                 <mat-form-field appearance="fill" class="filter-select">
-                    <mat-select [(ngModel)]="selectedCountry" multiple (selectionChange)="onCountryFilterChange()" placeholder="Sélectionner un ou plusieurs pays">
+                    <mat-select [(ngModel)]="selectedCountry" multiple (selectionChange)="onCountryFilterChange()" placeholder="{{ 'LBL.ui.selectionnerUnOuPlusieursPays' | translate }}">
                         <mat-option *ngFor="let country of availableCountries" [value]="country">
                             {{ country }}
                         </mat-option>
@@ -100,7 +100,7 @@
                            [matDatepicker]="dateStartPicker" 
                            [(ngModel)]="selectedDateStart"
                            (dateChange)="onDateStartChange()"
-                           placeholder="Sélectionner une date de début"
+                           placeholder="{{ 'LBL.ui.selectionnerUneDateDeDebut' | translate }}"
                            class="filter-date-input ds-input">
                     <mat-datepicker-toggle matSuffix [for]="dateStartPicker"></mat-datepicker-toggle>
                     <mat-datepicker #dateStartPicker></mat-datepicker>
@@ -114,7 +114,7 @@
                            [matDatepicker]="dateEndPicker" 
                            [(ngModel)]="selectedDateEnd"
                            (dateChange)="onDateEndChange()"
-                           placeholder="Sélectionner une date de fin"
+                           placeholder="{{ 'LBL.ui.selectionnerUneDateDeFin' | translate }}"
                            class="filter-date-input ds-input">
                     <mat-datepicker-toggle matSuffix [for]="dateEndPicker"></mat-datepicker-toggle>
                     <mat-datepicker #dateEndPicker></mat-datepicker>
@@ -124,7 +124,7 @@
             <div class="filter-group">
                 <label class="filter-label">{{ 'LBL.serviceLabel' | translate }}</label>
                 <mat-form-field appearance="fill" class="filter-select">
-                    <mat-select [(ngModel)]="selectedService" multiple (selectionChange)="onServiceFilterChange()" [disabled]="selectedCountry.length === 0 && filteredServices.length === 0" placeholder="Sélectionner un ou plusieurs services">
+                    <mat-select [(ngModel)]="selectedService" multiple (selectionChange)="onServiceFilterChange()" [disabled]="selectedCountry.length === 0 && filteredServices.length === 0" placeholder="{{ 'LBL.ui.selectionnerUnOuPlusieursServices' | translate }}">
                         <mat-option *ngFor="let service of filteredServices" [value]="service">
                             {{ service }}
                         </mat-option>
@@ -137,28 +137,28 @@
                         (click)="resetFilters()" 
                         class="reset-filters-btn ds-btn ds-btn--secondary ds-btn--sm"
                         [disabled]="!selectedCountry && !selectedService && !selectedDateStart && !selectedDateEnd">
-                    <i class="fas fa-sync-alt"></i> Réinitialiser
+                    <i class="fas fa-sync-alt"></i> {{ 'COMMON.actions.reset' | translate }}
                 </button>
             </div>
         </div>
         
         <!-- Résumé des filtres appliqués -->
         <div *ngIf="(selectedCountry && selectedCountry.length) || (selectedService && selectedService.length) || selectedDateStart || selectedDateEnd" class="active-filters">
-            <span class="active-filters-label">Filtres actifs:</span>
+            <span class="active-filters-label">{{ 'LBL.ui.filtresActifs' | translate }}</span>
             <span *ngIf="selectedCountry && selectedCountry.length" class="filter-tag">
-                Pays: {{ selectedCountry.join(', ') }}
+                {{ 'LBL.ui.pays' | translate: { p0: (selectedCountry.join(', ')) } }}
             </span>
             <span *ngIf="selectedDateStart" class="filter-tag">
-                Date début: {{ selectedDateStart | date:'dd/MM/yyyy' }}
+                {{ 'LBL.ui.dateDebut' | translate: { p0: (selectedDateStart | date:'dd/MM/yyyy') } }}
             </span>
             <span *ngIf="selectedDateEnd" class="filter-tag">
-                Date fin: {{ selectedDateEnd | date:'dd/MM/yyyy' }}
+                {{ 'LBL.ui.dateFin' | translate: { p0: (selectedDateEnd | date:'dd/MM/yyyy') } }}
             </span>
             <span *ngIf="selectedService && selectedService.length" class="filter-tag">
-                Service: {{ selectedService.join(', ') }}
+                {{ 'LBL.ui.service' | translate: { p0: (selectedService.join(', ')) } }}
             </span>
             <span class="filter-results">
-                ({{ filteredCountryServiceData.length }} résultat(s))
+                {{ 'LBL.ui.resultatS' | translate: { p0: filteredCountryServiceData.length } }}
             </span>
         </div>
     </div>
@@ -167,14 +167,14 @@
         <!-- Indicateur de chargement -->
         <div *ngIf="loading" class="loading-container">
             <div class="loading-spinner"><i class="fas fa-sync-alt"></i></div>
-            <div class="loading-message">Chargement des données de réconciliation...</div>
+            <div class="loading-message">{{ 'LBL.ui.chargementDesDonneesDeReconciliation' | translate }}</div>
         </div>
 
         <!-- Message d'erreur -->
         <div *ngIf="error && !loading" class="error-container">
             <div class="error-icon"><i class="fas fa-times-circle"></i></div>
             <div class="error-message">{{ error }}</div>
-            <button type="button" class="retry-btn ds-btn ds-btn--secondary" (click)="loadReconciliationData()"><i class="fas fa-sync-alt"></i> Réessayer</button>
+            <button type="button" class="retry-btn ds-btn ds-btn--secondary" (click)="loadReconciliationData()"><i class="fas fa-sync-alt"></i> {{ 'COMMON.actions.retry' | translate }}</button>
         </div>
 
 
@@ -191,7 +191,7 @@
                         <span *ngIf="!getCountryFlagUrl(countryData.countryCode)" class="country-flag">{{ getCountryFlag(countryData.countryCode) }}</span>
                         {{ countryData.country || getCountryName(countryData.countryCode) }}
                     </span>
-                    <span class="services-count">{{ getServiceEntries(countryData.services).length }} service(s)</span>
+                    <span class="services-count">{{ 'LBL.ui.serviceS' | translate: { p0: (getServiceEntries(countryData.services).length) } }}</span>
                 </div>
                 
                 <div class="services-grid" [class.horizontal-services]="filteredCountryServiceData.length === 1">
@@ -202,18 +202,18 @@
                         <ng-container [ngSwitch]="statusView">
                             <div *ngSwitchCase="'encours'" class="metrics-grid">
                                 <div class="metric-item" [ngClass]="getRateClass(serviceEntry.value.trxReconNet)">
-                                    <div class="metric-label">Réconciliation Nette</div>
+                                    <div class="metric-label">{{ 'LBL.ui.reconciliationNette' | translate }}</div>
                                     <div class="metric-value ds-num">{{ formatPercentage(serviceEntry.value.trxReconNet) }}</div>
                                 </div>
                                 
                                 <div class="metric-item" [ngClass]="getRateClass(serviceEntry.value.bkRecoBanque)">
-                                    <div class="metric-label">Taux de Correspondance</div>
+                                    <div class="metric-label">{{ 'RPT.matchRate' | translate }}</div>
                                     <div class="metric-value ds-num">{{ formatPercentage(serviceEntry.value.bkRecoBanque) }}</div>
                                 </div>
                             </div>
                             <div *ngSwitchCase="'traite'" class="metrics-grid discrepancy-grid">
                                 <div class="metric-item" [ngClass]="getDiscrepancyRateClass(serviceEntry.value.boDiscrepancyRate)">
-                                    <div class="metric-label">Taux écarts BO</div>
+                                    <div class="metric-label">{{ 'LBL.ui.tauxEcartsBo' | translate }}</div>
                                     <div class="metric-value ds-num"
                                          [ngClass]="getPositiveValueClass(serviceEntry.value.boDiscrepancyRate)">
                                         {{ formatDiscrepancyPercentage(serviceEntry.value.boDiscrepancyRate) }}
@@ -223,11 +223,11 @@
                                               [ngClass]="getPositiveValueClass(serviceEntry.value.boDiscrepancyCount)">
                                             {{ serviceEntry.value.boDiscrepancyCount || 0 }}
                                         </span>
-                                        écart(s) BO
+                                        {{ 'EBS.Écartsbo' | translate }}
                                     </div>
                                 </div>
                                 <div class="metric-item" [ngClass]="getDiscrepancyRateClass(serviceEntry.value.partnerDiscrepancyRate)">
-                                    <div class="metric-label">Taux écarts Partenaire</div>
+                                    <div class="metric-label">{{ 'LBL.ui.tauxEcartsPartenaire' | translate }}</div>
                                     <div class="metric-value ds-num"
                                          [ngClass]="getPositiveValueClass(serviceEntry.value.partnerDiscrepancyRate)">
                                         {{ formatDiscrepancyPercentage(serviceEntry.value.partnerDiscrepancyRate) }}
@@ -237,28 +237,28 @@
                                               [ngClass]="getPositiveValueClass(serviceEntry.value.partnerDiscrepancyCount)">
                                             {{ serviceEntry.value.partnerDiscrepancyCount || 0 }}
                                         </span>
-                                        écart(s) Part.
+                                        {{ 'LBL.ui.ecartSPart' | translate }}
                                     </div>
                                 </div>
                                 <div class="metric-item metric-item-centered discrepancy-total">
                                     <div class="metric-content">
-                                        <div class="metric-label">Total écarts exploités</div>
+                                        <div class="metric-label">{{ 'LBL.ui.totalEcartsExploites' | translate }}</div>
                                         <div class="metric-value ds-num"
                                              [ngClass]="getPositiveValueClass(getTotalDiscrepancies(serviceEntry.value))">
                                             {{ getTotalDiscrepancies(serviceEntry.value) }}
                                         </div>
-                                        <div class="metric-subtext">d'après les commentaires</div>
+                                        <div class="metric-subtext">{{ 'LBL.ui.dApresLesCommentaires' | translate }}</div>
                                     </div>
                                 </div>
                             </div>
                             <div *ngSwitchDefault class="metrics-grid">
                                 <div class="metric-item" [ngClass]="getRateClass(serviceEntry.value.trxReconNet)">
-                                    <div class="metric-label">Réconciliation Nette</div>
+                                    <div class="metric-label">{{ 'LBL.ui.reconciliationNette' | translate }}</div>
                                     <div class="metric-value ds-num">{{ formatPercentage(serviceEntry.value.trxReconNet) }}</div>
                                 </div>
                                 
                                 <div class="metric-item" [ngClass]="getRateClass(serviceEntry.value.bkRecoBanque)">
-                                    <div class="metric-label">Taux de Correspondance</div>
+                                    <div class="metric-label">{{ 'RPT.matchRate' | translate }}</div>
                                     <div class="metric-value ds-num">{{ formatPercentage(serviceEntry.value.bkRecoBanque) }}</div>
                                 </div>
                             </div>
@@ -270,7 +270,7 @@
                 <div class="services-toggle" *ngIf="getServiceEntries(countryData.services).length > 4">
                     <button type="button" class="toggle-btn ds-btn ds-btn--secondary ds-btn--sm" [class.active]="isShowingAll(countryData.countryCode)" (click)="toggleShowMore(countryData.countryCode)">
                         <span class="toggle-icon">▾</span>
-                        {{ isShowingAll(countryData.countryCode) ? 'Afficher moins' : 'Afficher plus' }}
+                        {{ isShowingAll(countryData.countryCode) ? ('LBL.ui.afficherMoins' | translate) : ('LBL.ui.afficherPlus' | translate) }}
                     </button>
                 </div>
             </div>
@@ -279,21 +279,21 @@
         <!-- Contrôles de pagination -->
         <div *ngIf="!loading && !error && countryServiceData && countryServiceData.length > 0" class="pagination-controls">
             <button type="button" (click)="previousPage()" [disabled]="currentPage === 1" class="pagination-btn ds-btn ds-btn--secondary ds-btn--sm">
-                ← Précédent
+                {{ 'LBL.ui.precedent' | translate }}
             </button>
             <span class="pagination-info">
-                Page {{ currentPage }} sur {{ getTotalPages() }}
+                {{ 'LBL.ui.pageSur' | translate: { p0: currentPage, p1: (getTotalPages()) } }}
             </span>
             <button type="button" (click)="nextPage()" [disabled]="currentPage === getTotalPages()" class="pagination-btn ds-btn ds-btn--secondary ds-btn--sm">
-                Suivant →
+                {{ 'LBL.ui.suivant' | translate }}
             </button>
         </div>
 
         <!-- Message si aucune donnée -->
         <div *ngIf="!loading && !error && (!countryServiceData || countryServiceData.length === 0)" class="no-data">
             <div class="no-data-icon"><i class="fas fa-chart-bar"></i></div>
-            <div class="no-data-message">Aucune donnée de réconciliation disponible</div>
-            <div class="no-data-subtitle">Les données seront disponibles après avoir effectué des réconciliations</div>
+            <div class="no-data-message">{{ 'RPT.noData' | translate }}</div>
+            <div class="no-data-subtitle">{{ 'LBL.ui.lesDonneesSerontDisponiblesApresAvoir' | translate }}</div>
         </div>
     </div>
 </div>

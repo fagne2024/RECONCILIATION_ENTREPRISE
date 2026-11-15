@@ -9,6 +9,7 @@ import {
   ViewChildren
 } from '@angular/core';
 import { CommonModule } from '@angular/common';
+import { I18nService } from '../../../services/i18n/i18n.service';
 
 export interface DsTab {
   id: string;
@@ -64,7 +65,7 @@ export class DsTabsComponent {
   get activeId(): string | null {
     return this._activeId;
   }
-  @Input() ariaLabel = 'Onglets';
+  @Input() ariaLabel = I18nService.t('DS.tabs.ariaLabel');
   /** Préfixe des identifiants DOM des onglets (utile pour `aria-labelledby` des panneaux). */
   @Input() idPrefix = 'ds-tab';
   @Output() activeIdChange = new EventEmitter<string>();

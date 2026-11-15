@@ -37,7 +37,7 @@
       <div class="pagination-controls" *ngIf="guideStructure.children && guideStructure.children.length > 0">
         <div class="pagination-info">
           <span>{{ rangeLabel }}</span>
-          <select (change)="changeItemsPerPage($event)" [value]="itemsPerPage" class="ds-select items-per-page-select">
+          <select (change)="changeItemsPerPage($event)" [value]="itemsPerPage" class="ds-select items-per-page-select"
             [attr.aria-label]="'PAG.rowsPerPage' | translate">
             <option *ngFor="let size of pageSizeOptions" [value]="size">{{ 'GUD.pagination.perPage' | translate: { count: size } }}</option>
           </select>

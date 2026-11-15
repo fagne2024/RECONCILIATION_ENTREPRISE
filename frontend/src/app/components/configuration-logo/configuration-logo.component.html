@@ -7,7 +7,7 @@
   <div class="config-card logo-card">
     <div class="logo-card-body">
       <div class="logo-preview-box" [class.is-empty]="!displayLogo" [ngStyle]="displayLogo ? paddingStyle : null">
-        <img *ngIf="displayLogo" [src]="displayLogo" alt="Logo" [ngStyle]="previewStyle">
+        <img *ngIf="displayLogo" [src]="displayLogo" alt="{{ 'NAV.logo' | translate }}" [ngStyle]="previewStyle">
         <div *ngIf="!displayLogo" class="logo-preview-empty">
           <i class="fas fa-image"></i>
           <span>{{ 'CFG.logo.none' | translate }}</span>

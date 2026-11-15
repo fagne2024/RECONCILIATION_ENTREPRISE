@@ -7,6 +7,7 @@ import { ExcelTypeDetectionService } from './excel-type-detection.service';
 import { SpecialFileDetectionService } from './special-file-detection.service';
 import { AppStateService } from './app-state.service';
 import { ColumnProcessingRule } from '../models/column-processing-rule.model';
+import { I18nService } from './i18n/i18n.service';
 
 export type { ColumnProcessingRule } from '../models/column-processing-rule.model';
 
@@ -531,7 +532,7 @@ export class AutoProcessingService {
         if (response && response.success && response.model) {
           return this.normalizeModel(response.model);
         } else {
-          throw new Error('Modèle non trouvé');
+          throw new Error(I18nService.t('MSG.msg.modeleNonTrouve'));
         }
       });
   }
@@ -547,7 +548,7 @@ export class AutoProcessingService {
           console.log('✅ Cache invalidé après création');
           return this.normalizeModel(response.model);
         } else {
-          throw new Error('Erreur lors de la création du modèle');
+          throw new Error(I18nService.t('MSG.msg.erreurLorsDeLaCreationDu'));
         }
       });
   }
@@ -563,7 +564,7 @@ export class AutoProcessingService {
           console.log('✅ Cache invalidé après mise à jour');
           return this.normalizeModel(response.model);
         } else {
-          throw new Error('Erreur lors de la mise à jour du modèle');
+          throw new Error(I18nService.t('MSG.msg.erreurLorsDeLaMiseA'));
         }
       });
   }
@@ -580,7 +581,7 @@ export class AutoProcessingService {
             console.log('✅ Cache invalidé après suppression');
             return;
           } else {
-            throw new Error('Erreur lors de la suppression du modèle');
+            throw new Error(I18nService.t('APM.errorDeleteModel'));
           }
         } else {
           // Si pas de réponse ou réponse invalide, considérer comme succès (compatibilité)
@@ -593,7 +594,7 @@ export class AutoProcessingService {
       })
       .catch(error => {
         console.error('❌ Erreur HTTP lors de la suppression:', error);
-        throw new Error('Erreur lors de la suppression du modèle');
+        throw new Error(I18nService.t('APM.errorDeleteModel'));
       });
   }
 

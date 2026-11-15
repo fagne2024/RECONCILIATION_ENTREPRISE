@@ -1,4 +1,5 @@
 import { ComponentFixture, TestBed } from '@angular/core/testing';
+import { TranslateModule, TranslateService } from '@ngx-translate/core';
 import { DsStatusBadgeComponent } from './ds-status-badge.component';
 
 describe('DsStatusBadgeComponent', () => {
@@ -7,8 +8,11 @@ describe('DsStatusBadgeComponent', () => {
 
   beforeEach(async () => {
     await TestBed.configureTestingModule({
-      imports: [DsStatusBadgeComponent]
+      imports: [DsStatusBadgeComponent, TranslateModule.forRoot()]
     }).compileComponents();
+    const translate = TestBed.inject(TranslateService);
+    translate.setTranslation('fr', { DS: { status: { matched: 'Rapproché', done: 'Traité' } } });
+    translate.use('fr');
     fixture = TestBed.createComponent(DsStatusBadgeComponent);
     component = fixture.componentInstance;
   });

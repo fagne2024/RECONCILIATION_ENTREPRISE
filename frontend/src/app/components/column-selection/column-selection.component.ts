@@ -1,6 +1,7 @@
 import { Component, Input, Output, EventEmitter, OnDestroy, OnChanges, SimpleChanges, OnInit, ChangeDetectorRef } from '@angular/core';
 import { FormsModule } from '@angular/forms';
 import { CommonModule } from '@angular/common';
+import { TranslateModule } from '@ngx-translate/core';
 import { Router, ActivatedRoute } from '@angular/router';
 import { ColumnComparison } from '../../models/column-comparison.model';
 import { AppStateService } from '../../services/app-state.service';
@@ -10,50 +11,51 @@ import { ConfigurationCalculService } from '../../services/configuration-calcul.
 import { PopupService } from '../../services/popup.service';
 import { Subscription } from 'rxjs';
 import { ReconciliationRequest } from '../../models/reconciliation-request.model';
+import { I18nService } from '../../services/i18n/i18n.service';
 
 @Component({
     selector: 'app-column-selection',
     standalone: true,
-    imports: [CommonModule, FormsModule],
+    imports: [CommonModule, FormsModule, TranslateModule],
     template: `
         <div class="column-selection-container">
-            <h2>📊 Sélection des colonnes</h2>
-            <p class="description">Sélectionnez les colonnes clés pour la réconciliation</p>
+            <h2>{{ 'CSEL.ui.selectionDesColonnes' | translate }}</h2>
+            <p class="description">{{ 'CSEL.ui.selectionnezLesColonnesClesPourLa' | translate }}</p>
 
             <!-- Option pour désactiver l'analyse automatique (seulement en mode assisté) -->
             <div class="section analysis-options-section" *ngIf="!disableAutoAnalysis">
-                <h3>⚙️ Options d'analyse</h3>
+                <h3>{{ 'CSEL.ui.optionsDAnalyse' | translate }}</h3>
                 <div class="analysis-toggle">
                     <label class="toggle-label">
                         <input type="checkbox" class="ds-checkbox"
                                [(ngModel)]="disableAutoAnalysis" 
                                (ngModelChange)="onAnalysisToggleChange($event)">
-                        <span class="toggle-text">Désactiver l'analyse automatique des clés</span>
+                        <span class="toggle-text">{{ 'CSEL.ui.desactiverLAnalyseAutomatiqueDesCles' | translate }}</span>
                     </label>
                     <p class="toggle-description">
-                        Si activé, vous devrez sélectionner manuellement toutes les colonnes sans suggestions automatiques
+                        {{ 'CSEL.ui.siActiveVousDevrezSelectionnerManuelleme' | translate }}
                     </p>
                 </div>
             </div>
 
             <!-- Message pour le mode manuel -->
             <div class="section manual-mode-section" *ngIf="disableAutoAnalysis">
-                <h3>🖐️ Mode Manuel</h3>
+                <h3>{{ 'CSEL.ui.modeManuel' | translate }}</h3>
                 <p class="manual-mode-description">
-                    Vous êtes en mode manuel. Sélectionnez manuellement les colonnes clés sans analyse automatique.
+                    {{ 'CSEL.ui.vousEtesEnModeManuelSelectionnez' | translate }}
                 </p>
             </div>
 
             <!-- Suggestions automatiques -->
             <div class="section suggestions-section" *ngIf="showSuggestions && !disableAutoAnalysis">
-                <h3>🤖 Suggestions Automatiques</h3>
-                <p class="section-description">Le système a analysé vos données et suggère les meilleures clés de réconciliation</p>
+                <h3>{{ 'CSEL.ui.suggestionsAutomatiques' | translate }}</h3>
+                <p class="section-description">{{ 'CSEL.ui.leSystemeAAnalyseVosDonnees' | translate }}</p>
                 
                 <div class="confidence-indicator">
                     <div class="confidence-bar">
                         <div class="confidence-fill" [style.width.%]="overallConfidence * 100"></div>
                     </div>
-                    <span class="confidence-text">Confiance globale: {{ (overallConfidence * 100) | number:'1.0-0' }}%</span>
+                    <span class="confidence-text">{{ 'CSEL.ui.confianceGlobale' | translate: { p0: ((overallConfidence * 100) | number:'1.0-0') } }}</span>
                 </div>
 
                 <div class="suggestions-list">
@@ -69,7 +71,7 @@ import { ReconciliationRequest } from '../../models/reconciliation-request.model
                         </div>
                         <div class="suggestion-reason">{{ suggestion.reason }}</div>
                         <div class="suggestion-samples" *ngIf="suggestion.sampleValues.length > 0">
-                            <small>Exemples: {{ suggestion.sampleValues.join(', ') }}</small>
+                            <small>{{ 'CSEL.ui.exemples' | translate: { p0: (suggestion.sampleValues.join(', ')) } }}</small>
                         </div>
                     </div>
                 </div>
@@ -77,9 +79,9 @@ import { ReconciliationRequest } from '../../models/reconciliation-request.model
                 <div class="auto-apply-section">
                     <button type="button" class="auto-apply-btn ds-btn ds-btn--primary" (click)="applyTopSuggestions()" 
                             [disabled]="keySuggestions.length === 0">
-                        ✅ Appliquer les suggestions automatiquement
+                        {{ 'CSEL.ui.appliquerLesSuggestionsAutomatiquement' | translate }}
                     </button>
-                    <p class="auto-apply-note">Les meilleures suggestions seront appliquées automatiquement</p>
+                    <p class="auto-apply-note">{{ 'CSEL.ui.lesMeilleuresSuggestionsSerontAppliquees' | translate }}</p>
                 </div>
             </div>
 
@@ -87,22 +89,22 @@ import { ReconciliationRequest } from '../../models/reconciliation-request.model
             <div class="section" *ngIf="isAnalyzing">
                 <div class="analyzing-indicator">
                     <div class="spinner"></div>
-                    <p>🔍 Analyse des données en cours...</p>
+                    <p>{{ 'CSEL.ui.analyseDesDonneesEnCours' | translate }}</p>
                 </div>
             </div>
 
             <!-- Colonnes clés -->
             <div class="section">
-                <h3>🔑 Colonnes clés</h3>
-                <p class="section-description">Sélectionnez les colonnes qui serviront à identifier les enregistrements correspondants</p>
+                <h3>{{ 'CSEL.ui.colonnesCles' | translate }}</h3>
+                <p class="section-description">{{ 'CSEL.ui.selectionnezLesColonnesQuiServirontA' | translate }}</p>
                 
                 <div class="key-columns">
                     <div class="column-group">
-                        <label>Colonne clé BO</label>
+                        <label>{{ 'CSEL.ui.colonneCleBo' | translate }}</label>
                         <select class="ds-select"
                             [(ngModel)]="selectedBoKeyColumn"
                             (ngModelChange)="onBoKeyColumnChange($event)">
-                            <option value="">Sélectionnez une colonne</option>
+                            <option value="">{{ 'CSEL.ui.selectionnezUneColonne' | translate }}</option>
                             <option *ngFor="let column of boColumns" [ngValue]="column">
                                 {{column}}
                             </option>
@@ -110,11 +112,11 @@ import { ReconciliationRequest } from '../../models/reconciliation-request.model
                     </div>
 
                     <div class="column-group">
-                        <label>Colonne clé Partenaire</label>
+                        <label>{{ 'CSEL.ui.colonneClePartenaire' | translate }}</label>
                         <select class="ds-select"
                             [(ngModel)]="selectedPartnerKeyColumn"
                             (ngModelChange)="onPartnerKeyColumnChange($event)">
-                            <option value="">Sélectionnez une colonne</option>
+                            <option value="">{{ 'CSEL.ui.selectionnezUneColonne' | translate }}</option>
                             <option *ngFor="let column of partnerColumns" [ngValue]="column">
                                 {{column}}
                             </option>
@@ -125,18 +127,18 @@ import { ReconciliationRequest } from '../../models/reconciliation-request.model
 
             <!-- Clés supplémentaires -->
             <div class="section" *ngIf="additionalKeys.length > 0">
-                <h3>🔑 Clés supplémentaires (optionnel)</h3>
-                <p class="section-description">Ajoutez des clés supplémentaires pour une réconciliation plus précise</p>
+                <h3>{{ 'CSEL.ui.clesSupplementairesOptionnel' | translate }}</h3>
+                <p class="section-description">{{ 'CSEL.ui.ajoutezDesClesSupplementairesPourUne' | translate }}</p>
                 
                 <div class="additional-keys">
                     <div class="additional-key-pair" *ngFor="let keyPair of additionalKeys; let i = index">
                         <div class="key-columns-wrapper">
                             <div class="column-group">
-                                <label>Colonne clé BO</label>
+                                <label>{{ 'CSEL.ui.colonneCleBo' | translate }}</label>
                                 <select class="ds-select"
                                     [(ngModel)]="keyPair.boColumn"
                                     (ngModelChange)="onAdditionalBoKeyChange($event, i)">
-                                    <option value="">Sélectionnez une colonne</option>
+                                    <option value="">{{ 'CSEL.ui.selectionnezUneColonne' | translate }}</option>
                                     <option *ngFor="let column of boColumns" [ngValue]="column">
                                         {{column}}
                                     </option>
@@ -144,11 +146,11 @@ import { ReconciliationRequest } from '../../models/reconciliation-request.model
                             </div>
 
                             <div class="column-group">
-                                <label>Colonne clé Partenaire</label>
+                                <label>{{ 'CSEL.ui.colonneClePartenaire' | translate }}</label>
                                 <select class="ds-select"
                                     [(ngModel)]="keyPair.partnerColumn"
                                     (ngModelChange)="onAdditionalPartnerKeyChange($event, i)">
-                                    <option value="">Sélectionnez une colonne</option>
+                                    <option value="">{{ 'CSEL.ui.selectionnezUneColonne' | translate }}</option>
                                     <option *ngFor="let column of partnerColumns" [ngValue]="column">
                                         {{column}}
                                     </option>
@@ -156,23 +158,23 @@ import { ReconciliationRequest } from '../../models/reconciliation-request.model
                             </div>
                         </div>
                         
-                        <button type="button" class="remove-key-btn ds-btn ds-btn--ghost ds-btn--sm" (click)="removeAdditionalKey(i)" title="Supprimer cette clé">
-                            🗑️ Supprimer
+                        <button type="button" class="remove-key-btn ds-btn ds-btn--ghost ds-btn--sm" (click)="removeAdditionalKey(i)" title="{{ 'CSEL.ui.supprimerCetteCle' | translate }}">
+                            {{ 'CSEL.ui.supprimer' | translate }}
                         </button>
                     </div>
                 </div>
 
                 <button type="button" class="add-btn ds-btn ds-btn--secondary ds-btn--sm" (click)="addAdditionalKey()">
-                    ➕ Ajouter une clé supplémentaire
+                    {{ 'CSEL.ui.ajouterUneCleSupplementaire' | translate }}
                 </button>
             </div>
             
             <!-- Bouton pour ajouter la première clé supplémentaire -->
             <div class="section" *ngIf="additionalKeys.length === 0">
-                <h3>🔑 Clés supplémentaires (optionnel)</h3>
-                <p class="section-description">Ajoutez des clés supplémentaires pour une réconciliation plus précise</p>
+                <h3>{{ 'CSEL.ui.clesSupplementairesOptionnel' | translate }}</h3>
+                <p class="section-description">{{ 'CSEL.ui.ajoutezDesClesSupplementairesPourUne' | translate }}</p>
                 <button type="button" class="add-btn ds-btn ds-btn--secondary ds-btn--sm" (click)="addAdditionalKey()">
-                    ➕ Ajouter une clé supplémentaire
+                    {{ 'CSEL.ui.ajouterUneCleSupplementaire' | translate }}
                 </button>
             </div>
 
@@ -180,7 +182,7 @@ import { ReconciliationRequest } from '../../models/reconciliation-request.model
             <div class="reconciliation-progress" *ngIf="isReconciliationInProgress">
                 <div class="progress-card">
                     <div class="progress-header">
-                        <h3>🔄 Réconciliation en cours...</h3>
+                        <h3>{{ 'FU.ReconciliationInProgress' | translate }}</h3>
                         <span class="progress-percentage">{{ reconciliationProgress }}%</span>
                     </div>
                     <div class="progress-bar">
@@ -189,7 +191,7 @@ import { ReconciliationRequest } from '../../models/reconciliation-request.model
                     <div class="progress-status">
                         <span class="status-text">{{ reconciliationStatus }}</span>
                         <span class="status-time" *ngIf="reconciliationStartTime">
-                            Temps écoulé : {{ getElapsedTime() }}
+                            {{ 'CSEL.ui.tempsEcoule' | translate: { p0: (getElapsedTime()) } }}
                         </span>
                     </div>
                 </div>
@@ -202,8 +204,8 @@ import { ReconciliationRequest } from '../../models/reconciliation-request.model
                     [disabled]="!isValid"
                     [class.processing]="isReconciliationActive()"
                     (click)="proceedWithReconciliation()">
-                    <span *ngIf="!isReconciliationActive()">🚀 Lancer la réconciliation</span>
-                    <span *ngIf="isReconciliationActive()">⏳ Réconciliation en cours — voir la progression</span>
+                    <span *ngIf="!isReconciliationActive()">{{ 'CSEL.ui.lancerLaReconciliation' | translate }}</span>
+                    <span *ngIf="isReconciliationActive()">{{ 'CSEL.ui.reconciliationEnCoursVoirLaProgression' | translate }}</span>
                 </button>
             </div>
         </div>
@@ -902,7 +904,7 @@ export class ColumnSelectionComponent implements OnDestroy, OnChanges, OnInit {
                     const lines = content.split('\n');
                     
                     if (lines.length < 2) {
-                        reject(new Error('Fichier CSV invalide: au moins 2 lignes requises (en-tête + données)'));
+                        reject(new Error(I18nService.t('CSEL.msg.fichierCsvInvalideAuMoins2')));
                         return;
                     }
                     
@@ -939,12 +941,12 @@ export class ColumnSelectionComponent implements OnDestroy, OnChanges, OnInit {
                     resolve(data);
                     
                 } catch (error) {
-                    reject(new Error(`Erreur lors du parsing du fichier ${file.name}: ${error}`));
+                    reject(new Error(I18nService.t('CSEL.msg.erreurLorsDuParsingDuFichier', { p0: file.name, p1: error })));
                 }
             };
             
             reader.onerror = (error) => {
-                reject(new Error(`Erreur lors de la lecture du fichier ${file.name}`));
+                reject(new Error(I18nService.t('CSEL.msg.erreurLorsDeLaLectureDu', { p0: file.name })));
             };
             
             reader.readAsText(file, 'UTF-8');
@@ -1038,20 +1040,20 @@ export class ColumnSelectionComponent implements OnDestroy, OnChanges, OnInit {
             try {
                 // Vérifications supplémentaires
                 if (!Array.isArray(this.boData) || !Array.isArray(this.partnerData)) {
-                    throw new Error('Les données ne sont pas des tableaux valides');
+                    throw new Error(I18nService.t('CSEL.msg.lesDonneesNeSontPasDes'));
                 }
                 
                 if (this.boData.length === 0 || this.partnerData.length === 0) {
-                    throw new Error('Les données sont vides');
+                    throw new Error(I18nService.t('CSEL.msg.lesDonneesSontVides'));
                 }
                 
                 // Vérifier que les premières lignes ont des propriétés
                 if (!this.boData[0] || typeof this.boData[0] !== 'object') {
-                    throw new Error('La première ligne BO n\'est pas un objet valide');
+                    throw new Error(I18nService.t('CSEL.msg.laPremiereLigneBoNEst'));
                 }
                 
                 if (!this.partnerData[0] || typeof this.partnerData[0] !== 'object') {
-                    throw new Error('La première ligne Partner n\'est pas un objet valide');
+                    throw new Error(I18nService.t('CSEL.msg.laPremiereLignePartnerNEst'));
                 }
                 
                 const result = this.keySuggestionService.analyzeAndSuggestKeys(this.boData, this.partnerData);
@@ -1113,20 +1115,20 @@ export class ColumnSelectionComponent implements OnDestroy, OnChanges, OnInit {
             try {
                 // Vérifications de sécurité
                 if (!this.boData || this.boData.length === 0) {
-                    throw new Error('Données BO manquantes ou vides');
+                    throw new Error(I18nService.t('CSEL.msg.donneesBoManquantesOuVides'));
                 }
                 
                 if (!this.partnerData || this.partnerData.length === 0) {
-                    throw new Error('Données Partner manquantes ou vides');
+                    throw new Error(I18nService.t('CSEL.msg.donneesPartnerManquantesOuVides'));
                 }
                 
                 // Vérifier que les premières lignes ont des propriétés
                 if (!this.boData[0] || typeof this.boData[0] !== 'object') {
-                    throw new Error('La première ligne BO n\'est pas un objet valide');
+                    throw new Error(I18nService.t('CSEL.msg.laPremiereLigneBoNEst'));
                 }
                 
                 if (!this.partnerData[0] || typeof this.partnerData[0] !== 'object') {
-                    throw new Error('La première ligne Partner n\'est pas un objet valide');
+                    throw new Error(I18nService.t('CSEL.msg.laPremiereLignePartnerNEst'));
                 }
                 
                 const result = this.keySuggestionService.analyzeAndSuggestKeys(this.boData, this.partnerData);
@@ -1436,8 +1438,8 @@ export class ColumnSelectionComponent implements OnDestroy, OnChanges, OnInit {
         const willUseChunks = this.willUseChunkedProcessing(boDataToReconcile, partnerDataToReconcile);
         if (willUseChunks) {
             this.popupService.showInfo(
-                'Gros fichier détecté ! Le système utilisera un traitement par chunks optimisé pour éviter les erreurs de mémoire. Le traitement peut prendre plus de temps mais sera plus stable.',
-                'Traitement Optimisé'
+                I18nService.t('CSEL.msg.grosFichierDetecteLeSystemeUtilisera'),
+                I18nService.t('CSEL.msg.traitementOptimise')
             );
             
             // Pour les très gros fichiers, utiliser directement le traitement par chunks
@@ -1473,7 +1475,7 @@ export class ColumnSelectionComponent implements OnDestroy, OnChanges, OnInit {
                 this.finishReconciliationProgress();
                 
                 // Afficher l'erreur à l'utilisateur
-                this.popupService.showError(`Erreur lors de la réconciliation: ${error.message || 'Erreur inconnue'}`, 'Erreur de Réconciliation');
+                this.popupService.showError(I18nService.t('CSEL.msg.erreurLorsDeLaReconciliation', { p0: error.message || I18nService.t('LNC.unknownError') }), I18nService.t('CSEL.msg.erreurDeReconciliation'));
             }
         });
     }
@@ -1514,7 +1516,7 @@ export class ColumnSelectionComponent implements OnDestroy, OnChanges, OnInit {
                 this.finishReconciliationProgress();
                 
                 // Afficher l'erreur à l'utilisateur
-                this.popupService.showError(`Erreur lors de la réconciliation par chunks: ${error.message || 'Erreur inconnue'}`, 'Erreur de Réconciliation');
+                this.popupService.showError(I18nService.t('CSEL.msg.erreurLorsDeLaReconciliationPar', { p0: error.message || I18nService.t('LNC.unknownError') }), I18nService.t('CSEL.msg.erreurDeReconciliation'));
             }
         });
     }

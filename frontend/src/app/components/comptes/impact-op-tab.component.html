@@ -1,10 +1,10 @@
 <div class="impact-op-tab">
   <div class="tab-header">
-    <h3>Impacts OP pour {{ agence }} - {{ formatDate(dateTransaction) }}</h3>
+    <h3>{{ 'TBL.ui.impactsOpPour' | translate: { p0: agence, p1: (formatDate(dateTransaction)) } }}</h3>
     <div class="tab-summary">
-      <span>Total: {{ impactOPs.length }} impact(s)</span>
+      <span>{{ 'TBL.ui.totalImpactS' | translate: { p0: impactOPs.length } }}</span>
       <span *ngIf="impactOPs.length > pageSize">
-        Affichage: {{ (currentPage - 1) * pageSize + 1 }} - {{ Math.min(currentPage * pageSize, impactOPs.length) }} sur {{ impactOPs.length }}
+        {{ 'TBL.ui.affichageSur' | translate: { p0: ((currentPage - 1) * pageSize + 1), p1: (Math.min(currentPage * pageSize, impactOPs.length)), p2: impactOPs.length } }}
       </span>
     </div>
   </div>
@@ -19,10 +19,10 @@
                  (change)="toggleSelectAll()"
                  [disabled]="isValidatingMass">
           <span class="checkmark"></span>
-          Sélectionner tout
+          {{ 'TBL.ui.selectionnerTout' | translate }}
         </label>
         <span class="selected-count" *ngIf="selectedItems.size > 0">
-          {{ selectedItems.size }} élément(s) sélectionné(s)
+          {{ 'TBL.ui.elementSSelectionneS' | translate: { p0: selectedItems.size } }}
         </span>
       </div>
       <div class="selection-actions" *ngIf="selectedItems.size > 0">
@@ -31,7 +31,7 @@
                 [disabled]="isValidatingMass || selectedItems.size === 0">
           <i class="fas fa-check" *ngIf="!isValidatingMass"></i>
           <i class="fas fa-spinner fa-spin" *ngIf="isValidatingMass"></i>
-          {{ isValidatingMass ? 'Validation...' : 'Valider sélection' }}
+          {{ isValidatingMass ? ('RPT.validating' | translate) : ('OPS.Validersélection' | translate) }}
         </button>
         <button class="btn btn-secondary btn-sm" 
                 (click)="clearSelection()"
@@ -42,12 +42,12 @@
   </div>
 
   <div *ngIf="isLoading" class="loading">
-    <i class="fas fa-spinner fa-spin"></i> Chargement des impacts OP...
+    <i class="fas fa-spinner fa-spin"></i> {{ 'TBL.ui.chargementDesImpactsOp' | translate }}
   </div>
 
   <div *ngIf="!isLoading && impactOPs.length === 0" class="no-data">
     <i class="fas fa-info-circle"></i>
-    <span>Aucun impact OP trouvé pour cette date et ce compte.</span>
+    <span>{{ 'TBL.ui.aucunImpactOpTrouvePourCette' | translate }}</span>
   </div>
 
   <div *ngIf="!isLoading && impactOPs.length > 0" class="impact-op-content">
@@ -62,12 +62,12 @@
           </th>
           <th>{{ 'TBL.operationType' | translate }}</th>
           <th>{{ 'TBL.amount' | translate }}</th>
-          <th>Solde avant</th>
-          <th>Solde après</th>
-          <th>Code propriétaire</th>
-          <th>Date opération</th>
+          <th>{{ 'TBL.balanceBefore' | translate }}</th>
+          <th>{{ 'TBL.balanceAfter' | translate }}</th>
+          <th>{{ 'OPS.Codepropriétaire_1' | translate }}</th>
+          <th>{{ 'TBL.operationDateCol' | translate }}</th>
           <th>{{ 'TBL.guTransactionNumber' | translate }}</th>
-          <th>Groupe réseau</th>
+          <th>{{ 'TBL.ui.groupeReseau' | translate }}</th>
           <th>{{ 'TBL.status' | translate }}</th>
           <th>{{ 'TBL.comment' | translate }}</th>
           <th>{{ 'TBL.actions' | translate }}</th>
@@ -102,13 +102,13 @@
               <button *ngIf="impact.statut === 'EN_ATTENTE'" 
                       class="btn btn-success btn-sm validate-btn" 
                       (click)="validateImpactOP(impact)"
-                      title="Valider l'impact OP">
+                      title="{{ 'TBL.ui.validerLImpactOp' | translate }}">
                 <i class="fas fa-check"></i>
-                Valider
+                {{ 'ACT.validate' | translate }}
               </button>
               <span *ngIf="impact.statut === 'TRAITE'" class="status-validated">
                 <i class="fas fa-check-circle"></i>
-                Validé
+                {{ 'CIB.badge.validated' | translate }}
               </span>
             </div>
           </td>
@@ -117,7 +117,7 @@
       <tfoot>
         <tr class="total-row">
           <td colspan="10" class="total-label">
-            <strong>MONTANT TOTAL :</strong>
+            <strong>{{ 'TBL.ui.montantTotal' | translate }}</strong>
           </td>
           <td colspan="1" class="total-amount">
             <strong>{{ formatTotalMontant() }}</strong>

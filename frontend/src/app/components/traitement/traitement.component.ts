@@ -43,6 +43,7 @@ import {
 import { AutoProcessingService, AutoProcessingModel } from '../../services/auto-processing.service';
 import * as Papa from 'papaparse';
 import * as XLSX from 'xlsx';
+import { I18nService } from '../../services/i18n/i18n.service';
 
 /** Détail d'un fichier CSV du lot : ce qui a été détecté pour lui. */
 interface CsvBatchFileInfo {
@@ -720,14 +721,14 @@ End Sub`;
       error instanceof RangeError ||
       /Maximum call stack|Invalid (string|array) length|Array buffer allocation|out of memory|allocation failed/i.test(raw);
     if (isMemoryError) {
-      return `Fichier ${where} trop volumineux pour être assemblé en mémoire par le navigateur. ` +
-        `Solutions : découpez le fichier en plusieurs parties, convertissez-le en CSV ou supprimez les colonnes inutiles avant l'import. ` +
-        `(Détail technique : ${raw || name})`;
+      return I18nService.t('TRT.msg.fichierTropVolumineuxPourEtreAssemble', { p0: where }) +
+        I18nService.t('TRT.msg.solutionsDecoupezLeFichierEnPlusieurs') +
+        I18nService.t('TRT.msg.detailTechnique', { p0: raw || name });
     }
     if (name === 'NotReadableError') {
-      return `Impossible de lire le fichier ${where} : il a peut-être été modifié ou supprimé depuis sa sélection. Sélectionnez-le à nouveau.`;
+      return I18nService.t('TRT.msg.impossibleDeLireLeFichierIl', { p0: where });
     }
-    return `Fichier ${where} : ${raw || 'erreur inconnue'}`;
+    return I18nService.t('TRT.msg.fichier', { p0: where, p1: raw || 'erreur inconnue' });
   }
 
   triggerFileInput() {
@@ -903,7 +904,7 @@ End Sub`;
           }
         }
         this.currentFileIndex++;
-        this.processingMessage = `Traitement ${isLargeUpload ? 'optimisé' : 'ultra-rapide'} du fichier ${this.currentFileIndex}/${this.totalFilesToProcess}: ${file.name} (lot ${tick}/${batches.length})`;
+        this.processingMessage = I18nService.t('TRT.msg.traitementDuFichierLot', { p0: isLargeUpload ? I18nService.t('TRT.msg.optimise') : 'ultra-rapide', p1: this.currentFileIndex, p2: this.totalFilesToProcess, p3: file.name, p4: tick, p5: batches.length });
         this.updateProcessingPopup({ currentFile: this.currentFileIndex, step: `Lecture de ${file.name}`, progress: ((this.currentFileIndex - 1) / this.totalFilesToProcess) * 70, message: '' });
         this.processingProgress = (this.currentFileIndex - 1) / this.totalFilesToProcess * 100;
         
@@ -962,7 +963,7 @@ End Sub`;
         
         // Mettre à jour la progression
         this.processingProgress = this.currentFileIndex / this.totalFilesToProcess * 100;
-        this.updateProcessingPopup({ progress: (this.currentFileIndex / this.totalFilesToProcess) * 70, message: `${this.allRows.length.toLocaleString()} lignes chargées` });
+        this.updateProcessingPopup({ progress: (this.currentFileIndex / this.totalFilesToProcess) * 70, message: I18nService.t('TRT.msg.lignesChargees', { p0: this.allRows.length.toLocaleString() }) });
         
         // Pause pour gros uploads
         if (isLargeUpload && this.currentFileIndex < this.totalFilesToProcess) {
@@ -987,19 +988,19 @@ End Sub`;
       }
 
       // Fusion optimisée des colonnes
-      this.updateProcessingPopup({ step: 'Alignement et fusion des colonnes', progress: 75, message: `${this.allRows.length.toLocaleString()} lignes` });
+      this.updateProcessingPopup({ step: I18nService.t('TRT.msg.alignementEtFusionDesColonnes'), progress: 75, message: I18nService.t('TRT.msg.lignes', { p0: this.allRows.length.toLocaleString() }) });
       await this.yieldTick();
       this.processingMessage = this.t('TRT.msg.mergeOptimized', { mode: isLargeUpload ? this.t('TRT.msg.mergeModeOptimized') : this.t('TRT.msg.mergeModeUltraFast') });
       this.allColumns = await this.mergeColumnsOptimized();
       
       // Normalisation optimisée des données
-      this.updateProcessingPopup({ step: 'Normalisation des données', progress: 85, message: '' });
+      this.updateProcessingPopup({ step: I18nService.t('TRT.msg.normalisationDesDonnees'), progress: 85, message: '' });
       await this.yieldTick();
-      this.processingMessage = `Normalisation ${isLargeUpload ? 'optimisée' : 'ultra-rapide'} des données...`;
+      this.processingMessage = I18nService.t('TRT.msg.normalisationDesDonnees2', { p0: isLargeUpload ? I18nService.t('TRT.msg.mergeModeOptimized') : 'ultra-rapide' });
       await this.normalizeDataOptimized();
       
       // Finalisation
-      this.updateProcessingPopup({ step: "Préparation de l'affichage", progress: 95, message: '' });
+      this.updateProcessingPopup({ step: I18nService.t('TRT.msg.preparationDeLAffichage'), progress: 95, message: '' });
       await this.yieldTick();
       this.processingMessage = this.t('TRT.msg.finalizing');
       this.combinedRows = this.allRows.clone();
@@ -1020,16 +1021,16 @@ End Sub`;
       const totalProcessed = this.allRows.length;
       const processingTime = ((Date.now() - startTime) / 1000).toFixed(1);
       
-      this.showSuccess('upload', `Traitement ${isLargeUpload ? 'optimisé' : 'ultra-rapide'} terminé ! ${totalProcessed.toLocaleString()} lignes traitées en ${processingTime}s`);
+      this.showSuccess('upload', I18nService.t('TRT.msg.traitementTermineLignesTraiteesEnS', { p0: isLargeUpload ? I18nService.t('TRT.msg.optimise') : 'ultra-rapide', p1: totalProcessed.toLocaleString(), p2: processingTime }));
       const failedStats = this.failedFileStats;
       const status: ProcessingPopupState['status'] =
         totalProcessed === 0 ? 'error' : failedStats.length > 0 ? 'warning' : 'success';
       this.finishProcessingPopup(
         status,
         totalProcessed === 0
-          ? "Aucune ligne n'a pu être chargée."
-          : `${totalProcessed.toLocaleString()} lignes traitées en ${processingTime} s (${this.totalFilesToProcess} fichier(s))`,
-        failedStats.map(f => `${f.name} : ${f.errorMsg ?? 'erreur inconnue'}`)
+          ? I18nService.t('TRT.msg.aucuneLigneNAPuEtre')
+          : I18nService.t('TRT.msg.lignesTraiteesEnSFichierS', { p0: totalProcessed.toLocaleString(), p1: processingTime, p2: this.totalFilesToProcess }),
+        failedStats.map(f => `${f.name} : ${f.errorMsg ?? I18nService.t('COMMON.errors.unknown')}`)
       );
       
     } catch (error) {
@@ -1045,8 +1046,8 @@ End Sub`;
       this.showError('upload', this.t('TRT.msg.ultraFastProcessingError'));
       this.finishProcessingPopup(
         'error',
-        "Le traitement a été interrompu. Aucune donnée n'a été affichée.",
-        this.failedFileStats.map(f => `${f.name} : ${f.errorMsg ?? 'erreur inconnue'}`)
+        I18nService.t('TRT.msg.leTraitementAEteInterrompuAucune'),
+        this.failedFileStats.map(f => `${f.name} : ${f.errorMsg ?? I18nService.t('COMMON.errors.unknown')}`)
       );
     }
   }
@@ -1078,7 +1079,7 @@ End Sub`;
         const partFichier = 80 / files.length;
         this.updateProcessingPopup({
           currentFile: i + 1,
-          step: `Envoi au serveur : ${fichier.name}`,
+          step: I18nService.t('TRT.msg.envoiAuServeur', { p0: fichier.name }),
           progress: partDebut,
           message: ''
         });
@@ -1101,10 +1102,10 @@ End Sub`;
         }
       }
 
-      this.updateProcessingPopup({ step: 'Lecture du résumé du lot', progress: 90, message: '' });
+      this.updateProcessingPopup({ step: I18nService.t('TRT.msg.lectureDuResumeDuLot'), progress: 90, message: '' });
       const resume = await this.traitementLotService.resume(lotId);
       if (!resume.nbLignes) {
-        throw new Error("Aucune ligne n'a pu être chargée depuis les fichiers.");
+        throw new Error(I18nService.t('TRT.msg.aucuneLigneNAPuEtre2'));
       }
       this.appliquerLot(resume);
       await this.chargerPageServeur(1);
@@ -1113,12 +1114,12 @@ End Sub`;
       const secondes = ((Date.now() - debut) / 1000).toFixed(1);
       this.finishProcessingPopup(
         echecs.length ? 'warning' : 'success',
-        `${resume.nbLignes.toLocaleString()} lignes stockées en ${secondes} s (${resume.nbFichiers} fichier(s))`,
-        echecs.map(f => `${f.name} : ${f.errorMsg ?? 'erreur inconnue'}`)
+        I18nService.t('TRT.msg.lignesStockeesEnSFichierS', { p0: resume.nbLignes.toLocaleString(), p1: secondes, p2: resume.nbFichiers }),
+        echecs.map(f => `${f.name} : ${f.errorMsg ?? I18nService.t('COMMON.errors.unknown')}`)
       );
     } catch (err) {
       const echecs = this.failedFileStats.map(f => `${f.name} : ${f.errorMsg ?? 'erreur inconnue'}`);
-      this.finishProcessingPopup('error', 'Le traitement a été interrompu.', [...echecs, this.messageErreurServeur(err)]);
+      this.finishProcessingPopup('error', I18nService.t('TRT.msg.leTraitementAEteInterrompu'), [...echecs, this.messageErreurServeur(err)]);
     } finally {
       this.isProcessing = false;
     }
@@ -1296,9 +1297,10 @@ End Sub`;
       }
       const aucunChangement = res.lignesSorties === res.lignesEntree;
       this.showSuccess(cible,
-        (aucunChangement ? 'Opération appliquée, aucune ligne retirée : ' : 'Opération appliquée : ') +
-        `${res.lignesSorties.toLocaleString()} lignes conservées sur ${res.lignesEntree.toLocaleString()} ` +
-        `(${res.doublonsSupprimes.toLocaleString()} doublons supprimés, ${res.lignesFiltrees.toLocaleString()} lignes filtrées).`);
+        I18nService.t(aucunChangement ? 'TRT.msg.srvOpAucuneLigneRetiree' : 'TRT.msg.srvOpAppliquee', {
+          p0: res.lignesSorties.toLocaleString(), p1: res.lignesEntree.toLocaleString(),
+          p2: res.doublonsSupprimes.toLocaleString(), p3: res.lignesFiltrees.toLocaleString()
+        }));
       return true;
     } catch (err) {
       this.showError(cible, this.messageErreurServeur(err));
@@ -1320,7 +1322,7 @@ End Sub`;
     document.body.appendChild(lien);
     lien.click();
     lien.remove();
-    this.showSuccess('export', `Téléchargement de ${base}.${format} lancé.`);
+    this.showSuccess('export', I18nService.t('TRT.msg.telechargementDeLance', { p0: base, p1: format }));
   }
 
   /** Bouton « Nouveau traitement » de la section serveur : même réinitialisation que l'en-tête. */
@@ -1376,10 +1378,10 @@ End Sub`;
     if (err instanceof HttpErrorResponse) {
       const corps = err.error as { message?: string } | null;
       if (corps?.message) return corps.message;
-      if (err.status === 413) return 'Fichier trop volumineux pour le serveur.';
-      return `Erreur serveur (${err.status || 'réseau'}).`;
+      if (err.status === 413) return I18nService.t('TRT.msg.fichierTropVolumineuxPourLeServeur');
+      return I18nService.t('TRT.msg.erreurServeur', { p0: err.status || 'réseau' });
     }
-    return err instanceof Error ? err.message : 'Erreur inconnue.';
+    return err instanceof Error ? err.message : I18nService.t('SV.unknownError');
   }
 
   // Méthodes optimisées pour le traitement ultra-rapide
@@ -1395,8 +1397,8 @@ End Sub`;
       onProgress: (processed, total) => {
         if (isLargeFile && processed % 2500 === 0) {
           this.processingProgress = Math.min(95, (processed / total) * 100);
-          this.processingMessage = `Traitement CSV: ${processed.toLocaleString()}/${total.toLocaleString()} lignes`;
-          this.updateProcessingPopup({ message: `${processed.toLocaleString()} lignes lues (${this.allRows.length.toLocaleString()} stockées)` });
+          this.processingMessage = I18nService.t('TRT.msg.traitementCsvLignes', { p0: processed.toLocaleString(), p1: total.toLocaleString() });
+          this.updateProcessingPopup({ message: I18nService.t('TRT.msg.lignesLuesStockees', { p0: processed.toLocaleString(), p1: this.allRows.length.toLocaleString() }) });
         }
       },
       // setTimeout uniquement : requestAnimationFrame ne se déclenche pas dans un onglet en arrière-plan.
@@ -1828,7 +1830,7 @@ End Sub`;
       const updateProgress = () => {
         if (isLargeFile) {
           this.processingProgress = Math.min(95, (processedRows / totalDataRows) * 100);
-          this.processingMessage = `Traitement Excel: ${processedRows.toLocaleString()}/${totalDataRows.toLocaleString()} lignes`;
+          this.processingMessage = I18nService.t('TRT.msg.traitementExcelLignes', { p0: processedRows.toLocaleString(), p1: totalDataRows.toLocaleString() });
         }
       };
       
@@ -1975,7 +1977,7 @@ End Sub`;
   private async readExcelFileAlternative(file: File): Promise<void> {
     const fileSizeMB = file.size / (1024 * 1024);
     
-    this.processingMessage = `Traitement fichier très volumineux (${fileSizeMB.toFixed(1)} MB)...`;
+    this.processingMessage = I18nService.t('TRT.msg.traitementFichierTresVolumineuxMb', { p0: fileSizeMB.toFixed(1) });
     
     // Pour les fichiers > 200MB, utiliser une approche de streaming
     if (fileSizeMB > 200) {
@@ -2017,7 +2019,7 @@ End Sub`;
       const worksheet = workbook.Sheets[firstSheetName];
       
       if (!worksheet) {
-        throw new Error('Impossible de lire la première feuille');
+        throw new Error(I18nService.t('TRT.msg.impossibleDeLireLaPremiereFeuille'));
       }
 
 
@@ -2029,7 +2031,7 @@ End Sub`;
       }) as any[][];
 
       if (!jsonData || jsonData.length === 0) {
-        throw new Error('Aucune donnée trouvée dans la première feuille');
+        throw new Error(I18nService.t('TRT.msg.aucuneDonneeTrouveeDansLaPremiere'));
       }
 
 
@@ -2099,8 +2101,8 @@ End Sub`;
     const fileSizeMB = file.size / (1024 * 1024);
     // Pas de lecture partielle silencieuse : un import tronqué fausserait la réconciliation.
     throw new Error(
-      `Fichier Excel « ${file.name} » (${fileSizeMB.toFixed(1)} Mo) : au-delà de 200 Mo, il ne peut pas être lu entièrement dans le navigateur. ` +
-      'Ouvrez-le dans Excel, enregistrez-le au format CSV, puis découpez-le en plusieurs parties (par mois, par trimestre ou par service).'
+      I18nService.t('TRT.msg.fichierExcelMoAuDelaDe', { p0: file.name, p1: fileSizeMB.toFixed(1) }) +
+      I18nService.t('TRT.msg.ouvrezLeDansExcelEnregistrezLe')
     );
   }
 
@@ -2125,7 +2127,7 @@ End Sub`;
       for (let i = 0; i < workbook.SheetNames.length; i++) {
         try {
           const sheetName = workbook.SheetNames[i];
-          this.processingMessage = `Traitement de la feuille: ${sheetName}`;
+          this.processingMessage = I18nService.t('TRT.msg.traitementDeLaFeuille', { p0: sheetName });
           await this.delay(10);
           
           const worksheet = workbook.Sheets[sheetName];
@@ -2167,7 +2169,7 @@ End Sub`;
                 },
                 50, // Chunks très petits pour éviter le blocage
                 (progress) => {
-                  this.processingMessage = `Traitement de la feuille ${sheetName}: ${Math.round(progress)}%`;
+                  this.processingMessage = I18nService.t('TRT.msg.traitementDeLaFeuille2', { p0: sheetName, p1: Math.round(progress) });
                 }
               );
               
@@ -2183,11 +2185,11 @@ End Sub`;
               }
               
             } catch (addError) {
-              this.showError('upload', `Erreur lors du traitement de la feuille ${sheetName}: ${addError}`);
+              this.showError('upload', I18nService.t('TRT.msg.erreurLorsDuTraitementDeLa', { p0: sheetName, p1: addError }));
             }
           }
         } catch (sheetError) {
-          this.showError('upload', `Erreur lors du traitement de la feuille ${workbook.SheetNames[i]}: ${sheetError}`);
+          this.showError('upload', I18nService.t('TRT.msg.erreurLorsDuTraitementDeLa', { p0: workbook.SheetNames[i], p1: sheetError }));
           // Continuer avec les autres feuilles
         }
       }
@@ -2810,12 +2812,12 @@ End Sub`;
     }
 
     if (!this.columns.includes(sourceColumn)) {
-      this.showError('columnRename', `La colonne « ${sourceColumn} » est introuvable.`);
+      this.showError('columnRename', I18nService.t('TRT.msg.laColonneEstIntrouvable', { p0: sourceColumn }));
       return;
     }
 
     if (this.columns.includes(newName)) {
-      this.showError('columnRename', `La colonne « ${newName} » existe déjà.`);
+      this.showError('columnRename', I18nService.t('TRT.msg.laColonneExisteDeja', { p0: newName }));
       return;
     }
 
@@ -2824,7 +2826,7 @@ End Sub`;
       this.renameSourceCol = '';
       this.renameNewName = '';
       this.updateDisplayedRows();
-      this.showSuccess('columnRename', `En-tête renommé : « ${sourceColumn} » → « ${newName} ».`);
+      this.showSuccess('columnRename', I18nService.t('TRT.msg.enTeteRenomme', { p0: sourceColumn, p1: newName }));
     } catch (e) {
       this.showError('columnRename', this.t('TRT.msg.renameError'));
     }
@@ -3066,14 +3068,14 @@ End Sub`;
         this.allRows = this.originalRows.clone();
         this.combinedRows = this.originalRows.clone();
         this.filterApplied = true;
-        this.showSuccess('filter', `Aucun filtre appliqué - toutes les lignes conservées (${this.combinedRows.length} lignes).`);
+        this.showSuccess('filter', I18nService.t('TRT.msg.aucunFiltreAppliqueToutesLesLignes', { p0: this.combinedRows.length }));
       } else {
         // Filtrage normal basé sur les valeurs sélectionnées
         this.filteredRows = this.originalRows.filter(row => this.selectedFilterValues.includes(row[this.selectedFilterColumn]));
         this.allRows = [...this.filteredRows];
         this.combinedRows = [...this.filteredRows];
         this.filterApplied = true;
-        this.showSuccess('filter', `Filtre appliqué sur « ${this.selectedFilterColumn} » = « ${this.selectedFilterValues.join(', ')} » (${this.combinedRows.length} lignes).`);
+        this.showSuccess('filter', I18nService.t('TRT.msg.filtreAppliqueSurLignes', { p0: this.selectedFilterColumn, p1: this.selectedFilterValues.join(', '), p2: this.combinedRows.length }));
       }
       this.updateDisplayedRows();
       this.autoShowPreviewSection(); // Afficher automatiquement la section d'aperçu
@@ -3168,7 +3170,7 @@ End Sub`;
     this.filterApplied = appliedFilters.length > 0;
     
     if (this.filterApplied) {
-      this.showSuccess('filter', `Filtres appliqués: ${appliedFilters.join(' | ')} (${this.combinedRows.length} lignes).`);
+      this.showSuccess('filter', I18nService.t('TRT.msg.filtresAppliquesLignes', { p0: appliedFilters.join(' | '), p1: this.combinedRows.length }));
     } else {
       this.showSuccess('filter', this.t('TRT.msg.noActiveFilter'));
     }
@@ -3309,9 +3311,9 @@ End Sub`;
           if (progress.isComplete) {
             this.isExporting = false;
             if (progress.message.includes('✅')) {
-              this.showSuccess('export', `Export CSV réussi: ${finalFileName}`);
+              this.showSuccess('export', I18nService.t('TRT.msg.exportCsvReussi', { p0: finalFileName }));
             } else {
-              this.showError('export', 'Erreur lors de l\'export CSV.');
+              this.showError('export', I18nService.t('TRT.msg.erreurLorsDeLExportCsv'));
             }
           }
         });
@@ -3325,11 +3327,11 @@ End Sub`;
         );
         
         this.isExporting = false;
-        this.showSuccess('export', `Export CSV réussi: ${finalFileName}`);
+        this.showSuccess('export', I18nService.t('TRT.msg.exportCsvReussi', { p0: finalFileName }));
       }
     } catch (e) {
       this.isExporting = false;
-      this.showError('export', 'Erreur lors de l\'export CSV.');
+      this.showError('export', I18nService.t('TRT.msg.erreurLorsDeLExportCsv'));
     }
   }
 
@@ -3384,9 +3386,9 @@ End Sub`;
           if (progress.isComplete) {
             this.isExporting = false;
             if (progress.message.includes('✅')) {
-              this.showSuccess('export', `Export ${format.toUpperCase()} réussi: ${finalFileName}`);
+              this.showSuccess('export', I18nService.t('TRT.msg.exportReussi', { p0: format.toUpperCase(), p1: finalFileName }));
             } else {
-              this.showError('export', `Erreur lors de l'export ${format.toUpperCase()}.`);
+              this.showError('export', I18nService.t('TRT.msg.erreurLorsDeLExport', { p0: format.toUpperCase() }));
             }
           }
         });
@@ -3400,11 +3402,11 @@ End Sub`;
         );
         
         this.isExporting = false;
-        this.showSuccess('export', `Export ${format.toUpperCase()} réussi: ${finalFileName}`);
+        this.showSuccess('export', I18nService.t('TRT.msg.exportReussi', { p0: format.toUpperCase(), p1: finalFileName }));
       }
     } catch (e) {
       this.isExporting = false;
-      this.showError('export', `Erreur lors de l'export ${format.toUpperCase()}.`);
+      this.showError('export', I18nService.t('TRT.msg.erreurLorsDeLExport', { p0: format.toUpperCase() }));
     }
   }
 
@@ -3445,7 +3447,7 @@ End Sub`;
       
       try {
         await this.loadTotalEnergieFile1();
-        this.showSuccess('totalEnergie', `Fichier 1 chargé : ${this.totalEnergieData1.length} lignes détectées`);
+        this.showSuccess('totalEnergie', I18nService.t('TRT.msg.fichier1ChargeLignesDetectees', { p0: this.totalEnergieData1.length }));
       } catch (error) {
         const message = error instanceof Error ? error.message : this.t('RES.dlg.loadFile1Error');
         this.showError('totalEnergie', message);
@@ -3463,7 +3465,7 @@ End Sub`;
       
       try {
         await this.loadTotalEnergieFile2();
-        this.showSuccess('totalEnergie', `Fichier 2 chargé : ${this.totalEnergieData2.length} lignes détectées`);
+        this.showSuccess('totalEnergie', I18nService.t('TRT.msg.fichier2ChargeLignesDetectees', { p0: this.totalEnergieData2.length }));
       } catch (error) {
         const message = error instanceof Error ? error.message : this.t('RES.dlg.loadFile2Error');
         this.showError('totalEnergie', message);
@@ -3522,7 +3524,7 @@ End Sub`;
     );
 
     if (missingCols.length > 0) {
-      throw new Error(`Colonnes manquantes dans le fichier 1 : ${missingCols.join(', ')}. Colonnes trouvées : ${this.totalEnergieColumns1.join(', ')}`);
+      throw new Error(I18nService.t('TRT.msg.colonnesManquantesDansLeFichier1', { p0: missingCols.join(', '), p1: this.totalEnergieColumns1.join(', ') }));
     }
   }
 
@@ -3578,7 +3580,7 @@ End Sub`;
     );
 
     if (!hasAccountCol) {
-      throw new Error(`Colonne "N° de compte" non trouvée dans le fichier 2. Colonnes trouvées : ${this.totalEnergieColumns2.join(', ')}`);
+      throw new Error(I18nService.t('TRT.msg.colonneNDeCompteNonTrouvee', { p0: this.totalEnergieColumns2.join(', ') }));
     }
   }
 
@@ -3676,7 +3678,7 @@ End Sub`;
       });
 
       this.totalEnergieProgress = `Traitement terminé : ${matchCount} lignes avec correspondance(s) sur ${this.totalEnergieData2.length} lignes du fichier 2. Total : ${totalRowsCreated} lignes créées`;
-      this.showSuccess('totalEnergie', `Fusion réussie : ${totalRowsCreated} lignes créées (${matchCount} avec correspondance, ${this.totalEnergieData2.length - matchCount} sans correspondance)`);
+      this.showSuccess('totalEnergie', I18nService.t('TRT.msg.fusionReussieLignesCreeesAvecCorresponda', { p0: totalRowsCreated, p1: matchCount, p2: this.totalEnergieData2.length - matchCount }));
     } catch (error) {
       const message = error instanceof Error ? error.message : this.t('RES.dlg.unknownProcessingError');
       this.showError('totalEnergie', message);
@@ -3703,7 +3705,7 @@ End Sub`;
       XLSX.writeFile(workbook, fileName);
 
       this.totalEnergieProgress = this.t('TRT.msg.exportDone');
-      this.showSuccess('totalEnergie', `Fichier exporté : ${fileName}`);
+      this.showSuccess('totalEnergie', I18nService.t('TRT.msg.fichierExporte', { p0: fileName }));
     } catch (error) {
       const message = error instanceof Error ? error.message : this.t('RES.dlg.exportError');
       this.showError('totalEnergie', message);
@@ -3743,7 +3745,7 @@ End Sub`;
       try {
         await this.loadCompileHeadersFile1();
         this.compileHeadersRetained = [...this.compileHeadersCols1];
-        this.showSuccess('compileHeaders', `Fichier 1 chargé : ${this.compileHeadersData1.length} lignes, ${this.compileHeadersCols1.length} en-têtes. Cochez les en-têtes à conserver.`);
+        this.showSuccess('compileHeaders', I18nService.t('TRT.msg.fichier1ChargeLignesEnTetes', { p0: this.compileHeadersData1.length, p1: this.compileHeadersCols1.length }));
       } catch (error) {
         const message = error instanceof Error ? error.message : this.t('RES.dlg.loadFile1Error');
         this.showError('compileHeaders', message);
@@ -3760,7 +3762,7 @@ End Sub`;
       this.errorMsg.compileHeaders = '';
       try {
         await this.loadCompileHeadersFile2();
-        this.showSuccess('compileHeaders', `Fichier 2 chargé : ${this.compileHeadersData2.length} lignes, ${this.compileHeadersCols2.length} colonnes. Associez chaque colonne à un en-tête retenu.`);
+        this.showSuccess('compileHeaders', I18nService.t('TRT.msg.fichier2ChargeLignesColonnesAssociez', { p0: this.compileHeadersData2.length, p1: this.compileHeadersCols2.length }));
       } catch (error) {
         const message = error instanceof Error ? error.message : this.t('RES.dlg.loadFile2Error');
         this.showError('compileHeaders', message);
@@ -3964,19 +3966,19 @@ End Sub`;
 
   async exportCompileHeadersResult() {
     if (this.compileHeadersResult.length === 0) {
-      this.showError('compileHeaders', 'Aucune donnée à exporter. Veuillez d\'abord compiler.');
+      this.showError('compileHeaders', I18nService.t('TRT.msg.aucuneDonneeAExporterVeuillezD'));
       return;
     }
     try {
       this.compileHeadersIsProcessing = true;
-      this.compileHeadersProgress = 'Export en cours...';
+      this.compileHeadersProgress = I18nService.t('TRT.MultiMergeExporting');
       const worksheet = XLSX.utils.json_to_sheet(this.compileHeadersResult);
       const workbook = XLSX.utils.book_new();
       XLSX.utils.book_append_sheet(workbook, worksheet, 'Résultat');
       const fileName = `compilation_entetes_${new Date().toISOString().split('T')[0]}.xlsx`;
       XLSX.writeFile(workbook, fileName);
       this.compileHeadersProgress = 'Export terminé';
-      this.showSuccess('compileHeaders', `Fichier exporté : ${fileName}`);
+      this.showSuccess('compileHeaders', I18nService.t('TRT.msg.fichierExporte', { p0: fileName }));
     } catch (error) {
       const message = error instanceof Error ? error.message : this.t('RES.dlg.exportError');
       this.showError('compileHeaders', message);
@@ -4084,7 +4086,7 @@ End Sub`;
     try {
       // @ts-ignore - File System Access API
       if (!('showDirectoryPicker' in window)) {
-        this.showError('multiMerge', 'File System Access API non supporté. Utilisez le bouton "Sélectionner un dossier" classique.');
+        this.showError('multiMerge', I18nService.t('TRT.msg.fileSystemAccessApiNonSupporte'));
         return;
       }
 
@@ -4145,7 +4147,7 @@ End Sub`;
       if (error.name === 'AbortError') {
         return; // Annulation utilisateur
       }
-      this.showError('multiMerge', `Erreur lors de la sélection du dossier: ${error.message}`);
+      this.showError('multiMerge', I18nService.t('TRT.msg.erreurLorsDeLaSelectionDu', { p0: error.message }));
     }
   }
 
@@ -4490,7 +4492,7 @@ End Sub`;
       this.errorMsg.totalEnergieCompare = '';
       try {
         await this.loadTotalEnergieCompareFile();
-        this.showSuccess('totalEnergieCompare', `Fichier chargé : ${this.totalEnergieCompareData.length} lignes. Cliquez sur "Comparer et ajouter Commentaire" pour lancer la comparaison.`);
+        this.showSuccess('totalEnergieCompare', I18nService.t('TRT.msg.fichierChargeLignesCliquezSurComparer', { p0: this.totalEnergieCompareData.length }));
       } catch (error) {
         const message = error instanceof Error ? error.message : this.t('RES.dlg.loadFileError');
         this.showError('totalEnergieCompare', message);
@@ -4542,10 +4544,10 @@ End Sub`;
       c === 'partner: station' || c === 'partner:station' || c === 'partenaire_station'
     );
     if (!hasBoAgence) {
-      throw new Error(`Colonne "BO: Agence" non trouvée. Colonnes : ${this.totalEnergieCompareColumns.join(', ')}`);
+      throw new Error(I18nService.t('TRT.msg.colonneBoAgenceNonTrouveeColonnes', { p0: this.totalEnergieCompareColumns.join(', ') }));
     }
     if (!hasPartnerStation) {
-      throw new Error(`Colonne "PARTNER: Station" non trouvée. Colonnes : ${this.totalEnergieCompareColumns.join(', ')}`);
+      throw new Error(I18nService.t('TRT.msg.colonnePartnerStationNonTrouveeColonnes', { p0: this.totalEnergieCompareColumns.join(', ') }));
     }
   }
 
@@ -4617,7 +4619,7 @@ End Sub`;
         .sort((a, b) => b.count - a.count);
       
       this.totalEnergieCompareProgress = `Comparaison terminée : ${okCount} OK, ${diffCount} à traiter.`;
-      this.showSuccess('totalEnergieCompare', `Comparaison terminée : ${this.totalEnergieCompareResult.length} lignes (${okCount} OK, ${diffCount} avec écart).`);
+      this.showSuccess('totalEnergieCompare', I18nService.t('TRT.msg.comparaisonTermineeLignesOkAvecEcart', { p0: this.totalEnergieCompareResult.length, p1: okCount, p2: diffCount }));
     } catch (error) {
       const message = error instanceof Error ? error.message : this.t('RES.dlg.compareError');
       this.showError('totalEnergieCompare', message);
@@ -4638,7 +4640,7 @@ End Sub`;
       XLSX.utils.book_append_sheet(workbook, worksheet, 'Comparaison');
       const fileName = `total_energie_comparaison_bo_partner_${new Date().toISOString().split('T')[0]}.xlsx`;
       XLSX.writeFile(workbook, fileName);
-      this.showSuccess('totalEnergieCompare', `Fichier exporté : ${fileName}`);
+      this.showSuccess('totalEnergieCompare', I18nService.t('TRT.msg.fichierExporte', { p0: fileName }));
     } catch (error) {
       const message = error instanceof Error ? error.message : this.t('RES.dlg.exportError');
       this.showError('totalEnergieCompare', message);
@@ -4695,7 +4697,7 @@ End Sub`;
       const fileName = `total_energie_recap_stations_${new Date().toISOString().split('T')[0]}.xlsx`;
       XLSX.writeFile(workbook, fileName);
       
-      this.showSuccess('totalEnergieCompare', `Récapitulatif exporté : ${fileName}`);
+      this.showSuccess('totalEnergieCompare', I18nService.t('TRT.msg.recapitulatifExporte', { p0: fileName }));
     } catch (error) {
       const message = error instanceof Error ? error.message : this.t('RES.dlg.exportRecapError');
       this.showError('totalEnergieCompare', message);
@@ -4838,7 +4840,7 @@ End Sub`;
       this.sheetSplitZipName = zipName;
       saveAs(blob, zipName);
       this.sheetSplitProgress = this.t('TRT.msg.splitDone');
-      this.showSuccess('sheetSplit', `Séparation terminée : ${nombreFeuilles} fichiers générés (${zipName}).`);
+      this.showSuccess('sheetSplit', I18nService.t('TRT.msg.separationTermineeFichiersGeneres', { p0: nombreFeuilles, p1: zipName }));
     } catch (error) {
       this.showError('sheetSplit', this.messageErreurServeur(error));
     } finally {
@@ -4925,7 +4927,7 @@ End Sub`;
       this.sheetSplitResults = sheetResults;
       this.sheetSplitProgress = this.t('TRT.msg.splitDone');
       this.showSheetSplitExcelFallbackHelp = false;
-      this.showSuccess('sheetSplit', `Séparation terminée : ${sheetResults.length} fichiers générés (${zipName}).`);
+      this.showSuccess('sheetSplit', I18nService.t('TRT.msg.separationTermineeFichiersGeneres', { p0: sheetResults.length, p1: zipName }));
     } catch (error) {
       const message = error instanceof Error ? error.message : this.t('RES.dlg.splitSheetsUnknownError');
       this.showError('sheetSplit', message);
@@ -5059,7 +5061,7 @@ End Sub`;
           ? `${remainingMinutes}m ${remainingSecs}s` 
           : `${remainingSecs}s`;
         
-        this.sheetSplitConversionMessage = `Conversion XLS → XLSX en cours... (${timeStr} écoulé${minutes > 0 ? 's' : ''}, ~${remainingStr} restant${remainingMinutes > 0 ? 's' : ''})`;
+        this.sheetSplitConversionMessage = I18nService.t('TRT.msg.conversionXlsXlsxEnCoursEcoule', { p0: timeStr, p1: minutes > 0 ? 's' : '', p2: remainingStr, p3: remainingMinutes > 0 ? 's' : '' });
         
         this.cd.detectChanges();
       }, 500); // Mise à jour toutes les 500ms
@@ -5308,17 +5310,17 @@ End Sub`;
         } else if (this.exportTypeFormat === 'xlsx') {
           this.exportPeriodAsXLSX(filteredRows, fileNameXlsx);
         } else {
-          throw new Error(`Format d'export non supporté: ${this.exportTypeFormat}`);
+          throw new Error(I18nService.t('TRT.msg.formatDExportNonSupporte', { p0: this.exportTypeFormat }));
         }
         exported++;
       }
       if (exported > 0) {
-        this.showSuccess('exportType', `Export par type réussi (${exported} fichier(s)).`);
+        this.showSuccess('exportType', I18nService.t('TRT.msg.exportParTypeReussiFichierS', { p0: exported }));
       } else {
         this.showError('exportType', this.t('TRT.msg.noDataForSelectedTypes'));
       }
     } catch (e) {
-      this.showError('exportType', 'Erreur lors de l\'export par type.');
+      this.showError('exportType', I18nService.t('TRT.msg.erreurLorsDeLExportPar'));
     }
   }
 
@@ -5371,7 +5373,7 @@ End Sub`;
         this.combinedRows = this.originalRows.clone();
         this.updateDisplayedRows();
       }
-      this.showSuccess('concat', `Colonne « ${this.concatNewCol} » créée par concaténation.`);
+      this.showSuccess('concat', I18nService.t('TRT.msg.colonneCreeeParConcatenation', { p0: this.concatNewCol }));
     } catch (e) {
       this.showError('concat', this.t('TRT.msg.concatError'));
     }
@@ -5587,7 +5589,7 @@ End Sub`;
       const actionText = this.removeCharMode === 'keep'
         ? `Conservation de ${this.removeCharCount} caractère(s)`
         : this.t('TRT.msg.removeCharsLabel');
-      this.showSuccess('format', `${actionText} appliquée sur ${this.formatSelections['removeCharacters'].length} colonne(s) (${processedCells} modifications)`);
+      this.showSuccess('format', I18nService.t('TRT.msg.appliqueeSurColonneSModifications', { p0: actionText, p1: this.formatSelections['removeCharacters'].length, p2: processedCells }));
       
       // Forcer la mise à jour de l'affichage
       this.updateDisplayedRowsForPage();
@@ -5700,7 +5702,7 @@ End Sub`;
       }
 
 
-      this.showSuccess('format', `Suppression de caractères spéciaux appliquée sur ${this.formatSelections['removeSpecialStrings'].length} colonne(s) (${processedCells} modifications)`);
+      this.showSuccess('format', I18nService.t('TRT.msg.suppressionDeCaracteresSpeciauxAppliquee', { p0: this.formatSelections['removeSpecialStrings'].length, p1: processedCells }));
       
       // Forcer la mise à jour de l'affichage
       this.updateDisplayedRowsForPage();
@@ -5769,7 +5771,7 @@ End Sub`;
       }
 
 
-      this.showSuccess('format', `Suppression de nombres appliquée sur ${this.formatSelections['removeNumbers'].length} colonne(s) (${processedCells} modifications)`);
+      this.showSuccess('format', I18nService.t('TRT.msg.suppressionDeNombresAppliqueeSurColonne', { p0: this.formatSelections['removeNumbers'].length, p1: processedCells }));
       
       // Forcer la mise à jour de l'affichage
       this.updateDisplayedRowsForPage();
@@ -5894,7 +5896,7 @@ End Sub`;
       }
 
 
-      this.showSuccess('format', `Suppression d'indicatif appliquée sur ${this.formatSelections['removeIndicatif'].length} colonne(s) (${processedCells} modifications)`);
+      this.showSuccess('format', I18nService.t('TRT.msg.suppressionDIndicatifAppliqueeSurColonne', { p0: this.formatSelections['removeIndicatif'].length, p1: processedCells }));
       
       // Forcer la mise à jour de l'affichage
       this.updateDisplayedRowsForPage();
@@ -6054,7 +6056,7 @@ End Sub`;
       }
 
 
-      this.showSuccess('format', `Suppression de décimales appliquée sur ${this.formatSelections['removeDecimals'].length} colonne(s) (${processedCells} modifications)`);
+      this.showSuccess('format', I18nService.t('TRT.msg.suppressionDeDecimalesAppliqueeSurColonn', { p0: this.formatSelections['removeDecimals'].length, p1: processedCells }));
       
       // Forcer la mise à jour de l'affichage
       this.updateDisplayedRowsForPage();
@@ -6163,7 +6165,7 @@ End Sub`;
       }
 
 
-      this.showSuccess('format', `Formatage "garder ${this.keepLastDigitsCount} derniers digits" appliqué sur ${this.formatSelections['keepLastDigits'].length} colonne(s) (${processedCells} modifications)`);
+      this.showSuccess('format', I18nService.t('TRT.msg.formatageGarderDerniersDigitsAppliqueSur', { p0: this.keepLastDigitsCount, p1: this.formatSelections['keepLastDigits'].length, p2: processedCells }));
       
       // Forcer la mise à jour de l'affichage
       this.updateDisplayedRowsForPage();
@@ -6229,7 +6231,7 @@ End Sub`;
       }
 
 
-      this.showSuccess('format', `Suppression des .0 sur les dates appliquée sur ${this.formatSelections['removeZeroDecimals'].length} colonne(s) (${processedCells} modifications)`);
+      this.showSuccess('format', I18nService.t('TRT.msg.suppressionDes0SurLesDates', { p0: this.formatSelections['removeZeroDecimals'].length, p1: processedCells }));
       
       // Forcer la mise à jour de l'affichage
       this.updateDisplayedRowsForPage();
@@ -6320,7 +6322,7 @@ End Sub`;
       }
 
 
-      this.showSuccess('format', `Suppression des espaces (${this.removeSpacesType}) appliquée sur ${this.formatSelections['removeSpaces'].length} colonne(s) (${processedCells} modifications)`);
+      this.showSuccess('format', I18nService.t('TRT.msg.suppressionDesEspacesAppliqueeSurColonne', { p0: this.removeSpacesType, p1: this.formatSelections['removeSpaces'].length, p2: processedCells }));
       
       // Forcer la mise à jour de l'affichage
       this.updateDisplayedRowsForPage();
@@ -6768,7 +6770,7 @@ End Sub`;
       
       const totalProcessed = this.allRows.length;
       
-      this.showSuccess('upload', `Fichier CSV traité avec succès ! ${totalProcessed} lignes importées`);
+      this.showSuccess('upload', I18nService.t('TRT.msg.fichierCsvTraiteAvecSuccesLignes', { p0: totalProcessed }));
       
       // Nettoyer les données temporaires
       this.csvContentToProcess = '';
@@ -6903,10 +6905,10 @@ End Sub`;
       this.modelList.find(m => isGeneric(m) && fileMatches(m));
 
     if (!found) {
-      this.modelDetectionMessage = 'Aucun modèle détecté pour ces fichiers : choisissez-le dans la liste.';
+      this.modelDetectionMessage = I18nService.t('TRT.msg.aucunModeleDetectePourCesFichiers');
       return;
     }
-    this.modelDetectionMessage = `Modèle détecté automatiquement : ${found.name}`;
+    this.modelDetectionMessage = I18nService.t('TRT.msg.modeleDetecteAutomatiquement', { p0: found.name });
     if (this.modelKey(found) !== this.selectedModelId) {
       void this.onModelSelected(this.modelKey(found));
     }
@@ -6915,7 +6917,7 @@ End Sub`;
   /** Choix manuel dans la liste : prime sur la détection automatique. */
   onModelSelectedManually(modelId: string): void {
     this.modelChosenManually = !!modelId;
-    this.modelDetectionMessage = modelId ? 'Modèle choisi manuellement.' : '';
+    this.modelDetectionMessage = modelId ? I18nService.t('TRT.msg.modeleChoisiManuellement') : '';
     void this.onModelSelected(modelId);
   }
 
@@ -6961,7 +6963,7 @@ End Sub`;
         this.applyConfiguredEquivalences();
       }
     } catch {
-      this.modelLinkMessage = 'Colonnes du modèle indisponibles.';
+      this.modelLinkMessage = I18nService.t('TRT.msg.colonnesDuModeleIndisponibles');
     } finally {
       this.modelColumnsLoading = false;
       this.cd.detectChanges();
@@ -7012,7 +7014,7 @@ End Sub`;
    */
   applyModelLinks(): void {
     if (!this.combinedRows.length) {
-      this.modelLinkMessage = 'Confirmez d\'abord l\'import pour renommer les colonnes du résultat.';
+      this.modelLinkMessage = I18nService.t('TRT.msg.confirmezDAbordLImportPour');
       return;
     }
     // colonne du traitement -> nom de la colonne du modèle
@@ -7023,17 +7025,17 @@ End Sub`;
       }
     }
     if (!rename.size) {
-      this.modelLinkMessage = 'Aucun lien à appliquer.';
+      this.modelLinkMessage = I18nService.t('TRT.msg.aucunLienAAppliquer');
       return;
     }
     const unlinked = new Set(this.allColumns.filter(c => !rename.has(c)));
     const clash = [...rename.values()].find(name => unlinked.has(name));
     if (clash) {
-      this.modelLinkMessage = `Impossible : « ${clash} » existe déjà dans le traitement sans lien.`;
+      this.modelLinkMessage = I18nService.t('TRT.msg.impossibleExisteDejaDansLeTraitement', { p0: clash });
       return;
     }
     this.renameTreatmentColumns(rename);
-    this.modelLinkMessage = `${rename.size} colonne(s) renommée(s) selon le modèle.`;
+    this.modelLinkMessage = I18nService.t('TRT.msg.colonneSRenommeeSSelonLe', { p0: rename.size });
   }
 
   /**
@@ -7112,11 +7114,11 @@ End Sub`;
     const header = this.csvHeaderLineInput;
     const data = this.csvDataLineInput;
     if (header === null || data === null) {
-      this.csvRowRangeError = 'Indiquez la ligne d\'en-tête et la première ligne de données.';
+      this.csvRowRangeError = I18nService.t('TRT.msg.indiquezLaLigneDEnTete');
       return;
     }
     if (data <= header) {
-      this.csvRowRangeError = 'La première ligne de données doit être après la ligne d\'en-tête.';
+      this.csvRowRangeError = I18nService.t('TRT.msg.laPremiereLigneDeDonneesDoit');
       return;
     }
     this.csvRowRangeError = '';
@@ -7309,10 +7311,10 @@ End Sub`;
       }
       
       this.applyFormatting();
-      this.showSuccess('format', `Formatage appliqué pour ${column} (${type})`);
+      this.showSuccess('format', I18nService.t('TRT.msg.formatageAppliquePour', { p0: column, p1: type }));
       
     } catch (error) {
-      this.showError('format', 'Erreur lors de l\'application du formatage');
+      this.showError('format', I18nService.t('TRT.msg.erreurLorsDeLApplicationDu'));
     }
   }
 
@@ -7510,7 +7512,7 @@ End Sub`;
 
     // Vérifier que la colonne de date existe
     if (!this.columns.includes(this.exportDateCol)) {
-      this.showError('exportDate', `La colonne "${this.exportDateCol}" n'existe pas dans les données chargées.`);
+      this.showError('exportDate', I18nService.t('TRT.msg.laColonneNExistePasDans', { p0: this.exportDateCol }));
       return;
     }
 
@@ -7541,7 +7543,7 @@ End Sub`;
           } else if (this.exportDateFormat === 'xlsx') {
             this.exportPeriodAsXLSX(rows, fileName);
           } else {
-            throw new Error(`Format d'export non supporté: ${this.exportDateFormat}`);
+            throw new Error(I18nService.t('TRT.msg.formatDExportNonSupporte', { p0: this.exportDateFormat }));
           }
           
           exportedCount++;
@@ -7553,8 +7555,8 @@ End Sub`;
 
       if (exportedCount > 0) {
         const message = errors.length > 0 
-          ? `${exportedCount} fichier(s) exporté(s) avec succès (toutes les pages), ${errors.length} erreur(s).`
-          : `${exportedCount} fichier(s) exporté(s) avec succès (toutes les pages) !`;
+          ? I18nService.t('TRT.msg.fichierSExporteSAvecSucces', { p0: exportedCount, p1: errors.length })
+          : I18nService.t('TRT.msg.fichierSExporteSAvecSucces2', { p0: exportedCount });
         this.showSuccess('exportDate', message);
         
         if (errors.length > 0) {
@@ -7563,7 +7565,7 @@ End Sub`;
         this.showError('exportDate', this.t('TRT.msg.noFileExported'));
       }
     } catch (error) {
-      this.showError('exportDate', `Erreur lors de l'export de toutes les pages: ${error.message}`);
+      this.showError('exportDate', I18nService.t('TRT.msg.erreurLorsDeLExportDe', { p0: error.message }));
     }
   }
 
@@ -7793,7 +7795,7 @@ End Sub`;
 
     // Vérifier que la colonne de date existe
     if (!this.columns.includes(this.exportDateCol)) {
-      this.showError('exportDate', `La colonne "${this.exportDateCol}" n'existe pas dans les données chargées.`);
+      this.showError('exportDate', I18nService.t('TRT.msg.laColonneNExistePasDans', { p0: this.exportDateCol }));
       return;
     }
 
@@ -7832,7 +7834,7 @@ End Sub`;
           } else if (this.exportDateFormat === 'xlsx') {
             this.exportPeriodAsXLSX(rows, fileName);
           } else {
-            throw new Error(`Format d'export non supporté: ${this.exportDateFormat}`);
+            throw new Error(I18nService.t('TRT.msg.formatDExportNonSupporte', { p0: this.exportDateFormat }));
           }
           
           exportedCount++;
@@ -7844,8 +7846,8 @@ End Sub`;
 
       if (exportedCount > 0) {
         const message = errors.length > 0 
-          ? `${exportedCount} fichier(s) exporté(s) avec succès (page ${this.detectedPeriodsPage}), ${errors.length} erreur(s).`
-          : `${exportedCount} fichier(s) exporté(s) avec succès (page ${this.detectedPeriodsPage}) !`;
+          ? I18nService.t('TRT.msg.fichierSExporteSAvecSucces3', { p0: exportedCount, p1: this.detectedPeriodsPage, p2: errors.length })
+          : I18nService.t('TRT.msg.fichierSExporteSAvecSucces4', { p0: exportedCount, p1: this.detectedPeriodsPage });
         this.showSuccess('exportDate', message);
         
         if (errors.length > 0) {
@@ -7854,7 +7856,7 @@ End Sub`;
         this.showError('exportDate', this.t('TRT.msg.noFileExported'));
       }
     } catch (error) {
-      this.showError('exportDate', `Erreur lors de l'export par date: ${error.message}`);
+      this.showError('exportDate', I18nService.t('TRT.msg.erreurLorsDeLExportPar2', { p0: error.message }));
     }
   }
 
@@ -8005,7 +8007,7 @@ End Sub`;
       URL.revokeObjectURL(url);
       
     } catch (error) {
-      throw new Error(`Erreur lors de l'export CSV: ${error.message}`);
+      throw new Error(I18nService.t('TRT.msg.erreurLorsDeLExportCsv2', { p0: error.message }));
     }
   }
 
@@ -8060,7 +8062,7 @@ End Sub`;
       XLSX.writeFile(workbook, fileName);
       
     } catch (error) {
-      throw new Error(`Erreur lors de l'export XLS: ${error.message}`);
+      throw new Error(I18nService.t('TRT.msg.erreurLorsDeLExportXls', { p0: error.message }));
     }
   }
 
@@ -8115,7 +8117,7 @@ End Sub`;
       XLSX.writeFile(workbook, fileName);
       
     } catch (error) {
-      throw new Error(`Erreur lors de l'export XLSX: ${error.message}`);
+      throw new Error(I18nService.t('TRT.msg.erreurLorsDeLExportXlsx', { p0: error.message }));
     }
   }
 

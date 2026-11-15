@@ -761,7 +761,7 @@
                 <p>{{ 'FU.Cliquezpoursélectionnerlefichierbocsvxlsxlsx' | translate }}</p>
                 <input #autoBoFileInput type="file" (change)="onAutoBoFileSelected($event)" accept=".csv, .xls, .xlsx, .xlsm, .xlsb" style="display: none">
                 <div class="file-info" [class.loaded]="autoBoFile || autoBoData.length > 0">
-                    {{ autoBoFileName || (autoBoFile ? autoBoFile.name : (autoBoData.length > 0 ? ('FU.FileLoaded' | translate: { n: autoBoData.length }) : 'Aucun fichier sélectionné')) }}
+                    {{ autoBoFileName || (autoBoFile ? autoBoFile.name : (autoBoData.length > 0 ? ('FU.FileLoaded' | translate: { n: autoBoData.length }) : ('FU.NoFileSelected' | translate))) }}
                     <button type="button" *ngIf="autoBoFile || autoBoData.length > 0" class="remove-file-btn ds-btn ds-btn--ghost ds-btn--sm" (click)="removeAutoBoFile($event)">
                         <i class="fas fa-times"></i>
                     </button>
@@ -774,7 +774,7 @@
                 <p>{{ 'FU.Cliquezpoursélectionnerlefichierpartenairecsvxlsxlsx' | translate }}</p>
                 <input #autoPartnerFileInput type="file" (change)="onAutoPartnerFileSelected($event)" accept=".csv, .xls, .xlsx, .xlsm, .xlsb" style="display: none">
                 <div class="file-info" [class.loaded]="autoPartnerFile || autoPartnerData.length > 0">
-                    {{ autoPartnerFileName || (autoPartnerFile ? autoPartnerFile.name : (autoPartnerData.length > 0 ? ('FU.FileLoaded' | translate: { n: autoPartnerData.length }) : 'Aucun fichier sélectionné')) }}
+                    {{ autoPartnerFileName || (autoPartnerFile ? autoPartnerFile.name : (autoPartnerData.length > 0 ? ('FU.FileLoaded' | translate: { n: autoPartnerData.length }) : ('FU.NoFileSelected' | translate))) }}
                     <button type="button" *ngIf="autoPartnerFile || autoPartnerData.length > 0" class="remove-file-btn ds-btn ds-btn--ghost ds-btn--sm" (click)="removeAutoPartnerFile($event)">
                         <i class="fas fa-times"></i>
                     </button>
@@ -1597,7 +1597,7 @@
             <div class="traitement-embed-model-toggle" *ngIf="embedTraitementSection">
                 <button type="button" class="btn btn-sm btn-outline-secondary" (click)="showEmbedModelsList = !showEmbedModelsList" [disabled]="traitementProcessing">
                     <i class="fas" [ngClass]="showEmbedModelsList ? 'fa-eye-slash' : 'fa-eye'"></i>
-                    {{ (showEmbedModelsList ? 'Masquer la liste des modèles' : 'Afficher la liste des modèles') }}
+                    {{ (showEmbedModelsList ? ('FU.ui.masquerLaListeDesModeles' | translate) : ('FU.ui.afficherLaListeDesModeles' | translate)) }}
                 </button>
             </div>
 
@@ -1641,7 +1641,7 @@
                                 (ngModelChange)="onTraitementModelSelectionChange()">
                             <span class="model-info">
                                 <strong>{{ model.name }}</strong>
-                                <small>{{ 'FU.Pattern' | translate }} {{ model.filePattern }} — {{ (model.fileType === 'bo' ? 'BO' : model.fileType === 'partner' ? ('FU.Partner' | translate) : 'BO / ' + ('FU.Partner' | translate)) }}</small>
+                                <small>{{ 'FU.Pattern' | translate }} {{ model.filePattern }} — {{ (model.fileType === 'bo' ? 'BO' : model.fileType === 'partner' ? ('FU.Partner' | translate) : ('FU.ui.bo' | translate) + ('FU.Partner' | translate)) }}</small>
                             </span>
                         </label>
                     </div>

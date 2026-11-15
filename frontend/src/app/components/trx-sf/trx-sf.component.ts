@@ -134,7 +134,7 @@ export class TrxSfComponent implements OnInit, OnDestroy {
       const text: string = await new Promise((resolve, reject) => {
         const reader = new FileReader();
         reader.onload = (e: any) => resolve(e.target.result as string);
-        reader.onerror = () => reject(new Error('Erreur de lecture CSV'));
+        reader.onerror = () => reject(new Error(I18nService.t('TSF.readCsvError')));
         reader.readAsText(file, 'UTF-8');
       });
       const lines = text.split('\n').filter(l => l.trim());
@@ -208,7 +208,7 @@ export class TrxSfComponent implements OnInit, OnDestroy {
             resolve({ data: arr, XLSX: mod });
           } catch (err) { reject(err); }
         };
-        reader.onerror = () => reject(new Error('Erreur de lecture Excel'));
+        reader.onerror = () => reject(new Error(I18nService.t('TSF.readExcelError')));
         reader.readAsArrayBuffer(file);
       });
       const wb = XLSX.read(data, { type: 'array' });
@@ -1555,7 +1555,7 @@ export class TrxSfComponent implements OnInit, OnDestroy {
             const colonneRequises = ['type operation', 'code proprietaire', 'numero trans gu'];
             const colonnesManquantes = colonneRequises.filter(col => !entetes.includes(col));
             if (colonnesManquantes.length > 0) {
-              throw new Error(`Colonnes manquantes dans le fichier: ${colonnesManquantes.join(', ')}\nColonnes attendues: ${colonneRequises.join(', ')}`);
+              throw new Error(I18nService.t('TSF.msg.colonnesManquantesDansLeFichierColonnes', { p0: colonnesManquantes.join(', '), p1: colonneRequises.join(', ') }));
             }
 
             for (let i = 1; i < lignes.length; i++) {
@@ -1573,12 +1573,12 @@ export class TrxSfComponent implements OnInit, OnDestroy {
             this.verifierEtMettreAJourStatuts(donneesFichier);
           } catch (error) {
             console.error('❌ Erreur lors du parsing du CSV:', error);
-            this.popupService.showError(`❌ Erreur lors du traitement du fichier:\n${error}`, 'Erreur de Traitement');
+            this.popupService.showError(I18nService.t('TSF.msg.erreurLorsDuTraitementDuFichier', { p0: error }), I18nService.t('TSF.processingErrorTitle'));
             this.isVerifyingFrais = false;
           }
         };
         reader.onerror = () => {
-          this.popupService.showError('❌ Erreur lors de la lecture du fichier', 'Erreur de Lecture');
+          this.popupService.showError(I18nService.t('TSF.msg.erreurLorsDeLaLectureDu'), I18nService.t('TSF.readErrorTitle'));
           this.isVerifyingFrais = false;
         };
         reader.readAsText(file, 'UTF-8');
@@ -1598,7 +1598,7 @@ export class TrxSfComponent implements OnInit, OnDestroy {
             // Convertir en JSON en conservant la première ligne comme en-têtes
             const rows: any[] = XLSX.utils.sheet_to_json(sheet, { defval: '' });
             if (!rows || rows.length === 0) {
-              throw new Error('La feuille Excel est vide');
+              throw new Error(I18nService.t('TSF.sheetEmpty'));
             }
 
             // Normaliser les clés en minuscules
@@ -1616,19 +1616,19 @@ export class TrxSfComponent implements OnInit, OnDestroy {
             const colonneRequises = ['type operation', 'code proprietaire', 'numero trans gu'];
             const colonnesManquantes = colonneRequises.filter(col => !entetes.includes(col));
             if (colonnesManquantes.length > 0) {
-              throw new Error(`Colonnes manquantes dans le fichier: ${colonnesManquantes.join(', ')}\nColonnes attendues: ${colonneRequises.join(', ')}`);
+              throw new Error(I18nService.t('TSF.msg.colonnesManquantesDansLeFichierColonnes', { p0: colonnesManquantes.join(', '), p1: colonneRequises.join(', ') }));
             }
 
             console.log(`📊 ${donneesFichier.length} lignes trouvées dans le fichier`);
             this.verifierEtMettreAJourStatuts(donneesFichier);
           } catch (error) {
             console.error('❌ Erreur lors du parsing de l\'Excel:', error);
-            this.popupService.showError(`❌ Erreur lors du traitement du fichier:\n${error}`, 'Erreur de Traitement');
+            this.popupService.showError(I18nService.t('TSF.msg.erreurLorsDuTraitementDuFichier', { p0: error }), I18nService.t('TSF.processingErrorTitle'));
             this.isVerifyingFrais = false;
           }
         };
         reader.onerror = () => {
-          this.popupService.showError('❌ Erreur lors de la lecture du fichier Excel', 'Erreur de Lecture');
+          this.popupService.showError(I18nService.t('TSF.msg.erreurLorsDeLaLectureDu2'), I18nService.t('TSF.readErrorTitle'));
           this.isVerifyingFrais = false;
         };
         reader.readAsArrayBuffer(file);
@@ -1699,7 +1699,7 @@ export class TrxSfComponent implements OnInit, OnDestroy {
                   },
                   error: (error) => {
                     transactionsErreur++;
-                    const msgErreur = `ID ${transactionTrxSf.id}: ${error.message || 'Erreur inconnue'}`;
+                    const msgErreur = `ID ${transactionTrxSf.id}: ${error.message || I18nService.t('TSF.unknownError')}`;
                     detailsErreurs.push(msgErreur);
                     console.error(`❌ Erreur mise à jour ID ${transactionTrxSf.id}:`, error);
                   }

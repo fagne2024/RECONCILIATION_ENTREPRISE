@@ -110,8 +110,8 @@
         </div>
         <div class="feature-card" role="button" tabindex="0" (click)="openSuiviCompense()" (keydown.enter)="openSuiviCompense()">
           <div class="feature-icon"><i class="fas fa-receipt"></i></div>
-          <h3>Suivi compense OP</h3>
-          <p>Suivre les compenses OP importées</p>
+          <h3>{{ 'TBL.ui.suiviCompenseOp' | translate }}</h3>
+          <p>{{ 'TBL.ui.suivreLesCompensesOpImportees' | translate }}</p>
         </div>
         <div class="feature-card" role="button" tabindex="0" (click)="openSecurite()" (keydown.enter)="openSecurite()">
           <div class="feature-icon"><i class="fas fa-link"></i></div>
@@ -150,7 +150,7 @@
 
     <div class="banque-section" *ngIf="activeSection === 'suivi-compense'">
       <div class="releve-header">
-        <h2>Suivi compense OP</h2>
+        <h2>{{ 'TBL.ui.suiviCompenseOp' | translate }}</h2>
         <div class="actions">
           <label class="file-btn">
             <input type="file" (change)="onSuiviCompenseFileSelected($event)" accept=".xlsx,.xls,.csv" />
@@ -164,7 +164,7 @@
           </button>
           <button type="button" class="ds-btn ds-btn--primary btn-primary" (click)="toggleSelectionModeSuivi()" [class.active]="isSelectionModeSuivi" title="{{ 'BQ.Sélectionmultiple' | translate }}">
             <i class="fas fa-check-square"></i>
-            {{ isSelectionModeSuivi ? 'Quitter la sélection' : 'Sélection multiple' }}
+            {{ isSelectionModeSuivi ? ('OPS.exitSelection' | translate) : ('ACT.multipleSelection' | translate) }}
             <span *ngIf="isSelectionModeSuivi && hasSelectedSuivi" class="badge" style="margin-left:6px;">{{ selectedSuiviIds.size }}</span>
           </button>
         </div>
@@ -172,11 +172,11 @@
 
       <div class="bulk-actions" *ngIf="isSelectionModeSuivi" style="margin-bottom: 12px;">
         <button type="button" class="ds-btn ds-btn--secondary btn-bulk-cancel" (click)="deselectAllSuivi()" [disabled]="!hasSelectedSuivi">
-          <i class="fas fa-times"></i> Tout désélectionner
+          <i class="fas fa-times"></i> {{ 'ACT.deselectAll' | translate }}
         </button>
         <button type="button" class="ds-btn ds-btn--secondary btn-warning" (click)="bulkDeleteSelectedSuivi()" [disabled]="isBulkDeletingSuivi || !hasSelectedSuivi">
           <i class="fas fa-trash" [class.spin]="isBulkDeletingSuivi"></i>
-          {{ isBulkDeletingSuivi ? 'Suppression...' : 'Supprimer (' + selectedSuiviIds.size + ')' }}
+          {{ isBulkDeletingSuivi ? ('ACT.deleting' | translate) : ('TBL.ui.supprimer' | translate) + selectedSuiviIds.size + ')' }}
         </button>
       </div>
 
@@ -207,18 +207,18 @@
       <!-- Filtres alignés sur les colonnes du tableau -->
       <div class="filters-bar" *ngIf="suiviCompenseRows.length">
         <div class="filters-row">
-          <input class="ds-input" type="date" [(ngModel)]="suiviFilters.dateDebut" (change)="onSuiviFilterChange()" title="Date début">
+          <input class="ds-input" type="date" [(ngModel)]="suiviFilters.dateDebut" (change)="onSuiviFilterChange()" title="{{ 'BQ.Datedébut' | translate }}">
           <span>→</span>
-          <input class="ds-input" type="date" [(ngModel)]="suiviFilters.dateFin" (change)="onSuiviFilterChange()" title="Date fin">
-          <input class="ds-input" type="text" placeholder="Code agence" [(ngModel)]="suiviFilters.codeAgence" (ngModelChange)="onSuiviFilterChange()">
-          <input class="ds-input" type="text" placeholder="Banque" [(ngModel)]="suiviFilters.banque" (ngModelChange)="onSuiviFilterChange()">
-          <input class="ds-input" type="text" placeholder="Compte bancaire" [(ngModel)]="suiviFilters.compteBancaire" (ngModelChange)="onSuiviFilterChange()">
-          <input class="ds-input" type="number" placeholder="Montant" [(ngModel)]="suiviFilters.montant" (ngModelChange)="onSuiviFilterChange()" style="width:110px;">
-          <input class="ds-input" type="text" placeholder="Mode de paiement" [(ngModel)]="suiviFilters.modePaiement" (ngModelChange)="onSuiviFilterChange()">
-          <input class="ds-input" type="text" placeholder="Référence" [(ngModel)]="suiviFilters.reference" (ngModelChange)="onSuiviFilterChange()">
-          <input class="ds-input" type="text" placeholder="ID ticket" [(ngModel)]="suiviFilters.idTicket" (ngModelChange)="onSuiviFilterChange()">
-          <input class="ds-input" type="text" placeholder="Service" [(ngModel)]="suiviFilters.service" (ngModelChange)="onSuiviFilterChange()">
-          <input class="ds-input" type="text" placeholder="Réseau" [(ngModel)]="suiviFilters.reseau" (ngModelChange)="onSuiviFilterChange()">
+          <input class="ds-input" type="date" [(ngModel)]="suiviFilters.dateFin" (change)="onSuiviFilterChange()" title="{{ 'BQ.Datefin' | translate }}">
+          <input class="ds-input" type="text" placeholder="{{ 'BQ.Codeagence' | translate }}" [(ngModel)]="suiviFilters.codeAgence" (ngModelChange)="onSuiviFilterChange()">
+          <input class="ds-input" type="text" placeholder="{{ 'TBL.bank' | translate }}" [(ngModel)]="suiviFilters.banque" (ngModelChange)="onSuiviFilterChange()">
+          <input class="ds-input" type="text" placeholder="{{ 'TBL.ui.compteBancaire' | translate }}" [(ngModel)]="suiviFilters.compteBancaire" (ngModelChange)="onSuiviFilterChange()">
+          <input class="ds-input" type="number" placeholder="{{ 'TBL.amount' | translate }}" [(ngModel)]="suiviFilters.montant" (ngModelChange)="onSuiviFilterChange()" style="width:110px;">
+          <input class="ds-input" type="text" placeholder="{{ 'TBL.ui.modeDePaiement' | translate }}" [(ngModel)]="suiviFilters.modePaiement" (ngModelChange)="onSuiviFilterChange()">
+          <input class="ds-input" type="text" placeholder="{{ 'TBL.labelNarration' | translate }}" [(ngModel)]="suiviFilters.reference" (ngModelChange)="onSuiviFilterChange()">
+          <input class="ds-input" type="text" placeholder="{{ 'TBL.ui.idTicket' | translate }}" [(ngModel)]="suiviFilters.idTicket" (ngModelChange)="onSuiviFilterChange()">
+          <input class="ds-input" type="text" placeholder="{{ 'TBL.service' | translate }}" [(ngModel)]="suiviFilters.service" (ngModelChange)="onSuiviFilterChange()">
+          <input class="ds-input" type="text" placeholder="{{ 'TBL.ui.reseau' | translate }}" [(ngModel)]="suiviFilters.reseau" (ngModelChange)="onSuiviFilterChange()">
           <button class="ds-btn ds-btn--secondary btn-clear-filters" type="button" (click)="resetSuiviFilters()"><i class="fas fa-times"></i> {{ 'CPT.Effacer' | translate }}</button>
         </div>
       </div>
@@ -232,18 +232,18 @@
                        [checked]="allSuiviOnPageSelected"
                        [indeterminate]="hasSelectedSuivi && !allSuiviOnPageSelected"
                        (change)="toggleSelectAllSuiviHeader()"
-                       title="Sélectionner/Désélectionner toutes les lignes (toutes les pages)">
+                       title="{{ 'TBL.ui.selectionnerDeselectionnerToutesLesLigne' | translate }}">
               </th>
-              <th>Date</th>
-              <th>Code agence</th>
-              <th>Banque</th>
-              <th>Compte bancaire</th>
-              <th class="right">Montant</th>
-              <th>Mode de paiement</th>
-              <th>Référence</th>
-              <th>ID ticket</th>
-              <th>Service</th>
-              <th>Réseau</th>
+              <th>{{ 'TBL.date' | translate }}</th>
+              <th>{{ 'BQ.Codeagence' | translate }}</th>
+              <th>{{ 'TBL.bank' | translate }}</th>
+              <th>{{ 'TBL.ui.compteBancaire' | translate }}</th>
+              <th class="right">{{ 'TBL.amount' | translate }}</th>
+              <th>{{ 'TBL.ui.modeDePaiement' | translate }}</th>
+              <th>{{ 'TBL.labelNarration' | translate }}</th>
+              <th>{{ 'TBL.ui.idTicket' | translate }}</th>
+              <th>{{ 'TBL.service' | translate }}</th>
+              <th>{{ 'TBL.ui.reseau' | translate }}</th>
               <th class="actions-col"></th>
             </tr>
           </thead>
@@ -263,13 +263,13 @@
               <td>{{ r.service || '-' }}</td>
               <td>{{ r.reseau || '-' }}</td>
               <td class="actions-col">
-                <button type="button" class="ds-btn ds-btn--secondary" (click)="deleteSuiviCompense(r)" title="Supprimer">
+                <button type="button" class="ds-btn ds-btn--secondary" (click)="deleteSuiviCompense(r)" title="{{ 'ACT.delete' | translate }}">
                   <i class="fas fa-trash"></i>
                 </button>
               </td>
             </tr>
             <tr *ngIf="!suiviCompenseLoading && !suiviCompenseRows.length">
-              <td [attr.colspan]="isSelectionModeSuivi ? 12 : 11">Aucune ligne importée.</td>
+              <td [attr.colspan]="isSelectionModeSuivi ? 12 : 11">{{ 'TBL.ui.aucuneLigneImportee' | translate }}</td>
             </tr>
           </tbody>
         </table>
@@ -306,16 +306,16 @@
           <button type="button" class="ds-btn ds-btn--primary btn-primary" (click)="exportReleveCSV()" [disabled]="!(filteredReleveRowsForImport && filteredReleveRowsForImport.length)" title="{{ 'BQ.Exporterlerelevécsv' | translate }}">
             <i class="fas fa-file-export"></i> {{ 'BQ.Exportcsv' | translate }}
           </button>
-          <button type="button" class="ds-btn ds-btn--secondary btn-success" (click)="openCreateOperation()" title="Ajouter une ligne au relevé bancaire">
-            <i class="fas fa-plus"></i> Ajouter une ligne
+          <button type="button" class="ds-btn ds-btn--secondary btn-success" (click)="openCreateOperation()" title="{{ 'TBL.ui.ajouterUneLigneAuReleveBancaire' | translate }}">
+            <i class="fas fa-plus"></i> {{ 'ACT.addRow' | translate }}
           </button>
           <button type="button" class="ds-btn ds-btn--primary btn-primary" (click)="toggleCommentColumn()" [class.active]="showCommentColumn" title="{{ 'BQ.Affichermasquerlacolonnecommentaire' | translate }}">
             <i class="fas" [class.fa-comment]="!showCommentColumn" [class.fa-comment-slash]="showCommentColumn"></i>
-            {{ showCommentColumn ? 'Masquer Commentaires' : 'Afficher Commentaires' }}
+            {{ showCommentColumn ? ('TBL.ui.masquerCommentaires' | translate) : ('TBL.ui.afficherCommentaires' | translate) }}
           </button>
           <button type="button" class="ds-btn ds-btn--primary btn-primary" (click)="toggleSelectionModeReleve()" [class.active]="isSelectionModeReleve" title="{{ 'BQ.Sélectionmultiple' | translate }}">
             <i class="fas fa-check-square"></i>
-            {{ isSelectionModeReleve ? 'Quitter la sélection' : 'Sélection multiple' }}
+            {{ isSelectionModeReleve ? ('OPS.exitSelection' | translate) : ('ACT.multipleSelection' | translate) }}
             <span *ngIf="isSelectionModeReleve && hasSelectedReleve" class="badge" style="margin-left:6px;">{{ selectedReleveIds.size }}</span>
           </button>
           <div class="filter-group" style="margin-left:12px; display: none;">
@@ -372,7 +372,7 @@
           <mat-form-field appearance="fill" class="bq-multi-filter">
             <mat-select placeholder="{{ 'TBL.accountNumber' | translate }}" [(ngModel)]="releveFilterNumeroComptes" multiple (selectionChange)="applyReleveFilters()">
               <mat-option>
-                <ngx-mat-select-search [(ngModel)]="releveCompteSearch" placeholderLabel="Rechercher un compte..." noEntriesFoundLabel="Aucun résultat"></ngx-mat-select-search>
+                <ngx-mat-select-search [(ngModel)]="releveCompteSearch" [placeholderLabel]="'SEARCH.account' | translate" [noEntriesFoundLabel]="'SEARCH.noResult' | translate"></ngx-mat-select-search>
               </mat-option>
               <mat-option *ngFor="let v of releveNumeroCompteFiltered" [value]="v">{{ v }}</mat-option>
             </mat-select>
@@ -380,7 +380,7 @@
           <mat-form-field appearance="fill" class="bq-multi-filter">
             <mat-select placeholder="{{ 'TBL.bank' | translate }}" [(ngModel)]="releveFilterBanques" multiple (selectionChange)="onReleveFilterScopeChange()">
               <mat-option>
-                <ngx-mat-select-search [(ngModel)]="releveBanqueSearch" placeholderLabel="Rechercher une banque..." noEntriesFoundLabel="Aucun résultat"></ngx-mat-select-search>
+                <ngx-mat-select-search [(ngModel)]="releveBanqueSearch" [placeholderLabel]="'SEARCH.bank' | translate" [noEntriesFoundLabel]="'SEARCH.noResult' | translate"></ngx-mat-select-search>
               </mat-option>
               <mat-option *ngFor="let v of releveBanqueFiltered" [value]="v">{{ v }}</mat-option>
             </mat-select>
@@ -409,11 +409,11 @@
 
       <div class="bulk-actions" *ngIf="releveRows.length && isSelectionModeReleve" style="margin-bottom: 12px;">
         <button type="button" class="ds-btn ds-btn--secondary btn-bulk-cancel" (click)="deselectAllReleve()" [disabled]="!hasSelectedReleve">
-          <i class="fas fa-times"></i> Tout désélectionner
+          <i class="fas fa-times"></i> {{ 'ACT.deselectAll' | translate }}
         </button>
         <button type="button" class="ds-btn ds-btn--secondary btn-warning" (click)="bulkDeleteSelectedReleve()" [disabled]="isBulkDeletingReleve || !hasSelectedReleve">
           <i class="fas fa-trash" [class.spin]="isBulkDeletingReleve"></i>
-          {{ isBulkDeletingReleve ? 'Suppression...' : 'Supprimer (' + selectedReleveIds.size + ')' }}
+          {{ isBulkDeletingReleve ? ('ACT.deleting' | translate) : ('TBL.ui.supprimer' | translate) + selectedReleveIds.size + ')' }}
         </button>
       </div>
 
@@ -427,7 +427,7 @@
                          [checked]="allReleveOnPageSelected"
                          [indeterminate]="hasSelectedReleve && !allReleveOnPageSelected"
                          (change)="toggleSelectAllReleveHeader()"
-                         title="Sélectionner/Désélectionner toutes les lignes (toutes les pages)">
+                         title="{{ 'TBL.ui.selectionnerDeselectionnerToutesLesLigne' | translate }}">
                 </th>
                 <th>{{ 'TBL.accountNumber' | translate }}</th>
                 <th>{{ 'TBL.accountName' | translate }}</th>
@@ -474,8 +474,8 @@
                 <td>{{ r.devise || '-' }}</td>
               <td>
                 <span class="badge status-ok" *ngIf="getReleveNiveauStatus(r)==='OK'">{{ 'COMMON.actions.ok' | translate }}</span>
-                <span class="badge status-en-cours" *ngIf="getReleveNiveauStatus(r)==='En cours'">En cours</span>
-                <span class="badge status-valide" *ngIf="getReleveNiveauStatus(r)==='Clôturé'">Clôturé</span>
+                <span class="badge status-en-cours" *ngIf="getReleveNiveauStatus(r)==='En cours'">{{ 'MSG.inProgress' | translate }}</span>
+                <span class="badge status-valide" *ngIf="getReleveNiveauStatus(r)==='Clôturé'">{{ 'RPT.closed' | translate }}</span>
                 <span class="badge status-ko" *ngIf="getReleveNiveauStatus(r)==='KO'">KO</span>
               </td>
               <td *ngIf="showCommentColumn" class="comment-cell">
@@ -587,11 +587,11 @@
         <div class="actions">
           <button type="button" class="ds-btn ds-btn--primary btn-primary" (click)="toggleSelectAllCurrentPage()" [class.active]="selectAllOnPage" title="{{ 'BQ.Sélectionnerdésélectionnerlapage' | translate }}" *ngIf="reconView==='corr_operation' || reconView==='corr_releve'">
             <i class="fas" [ngClass]="{ 'fa-square': !selectAllOnPage, 'fa-check-square': selectAllOnPage }"></i>
-            {{ selectAllOnPage ? 'Tout désélectionner' : 'Sélectionner la page' }}
+            {{ selectAllOnPage ? ('ACT.deselectAll' | translate) : ('BQ.Sélectionnerlapage' | translate) }}
           </button>
           <button type="button" class="ds-btn ds-btn--primary btn-primary" (click)="toggleSelectionModeOps()" [class.active]="isSelectionModeOps" title="{{ 'BQ.Sélectionmultiple' | translate }}" *ngIf="reconView==='operation'">
             <i class="fas fa-check-square"></i>
-            {{ isSelectionModeOps ? 'Quitter la sélection' : 'Sélection multiple' }}
+            {{ isSelectionModeOps ? ('OPS.exitSelection' | translate) : ('ACT.multipleSelection' | translate) }}
             <span *ngIf="isSelectionModeOps && hasSelectedOps" class="badge" style="margin-left:6px;">{{ selectedOpIds.size }}</span>
           </button>
         </div>
@@ -686,7 +686,7 @@
               </select>
               <button type="button" class="ds-btn ds-btn--secondary btn-bulk-action" (click)="bulkChangeSelectedOpsStatus()" [disabled]="isBulkUpdatingOps || !hasSelectedOps || !selectedOpsTargetStatut">
                 <i class="fas fa-exchange-alt"></i>
-                {{ isBulkUpdatingOps ? 'Changement...' : 'Changer statut (' + selectedOpIds.size + ')' }}
+                {{ isBulkUpdatingOps ? ('OPS.statusChanging' | translate) : ('TBL.ui.changerStatut' | translate) + selectedOpIds.size + ')' }}
               </button>
               <button type="button" class="ds-btn ds-btn--secondary btn-success" (click)="cloturerSelection('ops')" [disabled]="isBulkUpdatingOps || !hasSelectedOps">
                 <i class="fas fa-lock"></i> {{ 'BQ.Cloturer' | translate }}
@@ -751,7 +751,7 @@
                        [checked]="selectAllOpsOnPage && (pagedLeftOps.length>0)"
                        [indeterminate]="hasSelectedOps && !selectAllOpsOnPage"
                        (change)="toggleSelectAllOpsHeader()"
-                       title="Sélectionner/Désélectionner la page">
+                       title="{{ 'BQ.Sélectionnerdésélectionnerlapage' | translate }}">
               </th>
               <th>{{ 'TBL.country' | translate }}</th>
               <th>{{ 'TBL.operationDate' | translate }}</th>
@@ -959,8 +959,8 @@
               <label>{{ 'TBL.status' | translate }}</label>
               <select class="ds-select" [(ngModel)]="voirToutStatut" (change)="onVoirToutFilterChange()">
                 <option value="">{{ 'FILT.all' | translate }}</option>
-                <option value="Suspens">Suspens</option>
-                <option value="Correspondance">Correspondance</option>
+                <option value="Suspens">{{ 'BQ.Suspens' | translate }}</option>
+                <option value="Correspondance">{{ 'DASH.match' | translate }}</option>
               </select>
             </div>
             <div class="filter-group">
@@ -971,7 +971,7 @@
 
           <h4 class="recon-all-title">
             {{ 'BQ.OperationsBancaires' | translate }} ({{ voirToutOps.length }})
-            <span class="muted">— {{ voirToutOpCount.suspens }} suspens · {{ voirToutOpCount.correspondances }} correspondances</span>
+            <span class="muted">{{ 'TBL.ui.suspensCorrespondances' | translate: { p0: voirToutOpCount.suspens, p1: voirToutOpCount.correspondances } }}</span>
           </h4>
           <table class="ds-table operations-table">
             <thead>
@@ -1027,7 +1027,7 @@
 
           <h4 class="recon-all-title">
             {{ 'BQ.RelevesBancaires' | translate }} ({{ voirToutReleves.length }})
-            <span class="muted">— {{ voirToutRevCount.suspens }} suspens · {{ voirToutRevCount.correspondances }} correspondances</span>
+            <span class="muted">{{ 'TBL.ui.suspensCorrespondances' | translate: { p0: voirToutRevCount.suspens, p1: voirToutRevCount.correspondances } }}</span>
           </h4>
           <table class="ds-table operations-table">
             <thead>
@@ -1330,27 +1330,27 @@
           <button type="button" class="ds-btn ds-btn--primary btn-primary" (click)="downloadOpbTemplate()" title="{{ 'BQ.Téléchargerlemodèle' | translate }}">
             <i class="fas fa-file-excel"></i> {{ 'BQ.Modèle' | translate }}
           </button>
-          <button type="button" class="ds-btn ds-btn--secondary btn-primary" (click)="openCheckPopup()" title="Check des opérations par type">
-            <i class="fas fa-square-check"></i> Check
+          <button type="button" class="ds-btn ds-btn--secondary btn-primary" (click)="openCheckPopup()" title="{{ 'TBL.ui.checkDesOperationsParType' | translate }}">
+            <i class="fas fa-square-check"></i> {{ 'TBL.ui.check' | translate }}
           </button>
           <button type="button" class="ds-btn ds-btn--secondary btn-success" (click)="exportOperations()" [disabled]="filteredOperations.length === 0" title="{{ 'BQ.Exporterexcel' | translate }}">
             <i class="fas fa-file-excel"></i> {{ 'COMMON.actions.export' | translate }}
           </button>
           <button type="button" class="ds-btn ds-btn--primary btn-primary" (click)="toggleOpCommentColumn()" [class.active]="showOpCommentColumn" title="{{ 'BQ.Affichermasquerlacolonnecommentaire' | translate }}">
             <i class="fas" [class.fa-comment]="!showOpCommentColumn" [class.fa-comment-slash]="showOpCommentColumn"></i>
-            {{ showOpCommentColumn ? 'Masquer Commentaires' : 'Afficher Commentaires' }}
+            {{ showOpCommentColumn ? ('TBL.ui.masquerCommentaires' | translate) : ('TBL.ui.afficherCommentaires' | translate) }}
           </button>
           <button type="button" class="ds-btn ds-btn--primary btn-primary" (click)="toggleActionsColumn()" [class.active]="showActionsColumn" title="{{ 'BQ.Affichermasquerlescolonnesactions' | translate }}">
             <i class="fas" [class.fa-eye]="!showActionsColumn" [class.fa-eye-slash]="showActionsColumn"></i>
-            {{ showActionsColumn ? 'Masquer Actions' : 'Afficher Actions' }}
+            {{ showActionsColumn ? ('RPT.hideActionsBtn' | translate) : ('RPT.showActionsBtn' | translate) }}
           </button>
           <button type="button" class="ds-btn ds-btn--primary btn-primary" (click)="toggleLastActionColumn()" [class.active]="showLastActionColumn" title="{{ 'BQ.HistoriqueActions' | translate }}">
             <i class="fas fa-history"></i>
-            {{ showLastActionColumn ? 'Masquer Dernière action' : 'Afficher Dernière action' }}
+            {{ showLastActionColumn ? ('TBL.ui.masquerDerniereAction' | translate) : ('TBL.ui.afficherDerniereAction' | translate) }}
           </button>
           <button type="button" class="ds-btn ds-btn--primary btn-primary" (click)="toggleSelectionModeMain()" [class.active]="isSelectionModeMain" title="{{ 'BQ.Sélectionmultiple' | translate }}">
             <i class="fas fa-check-square"></i>
-            {{ isSelectionModeMain ? 'Quitter la sélection' : 'Sélection multiple' }}
+            {{ isSelectionModeMain ? ('OPS.exitSelection' | translate) : ('ACT.multipleSelection' | translate) }}
             <span *ngIf="isSelectionModeMain && hasSelectedMainOps" class="badge" style="margin-left:6px;">{{ selectedMainOpIds.size }}</span>
           </button>
         </div>
@@ -1411,7 +1411,7 @@
           <mat-form-field appearance="fill" class="bq-multi-filter">
             <mat-select placeholder="{{ 'FILT.all' | translate }}" [(ngModel)]="opFilterAgences" multiple (selectionChange)="applyFilters()">
               <mat-option>
-                <ngx-mat-select-search [(ngModel)]="opAgenceSearch" placeholderLabel="Rechercher une agence..." noEntriesFoundLabel="Aucun résultat"></ngx-mat-select-search>
+                <ngx-mat-select-search [(ngModel)]="opAgenceSearch" [placeholderLabel]="'SEARCH.agency' | translate" [noEntriesFoundLabel]="'SEARCH.noResult' | translate"></ngx-mat-select-search>
               </mat-option>
               <mat-option *ngFor="let v of opAgenceFiltered" [value]="v">{{ v }}</mat-option>
             </mat-select>
@@ -1439,9 +1439,9 @@
           <label>{{ 'TBL.reconciliationStatus' | translate }}</label>
           <select class="ds-select" [(ngModel)]="operationsReconStatusFilter" (change)="applyFilters()">
             <option value="">{{ 'FILT.all' | translate }}</option>
-            <option value="En cours">En cours</option>
+            <option value="En cours">{{ 'MSG.inProgress' | translate }}</option>
             <option value="OK">{{ 'COMMON.actions.ok' | translate }}</option>
-            <option value="Clôturé">Clôturé</option>
+            <option value="Clôturé">{{ 'RPT.closed' | translate }}</option>
           </select>
         </div>
         <div class="filter-group">
@@ -1467,14 +1467,14 @@
           </select>
           <button type="button" class="ds-btn ds-btn--secondary btn-bulk-action" (click)="bulkChangeSelectedMainStatus()" [disabled]="isBulkUpdatingMain || !hasSelectedMainOps || !selectedMainTargetStatut">
             <i class="fas fa-exchange-alt"></i>
-            {{ isBulkUpdatingMain ? 'Changement...' : 'Changer statut (' + selectedMainOpIds.size + ')' }}
+            {{ isBulkUpdatingMain ? ('OPS.statusChanging' | translate) : ('TBL.ui.changerStatut' | translate) + selectedMainOpIds.size + ')' }}
           </button>
           <button type="button" class="ds-btn ds-btn--secondary btn-success" (click)="cloturerSelection('main')" [disabled]="isBulkUpdatingMain || !hasSelectedMainOps">
             <i class="fas fa-lock"></i> {{ 'BQ.Cloturer' | translate }}
           </button>
           <button type="button" class="ds-btn ds-btn--secondary btn-warning" (click)="bulkDeleteSelectedMainOps()" [disabled]="isBulkDeletingMain || isBulkUpdatingMain || !hasSelectedMainOps">
             <i class="fas fa-trash" [class.spin]="isBulkDeletingMain"></i>
-            {{ isBulkDeletingMain ? 'Suppression...' : 'Supprimer (' + selectedMainOpIds.size + ')' }}
+            {{ isBulkDeletingMain ? ('ACT.deleting' | translate) : ('TBL.ui.supprimer' | translate) + selectedMainOpIds.size + ')' }}
           </button>
           <button type="button" class="ds-btn ds-btn--secondary btn-warning" (click)="quickBulkMain('Rejetée')" [disabled]="isBulkUpdatingMain || !hasSelectedMainOps">
             <i class="fas fa-ban"></i> {{ 'BQ.Rejeter' | translate }}
@@ -1492,7 +1492,7 @@
                        [checked]="allMainSelected"
                        [indeterminate]="hasSelectedMainOps && !allMainSelected"
                        (change)="toggleSelectAllMainHeader()"
-                       title="Sélectionner/Désélectionner toutes les lignes (toutes les pages)">
+                       title="{{ 'TBL.ui.selectionnerDeselectionnerToutesLesLigne' | translate }}">
               </th>
               <th>{{ 'TBL.country' | translate }}</th>
               <th>{{ 'TBL.operationDate' | translate }}</th>
@@ -1549,7 +1549,7 @@
               <td>{{ operation.bo }}</td>
               <td class="banque-corrigee-cell">
                 <ng-container *ngIf="editingBanqueCorrigeeOperation !== operation; else editBanqueCorrigee">
-                  <span (click)="startEditBanqueCorrigee(operation)" style="cursor: pointer;" [title]="'Cliquer pour modifier la banque corrigée'">{{ operation.banqueCorrigee || '-' }}</span>
+                  <span (click)="startEditBanqueCorrigee(operation)" style="cursor: pointer;" [title]="('TBL.ui.cliquerPourModifierLaBanqueCorrigee' | translate)">{{ operation.banqueCorrigee || '-' }}</span>
                 </ng-container>
                 <ng-template #editBanqueCorrigee>
                   <input class="ds-input edit-select" type="text" list="banques-corrigees-inline-list" maxlength="255" autocomplete="off" autofocus
@@ -1567,7 +1567,7 @@
               </td>
               <td class="traitement-cell">
                 <ng-container *ngIf="editingOperation !== operation; else editTraitement">
-                  <span [class]="getTraitementClass(operation.traitement)" class="traitement-badge" (click)="startEditTraitement(operation)" [style.cursor]="canEditTraitement(operation) ? 'pointer' : 'not-allowed'" [title]="canEditTraitement(operation) ? '' : 'Réservé à l\'administrateur'">
+                  <span [class]="getTraitementClass(operation.traitement)" class="traitement-badge" (click)="startEditTraitement(operation)" [style.cursor]="canEditTraitement(operation) ? 'pointer' : 'not-allowed'" [title]="canEditTraitement(operation) ? '' : ('TBL.ui.reserveALAdministrateur' | translate)">
                     {{ operation.traitement || '-' }}
                   </span>
                 </ng-container>
@@ -1670,9 +1670,9 @@
           <label>{{ 'TBL.reconciliationStatus' | translate }}</label>
           <select class="ds-select" [(ngModel)]="operationsReconStatusFilter" (change)="onOperationsReconStatusFilterChange()">
             <option value="">{{ 'FILT.all' | translate }}</option>
-            <option value="En cours">En cours</option>
+            <option value="En cours">{{ 'MSG.inProgress' | translate }}</option>
             <option value="OK">{{ 'COMMON.actions.ok' | translate }}</option>
-            <option value="Clôturé">Clôturé</option>
+            <option value="Clôturé">{{ 'RPT.closed' | translate }}</option>
           </select>
         </div>
       </div>
@@ -1693,7 +1693,7 @@
         <div class="detail-grid">
           <div class="detail-item">
             <label><i class="fas fa-globe"></i>{{ 'TBL.country' | translate }}</label>
-            <span>{{ selectedOperation.pays || 'Non renseigné' }}</span>
+            <span>{{ selectedOperation.pays || ('TBL.ui.nonRenseigne' | translate) }}</span>
           </div>
           <div class="detail-item">
             <label><i class="fas fa-clock"></i>{{ 'TBL.operationDate' | translate }}</label>
@@ -1713,7 +1713,7 @@
           </div>
           <div class="detail-item">
             <label><i class="fas fa-hashtag"></i>{{ 'TBL.reference' | translate }}</label>
-            <span>{{ selectedOperation.reference || 'Non renseignée' }}</span>
+            <span>{{ selectedOperation.reference || ('TBL.ui.nonRenseignee' | translate) }}</span>
           </div>
           <div class="detail-item">
             <label><i class="fas fa-ticket-alt"></i>{{ 'TBL.ticketId' | translate }}</label>
@@ -1735,19 +1735,19 @@
           </div>
           <div class="detail-item">
             <label><i class="fas fa-university"></i>{{ 'TBL.bank' | translate }}</label>
-            <span>{{ selectedOperation.bo || 'Non renseigné' }}</span>
+            <span>{{ selectedOperation.bo || ('TBL.ui.nonRenseigne' | translate) }}</span>
           </div>
           <div class="detail-item">
             <label><i class="fas fa-user"></i>{{ 'BQ.Demandeur' | translate }}</label>
-            <span>{{ selectedOperation.demandeur || 'Non renseigné' }}</span>
+            <span>{{ selectedOperation.demandeur || ('TBL.ui.nonRenseigne' | translate) }}</span>
           </div>
           <div class="detail-item">
             <label><i class="fas fa-user-check"></i>{{ 'BQ.Valideur' | translate }}</label>
-            <span>{{ selectedOperation.valideur || 'Non renseigné' }}</span>
+            <span>{{ selectedOperation.valideur || ('TBL.ui.nonRenseigne' | translate) }}</span>
           </div>
           <div class="detail-item">
             <label><i class="fas fa-comment"></i>{{ 'BQ.Commentaire' | translate }}</label>
-            <span>{{ selectedOperation.commentaire || 'Non renseigné' }}</span>
+            <span>{{ selectedOperation.commentaire || ('TBL.ui.nonRenseigne' | translate) }}</span>
           </div>
           <div class="detail-item">
             <label><i class="fas fa-info-circle"></i>{{ 'TBL.status' | translate }}</label>
@@ -1842,11 +1842,11 @@
             </select>
           </div>
           <div class="filter-group">
-            <label>Date du</label>
+            <label>{{ 'EBS.Datedu' | translate }}</label>
             <input class="ds-input" type="date" [(ngModel)]="reconResultDateDebut" (change)="onReconResultFilterChange()">
           </div>
           <div class="filter-group">
-            <label>au</label>
+            <label>{{ 'TBL.ui.au' | translate }}</label>
             <input class="ds-input" type="date" [(ngModel)]="reconResultDateFin" (change)="onReconResultFilterChange()">
           </div>
           <button type="button" class="ds-btn ds-btn--secondary btn-clear-filters" (click)="clearReconResultFilters()">
@@ -2146,7 +2146,7 @@
             </div>
             <div class="form-group">
               <label>{{ 'TBL.country' | translate }}</label>
-              <input class="ds-input" type="text" list="rv-pays-list" autocomplete="off" [(ngModel)]="releveEditForm.pays" name="rv_pays" placeholder="ML, SN, CM…">
+              <input class="ds-input" type="text" list="rv-pays-list" autocomplete="off" [(ngModel)]="releveEditForm.pays" name="rv_pays" placeholder="{{ 'TBL.ui.mlSnCm' | translate }}">
               <datalist id="rv-pays-list"><option *ngFor="let v of relevePaysCodeOptions" [value]="v"></option></datalist>
             </div>
           </div>
@@ -2217,7 +2217,7 @@
   <div class="modern-popup-overlay" *ngIf="showCreateOperationPopup" (click)="closeCreateOperationPopup()">
     <div class="modern-popup create-operation-popup" (click)="$event.stopPropagation()">
       <div class="popup-header">
-        <h3><i class="fas fa-plus"></i> Ajouter une ligne de relevé</h3>
+        <h3><i class="fas fa-plus"></i> {{ 'TBL.ui.ajouterUneLigneDeReleve' | translate }}</h3>
         <button type="button" class="ds-btn ds-btn--secondary btn-close" (click)="closeCreateOperationPopup()">
           <i class="fas fa-times"></i>
         </button>
@@ -2241,7 +2241,7 @@
             </div>
             <div class="form-group">
               <label>{{ 'TBL.country' | translate }}</label>
-              <input class="ds-input" type="text" [(ngModel)]="createOperationForm.pays" name="co_pays" placeholder="ML, SN, CM…">
+              <input class="ds-input" type="text" [(ngModel)]="createOperationForm.pays" name="co_pays" placeholder="{{ 'TBL.ui.mlSnCm' | translate }}">
             </div>
             <div class="form-group">
               <label>{{ 'TBL.accountingDate' | translate }} *</label>
@@ -2298,7 +2298,7 @@
           <i class="fas fa-times"></i>{{ 'COMMON.actions.cancel' | translate }}</button>
         <button type="button" class="ds-btn ds-btn--primary btn-primary" (click)="saveCreateOperation()" [disabled]="!isCreateOperationFormValid() || creatingOperation">
           <i class="fas" [class.fa-save]="!creatingOperation" [class.fa-spinner]="creatingOperation" [class.fa-spin]="creatingOperation"></i>
-          {{ creatingOperation ? 'Création en cours...' : 'Créer l\'Opération' }}
+          {{ creatingOperation ? ('TBL.ui.creationEnCours' | translate) : ('TBL.ui.creerLOperation' | translate) }}
         </button>
       </div>
     </div>
@@ -2344,8 +2344,8 @@
               <datalist id="edit-agences-list"><option *ngFor="let v of opAgenceOptions" [value]="v"></option></datalist>
             </div>
             <div class="form-group">
-              <label><i class="fas fa-credit-card"></i>Compte à débiter</label>
-              <input class="ds-input" type="text" list="edit-comptes-list" autocomplete="off" [(ngModel)]="editForm.compteADebiter" name="compteADebiter" placeholder="Compte à débiter">
+              <label><i class="fas fa-credit-card"></i>{{ 'TBL.ui.compteADebiter' | translate }}</label>
+              <input class="ds-input" type="text" list="edit-comptes-list" autocomplete="off" [(ngModel)]="editForm.compteADebiter" name="compteADebiter" placeholder="{{ 'TBL.ui.compteADebiter' | translate }}">
               <datalist id="edit-comptes-list"><option *ngFor="let v of opCompteOptions" [value]="v"></option></datalist>
             </div>
             <div class="form-group">
@@ -2429,12 +2429,12 @@
   <div class="check-popup-backdrop" *ngIf="checkPopup.visible" role="dialog" aria-modal="true">
     <div class="check-popup">
       <div class="check-popup__head">
-        <h3>Check des opérations</h3>
-        <button type="button" class="check-popup__close" (click)="closeCheckPopup()" aria-label="Fermer"><i class="fas fa-xmark"></i></button>
+        <h3>{{ 'TBL.ui.checkDesOperations' | translate }}</h3>
+        <button type="button" class="check-popup__close" (click)="closeCheckPopup()" [attr.aria-label]="'COMMON.actions.close' | translate"><i class="fas fa-xmark"></i></button>
       </div>
 
       <ng-container *ngIf="checkPopup.step === 'types'">
-        <p>Choisissez le type d'opération à contrôler :</p>
+        <p>{{ 'TBL.ui.choisissezLeTypeDOperationA' | translate }}</p>
         <div class="check-types">
           <button type="button" class="ds-btn ds-btn--secondary" *ngFor="let t of checkPopup.types" (click)="runCheck(t)">{{ t }}</button>
         </div>
@@ -2442,25 +2442,25 @@
       </ng-container>
 
       <div class="check-popup__loading" *ngIf="checkPopup.step === 'loading'">
-        <i class="fas fa-gears fa-spin"></i> Contrôle en cours...
+        <i class="fas fa-gears fa-spin"></i> {{ 'TBL.ui.controleEnCours' | translate }}
       </div>
 
       <p class="text-danger" *ngIf="checkPopup.step === 'error'">{{ checkPopup.message }}</p>
 
       <ng-container *ngIf="checkPopup.step === 'results' && checkPopup.result as r">
         <div class="check-summary">
-          <span>Type : <strong>{{ r.type }}</strong></span>
-          <span>Opérations : <strong>{{ r.total }}</strong></span>
-          <span class="check-ok">Correspondances : <strong>{{ r.matched }}</strong></span>
-          <span class="check-ko">Écarts : <strong>{{ r.gaps }}</strong></span>
+          <span>{{ 'TRT.Type' | translate }} <strong>{{ r.type }}</strong></span>
+          <span>{{ 'TBL.ui.operations' | translate }} <strong>{{ r.total }}</strong></span>
+          <span class="check-ok">{{ 'TBL.ui.correspondances' | translate }} <strong>{{ r.matched }}</strong></span>
+          <span class="check-ko">{{ 'TBL.ui.ecarts' | translate }} <strong>{{ r.gaps }}</strong></span>
         </div>
-        <p class="muted" *ngIf="r.compensation">Contrôle sur le suivi compense OP (date, agence et montant). Seules les correspondances peuvent être validées.</p>
-        <p class="muted" *ngIf="!r.compensation">Contrôle sur le relevé bancaire (date et montant). Pas de validation pour ce type.</p>
+        <p class="muted" *ngIf="r.compensation">{{ 'TBL.ui.controleSurLeSuiviCompenseOp' | translate }}</p>
+        <p class="muted" *ngIf="!r.compensation">{{ 'TBL.ui.controleSurLeReleveBancaireDate' | translate }}</p>
 
         <div class="check-table-wrap">
           <table class="check-table">
             <thead>
-              <tr><th>Date</th><th>Agence</th><th>Montant</th><th>Statut</th><th>Banque</th><th>Référence</th></tr>
+              <tr><th>{{ 'TBL.date' | translate }}</th><th>{{ 'TBL.agency' | translate }}</th><th>{{ 'TBL.amount' | translate }}</th><th>{{ 'TBL.status' | translate }}</th><th>{{ 'TBL.bank' | translate }}</th><th>{{ 'TBL.labelNarration' | translate }}</th></tr>
             </thead>
             <tbody>
               <tr *ngFor="let row of r.rows" [class.check-row-ko]="row.status !== 'MATCH'">
@@ -2469,13 +2469,13 @@
                 <td class="num">{{ row.montant | number:'1.0-2' }}</td>
                 <td>
                   <span class="check-badge" [class.is-ok]="row.status === 'MATCH'" [class.is-ko]="row.status !== 'MATCH'">
-                    {{ row.status === 'MATCH' ? 'Correspondance' : 'Écart' }}
+                    {{ row.status === 'MATCH' ? ('DASH.match' | translate) : ('TBL.gap' | translate) }}
                   </span>
                 </td>
                 <td>{{ row.banque || '—' }}</td>
                 <td>{{ row.reference || '—' }}</td>
               </tr>
-              <tr *ngIf="r.rows.length === 0"><td colspan="6" class="muted">Aucune opération de ce type.</td></tr>
+              <tr *ngIf="r.rows.length === 0"><td colspan="6" class="muted">{{ 'TBL.ui.aucuneOperationDeCeType' | translate }}</td></tr>
             </tbody>
           </table>
         </div>
@@ -2483,12 +2483,12 @@
       </ng-container>
 
       <div class="check-popup__foot">
-        <button type="button" class="ds-btn ds-btn--secondary" *ngIf="checkPopup.step === 'results' || checkPopup.step === 'error'" (click)="backToCheckTypes()">Autre type</button>
+        <button type="button" class="ds-btn ds-btn--secondary" *ngIf="checkPopup.step === 'results' || checkPopup.step === 'error'" (click)="backToCheckTypes()">{{ 'TBL.ui.autreType' | translate }}</button>
         <button type="button" class="ds-btn ds-btn--primary" *ngIf="checkPopup.step === 'results' && checkPopup.result?.compensation"
                 [disabled]="checkPopup.applying || checkMatchedRows.length === 0" (click)="validateCheckMatches()">
-          Valider les correspondances ({{ checkMatchedRows.length }})
+          {{ 'TBL.ui.validerLesCorrespondances' | translate: { p0: checkMatchedRows.length } }}
         </button>
-        <button type="button" class="ds-btn ds-btn--secondary" (click)="closeCheckPopup()">Fermer</button>
+        <button type="button" class="ds-btn ds-btn--secondary" (click)="closeCheckPopup()">{{ 'COMMON.actions.close' | translate }}</button>
       </div>
     </div>
   </div>
@@ -2497,51 +2497,49 @@
   <div class="import-popup-backdrop" *ngIf="releveMissingPopup.visible" role="dialog" aria-modal="true">
     <div class="import-popup releve-missing-popup">
       <div class="import-popup__icon is-error"><i class="fas fa-triangle-exclamation"></i></div>
-      <h3>Informations manquantes dans le relevé</h3>
+      <h3>{{ 'TBL.ui.informationsManquantesDansLeReleve' | translate }}</h3>
       <p>
-        Le fichier ne contient pas {{ describeMissingFields(releveMissingPopup.fields) }}
-        pour toutes les lignes. Merci de {{ releveMissingPopup.fields.length > 1 ? 'les' : 'le' }} renseigner :
-        la valeur sera appliquée aux lignes concernées.
+        {{ (releveMissingPopup.fields.length > 1 ? 'TBL.ui.missingFieldsMany' : 'TBL.ui.missingFieldsOne') | translate: { fields: describeMissingFields(releveMissingPopup.fields) } }}
       </p>
       <div class="form-group" *ngIf="releveMissingPopup.fields.includes('numeroCompte')">
-        <label for="releveMissingCompte">Numéro de compte</label>
+        <label for="releveMissingCompte">{{ 'TBL.accountNumber' | translate }}</label>
         <input id="releveMissingCompte" class="ds-input" type="text" autocomplete="off"
                [(ngModel)]="releveMissingPopup.values.numeroCompte"
                (keydown.enter)="confirmReleveMissing()">
         <small class="text-danger" *ngIf="releveMissingPopup.submitted && !releveMissingPopup.values.numeroCompte.trim()">
-          Merci de renseigner le numéro de compte.
+          {{ 'TBL.ui.merciDeRenseignerLeNumeroDe' | translate }}
         </small>
       </div>
       <div class="form-group" *ngIf="releveMissingPopup.fields.includes('nomCompte')">
-        <label for="releveMissingNomCompte">Nom du compte</label>
+        <label for="releveMissingNomCompte">{{ 'TBL.accountName' | translate }}</label>
         <input id="releveMissingNomCompte" class="ds-input" type="text" autocomplete="off"
                [(ngModel)]="releveMissingPopup.values.nomCompte"
                (keydown.enter)="confirmReleveMissing()">
         <small class="text-danger" *ngIf="releveMissingPopup.submitted && !releveMissingPopup.values.nomCompte.trim()">
-          Merci de renseigner le nom du compte.
+          {{ 'TBL.ui.merciDeRenseignerLeNomDu' | translate }}
         </small>
       </div>
       <div class="form-group" *ngIf="releveMissingPopup.fields.includes('banque')">
-        <label for="releveMissingBanque">Banque</label>
+        <label for="releveMissingBanque">{{ 'TBL.bank' | translate }}</label>
         <input id="releveMissingBanque" class="ds-input" type="text" autocomplete="off"
                [(ngModel)]="releveMissingPopup.values.banque"
                (keydown.enter)="confirmReleveMissing()">
         <small class="text-danger" *ngIf="releveMissingPopup.submitted && !releveMissingPopup.values.banque.trim()">
-          Merci de renseigner la banque.
+          {{ 'TBL.ui.merciDeRenseignerLaBanque' | translate }}
         </small>
       </div>
       <div class="form-group" *ngIf="releveMissingPopup.fields.includes('pays')">
-        <label for="releveMissingPays">Pays (code, ex. ML, SN, CM)</label>
+        <label for="releveMissingPays">{{ 'TBL.ui.paysCodeExMlSnCm' | translate }}</label>
         <input id="releveMissingPays" class="ds-input" type="text" autocomplete="off"
                [(ngModel)]="releveMissingPopup.values.pays"
                (keydown.enter)="confirmReleveMissing()">
         <small class="text-danger" *ngIf="releveMissingPopup.submitted && !releveMissingPopup.values.pays.trim()">
-          Merci de renseigner le pays.
+          {{ 'TBL.ui.merciDeRenseignerLePays' | translate }}
         </small>
       </div>
       <div class="releve-missing-popup__actions">
-        <button type="button" class="ds-btn ds-btn--secondary" (click)="cancelReleveMissing()">Annuler</button>
-        <button type="button" class="ds-btn ds-btn--primary" (click)="confirmReleveMissing()">Continuer l'import</button>
+        <button type="button" class="ds-btn ds-btn--secondary" (click)="cancelReleveMissing()">{{ 'COMMON.actions.cancel' | translate }}</button>
+        <button type="button" class="ds-btn ds-btn--primary" (click)="confirmReleveMissing()">{{ 'TBL.ui.continuerLImport' | translate }}</button>
       </div>
     </div>
   </div>
@@ -2559,7 +2557,7 @@
       </div>
       <h3>{{ importPopup.title }}</h3>
       <ng-container *ngIf="importPopup.phase === 'upload' || importPopup.phase === 'server'">
-        <p>{{ importPopup.phase === 'upload' ? 'Envoi du fichier : ' + importPopup.percent + ' %' : 'Traitement des lignes en cours...' }}</p>
+        <p>{{ importPopup.phase === 'upload' ? ('TBL.ui.envoiDuFichier' | translate) + importPopup.percent + ' %' : ('TBL.ui.traitementDesLignesEnCours' | translate) }}</p>
         <div class="import-popup__bar">
           <div class="import-popup__fill" [class.is-indeterminate]="importPopup.phase === 'server'"
                [style.width.%]="importPopup.phase === 'server' ? 100 : importPopup.percent"></div>

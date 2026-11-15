@@ -20,6 +20,7 @@ import {
     resolveMagicPartitionContext,
     MagicPartitionContext
 } from '../../utils/magic-partition.util';
+import { I18nService } from '../../services/i18n/i18n.service';
 
 @Component({
   selector: 'app-matches-table',
@@ -904,7 +905,7 @@ export class MatchesTableComponent implements OnInit, OnDestroy {
           this.isExporting = false;
           if (progress.message.includes('✅')) {
             this.popupService.showSuccess(this.t('MSG.exportSuccess'));
-          } else if (progress.message.includes('Erreur')) {
+          } else if (/erreur|error/i.test(progress.message)) {
             this.popupService.showError(this.t('MSG.exportError'));
           }
           this.cdr.markForCheck();
@@ -1200,7 +1201,7 @@ export class MatchesTableComponent implements OnInit, OnDestroy {
           this.suiviTrxSaving = false;
           this.showSuiviTrxAnnulerPopup = false;
           this.cdr.markForCheck();
-          this.popupService.showWarning('Enregistrement en base impossible : la ligne reste provisoire.');
+          this.popupService.showWarning(I18nService.t('TBL.msg.enregistrementEnBaseImpossibleLaLigne'));
           this.router.navigate(['/suivi-trx-a-annuler']);
         }
       })

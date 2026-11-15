@@ -7,6 +7,7 @@ import { ProfilService } from '../../services/profil.service';
 import { NiveauxValidationConfigService, NiveauTraitementConfig, NiveauxValidationConfig } from '../../services/niveaux-validation-config.service';
 import { Pays } from '../../models/pays.model';
 import { Profil } from '../../models/profil.model';
+import { I18nService } from '../../services/i18n/i18n.service';
 
 type ToastType = 'success' | 'error' | 'info' | 'warning';
 
@@ -196,7 +197,7 @@ export class NiveauxValidationRecoComponent implements OnInit, OnDestroy {
   }
 
   get selectedPaysLabel(): string {
-    if (this.selectedPaysCode === 'GNL') return 'GNL (Tous les pays)';
+    if (this.selectedPaysCode === 'GNL') return I18nService.t('NIVEAUX.GNL_TOUTS_PAYS');
     const p = this.paysList.find(p => p.code === this.selectedPaysCode);
     return p ? p.nom : this.selectedPaysCode;
   }
@@ -221,7 +222,7 @@ export class NiveauxValidationRecoComponent implements OnInit, OnDestroy {
 
   private sauvegarderDansService(): void {
     this.configService.setConfigForPays(this.selectedPaysCode, this.configLocale);
-    this.showToast(`Configuration sauvée pour ${this.selectedPaysLabel}`);
+    this.showToast(I18nService.t('NIVEAUX.msg.configurationSauveePour', { p0: this.selectedPaysLabel }));
   }
 
   /** Normalise une liste d'emails saisie en texte (séparateurs : virgule, point-virgule, espace). */
@@ -259,10 +260,10 @@ export class NiveauxValidationRecoComponent implements OnInit, OnDestroy {
     
     if (this.isEditingNiveau && this.editIndex !== null) {
       this.configLocale.niveauxTraitement[this.editIndex] = dataToSave;
-      this.showToast('Niveau de traitement modifié');
+      this.showToast(I18nService.t('NIVEAUX.msg.niveauDeTraitementModifie'));
     } else {
       this.configLocale.niveauxTraitement.push(dataToSave);
-      this.showToast('Niveau de traitement ajouté');
+      this.showToast(I18nService.t('NIVEAUX.msg.niveauDeTraitementAjoute'));
     }
     this.sauvegarderDansService();
     this.resetForm();
@@ -288,10 +289,10 @@ export class NiveauxValidationRecoComponent implements OnInit, OnDestroy {
   }
 
   supprimerNiveau(index: number): void {
-    if (confirm('Supprimer ce niveau de traitement ?')) {
+    if (confirm(I18nService.t('NIVEAUX.msg.supprimerCeNiveauDeTraitement'))) {
       this.configLocale.niveauxTraitement.splice(index, 1);
       this.sauvegarderDansService();
-      this.showToast('Niveau de traitement supprimé', 'info');
+      this.showToast(I18nService.t('NIVEAUX.msg.niveauDeTraitementSupprime'), 'info');
     }
   }
 
@@ -341,7 +342,7 @@ export class NiveauxValidationRecoComponent implements OnInit, OnDestroy {
   }
 
   getProfilsLabel(profilIds: number[]): string {
-    return profilIds.map(id => this.getProfilNom(id)).join(', ') || 'Aucun';
+    return profilIds.map(id => this.getProfilNom(id)).join(', ') || I18nService.t('COMMON.AUCUN');
   }
 
   /** Vérifie si un profil est autorisé pour un niveau donné (utilisé dans la matrice) */
@@ -367,7 +368,7 @@ export class NiveauxValidationRecoComponent implements OnInit, OnDestroy {
   reordonner(): void {
     this.configLocale.niveauxTraitement.forEach((item, i) => item.ordre = i + 1);
     this.sauvegarderDansService();
-    this.showToast('Ordre mis à jour', 'info');
+    this.showToast(I18nService.t('NIVEAUX.msg.ordreMisAJour'), 'info');
   }
 
   // --- Sauvegarde par pays ---
@@ -377,7 +378,7 @@ export class NiveauxValidationRecoComponent implements OnInit, OnDestroy {
 
   sauvegarderTout(): void {
     // Sauvegarder tous les pays du service
-    this.showToast('Toutes les configurations sauvegardées');
+    this.showToast(I18nService.t('NIVEAUX.msg.toutesLesConfigurationsSauvegardees'));
   }
 
   trackByIndex(index: number): number {

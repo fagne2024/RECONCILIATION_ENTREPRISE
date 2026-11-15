@@ -145,7 +145,7 @@
             </div>
 
             <div *ngIf="reconciliationSummaryLoading && !reconciliationSummaryRows.length" class="reco-loading">
-                Loading reconciliation status...
+                {{ 'DASH.ui.loadingReconciliationStatus' | translate }}
             </div>
             <div *ngIf="reconciliationSummaryLoadingMore" class="reco-loading-more">{{ 'MSG.loadingPreviousDates' | translate }}</div>
             <div *ngIf="!reconciliationSummaryLoading && reconciliationSummaryError" class="reco-error">
@@ -252,7 +252,7 @@
                     ‹
                 </button>
                 <span class="reco-page-info">
-                    Page {{ reconciliationPageIndex + 1 }} / {{ getReconciliationTotalPages() }}
+                    {{ 'DASH.ui.page' | translate: { p0: (reconciliationPageIndex + 1), p1: (getReconciliationTotalPages()) } }}
                 </span>
                 <button
                     type="button"
@@ -278,7 +278,7 @@
             <div class="metrics-period-filter">
                 <label for="metricsPeriod">{{ 'LBL.period' | translate }}</label>
                 <select class="ds-select" id="metricsPeriod" [(ngModel)]="metricsPeriod" (change)="onMetricsPeriodChange()">
-                    <option value="jour">Day (D-1)</option>
+                    <option value="jour">{{ 'ETA.periodOptions.jour' | translate }}</option>
                     <option value="7_jours">{{ 'LBL.last7Days' | translate }}</option>
                     <option value="30_jours">{{ 'LBL.last30Days' | translate }}</option>
                     <option value="semaine">{{ 'LBL.currentWeek' | translate }}</option>
@@ -339,10 +339,10 @@
                 </div>
                 <div class="reco-chart-legend-detail">
                     <div><span class="reco-legend-dot ok"></span> {{ recoValidatedStatusLabel }} : {{ recoCoverageCount }} ({{ recoCoverageRatePercent | number:'1.0-0' }} %)</div>
-                    <div><span class="reco-legend-dot pending-support"></span> Processing: {{ recoStats.enCoursSupport }} ({{ (recoStats.total > 0 ? (recoStats.enCoursSupport / recoStats.total * 100) : 0) | number:'1.0-0' }} %)</div>
-                    <div><span class="reco-legend-dot pending-cdo"></span> Validation in progress: {{ recoStats.enCoursCdo }} ({{ (recoStats.total > 0 ? (recoStats.enCoursCdo / recoStats.total * 100) : 0) | number:'1.0-0' }} %)</div>
-                    <div><span class="reco-legend-dot pending-group"></span> Closing in progress: {{ recoStats.enCoursGroup }} ({{ (recoStats.total > 0 ? (recoStats.enCoursGroup / recoStats.total * 100) : 0) | number:'1.0-0' }} %)</div>
-                    <div><span class="reco-legend-dot failed"></span> Not reconciled: {{ recoStats.nonReco }} ({{ (recoStats.total > 0 ? (recoStats.nonReco / recoStats.total * 100) : 0) | number:'1.0-0' }} %)</div>
+                    <div><span class="reco-legend-dot pending-support"></span> {{ 'DASH.ui.processing' | translate: { p0: recoStats.enCoursSupport, p1: ((recoStats.total > 0 ? (recoStats.enCoursSupport / recoStats.total * 100) : 0) | number:'1.0-0') } }}</div>
+                    <div><span class="reco-legend-dot pending-cdo"></span> {{ 'DASH.ui.validationInProgress' | translate: { p0: recoStats.enCoursCdo, p1: ((recoStats.total > 0 ? (recoStats.enCoursCdo / recoStats.total * 100) : 0) | number:'1.0-0') } }}</div>
+                    <div><span class="reco-legend-dot pending-group"></span> {{ 'DASH.ui.closingInProgress' | translate: { p0: recoStats.enCoursGroup, p1: ((recoStats.total > 0 ? (recoStats.enCoursGroup / recoStats.total * 100) : 0) | number:'1.0-0') } }}</div>
+                    <div><span class="reco-legend-dot failed"></span> {{ 'DASH.ui.notReconciled' | translate: { p0: recoStats.nonReco, p1: ((recoStats.total > 0 ? (recoStats.nonReco / recoStats.total * 100) : 0) | number:'1.0-0') } }}</div>
                 </div>
             </div>
             </div>
@@ -436,7 +436,7 @@
                     <mat-label>{{ 'TBL.client' | translate }}</mat-label>
                     <mat-select #agencySelect [(ngModel)]="selectedAgency" multiple (selectionChange)="onFilterChange()" placeholder="{{ 'LBL.multiSelect' | translate }}">
                       <mat-option>
-                        <ngx-mat-select-search [formControl]="agenceSearchCtrl" placeholderLabel="Rechercher un client..." noEntriesFoundLabel="Aucun client trouvé"></ngx-mat-select-search>
+                        <ngx-mat-select-search [formControl]="agenceSearchCtrl" [placeholderLabel]="'SEARCH.client' | translate" [noEntriesFoundLabel]="'SEARCH.noClient' | translate"></ngx-mat-select-search>
                       </mat-option>
                       <mat-option *ngFor="let agency of filteredAgencies" [value]="agency">
                         {{ agency }}
@@ -449,7 +449,7 @@
                     <mat-label>{{ 'TBL.service' | translate }}</mat-label>
                     <mat-select #serviceSelect [(ngModel)]="selectedService" multiple (selectionChange)="onFilterChange()" placeholder="{{ 'LBL.multiSelect' | translate }}">
                       <mat-option>
-                        <ngx-mat-select-search [formControl]="serviceSearchCtrl" placeholderLabel="Rechercher un service..." noEntriesFoundLabel="Aucun service trouvé"></ngx-mat-select-search>
+                        <ngx-mat-select-search [formControl]="serviceSearchCtrl" [placeholderLabel]="'SEARCH.service' | translate" [noEntriesFoundLabel]="'SEARCH.noService' | translate"></ngx-mat-select-search>
                       </mat-option>
                       <mat-option *ngFor="let service of filteredServices" [value]="service">
                         {{ service }}
@@ -462,7 +462,7 @@
                     <mat-label>{{ 'TBL.country' | translate }}</mat-label>
                     <mat-select #countrySelect [(ngModel)]="selectedCountry" multiple (selectionChange)="onFilterChange()" placeholder="{{ 'LBL.multiSelect' | translate }}">
                       <mat-option>
-                        <ngx-mat-select-search [formControl]="paysSearchCtrl" placeholderLabel="Rechercher un pays..." noEntriesFoundLabel="Aucun pays trouvé"></ngx-mat-select-search>
+                        <ngx-mat-select-search [formControl]="paysSearchCtrl" [placeholderLabel]="'SEARCH.country' | translate" [noEntriesFoundLabel]="'SEARCH.noCountry' | translate"></ngx-mat-select-search>
                       </mat-option>
                       <mat-option *ngFor="let country of filteredCountries" [value]="country">
                         {{ country }}
@@ -509,7 +509,7 @@
         </div>
 
         <div *ngIf="detailedLoading" class="loading-message">
-            Loading detailed metrics...
+            {{ 'DASH.ui.loadingDetailedMetrics' | translate }}
         </div>
 
         <div *ngIf="!detailedLoading && detailedMetrics" class="detailed-metrics-content">
@@ -608,7 +608,7 @@
                     </button>
                 </div>
                 <div *ngIf="transactionCreatedLoading && showBottomSection" class="loading-message">
-                    Loading created transactions statistics...
+                    {{ 'DASH.ui.loadingCreatedTransactionsStatistics' | translate }}
                 </div>
                 <div *ngIf="transactionCreatedError && showBottomSection" class="error-message">
                     {{ transactionCreatedError }}
@@ -782,7 +782,7 @@
                             <tr *ngFor="let statement of stats.statements; trackBy: trackByIndex">
                                 <td>{{ statement.banque }}</td>
                                 <td class="bv-file"><i class="fas fa-file-invoice"></i> {{ statement.releve }}</td>
-                                <td class="bv-num">{{ statement.lignes | number }} <span class="bv-muted">({{ statement.ok | number }} OK)</span></td>
+                                <td class="bv-num">{{ statement.lignes | number }} <span class="bv-muted">{{ 'DASH.ui.ok' | translate: { p0: (statement.ok | number) } }}</span></td>
                                 <td class="bv-num"><span class="bv-taux" [class.is-low]="statement.taux < 100">{{ statement.taux | number:'1.0-1' }} %</span></td>
                                 <td class="bv-num" [class.is-negative]="statement.ecartNet < 0">{{ statement.ecartNet | number:'1.2-2' }}</td>
                             </tr>
@@ -847,7 +847,7 @@
                             <mat-label>{{ 'TBL.client' | translate }}</mat-label>
                             <mat-select #agencySelectModal [(ngModel)]="selectedAgency" multiple (selectionChange)="onFilterChange()" placeholder="{{ 'LBL.multiSelect' | translate }}">
                                 <mat-option>
-                        <ngx-mat-select-search [formControl]="agenceSearchCtrl" placeholderLabel="Search for a client..." noEntriesFoundLabel="No client found"></ngx-mat-select-search>
+                        <ngx-mat-select-search [formControl]="agenceSearchCtrl" [placeholderLabel]="'SEARCH.client' | translate" [noEntriesFoundLabel]="'SEARCH.noClient' | translate"></ngx-mat-select-search>
                                 </mat-option>
                                 <mat-option *ngFor="let agency of filteredAgencies" [value]="agency">
                                     {{ agency }}
@@ -860,7 +860,7 @@
                             <mat-label>{{ 'TBL.service' | translate }}</mat-label>
                             <mat-select #serviceSelectModal [(ngModel)]="selectedService" multiple (selectionChange)="onFilterChange()" placeholder="{{ 'LBL.multiSelect' | translate }}">
                                 <mat-option>
-                        <ngx-mat-select-search [formControl]="serviceSearchCtrl" placeholderLabel="Search for a service..." noEntriesFoundLabel="No service found"></ngx-mat-select-search>
+                        <ngx-mat-select-search [formControl]="serviceSearchCtrl" [placeholderLabel]="'SEARCH.service' | translate" [noEntriesFoundLabel]="'SEARCH.noService' | translate"></ngx-mat-select-search>
                                 </mat-option>
                                 <mat-option *ngFor="let service of filteredServices" [value]="service">
                                     {{ service }}
@@ -873,7 +873,7 @@
                             <mat-label>{{ 'TBL.country' | translate }}</mat-label>
                             <mat-select #countrySelectModal [(ngModel)]="selectedCountry" multiple (selectionChange)="onFilterChange()" placeholder="{{ 'LBL.multiSelect' | translate }}">
                                 <mat-option>
-                        <ngx-mat-select-search [formControl]="paysSearchCtrl" placeholderLabel="Search for a country..." noEntriesFoundLabel="No country found"></ngx-mat-select-search>
+                        <ngx-mat-select-search [formControl]="paysSearchCtrl" [placeholderLabel]="'SEARCH.country' | translate" [noEntriesFoundLabel]="'SEARCH.noCountry' | translate"></ngx-mat-select-search>
                                 </mat-option>
                                 <mat-option *ngFor="let country of filteredCountries" [value]="country">
                                     {{ country }}
@@ -994,14 +994,14 @@
             </div>
             <div class="status-modal-body">
                 <div *ngIf="releveStatusResultLoading">
-                    Loading reconciliation status...
+                    {{ 'DASH.ui.loadingReconciliationStatus' | translate }}
                 </div>
                 <div *ngIf="!releveStatusResultLoading && (!releveStatusLines || !releveStatusLines.length)">
-                    No reconciliation data found for this country, service and date.
+                    {{ 'DASH.ui.noReconciliationDataFoundForThis' | translate }}
                 </div>
                 <div *ngIf="!releveStatusResultLoading && releveStatusLines && releveStatusLines.length">
                     <div *ngIf="!releveStatusAllOk" class="status-modal-error">
-                        Reconciliation is in progress for this service and date (processing...).
+                        {{ 'DASH.ui.reconciliationIsInProgressForThis' | translate }}
                     </div>
                     <div *ngIf="releveStatusAllOk" class="releve-summary-ok">
                         <p><strong>{{ 'DASH.reconciliationCompleted' | translate }}</strong> {{ 'DASH.forSelectedServiceAllOk' | translate }}</p>
@@ -1117,11 +1117,11 @@
                     </div>
                     <div class="reco-popup-service-field">
                         <mat-form-field appearance="fill" class="filter-select reco-popup-service-multiple">
-                            <mat-label>Services</mat-label>
+                            <mat-label>{{ 'CPT.Services' | translate }}</mat-label>
                             <mat-select multiple [(ngModel)]="transactStatsSelectedServices" (selectionChange)="onTransactStatsFiltersChange()">
                                 <mat-option *ngFor="let s of transactStatsServiceOptions" [value]="s">{{ s }}</mat-option>
                             </mat-select>
-                            <mat-hint>Empty = all services</mat-hint>
+                            <mat-hint>{{ 'DASH.ui.emptyAllServices' | translate }}</mat-hint>
                         </mat-form-field>
                     </div>
                 </div>
@@ -1134,37 +1134,35 @@
                         <div class="transact-stats-grid">
                             <div class="transact-stats-card transact-stats-card--correspondance">
                                 <div class="transact-stats-card-title">{{ 'DASH.match' | translate }}</div>
-                                <p class="transact-stats-card-desc">{{ 'DASH.summary' | translate }}<strong>(report + processed gap)</strong>: sum of <em>totalTransactions</em> (report) + <em>processed trx</em> entered on the statement, per row</p>
+                                <p class="transact-stats-card-desc">{{ 'DASH.summary' | translate }}<strong>{{ 'DASH.ui.reportProcessedGap' | translate }}</strong>{{ 'DASH.ui.sumOf' | translate }} <em>totalTransactions</em> {{ 'DASH.ui.report' | translate }} <em>{{ 'DASH.ui.processedTrx' | translate }}</em> {{ 'DASH.ui.enteredOnTheStatementPerRow' | translate }}</p>
                                 <div class="transact-stats-card-value ds-num">{{ block.stats.correspondance | number:'1.0-0' }}</div>
-                                <div class="transact-stats-card-volume">Volume: {{ block.stats.correspondanceVolume | number:'1.0-2' }} FCFA</div>
-                                <div class="transact-stats-card-pct">{{ block.stats.pctCorrespondance | number:'1.1-1' }}% of total (summary + refunded)</div>
-                                <div class="transact-stats-card-pct transact-stats-card-pct--vol">{{ block.stats.pctCorrespondanceVolume | number:'1.1-1' }}% vol. of total (summary + refunded)</div>
+                                <div class="transact-stats-card-volume">{{ 'DASH.ui.volumeFcfa' | translate: { p0: (block.stats.correspondanceVolume | number:'1.0-2') } }}</div>
+                                <div class="transact-stats-card-pct">{{ 'DASH.ui.ofTotalSummaryRefunded' | translate: { p0: (block.stats.pctCorrespondance | number:'1.1-1') } }}</div>
+                                <div class="transact-stats-card-pct transact-stats-card-pct--vol">{{ 'DASH.ui.volOfTotalSummaryRefunded' | translate: { p0: (block.stats.pctCorrespondanceVolume | number:'1.1-1') } }}</div>
                             </div>
                             <div class="transact-stats-card transact-stats-card--denoue">
                                 <div class="transact-stats-card-title">{{ 'DASH.resolvedTransaction' | translate }}</div>
                                 <p class="transact-stats-card-desc"><strong>{{ 'DASH.manualProcessedTrx' | translate }}</strong> — <em>releve_manual</em></p>
                                 <div class="transact-stats-card-value ds-num">{{ block.stats.transactionDenoue | number:'1.0-0' }}</div>
-                                <div class="transact-stats-card-volume">Volume: {{ block.stats.transactionDenoueVolume | number:'1.0-2' }} FCFA</div>
-                                <div class="transact-stats-card-pct">{{ block.stats.pctDenoue | number:'1.1-1' }}% of summary</div>
-                                <div class="transact-stats-card-pct transact-stats-card-pct--vol">{{ block.stats.pctDenoueVolume | number:'1.1-1' }}% vol. of summary</div>
+                                <div class="transact-stats-card-volume">{{ 'DASH.ui.volumeFcfa' | translate: { p0: (block.stats.transactionDenoueVolume | number:'1.0-2') } }}</div>
+                                <div class="transact-stats-card-pct">{{ 'DASH.ui.ofSummary' | translate: { p0: (block.stats.pctDenoue | number:'1.1-1') } }}</div>
+                                <div class="transact-stats-card-pct transact-stats-card-pct--vol">{{ 'DASH.ui.volOfSummary' | translate: { p0: (block.stats.pctDenoueVolume | number:'1.1-1') } }}</div>
                             </div>
                             <div class="transact-stats-card transact-stats-card--echec">
                                 <div class="transact-stats-card-title">{{ 'DASH.failedTransaction' | translate }}</div>
                                 <p class="transact-stats-card-desc"><strong>{{ 'DASH.manualRefundedTrx' | translate }}</strong></p>
                                 <div class="transact-stats-card-value ds-num">{{ block.stats.transactionEchec | number:'1.0-0' }}</div>
-                                <div class="transact-stats-card-volume">Volume: {{ block.stats.transactionEchecVolume | number:'1.0-2' }} FCFA</div>
-                                <div class="transact-stats-card-pct">{{ block.stats.pctEchec | number:'1.1-1' }}% of total (summary + refunded)</div>
-                                <div class="transact-stats-card-pct transact-stats-card-pct--vol">{{ block.stats.pctEchecVolume | number:'1.1-1' }}% vol. of total (summary + refunded)</div>
+                                <div class="transact-stats-card-volume">{{ 'DASH.ui.volumeFcfa' | translate: { p0: (block.stats.transactionEchecVolume | number:'1.0-2') } }}</div>
+                                <div class="transact-stats-card-pct">{{ 'DASH.ui.ofTotalSummaryRefunded' | translate: { p0: (block.stats.pctEchec | number:'1.1-1') } }}</div>
+                                <div class="transact-stats-card-pct transact-stats-card-pct--vol">{{ 'DASH.ui.volOfTotalSummaryRefunded' | translate: { p0: (block.stats.pctEchecVolume | number:'1.1-1') } }}</div>
                             </div>
                         </div>
                         <ng-container *ngIf="isLast">
                             <p class="transact-stats-total-ref">
-                                Total for "summary + refunded" rates: <strong>{{ block.stats.totalReference | number:'1.0-0' }}</strong> trx
-                                · reference volume: <strong>{{ block.stats.totalReferenceVolume | number:'1.0-2' }}</strong> FCFA
-                                (summary + refunded trx; processed trx are already included in the summary).
+                                {{ 'DASH.ui.totalForSummaryRefundedRates' | translate }} <strong>{{ block.stats.totalReference | number:'1.0-0' }}</strong> {{ 'DASH.ui.trxReferenceVolume' | translate }} <strong>{{ block.stats.totalReferenceVolume | number:'1.0-2' }}</strong> {{ 'DASH.ui.fcfaSummaryRefundedTrxProcessedTrx' | translate }}
                             </p>
                             <p class="transact-stats-footnote">
-                                Same partitioning as the week view: ENV options derived from <strong>result8rec</strong> data for the displayed period (and day); services filtered the same way.
+                                {{ 'DASH.ui.samePartitioningAsTheWeekView' | translate }} <strong>result8rec</strong> {{ 'DASH.ui.dataForTheDisplayedPeriodAnd' | translate }}
                                 <span *ngIf="transactStatsPerService.length >= 2"> {{ 'DASH.perServicePercentageNote' | translate }}</span>
                             </p>
                         </ng-container>
@@ -1173,7 +1171,7 @@
             </div>
             <div class="reco-view-modal-footer">
                 <button type="button" class="ds-btn ds-btn--secondary btn-export-pdf" (click)="exportTransactStatsToPdf()" [disabled]="transactStatsLoading" title="{{ 'ACT.exportPdf' | translate }}">
-                    Export PDF
+                    {{ 'CIB.export.pdf' | translate }}
                 </button>
                 <button type="button" class="ds-btn ds-btn--secondary btn-cancel" (click)="closeTransactStatsModal()">{{ 'COMMON.actions.close' | translate }}</button>
             </div>
@@ -1247,11 +1245,11 @@
                     </div>
                     <div class="reco-popup-service-field">
                         <mat-form-field appearance="fill" class="filter-select reco-popup-service-multiple">
-                            <mat-label>Services</mat-label>
+                            <mat-label>{{ 'CPT.Services' | translate }}</mat-label>
                             <mat-select multiple [(ngModel)]="recoViewSelectedServices" (selectionChange)="onRecoViewFiltersChange()">
                                 <mat-option *ngFor="let s of recoViewServiceOptions" [value]="s">{{ s }}</mat-option>
                             </mat-select>
-                            <mat-hint>Empty = all services</mat-hint>
+                            <mat-hint>{{ 'DASH.ui.emptyAllServices' | translate }}</mat-hint>
                         </mat-form-field>
                     </div>
                 </div>
@@ -1313,7 +1311,7 @@
             </div>
             <div class="reco-view-modal-footer">
                 <button type="button" class="ds-btn ds-btn--secondary btn-export-pdf" (click)="exportRecoViewToPdf()" [disabled]="recoViewLoading || !recoViewRows.length" title="{{ 'ACT.exportPdf' | translate }}">
-                    Export PDF
+                    {{ 'CIB.export.pdf' | translate }}
                 </button>
                 <button type="button" class="ds-btn ds-btn--secondary btn-cancel" (click)="closeRecoViewModal()">{{ 'COMMON.actions.close' | translate }}</button>
             </div>

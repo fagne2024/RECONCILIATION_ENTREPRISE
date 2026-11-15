@@ -10,6 +10,7 @@ import {
     ServiceCountryVolume
 } from '../../models/service-reference.model';
 import { ServiceReferenceService } from '../../services/service-reference.service';
+import { I18nService } from '../../services/i18n/i18n.service';
 
 interface ServiceRefDashboardOperatorGroup {
     operateurLabel: string;
@@ -53,19 +54,19 @@ export class ServiceReferencesDashboardPanelComponent implements OnInit, OnChang
 
     displayMode: ServiceReferenceDashboardDisplayMode = 'nombre';
     readonly displayModeOptions: { value: ServiceReferenceDashboardDisplayMode; label: string }[] = [
-        { value: 'nombre', label: 'Count (services)' },
-        { value: 'transactions', label: 'Count (transactions)' },
-        { value: 'volume', label: 'Volume (FCFA)' }
+        { value: 'nombre', label: I18nService.t('SRP.ui.countServices') },
+        { value: 'transactions', label: I18nService.t('SRP.ui.countTransactions') },
+        { value: 'volume', label: I18nService.t('SRP.ui.volumeFcfa') }
     ];
 
     /** Fenêtre glissante agency_summary (0 = toute la période). */
     periodMonths = 3;
     readonly periodMonthsOptions: { value: number; label: string }[] = [
-        { value: 1, label: '1 month' },
-        { value: 3, label: '3 months' },
-        { value: 6, label: '6 months' },
-        { value: 12, label: '12 months' },
-        { value: 0, label: 'All' }
+        { value: 1, label: I18nService.t('SRP.ui.month1') },
+        { value: 3, label: I18nService.t('SRP.ui.months3') },
+        { value: 6, label: I18nService.t('SRP.ui.months6') },
+        { value: 12, label: I18nService.t('SRP.ui.months12') },
+        { value: 0, label: I18nService.t('SRP.ui.allPeriod') }
     ];
 
     selectedPays: string[] = [];
@@ -509,98 +510,98 @@ export class ServiceReferencesDashboardPanelComponent implements OnInit, OnChang
     /** Base du % affiché sous la carte « réconciliés ». */
     get cardReconciliePercentBasisLabel(): string {
         if (this.isVolumeMode) {
-            return 'reconcilable volume';
+            return I18nService.t('SRP.card.basisReconcilableVolume');
         }
         if (this.isTransactionsMode) {
-            return 'reconcilable transactions';
+            return I18nService.t('SRP.card.basisReconcilableTransactions');
         }
-        return this.compactLayout ? 'reconcilable' : 'total reconcilable';
+        return this.compactLayout ? I18nService.t('SRP.card.basisReconcilable') : I18nService.t('SRP.card.basisTotalReconcilable');
     }
 
     get cardPercentBasisLabel(): string {
         if (this.isVolumeMode) {
-            return 'total volume';
+            return I18nService.t('SRP.card.basisTotalVolume');
         }
         if (this.isTransactionsMode) {
-            return 'total transactions';
+            return I18nService.t('SRP.card.basisTotalTransactions');
         }
-        return this.compactLayout ? 'repository' : 'total repository';
+        return this.compactLayout ? I18nService.t('SRP.card.basisRepository') : I18nService.t('SRP.card.basisTotalRepository');
     }
 
     get cardTotalTitle(): string {
         if (this.isVolumeMode) {
-            return 'Total volume';
+            return I18nService.t('SRP.card.totalVolume');
         }
         if (this.isTransactionsMode) {
-            return 'Total transactions';
+            return I18nService.t('SRP.card.totalTransactions');
         }
-        return 'Total services';
+        return I18nService.t('SRP.card.totalServices');
     }
 
     get cardReconciliableTitle(): string {
         if (this.isVolumeMode) {
-            return 'Reconcilable volume';
+            return I18nService.t('SRP.card.reconcilableVolume');
         }
         if (this.isTransactionsMode) {
-            return 'Reconcilable transactions';
+            return I18nService.t('SRP.card.reconcilableTransactions');
         }
-        return 'Reconcilable services';
+        return I18nService.t('SRP.card.reconcilableServices');
     }
 
     get cardReconcilieTitle(): string {
         if (this.isVolumeMode) {
-            return 'Reconciled volume';
+            return I18nService.t('SRP.card.reconciledVolume');
         }
         if (this.isTransactionsMode) {
-            return 'Reconciled transactions';
+            return I18nService.t('SRP.card.reconciledTransactions');
         }
-        return 'Reconciled services';
+        return I18nService.t('SRP.card.reconciledServices');
     }
 
     get cardNonReconciliableTitle(): string {
         if (this.isVolumeMode) {
-            return 'Non-reconcilable volume';
+            return I18nService.t('FILT.msg.nonReconcilableVolume');
         }
         if (this.isTransactionsMode) {
-            return 'Non-reconcilable transactions';
+            return I18nService.t('FILT.msg.nonReconcilableTransactions');
         }
-        return this.compactLayout ? 'Not reconcilable' : 'Non-reconcilable services';
+        return this.compactLayout ? I18nService.t('SRP.card.notReconcilable') : I18nService.t('FILT.msg.nonReconcilableServices');
     }
 
     get periodLabel(): string {
         if (this.periodMonths === 0) {
-            return 'Entire period';
+            return I18nService.t('SRP.card.entirePeriod');
         }
         if (this.periodMonths === 1) {
-            return 'Last month';
+            return I18nService.t('SRP.card.lastMonth');
         }
-        return `Last ${this.periodMonths} months`;
+        return I18nService.t('SRP.card.lastMonths', { p0: this.periodMonths });
     }
 
     get dashboardTotalCardSubtitle(): string {
         let base: string;
         if (this.isVolumeMode) {
             if (!this.selectedPays.length) {
-                base = 'Aggregated volume · all countries';
+                base = I18nService.t('SRP.card.aggVolumeAllCountries');
             } else if (this.selectedPays.length === 1) {
-                base = `Volume · ${this.selectedPays[0]}`;
+                base = I18nService.t('SRP.card.volumeCountry', { p0: this.selectedPays[0] });
             } else {
-                base = `Volume · ${this.selectedPays.length} countries`;
+                base = I18nService.t('SRP.card.volumeCountries', { p0: this.selectedPays.length });
             }
         } else if (this.isTransactionsMode) {
             if (!this.selectedPays.length) {
-                base = 'Aggregated transactions · all countries';
+                base = I18nService.t('SRP.card.aggTransactionsAllCountries');
             } else if (this.selectedPays.length === 1) {
-                base = `Transactions · ${this.selectedPays[0]}`;
+                base = I18nService.t('SRP.card.transactionsCountry', { p0: this.selectedPays[0] });
             } else {
-                base = `Transactions · ${this.selectedPays.length} countries`;
+                base = I18nService.t('SRP.card.transactionsCountries', { p0: this.selectedPays.length });
             }
         } else if (!this.selectedPays.length) {
-            base = 'All countries';
+            base = I18nService.t('SRP.card.allCountries');
         } else if (this.selectedPays.length === 1) {
-            base = `Country: ${this.selectedPays[0]}`;
+            base = I18nService.t('SRP.card.country', { p0: this.selectedPays[0] });
         } else {
-            base = `${this.selectedPays.length} countries selected`;
+            base = I18nService.t('SRP.card.countriesSelected', { p0: this.selectedPays.length });
         }
         return `${base} · ${this.periodLabel}`;
     }

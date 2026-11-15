@@ -1,3 +1,4 @@
+import { I18nService } from '../services/i18n/i18n.service';
 export interface ModuleActionDetail {
   action: string;
   httpMethod: string;
@@ -180,7 +181,7 @@ export function groupActionsByCategory(actions: ModuleActionDetail[]): ActionCat
       const rule = CATEGORY_RULES.find(category => category.key === key);
       buckets.set(key, {
         key,
-        label: rule?.label || 'Autres',
+        label: rule ? I18nService.t('PERM.category.' + rule.key) : I18nService.t('PERM.category.other'),
         icon: rule?.icon || 'fa-cog',
         actions: []
       });
