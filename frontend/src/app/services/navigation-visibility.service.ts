@@ -1,13 +1,72 @@
 import { Injectable } from '@angular/core';
 import { APP_NAVIGATION_CATALOG, AppNavigationGroup, AppNavigationSubmenu } from '../constants/app-navigation-catalog';
 import { AppStateService } from './app-state.service';
+import { HttpClient } from '@angular/common/http';
 import { Observable, Subject, of } from 'rxjs';
+import { catchError, map, tap } from 'rxjs/operators';
+
+/** Masquage du menu latéral propre à l'entreprise (page Modules, réservé à l'admin). */
+export interface NavigationMasquage {
+  modulesMasques: string[];
+  sousMenusMasques: string[];
+}
 
 @Injectable({ providedIn: 'root' })
 export class NavigationVisibilityService {
   private readonly visibilityChanges = new Subject<void>();
+  private readonly apiUrl = '/api/configuration/navigation-visibility';
+  private modulesMasques = new Set<string>();
+  private sousMenusMasques = new Set<string>();
 
-  constructor(private appState: AppStateService) {}
+  constructor(private appState: AppStateService, private http: HttpClient) {}
+
+  /** Charge le masquage de l'entreprise puis rafraîchit le menu. */
+  loadMasquage(): Observable<void> {
+    if (this.appState.isSuperAdmin()) {
+      return of(void 0);
+    }
+    return this.http.get<NavigationMasquage>(this.apiUrl).pipe(
+      tap(m => this.appliquerMasquage(m)),
+      map(() => void 0),
+      catchError(() => of(void 0))
+    );
+  }
+
+  /** Enregistre le masquage de l'entreprise (admin) et rafraîchit le menu. */
+  saveMasquage(masquage: NavigationMasquage): Observable<void> {
+    return this.http.post<NavigationMasquage>(this.apiUrl, masquage).pipe(
+      tap(m => this.appliquerMasquage(m || masquage)),
+      map(() => void 0)
+    );
+  }
+
+  getMasquage(): NavigationMasquage {
+    return { modulesMasques: [...this.modulesMasques], sousMenusMasques: [...this.sousMenusMasques] };
+  }
+
+  /** La page Modules (où l'on démasque) ne peut jamais être masquée. */
+  static readonly SOUS_MENUS_NON_MASQUABLES = ['param-modules'];
+  static readonly MODULES_NON_MASQUABLES = ['Module'];
+
+  isModuleMasque(moduleName?: string): boolean {
+    if (!moduleName || NavigationVisibilityService.MODULES_NON_MASQUABLES.includes(moduleName)) {
+      return false;
+    }
+    return this.modulesMasques.has(this.normalizeModuleName(moduleName));
+  }
+
+  isSousMenuMasque(key?: string): boolean {
+    if (!key || NavigationVisibilityService.SOUS_MENUS_NON_MASQUABLES.includes(key)) {
+      return false;
+    }
+    return this.sousMenusMasques.has(key);
+  }
+
+  private appliquerMasquage(m: NavigationMasquage | null | undefined): void {
+    this.modulesMasques = new Set((m?.modulesMasques || []).map(n => this.normalizeModuleName(n)));
+    this.sousMenusMasques = new Set(m?.sousMenusMasques || []);
+    this.visibilityChanges.next();
+  }
 
   /** Émis à chaque changement de visibilité pour que la sidebar se reconstruise. */
   get changes$(): Observable<void> {
@@ -39,6 +98,9 @@ export class NavigationVisibilityService {
     if (!group.moduleName) {
       return true;
     }
+    if (this.isModuleMasque(group.moduleName)) {
+      return false;
+    }
     // Vérifier si le module est actif pour l'entreprise
     return this.appState.isModuleActive(group.moduleName);
   }
@@ -53,6 +115,10 @@ export class NavigationVisibilityService {
   isSubmenuVisible(submenu: AppNavigationSubmenu, parentGroup?: AppNavigationGroup): boolean {
     // Si le sous-menu a visible === false, il est masqué
     if (submenu.visible === false) {
+      return false;
+    }
+    // Masquage propre à l'entreprise (page Modules) : sous-menu ou module entier
+    if (this.isSousMenuMasque(submenu.key) || this.isModuleMasque(submenu.moduleName)) {
       return false;
     }
 
@@ -98,8 +164,25 @@ export class NavigationVisibilityService {
    * Appelé au démarrage de l'application pour synchroniser l'état.
    */
   refreshActiveModules(): Observable<void> {
-    this.visibilityChanges.next();
-    return of(void 0);
+    // Recharge les modules actifs (un module désactivé ou masqué depuis la
+    // dernière connexion disparaît du menu sans se reconnecter).
+    if (this.appState.isSuperAdmin()) {
+      this.visibilityChanges.next();
+      return of(void 0);
+    }
+    return this.http.get<{ modules?: string[] }>('/api/modules/active').pipe(
+      tap(res => {
+        if (Array.isArray(res?.modules)) {
+          this.appState.setActiveModules(res.modules);
+        }
+        this.visibilityChanges.next();
+      }),
+      map(() => void 0),
+      catchError(() => {
+        this.visibilityChanges.next();
+        return of(void 0);
+      })
+    );
   }
 
   /**

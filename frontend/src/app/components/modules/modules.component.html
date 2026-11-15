@@ -96,7 +96,7 @@
                 </td>
                 <td class="text-center">
                   <label class="switch">
-                    <input type="checkbox" [checked]="module.visible !== false" (change)="toggleModuleVisibility(module, $event)">
+                    <input type="checkbox" [checked]="isModuleVisible(module)" (change)="toggleModuleVisibility(module, $event)">
                     <span class="slider"></span>
                   </label>
                 </td>
@@ -334,10 +334,10 @@
                 type="checkbox"
                 [checked]="isSubmenuVisible(submenu)"
                 (change)="toggleSubmenuVisibility(submenu, $event)"
-                [disabled]="isSavingSubmenuVisibility"
+                [disabled]="isSavingSubmenuVisibility || !isSubmenuMasquable(submenu)"
               >
               <span class="checkmark"></span>
-              <span class="submenu-visibility-name">{{ submenu.label }}</span>
+              <span class="submenu-visibility-name">{{ (submenu.labelKey || submenu.label) | translate }}</span>
               <span *ngIf="submenu.route" class="submenu-visibility-route">{{ submenu.route }}</span>
             </label>
           </div>

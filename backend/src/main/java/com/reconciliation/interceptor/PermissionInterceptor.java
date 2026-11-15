@@ -76,7 +76,8 @@ public class PermissionInterceptor implements HandlerInterceptor {
     private static final String[] PUBLIC_CONFIGURATION_PATHS = {
         "/api/configuration/logo",
         "/api/configuration/theme",
-        "/api/configuration/navigation-labels"
+        "/api/configuration/navigation-labels",
+        "/api/configuration/navigation-visibility"
     };
 
     @Override

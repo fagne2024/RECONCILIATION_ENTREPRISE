@@ -40,6 +40,8 @@ export class ModulesComponent implements OnInit {
   selectedModuleForSubmenu: Module | null = null;
   moduleSubmenus: AppNavigationSubmenu[] = [];
   isSavingSubmenuVisibility = false;
+  /** Sous-menus masqués en cours d'édition dans la fenêtre (enregistrés au clic sur Enregistrer). */
+  private sousMenusMasquesEdition = new Set<string>();
 
   // Propriétés pour la pagination
   currentPage = 1;
@@ -464,6 +466,24 @@ export class ModulesComponent implements OnInit {
       return;
     }
 
+    // Admin d'entreprise : masquage propre à l'entreprise (le module global
+    // n'est modifiable que par le SUPER_ADMIN).
+    if (!this.appState.isSuperAdmin()) {
+      const masquage = this.navVisibility.getMasquage();
+      const autres = masquage.modulesMasques.filter(n => n !== module.nom);
+      this.navVisibility.saveMasquage({
+        ...masquage,
+        modulesMasques: visible ? autres : [...autres, module.nom]
+      }).subscribe({
+        error: (error) => {
+          console.error("Erreur lors de l'enregistrement du masquage du module :", error);
+          checkbox.checked = !visible;
+          this.popup.showError(I18nService.t('MOD.alert.updateError'));
+        }
+      });
+      return;
+    }
+
     const updatedModule = { ...module, visible };
     this.moduleService.updateModule(module.id, updatedModule).subscribe({
       next: (updated) => {
@@ -484,6 +504,11 @@ export class ModulesComponent implements OnInit {
    * courante par le SUPER_ADMIN (via /api/modules/active). Un SUPER_ADMIN n'a
    * pas de périmètre entreprise : on ne bloque jamais son action.
    */
+  /** Case « visible » : module visible globalement et non masqué pour l'entreprise. */
+  isModuleVisible(module: Module): boolean {
+    return module.visible !== false && !this.navVisibility.isModuleMasque(module.nom);
+  }
+
   isModuleActiveForCompany(module: Module): boolean {
     if (this.appState.isSuperAdmin()) {
       return true;
@@ -505,6 +530,7 @@ export class ModulesComponent implements OnInit {
     this.selectedModuleForSubmenu = module;
     // Trouver les sous-menus associés à ce module
     this.moduleSubmenus = this.getSubmenusForModule(module.nom);
+    this.sousMenusMasquesEdition = new Set(this.navVisibility.getMasquage().sousMenusMasques);
     this.showSubmenuVisibilityModal = true;
   }
 
@@ -522,6 +548,12 @@ export class ModulesComponent implements OnInit {
           if (submenu.moduleName === moduleName) {
             submenus.push(submenu);
           }
+          // Sous-menus de 3e niveau (ex. Configuration > Modèles de traitement)
+          for (const nested of submenu.children || []) {
+            if (nested.moduleName === moduleName) {
+              submenus.push(nested);
+            }
+          }
         }
       }
     }
@@ -529,24 +561,39 @@ export class ModulesComponent implements OnInit {
   }
 
   isSubmenuVisible(submenu: AppNavigationSubmenu): boolean {
-    return submenu.visible !== false;
+    return submenu.visible !== false && !this.sousMenusMasquesEdition.has(submenu.key);
+  }
+
+  /** La page Modules elle-même ne peut pas être masquée (sinon impossible de revenir). */
+  isSubmenuMasquable(submenu: AppNavigationSubmenu): boolean {
+    return !NavigationVisibilityService.SOUS_MENUS_NON_MASQUABLES.includes(submenu.key);
   }
 
   toggleSubmenuVisibility(submenu: AppNavigationSubmenu, event: Event): void {
     const visible = (event.target as HTMLInputElement).checked;
-    submenu.visible = visible;
-    this.navVisibility.invalidateCache();
-    console.log(`✅ Sous-menu ${submenu.label} visibility updated to ${visible}`);
+    if (visible) {
+      this.sousMenusMasquesEdition.delete(submenu.key);
+    } else {
+      this.sousMenusMasquesEdition.add(submenu.key);
+    }
   }
 
   saveSubmenuVisibility(): void {
     if (!this.selectedModuleForSubmenu) return;
     this.isSavingSubmenuVisibility = true;
-    
-    // Note: La persistance côté backend nécessiterait un endpoint dédié
-    // Pour l'instant, on invalide le cache et on met à jour l'UI
-    this.navVisibility.invalidateCache();
-    this.isSavingSubmenuVisibility = false;
-    this.closeSubmenuVisibilityModal();
+    this.navVisibility.saveMasquage({
+      ...this.navVisibility.getMasquage(),
+      sousMenusMasques: [...this.sousMenusMasquesEdition]
+    }).subscribe({
+      next: () => {
+        this.isSavingSubmenuVisibility = false;
+        this.closeSubmenuVisibilityModal();
+      },
+      error: (error) => {
+        console.error("Erreur lors de l'enregistrement de la visibilité des sous-menus :", error);
+        this.isSavingSubmenuVisibility = false;
+        this.popup.showError(I18nService.t('MOD.alert.updateError'));
+      }
+    });
   }
 } 

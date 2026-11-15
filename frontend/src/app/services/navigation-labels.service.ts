@@ -118,6 +118,19 @@ export class NavigationLabelsService {
     return label?.label || null;
   }
 
+  /**
+   * Libellé personnalisé : il remplace le libellé traduit (labelKey), sinon le menu
+   * afficherait toujours la traduction. Un libellé enregistré identique à l'original
+   * n'est pas un renommage : l'élément reste traduit (fr/en).
+   */
+  private appliquerLibellePerso(item: { label: string; labelKey?: string }, perso?: NavigationLabel): { label: string; labelKey?: string } {
+    const libelle = perso?.label?.trim();
+    if (!libelle || libelle === item.label || libelle === perso?.originalLabel) {
+      return { label: item.label, labelKey: item.labelKey };
+    }
+    return { label: libelle, labelKey: undefined };
+  }
+
   /** Construit le catalogue complet avec les labels personnalisés */
   buildCatalogWithLabels(): AppNavigationGroup[] {
     const labels = this.labelsSubject.value;
@@ -127,7 +140,7 @@ export class NavigationLabelsService {
       
       const updatedGroup: AppNavigationGroup = {
         ...group,
-        label: groupLabel?.label || group.label
+        ...this.appliquerLibellePerso(group, groupLabel)
       };
 
       if (group.children) {
@@ -136,7 +149,7 @@ export class NavigationLabelsService {
           
           const updatedSubmenu: AppNavigationSubmenu = {
             ...submenu,
-            label: submenuLabel?.label || submenu.label
+            ...this.appliquerLibellePerso(submenu, submenuLabel)
           };
 
           if (submenu.children) {
@@ -144,7 +157,7 @@ export class NavigationLabelsService {
               const nestedLabel = labels.find(l => l.type === 'nested' && l.groupKey === group.key && l.submenuKey === submenu.key && l.nestedKey === nested.key);
               return {
                 ...nested,
-                label: nestedLabel?.label || nested.label
+                ...this.appliquerLibellePerso(nested, nestedLabel)
               };
             });
           }

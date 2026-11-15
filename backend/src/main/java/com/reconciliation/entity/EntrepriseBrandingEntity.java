@@ -41,6 +41,14 @@ public class EntrepriseBrandingEntity {
     @Column(name = "logo_settings_json", columnDefinition = "TEXT")
     private String logoSettingsJson;
 
+    /** Libelles de navigation personnalises (page Renommer), serialises en JSON. */
+    @Column(name = "navigation_labels_json", columnDefinition = "LONGTEXT")
+    private String navigationLabelsJson;
+
+    /** Modules et sous-menus masques dans le menu lateral, serialises en JSON. */
+    @Column(name = "navigation_masquage_json", columnDefinition = "TEXT")
+    private String navigationMasquageJson;
+
     @Column(name = "updated_at")
     private LocalDateTime updatedAt;
 
@@ -55,6 +63,12 @@ public class EntrepriseBrandingEntity {
 
     public String getLogoSettingsJson() { return logoSettingsJson; }
     public void setLogoSettingsJson(String logoSettingsJson) { this.logoSettingsJson = logoSettingsJson; }
+
+    public String getNavigationLabelsJson() { return navigationLabelsJson; }
+    public void setNavigationLabelsJson(String navigationLabelsJson) { this.navigationLabelsJson = navigationLabelsJson; }
+
+    public String getNavigationMasquageJson() { return navigationMasquageJson; }
+    public void setNavigationMasquageJson(String navigationMasquageJson) { this.navigationMasquageJson = navigationMasquageJson; }
 
     public LocalDateTime getUpdatedAt() { return updatedAt; }
     public void setUpdatedAt(LocalDateTime updatedAt) { this.updatedAt = updatedAt; }

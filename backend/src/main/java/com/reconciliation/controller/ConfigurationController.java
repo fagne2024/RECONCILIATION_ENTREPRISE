@@ -53,7 +53,9 @@ public class ConfigurationController {
     @Autowired
     private EntrepriseBrandingRepository brandingRepository;
 
-    // Libelles de navigation : stockage en memoire, cle par tenant.
+    // Libelles de navigation : persistes par entreprise dans entreprise_branding (V34).
+    // Le SUPER_ADMIN (aucune entreprise) n'a pas de ligne de branding : ses libelles
+    // restent en memoire (perdus au redemarrage, comme avant).
     private final Map<String, Object> configStorage = new ConcurrentHashMap<>();
 
     private static final String NAVIGATION_LABELS_KEY = "navigation_labels";
@@ -61,10 +63,8 @@ public class ConfigurationController {
 
     @GetMapping("/navigation-labels")
     public ResponseEntity<Map<String, Object>> getNavigationLabels() {
-        @SuppressWarnings("unchecked")
-        List<Map<String, Object>> labels = (List<Map<String, Object>>) configStorage.getOrDefault(labelsStorageKey(), new ArrayList<>());
         Map<String, Object> response = new HashMap<>();
-        response.put("labels", labels);
+        response.put("labels", readNavigationLabels());
         return ResponseEntity.ok(response);
     }
 
@@ -74,7 +74,7 @@ public class ConfigurationController {
         @SuppressWarnings("unchecked")
         List<Map<String, Object>> labels = (List<Map<String, Object>>) request.get("labels");
         if (labels != null) {
-            configStorage.put(labelsStorageKey(), labels);
+            writeNavigationLabels(labels);
         }
         return ResponseEntity.ok().build();
     }
@@ -82,8 +82,69 @@ public class ConfigurationController {
     @DeleteMapping("/navigation-labels")
     @PreAuthorize("hasRole('ADMIN')")
     public ResponseEntity<Void> resetNavigationLabels() {
-        configStorage.remove(labelsStorageKey());
+        writeNavigationLabels(null);
         return ResponseEntity.ok().build();
+    }
+
+    // ===== MASQUAGE DE LA NAVIGATION (par entreprise) =====
+
+    /**
+     * Modules et sous-menus masques dans le menu lateral de l'entreprise connectee.
+     * Simple confort d'affichage : les droits d'acces restent controles par
+     * PermissionInterceptor. Lecture ouverte a tout utilisateur authentifie
+     * (le menu en a besoin), voir PUBLIC_CONFIGURATION_PATHS.
+     */
+    @GetMapping("/navigation-visibility")
+    public ResponseEntity<Map<String, Object>> getNavigationVisibility() {
+        return ResponseEntity.ok(readNavigationMasquage(currentTenantId()));
+    }
+
+    @PostMapping("/navigation-visibility")
+    @PreAuthorize("hasRole('ADMIN')")
+    public ResponseEntity<Map<String, Object>> saveNavigationVisibility(@RequestBody Map<String, Object> request) {
+        Long entrepriseId = currentTenantId();
+        if (entrepriseId == null) {
+            return ResponseEntity.status(HttpStatus.FORBIDDEN).build();
+        }
+        Map<String, Object> masquage = new LinkedHashMap<>();
+        masquage.put("modulesMasques", stringList(request.get("modulesMasques")));
+        masquage.put("sousMenusMasques", stringList(request.get("sousMenusMasques")));
+        EntrepriseBrandingEntity branding = getOrCreate(entrepriseId);
+        branding.setNavigationMasquageJson(writeJson(masquage));
+        branding.setUpdatedAt(LocalDateTime.now());
+        brandingRepository.save(branding);
+        return ResponseEntity.ok(masquage);
+    }
+
+    private Map<String, Object> readNavigationMasquage(Long entrepriseId) {
+        Map<String, Object> masquage = new LinkedHashMap<>();
+        masquage.put("modulesMasques", new ArrayList<String>());
+        masquage.put("sousMenusMasques", new ArrayList<String>());
+        if (entrepriseId == null) {
+            return masquage;
+        }
+        Map<String, Object> stocke = brandingRepository.findById(entrepriseId)
+            .map(EntrepriseBrandingEntity::getNavigationMasquageJson)
+            .map(this::readJsonMap)
+            .orElse(null);
+        if (stocke != null) {
+            masquage.put("modulesMasques", stringList(stocke.get("modulesMasques")));
+            masquage.put("sousMenusMasques", stringList(stocke.get("sousMenusMasques")));
+        }
+        return masquage;
+    }
+
+    /** Liste de chaines non vides, sans doublon (ordre conserve). */
+    private List<String> stringList(Object value) {
+        Set<String> out = new LinkedHashSet<>();
+        if (value instanceof Collection<?> items) {
+            for (Object item : items) {
+                if (item != null && !item.toString().isBlank()) {
+                    out.add(item.toString().trim());
+                }
+            }
+        }
+        return new ArrayList<>(out);
     }
 
     // ===== LOGO DE L'APPLICATION (par entreprise) =====
@@ -202,6 +263,44 @@ public class ConfigurationController {
         return currentTenantId();
     }
 
+    /** Libelles de navigation de l'entreprise connectee (liste vide si aucun). */
+    private List<Map<String, Object>> readNavigationLabels() {
+        Long entrepriseId = currentTenantId();
+        if (entrepriseId == null) {
+            @SuppressWarnings("unchecked")
+            List<Map<String, Object>> labels = (List<Map<String, Object>>) configStorage.get(labelsStorageKey());
+            return labels == null ? new ArrayList<>() : new ArrayList<>(labels);
+        }
+        String json = brandingRepository.findById(entrepriseId)
+            .map(EntrepriseBrandingEntity::getNavigationLabelsJson)
+            .orElse(null);
+        if (json == null || json.isBlank()) {
+            return new ArrayList<>();
+        }
+        try {
+            return OBJECT_MAPPER.readValue(json, new TypeReference<List<Map<String, Object>>>() { });
+        } catch (Exception ignored) {
+            return new ArrayList<>();
+        }
+    }
+
+    /** Enregistre (ou efface avec {@code null}) les libelles de l'entreprise connectee. */
+    private void writeNavigationLabels(List<Map<String, Object>> labels) {
+        Long entrepriseId = currentTenantId();
+        if (entrepriseId == null) {
+            if (labels == null) {
+                configStorage.remove(labelsStorageKey());
+            } else {
+                configStorage.put(labelsStorageKey(), labels);
+            }
+            return;
+        }
+        EntrepriseBrandingEntity branding = getOrCreate(entrepriseId);
+        branding.setNavigationLabelsJson(labels == null ? null : writeJson(labels));
+        branding.setUpdatedAt(LocalDateTime.now());
+        brandingRepository.save(branding);
+    }
+
     private String labelsStorageKey() {
         Long tenant = currentTenantId();
         return tenant == null ? NAVIGATION_LABELS_KEY + ":platform" : NAVIGATION_LABELS_KEY + ":" + tenant;
@@ -298,15 +397,14 @@ public class ConfigurationController {
         if (version >= 0 && version < history.size()) {
             NavigationLabelAuditEntity target = history.get(version);
             // Restaurer l'ancien label
-            @SuppressWarnings("unchecked")
-            List<Map<String, Object>> labels = (List<Map<String, Object>>) configStorage.getOrDefault(labelsStorageKey(), new ArrayList<>());
+            List<Map<String, Object>> labels = readNavigationLabels();
             for (Map<String, Object> label : labels) {
                 if (labelId.equals(label.get("id"))) {
                     label.put("label", target.getOldLabel());
                     break;
                 }
             }
-            configStorage.put(labelsStorageKey(), labels);
+            writeNavigationLabels(labels);
 
             // Logger la restauration
             auditService.logChange(labelId, target.getLabelType(), target.getGroupKey(),

@@ -39,6 +39,8 @@ public class CurrentModuleController {
 
         List<String> names = moduleService.catalogue().stream()
             .filter(module -> activeIds.contains(module.getId()))
+            // Module masque globalement (Module.visible = false) : retire du menu.
+            .filter(module -> !Boolean.FALSE.equals(module.getVisible()))
             .map(ModuleEntity::getNom)
             .toList();
 

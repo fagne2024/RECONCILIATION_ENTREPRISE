@@ -85,6 +85,11 @@ export class SidebarComponent implements OnInit {
       this.updateVisibleNavigation();
     });
 
+    // Masquage du menu propre à l'entreprise (page Modules)
+    this.navVisibility.loadMasquage().pipe(takeUntil(this.destroy$)).subscribe(() => {
+      this.updateVisibleNavigation();
+    });
+
     // Charger les modules actifs au démarrage (rafraîchit depuis le backend)
     this.navVisibility.refreshActiveModules().pipe(takeUntil(this.destroy$)).subscribe(() => {
       this.updateVisibleNavigation();
