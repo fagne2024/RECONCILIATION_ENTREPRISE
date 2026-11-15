@@ -1018,7 +1018,17 @@ export class MatchesTableComponent implements OnInit, OnDestroy {
       }
     }
 
-    return hasTRXBO && hasOPPART;
+    if (!hasTRXBO || !hasOPPART) {
+      return false;
+    }
+
+    // Les colonnes seules ne suffisent pas : un fichier partenaire Moov / OPGU1 a aussi
+    // « Type Opération » et la BO TRXBO a « GRX ». Sans type d'opération OPPART réel,
+    // le filtre IMPACT_COMPTIMPACT masquerait toutes les correspondances (0 affichée).
+    return matches.some(match => {
+      const type = this.getTypeOperation(match.partnerData);
+      return !!type && (type.includes('IMPACT_COMPT') || type.includes('FRAIS_TRANSACTION'));
+    });
   }
 
   /**
