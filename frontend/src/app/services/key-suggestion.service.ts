@@ -43,6 +43,14 @@ export class KeySuggestionService {
     // Cache pour les transformations
     private transformationCache = new Map<string, any>();
 
+    // Caches d'une analyse (PERF) : l'analyse exhaustive teste toutes les paires de colonnes
+    // (ex. 27 x 11 = 297) ; sans cache, chaque paire relisait toutes les lignes et
+    // re-mélangeait les valeurs uniques des deux colonnes (54 s pour 62k lignes).
+    // Clés = identité des tableaux / Sets : une colonne est calculée une seule fois.
+    private uniqueValuesCache = new WeakMap<object, Map<string, Set<string>>>();
+    private sampleCache = new WeakMap<Set<string>, string[]>();
+    private formatsCache = new WeakMap<Set<string>, { isNumeric: boolean; isDate: boolean; isPhone: boolean; isAlphanumeric: boolean }>();
+
     constructor() { }
 
     /**
@@ -62,7 +70,14 @@ export class KeySuggestionService {
      */
     private createSample(values: Set<string>): string[] {
         if (values.size === 0) return [];
-        
+        const cached = this.sampleCache.get(values);
+        if (cached) return cached;
+        const sample = this.buildSample(values);
+        this.sampleCache.set(values, sample);
+        return sample;
+    }
+
+    private buildSample(values: Set<string>): string[] {
         const valuesArray = Array.from(values);
         
         // Calculer la taille de l'échantillon
@@ -92,16 +107,25 @@ export class KeySuggestionService {
             }
         }
         
-        // Mélanger les tableaux
-        const shuffle = (arr: string[]) => arr.sort(() => 0.5 - Math.random());
-        
+        // Tirage aléatoire de k éléments (Fisher-Yates partiel, O(k)). L'ancien
+        // arr.sort(() => 0.5 - Math.random()) triait TOUTES les valeurs (O(n log n),
+        // ~1 M de comparaisons pour 62k valeurs) pour n'en garder que quelques centaines.
+        const pick = (arr: string[], k: number): string[] => {
+            const n = Math.min(k, arr.length);
+            for (let i = 0; i < n; i++) {
+                const j = i + Math.floor(Math.random() * (arr.length - i));
+                const tmp = arr[i]; arr[i] = arr[j]; arr[j] = tmp;
+            }
+            return arr.slice(0, n);
+        };
+
         // Prendre d'abord les valeurs prioritaires, puis compléter avec les autres
         const finalSample = [
-            ...shuffle(prioritizedValues).slice(0, Math.floor(sampleSize * 0.6)),
-            ...shuffle(regularValues).slice(0, sampleSize - Math.floor(sampleSize * 0.6))
+            ...pick(prioritizedValues, Math.floor(sampleSize * 0.6)),
+            ...pick(regularValues, sampleSize - Math.floor(sampleSize * 0.6))
         ];
-        
-        return shuffle(finalSample);
+
+        return pick(finalSample, finalSample.length);
     }
 
     /**
@@ -130,6 +154,9 @@ export class KeySuggestionService {
      */
     private clearCache(): void {
         this.transformationCache.clear();
+        this.uniqueValuesCache = new WeakMap();
+        this.sampleCache = new WeakMap();
+        this.formatsCache = new WeakMap();
     }
 
     /**
@@ -454,6 +481,9 @@ export class KeySuggestionService {
                 overallConfidence: 0,
                 recommendedKeys: []
             };
+        } finally {
+            // Libérer les valeurs uniques des colonnes (peuvent peser lourd sur gros fichiers)
+            this.clearCache();
         }
     }
 
@@ -616,12 +646,17 @@ export class KeySuggestionService {
             { name: 'multi_step', fn: () => this.analyzeMultiStepTransformation(boArray, partnerArray) }
         ];
         
+        // Résultats de chaque analyse, réutilisés pour les combinaisons (mêmes entrées
+        // boArray/partnerArray : recalculer donnait exactement le même résultat).
+        const transformResults = new Map<string, any>();
+
         // Test de chaque transformation individuellement
         for (const transform of transformationTypes) {
             try {
                 this.log('debug', `🔧 Test de transformation: ${transform.name}`);
                 const result = transform.fn();
-                
+                transformResults.set(transform.name, result);
+
                 if (result) {
                     const testOverlap = this.testTransformationOverlap(boArray, partnerArray, result);
                     this.log('debug', `📊 ${transform.name}: ${(testOverlap * 100).toFixed(1)}% (initial: ${(initialOverlap * 100).toFixed(1)}%)`);
@@ -650,7 +685,9 @@ export class KeySuggestionService {
             for (const transform of transformationTypes) {
                 if (!bestSteps.includes(transform.name)) { // Éviter les doublons
                     try {
-                        const additionalResult = transform.fn();
+                        const additionalResult = transformResults.has(transform.name)
+                            ? transformResults.get(transform.name)
+                            : transform.fn();
                         if (additionalResult) {
                             const bestPattern = this.getTransformationPattern(bestTransformation);
                             const bestDesc = this.getTransformationDescription(bestTransformation);
@@ -1284,18 +1321,22 @@ export class KeySuggestionService {
     private calculateValueOverlap(boValues: Set<string>, partnerValues: Set<string>): number {
         if (boValues.size === 0 || partnerValues.size === 0) return 0;
         
-        const intersection = new Set([...boValues].filter(x => partnerValues.has(x)));
-        const union = new Set([...boValues, ...partnerValues]);
-        
-        return intersection.size / union.size;
+        // Jaccard sans copier les ensembles : |A ∩ B| / (|A| + |B| - |A ∩ B|)
+        const [small, large] = boValues.size <= partnerValues.size
+            ? [boValues, partnerValues] : [partnerValues, boValues];
+        let intersection = 0;
+        for (const value of small) {
+            if (large.has(value)) intersection++;
+        }
+        return intersection / (boValues.size + partnerValues.size - intersection);
     }
 
     /**
      * Calcule la compatibilité des formats
      */
     private calculateFormatCompatibility(boValues: Set<string>, partnerValues: Set<string>): number {
-        const boFormats = this.analyzeFormats(Array.from(boValues));
-        const partnerFormats = this.analyzeFormats(Array.from(partnerValues));
+        const boFormats = this.getFormats(boValues);
+        const partnerFormats = this.getFormats(partnerValues);
         
         // Vérifier si les formats sont compatibles
         if (boFormats.isNumeric && partnerFormats.isNumeric) return 0.9;
@@ -1315,6 +1356,16 @@ export class KeySuggestionService {
         
         // Plus les valeurs sont uniques, mieux c'est pour une clé
         return (boUniqueness + partnerUniqueness) / 2;
+    }
+
+    /** Formats d'une colonne, calculés une seule fois par analyse. */
+    private getFormats(values: Set<string>) {
+        let formats = this.formatsCache.get(values);
+        if (!formats) {
+            formats = this.analyzeFormats(Array.from(values));
+            this.formatsCache.set(values, formats);
+        }
+        return formats;
     }
 
     /**
@@ -1398,8 +1449,19 @@ export class KeySuggestionService {
                 return new Set<string>();
             }
             
+            let perColumn = this.uniqueValuesCache.get(data);
+            const cached = perColumn?.get(column);
+            if (cached) {
+                return cached;
+            }
+            if (!perColumn) {
+                perColumn = new Map();
+                this.uniqueValuesCache.set(data, perColumn);
+            }
+
             const uniqueValues = new Set<string>();
-            
+            perColumn.set(column, uniqueValues);
+
             // Optimisation : traitement direct sans tableau intermédiaire
             for (let i = 0; i < data.length; i++) {
                 const row = data[i];
@@ -1433,8 +1495,14 @@ export class KeySuggestionService {
      * Obtient un échantillon de valeurs communes
      */
     private getSampleCommonValues(boValues: Set<string>, partnerValues: Set<string>): string[] {
-        const common = Array.from(boValues).filter(v => partnerValues.has(v));
-        return common.slice(0, 3); // Retourner max 3 exemples
+        const common: string[] = [];
+        for (const value of boValues) {
+            if (partnerValues.has(value)) {
+                common.push(value);
+                if (common.length === 3) break; // max 3 exemples
+            }
+        }
+        return common;
     }
 
     /**
