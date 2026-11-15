@@ -38,6 +38,42 @@ export function normalizeColumnKey(columnName: string): string {
     .replace(/\s+/g, ' ');
 }
 
+export type ColumnKeyResolver = (row: Record<string, string>, column: string) => string | null;
+
+/**
+ * Version mémorisée de {@link resolveColumnKeyInRow} pour les traitements sur toutes les lignes.
+ * Le résultat ne dépend que des noms de colonnes de la ligne : il est calculé une fois par
+ * structure de ligne (liste des clés) et par colonne. Sans ce cache, une colonne absente du
+ * fichier recompare tous les en-têtes normalisés à chaque cellule (≈ 11 s pour 20 000 lignes
+ * TRXBO en prod). À créer pour un traitement donné : les lignes ne doivent pas changer de
+ * colonnes pendant son utilisation.
+ */
+export function createColumnKeyResolver(): ColumnKeyResolver {
+  const signatureByRow = new WeakMap<object, string>();
+  const keysBySignature = new Map<string, Map<string, string | null>>();
+  return (row, column) => {
+    if (!column || !row) {
+      return null;
+    }
+    let signature = signatureByRow.get(row);
+    if (signature === undefined) {
+      signature = Object.keys(row).join('\u0001');
+      signatureByRow.set(row, signature);
+    }
+    let keys = keysBySignature.get(signature);
+    if (!keys) {
+      keys = new Map();
+      keysBySignature.set(signature, keys);
+    }
+    let key = keys.get(column);
+    if (key === undefined) {
+      key = resolveColumnKeyInRow(row, column);
+      keys.set(column, key);
+    }
+    return key;
+  };
+}
+
 /** Trouve la clé réelle dans une ligne à partir du nom configuré. */
 export function resolveColumnKeyInRow(row: Record<string, string>, column: string): string | null {
   if (!column || !row) {

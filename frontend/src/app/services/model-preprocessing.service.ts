@@ -23,6 +23,8 @@ import {
 import { getOrangeMoneyAliasHeadersForColumn, dedupeBilingualColumnNames } from '../utils/bilingual-column.util';
 import { parseAmountValue, tryParseAmount } from '../utils/record-amount.util';
 import {
+  ColumnKeyResolver,
+  createColumnKeyResolver,
   normalizeColumnKey,
   renameKeyPreservingOrder,
   resolveColumnKeyInRow,
@@ -66,6 +68,24 @@ interface ResolvedColumnRenameRule {
   providedIn: 'root'
 })
 export class ModelPreProcessingService {
+
+  /**
+   * Cache de résolution des colonnes, actif pendant un traitement de toutes les lignes
+   * (projection, filtrage des colonnes vides). Méthodes synchrones : pas d'entrelacement.
+   */
+  private bulkKeyResolver: ColumnKeyResolver | null = null;
+
+  private withBulkKeyResolver<T>(fn: () => T): T {
+    if (this.bulkKeyResolver) {
+      return fn();
+    }
+    this.bulkKeyResolver = createColumnKeyResolver();
+    try {
+      return fn();
+    } finally {
+      this.bulkKeyResolver = null;
+    }
+  }
 
   async applyPreProcessingAsync(
     rows: Record<string, string>[],
@@ -2086,7 +2106,9 @@ export class ModelPreProcessingService {
   }
 
   private resolveRowColumnValue(row: Record<string, string>, column: string): string {
-    const key = resolveColumnKeyInRow(row, column);
+    const key = this.bulkKeyResolver
+      ? this.bulkKeyResolver(row, column)
+      : resolveColumnKeyInRow(row, column);
     if (key) {
       return row[key] ?? '';
     }
@@ -2104,6 +2126,10 @@ export class ModelPreProcessingService {
 
   /** True si toutes les lignes ont une valeur vide pour cette colonne. */
   isColumnEmptyInAllRows(rows: Record<string, string>[], column: string): boolean {
+    return this.withBulkKeyResolver(() => this.isColumnEmptyInAllRowsImpl(rows, column));
+  }
+
+  private isColumnEmptyInAllRowsImpl(rows: Record<string, string>[], column: string): boolean {
     if (!rows.length || this.isBlankColumnName(column)) {
       return true;
     }
@@ -2136,6 +2162,13 @@ export class ModelPreProcessingService {
     rows: Record<string, string>[],
     candidateColumns?: string[]
   ): string[] {
+    return this.withBulkKeyResolver(() => this.getNonemptyExportColumnsImpl(rows, candidateColumns));
+  }
+
+  private getNonemptyExportColumnsImpl(
+    rows: Record<string, string>[],
+    candidateColumns?: string[]
+  ): string[] {
     if (!rows.length) {
       return [];
     }
@@ -2149,6 +2182,13 @@ export class ModelPreProcessingService {
    * Retire du fichier final les colonnes sans nom ou sans aucune valeur sur l'ensemble des lignes.
    */
   dropEmptyColumnsFromRows(
+    rows: Record<string, string>[],
+    candidateColumns?: string[]
+  ): { rows: Record<string, string>[]; columns: string[] } {
+    return this.withBulkKeyResolver(() => this.dropEmptyColumnsFromRowsImpl(rows, candidateColumns));
+  }
+
+  private dropEmptyColumnsFromRowsImpl(
     rows: Record<string, string>[],
     candidateColumns?: string[]
   ): { rows: Record<string, string>[]; columns: string[] } {
@@ -2206,6 +2246,17 @@ export class ModelPreProcessingService {
 
   /** Projette les lignes vers les colonnes finales du modèle (avec repli sur colonnes sources). */
   projectRowsToExportColumns(
+    rows: Record<string, string>[],
+    outputColumns: string[],
+    columnRules: ColumnProcessingRule[],
+    model?: AutoProcessingModel
+  ): Record<string, string>[] {
+    return this.withBulkKeyResolver(() =>
+      this.projectRowsToExportColumnsImpl(rows, outputColumns, columnRules, model)
+    );
+  }
+
+  private projectRowsToExportColumnsImpl(
     rows: Record<string, string>[],
     outputColumns: string[],
     columnRules: ColumnProcessingRule[],
@@ -2328,6 +2379,13 @@ export class ModelPreProcessingService {
 
   /** Ne conserve que les colonnes attendues dans le fichier final (hors colonnes vides). */
   filterRowsToColumns(
+    rows: Record<string, string>[],
+    columns: string[]
+  ): Record<string, string>[] {
+    return this.withBulkKeyResolver(() => this.filterRowsToColumnsImpl(rows, columns));
+  }
+
+  private filterRowsToColumnsImpl(
     rows: Record<string, string>[],
     columns: string[]
   ): Record<string, string>[] {
