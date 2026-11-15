@@ -672,6 +672,28 @@ private reconciliationProgressSubject = new BehaviorSubject<boolean>(false);
         }
     }
 
+    /** Modules du catalogue non activés pour l'entreprise (dont les sous-modules « Groupe · Sous-menu »). */
+    private inactiveModules = new Set<string>();
+
+    setInactiveModules(modules: string[]): void {
+        this.inactiveModules = new Set((modules || []).map(m => this.normalizeModuleName(m)).filter(Boolean));
+        try { localStorage.setItem('inactiveModules', JSON.stringify(modules || [])); } catch { /* stockage indisponible */ }
+    }
+
+    /** Module explicitement non activé pour l'entreprise (présent au catalogue mais désactivé). */
+    isModuleInactive(module: string): boolean {
+        if (!this.inactiveModules.size) {
+            try {
+                const saved = JSON.parse(localStorage.getItem('inactiveModules') || '[]');
+                if (Array.isArray(saved) && saved.length) {
+                    this.inactiveModules = new Set(saved.map((m: string) => this.normalizeModuleName(m)).filter(Boolean));
+                }
+            } catch { /* stockage indisponible */ }
+        }
+        const normalized = this.normalizeModuleName(module);
+        return !!normalized && this.inactiveModules.has(normalized);
+    }
+
     /** Vérifie si un module est actif pour l'entreprise courante. */
     isModuleActive(module: string): boolean {
         const activeModules = this.getActiveModules();

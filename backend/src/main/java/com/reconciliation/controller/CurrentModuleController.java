@@ -44,9 +44,19 @@ public class CurrentModuleController {
             .map(ModuleEntity::getNom)
             .toList();
 
+        // Modules du catalogue non activés (ou masqués globalement) : le menu s'en
+        // sert pour masquer les sous-menus dont le sous-module (« Groupe · Sous-menu »)
+        // a été désactivé par le SUPER_ADMIN alors que le module parent est actif.
+        Set<String> actifs = Set.copyOf(names);
+        List<String> inactifs = moduleService.catalogue().stream()
+            .map(ModuleEntity::getNom)
+            .filter(nom -> nom != null && !actifs.contains(nom))
+            .toList();
+
         Map<String, Object> body = new LinkedHashMap<>();
         body.put("entrepriseId", entrepriseId);
         body.put("modules", names);
+        body.put("modulesInactifs", inactifs);
         return ResponseEntity.ok(body);
     }
 }

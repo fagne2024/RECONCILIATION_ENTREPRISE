@@ -450,6 +450,7 @@ export class LoginComponent implements OnInit {
       
       const activeModules: string[] = response?.modules ?? [];
       this.appState.setActiveModules(activeModules);
+      this.appState.setInactiveModules(response?.modulesInactifs ?? []);
       
       // Notifier la sidebar du changement
       // NavigationVisibilityService sera notifié via AppStateService

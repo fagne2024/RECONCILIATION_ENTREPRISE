@@ -1,5 +1,5 @@
 import { Injectable } from '@angular/core';
-import { APP_NAVIGATION_CATALOG, AppNavigationGroup, AppNavigationSubmenu } from '../constants/app-navigation-catalog';
+import { APP_NAVIGATION_CATALOG, AppNavigationGroup, AppNavigationSubmenu, resolveSubmenuAccessModuleName } from '../constants/app-navigation-catalog';
 import { AppStateService } from './app-state.service';
 import { HttpClient } from '@angular/common/http';
 import { Observable, Subject, of } from 'rxjs';
@@ -144,7 +144,28 @@ export class NavigationVisibilityService {
       return false;
     }
 
+    // Sous-module propre au sous-menu (« Comptes · Prédictions ») désactivé par le
+    // SUPER_ADMIN alors que le module parent (« Comptes ») est actif.
+    if (this.isSousModuleDesactive(submenu)) {
+      return false;
+    }
+
     return true;
+  }
+
+  /**
+   * Nom d'accès du sous-menu calculé sur le catalogue d'origine (par clé), pour
+   * ne pas dépendre des libellés renommés.
+   */
+  private isSousModuleDesactive(submenu: AppNavigationSubmenu): boolean {
+    for (const group of APP_NAVIGATION_CATALOG) {
+      const original = group.children?.find(s => s.key === submenu.key);
+      if (original) {
+        const accessName = resolveSubmenuAccessModuleName(group, original);
+        return accessName !== original.moduleName && this.appState.isModuleInactive(accessName);
+      }
+    }
+    return false;
   }
 
   /**
@@ -170,10 +191,13 @@ export class NavigationVisibilityService {
       this.visibilityChanges.next();
       return of(void 0);
     }
-    return this.http.get<{ modules?: string[] }>('/api/modules/active').pipe(
+    return this.http.get<{ modules?: string[]; modulesInactifs?: string[] }>('/api/modules/active').pipe(
       tap(res => {
         if (Array.isArray(res?.modules)) {
           this.appState.setActiveModules(res.modules);
+        }
+        if (Array.isArray(res?.modulesInactifs)) {
+          this.appState.setInactiveModules(res.modulesInactifs);
         }
         this.visibilityChanges.next();
       }),

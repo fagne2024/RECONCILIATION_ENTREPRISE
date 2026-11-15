@@ -372,6 +372,8 @@ export const APP_NAVIGATION_CATALOG: AppNavigationGroup[] = [
         labelKey: 'NAV.serviceBalance',
         route: '/service-balance',
         moduleName: 'Comptes',
+        // Nom d'accès historique, aligné sur NavigationSubmenuRegistry et la table module.
+        accessModuleName: 'Comptes · Service balance',
         apiPathPrefixes: ['/api/service-balance'],
         icon: 'fa-balance-scale'
       },
