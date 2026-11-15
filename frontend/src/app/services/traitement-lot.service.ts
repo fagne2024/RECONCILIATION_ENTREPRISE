@@ -43,6 +43,8 @@ export interface TraitementFiltre {
 export interface TraitementOperation {
   filtres?: TraitementFiltre[];
   dedoublonnerSur?: string[];
+  /** Deux colonnes A et B : les lignes portant une valeur présente dans les deux sont supprimées. */
+  dedoublonnerEntre?: string[];
   colonnesNombre?: string[];
   colonnesDate?: string[];
   formatDate?: string;

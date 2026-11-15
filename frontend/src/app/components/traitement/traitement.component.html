@@ -196,6 +196,9 @@
         <button type="button" class="ds-btn ds-btn--primary" (click)="appliquerFiltresServeur()" [disabled]="!filtresServeurPrets">
           <i class="fas fa-check"></i> {{ 'TRT.AppliquerTousLesFiltres' | translate }}
         </button>
+        <button type="button" class="ds-btn ds-btn--secondary" (click)="reinitialiserFiltreServeur()" [disabled]="!serverOriginLotId || serverLot.lotId === serverOriginLotId">
+          <i class="fas fa-undo"></i> {{ 'COMMON.actions.reset' | translate }}
+        </button>
       </div>
     </fieldset>
 
@@ -1648,7 +1651,8 @@
      </div>
    </div>
    </div>
-     <div *ngIf="columns.length > 0 && combinedRows.length > 0" class="filtre-section" style="margin-bottom: 24px;">
+     <!-- Toujours affichée après un chargement en mode navigateur (même si un filtre a tout exclu) ; en mode serveur, le filtre est dans le bloc du lot -->
+     <div *ngIf="columns.length > 0 && !serverLot" class="filtre-section" style="margin-bottom: 24px;">
      <div class="section-header">
        <h4>
          <i class="fas fa-filter"></i>{{ 'TRT.FiltrerLesLignes' | translate }}<button type="button" class="ds-btn ds-btn--secondary btn btn-sm btn-outline-info" (click)="toggleSection('filter')">
@@ -1660,6 +1664,7 @@
      </div>
      
      <div *ngIf="showSections.filter" class="section-content">
+    <ng-container *ngIf="!serverLot">
     <!-- Filtres multiples -->
     <div class="multiple-filters-container">
       <div class="filters-header">
@@ -1763,6 +1768,7 @@
       </div>
     </div>
     </div>
+    </ng-container>
 
          <div *ngIf="successMsg.filter" class="success-msg">{{ successMsg.filter }}</div>
      <div *ngIf="errorMsg.filter" class="error-msg">{{ errorMsg.filter }}</div>
@@ -2005,6 +2011,24 @@
       </label>
     </div>
          <button type="button" (click)="deduplicate()" [disabled]="dedupCols.length === 0" class="ds-btn ds-btn--secondary">{{ 'TRT.SupprimerLesDoublons' | translate }}</button>
+    <hr>
+    <label>{{ 'TRT.DoublonsEntreDeuxColonnes' | translate }}</label>
+    <p class="hint">{{ 'TRT.DoublonsEntreDeuxColonnesAide' | translate }}</p>
+    <div class="dedup-cols">
+      <label>{{ 'TRT.ColonneA' | translate }}
+        <select [(ngModel)]="crossDedupColA">
+          <option value="">--</option>
+          <option *ngFor="let col of columns" [value]="col">{{ col }}</option>
+        </select>
+      </label>
+      <label>{{ 'TRT.ColonneB' | translate }}
+        <select [(ngModel)]="crossDedupColB">
+          <option value="">--</option>
+          <option *ngFor="let col of columns" [value]="col">{{ col }}</option>
+        </select>
+      </label>
+    </div>
+         <button type="button" (click)="deduplicateAcrossColumns()" [disabled]="!crossDedupColA || !crossDedupColB || crossDedupColA === crossDedupColB" class="ds-btn ds-btn--secondary">{{ 'TRT.SupprimerLesDoublonsCroises' | translate }}</button>
      <div *ngIf="successMsg.dedup" class="success-msg">{{ successMsg.dedup }}</div>
      <div *ngIf="errorMsg.dedup" class="error-msg">{{ errorMsg.dedup }}</div>
    </div>

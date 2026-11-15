@@ -53,12 +53,17 @@ public class TraitementOperationService {
     public record FiltreValeurs(String colonne, List<String> valeurs) {
     }
 
-    /** Opération demandée sur un lot. Toutes les listes peuvent être nulles ou vides. */
+    /**
+     * Opération demandée sur un lot. Toutes les listes peuvent être nulles ou vides.
+     * {@code dedoublonnerEntre} = deux colonnes A et B : toute valeur présente à la fois dans A
+     * et dans B entraîne la suppression des lignes qui la portent, côté A comme côté B.
+     */
     public record Operation(List<FiltreValeurs> filtres,
                             List<String> dedoublonnerSur,
                             List<String> colonnesNombre,
                             List<String> colonnesDate,
-                            String formatDate) {
+                            String formatDate,
+                            List<String> dedoublonnerEntre) {
     }
 
     /** Résultat : identifiant du nouveau lot et compteurs. */
@@ -80,6 +85,12 @@ public class TraitementOperationService {
 
         long nouveauLotId = creerLotResultat(entrepriseId, utilisateur, lotSourceId);
         Set<String> clesVues = new HashSet<>();
+        String[] croise = colonnesCroisees(operation);
+        Set<String> valeursA = new HashSet<>();
+        Set<String> valeursB = new HashSet<>();
+        if (croise != null) {
+            collecterValeursCroisees(lotSourceId, entrepriseId, operation, croise, valeursA, valeursB);
+        }
         long entree = 0;
         long filtrees = 0;
         long doublons = 0;
@@ -103,6 +114,14 @@ public class TraitementOperationService {
                     if (!passeFiltres(ligne, operation.filtres())) {
                         filtrees++;
                         continue;
+                    }
+                    if (croise != null) {
+                        String a = valeurNormalisee(ligne.get(croise[0]));
+                        String b = valeurNormalisee(ligne.get(croise[1]));
+                        if ((!a.isEmpty() && valeursB.contains(a)) || (!b.isEmpty() && valeursA.contains(b))) {
+                            doublons++;
+                            continue;
+                        }
                     }
                     if (operation.dedoublonnerSur() != null && !operation.dedoublonnerSur().isEmpty()) {
                         if (!clesVues.add(TraitementTransformations.cleDedoublonnage(operation.dedoublonnerSur(), ligne))) {
@@ -142,6 +161,52 @@ public class TraitementOperationService {
     }
 
     // ------------------------------------------------------------------
+
+    /** Les deux colonnes du dédoublonnage croisé, ou null s'il n'est pas demandé. */
+    private static String[] colonnesCroisees(Operation operation) {
+        List<String> cols = operation.dedoublonnerEntre();
+        if (cols == null || cols.isEmpty()) {
+            return null;
+        }
+        if (cols.size() != 2 || cols.get(0) == null || cols.get(1) == null || cols.get(0).equals(cols.get(1))) {
+            throw new IllegalArgumentException("Le dédoublonnage entre colonnes exige deux colonnes différentes.");
+        }
+        return new String[]{cols.get(0), cols.get(1)};
+    }
+
+    private static String valeurNormalisee(Object valeur) {
+        return valeur == null ? "" : String.valueOf(valeur).trim().toLowerCase();
+    }
+
+    /** Première passe : valeurs non vides des colonnes A et B, sur les lignes qui passent les filtres. */
+    private void collecterValeursCroisees(long lotId, long entrepriseId, Operation operation, String[] croise,
+                                          Set<String> valeursA, Set<String> valeursB) {
+        long curseur = 0;
+        while (true) {
+            List<Map<String, Object>> page = jdbc.queryForList(
+                    "SELECT numero, valeurs_json FROM traitement_ligne "
+                            + "WHERE entreprise_id = ? AND lot_id = ? AND numero > ? ORDER BY numero LIMIT ?",
+                    entrepriseId, lotId, curseur, TAILLE_PAGE);
+            for (Map<String, Object> brute : page) {
+                curseur = ((Number) brute.get("numero")).longValue();
+                Map<String, Object> ligne = lireLigne((String) brute.get("valeurs_json"));
+                if (!passeFiltres(ligne, operation.filtres())) {
+                    continue;
+                }
+                String a = valeurNormalisee(ligne.get(croise[0]));
+                String b = valeurNormalisee(ligne.get(croise[1]));
+                if (!a.isEmpty()) {
+                    valeursA.add(a);
+                }
+                if (!b.isEmpty()) {
+                    valeursB.add(b);
+                }
+            }
+            if (page.size() < TAILLE_PAGE) {
+                break;
+            }
+        }
+    }
 
     private void appliquerConversions(Map<String, Object> ligne, Operation operation) {
         if (operation.colonnesNombre() != null) {
@@ -200,6 +265,7 @@ public class TraitementOperationService {
         Set<String> connues = new HashSet<>(colonnes);
         List<String> demandees = new ArrayList<>();
         if (operation.dedoublonnerSur() != null) demandees.addAll(operation.dedoublonnerSur());
+        if (operation.dedoublonnerEntre() != null) demandees.addAll(operation.dedoublonnerEntre());
         if (operation.colonnesNombre() != null) demandees.addAll(operation.colonnesNombre());
         if (operation.colonnesDate() != null) demandees.addAll(operation.colonnesDate());
         if (operation.filtres() != null) {

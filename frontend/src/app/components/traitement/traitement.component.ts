@@ -114,6 +114,9 @@ export class TraitementComponent implements OnInit, AfterViewInit, OnDestroy {
   set combinedRows(value: any) { this._combinedRows = RowCollection.from(value); }
   columns: string[] = [];
   dedupCols: string[] = [];
+  // Dédoublonnage croisé : valeurs de la colonne A comparées à celles de la colonne B
+  crossDedupColA = '';
+  crossDedupColB = '';
   formatOptions: any = {
     removeCharacters: false,
     removeSpecialStrings: false,
@@ -558,11 +561,31 @@ End Sub`;
   }
 
   private showSuccess(key: string, msg: string) {
+    this.errorMsg[key] = '';
     this.successMsg[key] = msg;
   }
   private showError(key: string, msg: string) {
+    // Un échec remplace le succès précédent de la même section, et reste lisible assez longtemps.
+    this.successMsg[key] = '';
     this.errorMsg[key] = msg;
-    setTimeout(() => { this.errorMsg[key] = ''; }, 3000);
+    setTimeout(() => {
+      if (this.errorMsg[key] === msg) {
+        this.errorMsg[key] = '';
+      }
+    }, 10000);
+  }
+
+  /**
+   * Fichiers volumineux traités côté serveur : les lignes ne sont pas dans le navigateur, donc les
+   * sections qui travaillent en mémoire ne peuvent rien modifier. On le dit explicitement au lieu
+   * d'afficher un faux succès.
+   */
+  private bloqueSiServeur(key: string): boolean {
+    if (!this.serverLot) {
+      return false;
+    }
+    this.showError(key, this.t('TRT.msg.serverModeUnsupported'));
+    return true;
   }
 
   /**
@@ -1154,7 +1177,7 @@ End Sub`;
       colonnesNombre: this.serverOp.colonnesNombre,
       colonnesDate: this.serverOp.colonnesDate,
       formatDate: this.serverOp.formatDate
-    });
+    }, 'upload');
   }
 
   ajouterFiltreServeur(): void {
@@ -1226,13 +1249,37 @@ End Sub`;
     if (!filtres.length) {
       return;
     }
-    const ok = await this.executerOperationServeur({ filtres });
+    const ok = await this.executerOperationServeur({ filtres }, 'filter');
     if (ok) {
       this.serverFiltres = [];
     }
   }
 
-  private async executerOperationServeur(operation: TraitementOperation): Promise<boolean> {
+  /** Annule les opérations serveur : retour au lot d'origine (fichiers tels que chargés). */
+  async reinitialiserFiltreServeur(): Promise<void> {
+    if (!this.serverLot || this.serverBusy || !this.serverOriginLotId) {
+      return;
+    }
+    const courant = this.serverLot.lotId;
+    this.serverFiltres = [];
+    if (courant === this.serverOriginLotId) {
+      return;
+    }
+    this.serverBusy = true;
+    try {
+      const resume = await this.traitementLotService.resume(this.serverOriginLotId);
+      this.appliquerLot(resume);
+      await this.chargerPageServeur(1);
+      await this.traitementLotService.supprimer(courant).catch(() => undefined);
+      this.showSuccess('filter', this.t('TRT.msg.serverFilterReset'));
+    } catch (err) {
+      this.showError('filter', this.messageErreurServeur(err));
+    } finally {
+      this.serverBusy = false;
+    }
+  }
+
+  private async executerOperationServeur(operation: TraitementOperation, cible: 'upload' | 'filter' | 'dedup'): Promise<boolean> {
     if (!this.serverLot || this.serverBusy) {
       return false;
     }
@@ -1247,12 +1294,14 @@ End Sub`;
       if (precedent !== this.serverOriginLotId) {
         await this.traitementLotService.supprimer(precedent).catch(() => undefined);
       }
-      this.showSuccess('upload',
-        `Opération appliquée : ${res.lignesSorties.toLocaleString()} lignes conservées ` +
-        `(${res.doublonsSupprimes.toLocaleString()} doublons, ${res.lignesFiltrees.toLocaleString()} filtrées).`);
+      const aucunChangement = res.lignesSorties === res.lignesEntree;
+      this.showSuccess(cible,
+        (aucunChangement ? 'Opération appliquée, aucune ligne retirée : ' : 'Opération appliquée : ') +
+        `${res.lignesSorties.toLocaleString()} lignes conservées sur ${res.lignesEntree.toLocaleString()} ` +
+        `(${res.doublonsSupprimes.toLocaleString()} doublons supprimés, ${res.lignesFiltrees.toLocaleString()} lignes filtrées).`);
       return true;
     } catch (err) {
-      this.showError('upload', this.messageErreurServeur(err));
+      this.showError(cible, this.messageErreurServeur(err));
       return false;
     } finally {
       this.serverBusy = false;
@@ -2627,20 +2676,107 @@ End Sub`;
     }
   }
 
-  deduplicate() {
+  async deduplicate() {
     try {
-      if (this.dedupCols.length === 0) return;
+      if (this.dedupCols.length === 0) {
+        this.showError('dedup', this.t('TRT.msg.selectAtLeastOneColumn'));
+        return;
+      }
+      if (this.serverLot) {
+        // Gros fichier : le dédoublonnage est fait en base, sur toutes les lignes du lot
+        await this.executerOperationServeur({ dedoublonnerSur: [...this.dedupCols] }, 'dedup');
+        return;
+      }
+      const totalBefore = this.combinedRows.length;
       const seen = new Set<string>();
-      const deduped: any[] = [];
-      this.combinedRows.forEach((row) => {
+      const removedIndexes = new Set<number>();
+      const deduped = this.combinedRows.filter((row, index) => {
         const key = this.dedupCols.map(col => (row[col] ?? '').toString().trim().toLowerCase()).join('||');
-        if (!seen.has(key)) {
-          seen.add(key);
-          deduped.push(row);
+        if (seen.has(key)) {
+          removedIndexes.add(index);
+          return false;
         }
+        seen.add(key);
+        return true;
       });
+      if (removedIndexes.size === 0) {
+        this.showSuccess('dedup', this.translate.instant('TRT.msg.dedupNone', { columns: this.dedupCols.join(', ') }));
+        return;
+      }
+      // Garder allRows aligné (mêmes index), sinon un rafraîchissement de l'affichage restaure les doublons
+      if (this.allRows.length === totalBefore) {
+        this.allRows = this.allRows.filter((_row, index) => !removedIndexes.has(index));
+      }
       this.combinedRows = deduped;
-      this.showSuccess('dedup', this.t('TRT.msg.duplicatesRemoved'));
+      this.currentPage = 1;
+      this.updatePagination();
+      this.showSuccess('dedup', this.translate.instant('TRT.msg.dedupRemoved', {
+        count: removedIndexes.size.toLocaleString(),
+        remaining: deduped.length.toLocaleString()
+      }));
+    } catch (e) {
+      this.showError('dedup', this.t('TRT.msg.duplicateRemovalError'));
+    }
+  }
+
+  /**
+   * Dédoublonnage croisé entre deux colonnes : toute valeur présente à la fois dans la
+   * colonne A et dans la colonne B entraîne la suppression des lignes qui la portent,
+   * côté A comme côté B. Les valeurs vides sont ignorées.
+   */
+  async deduplicateAcrossColumns() {
+    try {
+      const colA = this.crossDedupColA;
+      const colB = this.crossDedupColB;
+      if (!colA || !colB) return;
+      if (colA === colB) {
+        this.showError('dedup', this.t('TRT.msg.crossDedupSameColumn'));
+        return;
+      }
+      if (this.serverLot) {
+        await this.executerOperationServeur({ dedoublonnerEntre: [colA, colB] }, 'dedup');
+        return;
+      }
+
+      const normalize = (value: any) => (value ?? '').toString().trim().toLowerCase();
+      const valuesA = new Set<string>();
+      const valuesB = new Set<string>();
+      this.combinedRows.forEach((row) => {
+        const a = normalize(row[colA]);
+        const b = normalize(row[colB]);
+        if (a) valuesA.add(a);
+        if (b) valuesB.add(b);
+      });
+
+      const isDuplicate = (row: any) => {
+        const a = normalize(row[colA]);
+        const b = normalize(row[colB]);
+        return (a !== '' && valuesB.has(a)) || (b !== '' && valuesA.has(b));
+      };
+
+      const totalBefore = this.combinedRows.length;
+      const removedIndexes = new Set<number>();
+      const kept = this.combinedRows.filter((row, index) => {
+        if (isDuplicate(row)) {
+          removedIndexes.add(index);
+          return false;
+        }
+        return true;
+      });
+
+      if (removedIndexes.size === 0) {
+        this.showSuccess('dedup', this.t('TRT.msg.crossDedupNone'));
+        return;
+      }
+
+      // Garder allRows aligné (mêmes index) pour que la suppression survive à un rafraîchissement de l'affichage
+      if (this.allRows.length === totalBefore) {
+        this.allRows = this.allRows.filter((_row, index) => !removedIndexes.has(index));
+      }
+      this.combinedRows = kept;
+      this.currentPage = 1;
+      this.updatePagination();
+      this.showSuccess('dedup', this.translate.instant('TRT.msg.crossDedupRemoved', { count: removedIndexes.size.toLocaleString() }));
     } catch (e) {
       this.showError('dedup', this.t('TRT.msg.duplicateRemovalError'));
     }
@@ -2659,6 +2795,7 @@ End Sub`;
   }
 
   applyColumnRename() {
+    if (this.bloqueSiServeur('columnRename')) return;
     const sourceColumn = this.renameSourceCol?.trim();
     const newName = this.renameNewName?.trim();
 
@@ -2707,6 +2844,12 @@ End Sub`;
     this.allColumns = renameInList(this.allColumns);
     this.columns = renameInList(this.columns);
     this.dedupCols = renameInList(this.dedupCols);
+    if (this.crossDedupColA === sourceColumn) {
+      this.crossDedupColA = newName;
+    }
+    if (this.crossDedupColB === sourceColumn) {
+      this.crossDedupColB = newName;
+    }
     this.selectedCols = renameInList(this.selectedCols);
     this.concatCols = renameInList(this.concatCols);
 
@@ -2792,6 +2935,7 @@ End Sub`;
   }
 
   applyExtraction() {
+    if (this.bloqueSiServeur('extract')) return;
     try {
       if (!this.extractCol || !this.extractType) return;
       // Utilise la clé personnalisée si fournie, sinon nom par défaut
@@ -3725,6 +3869,46 @@ End Sub`;
     this.compileHeadersMapping[col2] = select.value;
   }
 
+  /**
+   * Charge le résultat d'un traitement annexe (compilation d'en-têtes, fusion multi-fichiers)
+   * comme jeu de données principal, pour que les sections communes (filtrer les lignes,
+   * doublons, formatage, export…) s'appliquent dessus. Remplace les données déjà chargées.
+   */
+  private chargerResultatDansTraitement(rows: any[], columns: string[]): void {
+    if (!rows.length || !columns.length) {
+      return;
+    }
+    if (this.serverLot) {
+      this.reinitialiserEtatServeur();
+    }
+    this.showCsvPreview = false;
+    this.allColumns = [...columns];
+    this.allRows = rows;
+    this.originalRows = this.allRows.clone();
+    this.combinedRows = this.allRows.clone();
+    this.columns = [...columns];
+    this.filteredRows = [];
+    this.filterApplied = false;
+    this.selectedFilterColumn = '';
+    this.selectedFilterValues = [];
+    this.filterValues = [];
+    this.filteredFilterValues = [];
+    this.multipleFilters = [];
+    this.selectionApplied = false;
+    this.selectedCols = [...columns];
+    this.isColumnReorderMode = false;
+    this.reorderedColumns = [...columns];
+    this.dedupCols = [];
+    this.crossDedupColA = '';
+    this.crossDedupColB = '';
+    this.currentPage = 1;
+    this.optimizeForLargeFiles();
+    this.updateDisplayedRows();
+    this.updatePagination();
+    this.autoShowPreviewSection();
+    this.cd.detectChanges();
+  }
+
   async processCompileHeaders() {
     if (this.compileHeadersRetained.length === 0) {
       this.showError('compileHeaders', this.t('TRT.msg.selectHeaderToKeep'));
@@ -3767,6 +3951,8 @@ End Sub`;
 
       this.compileHeadersResult = [...file1Rows, ...file2Rows];
       this.compileHeadersProgress = `Compilation terminée : ${file1Rows.length} ligne(s) du fichier 1 + ${file2Rows.length} ligne(s) du fichier 2 = ${this.compileHeadersResult.length} ligne(s).`;
+      this.chargerResultatDansTraitement(this.compileHeadersResult, this.compileHeadersResultColumns);
+      this.compileHeadersProgress += ' ' + this.t('TRT.msg.resultLoadedInTraitement');
       this.showSuccess('compileHeaders', this.compileHeadersProgress);
     } catch (error) {
       const message = error instanceof Error ? error.message : this.t('RES.dlg.compileError');
@@ -4191,6 +4377,8 @@ End Sub`;
         files: stats.length,
         rows: merged.length
       });
+      this.chargerResultatDansTraitement(merged, columns);
+      this.multiMergeProgress += ' ' + this.t('TRT.msg.resultLoadedInTraitement');
       this.showSuccess('multiMerge', this.multiMergeProgress);
     } catch (error: any) {
       this.multiMergeProgress = '';
@@ -5087,6 +5275,7 @@ End Sub`;
   }
 
   exportByType() {
+    if (this.bloqueSiServeur('exportType')) return;
     try {
       if (!this.exportTypeCol || this.exportTypeSelected.length === 0) return;
       let exported = 0;
@@ -5150,6 +5339,7 @@ End Sub`;
   }
 
   applyConcat() {
+    if (this.bloqueSiServeur('concat')) return;
     if (!this.concatCols.length || !this.concatNewCol) return;
     try {
       // Appliquer la concaténation sur toutes les données d'origine
@@ -5305,6 +5495,7 @@ End Sub`;
   }
 
   applyRemoveCharactersFormatting() {
+    if (this.bloqueSiServeur('format')) return;
     if (!this.formatSelections['removeCharacters'].length) {
       this.showError('format', this.t('TRT.msg.selectAtLeastOneColumn'));
       return;
@@ -5407,6 +5598,7 @@ End Sub`;
   }
 
   applyRemoveSpecialStringsFormatting() {
+    if (this.bloqueSiServeur('format')) return;
     if (!this.formatSelections['removeSpecialStrings'] || this.formatSelections['removeSpecialStrings'].length === 0) {
       this.showError('format', this.t('TRT.msg.selectColumnToProcess'));
       return;
@@ -5519,6 +5711,7 @@ End Sub`;
   }
 
   applyRemoveNumbersFormatting() {
+    if (this.bloqueSiServeur('format')) return;
     if (!this.formatSelections['removeNumbers'].length) {
       this.showError('format', this.t('TRT.msg.selectAtLeastOneColumn'));
       return;
@@ -5587,6 +5780,7 @@ End Sub`;
   }
 
   applyRemoveIndicatifFormatting() {
+    if (this.bloqueSiServeur('format')) return;
     if (!this.formatSelections['removeIndicatif'].length) {
       this.showError('format', this.t('TRT.msg.selectAtLeastOneColumn'));
       return;
@@ -5711,6 +5905,7 @@ End Sub`;
   }
 
   applyRemoveDecimalsFormatting() {
+    if (this.bloqueSiServeur('format')) return;
     if (!this.formatSelections['removeDecimals'].length) {
       this.showError('format', this.t('TRT.msg.selectAtLeastOneColumn'));
       return;
@@ -5873,6 +6068,7 @@ End Sub`;
    * Applique le formatage pour garder les N derniers digits
    */
   applyKeepLastDigitsFormatting() {
+    if (this.bloqueSiServeur('format')) return;
     if (!this.formatSelections['keepLastDigits'].length) {
       this.showError('format', this.t('TRT.msg.selectAtLeastOneColumn'));
       return;
@@ -5981,6 +6177,7 @@ End Sub`;
    * Applique le formatage pour supprimer .0 sur les dates
    */
   applyRemoveZeroDecimalsFormatting() {
+    if (this.bloqueSiServeur('format')) return;
     if (!this.formatSelections['removeZeroDecimals'].length) {
       this.showError('format', this.t('TRT.msg.selectAtLeastOneColumn'));
       return;
@@ -6046,6 +6243,7 @@ End Sub`;
    * Applique le formatage pour supprimer les espaces
    */
   applyRemoveSpacesFormatting() {
+    if (this.bloqueSiServeur('format')) return;
     if (!this.formatSelections['removeSpaces'].length) {
       this.showError('format', this.t('TRT.msg.selectAtLeastOneColumn'));
       return;
@@ -6284,6 +6482,8 @@ End Sub`;
     this.combinedRows = [];
     this.columns = [];
     this.dedupCols = [];
+    this.crossDedupColA = '';
+    this.crossDedupColB = '';
     this.formatOptions = {
       trimSpaces: false,
       toLowerCase: false,
@@ -7291,6 +7491,7 @@ End Sub`;
    * Exporte toutes les périodes (toutes les pages)
    */
   exportAllPages(): void {
+    if (this.bloqueSiServeur('exportDate')) return;
 
     if (!this.exportDateCol || !this.exportDatePeriod || !this.exportDateFormat) {
       this.showError('exportDate', this.t('TRT.msg.selectDateColPeriodFormat'));
@@ -7573,6 +7774,7 @@ End Sub`;
    * Exporte les données par période de date (page courante seulement)
    */
   exportByDate(): void {
+    if (this.bloqueSiServeur('exportDate')) return;
 
     if (!this.exportDateCol || !this.exportDatePeriod || !this.exportDateFormat) {
       this.showError('exportDate', this.t('TRT.msg.selectDateColPeriodFormat'));

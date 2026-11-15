@@ -519,6 +519,8 @@ export class FileUploadComponent implements OnInit, OnDestroy {
                 this.selectedTraitementModelIds.clear();
                 this.selectedTraitementModelId = '';
                 this.traitementAutoSelectedModelHint = '';
+                // Recherche effacée : on revient au modèle par défaut de la section
+                this.applyDefaultTraitementModel();
             }
             return;
         }
@@ -787,6 +789,10 @@ export class FileUploadComponent implements OnInit, OnDestroy {
         } else {
             this.selectedTraitementModelId = this.getTraitementModelId(model);
             this.onTraitementModelSelectionChange();
+        }
+        // La liste est repliée par défaut en mode embarqué : rendre la présélection visible
+        if (!this.traitementFiles.length) {
+            this.traitementAutoSelectedModelHint = `Modèle sélectionné par défaut : ${model.name}`;
         }
     }
 
