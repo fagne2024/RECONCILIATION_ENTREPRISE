@@ -175,10 +175,19 @@ function proxyApi(req, res) {
     upRes.pipe(res);
   });
 
+  upstream.on('response', () => setBackendState(true));
   upstream.on('timeout', () => upstream.destroy(new Error('Délai du backend dépassé')));
   upstream.on('error', (err) => {
-    console.error('[Proxy Error]', err.code || '', err.message, 'for', req.method, req.url,
-      err.code === 'ECONNREFUSED' ? '(backend arrete ou en cours de demarrage)' : '');
+    if (err.code === 'ECONNREFUSED') {
+      // Backend arrêté / en démarrage : signalé une fois par la surveillance, pas à chaque requête.
+      const wasDown = backendState === false;
+      setBackendState(false);
+      if (!wasDown) {
+        console.error(`${horodatage()} [Proxy Error] ECONNREFUSED for ${req.method} ${req.url}`);
+      }
+    } else {
+      console.error(`${horodatage()} [Proxy Error]`, err.code || '', err.message, 'for', req.method, req.url);
+    }
     if (!res.headersSent) {
       res.writeHead(502, { 'Content-Type': 'application/json' });
       res.end(JSON.stringify({ error: 'Proxy error', message: err.message, code: err.code }));
@@ -188,6 +197,64 @@ function proxyApi(req, res) {
   });
   req.on('aborted', () => upstream.destroy());
   req.pipe(upstream);
+}
+
+// --- Surveillance du backend : message à chaque changement d'état (console + log) ---
+// null = pas encore vérifié, true = disponible, false = injoignable.
+let backendState = null;
+let backendDownSince = 0;
+
+function horodatage() {
+  const d = new Date();
+  const p = (n) => String(n).padStart(2, '0');
+  return `${p(d.getHours())}:${p(d.getMinutes())}:${p(d.getSeconds())}`;
+}
+
+function setBackendState(up) {
+  if (backendState === up) return;
+  const previous = backendState;
+  backendState = up;
+  if (up) {
+    const duree = previous === false && backendDownSince
+      ? ` (indisponible pendant ${Math.round((Date.now() - backendDownSince) / 1000)} s)` : '';
+    console.log(`${horodatage()} [backend] DISPONIBLE : ${BACKEND.origin} repond${duree}`);
+  } else {
+    backendDownSince = Date.now();
+    console.log(previous === null
+      ? `${horodatage()} [backend] en attente : ${BACKEND.origin} ne repond pas encore (demarrage en cours ?)`
+      : `${horodatage()} [backend] INJOIGNABLE : ${BACKEND.origin} ne repond plus`);
+  }
+  scheduleProbe(); // cadence adaptée au nouvel état
+}
+
+// Sonde légère : toute réponse HTTP (401 attendu sans session) = backend démarré.
+function probeBackend() {
+  const req = backendClient.request({
+    protocol: BACKEND.protocol,
+    hostname: BACKEND.hostname,
+    port: BACKEND.port,
+    method: 'GET',
+    path: '/api/auth/me',
+    headers: { host: BACKEND.host, 'x-sonde-frontend': '1' },
+    agent: false,
+    rejectUnauthorized: false,
+    timeout: 5000
+  }, (res) => {
+    res.resume();
+    setBackendState(true);
+    scheduleProbe();
+  });
+  req.on('timeout', () => req.destroy(new Error('timeout')));
+  req.on('error', () => { setBackendState(false); scheduleProbe(); });
+  req.end();
+}
+
+// Une seule minuterie : toutes les 2 s tant que le backend est absent (détection rapide
+// du démarrage / redémarrage), 15 s quand il répond. Relancée à chaque changement d'état.
+let probeTimer = null;
+function scheduleProbe() {
+  if (probeTimer) clearTimeout(probeTimer);
+  probeTimer = setTimeout(probeBackend, backendState ? 15000 : 2000);
 }
 
 function handler(req, res) {
@@ -211,7 +278,8 @@ server.timeout = 0;
 
 server.listen(PORT, HOST, () => {
   const scheme = SSL_KEY && SSL_CERT ? 'https' : 'http';
-  console.log(`[frontend] ${scheme}://${HOST}:${PORT}  dist=${DIST_DIR}  /api -> ${BACKEND.origin}`);
+  console.log(`${horodatage()} [frontend] ${scheme}://${HOST}:${PORT}  dist=${DIST_DIR}  /api -> ${BACKEND.origin}`);
+  probeBackend();
   // Préchauffage : compresse d'avance les fichiers du build pour que le premier
   // utilisateur n'attende pas la compression brotli (≈1 s pour main.js).
   setImmediate(() => {
@@ -224,6 +292,6 @@ server.listen(PORT, HOST, () => {
       }
     });
     walk(DIST_DIR);
-    console.log(`[frontend] ${cache.size} fichiers compresses en ${Date.now() - t0} ms`);
+    console.log(`${horodatage()} [frontend] ${cache.size} fichiers compresses en ${Date.now() - t0} ms`);
   });
 });
