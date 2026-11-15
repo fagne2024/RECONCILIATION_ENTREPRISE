@@ -1607,7 +1607,8 @@
      </div>
    </div>
    </div>
-     <div *ngIf="columns.length > 0 && combinedRows.length > 0" class="filtre-section" style="margin-bottom: 24px;">
+     <!-- Toujours affichée après un chargement : mode navigateur (même si un filtre a tout exclu) et mode serveur -->
+     <div *ngIf="columns.length > 0" class="filtre-section" style="margin-bottom: 24px;">
      <div class="section-header">
        <h4>
          <i class="fas fa-filter"></i>{{ 'TRT.FiltrerLesLignes' | translate }}<button type="button" class="ds-btn ds-btn--secondary btn btn-sm btn-outline-info" (click)="toggleSection('filter')">
@@ -1619,6 +1620,26 @@
      </div>
      
      <div *ngIf="showSections.filter" class="section-content">
+    <!-- Mode serveur (gros fichiers) : le filtre est appliqué en base, sur toutes les lignes du lot -->
+    <div *ngIf="serverLot" class="filter-controls">
+      <p class="hint">{{ 'TRT.FiltreServeurAide' | translate }}</p>
+      <div class="filter-group">
+        <label>{{ 'TRT.Colonne' | translate }}</label>
+        <select [(ngModel)]="serverOp.filtreColonne" [disabled]="serverBusy" class="ds-select">
+          <option value="">{{ 'TRT.--ChoisirUneColonne--' | translate }}</option>
+          <option *ngFor="let col of serverColumns" [value]="col">{{ col }}</option>
+        </select>
+      </div>
+      <div class="filter-group">
+        <label>{{ 'TRT.FiltreServeurValeurs' | translate }}</label>
+        <input type="text" [(ngModel)]="serverOp.filtreValeurs" [disabled]="serverBusy" placeholder="OK;KO" class="ds-input" />
+      </div>
+      <div class="filter-actions">
+        <button type="button" (click)="appliquerFiltreServeur()" [disabled]="serverBusy || !serverOp.filtreColonne || !serverOp.filtreValeurs.trim()" class="ds-btn ds-btn--secondary apply-btn">{{ 'TRT.AppliquerLeFiltre' | translate }}</button>
+        <button type="button" (click)="reinitialiserFiltreServeur()" [disabled]="serverBusy" class="ds-btn ds-btn--secondary reset-btn">{{ 'COMMON.actions.reset' | translate }}</button>
+      </div>
+    </div>
+    <ng-container *ngIf="!serverLot">
     <!-- Filtres multiples -->
     <div class="multiple-filters-container">
       <div class="filters-header">
@@ -1722,6 +1743,7 @@
       </div>
     </div>
     </div>
+    </ng-container>
 
          <div *ngIf="successMsg.filter" class="success-msg">{{ successMsg.filter }}</div>
      <div *ngIf="errorMsg.filter" class="error-msg">{{ errorMsg.filter }}</div>
@@ -1964,6 +1986,24 @@
       </label>
     </div>
          <button type="button" (click)="deduplicate()" [disabled]="dedupCols.length === 0" class="ds-btn ds-btn--secondary">{{ 'TRT.SupprimerLesDoublons' | translate }}</button>
+    <hr>
+    <label>{{ 'TRT.DoublonsEntreDeuxColonnes' | translate }}</label>
+    <p class="hint">{{ 'TRT.DoublonsEntreDeuxColonnesAide' | translate }}</p>
+    <div class="dedup-cols">
+      <label>{{ 'TRT.ColonneA' | translate }}
+        <select [(ngModel)]="crossDedupColA">
+          <option value="">--</option>
+          <option *ngFor="let col of columns" [value]="col">{{ col }}</option>
+        </select>
+      </label>
+      <label>{{ 'TRT.ColonneB' | translate }}
+        <select [(ngModel)]="crossDedupColB">
+          <option value="">--</option>
+          <option *ngFor="let col of columns" [value]="col">{{ col }}</option>
+        </select>
+      </label>
+    </div>
+         <button type="button" (click)="deduplicateAcrossColumns()" [disabled]="!crossDedupColA || !crossDedupColB || crossDedupColA === crossDedupColB" class="ds-btn ds-btn--secondary">{{ 'TRT.SupprimerLesDoublonsCroises' | translate }}</button>
      <div *ngIf="successMsg.dedup" class="success-msg">{{ successMsg.dedup }}</div>
      <div *ngIf="errorMsg.dedup" class="error-msg">{{ errorMsg.dedup }}</div>
    </div>
