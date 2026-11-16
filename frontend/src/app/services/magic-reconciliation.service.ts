@@ -589,9 +589,48 @@ export class MagicReconciliationService {
     if (modelId) {
       request.modelId = modelId;
     }
-    return firstValueFrom(
+    const response = await firstValueFrom(
       this.reconciliationService.reconcileWithLiveProgress(request, onStep)
     );
+    return this.hydratePaginatedResponse(response, onStep);
+  }
+
+  /**
+   * Au-delà de 5 000 lignes de détail, le backend renvoie une réponse « slim » (totaux seuls,
+   * tableaux vides, resultsPaginated=true) et garde le détail en cache sous la session.
+   * La réconciliation magique fusionne les lignes de chaque service et l'écran /results
+   * compte les lignes filtrées par service : sans rechargement, il affichait 0 correspondance
+   * et 0 écart alors que les totaux étaient corrects. On recharge donc toutes les pages ici.
+   */
+  private async hydratePaginatedResponse(
+    response: ReconciliationResponse,
+    onStep?: (step: string, percentage?: number) => void
+  ): Promise<ReconciliationResponse> {
+    const sessionId = response.progressSessionId;
+    const expectedRows =
+      (response.totalMatches ?? 0) +
+      (response.totalBoOnly ?? 0) +
+      (response.totalPartnerOnly ?? 0) +
+      (response.totalMismatches ?? 0);
+    const loadedRows =
+      (response.matches?.length ?? 0) +
+      (response.boOnly?.length ?? 0) +
+      (response.partnerOnly?.length ?? 0) +
+      (response.mismatches?.length ?? 0);
+    if (!sessionId || !response.resultsPaginated || loadedRows > 0 || expectedRows === 0) {
+      return response;
+    }
+
+    onStep?.(I18nService.t('MSG.msg.agregationDesResultats'), 99);
+    const detail = await this.reconciliationService.loadAllDetailResults(sessionId);
+    return {
+      ...response,
+      matches: detail.matches ?? [],
+      boOnly: detail.boOnly ?? [],
+      partnerOnly: detail.partnerOnly ?? [],
+      mismatches: detail.mismatches ?? [],
+      resultsPaginated: false
+    };
   }
 
   private loadTraitementModels(): Promise<AutoProcessingModel[]> {

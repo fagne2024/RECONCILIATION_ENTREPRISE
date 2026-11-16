@@ -1494,6 +1494,15 @@ export class ReconciliationService implements OnInit, OnDestroy {
     }
 
     /**
+     * Oublie la session courante. Utilisé après une réconciliation magique : le résultat fusionné
+     * contient déjà toutes les lignes de tous les services, et la dernière session serveur ne
+     * correspond qu'à un seul service (ou à une session parente de chunks inexistante côté serveur).
+     */
+    clearCurrentJobId(): void {
+        this.currentJobId = null;
+    }
+
+    /**
      * Vérifie si un job est en cours
      */
     isJobRunning(): boolean {

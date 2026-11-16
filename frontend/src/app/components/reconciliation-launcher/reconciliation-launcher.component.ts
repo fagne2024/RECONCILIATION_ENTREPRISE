@@ -399,12 +399,26 @@ async launchMagicReconciliation(): Promise<void> {
       );
 
       this.reconciliationTabsService.clearAllData();
+      // Nouveau run : oublier la card / le fichier partenaire / la reponse complete du run
+      // precedent, sinon /results cloisonne les nouvelles lignes sur un ancien service (0 affiche).
+      this.appStateService.setSelectedMagicService('');
+      this.appStateService.setSelectedMagicPartnerFile('');
+      this.appStateService.setMagicFullResponse(null);
       // Les syntheses par service et les noms de fichiers partenaires alimentent le
       // panneau « Resultats magiques » de /results. Sans ces deux appels, la vue
       // groupee reste vide car rien d'autre ne les publie dans AppStateService.
       this.appStateService.setMagicServiceSummaries(result.serviceSummaries);
       this.appStateService.setMagicPartnerFileNames(result.partnerFileNames ?? []);
-      this.appStateService.setReconciliationResults(result.response);
+      // Le resultat magique fusionne contient deja toutes les lignes (pages rechargees par
+      // service). Sans session courante, /results, /matches, /ecart-bo et /ecart-partner
+      // affichent ces lignes cloisonnees par card, comme en mode assiste / manuel, au lieu de
+      // recharger depuis la session d'un seul service (ou d'une session inexistante).
+      this.reconciliationService.clearCurrentJobId();
+      this.appStateService.setReconciliationResults({
+        ...result.response,
+        progressSessionId: undefined,
+        resultsPaginated: false
+      });
       this.appStateService.setReconciliationEntryPath('/reconciliation-launcher');
       this.router.navigate(['/results']);
 
