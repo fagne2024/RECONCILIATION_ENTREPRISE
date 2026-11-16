@@ -5811,10 +5811,13 @@ reportData: ReconciliationReportData[] = [];
             return this.getSortableDateTime(b.date) - this.getSortableDateTime(a.date);
         });
 
-        // Affichage par service (mode magique) : 2 lignes par service, une "Multiagence"
-        // pour les écarts BO et une ligne service pour les correspondances + écarts
-        // partenaire. Remplace le détail par agence.
-        this.collapseReportToServiceSummary();
+        // Mode magique : même affichage qu'en mode manuel / assisté (détail par agence +
+        // lignes Multiagence pour les écarts non attribuables). L'ancien regroupement en
+        // 2 lignes par service (collapseReportToServiceSummary) n'est appliqué que si le
+        // détail par agence est indisponible (lignes non chargées).
+        if (!this.hasMagicDetailRowsLoaded()) {
+            this.collapseReportToServiceSummary();
+        }
 
         this.syncLastSavedGlpiValues(this.reportData);
     }
@@ -6714,6 +6717,37 @@ reportData: ReconciliationReportData[] = [];
      */
     private readonly magicScopedSummaries = new WeakSet<AgencySummaryData[]>();
 
+    /** Vrai si le détail par agence couvre les correspondances + écarts BO attendus des cards. */
+    private isDetailSummaryComplete(
+        detail: AgencySummaryData[],
+        expected: { matches: number; boOnly: number; partnerOnly: number }
+    ): boolean {
+        const expectedBo = (expected.matches || 0) + (expected.boOnly || 0);
+        if (expectedBo <= 0) {
+            return true;
+        }
+        const detailBo = detail.reduce(
+            (sum, row) => sum + (Number(row.matches) || 0) + (Number(row.boOnly) || 0),
+            0
+        );
+        return detailBo >= expectedBo;
+    }
+
+    /** Vrai si les lignes de détail des cards du rapport sont chargées en mémoire. */
+    private hasMagicDetailRowsLoaded(): boolean {
+        if (!this.isMagicScopeActive()) {
+            return true;
+        }
+        const { filteredMatches, filteredBoOnly, filteredPartnerOnly, filteredMismatches } = this.getDetailDatasets();
+        const loaded = filteredMatches.length + filteredBoOnly.length
+            + filteredPartnerOnly.length + filteredMismatches.length;
+        if (loaded === 0) {
+            return false;
+        }
+        const expected = this.getMagicScopeExpectedTotals();
+        return (filteredMatches.length + filteredBoOnly.length) >= (expected.matches || 0) + (expected.boOnly || 0);
+    }
+
     private getEffectiveSummaryForMagic(summary: AgencySummaryData[]): AgencySummaryData[] {
         if (!this.isMagicScopeActive() || this.magicScopedSummaries.has(summary)) {
             return summary;
@@ -6726,6 +6760,14 @@ reportData: ReconciliationReportData[] = [];
         // Affichage "par agence" pour TOUT le groupe de cards sélectionné : reconstruire le
         // résumé depuis les datasets cloisonnés du rapport (source de vérité sur le groupe).
         const fromDetail = this.buildAgencySummaryFromDetailDatasets();
+        // Lignes de toutes les cards chargées (réponse magique hydratée) : le détail par agence
+        // est complet, on l'utilise seul, comme en mode manuel / assisté. Le fusionner avec les
+        // lignes « total du service » (fallback) doublerait les totaux quand le libellé service
+        // du BO diffère du nom de la card.
+        if (fromDetail.length > 0 && this.isDetailSummaryComplete(fromDetail, expected)) {
+            this.magicScopedSummaries.add(fromDetail);
+            return fromDetail;
+        }
         // Combiner TOUTES les sources par agence/service : le résumé entrant (scoped) couvre
         // les services dont les datasets ne sont pas chargés, fromDetail couvre ceux dont les
         // datasets le sont, fallback garantit une ligne au moins par card du scope.
