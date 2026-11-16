@@ -2215,6 +2215,15 @@ export class BanqueComponent implements OnInit {
     return p.rev ? this.getReleveMontantAbs(p.rev) : 0;
   }
 
+  /**
+   * Résultats de réconciliation à afficher : écarts, paires, ou correspondances seules
+   * (ex. une opération rapprochée par commentaire sans aucun écart ni paire restants).
+   */
+  get hasReconDisplayData(): boolean {
+    return !!(this.reconDiffRows?.length || this.matchedPairs?.length
+      || this.matchedOperations?.length || this.matchedReleves?.length);
+  }
+
   /** Ligne présente dans les correspondances grâce à son commentaire (sans vis-à-vis). */
   isCommentMatch(row: unknown): boolean {
     return (row as { reconMatchBy?: string } | null)?.reconMatchBy === 'COMMENTAIRE';

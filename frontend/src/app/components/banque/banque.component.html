@@ -597,7 +597,7 @@
         </div>
       </div>
 
-      <div class="table-container" *ngIf="reconDiffRows.length || (matchedPairs && matchedPairs.length)">
+      <div class="table-container" *ngIf="hasReconDisplayData">
         <!-- Filtres Réconciliation -->
         <div class="table-filters">
           <div class="filter-group" *ngIf="reconView==='operation' || reconView==='corr_operation' || reconView==='all'">
@@ -1098,7 +1098,7 @@
           </p>
         </div>
       </div>
-      <div *ngIf="!reconDiffRows.length" class="empty-row">
+      <div *ngIf="!hasReconDisplayData" class="empty-row">
         {{ 'BQ.Aucunedonnéesélectionnezunpaysetunedatepuislancezlaréconciliation' | translate }}
       </div>
     </div>

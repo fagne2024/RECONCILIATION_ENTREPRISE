@@ -66,6 +66,11 @@ describe('BanqueComponent - correspondances par commentaire', () => {
     expect(comp.reconDiffRows).toEqual([{ left: op2 }, { right: rev11 }]);
     expect(comp.isCommentMatch(op1)).toBe(true);
     expect(comp.isCommentMatch(pairOp)).toBe(false);
+    // Bloc des tableaux affiché même sans écart ni paire « réelle » (cas Togo : une seule opération commentée)
+    comp.reconDiffRows = [];
+    comp.matchedPairs = [];
+    expect(comp.hasReconDisplayData).toBe(true);
+    comp.applyCommentCorrespondances();
 
     // Vue « Résultat » : la paire existante + une ligne seule par commentaire de chaque côté
     const resultat = comp.reconResultPairs;
