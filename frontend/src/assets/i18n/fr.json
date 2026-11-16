@@ -551,6 +551,8 @@
     }
   },
   "BQ": {
+    "ViaCommentaire": "Commentaire",
+    "RapprocheParCommentaire": "Rapproché par un commentaire OK_ (sans ligne en vis-à-vis)",
     "ReconResultShowKeyHint": "Cliquer pour afficher la clé",
     "crTitre": "Reporter le commentaire sur le relevé",
     "crTitreOp": "Reporter le commentaire sur une opération",

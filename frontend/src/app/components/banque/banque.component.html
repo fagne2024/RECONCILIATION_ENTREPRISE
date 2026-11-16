@@ -877,6 +877,7 @@
               <td class="right">
                 <!-- Correspondance : toujours OK -->
                 <span class="badge status-ok">{{ 'COMMON.actions.ok' | translate }}</span>
+                <span *ngIf="isCommentMatch(op)" class="badge badge-comment-match" [title]="'BQ.RapprocheParCommentaire' | translate">{{ 'BQ.ViaCommentaire' | translate }}</span>
                 <button type="button" class="btn-icon" (click)="markAsOkPermanentByKey(op.key)" title="{{ 'BQ.Marquerdéfinitivementokignorer' | translate }}"><i class="fas fa-check-double"></i></button>
                 <button type="button" class="btn-icon" (click)="unmarkOkByKey(op.key)" title="{{ 'BQ.Annulerokdéfinitif' | translate }}"><i class="fas fa-undo"></i></button>
               </td>
@@ -934,6 +935,7 @@
               <td class="right">
                 <!-- Correspondance : toujours OK -->
                 <span class="badge status-ok">{{ 'COMMON.actions.ok' | translate }}</span>
+                <span *ngIf="isCommentMatch(r)" class="badge badge-comment-match" [title]="'BQ.RapprocheParCommentaire' | translate">{{ 'BQ.ViaCommentaire' | translate }}</span>
                 <button type="button" class="btn-icon" (click)="markAsOkPermanentByKey(r.key)" title="{{ 'BQ.Marquerdéfinitivementokignorer' | translate }}"><i class="fas fa-check-double"></i></button>
                 <button type="button" class="btn-icon" (click)="unmarkOkByKey(r.key)" title="{{ 'BQ.Annulerokdéfinitif' | translate }}"><i class="fas fa-undo"></i></button>
               </td>

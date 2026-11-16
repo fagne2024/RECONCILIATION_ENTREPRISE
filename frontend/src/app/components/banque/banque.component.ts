@@ -2120,6 +2120,66 @@ export class BanqueComponent implements OnInit {
     });
   }
 
+  /** Listes de la dernière réconciliation, avant prise en compte des commentaires OK_*. */
+  private reconBaseLists: {
+    leftOnly: OperationBancaireDisplay[];
+    rightOnly: ReleveBancaireRow[];
+    diffs: BanqueComponent['reconDiffRows'];
+    matchedOps: OperationBancaireDisplay[];
+    matchedRevs: ReleveBancaireRow[];
+  } | null = null;
+
+  /** Commentaire validé « OK » (tags OK_FRAIS_BANCAIRES_AUTRES, OK_REGUL_*…) : la ligne est rapprochée. */
+  static isCommentaireCorrespondance(commentaire: string | null | undefined): boolean {
+    return /^\s*OK_/i.test(commentaire || '');
+  }
+
+  /**
+   * Une opération ou une ligne de relevé sans vis-à-vis dont le commentaire commence par OK_
+   * passe dans les correspondances (et sort des suspens). Les lignes déjà appariées y restent.
+   * Les listes de réconciliation contiennent des copies : le commentaire à jour est relu
+   * sur les tableaux source par identifiant.
+   */
+  private applyCommentCorrespondances(): void {
+    const base = this.reconBaseLists;
+    if (!base) return;
+    const opComments = new Map<string, string>();
+    (this.operations || []).forEach(o => opComments.set(`${o.source || ''}|${o.id}`, o.commentaire || ''));
+    const revComments = new Map<number, string>();
+    (this.releveAllRows || []).forEach(r => { if (r.id != null) revComments.set(r.id, r.commentaire || ''); });
+    (this.releveRows || []).forEach(r => { if (r.id != null) revComments.set(r.id, r.commentaire || ''); });
+
+    const isOk = BanqueComponent.isCommentaireCorrespondance;
+    const opOk = new Set(base.leftOnly.filter(o => {
+      const k = `${o.source || ''}|${o.id}`;
+      return isOk(opComments.has(k) ? opComments.get(k) : o.commentaire);
+    }));
+    const revOk = new Set(base.rightOnly.filter(r =>
+      isOk(r.id != null && revComments.has(r.id) ? revComments.get(r.id) : r.commentaire)));
+    opOk.forEach(o => { (o as any).reconMatchBy = 'COMMENTAIRE'; });
+    revOk.forEach(r => { (r as any).reconMatchBy = 'COMMENTAIRE'; });
+
+    this.leftOnlyOperations = base.leftOnly.filter(o => !opOk.has(o));
+    this.rightOnlyReleves = base.rightOnly.filter(r => !revOk.has(r));
+    this.reconDiffRows = base.diffs.filter(d =>
+      !(d.left && opOk.has(d.left as OperationBancaireDisplay)) && !(d.right && revOk.has(d.right as ReleveBancaireRow)));
+    this.matchedOperations = [...base.matchedOps, ...opOk];
+    this.matchedReleves = [...base.matchedRevs, ...revOk];
+  }
+
+  /** Ligne présente dans les correspondances grâce à son commentaire OK_* (sans vis-à-vis). */
+  isCommentMatch(row: unknown): boolean {
+    return (row as { reconMatchBy?: string } | null)?.reconMatchBy === 'COMMENTAIRE';
+  }
+
+  /** Après l'enregistrement d'un commentaire : reclasse les lignes sans relancer la réconciliation. */
+  private refreshCommentCorrespondances(): void {
+    if (!this.reconBaseLists) return;
+    this.applyCommentCorrespondances();
+    this.updateTotalSuspensKO();
+    this.updatePagedReconciliationResults();
+  }
+
   // Calcul du nombre de suspens : une ligne est KO si elle n'est dans aucune correspondance (même règle que la réconciliation)
   private updateTotalSuspensKO() {
     try {
@@ -2674,6 +2734,7 @@ export class BanqueComponent implements OnInit {
         const fop = this.filteredOperations.find(o => o.id === operation.id);
         if (fop) fop.commentaire = valeur;
         this.cancelEditComment();
+        this.refreshCommentCorrespondances();
         // Reporter le commentaire sur une ligne de relevé de la même banque
         this.openCommentReportPopup(operation, valeur);
       },
@@ -2820,6 +2881,7 @@ export class BanqueComponent implements OnInit {
           const valeur = updated.commentaire || commentaire;
           [this.operations, this.filteredOperations, this.pagedOperations].forEach(list =>
             (list || []).filter(o => o.id === id && o.source !== 'generale').forEach(o => { o.commentaire = valeur; }));
+          this.refreshCommentCorrespondances();
           this.commentReportSaving = false;
           this.closeCommentReportPopup();
           this.popupService.showSuccess(I18nService.t('TBL.msg.commentaireReporteSurLOperation'));
@@ -2836,6 +2898,7 @@ export class BanqueComponent implements OnInit {
       next: () => {
         [this.releveAllRows, this.releveRows].forEach(list =>
           (list || []).filter(r => r.id === id).forEach(r => { r.commentaire = commentaire; }));
+        this.refreshCommentCorrespondances();
         this.commentReportSaving = false;
         this.closeCommentReportPopup();
         this.popupService.showSuccess(I18nService.t('TBL.msg.commentaireReporteSurLaLigneDe'));
@@ -2911,7 +2974,10 @@ export class BanqueComponent implements OnInit {
     this.releveService.updateCommentaire(row.id, commentaire).subscribe({
       next: () => {
         row.commentaire = commentaire;
+        [this.releveAllRows, this.releveRows].forEach(list =>
+          (list || []).filter(r => r.id === row.id).forEach(r => { r.commentaire = commentaire; }));
         this.cancelEditComment();
+        this.refreshCommentCorrespondances();
         // Lier le commentaire à une opération de la même banque
         this.openCommentReportPopupFromReleve(row, commentaire);
       },
@@ -5348,6 +5414,15 @@ export class BanqueComponent implements OnInit {
     const bothKeys = Array.from(allKeys).filter(k => opMap.has(k) && revMap.has(k));
     this.matchedOperations = bothKeys.map(k => opMap.get(k)!.op);
     this.matchedReleves = bothKeys.map(k => revMap.get(k)!.row);
+    // Lignes sans vis-à-vis portant un commentaire OK_* : remontées dans les correspondances
+    this.reconBaseLists = {
+      leftOnly: [...this.leftOnlyOperations],
+      rightOnly: [...this.rightOnlyReleves],
+      diffs: [...this.reconDiffRows],
+      matchedOps: [...this.matchedOperations],
+      matchedRevs: [...this.matchedReleves]
+    };
+    this.applyCommentCorrespondances();
     // Vue « Résultat » : chaque opération face au relevé qui lui correspond
     this.reconResultPairs = bothKeys.map(k => {
       const op = opMap.get(k)!.op;
@@ -6335,6 +6410,7 @@ export class BanqueComponent implements OnInit {
     this.matchedReleves = [];
     this.matchedPairs = [];
     this.reconDiffRows = [];
+    this.reconBaseLists = null;
     this.reconResultPairs = [];
     this.reconView = 'operation';
     this.updatePagedReconciliationResults();
@@ -6767,7 +6843,8 @@ export class BanqueComponent implements OnInit {
           }
         }
         
-        this.loadOperations();
+        // Commentaire OK_* éventuellement modifié : reclasser les correspondances une fois rechargé
+        this.loadOperations(() => this.refreshCommentCorrespondances());
         this.loadDashboardStats(); // Mettre à jour le compteur de tickets
         this.closeEditPopup();
         this.popupService.showSuccess(message);

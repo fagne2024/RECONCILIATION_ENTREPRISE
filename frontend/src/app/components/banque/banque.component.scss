@@ -1348,6 +1348,16 @@
 .operations-table {
   .badge.sens-debit { background: #ffebee; color: #c62828; border: 1px solid #ffcdd2; }
   .badge.sens-credit { background: #ecfdf5; color: #065f46; border: 1px solid #a7f3d0; }
+  // Ligne rapprochée par un commentaire OK_* (sans vis-à-vis)
+  .badge.badge-comment-match {
+    background: #e0f2f1;
+    color: #00695c;
+    border: 1px solid #80cbc4;
+    font-size: 12px;
+    padding: 2px 8px;
+    margin-left: 4px;
+  }
+
   .badge.badge-grouped { 
     background: #e8eaf6; 
     color: #3f51b5; 

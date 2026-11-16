@@ -1,0 +1,72 @@
+// ExcelJS (via uuid ESM) n'est pas transformable par Jest et n'est pas utilisé ici
+jest.mock('exceljs', () => ({}));
+// Service à web worker (import.meta) non compilable sous Jest
+jest.mock('../../services/column-rules-processor.service', () => ({ ColumnRulesProcessorService: class {} }));
+
+import { EnvironmentInjector } from '@angular/core';
+import { TestBed } from '@angular/core/testing';
+import { BanqueComponent } from './banque.component';
+import { SuiviCompenseOpService } from '../../services/suivi-compense-op.service';
+
+/** Une ligne sans vis-à-vis portant un commentaire OK_* passe dans les correspondances. */
+describe('BanqueComponent - correspondances par commentaire OK_', () => {
+  const stub: any = {};
+  let comp: any;
+
+  beforeEach(() => {
+    TestBed.configureTestingModule({ providers: [{ provide: SuiviCompenseOpService, useValue: {} }] });
+    comp = TestBed.inject(EnvironmentInjector)
+      .runInContext(() => new BanqueComponent(stub, stub, stub, stub, stub, stub, stub, stub, stub, stub, stub));
+  });
+
+  it('reconnaît uniquement les commentaires commençant par OK_', () => {
+    const ok = BanqueComponent.isCommentaireCorrespondance;
+    expect(ok('OK_REGUL_COMMENT')).toBe(true);
+    expect(ok(' ok_frais_bancaires_autres')).toBe(true);
+    expect(ok('SUSPENS_BO')).toBe(false);
+    expect(ok('texte libre')).toBe(false);
+    expect(ok('')).toBe(false);
+    expect(ok(undefined)).toBe(false);
+  });
+
+  it('remonte les lignes OK_ de chaque côté, garde les suspens et relit le commentaire à jour', () => {
+    // Tableaux source (commentaires à jour)
+    comp.operations = [
+      { id: 1, source: 'bancaire', commentaire: 'OK_REGUL_DATE' },
+      { id: 2, source: 'bancaire', commentaire: 'SUSPENS_BO' },
+      { id: 3, source: 'bancaire', commentaire: '' }
+    ];
+    comp.releveAllRows = [{ id: 10, commentaire: 'OK_REGUL_BANQUE' }, { id: 11, commentaire: 'SUSPENS_RLV' }];
+    comp.releveRows = [];
+    // Copies de la réconciliation (commentaire de l'op 3 obsolète, sans effet)
+    const op1 = { id: 1, source: 'bancaire', key: 'a' };
+    const op2 = { id: 2, source: 'bancaire', key: 'b' };
+    const rev10 = { id: 10, key: 'c' };
+    const rev11 = { id: 11, key: 'd' };
+    const pairOp = { id: 3, source: 'bancaire', key: 'e', commentaire: 'OK_REGUL_MONTANT' };
+    const pairRev = { id: 12, key: 'e' };
+    comp.reconBaseLists = {
+      leftOnly: [op1, op2],
+      rightOnly: [rev10, rev11],
+      diffs: [{ left: op1 }, { left: op2 }, { right: rev10 }, { right: rev11 }],
+      matchedOps: [pairOp],
+      matchedRevs: [pairRev]
+    };
+
+    comp.applyCommentCorrespondances();
+
+    expect(comp.matchedOperations).toEqual([pairOp, op1]);
+    expect(comp.matchedReleves).toEqual([pairRev, rev10]);
+    expect(comp.leftOnlyOperations).toEqual([op2]);
+    expect(comp.rightOnlyReleves).toEqual([rev11]);
+    expect(comp.reconDiffRows).toEqual([{ left: op2 }, { right: rev11 }]);
+    expect(comp.isCommentMatch(op1)).toBe(true);
+    expect(comp.isCommentMatch(pairOp)).toBe(false);
+
+    // Commentaire retiré : la ligne revient dans les suspens
+    comp.operations[0].commentaire = '';
+    comp.applyCommentCorrespondances();
+    expect(comp.leftOnlyOperations).toEqual([op1, op2]);
+    expect(comp.matchedOperations).toEqual([pairOp]);
+  });
+});
