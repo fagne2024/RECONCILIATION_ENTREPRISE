@@ -1596,6 +1596,7 @@ export class FileUploadComponent implements OnInit, OnDestroy {
         );
         if (this.modelPreProcessingService.hasPreProcessing(effectivePreProcessingConfig)) {
             const rowsBeforePreProcessing = workingRows.length;
+            const inputRowsBeforePreProcessing = workingRows;
             workingRows = await this.modelPreProcessingService.applyPreProcessingAsync(
                 workingRows,
                 effectivePreProcessingConfig,
@@ -1624,9 +1625,15 @@ export class FileUploadComponent implements OnInit, OnDestroy {
             );
 
             if (!workingRows.length) {
+                const reason = this.modelPreProcessingService.describeEmptyRowFilterResult(
+                    inputRowsBeforePreProcessing,
+                    effectivePreProcessingConfig
+                );
                 return {
                     success: false,
-                    warningMessage: I18nService.t('FU.msg.aucuneLigneRestanteApresPreTraitement')
+                    warningMessage: [I18nService.t('FU.msg.aucuneLigneRestanteApresPreTraitement'), reason]
+                        .filter(Boolean)
+                        .join(' ')
                 };
             }
             console.error('[DIAG-TRAITEMENT] APRÈS PRÉ-TRAITEMENT:', workingRows.length);

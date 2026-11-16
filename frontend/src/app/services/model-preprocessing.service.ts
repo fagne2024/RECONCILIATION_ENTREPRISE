@@ -1764,6 +1764,46 @@ export class ModelPreProcessingService {
     };
   }
 
+  /**
+   * Explique pourquoi les filtres de lignes ont tout supprimé : premier filtre actif qui
+   * ne laisse aucune ligne, avec la colonne absente ou les valeurs réellement présentes.
+   * Les filtres sont rejoués dans l'ordre sur les lignes d'entrée du pré-traitement.
+   */
+  describeEmptyRowFilterResult(
+    rows: Record<string, string>[],
+    config?: ModelPreProcessingConfig | null
+  ): string {
+    if (!rows?.length) {
+      return '';
+    }
+    let remaining = rows;
+    for (const filter of this.getActiveFilters(config)) {
+      if (filter.selectedValues.includes('__TOUS__')) {
+        continue;
+      }
+      const filtered = this.applyRowFilters(remaining, [filter]);
+      if (filtered.length) {
+        remaining = filtered;
+        continue;
+      }
+      const expected = filter.selectedValues.join(', ');
+      if (!resolveColumnKeyInRow(remaining[0], filter.column)) {
+        return I18nService.t('FU.msg.filtreColonneAbsente', { p0: filter.column, p1: expected });
+      }
+      const found = new Set<string>();
+      for (const row of remaining) {
+        const key = resolveColumnKeyInRow(row, filter.column);
+        found.add(key ? String(row[key] ?? '') : '');
+        if (found.size >= 5) {
+          break;
+        }
+      }
+      const foundText = Array.from(found).map(v => v === '' ? I18nService.t('FU.msg.valeurVide') : v).join(', ');
+      return I18nService.t('FU.msg.filtreAucuneValeur', { p0: filter.column, p1: expected, p2: foundText });
+    }
+    return '';
+  }
+
   buildApplicationResult(
     rowsBefore: number,
     rowsAfter: number,

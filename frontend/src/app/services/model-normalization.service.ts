@@ -22,6 +22,14 @@ export class ModelNormalizationService {
 
   /** Toutes les équivalences de l'entreprise, chargées une fois (invalidées à l'enregistrement). */
   private allCache: Promise<ModelColumnEquivalence[]> | null = null;
+  /** Date de chargement du cache : au-delà de CACHE_TTL_MS, les équivalences sont relues. */
+  private allCacheAt = 0;
+  /**
+   * Durée de vie courte : un traitement lit les équivalences plusieurs fois en quelques
+   * secondes, mais une modification faite depuis un autre onglet ou un autre compte doit
+   * être prise en compte au traitement suivant (sinon colonnes non renommées, lignes filtrées).
+   */
+  private static readonly CACHE_TTL_MS = 15000;
 
   constructor(private http: HttpClient) {}
 
@@ -51,7 +59,8 @@ export class ModelNormalizationService {
     if (!ids.length) {
       return [];
     }
-    if (!this.allCache) {
+    if (!this.allCache || Date.now() - this.allCacheAt > ModelNormalizationService.CACHE_TTL_MS) {
+      this.allCacheAt = Date.now();
       this.allCache = firstValueFrom(this.list()).catch(() => {
         this.allCache = null;
         return [];
