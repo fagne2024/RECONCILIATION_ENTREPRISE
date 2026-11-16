@@ -555,7 +555,7 @@
     "ReconResultNoOperation": "Aucune opération en face (rapproché par commentaire)",
     "ReconResultNoReleve": "Aucune ligne de relevé en face (rapproché par commentaire)",
     "ViaCommentaire": "Commentaire",
-    "RapprocheParCommentaire": "Rapproché par un commentaire OK_ (sans ligne en vis-à-vis)",
+    "RapprocheParCommentaire": "Rapproché par son commentaire (sans ligne en vis-à-vis)",
     "ReconResultShowKeyHint": "Cliquer pour afficher la clé",
     "crTitre": "Reporter le commentaire sur le relevé",
     "crTitreOp": "Reporter le commentaire sur une opération",

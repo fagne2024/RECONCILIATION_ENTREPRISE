@@ -8,8 +8,8 @@ import { TestBed } from '@angular/core/testing';
 import { BanqueComponent } from './banque.component';
 import { SuiviCompenseOpService } from '../../services/suivi-compense-op.service';
 
-/** Une ligne sans vis-à-vis portant un commentaire OK_* passe dans les correspondances. */
-describe('BanqueComponent - correspondances par commentaire OK_', () => {
+/** Une ligne sans vis-à-vis commentée (hors SUSPENS_*) passe dans les correspondances. */
+describe('BanqueComponent - correspondances par commentaire', () => {
   const stub: any = {};
   let comp: any;
 
@@ -19,12 +19,15 @@ describe('BanqueComponent - correspondances par commentaire OK_', () => {
       .runInContext(() => new BanqueComponent(stub, stub, stub, stub, stub, stub, stub, stub, stub, stub, stub));
   });
 
-  it('reconnaît uniquement les commentaires commençant par OK_', () => {
+  it('rapproche tout commentaire non vide sauf les tags SUSPENS_', () => {
     const ok = BanqueComponent.isCommentaireCorrespondance;
     expect(ok('OK_REGUL_COMMENT')).toBe(true);
     expect(ok(' ok_frais_bancaires_autres')).toBe(true);
+    expect(ok('COMPENSE CB MYTP')).toBe(true);
     expect(ok('SUSPENS_BO')).toBe(false);
-    expect(ok('texte libre')).toBe(false);
+    expect(ok(' suspens_bo_memo')).toBe(false);
+    expect(ok('SUSPENS_RLV')).toBe(false);
+    expect(ok('   ')).toBe(false);
     expect(ok('')).toBe(false);
     expect(ok(undefined)).toBe(false);
   });
@@ -32,7 +35,7 @@ describe('BanqueComponent - correspondances par commentaire OK_', () => {
   it('remonte les lignes OK_ de chaque côté, garde les suspens et relit le commentaire à jour', () => {
     // Tableaux source (commentaires à jour)
     comp.operations = [
-      { id: 1, source: 'bancaire', commentaire: 'OK_REGUL_DATE' },
+      { id: 1, source: 'bancaire', commentaire: 'COMPENSE CB MYTP' },
       { id: 2, source: 'bancaire', commentaire: 'SUSPENS_BO' },
       { id: 3, source: 'bancaire', commentaire: '' }
     ];
@@ -71,7 +74,7 @@ describe('BanqueComponent - correspondances par commentaire OK_', () => {
     const parRev = resultat.find((p: any) => p.matchBy === 'COMMENTAIRE' && p.rev);
     expect(parOp.op).toBe(op1);
     expect(parOp.rev).toBeUndefined();
-    expect(parOp.commentaire).toBe('OK_REGUL_DATE');
+    expect(parOp.commentaire).toBe('COMPENSE CB MYTP');
     expect(parRev.rev).toBe(rev10);
     expect(parRev.op).toBeUndefined();
     expect(parRev.commentaire).toBe('OK_REGUL_BANQUE');
