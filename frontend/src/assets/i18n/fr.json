@@ -551,6 +551,9 @@
     }
   },
   "BQ": {
+    "ReconResultByComment": "Par commentaire",
+    "ReconResultNoOperation": "Aucune opération en face (rapproché par commentaire)",
+    "ReconResultNoReleve": "Aucune ligne de relevé en face (rapproché par commentaire)",
     "ViaCommentaire": "Commentaire",
     "RapprocheParCommentaire": "Rapproché par un commentaire OK_ (sans ligne en vis-à-vis)",
     "ReconResultShowKeyHint": "Cliquer pour afficher la clé",

@@ -87,7 +87,7 @@ describe('BanqueComponent - appariement par référence', () => {
     expect(comp.reconResultPairs[0].rev.id).toBe(10);
     expect(comp.reconResultPairs[0].matchBy).toBe('REFERENCE');
     expect(comp.reconResultPairs[0].ecart).toBe(0);
-    expect(comp.reconResultStats).toEqual({ total: 1, parReference: 1, parCle: 0, avecEcart: 0 });
+    expect(comp.reconResultStats).toEqual({ total: 1, parReference: 1, parCle: 0, parCommentaire: 0, avecEcart: 0 });
     comp.reconResultSearch = 'intouch';
     expect(comp.filteredReconResultPairs.length).toBe(1);
     comp.reconResultMatchFilter = 'CLE';

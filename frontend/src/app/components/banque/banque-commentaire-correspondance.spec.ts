@@ -50,7 +50,8 @@ describe('BanqueComponent - correspondances par commentaire OK_', () => {
       rightOnly: [rev10, rev11],
       diffs: [{ left: op1 }, { left: op2 }, { right: rev10 }, { right: rev11 }],
       matchedOps: [pairOp],
-      matchedRevs: [pairRev]
+      matchedRevs: [pairRev],
+      pairs: [{ key: 'e', op: pairOp, rev: pairRev, matchBy: 'CLE', ecart: 0 }]
     };
 
     comp.applyCommentCorrespondances();
@@ -63,10 +64,27 @@ describe('BanqueComponent - correspondances par commentaire OK_', () => {
     expect(comp.isCommentMatch(op1)).toBe(true);
     expect(comp.isCommentMatch(pairOp)).toBe(false);
 
+    // Vue « Résultat » : la paire existante + une ligne seule par commentaire de chaque côté
+    const resultat = comp.reconResultPairs;
+    expect(resultat.length).toBe(3);
+    const parOp = resultat.find((p: any) => p.matchBy === 'COMMENTAIRE' && p.op);
+    const parRev = resultat.find((p: any) => p.matchBy === 'COMMENTAIRE' && p.rev);
+    expect(parOp.op).toBe(op1);
+    expect(parOp.rev).toBeUndefined();
+    expect(parOp.commentaire).toBe('OK_REGUL_DATE');
+    expect(parRev.rev).toBe(rev10);
+    expect(parRev.op).toBeUndefined();
+    expect(parRev.commentaire).toBe('OK_REGUL_BANQUE');
+    expect(comp.reconResultStats.parCommentaire).toBe(2);
+    comp.reconResultMatchFilter = 'COMMENTAIRE';
+    expect(comp.filteredReconResultPairs.length).toBe(2);
+    comp.reconResultMatchFilter = '';
+
     // Commentaire retiré : la ligne revient dans les suspens
     comp.operations[0].commentaire = '';
     comp.applyCommentCorrespondances();
     expect(comp.leftOnlyOperations).toEqual([op1, op2]);
     expect(comp.matchedOperations).toEqual([pairOp]);
+    expect(comp.reconResultPairs.length).toBe(2);
   });
 });

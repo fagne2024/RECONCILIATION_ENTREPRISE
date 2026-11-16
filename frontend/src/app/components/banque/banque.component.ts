@@ -59,10 +59,17 @@ function containsFilter(value: string | null | undefined, filter: string | null 
 /** Paire rapprochée affichée dans la vue « Résultat » de la réconciliation bancaire. */
 interface ReconResultPair {
   key: string;
-  op: OperationBancaireDisplay;
-  rev: ReleveBancaireRow;
-  /** REFERENCE : référence trouvée dans le libellé ; CLE : date + montant + banque + sens. */
-  matchBy: 'REFERENCE' | 'CLE';
+  /** Absent pour une ligne de relevé rapprochée par commentaire (sans opération en face). */
+  op?: OperationBancaireDisplay;
+  /** Absent pour une opération rapprochée par commentaire (sans relevé en face). */
+  rev?: ReleveBancaireRow;
+  /**
+   * REFERENCE : référence trouvée dans le libellé ; CLE : date + montant + banque + sens ;
+   * COMMENTAIRE : ligne seule rapprochée par un commentaire OK_*.
+   */
+  matchBy: 'REFERENCE' | 'CLE' | 'COMMENTAIRE';
+  /** Commentaire OK_* (lignes COMMENTAIRE). */
+  commentaire?: string;
   /** Montant opération (absolu) − montant relevé ; 0 si identiques. */
   ecart: number;
 }
@@ -1982,6 +1989,7 @@ export class BanqueComponent implements OnInit {
     this.reconVoirTout = false;
     if (!this.reconPays) {
       this.reconResultPairs = [];
+      this.reconBaseLists = null;
       return;
     }
     this.reconcile(true);
@@ -2127,6 +2135,8 @@ export class BanqueComponent implements OnInit {
     diffs: BanqueComponent['reconDiffRows'];
     matchedOps: OperationBancaireDisplay[];
     matchedRevs: ReleveBancaireRow[];
+    /** Paires opération ↔ relevé de la vue « Résultat » (hors commentaires). */
+    pairs: ReconResultPair[];
   } | null = null;
 
   /** Commentaire validé « OK » (tags OK_FRAIS_BANCAIRES_AUTRES, OK_REGUL_*…) : la ligne est rapprochée. */
@@ -2165,6 +2175,40 @@ export class BanqueComponent implements OnInit {
       !(d.left && opOk.has(d.left as OperationBancaireDisplay)) && !(d.right && revOk.has(d.right as ReleveBancaireRow)));
     this.matchedOperations = [...base.matchedOps, ...opOk];
     this.matchedReleves = [...base.matchedRevs, ...revOk];
+
+    // Vue « Résultat » : les lignes commentées OK_* y figurent aussi, seules de leur côté
+    const commentPairs: ReconResultPair[] = [
+      ...Array.from(opOk).map(op => ({
+        key: `commentaire-op-${op.source || ''}-${op.id}`,
+        op,
+        matchBy: 'COMMENTAIRE' as const,
+        commentaire: opComments.get(`${op.source || ''}|${op.id}`) ?? op.commentaire ?? '',
+        ecart: 0
+      })),
+      ...Array.from(revOk).map(rev => ({
+        key: `commentaire-rev-${rev.id}`,
+        rev,
+        matchBy: 'COMMENTAIRE' as const,
+        commentaire: (rev.id != null ? revComments.get(rev.id) : undefined) ?? rev.commentaire ?? '',
+        ecart: 0
+      }))
+    ];
+    this.reconResultPairs = [...base.pairs, ...commentPairs].sort((a, b) => {
+      const d = this.reconResultDateOf(a).localeCompare(this.reconResultDateOf(b));
+      return d !== 0 ? d : this.reconResultMontantOf(a) - this.reconResultMontantOf(b);
+    });
+  }
+
+  /** Date d'une ligne du Résultat : celle de l'opération, à défaut celle du relevé (aaaa-mm-jj). */
+  private reconResultDateOf(p: ReconResultPair): string {
+    if (p.op) return this.normalizeDateToYmd(p.op.dateOperation);
+    return p.rev ? this.normalizeDateToYmd((p.rev.dateValeur || p.rev.dateComptable) as any) : '';
+  }
+
+  /** Montant (absolu) d'une ligne du Résultat : opération, à défaut relevé. */
+  private reconResultMontantOf(p: ReconResultPair): number {
+    if (p.op) return Math.abs(p.op.montant || 0);
+    return p.rev ? this.getReleveMontantAbs(p.rev) : 0;
   }
 
   /** Ligne présente dans les correspondances grâce à son commentaire OK_* (sans vis-à-vis). */
@@ -5156,6 +5200,7 @@ export class BanqueComponent implements OnInit {
     const warn = (msg: string) => {
       if (silent) {
         this.reconResultPairs = [];
+        this.reconBaseLists = null;
       } else {
         this.popupService.showWarning(msg);
       }
@@ -5420,11 +5465,11 @@ export class BanqueComponent implements OnInit {
       rightOnly: [...this.rightOnlyReleves],
       diffs: [...this.reconDiffRows],
       matchedOps: [...this.matchedOperations],
-      matchedRevs: [...this.matchedReleves]
+      matchedRevs: [...this.matchedReleves],
+      pairs: []
     };
-    this.applyCommentCorrespondances();
     // Vue « Résultat » : chaque opération face au relevé qui lui correspond
-    this.reconResultPairs = bothKeys.map(k => {
+    this.reconBaseLists.pairs = bothKeys.map(k => {
       const op = opMap.get(k)!.op;
       const rev = revMap.get(k)!.row;
       const ecart = Math.abs(op.montant || 0) - this.getReleveMontantAbs(rev);
@@ -5435,10 +5480,8 @@ export class BanqueComponent implements OnInit {
         matchBy: (rev as any).reconMatchBy === 'REFERENCE' ? 'REFERENCE' : 'CLE',
         ecart: Math.abs(ecart) < 0.01 ? 0 : ecart
       } as ReconResultPair;
-    }).sort((a, b) => {
-      const d = this.normalizeDateToYmd(a.op.dateOperation).localeCompare(this.normalizeDateToYmd(b.op.dateOperation));
-      return d !== 0 ? d : Math.abs(a.op.montant || 0) - Math.abs(b.op.montant || 0);
     });
+    this.applyCommentCorrespondances();
     this.reconResultPage = 1;
     // Tableau de bord : suspens = lignes hors correspondance (KO), après mise à jour des correspondances
     this.updateTotalSuspensKO();
@@ -5502,7 +5545,7 @@ export class BanqueComponent implements OnInit {
     return this.reconResultShownKeys.has(key);
   }
   reconResultSearch = '';
-  reconResultMatchFilter: '' | 'REFERENCE' | 'CLE' = '';
+  reconResultMatchFilter: '' | 'REFERENCE' | 'CLE' | 'COMMENTAIRE' = '';
   reconResultPaysFilter = '';
   reconResultBanqueFilter = '';
   reconResultDateDebut = '';
@@ -5531,20 +5574,20 @@ export class BanqueComponent implements OnInit {
       return ymd ? ymd.split('-').reverse().join('/') : '';
     };
     return this.filteredReconResultPairs.map(p => [
-      fmtDate(p.op.dateOperation),
-      p.op.typeOperation || '',
-      p.op.agence || '',
-      p.op.reference || '',
-      this.getOperationBanque(p.op),
-      Number(p.op.montant || 0),
-      p.matchBy === 'REFERENCE' ? 'Référence' : 'Clé',
+      p.op ? fmtDate(p.op.dateOperation) : '',
+      p.op?.typeOperation || '',
+      p.op?.agence || '',
+      p.op?.reference || '',
+      p.op ? this.getOperationBanque(p.op) : '',
+      p.op ? Number(p.op.montant || 0) : '',
+      p.matchBy === 'REFERENCE' ? 'Référence' : p.matchBy === 'COMMENTAIRE' ? `Commentaire ${p.commentaire || ''}`.trim() : 'Clé',
       p.ecart || 0,
-      fmtDate(p.rev.dateValeur || p.rev.dateComptable),
-      [p.rev.numeroCompte, p.rev.nomCompte].filter(Boolean).join(' — '),
-      p.rev.banque || '',
-      p.rev.libelle || '',
-      this.getReleveMontantAbs(p.rev),
-      (p.rev.debit || 0) > 0 ? 'Débit' : 'Crédit'
+      p.rev ? fmtDate(p.rev.dateValeur || p.rev.dateComptable) : '',
+      p.rev ? [p.rev.numeroCompte, p.rev.nomCompte].filter(Boolean).join(' — ') : '',
+      p.rev?.banque || '',
+      p.rev?.libelle || '',
+      p.rev ? this.getReleveMontantAbs(p.rev) : '',
+      p.rev ? ((p.rev.debit || 0) > 0 ? 'Débit' : 'Crédit') : ''
     ]);
   }
 
@@ -5776,18 +5819,18 @@ export class BanqueComponent implements OnInit {
     const q = this.normalizeReconText(this.reconResultSearch);
     return this.reconResultPairs.filter(p => {
       if (this.reconResultMatchFilter && p.matchBy !== this.reconResultMatchFilter) return false;
-      if (this.reconResultPaysFilter && this.getPaysDisplay(p.op) !== this.reconResultPaysFilter) return false;
+      if (this.reconResultPaysFilter && this.reconResultPaysOf(p) !== this.reconResultPaysFilter) return false;
       if (this.reconResultBanqueFilter && this.reconResultBanqueOf(p) !== this.reconResultBanqueFilter) return false;
       if (this.reconResultDateDebut || this.reconResultDateFin) {
-        const ymd = this.normalizeDateToYmd(p.op.dateOperation as any);
+        const ymd = this.reconResultDateOf(p);
         if (!ymd) return false;
         if (this.reconResultDateDebut && ymd < this.reconResultDateDebut) return false;
         if (this.reconResultDateFin && ymd > this.reconResultDateFin) return false;
       }
       if (!q) return true;
       const haystack = this.normalizeReconText([
-        p.op.reference, p.op.agence, p.op.typeOperation, this.getOperationBanque(p.op),
-        p.rev.libelle, p.rev.banque, p.rev.numeroCompte, p.rev.nomCompte
+        p.op?.reference, p.op?.agence, p.op?.typeOperation, p.op ? this.getOperationBanque(p.op) : '',
+        p.rev?.libelle, p.rev?.banque, p.rev?.numeroCompte, p.rev?.nomCompte, p.commentaire
       ].join(' '));
       return haystack.includes(q);
     });
@@ -5803,12 +5846,13 @@ export class BanqueComponent implements OnInit {
     return this.filteredReconResultPairs.slice(start, start + this.reconResultPageSize);
   }
 
-  get reconResultStats(): { total: number; parReference: number; parCle: number; avecEcart: number } {
+  get reconResultStats(): { total: number; parReference: number; parCle: number; parCommentaire: number; avecEcart: number } {
     const pairs = this.reconResultPairs;
     return {
       total: pairs.length,
       parReference: pairs.filter(p => p.matchBy === 'REFERENCE').length,
       parCle: pairs.filter(p => p.matchBy === 'CLE').length,
+      parCommentaire: pairs.filter(p => p.matchBy === 'COMMENTAIRE').length,
       avecEcart: pairs.filter(p => p.ecart !== 0).length
     };
   }
@@ -5819,13 +5863,24 @@ export class BanqueComponent implements OnInit {
 
   /** Banque d'une paire : celle de l'opération, à défaut celle du relevé. */
   private reconResultBanqueOf(p: ReconResultPair): string {
-    return ((this.getOperationBanque(p.op) || p.rev.banque || '') + '').trim();
+    return (((p.op ? this.getOperationBanque(p.op) : '') || p.rev?.banque || '') + '').trim();
+  }
+
+  /** Pays d'une ligne du Résultat : celui de l'opération, à défaut déduit de la banque du relevé. */
+  private reconResultPaysOf(p: ReconResultPair): string {
+    if (p.op) return this.getPaysDisplay(p.op);
+    const r = p.rev;
+    if (!r) return '';
+    return (r.pays ? countryDisplayLabel(r.pays) : '')
+      || this.deriveCountryNameFromBanque(r.banque)
+      || this.deriveCountryNameFromBanque((r as any).nomCompte)
+      || '';
   }
 
   /** Pays présents dans les résultats (options du filtre). */
   get reconResultPaysOptions(): string[] {
     const set = new Set<string>();
-    this.reconResultPairs.forEach(p => { const v = this.getPaysDisplay(p.op); if (v) set.add(v); });
+    this.reconResultPairs.forEach(p => { const v = this.reconResultPaysOf(p); if (v && v !== '-') set.add(v); });
     return Array.from(set).sort((a, b) => a.localeCompare(b, 'fr'));
   }
 
@@ -5834,7 +5889,7 @@ export class BanqueComponent implements OnInit {
     const set = new Set<string>();
     this.reconResultPairs.forEach(p => {
       // Filtre cloisonné : seules les banques du pays choisi
-      if (this.reconResultPaysFilter && this.getPaysDisplay(p.op) !== this.reconResultPaysFilter) return;
+      if (this.reconResultPaysFilter && this.reconResultPaysOf(p) !== this.reconResultPaysFilter) return;
       const v = this.reconResultBanqueOf(p);
       if (v) set.add(v);
     });

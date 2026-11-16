@@ -551,6 +551,9 @@
     }
   },
   "BQ": {
+    "ReconResultByComment": "By comment",
+    "ReconResultNoOperation": "No operation on this side (matched by comment)",
+    "ReconResultNoReleve": "No statement line on this side (matched by comment)",
     "ViaCommentaire": "Comment",
     "RapprocheParCommentaire": "Matched by an OK_ comment (no counterpart line)",
     "ReconResultShowKeyHint": "Click to show the key",
