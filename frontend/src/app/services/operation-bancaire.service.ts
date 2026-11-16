@@ -96,6 +96,14 @@ export class OperationBancaireService {
         return this.http.get<OperationBancaireAuditStat[]>(`${this.apiUrl}/audit-summary`, { params: { start, end } });
     }
 
+    /**
+     * Top des utilisateurs par lignes utiles : actionType = catégorie ('agents' : lignes importées
+     * réconciliées OK, 'rapprochement' : lignes validées, 'clotures' : lignes clôturées).
+     */
+    getAuditRanking(start: string, end: string): Observable<OperationBancaireAuditStat[]> {
+        return this.http.get<OperationBancaireAuditStat[]>(`${this.apiUrl}/audit-ranking`, { params: { start, end } });
+    }
+
     /** Notification e-mail de la réconciliation bancaire (OK, validée ou clôturée). */
     sendReconciliationEmail(payload: {
         evenement: 'OK' | 'VALIDE' | 'CLOTURE';

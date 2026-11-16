@@ -7,7 +7,7 @@ import {
     ReleveManualRangeRow
 } from '../../services/dashboard.service';
 import { ChartConfiguration } from 'chart.js';
-import { DashboardReconciliationService, Result8RecData, RecoJ1BlockingComment, RecoAuditActionStat } from '../../services/dashboard-reconciliation.service';
+import { DashboardReconciliationService, Result8RecData, RecoJ1BlockingComment, RecoAuditServiceDayAction } from '../../services/dashboard-reconciliation.service';
 import {
   RECONCILIATION_ENV_OPTIONS,
   normalizeReconciliationReportEnv
@@ -1643,11 +1643,11 @@ export class EtatReconciliationsComponent implements OnInit {
 
             forkJoin({
                 current: this.dashboardReconciliationService
-                    .getAuditActionsSummary(start, endInclusive, opts, this.moduleContext)
-                    .pipe(catchError(() => of([] as RecoAuditActionStat[]))),
+                    .getAuditServiceDays(start, endInclusive, opts, this.moduleContext)
+                    .pipe(catchError(() => of([] as RecoAuditServiceDayAction[]))),
                 previous: this.dashboardReconciliationService
-                    .getAuditActionsSummary(prev.start, prev.end, opts, this.moduleContext)
-                    .pipe(catchError(() => of([] as RecoAuditActionStat[])))
+                    .getAuditServiceDays(prev.start, prev.end, opts, this.moduleContext)
+                    .pipe(catchError(() => of([] as RecoAuditServiceDayAction[])))
             })
                 .pipe(take(1))
                 .subscribe(({ current, previous }) => {
@@ -1693,7 +1693,7 @@ export class EtatReconciliationsComponent implements OnInit {
     }
 
     /** Construit les catégories configurées (Configuration > Top utilisateurs) et leur top N. */
-    private buildTopUserCategories(current: RecoAuditActionStat[], previous: RecoAuditActionStat[]): TopUserCategory[] {
+    private buildTopUserCategories(current: RecoAuditServiceDayAction[], previous: RecoAuditServiceDayAction[]): TopUserCategory[] {
         const cfg = this.topUsersConfig;
         const limit = Math.max(1, Number(cfg.topN) || 1);
         const categories: TopUsersCategoryConfig[] = (cfg.categories || []).filter(c => c?.enabled);
@@ -1732,24 +1732,39 @@ export class EtatReconciliationsComponent implements OnInit {
         });
     }
 
-    /** Regroupe les actions brutes par catégorie configurée puis par utilisateur. */
+    /** Ordre des niveaux de traitement, du moins avancé au plus avancé. */
+    private static readonly TOP_LEVEL_PRIORITY: Record<string, number> = {
+        none: 0, support: 1, cdo: 2, group: 3, termine: 4
+    };
+
+    /**
+     * Compte, par catégorie configurée puis par utilisateur, des SERVICES × JOUR distincts
+     * (une case de la grille), et non des lignes ni des actions :
+     *  - l'utilisateur doit avoir fait sur la période une action de la catégorie
+     *    (type d'événement + niveau au moment de l'action, comme avant) sur une ligne du service-jour ;
+     *  - le service-jour doit être AUJOURD'HUI au moins au niveau le plus avancé de la catégorie
+     *    (sa ligne la moins avancée) : agents → « En cours de validation » (service réconcilié et
+     *    envoyé en validation), responsables → « En cours de clôture » (validé),
+     *    validateurs → « Terminé » (clôturé). Un service resté en traitement ne compte pas.
+     */
     private aggregateTopUserCounts(
-        stats: RecoAuditActionStat[],
+        actions: RecoAuditServiceDayAction[],
         categories: TopUsersCategoryConfig[]
     ): Record<string, Map<string, number>> {
-        const result: Record<string, Map<string, number>> = {};
+        const perCategory: Record<string, Map<string, Set<string>>> = {};
         for (const category of categories) {
-            result[category.id] = new Map<string, number>();
+            perCategory[category.id] = new Map<string, Set<string>>();
         }
-        for (const stat of stats || []) {
-            const username = (stat?.username || '').trim();
-            const count = Number(stat?.count) || 0;
-            if (!username || count <= 0) {
+        const priority = EtatReconciliationsComponent.TOP_LEVEL_PRIORITY;
+        for (const entry of actions || []) {
+            const username = (entry?.username || '').trim();
+            const dayKey = (entry?.serviceDayKey || '').trim();
+            if (!username || !dayKey) {
                 continue;
             }
-            // Critères : (type d'événement + niveau de traitement), combinés en ET.
-            const action = this.normalizeAuditToken(stat.actionType);
-            const kind = resolveTraitementKind(stat.traitementSnapshot);
+            const action = this.normalizeAuditToken(entry.actionType);
+            const kind = resolveTraitementKind(entry.traitementSnapshot);
+            const dayPriority = priority[entry.serviceDayLevel] ?? 0;
             for (const category of categories) {
                 const events = category.events || [];
                 const levels = category.levels || [];
@@ -1759,9 +1774,24 @@ export class EtatReconciliationsComponent implements OnInit {
                 if (!eventMatch || !levelMatch) {
                     continue;
                 }
-                const map = result[category.id];
-                map.set(username, (map.get(username) || 0) + count);
+                const required = levels.reduce((max, l) => Math.max(max, priority[l] ?? 0), 0);
+                if (dayPriority < required) {
+                    continue;
+                }
+                const users = perCategory[category.id];
+                let days = users.get(username);
+                if (!days) {
+                    days = new Set<string>();
+                    users.set(username, days);
+                }
+                days.add(dayKey);
             }
+        }
+        const result: Record<string, Map<string, number>> = {};
+        for (const category of categories) {
+            const counts = new Map<string, number>();
+            perCategory[category.id].forEach((days, username) => counts.set(username, days.size));
+            result[category.id] = counts;
         }
         return result;
     }

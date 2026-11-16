@@ -66,6 +66,17 @@ export interface RecoAuditActionStat {
     count: number;
 }
 
+/** Action d'audit rattachée à son service × jour, avec le niveau actuel de ce service-jour. */
+export interface RecoAuditServiceDayAction {
+    username: string;
+    actionType: string;
+    traitementSnapshot: string | null;
+    /** Case de la grille : date|service|pays|ENV. */
+    serviceDayKey: string;
+    /** Niveau actuel du service-jour (ligne la moins avancée) : none | support | cdo | group | termine. */
+    serviceDayLevel: string;
+}
+
 export interface ServiceMetricDetails {
     bkRecoBanque: number;
     bkRecoBO: number;
@@ -170,6 +181,35 @@ export class DashboardReconciliationService {
             params = params.set('env', opts.env);
         }
         return this.http.get<RecoAuditActionStat[]>('/api/result8rec/audit-actions-summary', {
+            headers: this.buildContextHeaders(moduleContext),
+            params
+        });
+    }
+
+    /**
+     * Actions d'audit rattachées à leur service × jour (avec le niveau actuel du service-jour) :
+     * source du « Top des utilisateurs » compté en services.
+     */
+    getAuditServiceDays(
+        startDate: string,
+        endDate: string,
+        opts?: { country?: string; service?: string; env?: string },
+        moduleContext?: string
+    ): Observable<RecoAuditServiceDayAction[]> {
+        let params = new HttpParams()
+            .set('startDate', startDate)
+            .set('endDate', endDate)
+            .set('_t', String(Date.now()));
+        if (opts?.country) {
+            params = params.set('country', opts.country);
+        }
+        if (opts?.service) {
+            params = params.set('service', opts.service);
+        }
+        if (opts?.env) {
+            params = params.set('env', opts.env);
+        }
+        return this.http.get<RecoAuditServiceDayAction[]>('/api/result8rec/audit-service-days', {
             headers: this.buildContextHeaders(moduleContext),
             params
         });

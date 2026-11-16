@@ -1187,13 +1187,14 @@
   "EBQ": {
     "top": {
       "title": "Top {{count}} bank users",
-      "subtitle": "Actions performed on bank operations",
-      "catAgents": "Agents (creation / import)",
-      "actAgents": "Operations created",
-      "catRapprochement": "Reconciliation owners",
-      "actRapprochement": "Reconciliations",
-      "catClotures": "Closings",
-      "actClotures": "Closings"
+      "subtitle": "Processed lines on bank operations (an imported but unprocessed line does not count)",
+      "catAgents": "Agents (lines reconciled OK)",
+      "actAgents": "Lines reconciled OK",
+      "catRapprochement": "Managers (validated lines)",
+      "actRapprochement": "Validated lines",
+      "catClotures": "Closures (closed lines)",
+      "actClotures": "Closed lines",
+      "lines": "lines"
     },
     "title": "Bank reconciliation status",
     "refresh": "Refresh",
@@ -1251,18 +1252,19 @@
     "title": "Reconciliation status",
     "topUsers": {
       "title": "Top {{count}} users",
-      "subtitle": "Number of actions performed in the application",
+      "subtitle": "Services × day processed over the period (a service still in processing does not count)",
       "loading": "Loading ranking...",
-      "empty": "No action for this period",
+      "empty": "No service processed over the period",
       "actions": "actions",
       "stable": "stable",
       "photoAlt": "Photo of {{name}}",
       "catAgents": "Reconciliation agents",
       "catResponsables": "Reconciliation managers",
       "catValidateurs": "Approvers",
-      "actCreations": "Reconciliation",
-      "actModifications": "Validation",
-      "actValidations": "Closure"
+      "actCreations": "Reconciled services",
+      "actModifications": "Validated services",
+      "actValidations": "Closed services",
+      "services": "services"
     },
     "period": {
       "jour": "reference day (D-1)",

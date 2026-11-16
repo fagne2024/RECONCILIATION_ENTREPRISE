@@ -58,6 +58,15 @@ public class OperationBancaireController {
         return ResponseEntity.ok(auditService.summarize(d.atStartOfDay(), f.plusDays(1).atStartOfDay()));
     }
 
+    // Top des utilisateurs : lignes utiles (OK / validées / clôturées) par utilisateur sur la période
+    @GetMapping("/audit-ranking")
+    public ResponseEntity<List<com.reconciliation.dto.OperationBancaireAuditStatDto>> getAuditRanking(
+            @RequestParam String start, @RequestParam String end) {
+        java.time.LocalDate d = java.time.LocalDate.parse(start);
+        java.time.LocalDate f = java.time.LocalDate.parse(end);
+        return ResponseEntity.ok(auditService.rankUsefulLines(d.atStartOfDay(), f.plusDays(1).atStartOfDay()));
+    }
+
     // Clôture en lot : traitement « Niveau Group » → « Terminé » (statut inchangé)
     @PutMapping("/bulk-cloture")
     public ResponseEntity<Integer> bulkCloturer(@RequestBody com.reconciliation.dto.BulkUpdateStatutRequest request) {

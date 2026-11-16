@@ -566,6 +566,34 @@ public class Result8RecController {
         return ResponseEntity.ok(stats);
     }
 
+    /**
+     * « Top des utilisateurs » compté en services × jour : actions d'audit rattachées à leur
+     * service-jour avec le niveau de traitement actuel de ce service-jour. Mêmes filtres et même
+     * cloisonnement pays que {@code /audit-actions-summary}.
+     */
+    @GetMapping("/audit-service-days")
+    public ResponseEntity<List<com.reconciliation.dto.Result8RecServiceDayActionDto>> auditServiceDays(
+            @RequestParam(required = false) String startDate,
+            @RequestParam(required = false) String endDate,
+            @RequestParam(required = false) String country,
+            @RequestParam(required = false) String service,
+            @RequestParam(required = false) String env) {
+
+        LocalDateTime start = parseStartOfDay(startDate, LocalDateTime.of(1970, 1, 1, 0, 0));
+        LocalDateTime endExclusive = parseStartOfDay(endDate, LocalDateTime.now()).plusDays(1);
+        List<String> requestedCountryVariants =
+                CountryNormalizationUtil.expandCountryFilterValues(blankToNull(country));
+        String username = RequestContextUtil.getUsernameFromRequest();
+        List<String> allowedCountries = (username != null && !username.isEmpty())
+                ? paysFilterService.getAllowedPaysCodes(username)
+                : new ArrayList<>();
+
+        return ResponseEntity.ok(result8RecAuditService.serviceDayActions(
+                start, endExclusive, blankToNull(service), strictEnvKey(env),
+                requestedCountryVariants, allowedCountries
+        ));
+    }
+
     /** Date-heure du début de journée pour une date YYYY-MM-DD, ou la valeur par défaut. */
     private static LocalDateTime parseStartOfDay(String isoDate, LocalDateTime fallback) {
         String value = blankToNull(isoDate);

@@ -1187,13 +1187,14 @@
   "EBQ": {
     "top": {
       "title": "Top {{count}} des utilisateurs banque",
-      "subtitle": "Actions effectuées sur les opérations bancaires",
-      "catAgents": "Agents (création / import)",
-      "actAgents": "Opérations créées",
-      "catRapprochement": "Responsables rapprochement",
-      "actRapprochement": "Rapprochements",
-      "catClotures": "Clôtures",
-      "actClotures": "Clôtures"
+      "subtitle": "Lignes traitées sur les opérations bancaires (une ligne importée mais non traitée ne compte pas)",
+      "catAgents": "Agents (lignes réconciliées OK)",
+      "actAgents": "Lignes réconciliées OK",
+      "catRapprochement": "Responsables (lignes validées)",
+      "actRapprochement": "Lignes validées",
+      "catClotures": "Clôtures (lignes clôturées)",
+      "actClotures": "Lignes clôturées",
+      "lines": "lignes"
     },
     "title": "État de réconciliation bancaire",
     "refresh": "Actualiser",
@@ -1251,18 +1252,19 @@
     "title": "État des réconciliations",
     "topUsers": {
       "title": "Top {{count}} des utilisateurs",
-      "subtitle": "Nombre d'actions effectuées dans l'application",
+      "subtitle": "Services × jour traités sur la période (un service resté en traitement ne compte pas)",
       "loading": "Chargement du classement...",
-      "empty": "Aucune action sur la période",
+      "empty": "Aucun service traité sur la période",
       "actions": "actions",
       "stable": "stable",
       "photoAlt": "Photo de {{name}}",
       "catAgents": "Agents de réconciliation",
       "catResponsables": "Responsables réconciliation",
       "catValidateurs": "Validateurs",
-      "actCreations": "Réconciliation",
-      "actModifications": "Validation",
-      "actValidations": "Clôture"
+      "actCreations": "Services réconciliés",
+      "actModifications": "Services validés",
+      "actValidations": "Services clôturés",
+      "services": "services"
     },
     "period": {
       "jour": "jour de référence (J-1)",

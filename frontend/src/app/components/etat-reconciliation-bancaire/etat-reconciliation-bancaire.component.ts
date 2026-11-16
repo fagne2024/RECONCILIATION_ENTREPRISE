@@ -55,13 +55,18 @@ export interface BankTopCategory {
     users: BankTopUser[];
 }
 
-/** Catégories du top banque (événements de l'historique des opérations bancaires). */
+/**
+ * Catégories du top banque. Le classement compte des LIGNES utiles (calculées par le backend,
+ * /audit-ranking) et non des actions : agents = lignes importées dont la réconciliation est OK,
+ * responsables = lignes validées, clôtures = lignes clôturées. Une ligne importée mais non
+ * traitée ne compte pas. `events` = catégorie renvoyée par le backend.
+ */
 const BANK_TOP_DEFS: Array<{ key: string; titleKey: string; actionLabelKey: string; events: string[]; accent: string }> = [
-    { key: 'agents', titleKey: 'EBQ.top.catAgents', actionLabelKey: 'EBQ.top.actAgents', events: ['CREATION'], accent: '#2563EB' },
+    { key: 'agents', titleKey: 'EBQ.top.catAgents', actionLabelKey: 'EBQ.top.actAgents', events: ['AGENTS'], accent: '#2563EB' },
     { key: 'rapprochement', titleKey: 'EBQ.top.catRapprochement', actionLabelKey: 'EBQ.top.actRapprochement',
-      events: ['CHANGEMENT_TRAITEMENT', 'STATUT_RECONCILIATION', 'CONTROLE_BANQUE'], accent: '#7C3AED' },
+      events: ['RAPPROCHEMENT'], accent: '#7C3AED' },
     { key: 'clotures', titleKey: 'EBQ.top.catClotures', actionLabelKey: 'EBQ.top.actClotures',
-      events: ['CLOTURE', 'VALIDATION_TERMINE'], accent: '#0F766E' }
+      events: ['CLOTURES'], accent: '#0F766E' }
 ];
 
 /** Au-delà de ce nombre de jours, la grille n'affiche qu'une fenêtre glissante. */
@@ -163,9 +168,9 @@ export class EtatReconciliationBancaireComponent implements OnInit {
             }
             const prev = previousRange(this.rangeStart, this.rangeEnd);
             forkJoin({
-                current: this.operationBancaireService.getAuditSummary(this.rangeStart, this.rangeEnd)
+                current: this.operationBancaireService.getAuditRanking(this.rangeStart, this.rangeEnd)
                     .pipe(catchError(() => of([] as OperationBancaireAuditStat[]))),
-                previous: this.operationBancaireService.getAuditSummary(prev.start, prev.end)
+                previous: this.operationBancaireService.getAuditRanking(prev.start, prev.end)
                     .pipe(catchError(() => of([] as OperationBancaireAuditStat[])))
             }).pipe(take(1)).subscribe(({ current, previous }) => {
                 if (token !== this.topUsersToken) return;

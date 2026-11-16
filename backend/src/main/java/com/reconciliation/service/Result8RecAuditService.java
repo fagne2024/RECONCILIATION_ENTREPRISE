@@ -122,6 +122,137 @@ public class Result8RecAuditService {
                 .collect(Collectors.toList());
     }
 
+    /**
+     * « Top des utilisateurs » compté en SERVICES × JOUR : chaque action d'audit de la période est
+     * rattachée à la case de la grille (date|service|pays|ENV) de sa ligne rapport, avec le niveau
+     * de traitement actuel de ce service-jour (sa ligne la moins avancée). Le frontend compte les
+     * services-jours distincts par utilisateur dont le niveau actuel atteint celui de la catégorie.
+     * Mêmes filtres période / service / ENV / pays que {@link #aggregateActions}.
+     */
+    @Transactional(readOnly = true)
+    public List<com.reconciliation.dto.Result8RecServiceDayActionDto> serviceDayActions(
+            LocalDateTime start,
+            LocalDateTime endExclusive,
+            String service,
+            String envKey,
+            List<String> requestedCountryVariants,
+            List<String> allowedCountryCodes
+    ) {
+        if (start == null || endExclusive == null || !start.isBefore(endExclusive)) {
+            return List.of();
+        }
+        if (allowedCountryCodes != null && allowedCountryCodes.isEmpty()) {
+            return List.of();
+        }
+
+        List<Object[]> actions = auditRepository.findActionsWithServiceDay(start, endExclusive, service);
+        List<Object[]> kept = new ArrayList<>();
+        java.util.Set<String> dates = new java.util.HashSet<>();
+        for (Object[] row : actions) {
+            String username = row[0] != null ? String.valueOf(row[0]).trim() : "";
+            if (username.isEmpty()) {
+                continue;
+            }
+            String country = row[4] != null ? String.valueOf(row[4]) : null;
+            if (!matchesCountryFilter(country, requestedCountryVariants, allowedCountryCodes)) {
+                continue;
+            }
+            if (!matchesEnvKey(row[5] != null ? String.valueOf(row[5]) : null, envKey)) {
+                continue;
+            }
+            kept.add(row);
+            if (row[6] != null) {
+                dates.add(String.valueOf(row[6]));
+            }
+        }
+        if (kept.isEmpty()) {
+            return List.of();
+        }
+
+        // Niveau actuel de chaque service-jour = niveau de sa ligne la moins avancée.
+        Map<String, Integer> dayLevel = new java.util.HashMap<>();
+        for (Object[] line : auditRepository.findTraitementsForDates(dates, service)) {
+            String key = serviceDayKey(line[3], line[0], line[1], line[2]);
+            int priority = levelPriority(traitementKind(line[4] != null ? String.valueOf(line[4]) : null));
+            dayLevel.merge(key, priority, Math::min);
+        }
+
+        List<com.reconciliation.dto.Result8RecServiceDayActionDto> out = new ArrayList<>();
+        java.util.Set<String> seen = new java.util.HashSet<>();
+        for (Object[] row : kept) {
+            String key = serviceDayKey(row[6], row[3], row[4], row[5]);
+            String username = String.valueOf(row[0]).trim();
+            String actionType = row[1] != null ? String.valueOf(row[1]) : "";
+            String snapshot = row[2] != null ? String.valueOf(row[2]) : null;
+            if (!seen.add(username + "\u0001" + actionType + "\u0001" + snapshot + "\u0001" + key)) {
+                continue;
+            }
+            String level = LEVELS[dayLevel.getOrDefault(key, 0)];
+            out.add(new com.reconciliation.dto.Result8RecServiceDayActionDto(username, actionType, snapshot, key, level));
+        }
+        return out;
+    }
+
+    /** Du moins avancé au plus avancé (index = priorité). */
+    private static final String[] LEVELS = {"none", "support", "cdo", "group", "termine"};
+
+    private static int levelPriority(String kind) {
+        for (int i = 0; i < LEVELS.length; i++) {
+            if (LEVELS[i].equals(kind)) {
+                return i;
+            }
+        }
+        return 0;
+    }
+
+    /** Clé de la case de la grille : date (AAAA-MM-JJ) | service | code pays | ENV strict. */
+    private static String serviceDayKey(Object date, Object service, Object country, Object env) {
+        String d = date == null ? "" : String.valueOf(date).trim();
+        if (d.length() > 10 && d.charAt(4) == '-') {
+            d = d.substring(0, 10);
+        }
+        String s = service == null ? "" : String.valueOf(service).trim();
+        String c = country == null ? "" : String.valueOf(country).trim();
+        String code = c.isEmpty() ? "" : CountryNormalizationUtil.normalizeToCode(c);
+        if (code == null || code.isBlank()) {
+            code = c.toUpperCase(Locale.ROOT);
+        }
+        return d + "|" + s + "|" + code.toUpperCase(Locale.ROOT) + "|"
+                + strictEnvKey(env == null ? null : String.valueOf(env));
+    }
+
+    /** Même règle que {@code resolveTraitementKind} (frontend, result8rec-audit-display.ts). */
+    static String traitementKind(String traitement) {
+        String value = traitement == null ? "" : traitement.trim();
+        if (value.isEmpty() || "—".equals(value)) {
+            return "none";
+        }
+        String t = java.text.Normalizer.normalize(value.toLowerCase(Locale.ROOT), java.text.Normalizer.Form.NFD)
+                .replaceAll("\\p{M}", "");
+        if (t.contains("termine")) {
+            return "termine";
+        }
+        if (t.contains("validation")) {
+            return "cdo";
+        }
+        if (t.contains("cloture")) {
+            return "group";
+        }
+        if (t.contains("support")) {
+            return "support";
+        }
+        if (t.contains("traitement")) {
+            return "support";
+        }
+        if (t.contains("group")) {
+            return "group";
+        }
+        if (t.contains("cdo") || t.contains("responsable")) {
+            return "cdo";
+        }
+        return "none";
+    }
+
     private static boolean matchesCountryFilter(
             String rowCountry,
             List<String> requestedCountryVariants,

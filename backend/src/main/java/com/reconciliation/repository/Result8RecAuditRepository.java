@@ -38,4 +38,34 @@ public interface Result8RecAuditRepository extends JpaRepository<Result8RecAudit
             @Param("endExclusive") LocalDateTime endExclusive,
             @Param("service") String service
     );
+
+    /**
+     * Actions d'audit distinctes par utilisateur / type / niveau et service × jour de la ligne
+     * rapport (comptage du « Top des utilisateurs » par services et non par lignes).
+     */
+    @Query("""
+        SELECT DISTINCT a.username, a.actionType, a.traitementSnapshot, r.service, r.country, r.env, r.date
+        FROM Result8RecAuditEntity a, Result8RecEntity r
+        WHERE a.result8recId = r.id
+          AND a.createdAt >= :start
+          AND a.createdAt < :endExclusive
+          AND (:service IS NULL OR r.service = :service)
+        """)
+    List<Object[]> findActionsWithServiceDay(
+            @Param("start") LocalDateTime start,
+            @Param("endExclusive") LocalDateTime endExclusive,
+            @Param("service") String service
+    );
+
+    /** Niveau actuel des lignes rapport des services-jours concernés (date, service, pays, ENV, traitement). */
+    @Query("""
+        SELECT r.service, r.country, r.env, r.date, r.traitement
+        FROM Result8RecEntity r
+        WHERE r.date IN :dates
+          AND (:service IS NULL OR r.service = :service)
+        """)
+    List<Object[]> findTraitementsForDates(
+            @Param("dates") java.util.Collection<String> dates,
+            @Param("service") String service
+    );
 }

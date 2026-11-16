@@ -50,6 +50,20 @@ public class OperationBancaireAuditService {
         return auditRepository.summarize(debut, fin);
     }
 
+    /**
+     * Classement par lignes utiles sur [debut, fin[ : actionType = catégorie (agents, rapprochement, clotures).
+     * Agents : lignes importées dont la réconciliation est OK ; responsables : lignes validées ;
+     * clôtures : lignes clôturées. Chaque ligne n'est comptée qu'une fois par utilisateur et catégorie.
+     */
+    @Transactional(readOnly = true)
+    public List<com.reconciliation.dto.OperationBancaireAuditStatDto> rankUsefulLines(LocalDateTime debut, LocalDateTime fin) {
+        List<com.reconciliation.dto.OperationBancaireAuditStatDto> all = new ArrayList<>();
+        all.addAll(auditRepository.countAgentLignesReconciliees(debut, fin));
+        all.addAll(auditRepository.countLignesValidees(debut, fin));
+        all.addAll(auditRepository.countLignesCloturees(debut, fin));
+        return all;
+    }
+
     /** Journalise la création de plusieurs opérations déjà enregistrées (import de fichier). */
     @Transactional
     public void logCreations(List<OperationBancaireEntity> ops, String detail) {
