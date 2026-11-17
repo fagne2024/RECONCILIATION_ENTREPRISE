@@ -92,6 +92,57 @@ public class SuiviCompenseOpController {
         }
     }
 
+    /** Saisie manuelle d'une ligne ; typeReference : COMPENSE (défaut), APPRO ou CROSS_BORDER. */
+    public record CreateSuiviCompenseRequest(
+            java.time.LocalDate dateOperation, String codeAgence, String banque, String compteBancaire,
+            Double montant, String modePaiement, String idTicket, String service, String reseau,
+            String typeReference) {}
+
+    /**
+     * Ajout manuel d'une ligne. La référence est toujours générée côté serveur :
+     * CODE_AGENCE (ou service)-jjmmaa + CP/AP/CB + numéro du jour (ex. GRACE-061126CP1).
+     */
+    @PostMapping
+    public ResponseEntity<?> create(@RequestBody CreateSuiviCompenseRequest req) {
+        if (req == null || req.dateOperation() == null) {
+            return ResponseEntity.badRequest().body(Map.of("error", "La date est obligatoire."));
+        }
+        if (req.montant() == null || req.montant() == 0) {
+            return ResponseEntity.badRequest().body(Map.of("error", "Le montant est obligatoire."));
+        }
+        SuiviCompenseOpEntity e = new SuiviCompenseOpEntity();
+        e.setDateOperation(req.dateOperation());
+        e.setCodeAgence(trimToNull(req.codeAgence()));
+        e.setBanque(trimToNull(req.banque()));
+        e.setCompteBancaire(trimToNull(req.compteBancaire()));
+        e.setMontant(req.montant());
+        e.setModePaiement(trimToNull(req.modePaiement()));
+        e.setIdTicket(trimToNull(req.idTicket()));
+        e.setService(trimToNull(req.service()));
+        e.setReseau(trimToNull(req.reseau()));
+        String code = SuiviCompenseOpImportService.agenceOuService(e);
+        if (code == null) {
+            return ResponseEntity.badRequest().body(Map.of("error", "Le code agence ou le service est obligatoire."));
+        }
+        String prefix = SuiviCompenseOpImportService.referencePrefix(code, e.getDateOperation(), req.typeReference());
+        List<String> existing = repository.findByReferenceStartingWith(prefix).stream()
+                .map(SuiviCompenseOpEntity::getReference).toList();
+        String reference = SuiviCompenseOpImportService.nextReference(code, e.getDateOperation(), req.typeReference(), existing);
+        e.setReference(reference);
+        e.setDedupKey(com.reconciliation.util.BankingDedupKey.of("REF", reference));
+        if (!repository.findByDedupKeyIn(List.of(e.getDedupKey())).isEmpty()) {
+            return ResponseEntity.status(HttpStatus.CONFLICT)
+                    .body(Map.of("error", "La référence " + reference + " existe déjà, réessayez."));
+        }
+        e.setSourceFilename("Saisie manuelle");
+        e.setUploadedAt(LocalDateTime.now());
+        return ResponseEntity.status(HttpStatus.CREATED).body(repository.save(e));
+    }
+
+    private static String trimToNull(String value) {
+        return value == null || value.isBlank() ? null : value.trim();
+    }
+
     @GetMapping(value = "/template", produces = "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet")
     public ResponseEntity<byte[]> template() {
         try {

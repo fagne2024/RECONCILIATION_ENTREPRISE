@@ -987,8 +987,8 @@
 
 // Relevé - styles
 .releve-header {
-  display: flex; align-items: center; justify-content: space-between; margin-bottom: 12px;
-  .actions { display: inline-flex; gap: 10px; }
+  display: flex; align-items: center; justify-content: space-between; flex-wrap: wrap; gap: 10px; margin-bottom: 12px;
+  .actions { display: inline-flex; flex-wrap: wrap; gap: 10px; }
   .file-btn {
     display: inline-flex; align-items: center; gap: 8px; cursor: pointer;
     background: #eef2f7; border: 1px dashed #cbd5e1; padding: 8px 12px; border-radius: 8px; color: #334155;

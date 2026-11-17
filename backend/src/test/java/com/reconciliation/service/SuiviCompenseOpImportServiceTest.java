@@ -104,4 +104,20 @@ class SuiviCompenseOpImportServiceTest {
                 "a;b;c\n1;2;3".getBytes(StandardCharsets.UTF_8));
         assertThrows(IllegalArgumentException.class, () -> service.parse(file));
     }
+
+    @Test
+    void generatesFirstReferenceOfTheDayPerType() {
+        LocalDate day = LocalDate.of(2026, 11, 6);
+        assertEquals("GRACE-061126CP1", SuiviCompenseOpImportService.nextReference("GRACE", day, "COMPENSE", List.of()));
+        assertEquals("GRACE-061126AP1", SuiviCompenseOpImportService.nextReference("GRACE", day, "APPRO", null));
+        assertEquals("GRACE-061126CB1", SuiviCompenseOpImportService.nextReference(" GRACE ", day, "CROSS_BORDER", List.of()));
+    }
+
+    @Test
+    void nextReferenceFollowsHighestExistingNumber() {
+        LocalDate day = LocalDate.of(2026, 11, 6);
+        // Un trou (CP2 supprimée) ne doit pas faire réutiliser un numéro ; CP3X n'est pas une référence générée.
+        List<String> existing = List.of("GRACE-061126CP1", "grace-061126cp3", "GRACE-061126CP3X", "GRACE-061126AP9");
+        assertEquals("GRACE-061126CP4", SuiviCompenseOpImportService.nextReference("GRACE", day, "COMPENSE", existing));
+    }
 }
