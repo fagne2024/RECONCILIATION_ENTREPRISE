@@ -2457,10 +2457,33 @@
         <button type="button" class="check-popup__close" (click)="closeCheckPopup()" [attr.aria-label]="'COMMON.actions.close' | translate"><i class="fas fa-xmark"></i></button>
       </div>
 
+      <!-- Plage de dates (date de l'opération) : vide = toutes les dates -->
+      <div class="check-dates" *ngIf="checkPopup.step === 'types' || checkPopup.step === 'results'">
+        <span class="check-dates__label">{{ 'TBL.ui.checkPeriode' | translate }}</span>
+        <label class="check-dates__field">
+          {{ 'TBL.ui.checkDu' | translate }}
+          <input type="date" class="ds-input" [(ngModel)]="checkPopup.dateDebut" [max]="checkPopup.dateFin || null"
+                 [attr.aria-label]="'TBL.ui.checkDateDebut' | translate">
+        </label>
+        <label class="check-dates__field">
+          {{ 'TBL.ui.au' | translate }}
+          <input type="date" class="ds-input" [(ngModel)]="checkPopup.dateFin" [min]="checkPopup.dateDebut || null"
+                 [attr.aria-label]="'TBL.ui.checkDateFin' | translate">
+        </label>
+        <button type="button" class="ds-btn ds-btn--primary" *ngIf="checkPopup.step === 'results'"
+                [disabled]="checkDatesInvalides" (click)="runCheck(checkPopup.type)">
+          <i class="fas fa-rotate"></i> {{ 'TBL.ui.checkActualiser' | translate }}
+        </button>
+        <button type="button" class="ds-btn ds-btn--secondary" *ngIf="checkPopup.dateDebut || checkPopup.dateFin"
+                (click)="clearCheckDates()">{{ 'TBL.ui.checkToutesLesDates' | translate }}</button>
+        <small class="text-danger" *ngIf="checkDatesInvalides">{{ 'TBL.ui.checkDatesInvalides' | translate }}</small>
+      </div>
+
       <ng-container *ngIf="checkPopup.step === 'types'">
         <p>{{ 'TBL.ui.choisissezLeTypeDOperationA' | translate }}</p>
         <div class="check-types">
-          <button type="button" class="ds-btn ds-btn--secondary" *ngFor="let t of checkPopup.types" (click)="runCheck(t)">{{ t }}</button>
+          <button type="button" class="ds-btn ds-btn--secondary" *ngFor="let t of checkPopup.types"
+                  [disabled]="checkDatesInvalides" (click)="runCheck(t)">{{ t }}</button>
         </div>
         <p class="muted" *ngIf="checkPopup.message">{{ checkPopup.message }}</p>
       </ng-container>
@@ -2474,6 +2497,10 @@
       <ng-container *ngIf="checkPopup.step === 'results' && checkPopup.result as r">
         <div class="check-summary">
           <span>{{ 'TRT.Type' | translate }} <strong>{{ r.type }}</strong></span>
+          <span>{{ 'TBL.ui.checkPeriode' | translate }}
+            <strong>{{ checkPopup.dateDebut || checkPopup.dateFin
+              ? ((checkPopup.dateDebut || '…') + ' → ' + (checkPopup.dateFin || '…'))
+              : ('TBL.ui.checkToutesLesDates' | translate) }}</strong></span>
           <span>{{ 'TBL.ui.operations' | translate }} <strong>{{ r.total }}</strong></span>
           <span class="check-ok">{{ 'TBL.ui.correspondances' | translate }} <strong>{{ r.matched }}</strong></span>
           <span class="check-ko">{{ 'TBL.ui.ecarts' | translate }} <strong>{{ r.gaps }}</strong></span>

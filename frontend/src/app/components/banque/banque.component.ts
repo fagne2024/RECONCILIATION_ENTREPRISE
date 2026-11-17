@@ -4559,7 +4559,16 @@ export class BanqueComponent implements OnInit {
     result: OperationCheckResult | null;
     applying: boolean;
     message: string;
-  } = { visible: false, step: 'types', types: [], type: '', result: null, applying: false, message: '' };
+    /** Plage de dates (yyyy-MM-dd, bornes incluses) sur la date de l'opération ; vide = toutes les dates. */
+    dateDebut: string;
+    dateFin: string;
+  } = { visible: false, step: 'types', types: [], type: '', result: null, applying: false, message: '', dateDebut: '', dateFin: '' };
+
+  /** Plage incohérente : date de fin avant la date de début. */
+  get checkDatesInvalides(): boolean {
+    const { dateDebut, dateFin } = this.checkPopup;
+    return !!dateDebut && !!dateFin && dateFin < dateDebut;
+  }
 
   get checkMatchedRows() {
     return (this.checkPopup.result?.rows ?? []).filter(r => r.status === 'MATCH');
@@ -4569,7 +4578,9 @@ export class BanqueComponent implements OnInit {
     const types = [...new Set(this.operations
       .filter(o => o.source === 'bancaire' && o.typeOperation)
       .map(o => o.typeOperation as string))].sort();
+    // La plage de dates choisie est conservée d'une ouverture à l'autre
     this.checkPopup = {
+      ...this.checkPopup,
       visible: true, step: 'types', types, type: '', result: null, applying: false,
       message: types.length ? '' : I18nService.t('TBL.msg.aucuneOperationBancaireAControler')
     };
@@ -4579,13 +4590,21 @@ export class BanqueComponent implements OnInit {
     this.checkPopup = { ...this.checkPopup, visible: false };
   }
 
+  /** Efface la plage de dates ; relance le check affiché le cas échéant. */
+  clearCheckDates(): void {
+    this.checkPopup = { ...this.checkPopup, dateDebut: '', dateFin: '' };
+    if (this.checkPopup.step === 'results') this.runCheck(this.checkPopup.type);
+  }
+
   backToCheckTypes(): void {
     this.checkPopup = { ...this.checkPopup, step: 'types', result: null, message: '' };
   }
 
   runCheck(type: string): void {
+    if (!type || this.checkDatesInvalides) return;
     this.checkPopup = { ...this.checkPopup, step: 'loading', type, result: null, message: '' };
-    this.operationBancaireService.check(type).subscribe({
+    const { dateDebut, dateFin } = this.checkPopup;
+    this.operationBancaireService.check(type, dateDebut || undefined, dateFin || undefined).subscribe({
       next: (result) => { this.checkPopup = { ...this.checkPopup, step: 'results', result }; },
       error: () => { this.checkPopup = { ...this.checkPopup, step: 'error', message: I18nService.t('TBL.msg.leCheckAEchoue') }; }
     });

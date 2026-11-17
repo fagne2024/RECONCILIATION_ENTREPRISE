@@ -3112,6 +3112,10 @@
 .check-popup__head h3 { margin: 0; font-family: var(--font-display, inherit); }
 .check-popup__close { background: none; border: none; font-size: 18px; cursor: pointer; color: var(--rd-muted, #64748b); }
 .check-types { display: flex; flex-wrap: wrap; gap: 8px; margin: 12px 0; }
+.check-dates { display: flex; flex-wrap: wrap; align-items: center; gap: 8px 12px; margin: 8px 0 4px; padding: 10px 12px; border: 1px solid var(--rd-border, #e2e8f0); border-radius: 8px; }
+.check-dates__label { font-weight: 600; }
+.check-dates__field { display: inline-flex; align-items: center; gap: 6px; margin: 0; }
+.check-dates__field .ds-input { width: auto; }
 .check-popup__loading { padding: 24px 0; text-align: center; }
 .check-summary { display: flex; flex-wrap: wrap; gap: 16px; margin: 8px 0 12px; }
 .check-ok strong { color: var(--rd-green-m, #16a34a); }

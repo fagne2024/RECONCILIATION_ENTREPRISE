@@ -141,8 +141,12 @@ export class OperationBancaireService {
   }
 
   /** Check d'un type d'opération (compensation : suivi compense ; autres : relevé). */
-  check(type: string): Observable<OperationCheckResult> {
-    return this.http.get<OperationCheckResult>(`${this.apiUrl}/check`, { params: { type } });
+  check(type: string, dateDebut?: string, dateFin?: string): Observable<OperationCheckResult> {
+    // Plage de dates optionnelle (yyyy-MM-dd, bornes incluses) sur la date de l'opération
+    const params: Record<string, string> = { type };
+    if (dateDebut) params['dateDebut'] = dateDebut;
+    if (dateFin) params['dateFin'] = dateFin;
+    return this.http.get<OperationCheckResult>(`${this.apiUrl}/check`, { params });
   }
 
   /** Validation des seules correspondances de compensation : banque et référence reportées. */

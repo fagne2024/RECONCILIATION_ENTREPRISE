@@ -342,10 +342,26 @@ public class OperationBancaireController {
     @Autowired
     private com.reconciliation.service.OperationBancaireCheckService checkService;
 
-    /** Check des opérations d'un type : compensation (suivi compense) ou contrôle relevé. */
+    /**
+     * Check des opérations d'un type : compensation (suivi compense) ou contrôle relevé.
+     * Plage de dates optionnelle (yyyy-MM-dd, bornes incluses) sur la date de l'opération.
+     */
     @GetMapping("/check")
-    public ResponseEntity<com.reconciliation.service.OperationBancaireCheckService.CheckResult> check(@RequestParam("type") String type) {
-        return ResponseEntity.ok(checkService.check(type));
+    public ResponseEntity<?> check(@RequestParam("type") String type,
+                                   @RequestParam(value = "dateDebut", required = false) String dateDebut,
+                                   @RequestParam(value = "dateFin", required = false) String dateFin) {
+        java.time.LocalDate debut;
+        java.time.LocalDate fin;
+        try {
+            debut = dateDebut == null || dateDebut.isBlank() ? null : java.time.LocalDate.parse(dateDebut.trim());
+            fin = dateFin == null || dateFin.isBlank() ? null : java.time.LocalDate.parse(dateFin.trim());
+        } catch (java.time.format.DateTimeParseException e) {
+            return ResponseEntity.badRequest().body(java.util.Map.of("message", "Date invalide (format attendu : yyyy-MM-dd)"));
+        }
+        if (debut != null && fin != null && fin.isBefore(debut)) {
+            return ResponseEntity.badRequest().body(java.util.Map.of("message", "La date de fin précède la date de début"));
+        }
+        return ResponseEntity.ok(checkService.check(type, debut, fin));
     }
 
     /** Validation des seules correspondances de compensation : banque et référence reportées. */

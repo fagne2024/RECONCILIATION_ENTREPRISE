@@ -54,13 +54,29 @@ public class OperationBancaireCheckService {
     }
 
     public CheckResult check(String type) {
+        return check(type, null, null);
+    }
+
+    /**
+     * Check limité aux opérations dont la date est dans [dateDebut, dateFin] (bornes incluses,
+     * null = sans borne). Les suivis compense / lignes de relevé restent tous candidats.
+     */
+    public CheckResult check(String type, LocalDate dateDebut, LocalDate dateFin) {
         boolean compensation = isCompensation(type);
+        boolean filtreDates = dateDebut != null || dateFin != null;
         List<OperationBancaireEntity> ops = new ArrayList<>();
         for (OperationBancaireEntity op : operationRepository.findAll()) {
             // Une opération déjà validée par un check ne réapparaît plus.
-            if (type != null && type.equals(op.getTypeOperation()) && !Boolean.TRUE.equals(op.getCheckValide())) {
-                ops.add(op);
+            if (type == null || !type.equals(op.getTypeOperation()) || Boolean.TRUE.equals(op.getCheckValide())) {
+                continue;
             }
+            if (filtreDates) {
+                if (op.getDateOperation() == null) continue;
+                LocalDate d = op.getDateOperation().toLocalDate();
+                if (dateDebut != null && d.isBefore(dateDebut)) continue;
+                if (dateFin != null && d.isAfter(dateFin)) continue;
+            }
+            ops.add(op);
         }
         ops.sort(Comparator.comparing(OperationBancaireEntity::getDateOperation,
                 Comparator.nullsLast(Comparator.naturalOrder())));
