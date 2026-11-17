@@ -2534,6 +2534,33 @@
             </tbody>
           </table>
         </div>
+
+        <!-- Lignes du suivi compense OP sur la même période -->
+        <ng-container *ngIf="r.compensation && r.suiviRows">
+          <h4 class="check-section-title">{{ 'TBL.ui.checkSuiviDeLaPeriode' | translate }} ({{ r.suiviRows.length }})</h4>
+          <div class="check-table-wrap">
+            <table class="check-table">
+              <thead>
+                <tr><th>{{ 'TBL.date' | translate }}</th><th>{{ 'TBL.agency' | translate }}</th><th>{{ 'TBL.amount' | translate }}</th><th>{{ 'TBL.status' | translate }}</th><th>{{ 'TBL.bank' | translate }}</th><th>{{ 'TBL.labelNarration' | translate }}</th></tr>
+              </thead>
+              <tbody>
+                <tr *ngFor="let s of r.suiviRows" [class.check-row-ko]="s.status === 'SANS_OPERATION'">
+                  <td>{{ s.dateOperation }}</td>
+                  <td>{{ s.agence || '—' }}</td>
+                  <td class="num">{{ s.montant | number:'1.0-2' }}</td>
+                  <td>
+                    <span class="check-badge" [class.is-ok]="s.status !== 'SANS_OPERATION'" [class.is-ko]="s.status === 'SANS_OPERATION'">
+                      {{ (s.status === 'MATCH' ? 'DASH.match' : s.status === 'DEJA_VALIDE' ? 'TBL.ui.checkDejaValide' : 'TBL.ui.checkSansOperation') | translate }}
+                    </span>
+                  </td>
+                  <td>{{ s.banque || '—' }}</td>
+                  <td>{{ s.reference || '—' }}</td>
+                </tr>
+                <tr *ngIf="r.suiviRows.length === 0"><td colspan="6" class="muted">{{ 'TBL.ui.checkAucunSuiviSurLaPeriode' | translate }}</td></tr>
+              </tbody>
+            </table>
+          </div>
+        </ng-container>
         <p class="import-popup__message" *ngIf="checkPopup.message">{{ checkPopup.message }}</p>
       </ng-container>
 

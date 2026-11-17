@@ -44,14 +44,23 @@ public class OperationBancaireCheckService {
                            String typeOperation, String status, String banque, String reference) {}
 
     /**
-     * {@code suiviTotal} / {@code suiviNonRapproches} : lignes de suivi compense candidates sur la
-     * période et celles restées sans opération (null hors compensation).
+     * Ligne de suivi compense OP de la période. {@code status} : MATCH (rapprochée d'une opération
+     * de ce check), SANS_OPERATION (aucune opération trouvée) ou DEJA_VALIDE (référence déjà
+     * validée par un check précédent : elle n'est plus candidate).
+     */
+    public record SuiviRow(Long id, String dateOperation, String agence, Double montant, String banque,
+                           String reference, String status, Long operationId) {}
+
+    /**
+     * {@code suiviTotal} / {@code suiviNonRapproches} / {@code suiviRows} : lignes de suivi compense
+     * de la période, celles restées sans opération, et leur détail (null hors compensation).
      */
     public record CheckResult(String type, boolean compensation, int total, int matched, int gaps,
-                              List<CheckRow> rows, Integer suiviTotal, Integer suiviNonRapproches) {}
+                              List<CheckRow> rows, Integer suiviTotal, Integer suiviNonRapproches,
+                              List<SuiviRow> suiviRows) {}
 
-    /** Résultat interne du matching compense : lignes + compteurs du suivi. */
-    private record CompenseMatch(List<CheckRow> rows, int suiviTotal, int suiviNonRapproches) {}
+    /** Résultat interne du matching compense : lignes d'opérations + lignes du suivi. */
+    private record CompenseMatch(List<CheckRow> rows, List<SuiviRow> suiviRows) {}
 
     public record ApplyItem(Long operationId, String banque, String reference) {}
 
@@ -90,12 +99,13 @@ public class OperationBancaireCheckService {
         if (compensation) {
             CompenseMatch m = checkCompense(ops, dateDebut, dateFin);
             int matched = (int) m.rows().stream().filter(r -> "MATCH".equals(r.status())).count();
+            int sansOperation = (int) m.suiviRows().stream().filter(r -> "SANS_OPERATION".equals(r.status())).count();
             return new CheckResult(type, true, m.rows().size(), matched, m.rows().size() - matched, m.rows(),
-                    m.suiviTotal(), m.suiviNonRapproches());
+                    m.suiviRows().size(), sansOperation, m.suiviRows());
         }
         List<CheckRow> rows = checkReleve(ops);
         int matched = (int) rows.stream().filter(r -> "MATCH".equals(r.status())).count();
-        return new CheckResult(type, false, rows.size(), matched, rows.size() - matched, rows, null, null);
+        return new CheckResult(type, false, rows.size(), matched, rows.size() - matched, rows, null, null, null);
     }
 
     /** Date dans [debut, fin] (bornes incluses, null = sans borne) ; une date absente est hors plage. */
@@ -113,18 +123,24 @@ public class OperationBancaireCheckService {
                 validatedRefs.add(op.getReference());
             }
         }
-        Map<String, Deque<SuiviCompenseOpEntity>> suivis = new HashMap<>();
-        int suiviTotal = 0;
+        // Lignes de suivi de la période (même plage que les opérations), triées par date
+        List<SuiviCompenseOpEntity> suivisPeriode = new ArrayList<>();
         for (SuiviCompenseOpEntity s : suiviRepository.findAll()) {
             if (s.getDateOperation() == null || s.getMontant() == null) continue;
-            if (s.getReference() != null && validatedRefs.contains(s.getReference())) continue;
-            // Même plage de dates que les opérations
             if (!inRange(s.getDateOperation(), dateDebut, dateFin)) continue;
-            suiviTotal++;
+            suivisPeriode.add(s);
+        }
+        suivisPeriode.sort(Comparator.comparing(SuiviCompenseOpEntity::getDateOperation)
+                .thenComparing(SuiviCompenseOpEntity::getId, Comparator.nullsLast(Comparator.naturalOrder())));
+
+        Map<String, Deque<SuiviCompenseOpEntity>> suivis = new HashMap<>();
+        for (SuiviCompenseOpEntity s : suivisPeriode) {
+            if (s.getReference() != null && validatedRefs.contains(s.getReference())) continue;
             // Compense distributeur : code agence ; compense fournisseur : service (colonnes exclusives).
             suivis.computeIfAbsent(key(s.getDateOperation(), SuiviCompenseOpImportService.agenceOuService(s), s.getMontant()),
                     k -> new ArrayDeque<>()).add(s);
         }
+        Map<SuiviCompenseOpEntity, Long> matchedOps = new IdentityHashMap<>();
         List<CheckRow> rows = new ArrayList<>();
         for (OperationBancaireEntity op : ops) {
             Deque<SuiviCompenseOpEntity> candidates = op.getDateOperation() == null || op.getMontant() == null
@@ -132,14 +148,28 @@ public class OperationBancaireCheckService {
                     : suivis.get(key(op.getDateOperation().toLocalDate(), op.getAgence(), op.getMontant()));
             if (candidates != null && !candidates.isEmpty()) {
                 SuiviCompenseOpEntity s = candidates.poll();
+                matchedOps.put(s, op.getId());
                 rows.add(row(op, "MATCH", s.getBanque(), s.getReference()));
             } else {
                 rows.add(row(op, "ECART", null, null));
             }
         }
-        int restants = 0;
-        for (Deque<SuiviCompenseOpEntity> d : suivis.values()) restants += d.size();
-        return new CompenseMatch(rows, suiviTotal, restants);
+        List<SuiviRow> suiviRows = new ArrayList<>();
+        for (SuiviCompenseOpEntity s : suivisPeriode) {
+            String status;
+            Long opId = matchedOps.get(s);
+            if (opId != null) {
+                status = "MATCH";
+            } else if (s.getReference() != null && validatedRefs.contains(s.getReference())) {
+                status = "DEJA_VALIDE";
+            } else {
+                status = "SANS_OPERATION";
+            }
+            suiviRows.add(new SuiviRow(s.getId(), s.getDateOperation().toString(),
+                    SuiviCompenseOpImportService.agenceOuService(s), s.getMontant(), s.getBanque(),
+                    s.getReference(), status, opId));
+        }
+        return new CompenseMatch(rows, suiviRows);
     }
 
     private List<CheckRow> checkReleve(List<OperationBancaireEntity> ops) {

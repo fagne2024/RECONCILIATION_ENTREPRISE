@@ -3114,6 +3114,7 @@
 .check-types { display: flex; flex-wrap: wrap; gap: 8px; margin: 12px 0; }
 .check-dates { display: flex; flex-wrap: wrap; align-items: center; gap: 8px 12px; margin: 8px 0 4px; padding: 10px 12px; border: 1px solid var(--rd-border, #e2e8f0); border-radius: 8px; }
 .check-dates__label { font-weight: 600; }
+.check-section-title { margin: 16px 0 8px; font-size: 14px; }
 .check-dates__field { display: inline-flex; align-items: center; gap: 6px; margin: 0; }
 .check-dates__field .ds-input { width: auto; }
 .check-popup__loading { padding: 24px 0; text-align: center; }

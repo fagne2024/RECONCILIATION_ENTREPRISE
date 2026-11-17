@@ -32,6 +32,19 @@ export interface OperationCheckResult {
     /** Compensation : lignes de suivi compense sur la période / restées sans opération. */
     suiviTotal?: number | null;
     suiviNonRapproches?: number | null;
+    /** Compensation : détail des lignes de suivi compense de la période. */
+    suiviRows?: OperationCheckSuiviRow[] | null;
+}
+
+export interface OperationCheckSuiviRow {
+    id: number;
+    dateOperation: string;
+    agence: string;
+    montant: number;
+    banque?: string;
+    reference?: string;
+    status: 'MATCH' | 'SANS_OPERATION' | 'DEJA_VALIDE';
+    operationId?: number | null;
 }
 
 @Injectable({
