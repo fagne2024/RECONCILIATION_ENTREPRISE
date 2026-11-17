@@ -14,4 +14,7 @@ public interface SuiviCompenseOpRepository extends JpaRepository<SuiviCompenseOp
 
     /** Lignes dont la référence figure dans la liste (contrôle de doublon à l'import). */
     List<SuiviCompenseOpEntity> findByReferenceIn(java.util.Collection<String> references);
+
+    /** Lignes dont la référence commence par le préfixe (numérotation des références générées). */
+    List<SuiviCompenseOpEntity> findByReferenceStartingWith(String prefix);
 }

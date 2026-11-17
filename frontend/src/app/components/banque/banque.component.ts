@@ -14,7 +14,7 @@ import { OperationServiceApi } from '../../services/operation.service';
 import { ReleveBancaireService } from '../../services/releve-bancaire.service';
 import { NiveauxValidationConfigService } from '../../services/niveaux-validation-config.service';
 import { ReleveBancaireRow, ReleveImportDefaults, ReleveMissingField, ReleveUploadResponse } from '../../models/releve-bancaire.model';
-import { SuiviCompenseOp } from '../../models/suivi-compense-op.model';
+import { SuiviCompenseOp, SuiviCompenseReferenceType } from '../../models/suivi-compense-op.model';
 import { SuiviCompenseOpService } from '../../services/suivi-compense-op.service';
 import { ExportOptimizationService } from '../../services/export-optimization.service';
 import { PopupService } from '../../services/popup.service';
@@ -4107,6 +4107,92 @@ export class BanqueComponent implements OnInit {
       },
       error: () => {
         this.popupService.showError('Impossible de télécharger le modèle du suivi compense OP');
+      }
+    });
+  }
+
+  // Ajout manuel d'une ligne du suivi compense OP (référence générée par le serveur)
+  showCreateSuiviPopup = false;
+  creatingSuivi = false;
+  createSuiviForm = this.emptySuiviForm();
+
+  private emptySuiviForm() {
+    return {
+      typeReference: 'COMPENSE' as SuiviCompenseReferenceType,
+      dateOperation: new Date().toISOString().split('T')[0],
+      codeAgence: '',
+      banque: '',
+      compteBancaire: '',
+      montant: null as number | null,
+      modePaiement: '',
+      idTicket: '',
+      service: '',
+      reseau: ''
+    };
+  }
+
+  openCreateSuiviCompense() {
+    this.createSuiviForm = this.emptySuiviForm();
+    this.showCreateSuiviPopup = true;
+  }
+
+  closeCreateSuiviCompense() {
+    this.showCreateSuiviPopup = false;
+  }
+
+  isCreateSuiviFormValid(): boolean {
+    const f = this.createSuiviForm;
+    const montant = Number(f.montant);
+    return !!(f.dateOperation && (f.codeAgence.trim() || f.service.trim())
+      && f.montant != null && Number.isFinite(montant) && montant !== 0);
+  }
+
+  /**
+   * Aperçu de la référence qui sera générée : CODE-jjmmaa + CP/AP/CB + numéro suivant du jour,
+   * calculé sur les lignes chargées. Le serveur reste la source de vérité à l'enregistrement.
+   */
+  get createSuiviReferencePreview(): string {
+    const f = this.createSuiviForm;
+    const code = (f.codeAgence.trim() || f.service.trim());
+    const match = /^(\d{4})-(\d{2})-(\d{2})$/.exec(f.dateOperation || '');
+    if (!code || !match) return '';
+    const suffix = f.typeReference === 'APPRO' ? 'AP' : f.typeReference === 'CROSS_BORDER' ? 'CB' : 'CP';
+    const prefix = `${code}-${match[3]}${match[2]}${match[1].slice(2)}${suffix}`;
+    const upperPrefix = prefix.toUpperCase();
+    let max = 0;
+    for (const row of this.suiviCompenseRows) {
+      const ref = (row.reference || '').trim().toUpperCase();
+      if (!ref.startsWith(upperPrefix)) continue;
+      const digits = ref.slice(upperPrefix.length);
+      if (/^\d{1,6}$/.test(digits)) max = Math.max(max, Number(digits));
+    }
+    return prefix + (max + 1);
+  }
+
+  saveCreateSuiviCompense() {
+    if (!this.isCreateSuiviFormValid() || this.creatingSuivi) return;
+    const f = this.createSuiviForm;
+    this.creatingSuivi = true;
+    this.suiviCompenseService.create({
+      typeReference: f.typeReference,
+      dateOperation: f.dateOperation,
+      codeAgence: f.codeAgence.trim() || undefined,
+      banque: f.banque.trim() || undefined,
+      compteBancaire: f.compteBancaire.trim() || undefined,
+      montant: Number(f.montant),
+      modePaiement: f.modePaiement.trim() || undefined,
+      idTicket: f.idTicket.trim() || undefined,
+      service: f.service.trim() || undefined,
+      reseau: f.reseau.trim() || undefined
+    }).pipe(finalize(() => this.creatingSuivi = false)).subscribe({
+      next: (created) => {
+        this.showCreateSuiviPopup = false;
+        this.suiviCompensePage = 1;
+        this.loadSuiviCompense();
+        this.popupService.showSuccess(`✅ Ligne ajoutée au suivi compense OP (référence ${created?.reference || ''}).`);
+      },
+      error: (err) => {
+        this.popupService.showError('❌ ' + (err?.error?.error || 'Ajout de la ligne impossible'));
       }
     });
   }

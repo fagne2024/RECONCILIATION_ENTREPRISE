@@ -51,6 +51,46 @@ public class SuiviCompenseOpImportService {
         return service != null && !service.isBlank() ? service : null;
     }
 
+    /**
+     * Suffixe de référence par type d'opération, aligné sur les références générées pour les
+     * opérations (OperationService) : compense = CP, appro = AP, cross-border = CB.
+     */
+    public static String referenceSuffix(String typeReference) {
+        String type = typeReference == null ? "" : typeReference.trim().toUpperCase(Locale.ROOT);
+        switch (type) {
+            case "APPRO": return "AP";
+            case "CROSS_BORDER": return "CB";
+            default: return "CP";
+        }
+    }
+
+    /** Préfixe commun des références d'une agence (ou service) pour un jour et un type : CODE-jjmmaaCP. */
+    public static String referencePrefix(String agenceOuService, LocalDate date, String typeReference) {
+        return agenceOuService.trim() + "-" + date.format(DateTimeFormatter.ofPattern("ddMMyy"))
+                + referenceSuffix(typeReference);
+    }
+
+    /**
+     * Référence suivante au format CODE-jjmmaa{CP|AP|CB}{n} (ex. GRACE-061126CP1) : n = plus grand
+     * numéro déjà utilisé avec ce préfixe + 1, pour ne pas réutiliser un numéro après une suppression.
+     */
+    public static String nextReference(String agenceOuService, LocalDate date, String typeReference,
+                                       Collection<String> existingReferences) {
+        String prefix = referencePrefix(agenceOuService, date, typeReference);
+        int max = 0;
+        if (existingReferences != null) {
+            for (String ref : existingReferences) {
+                if (ref == null) continue;
+                String r = ref.trim();
+                if (r.length() <= prefix.length() || !r.regionMatches(true, 0, prefix, 0, prefix.length())) continue;
+                String digits = r.substring(prefix.length());
+                if (!digits.matches("\\d{1,6}")) continue;
+                max = Math.max(max, Integer.parseInt(digits));
+            }
+        }
+        return prefix + (max + 1);
+    }
+
     public List<SuiviCompenseOpEntity> parse(MultipartFile file) throws Exception {
         String orig = file.getOriginalFilename();
         String filename = orig != null ? orig.toLowerCase() : "";
