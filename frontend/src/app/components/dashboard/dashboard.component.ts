@@ -239,6 +239,9 @@ export class DashboardComponent implements OnInit, OnDestroy {
         this.loadBanqueDashboard(true);
     }
 
+    /** Tableau des relevés bancaires de la vue Banque : masqué par défaut, affiché à la demande. */
+    showBanqueStatements = false;
+
     /** Plus grand bloc d'ancienneté, pour dimensionner les barres (0-100 %). */
     get banqueAgingMax(): number {
         const buckets = this.banqueStats ? this.banqueStats.aging : [];

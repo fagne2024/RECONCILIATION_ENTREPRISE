@@ -3132,6 +3132,23 @@
   height: 300px;
 }
 
+/* En-tête de carte avec bouton afficher/masquer (relevés bancaires) */
+.bv-section-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  flex-wrap: wrap;
+
+  .bv-section-title {
+    margin: 0;
+  }
+}
+
+#bv-statements-content {
+  margin-top: 16px;
+}
+
 .bv-empty {
   margin: 0;
   font-size: 13px;

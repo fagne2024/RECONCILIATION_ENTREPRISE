@@ -1615,6 +1615,8 @@
     "banqueRateTitle": "Taux de rapprochement par jour",
     "banqueOriginsTitle": "Origine des écarts",
     "banqueStatementsTitle": "Relevés bancaires",
+    "banqueStatementsShow": "Afficher",
+    "banqueStatementsHide": "Masquer",
     "banqueAgingTitle": "Ancienneté des non rapprochés",
     "banqueColBanque": "Banque",
     "banqueColReleve": "Relevé",
