@@ -24,7 +24,7 @@ import {
   resolveCanonicalColumnId,
   findEquivalentHeader
 } from '../../utils/bilingual-column.util';
-import { resolveColumnKeyInRow, deduplicateHeaderNames, alignRowsToHeaders, filterRealDataRows } from '../../utils/row-column.util';
+import { resolveColumnKeyInRow, deduplicateHeaderNames, alignRowsToHeaders, filterRealDataRows, keepSecondDuplicateColumns, looksLikeOrangeMoneyStatement } from '../../utils/row-column.util';
 import { stripAllWhitespace } from '../../utils/concat.util';
 import { hasCommaSeparatedSearchFilter, matchesCommaSeparatedFilter } from '../../utils/search-filter.util';
 import {
@@ -4021,7 +4021,24 @@ export class FileUploadComponent implements OnInit, OnDestroy {
         return 'services';
     }
 
-    private readAssistedTreatmentFileRows(
+    private async readAssistedTreatmentFileRows(
+        file: File,
+        expectedHeaderColumns: string[] = []
+    ): Promise<{
+        rows: Record<string, string>[];
+        headerLine: number;
+        removedLines: number;
+    }> {
+        const parsed = await this.readAssistedTreatmentFileRowsRaw(file, expectedHeaderColumns);
+        // Relevé Orange Money : « N° de Compte » en double, on garde la 2e colonne (contrepartie).
+        const columns = parsed.rows.length ? Object.keys(parsed.rows[0]) : [];
+        if (this.orangeMoneyUtilsService.isOrangeMoneyFile(file.name) || looksLikeOrangeMoneyStatement(columns)) {
+            parsed.rows = keepSecondDuplicateColumns(parsed.rows);
+        }
+        return parsed;
+    }
+
+    private readAssistedTreatmentFileRowsRaw(
         file: File,
         expectedHeaderColumns: string[] = []
     ): Promise<{
