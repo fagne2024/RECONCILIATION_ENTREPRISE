@@ -89,7 +89,7 @@ public class ReleveBancaireEntity {
     @Column(name = "recon_status")
     private String reconStatus; // OK/KO/null
 
-    @Column(name = "dedup_key", unique = true)
+    @Column(name = "dedup_key")
     private String dedupKey;
 
     @Column(name = "commentaire", length = 1000)

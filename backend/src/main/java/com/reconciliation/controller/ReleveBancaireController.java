@@ -78,43 +78,15 @@ public class ReleveBancaireController {
                 return ResponseEntity.unprocessableEntity().body(body);
             }
 
-            // Déduplication côté base via dedupKey: construire l'ensemble des clés et filtrer celles déjà existantes
-            java.util.Set<String> allKeys = new java.util.HashSet<>();
-            for (var e : entities) { if (e.getDedupKey() != null) allKeys.add(e.getDedupKey()); }
-            java.util.List<com.reconciliation.entity.ReleveBancaireEntity> existing = allKeys.isEmpty()
-                    ? java.util.List.of()
-                    : repository.findByDedupKeyIn(allKeys);
-            java.util.Set<String> existingKeys = new java.util.HashSet<>();
-            for (var ex : existing) { if (ex.getDedupKey() != null) existingKeys.add(ex.getDedupKey()); }
-
-            // Libellés déjà enregistrés (y compris sur les lignes importées avec l'ancienne clé de doublon)
-            java.util.Set<String> existingLibelles = new java.util.HashSet<>();
-            for (String lib : repository.findAllLibelles()) {
-                String n = com.reconciliation.service.ReleveBancaireImportService.normalizeLibelle(lib);
-                if (!n.isEmpty()) existingLibelles.add(n);
-            }
-
-            java.util.List<com.reconciliation.entity.ReleveBancaireEntity> toInsert = new java.util.ArrayList<>();
+            // Aucun contrôle de doublon (libellé / clé) : toutes les lignes sont chargées,
+            // les doublons éventuels sont supprimés manuellement.
             for (var e : entities) {
-                String lib = com.reconciliation.service.ReleveBancaireImportService.normalizeLibelle(e.getLibelle());
-                boolean libelleConnu = !lib.isEmpty() && existingLibelles.contains(lib);
-                if (e.getDedupKey() != null && !existingKeys.contains(e.getDedupKey()) && !libelleConnu) {
-                    e.setBatchId(batchId);
-                    toInsert.add(e);
-                }
+                e.setBatchId(batchId);
             }
-
             int saved = 0;
-            if (!toInsert.isEmpty()) {
-                try {
-                    repository.saveAll(toInsert);
-                    saved = toInsert.size();
-                } catch (Exception ex) {
-                    // En cas de contrainte d'unicité (races), tenter une insertion unitaire tolérante
-                    for (var e : toInsert) {
-                        try { repository.save(e); saved++; } catch (Exception ignore) {}
-                    }
-                }
+            if (!entities.isEmpty()) {
+                repository.saveAll(entities);
+                saved = entities.size();
             }
 
             java.util.Map<String, Object> payload = new java.util.HashMap<>();
@@ -123,9 +95,7 @@ public class ReleveBancaireController {
             payload.put("rows", result.rows);
             payload.put("count", saved);
             payload.put("totalRead", result.totalRead);
-            // Ajouter les doublons ignorés côté base au compteur existant
-            int dbDuplicates = entities.size() - saved;
-            payload.put("duplicatesIgnored", result.duplicatesIgnored + Math.max(dbDuplicates, 0));
+            payload.put("duplicatesIgnored", 0);
             payload.put("unmappedHeaders", result.unmappedHeaders);
             return ResponseEntity.ok(payload);
         } catch (Exception e) {
@@ -252,7 +222,7 @@ public class ReleveBancaireController {
 
     /**
      * Saisie manuelle d'une ligne de relevé (formulaire « Créer une opération bancaire »).
-     * Refuse une ligne déjà présente (même clé de doublon que l'import).
+     * Aucun contrôle de doublon : les doublons sont supprimés manuellement.
      */
     @PostMapping
     public ResponseEntity<?> create(@RequestBody com.reconciliation.entity.ReleveBancaireEntity payload) {
@@ -269,13 +239,6 @@ public class ReleveBancaireController {
                 com.reconciliation.service.ReleveBancaireImportService.buildDedupKey(
                         payload.getNumeroCompte(), payload.getDateComptable(), payload.getDateValeur(),
                         payload.getLibelle(), payload.getMontant()));
-        String libelleNormalise = com.reconciliation.service.ReleveBancaireImportService.normalizeLibelle(payload.getLibelle());
-        boolean libelleExiste = !libelleNormalise.isEmpty() && repository.findAllLibelles().stream()
-                .anyMatch(l -> libelleNormalise.equals(com.reconciliation.service.ReleveBancaireImportService.normalizeLibelle(l)));
-        if (libelleExiste || !repository.findByDedupKeyIn(java.util.Set.of(key)).isEmpty()) {
-            return ResponseEntity.status(org.springframework.http.HttpStatus.CONFLICT)
-                    .body("Cette ligne de relevé existe déjà (doublon).");
-        }
         payload.setId(null);
         payload.setDedupKey(key);
         payload.setUploadedAt(java.time.LocalDateTime.now());
@@ -359,17 +322,11 @@ public class ReleveBancaireController {
         }
         var entity = opt.get();
         entity.setDateValeur(date);
-        // La clé de doublon dépend de la date de valeur quand la ligne n'a pas de libellé : on la recalcule
+        // Clé indicative recalculée (dépend de la date de valeur sans libellé) ; plus de refus de doublon
         String key = com.reconciliation.service.ReleveBancaireImportService.libelleDedupKey(entity.getLibelle(),
                 com.reconciliation.service.ReleveBancaireImportService.buildDedupKey(
                         entity.getNumeroCompte(), entity.getDateComptable(), entity.getDateValeur(),
                         entity.getLibelle(), entity.getMontant()));
-        boolean conflit = repository.findByDedupKeyIn(java.util.Set.of(key)).stream()
-                .anyMatch(other -> !other.getId().equals(id));
-        if (conflit) {
-            return ResponseEntity.status(409).body(java.util.Map.of(
-                    "message", "Une autre ligne du relevé existe déjà avec cette date de valeur"));
-        }
         entity.setDedupKey(key);
         repository.save(entity);
         return ResponseEntity.ok(entity);

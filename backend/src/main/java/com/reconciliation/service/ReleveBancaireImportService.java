@@ -98,16 +98,8 @@ public class ReleveBancaireImportService {
                 if (!allEmpty) rows.add(dto);
             }
             int totalRead = rows.size();
-            // Déduplication basique (par numéroCompte + dateComptable + dateValeur + libelle + montant)
-            LinkedHashSet<String> seen = new LinkedHashSet<>();
-            List<ReleveBancaireRow> deduped = new ArrayList<>();
-            for (ReleveBancaireRow r : rows) {
-                String key = libelleDedupKey(r.libelle,
-                        buildDedupKey(r.numeroCompte, r.dateComptable, r.dateValeur, r.libelle, r.montant));
-                if (seen.add(key)) deduped.add(r);
-            }
-            int duplicatesIgnored = totalRead - deduped.size();
-            return new com.reconciliation.dto.ReleveImportResult(deduped, totalRead, duplicatesIgnored, unmapped);
+            // Aucun dédoublonnage : toutes les lignes sont chargées, les doublons sont supprimés manuellement
+            return new com.reconciliation.dto.ReleveImportResult(rows, totalRead, 0, unmapped);
         }
     }
 
@@ -182,7 +174,7 @@ public class ReleveBancaireImportService {
             }
             e.setSourceFilename(filename);
             e.setUploadedAt(java.time.LocalDateTime.now());
-            // Définir la clé de déduplication stable
+            // Clé indicative (plus de contrôle d'unicité : les doublons sont supprimés manuellement)
             String dedupKey = libelleDedupKey(e.getLibelle(),
                     buildDedupKey(e.getNumeroCompte(), e.getDateComptable(), e.getDateValeur(), e.getLibelle(), e.getMontant()));
             e.setDedupKey(dedupKey);
