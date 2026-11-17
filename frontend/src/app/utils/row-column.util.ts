@@ -28,6 +28,47 @@ export function deduplicateHeaderNames(headers: string[]): string[] {
   return result;
 }
 
+/** Colonnes présentes deux fois dans un relevé Orange Money dont on garde la 2e occurrence. */
+export const ORANGE_MONEY_KEEP_SECOND_COLUMNS = ['N° de Compte'];
+
+/**
+ * Relevé Orange Money : la colonne « N° de Compte » apparaît deux fois (compte du titulaire, puis
+ * compte de la contrepartie, renommé « N° de Compte (2) » à la lecture). On garde la 2e : sa valeur
+ * remplace la 1re, à la position de la 2e, sous le nom d'origine « N° de Compte ».
+ * Sans doublon, les lignes sont renvoyées telles quelles.
+ */
+export function keepSecondDuplicateColumns(
+  rows: Record<string, any>[],
+  baseColumns: string[] = ORANGE_MONEY_KEEP_SECOND_COLUMNS
+): Record<string, any>[] {
+  if (!rows?.length) return rows;
+  const keys = Object.keys(rows[0]);
+  const renames: { first: string; second: string }[] = [];
+  for (const base of baseColumns) {
+    const baseKey = normalizeColumnKey(base);
+    const first = keys.find(k => normalizeColumnKey(k) === baseKey);
+    const second = keys.find(k => normalizeColumnKey(k) === `${baseKey} (2)`);
+    if (first && second) renames.push({ first, second });
+  }
+  if (!renames.length) return rows;
+
+  const firstKeys = new Set(renames.map(r => r.first));
+  const secondToName = new Map(renames.map(r => [r.second, r.first] as [string, string]));
+  return rows.map(row => {
+    const out: Record<string, any> = {};
+    for (const key of Object.keys(row)) {
+      if (firstKeys.has(key)) continue;
+      out[secondToName.get(key) ?? key] = row[key];
+    }
+    return out;
+  });
+}
+
+/** Vrai si les colonnes ressemblent à un relevé Orange Money (colonne « N° Pseudo »). */
+export function looksLikeOrangeMoneyStatement(columns: string[]): boolean {
+  return columns.some(c => normalizeColumnKey(c) === 'n° pseudo');
+}
+
 /** Normalise un nom de colonne pour comparaison (accents, casse, espaces). */
 export function normalizeColumnKey(columnName: string): string {
   return fixCellEncoding(columnName || '')
