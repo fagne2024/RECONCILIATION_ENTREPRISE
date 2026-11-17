@@ -43,8 +43,15 @@ public class OperationBancaireCheckService {
     public record CheckRow(Long operationId, String dateOperation, String agence, Double montant,
                            String typeOperation, String status, String banque, String reference) {}
 
+    /**
+     * {@code suiviTotal} / {@code suiviNonRapproches} : lignes de suivi compense candidates sur la
+     * période et celles restées sans opération (null hors compensation).
+     */
     public record CheckResult(String type, boolean compensation, int total, int matched, int gaps,
-                              List<CheckRow> rows) {}
+                              List<CheckRow> rows, Integer suiviTotal, Integer suiviNonRapproches) {}
+
+    /** Résultat interne du matching compense : lignes + compteurs du suivi. */
+    private record CompenseMatch(List<CheckRow> rows, int suiviTotal, int suiviNonRapproches) {}
 
     public record ApplyItem(Long operationId, String banque, String reference) {}
 
@@ -59,7 +66,8 @@ public class OperationBancaireCheckService {
 
     /**
      * Check limité aux opérations dont la date est dans [dateDebut, dateFin] (bornes incluses,
-     * null = sans borne). Les suivis compense / lignes de relevé restent tous candidats.
+     * null = sans borne). La même plage s'applique aux lignes de suivi compense candidates ;
+     * les lignes de relevé restent toutes candidates.
      */
     public CheckResult check(String type, LocalDate dateDebut, LocalDate dateFin) {
         boolean compensation = isCompensation(type);
@@ -70,23 +78,34 @@ public class OperationBancaireCheckService {
             if (type == null || !type.equals(op.getTypeOperation()) || Boolean.TRUE.equals(op.getCheckValide())) {
                 continue;
             }
-            if (filtreDates) {
-                if (op.getDateOperation() == null) continue;
-                LocalDate d = op.getDateOperation().toLocalDate();
-                if (dateDebut != null && d.isBefore(dateDebut)) continue;
-                if (dateFin != null && d.isAfter(dateFin)) continue;
+            if (filtreDates && !inRange(op.getDateOperation() == null ? null : op.getDateOperation().toLocalDate(),
+                    dateDebut, dateFin)) {
+                continue;
             }
             ops.add(op);
         }
         ops.sort(Comparator.comparing(OperationBancaireEntity::getDateOperation,
                 Comparator.nullsLast(Comparator.naturalOrder())));
 
-        List<CheckRow> rows = compensation ? checkCompense(ops) : checkReleve(ops);
+        if (compensation) {
+            CompenseMatch m = checkCompense(ops, dateDebut, dateFin);
+            int matched = (int) m.rows().stream().filter(r -> "MATCH".equals(r.status())).count();
+            return new CheckResult(type, true, m.rows().size(), matched, m.rows().size() - matched, m.rows(),
+                    m.suiviTotal(), m.suiviNonRapproches());
+        }
+        List<CheckRow> rows = checkReleve(ops);
         int matched = (int) rows.stream().filter(r -> "MATCH".equals(r.status())).count();
-        return new CheckResult(type, compensation, rows.size(), matched, rows.size() - matched, rows);
+        return new CheckResult(type, false, rows.size(), matched, rows.size() - matched, rows, null, null);
     }
 
-    private List<CheckRow> checkCompense(List<OperationBancaireEntity> ops) {
+    /** Date dans [debut, fin] (bornes incluses, null = sans borne) ; une date absente est hors plage. */
+    private static boolean inRange(LocalDate d, LocalDate debut, LocalDate fin) {
+        if (debut == null && fin == null) return true;
+        if (d == null) return false;
+        return (debut == null || !d.isBefore(debut)) && (fin == null || !d.isAfter(fin));
+    }
+
+    private CompenseMatch checkCompense(List<OperationBancaireEntity> ops, LocalDate dateDebut, LocalDate dateFin) {
         // Références déjà validées : la ligne de suivi correspondante ne sert plus à un autre check.
         Set<String> validatedRefs = new HashSet<>();
         for (OperationBancaireEntity op : operationRepository.findAll()) {
@@ -95,9 +114,13 @@ public class OperationBancaireCheckService {
             }
         }
         Map<String, Deque<SuiviCompenseOpEntity>> suivis = new HashMap<>();
+        int suiviTotal = 0;
         for (SuiviCompenseOpEntity s : suiviRepository.findAll()) {
             if (s.getDateOperation() == null || s.getMontant() == null) continue;
             if (s.getReference() != null && validatedRefs.contains(s.getReference())) continue;
+            // Même plage de dates que les opérations
+            if (!inRange(s.getDateOperation(), dateDebut, dateFin)) continue;
+            suiviTotal++;
             // Compense distributeur : code agence ; compense fournisseur : service (colonnes exclusives).
             suivis.computeIfAbsent(key(s.getDateOperation(), SuiviCompenseOpImportService.agenceOuService(s), s.getMontant()),
                     k -> new ArrayDeque<>()).add(s);
@@ -114,7 +137,9 @@ public class OperationBancaireCheckService {
                 rows.add(row(op, "ECART", null, null));
             }
         }
-        return rows;
+        int restants = 0;
+        for (Deque<SuiviCompenseOpEntity> d : suivis.values()) restants += d.size();
+        return new CompenseMatch(rows, suiviTotal, restants);
     }
 
     private List<CheckRow> checkReleve(List<OperationBancaireEntity> ops) {

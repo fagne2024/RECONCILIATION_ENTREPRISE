@@ -2505,6 +2505,10 @@
           <span class="check-ok">{{ 'TBL.ui.correspondances' | translate }} <strong>{{ r.matched }}</strong></span>
           <span class="check-ko">{{ 'TBL.ui.ecarts' | translate }} <strong>{{ r.gaps }}</strong></span>
         </div>
+        <div class="check-summary" *ngIf="r.compensation && r.suiviTotal != null">
+          <span>{{ 'TBL.ui.checkSuiviSurPeriode' | translate }} <strong>{{ r.suiviTotal }}</strong></span>
+          <span class="check-ko">{{ 'TBL.ui.checkSuiviNonRapproches' | translate }} <strong>{{ r.suiviNonRapproches }}</strong></span>
+        </div>
         <p class="muted" *ngIf="r.compensation">{{ 'TBL.ui.controleSurLeSuiviCompenseOp' | translate }}</p>
         <p class="muted" *ngIf="!r.compensation">{{ 'TBL.ui.controleSurLeReleveBancaireDate' | translate }}</p>
 

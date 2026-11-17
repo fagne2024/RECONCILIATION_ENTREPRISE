@@ -29,6 +29,9 @@ export interface OperationCheckResult {
     matched: number;
     gaps: number;
     rows: OperationCheckRow[];
+    /** Compensation : lignes de suivi compense sur la période / restées sans opération. */
+    suiviTotal?: number | null;
+    suiviNonRapproches?: number | null;
 }
 
 @Injectable({
