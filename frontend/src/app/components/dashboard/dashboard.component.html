@@ -766,7 +766,20 @@
 
             <!-- Relevés bancaires -->
             <div class="bv-card">
-                <h3 class="bv-section-title">{{ 'DASH.banqueStatementsTitle' | translate }}</h3>
+                <div class="bv-section-header">
+                    <h3 class="bv-section-title">
+                        {{ 'DASH.banqueStatementsTitle' | translate }}
+                        <span class="bv-muted" *ngIf="stats.statements.length">({{ stats.statements.length | number }})</span>
+                    </h3>
+                    <button type="button" class="ds-btn ds-btn--secondary bv-toggle"
+                        (click)="showBanqueStatements = !showBanqueStatements"
+                        [attr.aria-expanded]="showBanqueStatements"
+                        aria-controls="bv-statements-content">
+                        <i class="fas" [ngClass]="showBanqueStatements ? 'fa-eye-slash' : 'fa-eye'"></i>
+                        {{ (showBanqueStatements ? 'DASH.banqueStatementsHide' : 'DASH.banqueStatementsShow') | translate }}
+                    </button>
+                </div>
+                <div id="bv-statements-content" *ngIf="showBanqueStatements">
                 <div class="bv-table-wrapper" *ngIf="stats.statements.length">
                     <table class="ds-table bv-table">
                         <thead>
@@ -790,6 +803,7 @@
                     </table>
                 </div>
                 <p class="bv-empty" *ngIf="!stats.statements.length">{{ 'DASH.banqueNoData' | translate }}</p>
+                </div>
             </div>
 
             <!-- Ancienneté des non rapprochés -->

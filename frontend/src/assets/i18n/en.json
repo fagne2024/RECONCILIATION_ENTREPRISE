@@ -1988,6 +1988,8 @@
     "banqueRateTitle": "Daily match rate",
     "banqueOriginsTitle": "Origins of discrepancies",
     "banqueStatementsTitle": "Bank statements",
+    "banqueStatementsShow": "Show",
+    "banqueStatementsHide": "Hide",
     "banqueAgingTitle": "Aging of unmatched items",
     "banqueColBanque": "Bank",
     "banqueColReleve": "Statement",
