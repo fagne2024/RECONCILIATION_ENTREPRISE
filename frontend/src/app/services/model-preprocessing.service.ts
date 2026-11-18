@@ -31,6 +31,7 @@ import {
   resolveCanonicalColumnKeysInRow
 } from '../utils/row-column.util';
 import { fixCellEncoding, fixCellEncodingIfNeeded } from '../utils/encoding-fixer';
+import { resolveTimezoneShiftHours, shiftDateTimeValue } from '../utils/timezone-shift.util';
 import {
   finalizeTextPreserveColumnValue,
   preserveLeadingZeroString,
@@ -1255,6 +1256,15 @@ export class ModelPreProcessingService {
       case 'removeSpaces':
         result = this.applyRemoveSpaces(value, action);
         break;
+      case 'timezoneShift': {
+        const hours = resolveTimezoneShiftHours(
+          action.timezoneCountry,
+          action.timezoneToReference,
+          action.timezoneCustomHours
+        );
+        result = String(shiftDateTimeValue(value, hours).value);
+        break;
+      }
       default:
         result = value;
     }
@@ -1860,6 +1870,14 @@ export class ModelPreProcessingService {
         return I18nService.t('MSG.msg.supprimer0EnFinDeValeur', { p0: columns, p1: conditionSuffix });
       case 'removeSpaces':
         return I18nService.t('MSG.msg.supprimerEspaces', { p0: columns, p1: action.removeSpacesType ?? 'all', p2: conditionSuffix });
+      case 'timezoneShift': {
+        const hours = resolveTimezoneShiftHours(
+          action.timezoneCountry,
+          action.timezoneToReference,
+          action.timezoneCustomHours
+        );
+        return I18nService.t('MSG.msg.decalageHoraire', { p0: columns, p1: `${hours > 0 ? '+' : ''}${hours}`, p2: conditionSuffix });
+      }
       default:
         return `${columns}${conditionSuffix}`;
     }

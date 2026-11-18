@@ -10,6 +10,7 @@ import { ModelManagementService } from '../../services/model-management.service'
 import { PopupService } from '../../services/popup.service';
 import { ConfigurationCalculService } from '../../services/configuration-calcul.service';
 import { ModelPreProcessingService } from '../../services/model-preprocessing.service';
+import { resolveTimezoneShiftHours, TIMEZONE_SHIFT_COUNTRIES } from '../../utils/timezone-shift.util';
 import { TranslateModule } from '@ngx-translate/core';
 import { I18nService } from '../../services/i18n/i18n.service';
 
@@ -269,8 +270,17 @@ export class AutoProcessingModelsComponent implements OnInit {
     { type: 'removeDecimals', labelKey: 'APM.actionRemoveDecimals' },
     { type: 'keepLastDigits', labelKey: 'APM.actionKeepLastDigits' },
     { type: 'removeZeroDecimals', labelKey: 'APM.actionRemoveZeroDecimals' },
-    { type: 'removeSpaces', labelKey: 'APM.actionRemoveSpaces' }
+    { type: 'removeSpaces', labelKey: 'APM.actionRemoveSpaces' },
+    { type: 'timezoneShift', labelKey: 'APM.actionTimezoneShift' }
   ];
+  /** Pays proposés pour l'action « Décalage horaire ». */
+  readonly timezoneCountries = TIMEZONE_SHIFT_COUNTRIES;
+
+  /** Décalage (en heures) résultant de réglages timezoneShift, pour l'aperçu. */
+  getTimezoneShiftLabel(settings: ModelFormatColumnSettings | ModelFormatAction): string {
+    const h = resolveTimezoneShiftHours(settings.timezoneCountry, settings.timezoneToReference, settings.timezoneCustomHours);
+    return `${h > 0 ? '+' : ''}${h} h`;
+  }
   
   // États d'édition
   editingReconciliationLogic = false;
@@ -4665,6 +4675,9 @@ export class AutoProcessingModelsComponent implements OnInit {
       leadingZeroMode: this.normalizeLeadingZeroMode(action.leadingZeroMode),
       removeSpacesType: action.removeSpacesType ?? 'all',
       keepLastDigitsCount: action.keepLastDigitsCount ?? 3,
+      timezoneCountry: action.timezoneCountry ?? '',
+      timezoneToReference: action.timezoneToReference ?? false,
+      timezoneCustomHours: action.timezoneCustomHours ?? 0,
       indicatifType: action.indicatifType ?? 'international',
       customIndicatif: action.customIndicatif ?? '+33',
       decimalSeparator: action.decimalSeparator ?? ',',
@@ -4843,6 +4856,9 @@ export class AutoProcessingModelsComponent implements OnInit {
       leadingZeroMode: 'none',
       removeSpacesType: 'all',
       keepLastDigitsCount: 3,
+      timezoneCountry: '',
+      timezoneToReference: false,
+      timezoneCustomHours: 0,
       indicatifType: 'international',
       customIndicatif: '+33',
       decimalSeparator: ',',

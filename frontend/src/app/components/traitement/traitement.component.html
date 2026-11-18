@@ -2460,6 +2460,48 @@
         </div>
         <button type="button" (click)="applyRemoveSpacesFormatting()" [disabled]="!formatSelections['removeSpaces'].length" class="ds-btn ds-btn--secondary">{{ 'ACT.apply' | translate }}</button>
       </div>
+
+      <!-- Option : Décalage horaire (colonne date + heure) -->
+      <label>
+        <input type="checkbox" [(ngModel)]="formatOptions['timezoneShift']" class="ds-checkbox">{{ 'TRT.DecalageHoraire' | translate }}</label>
+      <div *ngIf="formatOptions['timezoneShift']" class="format-columns">
+        <label>{{ 'TRT.DecalageHoraireColonnes' | translate }}</label>
+        <select multiple [(ngModel)]="timezoneColumns" class="ds-select">
+          <option *ngFor="let col of columns" [value]="col">{{ col }}</option>
+        </select>
+        <div class="option-group">
+          <label>{{ 'TRT.DecalageHorairePays' | translate }}</label>
+          <select [(ngModel)]="timezoneCountry" class="ds-select">
+            <option value="">{{ 'TRT.DecalageHoraireChoisirPays' | translate }}</option>
+            <option *ngFor="let c of timezoneCountries" [value]="c.code">{{ c.label }} (GMT{{ c.utcOffset >= 0 ? '+' : '' }}{{ c.utcOffset }})</option>
+            <option value="custom">{{ 'TRT.DecalageHorairePersonnalise' | translate }}</option>
+          </select>
+        </div>
+        <div class="option-group" *ngIf="timezoneCountry && timezoneCountry !== 'custom'">
+          <label>{{ 'TRT.DecalageHoraireSens' | translate }}</label>
+          <select [(ngModel)]="timezoneToReference" class="ds-select">
+            <option [ngValue]="false">{{ 'TRT.DecalageHoraireDepuisReference' | translate }}</option>
+            <option [ngValue]="true">{{ 'TRT.DecalageHoraireVersReference' | translate }}</option>
+          </select>
+        </div>
+        <div class="option-group" *ngIf="timezoneCountry === 'custom'">
+          <label>{{ 'TRT.DecalageHoraireHeures' | translate }}</label>
+          <input type="number" step="0.5" min="-14" max="14" [(ngModel)]="timezoneCustomHours" class="ds-input">
+        </div>
+        <div class="remove-spaces-help">
+          <small class="help-text">
+            <strong>{{ 'TRT.DecalageHoraireApplique' | translate }}</strong> {{ formatShiftHours(timezoneShiftHours) }}
+            <br>{{ 'TRT.DecalageHoraireAide' | translate }}
+            <br><strong>{{ 'TRT.Exemple' | translate }}</strong> {{ 'TRT.DecalageHoraireExemple' | translate }}
+          </small>
+        </div>
+        <div *ngIf="timezoneAlreadyShiftedColumns.length" class="error-msg">
+          {{ 'TRT.DecalageHoraireDejaApplique' | translate: { columns: timezoneAlreadyShiftedColumns.join(', ') } }}
+        </div>
+        <button type="button" (click)="applyTimezoneShift()" [disabled]="!timezoneColumns.length || !timezoneShiftHours" class="ds-btn ds-btn--secondary">{{ 'ACT.apply' | translate }}</button>
+        <div *ngIf="successMsg.timezone" class="success-msg">{{ successMsg.timezone }}</div>
+        <div *ngIf="errorMsg.timezone" class="error-msg">{{ errorMsg.timezone }}</div>
+      </div>
     </div>
   <div *ngIf="successMsg.format" class="success-msg">{{ successMsg.format }}</div>
   <div *ngIf="errorMsg.format" class="error-msg">{{ errorMsg.format }}</div>
