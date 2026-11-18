@@ -1074,9 +1074,14 @@ export class ModelPreProcessingService {
     let duplicatesRemoved = 0;
 
     for (const row of rows) {
-      const key = dedupColumns
-        .map(col => String(row[col] ?? '').trim().toLowerCase())
-        .join('\u0001');
+      const parts = dedupColumns.map(col => String(row[col] ?? '').trim().toLowerCase());
+      // Clé entièrement vide : pas un doublon, la ligne est conservée
+      // (ex. Wave api_payout sans identifiant de session API → ID PARTENAIRE PM vide).
+      if (parts.every(p => p === '')) {
+        uniqueRows.push(row);
+        continue;
+      }
+      const key = parts.join('\u0001');
       if (seen.has(key)) {
         duplicatesRemoved++;
         continue;
