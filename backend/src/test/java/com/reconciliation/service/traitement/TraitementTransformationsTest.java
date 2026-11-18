@@ -55,6 +55,20 @@ class TraitementTransformationsTest {
     }
 
     @Test
+    void cleDedoublonnageNulleSiToutesLesColonnesSontVides() {
+        // Wave : les api_payout n'ont pas d'identifiant de session API → ne doivent pas être fusionnés
+        Map<String, Object> payout = new java.util.HashMap<>();
+        payout.put("ID PARTENAIRE PM", "");
+        payout.put("Autre", null);
+        assertThat(TraitementTransformations.cleDedoublonnage(List.of("ID PARTENAIRE PM", "Autre"), payout)).isNull();
+        assertThat(TraitementTransformations.cleDedoublonnage(List.of("ID PARTENAIRE PM"), Map.of("ID PARTENAIRE PM", "  ")))
+                .isNull();
+        // Une seule colonne renseignée suffit pour former une clé
+        assertThat(TraitementTransformations.cleDedoublonnage(List.of("ID PARTENAIRE PM", "Autre"), Map.of("ID PARTENAIRE PM", "", "Autre", "x")))
+                .isNotNull();
+    }
+
+    @Test
     void appartientCompareLesValeursCommeDesTextes() {
         assertThat(TraitementTransformations.appartient("OK", List.of("OK", "KO"))).isTrue();
         assertThat(TraitementTransformations.appartient("10", List.of("10"))).isTrue();

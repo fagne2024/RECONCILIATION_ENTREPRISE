@@ -124,7 +124,8 @@ public class TraitementOperationService {
                         }
                     }
                     if (operation.dedoublonnerSur() != null && !operation.dedoublonnerSur().isEmpty()) {
-                        if (!clesVues.add(TraitementTransformations.cleDedoublonnage(operation.dedoublonnerSur(), ligne))) {
+                        String cle = TraitementTransformations.cleDedoublonnage(operation.dedoublonnerSur(), ligne);
+                        if (cle != null && !clesVues.add(cle)) {
                             doublons++;
                             continue;
                         }

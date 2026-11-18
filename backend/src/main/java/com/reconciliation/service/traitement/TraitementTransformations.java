@@ -91,17 +91,26 @@ public final class TraitementTransformations {
         return appliquerFormat(date, format == null || format.isBlank() ? "yyyy-MM-dd" : format);
     }
 
-    /** Clé de dédoublonnage : valeurs des colonnes, espaces retirés et en minuscules. */
+    /**
+     * Clé de dédoublonnage : valeurs des colonnes, espaces retirés et en minuscules.
+     * {@code null} si toutes les colonnes sont vides : une absence de valeur n'est pas un doublon
+     * (ex. Wave api_payout sans identifiant de session API), la ligne est conservée.
+     */
     public static String cleDedoublonnage(List<String> colonnes, Map<String, Object> ligne) {
         StringBuilder cle = new StringBuilder();
+        boolean toutVide = true;
         for (int i = 0; i < colonnes.size(); i++) {
             if (i > 0) {
                 cle.append(SEPARATEUR_CLE);
             }
             Object v = ligne.get(colonnes.get(i));
-            cle.append(v == null ? "" : String.valueOf(v).trim().toLowerCase());
+            String texte = v == null ? "" : String.valueOf(v).trim().toLowerCase();
+            if (!texte.isEmpty()) {
+                toutVide = false;
+            }
+            cle.append(texte);
         }
-        return cle.toString();
+        return toutVide ? null : cle.toString();
     }
 
     /** Vrai si la valeur (texte) appartient à la liste des valeurs retenues. */

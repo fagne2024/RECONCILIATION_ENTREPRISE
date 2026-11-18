@@ -2693,7 +2693,12 @@ End Sub`;
       const seen = new Set<string>();
       const removedIndexes = new Set<number>();
       const deduped = this.combinedRows.filter((row, index) => {
-        const key = this.dedupCols.map(col => (row[col] ?? '').toString().trim().toLowerCase()).join('||');
+        const parts = this.dedupCols.map(col => (row[col] ?? '').toString().trim().toLowerCase());
+        // Colonnes toutes vides : pas un doublon (ex. Wave api_payout sans identifiant de session API)
+        if (parts.every(p => p === '')) {
+          return true;
+        }
+        const key = parts.join('||');
         if (seen.has(key)) {
           removedIndexes.add(index);
           return false;
