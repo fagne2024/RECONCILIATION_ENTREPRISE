@@ -10,7 +10,7 @@ import { ModelManagementService } from '../../services/model-management.service'
 import { PopupService } from '../../services/popup.service';
 import { ConfigurationCalculService } from '../../services/configuration-calcul.service';
 import { ModelPreProcessingService } from '../../services/model-preprocessing.service';
-import { resolveTimezoneShiftHours, TIMEZONE_SHIFT_COUNTRIES } from '../../utils/timezone-shift.util';
+import { resolveTimezoneShiftHours, TIMEZONE_COUNTRY_FROM_COLUMN, TIMEZONE_SHIFT_COUNTRIES } from '../../utils/timezone-shift.util';
 import { TranslateModule } from '@ngx-translate/core';
 import { I18nService } from '../../services/i18n/i18n.service';
 
@@ -278,6 +278,10 @@ export class AutoProcessingModelsComponent implements OnInit {
 
   /** Décalage (en heures) résultant de réglages timezoneShift, pour l'aperçu. */
   getTimezoneShiftLabel(settings: ModelFormatColumnSettings | ModelFormatAction): string {
+    if (settings.timezoneCountry === TIMEZONE_COUNTRY_FROM_COLUMN) {
+      const col = settings.timezoneCountryColumn || '?';
+      return I18nService.t('APM.timezoneFromColumnLabel', { column: col });
+    }
     const h = resolveTimezoneShiftHours(settings.timezoneCountry, settings.timezoneToReference, settings.timezoneCustomHours);
     return `${h > 0 ? '+' : ''}${h} h`;
   }
@@ -4676,6 +4680,7 @@ export class AutoProcessingModelsComponent implements OnInit {
       removeSpacesType: action.removeSpacesType ?? 'all',
       keepLastDigitsCount: action.keepLastDigitsCount ?? 3,
       timezoneCountry: action.timezoneCountry ?? '',
+      timezoneCountryColumn: action.timezoneCountryColumn ?? '',
       timezoneToReference: action.timezoneToReference ?? false,
       timezoneCustomHours: action.timezoneCustomHours ?? 0,
       indicatifType: action.indicatifType ?? 'international',
@@ -4857,6 +4862,7 @@ export class AutoProcessingModelsComponent implements OnInit {
       removeSpacesType: 'all',
       keepLastDigitsCount: 3,
       timezoneCountry: '',
+      timezoneCountryColumn: '',
       timezoneToReference: false,
       timezoneCustomHours: 0,
       indicatifType: 'international',

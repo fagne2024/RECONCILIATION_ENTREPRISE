@@ -1478,7 +1478,15 @@
                             <select class="ds-select form-control" [(ngModel)]="getFormatColumnSettings(action, col).timezoneCountry" [ngModelOptions]="{standalone: true}">
                               <option value="">{{ 'APM.timezoneChooseCountry' | translate }}</option>
                               <option *ngFor="let c of timezoneCountries" [value]="c.code">{{ c.label }} (GMT{{ c.utcOffset >= 0 ? '+' : '' }}{{ c.utcOffset }})</option>
+                              <option value="column">{{ 'APM.timezoneFromColumn' | translate }}</option>
                               <option value="custom">{{ 'APM.timezoneCustom' | translate }}</option>
+                            </select>
+                          </div>
+                          <div class="form-group col-md-4" *ngIf="getFormatColumnSettings(action, col).timezoneCountry === 'column'">
+                            <label>{{ 'APM.timezoneCountryColumn' | translate }}</label>
+                            <select class="ds-select form-control" [(ngModel)]="getFormatColumnSettings(action, col).timezoneCountryColumn" [ngModelOptions]="{standalone: true}">
+                              <option value="">{{ 'APM.Choisirunecolonne' | translate }}</option>
+                              <option *ngFor="let c of getPreProcessingColumns()" [value]="c">{{ c }}</option>
                             </select>
                           </div>
                           <div class="form-group col-md-4" *ngIf="getFormatColumnSettings(action, col).timezoneCountry && getFormatColumnSettings(action, col).timezoneCountry !== 'custom'">
@@ -1604,10 +1612,18 @@
                           <select class="ds-select form-control" [(ngModel)]="action.timezoneCountry" [ngModelOptions]="{standalone: true}">
                             <option value="">{{ 'APM.timezoneChooseCountry' | translate }}</option>
                             <option *ngFor="let c of timezoneCountries" [value]="c.code">{{ c.label }} (GMT{{ c.utcOffset >= 0 ? '+' : '' }}{{ c.utcOffset }})</option>
-                            <option value="custom">{{ 'APM.timezoneCustom' | translate }}</option>
+                            <option value="column">{{ 'APM.timezoneFromColumn' | translate }}</option>
+                              <option value="custom">{{ 'APM.timezoneCustom' | translate }}</option>
                           </select>
                         </div>
-                        <div class="form-group col-md-4" *ngIf="action.timezoneCountry && action.timezoneCountry !== 'custom'">
+                        <div class="form-group col-md-4" *ngIf="action.timezoneCountry === 'column'">
+                            <label>{{ 'APM.timezoneCountryColumn' | translate }}</label>
+                            <select class="ds-select form-control" [(ngModel)]="action.timezoneCountryColumn" [ngModelOptions]="{standalone: true}">
+                              <option value="">{{ 'APM.Choisirunecolonne' | translate }}</option>
+                              <option *ngFor="let c of getPreProcessingColumns()" [value]="c">{{ c }}</option>
+                            </select>
+                          </div>
+                          <div class="form-group col-md-4" *ngIf="action.timezoneCountry && action.timezoneCountry !== 'custom'">
                           <label>{{ 'APM.timezoneDirection' | translate }}</label>
                           <select class="ds-select form-control" [(ngModel)]="action.timezoneToReference" [ngModelOptions]="{standalone: true}">
                             <option [ngValue]="false">{{ 'APM.timezoneFromReference' | translate }}</option>

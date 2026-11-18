@@ -53,9 +53,49 @@ export function countryShiftHours(utcOffset: number, toReference = true): number
   return toReference ? -diff : diff;
 }
 
+/** Valeur spéciale de `timezoneCountry` : le pays est lu ligne par ligne dans une colonne. */
+export const TIMEZONE_COUNTRY_FROM_COLUMN = 'column';
+
+/** Pays de l'heure de référence (Sénégal) : décalage nul quand il apparaît dans la colonne pays. */
+const REFERENCE_COUNTRY: TimezoneShiftCountry = { code: 'SN', label: 'Sénégal', utcOffset: TIMEZONE_REFERENCE_UTC_OFFSET };
+
+function normalizeCountryText(value: string): string {
+  return value
+    .normalize('NFD')
+    .replace(/[\u0300-\u036f]/g, '')
+    .toLowerCase()
+    .replace(/[^a-z]/g, '');
+}
+
+/**
+ * Retrouve un pays à partir d'une valeur de cellule : code ISO (« CM », « ga »)
+ * ou libellé (« Cameroun », « Côte d'Ivoire »). Inconnu : null.
+ */
+export function findTimezoneCountry(value: unknown): TimezoneShiftCountry | null {
+  if (value === null || value === undefined) return null;
+  const raw = String(value).trim();
+  if (!raw) return null;
+  const all = [...TIMEZONE_SHIFT_COUNTRIES, REFERENCE_COUNTRY];
+  const upper = raw.toUpperCase();
+  const byCode = all.find(c => c.code === upper);
+  if (byCode) return byCode;
+  const norm = normalizeCountryText(raw);
+  return all.find(c => normalizeCountryText(c.label) === norm) ?? null;
+}
+
+/** Décalage (en heures) pour la valeur pays d'une ligne. Pays inconnu : 0 (ligne non modifiée). */
+export function resolveTimezoneShiftHoursForCountryValue(
+  countryValue: unknown,
+  toReference: boolean | null | undefined
+): number {
+  const country = findTimezoneCountry(countryValue);
+  return country ? countryShiftHours(country.utcOffset, toReference === true) : 0;
+}
+
 /**
  * Décalage (en heures) d'une configuration pays / sens / saisie libre.
- * `countryCode = 'custom'` : `customHours` est utilisé tel quel. Pays inconnu ou vide : 0.
+ * `countryCode = 'custom'` : `customHours` est utilisé tel quel. Pays inconnu, vide ou
+ * « colonne » (dépend de la ligne) : 0.
  */
 export function resolveTimezoneShiftHours(
   countryCode: string | null | undefined,
