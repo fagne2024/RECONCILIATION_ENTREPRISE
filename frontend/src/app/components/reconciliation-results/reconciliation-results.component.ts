@@ -7282,6 +7282,17 @@ private async downloadExcelFile(workbooks: ExcelJS.Workbook[], fileName: string)
         });
     }
 
+    /**
+     * Volume BO des correspondances : somme des montants en valeur absolue,
+     * pour comparer des volumes (comme côté partenaire) et non des soldes signés.
+     */
+    private sumAbsoluteBoAmounts(amountColumn: string): number {
+        return this.filteredMatches.reduce((total, match) => {
+            const amount = parseFloat(match.boData?.[amountColumn] || '0');
+            return total + (isNaN(amount) ? 0 : Math.abs(amount));
+        }, 0);
+    }
+
     private calculateTotalVolumeCallCount = 0;
     calculateTotalVolume(type: 'bo' | 'partner'): number {
         this.calculateTotalVolumeCallCount++;
@@ -7326,10 +7337,7 @@ private async downloadExcelFile(workbooks: ExcelJS.Workbook[], fileName: string)
                 if (!amountColumn) {
                     result = 0;
                 } else {
-                    result = this.filteredMatches.reduce((total, match) => {
-                        const amount = parseFloat(match.boData[amountColumn] || '0');
-                        return total + (isNaN(amount) ? 0 : amount);
-                    }, 0);
+                    result = this.sumAbsoluteBoAmounts(amountColumn);
                 }
             }
             this.cachedTotalVolumeBo = result; // Mettre en cache
@@ -7362,10 +7370,7 @@ private async downloadExcelFile(workbooks: ExcelJS.Workbook[], fileName: string)
             } else {
                 const amountColumn = this.findAmountColumn('bo');
                 if (amountColumn) {
-                    this.cachedTotalVolumeBo = this.filteredMatches.reduce((total, match) => {
-                        const amount = parseFloat(match.boData[amountColumn] || '0');
-                        return total + (isNaN(amount) ? 0 : amount);
-                    }, 0);
+                    this.cachedTotalVolumeBo = this.sumAbsoluteBoAmounts(amountColumn);
                 } else {
                     this.cachedTotalVolumeBo = 0;
                 }
