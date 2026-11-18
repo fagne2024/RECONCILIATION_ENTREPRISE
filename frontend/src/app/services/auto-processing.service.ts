@@ -25,7 +25,8 @@ export type ModelFormatActionType =
   | 'removeDecimals'
   | 'keepLastDigits'
   | 'removeZeroDecimals'
-  | 'removeSpaces';
+  | 'removeSpaces'
+  | 'timezoneShift';
 
 export interface ModelFormatColumnSettings {
   specialStringToRemove?: string;
@@ -38,6 +39,12 @@ export interface ModelFormatColumnSettings {
   leadingZeroMode?: 'none' | 'keep' | 'strip' | 'auto';
   removeSpacesType?: 'all' | 'leading' | 'trailing' | 'multiple';
   keepLastDigitsCount?: number;
+  /** Décalage horaire (timezoneShift) : code pays (cf. timezone-shift.util) ou 'custom'. */
+  timezoneCountry?: string;
+  /** true : heure du pays → heure du Sénégal ; false (défaut) : heure du Sénégal → heure du pays. */
+  timezoneToReference?: boolean;
+  /** Décalage en heures si timezoneCountry = 'custom'. */
+  timezoneCustomHours?: number;
   indicatifType?: 'international' | 'national' | 'custom';
   customIndicatif?: string;
   decimalSeparator?: ',' | '.';
@@ -67,6 +74,12 @@ export interface ModelFormatAction {
   leadingZeroMode?: 'none' | 'keep' | 'strip' | 'auto';
   removeSpacesType?: 'all' | 'leading' | 'trailing' | 'multiple';
   keepLastDigitsCount?: number;
+  /** Décalage horaire (timezoneShift) : code pays (cf. timezone-shift.util) ou 'custom'. */
+  timezoneCountry?: string;
+  /** true : heure du pays → heure du Sénégal ; false (défaut) : heure du Sénégal → heure du pays. */
+  timezoneToReference?: boolean;
+  /** Décalage en heures si timezoneCountry = 'custom'. */
+  timezoneCustomHours?: number;
   indicatifType?: 'international' | 'national' | 'custom';
   customIndicatif?: string;
   decimalSeparator?: ',' | '.';

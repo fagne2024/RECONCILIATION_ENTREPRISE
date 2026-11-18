@@ -29,6 +29,7 @@ import {
   resolveCanonicalColumnKeysInRow
 } from '../utils/row-column.util';
 import { fixCellEncoding, fixCellEncodingIfNeeded } from '../utils/encoding-fixer';
+import { resolveTimezoneShiftHours, shiftDateTimeValue } from '../utils/timezone-shift.util';
 import {
   finalizeTextPreserveColumnValue,
   preserveLeadingZeroString,
@@ -1229,6 +1230,15 @@ export class ModelPreProcessingService {
       case 'removeSpaces':
         result = this.applyRemoveSpaces(value, action);
         break;
+      case 'timezoneShift': {
+        const hours = resolveTimezoneShiftHours(
+          action.timezoneCountry,
+          action.timezoneToReference,
+          action.timezoneCustomHours
+        );
+        result = String(shiftDateTimeValue(value, hours).value);
+        break;
+      }
       default:
         result = value;
     }
@@ -1794,6 +1804,14 @@ export class ModelPreProcessingService {
         return `${columns} — supprimer .0 en fin de valeur${conditionSuffix}`;
       case 'removeSpaces':
         return `${columns} — supprimer espaces (${action.removeSpacesType ?? 'all'})${conditionSuffix}`;
+      case 'timezoneShift': {
+        const hours = resolveTimezoneShiftHours(
+          action.timezoneCountry,
+          action.timezoneToReference,
+          action.timezoneCustomHours
+        );
+        return `${columns} — décalage horaire ${hours > 0 ? '+' : ''}${hours} h${conditionSuffix}`;
+      }
       default:
         return `${columns}${conditionSuffix}`;
     }

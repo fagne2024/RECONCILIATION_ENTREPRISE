@@ -66,6 +66,7 @@ import { saveAs } from 'file-saver';
 import { HttpErrorResponse } from '@angular/common/http';
 import { ExcelConversionService } from '../../services/excel-conversion.service';
 import { ConfigurationCalculService } from '../../services/configuration-calcul.service';
+import { resolveTimezoneShiftHours, shiftDateTimeValue, TIMEZONE_SHIFT_COUNTRIES } from '../../utils/timezone-shift.util';
 
 export interface ProcessingPopupState {
   visible: boolean;
@@ -335,6 +336,17 @@ export class TraitementComponent implements OnInit, AfterViewInit, OnDestroy {
     removeZeroDecimals: [],
     removeSpaces: []
   };
+
+  // --- DÉCALAGE HORAIRE (colonne date + heure) ---
+  readonly timezoneCountries = TIMEZONE_SHIFT_COUNTRIES;
+  /** Code pays choisi, ou 'custom' pour saisir le décalage à la main. */
+  timezoneCountry = '';
+  /** false (défaut) : heure du Sénégal → heure du pays ; true : heure du pays → heure du Sénégal. */
+  timezoneToReference = false;
+  timezoneCustomHours = 0;
+  timezoneColumns: string[] = [];
+  /** Décalages déjà appliqués par colonne (alerte contre une double application). */
+  timezoneApplied: Record<string, number> = {};
 
   // --- SÉPARATION DES FEUILLES EXCEL ---
   readonly sheetSplitDefaultHeader: string[] = [
@@ -3835,6 +3847,7 @@ End Sub`;
     this.dedupCols = [];
     this.crossDedupColA = '';
     this.crossDedupColB = '';
+    this.timezoneApplied = {};
     this.currentPage = 1;
     this.optimizeForLargeFiles();
     this.updateDisplayedRows();
@@ -6173,6 +6186,79 @@ End Sub`;
     }
   }
 
+  /** Décalage (en heures) correspondant au pays / à la saisie courante. */
+  get timezoneShiftHours(): number {
+    if (this.timezoneCountry === 'custom') {
+      const h = Number(this.timezoneCustomHours);
+      return isFinite(h) ? h : 0;
+    }
+    return resolveTimezoneShiftHours(this.timezoneCountry, this.timezoneToReference);
+  }
+
+  /** Colonnes sélectionnées déjà décalées pendant ce traitement. */
+  get timezoneAlreadyShiftedColumns(): string[] {
+    return this.timezoneColumns.filter(col => this.timezoneApplied[col] !== undefined);
+  }
+
+  formatShiftHours(hours: number): string {
+    return `${hours > 0 ? '+' : ''}${hours} h`;
+  }
+
+  /**
+   * Décale les colonnes date + heure sélectionnées (ex. Cameroun → Sénégal : −1 h).
+   * Le format de chaque valeur est conservé ; les valeurs sans heure restent inchangées.
+   */
+  applyTimezoneShift() {
+    if (this.bloqueSiServeur('timezone')) return;
+    if (!this.timezoneColumns.length) {
+      this.showError('timezone', this.t('TRT.msg.selectAtLeastOneColumn'));
+      return;
+    }
+    const hours = this.timezoneShiftHours;
+    if (!hours) {
+      this.showError('timezone', this.t('TRT.DecalageHoraireNul'));
+      return;
+    }
+
+    try {
+      const cols = [...this.timezoneColumns];
+      let changed = 0;
+      let ignored = 0;
+      const shiftRow = (row: any, count: boolean) => {
+        for (const col of cols) {
+          const v = row[col];
+          if (v === undefined || v === null || v === '') continue;
+          const r = shiftDateTimeValue(v, hours);
+          if (r.changed) {
+            row[col] = r.value;
+            if (count) changed++;
+          } else if (count) {
+            ignored++;
+          }
+        }
+      };
+      // combinedRows et allRows sont deux stockages distincts : les deux doivent être décalés.
+      this.combinedRows.mutateEach(row => shiftRow(row, true));
+      if (!this.selectionApplied) {
+        this.allRows.mutateEach(row => shiftRow(row, false));
+      }
+      for (const col of cols) {
+        this.timezoneApplied[col] = (this.timezoneApplied[col] || 0) + hours;
+      }
+
+      this.showSuccess('timezone', this.t('TRT.DecalageHoraireSucces', {
+        hours: this.formatShiftHours(hours),
+        columns: cols.length,
+        changed,
+        ignored
+      }));
+      this.updateDisplayedRowsForPage();
+      this.cd.detectChanges();
+    } catch (error) {
+      this.showError('timezone', this.t('TRT.DecalageHoraireErreur'));
+    }
+  }
+
   /**
    * Applique le formatage pour supprimer les espaces
    */
@@ -6418,6 +6504,7 @@ End Sub`;
     this.dedupCols = [];
     this.crossDedupColA = '';
     this.crossDedupColB = '';
+    this.timezoneApplied = {};
     this.formatOptions = {
       trimSpaces: false,
       toLowerCase: false,
