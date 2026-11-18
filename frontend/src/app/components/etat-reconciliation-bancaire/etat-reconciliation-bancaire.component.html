@@ -45,11 +45,11 @@
                 <div class="tu-col" *ngFor="let cat of topUsersCategories; trackBy: trackByCategoryKey" [style.--a]="cat.accent">
                     <div class="tu-col-head">
                         <h2><i></i>{{ cat.titleKey | translate }}</h2>
-                        <small>{{ cat.total }} {{ 'EBQ.top.lines' | translate }}</small>
+                        <small [title]="'ETA.topUsers.shareHint' | translate">{{ cat.total }} {{ 'EBQ.top.lines' | translate }} · {{ 'ETA.topUsers.allCountries' | translate }}</small>
                     </div>
                     <div class="tu-empty" *ngIf="!cat.users.length">{{ 'ETA.topUsers.empty' | translate }}</div>
                     <div class="tu-user" *ngFor="let user of cat.users; let i = index; trackBy: trackByUsername"
-                         [title]="user.displayName + ' : ' + user.count">
+                         [title]="user.displayName + ' : ' + ('ETA.topUsers.shareTitle' | translate:{ count: user.count, total: cat.total, pct: (user.sharePct | number:'1.0-1') })">
                         <span class="ph" [class.p1]="i === 0">
                             <img *ngIf="user.photo" [src]="user.photo" [alt]="'ETA.topUsers.photoAlt' | translate:{ name: user.displayName }"
                                  width="40" height="40" (error)="onTopUserPhotoError(user)">
@@ -61,12 +61,13 @@
                             <div class="pl">{{ cat.actionLabelKey | translate }}</div>
                         </div>
                         <div class="nb">
-                            <b>{{ user.count }}</b>
+                            <b>{{ user.sharePct | number:'1.0-1' }} %</b>
+                            <span class="cnt">{{ user.count }} {{ 'EBQ.top.lines' | translate }}</span>
                             <span class="d eq" *ngIf="topUsersConfig.showDelta && user.delta === 0">{{ 'ETA.topUsers.stable' | translate }}</span>
                             <span class="d up" *ngIf="topUsersConfig.showDelta && user.delta > 0">▲ {{ user.delta }}</span>
                             <span class="d dn" *ngIf="topUsersConfig.showDelta && user.delta < 0">▼ {{ -user.delta }}</span>
                         </div>
-                        <div class="bar"><i [style.width.%]="user.barPct"></i></div>
+                        <div class="bar"><i [style.width.%]="user.sharePct"></i></div>
                     </div>
                 </div>
             </div>

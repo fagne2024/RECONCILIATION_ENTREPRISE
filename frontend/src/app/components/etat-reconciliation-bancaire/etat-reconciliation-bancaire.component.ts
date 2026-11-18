@@ -31,6 +31,7 @@ import {
     sparkHeights,
     toIsoDate
 } from './etat-reconciliation-bancaire.util';
+import { rankByShare } from '../../utils/top-users-share.util';
 
 type StatusFilter = 'ALL' | BankStatus;
 
@@ -42,6 +43,8 @@ export interface BankTopUser {
     count: number;
     delta: number;
     barPct: number;
+    /** Part (%) de l'utilisateur sur le total de la catégorie, tous pays confondus : donne le rang. */
+    sharePct: number;
     photo?: string | null;
 }
 
@@ -204,16 +207,17 @@ export class EtatReconciliationBancaireComponent implements OnInit {
         return BANK_TOP_DEFS.map(def => {
             const perUser = counts[def.key];
             const prevPerUser = prevCounts[def.key];
-            const ranked = Array.from(perUser.entries())
-                .map(([username, count]) => ({ username, count }))
-                .sort((a, b) => b.count - a.count || a.username.localeCompare(b.username, 'fr'));
-            const max = ranked.length ? ranked[0].count : 0;
+            // Le classement banque (/audit-ranking) couvre déjà tous les pays : le total de la
+            // catégorie est la somme des lignes, et la part de chacun sur ce total donne le rang.
+            const total = Array.from(perUser.values()).reduce((a, b) => a + b, 0);
+            const ranked = rankByShare(perUser, total);
+            const max = ranked.reduce((m, e) => Math.max(m, e.count), 0);
             return {
                 key: def.key,
                 titleKey: def.titleKey,
                 actionLabelKey: def.actionLabelKey,
                 accent: def.accent,
-                total: Array.from(perUser.values()).reduce((a, b) => a + b, 0),
+                total,
                 users: ranked.slice(0, limit).map(e => ({
                     username: e.username,
                     displayName: this.formatUsername(e.username),
@@ -221,6 +225,7 @@ export class EtatReconciliationBancaireComponent implements OnInit {
                     count: e.count,
                     delta: e.count - (prevPerUser.get(e.username) || 0),
                     barPct: max > 0 ? Math.round((e.count / max) * 100) : 0,
+                    sharePct: e.sharePct,
                     photo: null
                 }))
             };

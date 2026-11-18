@@ -1200,7 +1200,7 @@
   "EBQ": {
     "top": {
       "title": "Top {{count}} des utilisateurs banque",
-      "subtitle": "Lignes traitées sur les opérations bancaires (une ligne importée mais non traitée ne compte pas)",
+      "subtitle": "Part de chaque utilisateur sur le total tous pays : lignes traitées sur les opérations bancaires (une ligne importée mais non traitée ne compte pas)",
       "catAgents": "Agents (lignes réconciliées OK)",
       "actAgents": "Lignes réconciliées OK",
       "catRapprochement": "Responsables (lignes validées)",
@@ -1265,7 +1265,7 @@
     "title": "État des réconciliations",
     "topUsers": {
       "title": "Top {{count}} des utilisateurs",
-      "subtitle": "Services × jour traités sur la période (un service resté en traitement ne compte pas)",
+      "subtitle": "Part de chaque utilisateur sur le total tous pays : services × jour traités sur la période (un service resté en traitement ne compte pas)",
       "loading": "Chargement du classement...",
       "empty": "Aucun service traité sur la période",
       "actions": "actions",
@@ -1277,7 +1277,10 @@
       "actCreations": "Services réconciliés",
       "actModifications": "Services validés",
       "actValidations": "Services clôturés",
-      "services": "services"
+      "services": "services",
+      "allCountries": "tous pays",
+      "shareHint": "Pourcentage = part de l'utilisateur sur le total tous pays de la catégorie ; il donne le rang.",
+      "shareTitle": "{{count}} sur {{total}} (tous pays) = {{pct}} %"
     },
     "period": {
       "jour": "jour de référence (J-1)",

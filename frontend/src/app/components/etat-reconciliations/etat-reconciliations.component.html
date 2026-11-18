@@ -52,7 +52,7 @@
                 >
                     <div class="tu-col-head">
                         <h2><i></i>{{ cat.customTitle || (cat.titleKey | translate) }}</h2>
-                        <small>{{ cat.total }} {{ 'ETA.topUsers.services' | translate }}</small>
+                        <small [title]="'ETA.topUsers.shareHint' | translate">{{ cat.total }} {{ 'ETA.topUsers.services' | translate }} · {{ 'ETA.topUsers.allCountries' | translate }}</small>
                     </div>
 
                     <div class="tu-empty" *ngIf="!cat.users.length">
@@ -62,7 +62,7 @@
                     <div
                         class="tu-user"
                         *ngFor="let user of cat.users; let i = index; trackBy: trackByUsername"
-                        [title]="user.displayName + ' : ' + user.count"
+                        [title]="user.displayName + ' : ' + ('ETA.topUsers.shareTitle' | translate:{ count: user.count, total: cat.total, pct: (user.sharePct | number:'1.0-1') })"
                     >
                         <span class="ph" [class.p1]="i === 0">
                             <img
@@ -83,13 +83,14 @@
                         </div>
 
                         <div class="nb">
-                            <b>{{ user.count }}</b>
+                            <b>{{ user.sharePct | number:'1.0-1' }} %</b>
+                            <span class="cnt">{{ user.count }} {{ 'ETA.topUsers.services' | translate }}</span>
                             <span class="d eq" *ngIf="topUsersConfig.showDelta && user.delta === 0">{{ 'ETA.topUsers.stable' | translate }}</span>
                             <span class="d up" *ngIf="topUsersConfig.showDelta && user.delta > 0">▲ {{ user.delta }}</span>
                             <span class="d dn" *ngIf="topUsersConfig.showDelta && user.delta < 0">▼ {{ -user.delta }}</span>
                         </div>
 
-                        <div class="bar"><i [style.width.%]="user.barPct"></i></div>
+                        <div class="bar"><i [style.width.%]="user.sharePct"></i></div>
                     </div>
                 </div>
             </div>

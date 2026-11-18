@@ -1200,7 +1200,7 @@
   "EBQ": {
     "top": {
       "title": "Top {{count}} bank users",
-      "subtitle": "Processed lines on bank operations (an imported but unprocessed line does not count)",
+      "subtitle": "Each user's share of the all-country total: processed lines on bank operations (an imported but unprocessed line does not count)",
       "catAgents": "Agents (lines reconciled OK)",
       "actAgents": "Lines reconciled OK",
       "catRapprochement": "Managers (validated lines)",
@@ -1265,7 +1265,7 @@
     "title": "Reconciliation status",
     "topUsers": {
       "title": "Top {{count}} users",
-      "subtitle": "Services × day processed over the period (a service still in processing does not count)",
+      "subtitle": "Each user's share of the all-country total: services × day processed over the period (a service still in processing does not count)",
       "loading": "Loading ranking...",
       "empty": "No service processed over the period",
       "actions": "actions",
@@ -1277,7 +1277,10 @@
       "actCreations": "Reconciled services",
       "actModifications": "Validated services",
       "actValidations": "Closed services",
-      "services": "services"
+      "services": "services",
+      "allCountries": "all countries",
+      "shareHint": "Percentage = the user's share of the category's all-country total; it sets the rank.",
+      "shareTitle": "{{count}} of {{total}} (all countries) = {{pct}} %"
     },
     "period": {
       "jour": "reference day (D-1)",

@@ -33,6 +33,7 @@ import { forkJoin, of } from 'rxjs';
 import { catchError } from 'rxjs/operators';
 import { I18nService } from '../../services/i18n/i18n.service';
 import { GLPI_TICKET_FORM_URL } from '../../constants/glpi';
+import { rankByShare } from '../../utils/top-users-share.util';
 
 type RecoSummaryStatus = 'RECONCILIE' | 'NON_RECONCILIE' | 'EN_COURS' | 'NON_RECONCILIE';
 
@@ -85,6 +86,8 @@ export interface TopUserEntry {
     count: number;
     delta: number;
     barPct: number;
+    /** Part (%) de l'utilisateur sur le total de la catégorie, tous pays confondus : donne le rang. */
+    sharePct: number;
     photo?: string | null;
 }
 
@@ -1641,21 +1644,31 @@ export class EtatReconciliationsComponent implements OnInit {
                     : undefined
             };
             const prev = this.previousPeriodRange(start, endInclusive);
+            const current$ = this.dashboardReconciliationService
+                .getAuditServiceDays(start, endInclusive, opts, this.moduleContext)
+                .pipe(catchError(() => of([] as RecoAuditServiceDayAction[])));
+            // Le pourcentage se calcule sur le total TOUS PAYS : si un pays est filtré,
+            // on charge aussi la période sans filtre pays pour le dénominateur.
+            const allCountries$ = opts.country
+                ? this.dashboardReconciliationService
+                    .getAuditServiceDays(start, endInclusive, { ...opts, country: undefined }, this.moduleContext)
+                    .pipe(catchError(() => of(null as RecoAuditServiceDayAction[] | null)))
+                : of(null as RecoAuditServiceDayAction[] | null);
 
             forkJoin({
-                current: this.dashboardReconciliationService
-                    .getAuditServiceDays(start, endInclusive, opts, this.moduleContext)
-                    .pipe(catchError(() => of([] as RecoAuditServiceDayAction[]))),
+                current: current$,
                 previous: this.dashboardReconciliationService
                     .getAuditServiceDays(prev.start, prev.end, opts, this.moduleContext)
-                    .pipe(catchError(() => of([] as RecoAuditServiceDayAction[])))
+                    .pipe(catchError(() => of([] as RecoAuditServiceDayAction[]))),
+                allCountries: allCountries$
             })
                 .pipe(take(1))
-                .subscribe(({ current, previous }) => {
+                .subscribe(({ current, previous, allCountries }) => {
                     if (token !== this.topUsersLoadToken) {
                         return;
                     }
-                    const categories = this.buildTopUserCategories(current || [], previous || []);
+                    const categories = this.buildTopUserCategories(
+                        current || [], previous || [], allCountries ?? current ?? []);
                     this.loadTopUserPhotos(categories, token);
                 });
         });
@@ -1693,22 +1706,30 @@ export class EtatReconciliationsComponent implements OnInit {
         return { start: this.formatLocalYmd(prevStart), end: this.formatLocalYmd(prevEnd) };
     }
 
-    /** Construit les catégories configurées (Configuration > Top utilisateurs) et leur top N. */
-    private buildTopUserCategories(current: RecoAuditServiceDayAction[], previous: RecoAuditServiceDayAction[]): TopUserCategory[] {
+    /**
+     * Construit les catégories configurées (Configuration > Top utilisateurs) et leur top N.
+     * Rang = part de l'utilisateur (services réconciliés) sur le total de la catégorie tous pays
+     * confondus (`allCountries`, services × jour distincts).
+     */
+    private buildTopUserCategories(
+        current: RecoAuditServiceDayAction[],
+        previous: RecoAuditServiceDayAction[],
+        allCountries: RecoAuditServiceDayAction[]
+    ): TopUserCategory[] {
         const cfg = this.topUsersConfig;
         const limit = Math.max(1, Number(cfg.topN) || 1);
         const categories: TopUsersCategoryConfig[] = (cfg.categories || []).filter(c => c?.enabled);
 
-        const counts = this.aggregateTopUserCounts(current, categories);
-        const prevCounts = this.aggregateTopUserCounts(previous, categories);
+        const counts = this.aggregateTopUserCounts(current, categories).counts;
+        const prevCounts = this.aggregateTopUserCounts(previous, categories).counts;
+        const globalTotals = this.aggregateTopUserCounts(allCountries, categories).totals;
 
         return categories.map((def, index) => {
             const perUser = counts[def.id] || new Map<string, number>();
             const prevPerUser = prevCounts[def.id] || new Map<string, number>();
-            const ranked = Array.from(perUser.entries())
-                .map(([username, count]) => ({ username, count }))
-                .sort((a, b) => b.count - a.count || a.username.localeCompare(b.username, 'fr'));
-            const max = ranked.length ? ranked[0].count : 0;
+            const total = globalTotals[def.id] || 0;
+            const ranked = rankByShare(perUser, total);
+            const max = ranked.reduce((m, e) => Math.max(m, e.count), 0);
             const users: TopUserEntry[] = ranked.slice(0, limit).map(entry => ({
                 username: entry.username,
                 displayName: this.formatUsernameDisplay(entry.username),
@@ -1716,9 +1737,9 @@ export class EtatReconciliationsComponent implements OnInit {
                 count: entry.count,
                 delta: entry.count - (prevPerUser.get(entry.username) || 0),
                 barPct: max > 0 ? Math.round((entry.count / max) * 100) : 0,
+                sharePct: entry.sharePct,
                 photo: null
             }));
-            const total = Array.from(perUser.values()).reduce((sum, v) => sum + v, 0);
             const builtin = BUILTIN_CATEGORY_KEYS[def.id];
             return {
                 key: def.id,
@@ -1751,10 +1772,13 @@ export class EtatReconciliationsComponent implements OnInit {
     private aggregateTopUserCounts(
         actions: RecoAuditServiceDayAction[],
         categories: TopUsersCategoryConfig[]
-    ): Record<string, Map<string, number>> {
+    ): { counts: Record<string, Map<string, number>>; totals: Record<string, number> } {
         const perCategory: Record<string, Map<string, Set<string>>> = {};
+        /** Services × jour distincts de la catégorie, tous utilisateurs confondus (dénominateur du %). */
+        const allDays: Record<string, Set<string>> = {};
         for (const category of categories) {
             perCategory[category.id] = new Map<string, Set<string>>();
+            allDays[category.id] = new Set<string>();
         }
         const priority = EtatReconciliationsComponent.TOP_LEVEL_PRIORITY;
         for (const entry of actions || []) {
@@ -1786,15 +1810,18 @@ export class EtatReconciliationsComponent implements OnInit {
                     users.set(username, days);
                 }
                 days.add(dayKey);
+                allDays[category.id].add(dayKey);
             }
         }
         const result: Record<string, Map<string, number>> = {};
+        const totals: Record<string, number> = {};
         for (const category of categories) {
             const counts = new Map<string, number>();
             perCategory[category.id].forEach((days, username) => counts.set(username, days.size));
             result[category.id] = counts;
+            totals[category.id] = allDays[category.id].size;
         }
-        return result;
+        return { counts: result, totals };
     }
 
     /** Compare des libellés d'action sans tenir compte des accents / de la casse. */
