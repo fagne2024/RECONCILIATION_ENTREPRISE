@@ -2,7 +2,14 @@ import { Injectable } from '@angular/core';
 import { HttpClient, HttpHeaders, HttpParams } from '@angular/common/http';
 import { Observable } from 'rxjs';
 import { postFormWithProgress } from '../utils/upload-with-progress.util';
-import { ReleveBancaireRow, ReleveUploadResponse, ReleveListFilter, ReleveImportDefaults } from '../models/releve-bancaire.model';
+import { ReleveBancaireRow, ReleveUploadResponse, ReleveListFilter, ReleveImportDefaults, DecisionDoublons } from '../models/releve-bancaire.model';
+
+/** 2e envoi après le pop-up des doublons : lignes en doublon à charger quand même. */
+export function appendDecisionDoublons(form: FormData, decision?: DecisionDoublons): void {
+  if (!decision) return;
+  form.append('decisionDoublons', 'true');
+  form.append('doublonsAcceptes', decision.acceptes.join(','));
+}
 
 @Injectable({ providedIn: 'root' })
 export class ReleveBancaireService {
@@ -18,11 +25,13 @@ export class ReleveBancaireService {
   uploadWithProgress(
     file: File,
     onProgress?: (percent: number) => void,
-    defaults?: ReleveImportDefaults
+    defaults?: ReleveImportDefaults,
+    decision?: DecisionDoublons
   ): Promise<ReleveUploadResponse> {
     const form = new FormData();
     form.append('file', file);
     this.appendDefaults(form, defaults);
+    appendDecisionDoublons(form, decision);
     return postFormWithProgress<ReleveUploadResponse>(this.http, this.apiUrl + '/upload', form, onProgress);
   }
 
@@ -34,10 +43,11 @@ export class ReleveBancaireService {
     if (defaults?.pays?.trim()) form.append('pays', defaults.pays.trim());
   }
 
-  upload(file: File, defaults?: ReleveImportDefaults): Observable<ReleveUploadResponse> {
+  upload(file: File, defaults?: ReleveImportDefaults, decision?: DecisionDoublons): Observable<ReleveUploadResponse> {
     const form = new FormData();
     form.append('file', file);
     this.appendDefaults(form, defaults);
+    appendDecisionDoublons(form, decision);
     return this.http.post<ReleveUploadResponse>(`${this.apiUrl}/upload`, form);
   }
 

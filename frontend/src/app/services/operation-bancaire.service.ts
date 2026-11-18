@@ -1,3 +1,5 @@
+import { DecisionDoublons, DoublonImportLigne } from '../models/releve-bancaire.model';
+import { appendDecisionDoublons } from './releve-bancaire.service';
 import { Injectable } from '@angular/core';
 import { HttpClient, HttpHeaders, HttpParams } from '@angular/common/http';
 import { Observable } from 'rxjs';
@@ -45,6 +47,16 @@ export interface OperationCheckSuiviRow {
     reference?: string;
     status: 'MATCH' | 'SANS_OPERATION' | 'DEJA_VALIDE';
     operationId?: number | null;
+}
+
+/** Réponse de l'import d'opérations (doublonsEnAttente : rien n'est enregistré, décision attendue). */
+export interface OperationUploadResponse {
+  totalRead: number;
+  saved: number;
+  errors: string[];
+  duplicatesIgnored?: number;
+  doublonsEnAttente?: boolean;
+  doublons?: DoublonImportLigne[];
 }
 
 @Injectable({
@@ -150,10 +162,11 @@ export class OperationBancaireService {
 
     // Importer des opérations bancaires depuis un fichier (Excel/CSV)
     /** Import avec pourcentage d'envoi (pop-up de progression). */
-  uploadWithProgress(file: File, onProgress?: (percent: number) => void): Promise<{ totalRead: number; saved: number; errors: string[]; duplicatesIgnored?: number }> {
+  uploadWithProgress(file: File, onProgress?: (percent: number) => void, decision?: DecisionDoublons): Promise<OperationUploadResponse> {
     const form = new FormData();
     form.append('file', file);
-    return postFormWithProgress<{ totalRead: number; saved: number; errors: string[]; duplicatesIgnored?: number }>(this.http, this.apiUrl + '/upload', form, onProgress);
+    appendDecisionDoublons(form, decision);
+    return postFormWithProgress<OperationUploadResponse>(this.http, this.apiUrl + '/upload', form, onProgress);
   }
 
   /** Check d'un type d'opération (compensation : suivi compense ; autres : relevé). */
@@ -170,11 +183,12 @@ export class OperationBancaireService {
     return this.http.post<{ updated: number }>(`${this.apiUrl}/check/apply`, items);
   }
 
-  upload(file: File): Observable<{ totalRead: number; saved: number; errors: string[]; duplicatesIgnored?: number }>{
-        const form = new FormData();
-        form.append('file', file);
-        return this.http.post<{ totalRead: number; saved: number; errors: string[]; duplicatesIgnored?: number }>(`${this.apiUrl}/upload`, form);
-    }
+  upload(file: File, decision?: DecisionDoublons): Observable<OperationUploadResponse> {
+    const form = new FormData();
+    form.append('file', file);
+    appendDecisionDoublons(form, decision);
+    return this.http.post<OperationUploadResponse>(`${this.apiUrl}/upload`, form);
+  }
 
   updateReconStatus(id: number, status: 'OK' | 'KO'): Observable<any> {
     return this.http.put(`${this.apiUrl}/${id}/recon-status?status=${encodeURIComponent(status)}`, {});

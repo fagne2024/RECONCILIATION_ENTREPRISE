@@ -2714,6 +2714,53 @@
     </div>
   </div>
 
+  <!-- Pop-up : lignes du fichier déjà présentes en base (cochées = chargées, non cochées = rejetées) -->
+  <div class="import-popup-backdrop" *ngIf="doublonsPopup.visible" role="dialog" aria-modal="true" aria-labelledby="doublonsPopupTitle">
+    <div class="import-popup doublons-popup">
+      <div class="import-popup__icon is-error"><i class="fas fa-clone"></i></div>
+      <h3 id="doublonsPopupTitle">{{ 'BANK_DUP.title' | translate }}</h3>
+      <p>
+        {{ (doublonsPopup.kind === 'operations' ? 'BANK_DUP.introOperations' : 'BANK_DUP.introReleve') | translate: { count: doublonsPopup.lignes.length } }}
+      </p>
+      <p class="doublons-popup__hint">{{ 'BANK_DUP.hint' | translate }}</p>
+      <div class="doublons-popup__table-wrap">
+        <table class="doublons-popup__table">
+          <thead>
+            <tr>
+              <th class="col-check">
+                <input type="checkbox" [checked]="doublonsTousCoches"
+                       [indeterminate]="doublonsPopup.coches.size > 0 && !doublonsTousCoches"
+                       (change)="toggleTousDoublons()" [attr.aria-label]="'BANK_DUP.toutCocher' | translate">
+              </th>
+              <th>{{ 'BANK_DUP.col.ligne' | translate }}</th>
+              <th>{{ 'BANK_DUP.col.motif' | translate }}</th>
+              <th *ngFor="let c of doublonsPopup.colonnes">{{ 'BANK_DUP.col.' + c | translate }}</th>
+            </tr>
+          </thead>
+          <tbody>
+            <tr *ngFor="let d of doublonsPopup.lignes" [class.is-checked]="doublonsPopup.coches.has(d.ligne)" (click)="toggleDoublon(d.ligne)">
+              <td class="col-check" (click)="$event.stopPropagation()">
+                <input type="checkbox" [checked]="doublonsPopup.coches.has(d.ligne)" (change)="toggleDoublon(d.ligne)"
+                       [attr.aria-label]="'BANK_DUP.cocherLigne' | translate: { ligne: d.ligne }">
+              </td>
+              <td>{{ d.ligne }}</td>
+              <td><span class="doublons-popup__motif">{{ 'BANK_DUP.motif.' + d.motif | translate }}</span></td>
+              <td *ngFor="let c of doublonsPopup.colonnes" [class.is-num]="c === 'montant'">{{ formatDoublonValeur(c, d.valeurs[c]) }}</td>
+            </tr>
+          </tbody>
+        </table>
+      </div>
+      <p class="doublons-popup__summary">
+        {{ 'BANK_DUP.summary' | translate: { coches: doublonsPopup.coches.size, rejetes: doublonsPopup.lignes.length - doublonsPopup.coches.size } }}
+      </p>
+      <div class="doublons-popup__actions">
+        <button type="button" class="ds-btn ds-btn--secondary" (click)="annulerDoublons()">{{ 'BANK_DUP.annuler' | translate }}</button>
+        <button type="button" class="ds-btn ds-btn--secondary" (click)="rejeterTousDoublons()">{{ 'BANK_DUP.rejeterTous' | translate }}</button>
+        <button type="button" class="ds-btn ds-btn--primary" (click)="validerDoublons()">{{ 'BANK_DUP.valider' | translate }}</button>
+      </div>
+    </div>
+  </div>
+
   <!-- Pop-up de chargement manuel (avancement puis fin) -->
   <div class="import-popup-backdrop" *ngIf="importPopup.visible" role="dialog" aria-modal="true">
     <div class="import-popup">

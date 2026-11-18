@@ -373,14 +373,21 @@ public class OperationBancaireController {
     }
 
     @PostMapping(value = "/upload", consumes = {"multipart/form-data"})
-    public ResponseEntity<java.util.Map<String, Object>> upload(@RequestParam("file") MultipartFile file) {
+    public ResponseEntity<java.util.Map<String, Object>> upload(
+            @RequestParam("file") MultipartFile file,
+            // Décision sur les doublons (2e envoi après le pop-up) : lignes à charger quand même
+            @RequestParam(value = "decisionDoublons", required = false) Boolean decisionDoublons,
+            @RequestParam(value = "doublonsAcceptes", required = false) String doublonsAcceptes) {
         try {
-            var res = importService.importFile(file);
+            var res = importService.importFile(file,
+                    com.reconciliation.dto.DoublonImportLigne.parseDecision(decisionDoublons, doublonsAcceptes));
             java.util.Map<String, Object> payload = new java.util.HashMap<>();
             payload.put("totalRead", res.totalRead);
             payload.put("saved", res.saved);
             payload.put("duplicatesIgnored", res.duplicatesIgnored);
             payload.put("errors", res.errors);
+            payload.put("doublonsEnAttente", res.doublonsEnAttente);
+            payload.put("doublons", res.doublonsEnAttente ? res.doublons : java.util.List.of());
             return ResponseEntity.ok(payload);
         } catch (Exception e) {
             String message = e.getMessage() != null ? e.getMessage() : e.getClass().getSimpleName();

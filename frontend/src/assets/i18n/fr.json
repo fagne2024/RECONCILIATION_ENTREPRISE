@@ -8979,5 +8979,39 @@
     "noValue": "Aucune valeur trouvée",
     "noNetwork": "Aucun réseau trouvé",
     "noOperator": "Aucun opérateur trouvé"
+  },
+  "BANK_DUP": {
+    "title": "Lignes déjà présentes dans le système",
+    "introOperations": "{{count}} opération(s) du fichier existent déjà en base. Rien n'a encore été enregistré.",
+    "introReleve": "{{count}} ligne(s) du relevé existent déjà en base. Rien n'a encore été enregistré.",
+    "hint": "Cochez les lignes à charger quand même : les lignes non cochées seront rejetées. Les lignes nouvelles du fichier sont chargées dans tous les cas.",
+    "toutCocher": "Tout cocher",
+    "cocherLigne": "Charger la ligne {{ligne}}",
+    "summary": "{{coches}} ligne(s) cochée(s) à charger, {{rejetes}} rejetée(s)",
+    "annuler": "Annuler l'import",
+    "rejeterTous": "Rejeter tous les doublons",
+    "valider": "Valider la sélection",
+    "importAnnule": "Import annulé : aucune ligne n'a été chargée.",
+    "aucuneLigneChargee": "Aucune nouvelle ligne chargée : {{p0}} doublon(s) rejeté(s).",
+    "motif": {
+      "REFERENCE": "Même référence",
+      "LIBELLE": "Même libellé",
+      "CLE": "Même montant, date et compte/agence"
+    },
+    "col": {
+      "ligne": "Ligne",
+      "motif": "Motif",
+      "dateOperation": "Date opération",
+      "agence": "Agence",
+      "typeOperation": "Type",
+      "montant": "Montant",
+      "reference": "Référence",
+      "banque": "Banque",
+      "pays": "Pays",
+      "numeroCompte": "N° de compte",
+      "dateComptable": "Date comptable",
+      "dateValeur": "Date de valeur",
+      "libelle": "Libellé"
+    }
   }
 }

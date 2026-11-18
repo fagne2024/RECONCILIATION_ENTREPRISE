@@ -13,7 +13,7 @@ import { OperationService } from '../../services/operation.service';
 import { OperationServiceApi } from '../../services/operation.service';
 import { ReleveBancaireService } from '../../services/releve-bancaire.service';
 import { NiveauxValidationConfigService } from '../../services/niveaux-validation-config.service';
-import { ReleveBancaireRow, ReleveImportDefaults, ReleveMissingField, ReleveUploadResponse } from '../../models/releve-bancaire.model';
+import { ReleveBancaireRow, ReleveImportDefaults, ReleveMissingField, ReleveUploadResponse, DoublonImportLigne, DecisionDoublons } from '../../models/releve-bancaire.model';
 import { SuiviCompenseOp, SuiviCompenseReferenceType } from '../../models/suivi-compense-op.model';
 import { SuiviCompenseOpService } from '../../services/suivi-compense-op.service';
 import { ExportOptimizationService } from '../../services/export-optimization.service';
@@ -3340,12 +3340,29 @@ export class BanqueComponent implements OnInit {
       const file = await this.buildTreatedRowsFile(rows, destination, outputName);
 
       if (destination === 'operations') {
-        const res: any = await firstValueFrom(this.operationBancaireService.upload(file));
+        let res: any = await firstValueFrom(this.operationBancaireService.upload(file));
+        if (res?.doublonsEnAttente) {
+          // Lignes déjà en base : l'utilisateur choisit celles à charger quand même
+          const decision = await this.askDoublonsDecision('operations', res.doublons || []);
+          if (!decision) {
+            await this.popupService.showWarning(I18nService.t('BANK_DUP.importAnnule'), I18nService.t('TBL.msg.chargementDesOperations'));
+            return;
+          }
+          res = await firstValueFrom(this.operationBancaireService.upload(file, decision));
+        }
         const saved = Number(res?.saved ?? 0);
         const totalRead = Number(res?.totalRead ?? rows.length);
         const opbDuplicates = Number(res?.duplicatesIgnored ?? 0);
         const errors = Array.isArray(res?.errors) ? res.errors.length : 0;
 
+        if (!saved && opbDuplicates && !errors) {
+          // Toutes les lignes étaient des doublons rejetés : pas un problème de colonnes
+          await this.popupService.showSuccess(
+            I18nService.t('BANK_DUP.aucuneLigneChargee', { p0: opbDuplicates }),
+            I18nService.t('TBL.msg.chargementDesOperations')
+          );
+          return;
+        }
         if (!saved) {
           const errorDetails = Array.isArray(res?.errors) && res.errors.length
             ? I18nService.t('TBL.msg.detail', { p0: res.errors.slice(0, 5).join('\n') })
@@ -3381,6 +3398,15 @@ export class BanqueComponent implements OnInit {
       for (;;) {
         try {
           res = await firstValueFrom(this.releveService.upload(file, importDefaults));
+          if (res?.doublonsEnAttente) {
+            // Lignes déjà en base : l'utilisateur choisit celles à charger quand même
+            const decision = await this.askDoublonsDecision('releve', res.doublons || []);
+            if (!decision) {
+              await this.popupService.showWarning(I18nService.t('BANK_DUP.importAnnule'), I18nService.t('TBL.msg.chargementDuReleve'));
+              return;
+            }
+            res = await firstValueFrom(this.releveService.upload(file, importDefaults, decision));
+          }
           break;
         } catch (uploadErr: any) {
           const missing = this.getReleveMissingFields(uploadErr);
@@ -3401,6 +3427,14 @@ export class BanqueComponent implements OnInit {
       const totalRead = Number(res?.totalRead ?? rows.length);
       const duplicates = Number(res?.duplicatesIgnored ?? 0);
 
+      if (!saved && duplicates) {
+        // Toutes les lignes étaient des doublons rejetés : pas un problème de colonnes
+        await this.popupService.showSuccess(
+          I18nService.t('BANK_DUP.aucuneLigneChargee', { p0: duplicates }),
+          I18nService.t('TBL.msg.chargementDuReleve')
+        );
+        return;
+      }
       if (!saved) {
         const unmapped = Array.isArray(res?.unmappedHeaders) && res.unmappedHeaders.length
           ? `\nColonnes non reconnues : ${res.unmappedHeaders.join(', ')}`
@@ -3962,6 +3996,75 @@ export class BanqueComponent implements OnInit {
     this.importPopup = { ...this.importPopup, visible: false };
   }
 
+  // ── Doublons à l'import (opérations / relevé) : lignes déjà présentes en base ──
+  // Le serveur n'enregistre rien tant que l'utilisateur n'a pas choisi : les lignes cochées
+  // sont chargées avec les lignes nouvelles, les lignes non cochées sont rejetées.
+  doublonsPopup: {
+    visible: boolean;
+    kind: 'operations' | 'releve';
+    lignes: DoublonImportLigne[];
+    coches: Set<number>;
+    colonnes: string[];
+  } = { visible: false, kind: 'operations', lignes: [], coches: new Set(), colonnes: [] };
+  private doublonsResolver: ((d: DecisionDoublons | null) => void) | null = null;
+
+  /** Ouvre le pop-up des doublons ; résout la décision, ou null si l'import est annulé. */
+  private askDoublonsDecision(kind: 'operations' | 'releve', lignes: DoublonImportLigne[]): Promise<DecisionDoublons | null> {
+    const colonnes = kind === 'operations'
+      ? ['dateOperation', 'agence', 'typeOperation', 'montant', 'reference', 'banque', 'pays']
+      : ['numeroCompte', 'dateComptable', 'dateValeur', 'libelle', 'montant', 'banque'];
+    this.doublonsPopup = { visible: true, kind, lignes, coches: new Set(), colonnes };
+    return new Promise(resolve => { this.doublonsResolver = resolve; });
+  }
+
+  get doublonsTousCoches(): boolean {
+    const p = this.doublonsPopup;
+    return p.lignes.length > 0 && p.coches.size === p.lignes.length;
+  }
+
+  toggleDoublon(ligne: number): void {
+    const coches = new Set(this.doublonsPopup.coches);
+    if (coches.has(ligne)) coches.delete(ligne); else coches.add(ligne);
+    this.doublonsPopup = { ...this.doublonsPopup, coches };
+  }
+
+  toggleTousDoublons(): void {
+    const coches = this.doublonsTousCoches ? new Set<number>() : new Set(this.doublonsPopup.lignes.map(l => l.ligne));
+    this.doublonsPopup = { ...this.doublonsPopup, coches };
+  }
+
+  /** Charge les lignes cochées, rejette les autres. */
+  validerDoublons(): void {
+    this.resoudreDoublons({ acceptes: Array.from(this.doublonsPopup.coches) });
+  }
+
+  /** Rejette tous les doublons (les lignes nouvelles sont chargées). */
+  rejeterTousDoublons(): void {
+    this.resoudreDoublons({ acceptes: [] });
+  }
+
+  /** Annule tout l'import : rien n'est chargé. */
+  annulerDoublons(): void {
+    this.resoudreDoublons(null);
+  }
+
+  private resoudreDoublons(decision: DecisionDoublons | null): void {
+    this.doublonsPopup = { ...this.doublonsPopup, visible: false };
+    this.doublonsResolver?.(decision);
+    this.doublonsResolver = null;
+  }
+
+  formatDoublonValeur(colonne: string, valeur: any): string {
+    if (valeur === null || valeur === undefined || valeur === '') return '—';
+    if (colonne === 'montant') return Number(valeur).toLocaleString('fr-FR');
+    if (colonne.startsWith('date')) {
+      const s = String(valeur);
+      const m = s.match(/^(\d{4})-(\d{2})-(\d{2})/);
+      return m ? `${m[3]}/${m[2]}/${m[1]}` : s;
+    }
+    return String(valeur);
+  }
+
   // ── Colonnes obligatoires absentes du relevé importé (numéro de compte, banque) ──
   releveMissingPopup: {
     visible: boolean;
@@ -4028,7 +4131,20 @@ export class BanqueComponent implements OnInit {
     try {
       for (;;) {
         try {
-          const res = await this.releveService.uploadWithProgress(file, pct => this.onImportUploadProgress(pct), defaults);
+          let res = await this.releveService.uploadWithProgress(file, pct => this.onImportUploadProgress(pct), defaults);
+          if (res?.doublonsEnAttente) {
+            // Lignes déjà en base : rien n'est enregistré tant que l'utilisateur n'a pas choisi
+            this.closeImportPopup();
+            const decision = await this.askDoublonsDecision('releve', res.doublons || []);
+            if (!decision) {
+              this.releveUploading = false;
+              this.releveMessageKind = 'info';
+              this.releveMessage = I18nService.t('BANK_DUP.importAnnule');
+              return;
+            }
+            this.openImportPopup(I18nService.t('TBL.msg.importDuReleveBancaire'));
+            res = await this.releveService.uploadWithProgress(file, pct => this.onImportUploadProgress(pct), defaults, decision);
+          }
           this.applyReleveUploadResult(res);
           break;
         } catch (err: any) {
@@ -4850,29 +4966,41 @@ export class BanqueComponent implements OnInit {
     }
   }
 
-  uploadOpb() {
+  async uploadOpb() {
     if (!this.opbSelectedFile) return;
     this.opbUploading = true;
     this.opbMessageKind = 'info';
     this.opbMessage = I18nService.t('TBL.msg.importDesOperationsEnCours');
-    this.openImportPopup(I18nService.t('TBL.msg.importDesOperationsBancaires'));
-    from(this.operationBancaireService.uploadWithProgress(this.opbSelectedFile, pct => this.onImportUploadProgress(pct)))
-      .pipe(finalize(() => this.finishImportPopup(this.opbMessage, this.opbMessageKind)))
-      .subscribe({
-      next: (res) => {
-        this.opbUploading = false;
-        const errs = (res && Array.isArray(res.errors)) ? res.errors.length : 0;
-        this.opbMessageKind = 'success';
-        const opbDup = Number(res?.duplicatesIgnored ?? 0);
-        this.opbMessage = I18nService.t('TBL.msg.importTermineLuesEnregistrees', { p0: res.totalRead || 0, p1: res.saved || 0, p2: opbDup ? I18nService.t('TBL.msg.doublonsIgnores', { p0: opbDup }) : '', p3: errs ? I18nService.t('TBL.msg.erreurs', { p0: errs }) : '' });
-        this.loadOperations();
-      },
-      error: () => {
-        this.opbUploading = false;
-        this.opbMessageKind = 'error';
-        this.opbMessage = I18nService.t('TBL.msg.echecDeLImportDesOperations');
+    const title = I18nService.t('TBL.msg.importDesOperationsBancaires');
+    const file = this.opbSelectedFile;
+    this.openImportPopup(title);
+    try {
+      let res = await this.operationBancaireService.uploadWithProgress(file, pct => this.onImportUploadProgress(pct));
+      if (res?.doublonsEnAttente) {
+        // Lignes déjà en base : rien n'est enregistré tant que l'utilisateur n'a pas choisi
+        this.closeImportPopup();
+        const decision = await this.askDoublonsDecision('operations', res.doublons || []);
+        if (!decision) {
+          this.opbUploading = false;
+          this.opbMessageKind = 'info';
+          this.opbMessage = I18nService.t('BANK_DUP.importAnnule');
+          return;
+        }
+        this.openImportPopup(title);
+        res = await this.operationBancaireService.uploadWithProgress(file, pct => this.onImportUploadProgress(pct), decision);
       }
-    });
+      this.opbUploading = false;
+      const errs = (res && Array.isArray(res.errors)) ? res.errors.length : 0;
+      this.opbMessageKind = 'success';
+      const opbDup = Number(res?.duplicatesIgnored ?? 0);
+      this.opbMessage = I18nService.t('TBL.msg.importTermineLuesEnregistrees', { p0: res.totalRead || 0, p1: res.saved || 0, p2: opbDup ? I18nService.t('TBL.msg.doublonsIgnores', { p0: opbDup }) : '', p3: errs ? I18nService.t('TBL.msg.erreurs', { p0: errs }) : '' });
+      this.loadOperations();
+    } catch {
+      this.opbUploading = false;
+      this.opbMessageKind = 'error';
+      this.opbMessage = I18nService.t('TBL.msg.echecDeLImportDesOperations');
+    }
+    this.finishImportPopup(this.opbMessage, this.opbMessageKind);
   }
 
   downloadOpbTemplate() {

@@ -1,5 +1,6 @@
 package com.reconciliation.service;
 
+import com.reconciliation.dto.DoublonImportLigne;
 import com.reconciliation.entity.OperationBancaireEntity;
 import com.reconciliation.repository.OperationBancaireRepository;
 import com.reconciliation.util.BankingDedupKey;
@@ -40,12 +41,29 @@ public class OperationBancaireImportService {
     public static class ImportResult {
         public int totalRead;
         public int saved;
-        /** Toujours 0 : plus de contrôle de doublon à l'import (suppression manuelle). */
+        /** Lignes déjà présentes en base rejetées par l'utilisateur (non cochées dans le pop-up). */
         public int duplicatesIgnored;
         public List<String> errors = new ArrayList<>();
+        /** Lignes déjà présentes en base (référence ou clé agence + type + date + montant). */
+        public List<DoublonImportLigne> doublons = new ArrayList<>();
+        /** Doublons détectés sans décision : rien n'a été enregistré, l'utilisateur doit choisir. */
+        public boolean doublonsEnAttente;
     }
 
+    /** Import avec détection des doublons : rien n'est enregistré s'il y en a (voir {@link #importFile(MultipartFile, Set)}). */
     public ImportResult importFile(MultipartFile file) throws Exception {
+        return importFile(file, null);
+    }
+
+    /**
+     * Import des opérations.
+     *
+     * @param doublonsAcceptes {@code null} : détection ; si des lignes existent déjà en base, rien n'est
+     *                         enregistré et elles sont renvoyées ({@code doublonsEnAttente}) pour que
+     *                         l'utilisateur choisisse. Sinon : numéros de ligne des doublons à charger
+     *                         quand même ; les autres doublons sont rejetés, les lignes nouvelles chargées.
+     */
+    public ImportResult importFile(MultipartFile file, Set<Integer> doublonsAcceptes) throws Exception {
         String orig = file.getOriginalFilename();
         String filename = orig != null ? orig.toLowerCase() : "";
         try (InputStream is = file.getInputStream(); Workbook wb = createWorkbook(filename, is)) {
@@ -59,6 +77,9 @@ public class OperationBancaireImportService {
             ReferenceSequencer sequencer = new ReferenceSequencer();
 
             List<OperationBancaireEntity> candidates = new ArrayList<>();
+            // Numéro de ligne (Excel) et référence fournie par le fichier, par candidat
+            Map<OperationBancaireEntity, Integer> lignes = new IdentityHashMap<>();
+            Map<OperationBancaireEntity, String> fileRefs = new IdentityHashMap<>();
             int last = sheet.getLastRowNum();
             for (int r = 1; r <= last; r++) {
                 Row row = sheet.getRow(r);
@@ -137,13 +158,38 @@ public class OperationBancaireImportService {
                     // (cas des compensations, qui n'ont pas de référence). La référence générée n'en fait pas partie.
                     e.setDedupKey(operationDedupKey(fileReference, agence, typeOperation, dateOp, montant));
                     candidates.add(e);
+                    lignes.put(e, r + 1);
+                    fileRefs.put(e, fileReference);
                 } catch (Exception ex) {
                     result.errors.add("Ligne " + (r + 1) + ": " + ex.getMessage());
                 }
             }
-            // Aucun contrôle de doublon (référence / clé) : toutes les lignes valides sont chargées,
-            // les doublons éventuels sont supprimés manuellement.
-            List<OperationBancaireEntity> toSave = candidates;
+            // Doublons : lignes déjà présentes en base, soumises à la décision de l'utilisateur
+            Map<OperationBancaireEntity, String> motifs = detecterDoublons(candidates, fileRefs);
+            for (OperationBancaireEntity c : candidates) {
+                String motif = motifs.get(c);
+                if (motif == null) continue;
+                result.doublons.add(new DoublonImportLigne(lignes.get(c), motif)
+                        .put("dateOperation", c.getDateOperation())
+                        .put("agence", c.getAgence())
+                        .put("typeOperation", c.getTypeOperation())
+                        .put("montant", c.getMontant())
+                        .put("reference", c.getReference())
+                        .put("banque", c.getBo())
+                        .put("pays", c.getPays()));
+            }
+            if (doublonsAcceptes == null && !result.doublons.isEmpty()) {
+                result.doublonsEnAttente = true;
+                return result;
+            }
+            List<OperationBancaireEntity> toSave = new ArrayList<>();
+            for (OperationBancaireEntity c : candidates) {
+                if (!motifs.containsKey(c) || (doublonsAcceptes != null && doublonsAcceptes.contains(lignes.get(c)))) {
+                    toSave.add(c);
+                } else {
+                    result.duplicatesIgnored++;
+                }
+            }
             if (!toSave.isEmpty()) {
                 List<OperationBancaireEntity> enregistrees = repository.saveAll(toSave);
                 result.saved = toSave.size();
@@ -151,6 +197,44 @@ public class OperationBancaireImportService {
             }
             return result;
         }
+    }
+
+    /**
+     * Lignes déjà présentes en base : même clé de doublon (référence du fichier, ou agence + type +
+     * date + montant sans référence) ou référence déjà enregistrée (y compris reportée par un check).
+     * Les répétitions à l'intérieur du fichier ne sont pas des doublons.
+     */
+    private Map<OperationBancaireEntity, String> detecterDoublons(List<OperationBancaireEntity> candidates,
+                                                                  Map<OperationBancaireEntity, String> fileRefs) {
+        Map<OperationBancaireEntity, String> motifs = new IdentityHashMap<>();
+        if (candidates.isEmpty()) return motifs;
+        Set<String> keys = new LinkedHashSet<>();
+        Set<String> refs = new LinkedHashSet<>();
+        for (OperationBancaireEntity c : candidates) {
+            if (c.getDedupKey() != null) keys.add(c.getDedupKey());
+            String ref = fileRefs.get(c);
+            if (ref != null && !ref.isBlank()) refs.add(ref.trim());
+        }
+        Set<String> knownKeys = new HashSet<>();
+        for (List<String> paquet : DoublonImportLigne.paquets(keys, 1000)) {
+            for (OperationBancaireEntity ex : repository.findByDedupKeyIn(paquet)) knownKeys.add(ex.getDedupKey());
+        }
+        Set<String> knownRefs = new HashSet<>();
+        for (List<String> paquet : DoublonImportLigne.paquets(refs, 1000)) {
+            for (OperationBancaireEntity ex : repository.findByReferenceIn(paquet)) {
+                knownRefs.add(BankingDedupKey.normalizeText(ex.getReference()));
+            }
+        }
+        for (OperationBancaireEntity c : candidates) {
+            String ref = fileRefs.get(c);
+            boolean avecRef = ref != null && !ref.isBlank();
+            if (avecRef && knownRefs.contains(BankingDedupKey.normalizeText(ref))) {
+                motifs.put(c, DoublonImportLigne.MOTIF_REFERENCE);
+            } else if (c.getDedupKey() != null && knownKeys.contains(c.getDedupKey())) {
+                motifs.put(c, avecRef ? DoublonImportLigne.MOTIF_REFERENCE : DoublonImportLigne.MOTIF_CLE);
+            }
+        }
+        return motifs;
     }
 
     /**

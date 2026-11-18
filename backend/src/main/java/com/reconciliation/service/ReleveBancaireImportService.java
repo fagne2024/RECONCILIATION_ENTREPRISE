@@ -174,7 +174,7 @@ public class ReleveBancaireImportService {
             }
             e.setSourceFilename(filename);
             e.setUploadedAt(java.time.LocalDateTime.now());
-            // Clé indicative (plus de contrôle d'unicité : les doublons sont supprimés manuellement)
+            // Clé de doublon (contrôle à l'import, décision de l'utilisateur dans le pop-up)
             String dedupKey = libelleDedupKey(e.getLibelle(),
                     buildDedupKey(e.getNumeroCompte(), e.getDateComptable(), e.getDateValeur(), e.getLibelle(), e.getMontant()));
             e.setDedupKey(dedupKey);
@@ -229,6 +229,39 @@ public class ReleveBancaireImportService {
         String normalized = normalizeLibelle(libelle);
         if (normalized.isEmpty()) return fallbackKey;
         return com.reconciliation.util.BankingDedupKey.of("LIB", normalized);
+    }
+
+    /**
+     * Lignes de relevé déjà présentes en base, par position dans {@code entities} : même clé de doublon
+     * (libellé, ou compte + dates + montant sans libellé) ou même libellé qu'une ligne existante
+     * (y compris les lignes importées avec l'ancienne clé). Les répétitions dans le fichier ne comptent pas.
+     */
+    public static Map<Integer, String> detecterDoublons(List<com.reconciliation.entity.ReleveBancaireEntity> entities,
+                                                        com.reconciliation.repository.ReleveBancaireRepository repository) {
+        Map<Integer, String> motifs = new LinkedHashMap<>();
+        if (entities.isEmpty()) return motifs;
+        Set<String> keys = new LinkedHashSet<>();
+        for (var e : entities) if (e.getDedupKey() != null) keys.add(e.getDedupKey());
+        Set<String> knownKeys = new HashSet<>();
+        for (List<String> paquet : com.reconciliation.dto.DoublonImportLigne.paquets(keys, 1000)) {
+            for (var ex : repository.findByDedupKeyIn(new HashSet<>(paquet))) knownKeys.add(ex.getDedupKey());
+        }
+        Set<String> knownLibelles = new HashSet<>();
+        for (String lib : repository.findAllLibelles()) {
+            String n = normalizeLibelle(lib);
+            if (!n.isEmpty()) knownLibelles.add(n);
+        }
+        for (int i = 0; i < entities.size(); i++) {
+            var e = entities.get(i);
+            String lib = normalizeLibelle(e.getLibelle());
+            if (!lib.isEmpty() && knownLibelles.contains(lib)) {
+                motifs.put(i, com.reconciliation.dto.DoublonImportLigne.MOTIF_LIBELLE);
+            } else if (e.getDedupKey() != null && knownKeys.contains(e.getDedupKey())) {
+                motifs.put(i, lib.isEmpty() ? com.reconciliation.dto.DoublonImportLigne.MOTIF_CLE
+                        : com.reconciliation.dto.DoublonImportLigne.MOTIF_LIBELLE);
+            }
+        }
+        return motifs;
     }
 
     /** Clé de doublon d'une ligne de relevé (partagée par l'import et la saisie manuelle). */

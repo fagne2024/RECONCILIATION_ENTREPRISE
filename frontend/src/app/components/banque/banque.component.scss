@@ -3523,3 +3523,27 @@
   flex: 0 0 auto;
   width: 100%;
 }
+
+/* Pop-up des doublons à l'import (opérations / relevé) */
+.import-popup.doublons-popup { width: min(1100px, 100%); max-height: calc(100vh - 32px); display: flex; flex-direction: column; text-align: left; }
+.doublons-popup .import-popup__icon { text-align: center; color: var(--rd-amber, #d97706); }
+.doublons-popup h3 { text-align: center; }
+.doublons-popup p { margin: 0 0 8px; color: var(--rd-text1, #0f172a); }
+.doublons-popup__hint { font-size: 0.85rem; color: var(--rd-text2, #475569) !important; }
+.doublons-popup__table-wrap { flex: 1 1 auto; min-height: 120px; overflow: auto; border: 1px solid var(--rd-border, #e2e8f0); border-radius: var(--rd-r-sm, 8px); margin: 8px 0; }
+.doublons-popup__table { width: 100%; border-collapse: collapse; font-size: 0.85rem; }
+.doublons-popup__table th { position: sticky; top: 0; z-index: 1; background: var(--rd-bg, #f8fafc); color: var(--rd-text2, #475569); font-weight: 600; text-align: left; padding: 8px 10px; border-bottom: 1px solid var(--rd-border, #e2e8f0); white-space: nowrap; }
+.doublons-popup__table td { padding: 6px 10px; border-bottom: 1px solid var(--rd-border, #e2e8f0); color: var(--rd-text1, #0f172a); vertical-align: top; }
+.doublons-popup__table tbody tr { cursor: pointer; }
+.doublons-popup__table tbody tr:hover { background: var(--rd-bg, #f8fafc); }
+.doublons-popup__table tbody tr.is-checked { background: var(--rd-green-l, #ecfdf5); }
+.doublons-popup__table .col-check { width: 36px; text-align: center; }
+.doublons-popup__table .col-check input { width: 16px; height: 16px; cursor: pointer; }
+.doublons-popup__table td.is-num { text-align: right; white-space: nowrap; font-variant-numeric: tabular-nums; }
+.doublons-popup__motif { display: inline-block; padding: 2px 8px; border-radius: 999px; background: var(--rd-amber-l, #fef3c7); color: var(--rd-text1, #0f172a); font-size: 0.75rem; white-space: nowrap; }
+.doublons-popup__summary { font-weight: 600; }
+.doublons-popup__actions { display: flex; flex-wrap: wrap; justify-content: flex-end; gap: 8px; margin-top: 8px; }
+@media (max-width: 600px) {
+  .doublons-popup__actions { flex-direction: column-reverse; }
+  .doublons-popup__actions .ds-btn { width: 100%; }
+}

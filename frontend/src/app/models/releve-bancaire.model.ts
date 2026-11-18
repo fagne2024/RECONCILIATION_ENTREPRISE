@@ -29,6 +29,22 @@ export interface ReleveUploadResponse {
   totalRead: number;
   duplicatesIgnored: number;
   unmappedHeaders: string[];
+  /** Lignes déjà présentes en base : rien n'a été enregistré, l'utilisateur doit choisir. */
+  doublonsEnAttente?: boolean;
+  doublons?: DoublonImportLigne[];
+}
+
+/** Ligne d'un import banque déjà présente en base (opérations ou relevé). */
+export interface DoublonImportLigne {
+  /** Identifiant de la ligne dans le fichier, à renvoyer dans la décision. */
+  ligne: number;
+  motif: 'REFERENCE' | 'LIBELLE' | 'CLE';
+  valeurs: Record<string, any>;
+}
+
+/** Décision sur les doublons : numéros de ligne à charger quand même (les autres sont rejetés). */
+export interface DecisionDoublons {
+  acceptes: number[];
 }
 
 /** Valeurs à appliquer aux lignes dont le numéro de compte ou la banque est absent du fichier. */

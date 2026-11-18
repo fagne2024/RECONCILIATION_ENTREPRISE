@@ -11,6 +11,7 @@ import java.nio.charset.StandardCharsets;
 import java.util.List;
 
 import static org.junit.jupiter.api.Assertions.*;
+import static org.mockito.ArgumentMatchers.anyCollection;
 import static org.mockito.ArgumentMatchers.anyList;
 import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.Mockito.*;
@@ -210,5 +211,82 @@ class OperationBancaireImportServiceTest {
         assertEquals(1.5d, OperationBancaireImportService.parseAmount("1.5"));
         assertNull(OperationBancaireImportService.parseAmount("null"));
         assertNull(OperationBancaireImportService.parseAmount("abc"));
+    }
+
+    // --- Doublons : détection puis décision de l'utilisateur ---
+
+    private static OperationBancaireEntity existante(String reference, String dedupKey) {
+        OperationBancaireEntity e = new OperationBancaireEntity();
+        e.setReference(reference);
+        e.setDedupKey(dedupKey);
+        return e;
+    }
+
+    private static final String CSV_DOUBLONS = String.join("\n",
+            HEADER,
+            "APPRO_FOURNISSEUR,1000,OK,2026-11-02,ONUF6873,REF-CONNUE,,MEMO-CI,,Virement,,,,CI",
+            "APPRO_FOURNISSEUR,2000,OK,2026-11-02,ONUF6873,REF-NOUVELLE,,MEMO-CI,,Virement,,,,CI",
+            "COMPENSATION_CLIENT,3000,OK,2026-11-02,ONUF6873,,,MEMO-CI,,Virement,,,,CI");
+
+    private static OperationBancaireRepository repoAvecDoublons() {
+        OperationBancaireRepository repo = mock(OperationBancaireRepository.class);
+        when(repo.findByReferenceStartingWith(anyString())).thenReturn(List.of());
+        when(repo.findByReferenceIn(anyCollection())).thenReturn(List.of(existante("ref-connue", "x")));
+        String cleCompense = OperationBancaireImportService.operationDedupKey(null, "ONUF6873", "COMPENSATION_CLIENT",
+                java.time.LocalDate.of(2026, 11, 2).atStartOfDay(), 3000d);
+        when(repo.findByDedupKeyIn(anyCollection())).thenReturn(List.of(existante(null, cleCompense)));
+        return repo;
+    }
+
+    @Test
+    void detectionDesDoublonsNEnregistreRienEtLesRenvoie() throws Exception {
+        OperationBancaireRepository repo = repoAvecDoublons();
+        OperationBancaireImportService service = newService();
+        ReflectionTestUtils.setField(service, "repository", repo);
+
+        OperationBancaireImportService.ImportResult result = service.importFile(
+                new MockMultipartFile("file", "ops.csv", "text/csv", CSV_DOUBLONS.getBytes(StandardCharsets.UTF_8)));
+
+        assertTrue(result.doublonsEnAttente);
+        assertEquals(0, result.saved);
+        verify(repo, never()).saveAll(anyList());
+        assertEquals(2, result.doublons.size());
+        assertEquals(2, result.doublons.get(0).ligne);
+        assertEquals("REFERENCE", result.doublons.get(0).motif);
+        assertEquals(4, result.doublons.get(1).ligne);
+        assertEquals("CLE", result.doublons.get(1).motif);
+    }
+
+    @Test
+    void decisionChargeLesNouvellesEtLesDoublonsCochesSeulement() throws Exception {
+        OperationBancaireRepository repo = repoAvecDoublons();
+        OperationBancaireImportService service = newService();
+        ReflectionTestUtils.setField(service, "repository", repo);
+
+        OperationBancaireImportService.ImportResult result = service.importFile(
+                new MockMultipartFile("file", "ops.csv", "text/csv", CSV_DOUBLONS.getBytes(StandardCharsets.UTF_8)),
+                java.util.Set.of(4));
+
+        assertFalse(result.doublonsEnAttente);
+        assertEquals(2, result.saved);
+        assertEquals(1, result.duplicatesIgnored);
+        ArgumentCaptor<List<OperationBancaireEntity>> captor = ArgumentCaptor.forClass(List.class);
+        verify(repo).saveAll(captor.capture());
+        assertEquals("REF-NOUVELLE", captor.getValue().get(0).getReference());
+        assertEquals("COMPENSATION_CLIENT", captor.getValue().get(1).getTypeOperation());
+    }
+
+    @Test
+    void decisionVideRejetteTousLesDoublons() throws Exception {
+        OperationBancaireRepository repo = repoAvecDoublons();
+        OperationBancaireImportService service = newService();
+        ReflectionTestUtils.setField(service, "repository", repo);
+
+        OperationBancaireImportService.ImportResult result = service.importFile(
+                new MockMultipartFile("file", "ops.csv", "text/csv", CSV_DOUBLONS.getBytes(StandardCharsets.UTF_8)),
+                java.util.Set.of());
+
+        assertEquals(1, result.saved);
+        assertEquals(2, result.duplicatesIgnored);
     }
 }

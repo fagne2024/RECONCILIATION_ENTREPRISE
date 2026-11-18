@@ -31,7 +31,10 @@ public class ReleveBancaireController {
             @RequestParam(value = "numeroCompte", required = false) String defaultNumeroCompte,
             @RequestParam(value = "nomCompte", required = false) String defaultNomCompte,
             @RequestParam(value = "banque", required = false) String defaultBanque,
-            @RequestParam(value = "pays", required = false) String defaultPays) {
+            @RequestParam(value = "pays", required = false) String defaultPays,
+            // Décision sur les doublons (2e envoi après le pop-up) : lignes à charger quand même
+            @RequestParam(value = "decisionDoublons", required = false) Boolean decisionDoublons,
+            @RequestParam(value = "doublonsAcceptes", required = false) String doublonsAcceptes) {
         try {
             var result = importService.parseFileWithAlerts(file);
             // Valeurs saisies par l'utilisateur pour les colonnes absentes ou vides du fichier
@@ -78,24 +81,59 @@ public class ReleveBancaireController {
                 return ResponseEntity.unprocessableEntity().body(body);
             }
 
-            // Aucun contrôle de doublon (libellé / clé) : toutes les lignes sont chargées,
-            // les doublons éventuels sont supprimés manuellement.
-            for (var e : entities) {
+            // Doublons : lignes déjà présentes en base, soumises à la décision de l'utilisateur.
+            // Le numéro de ligne est la position (1, 2, …) dans les lignes lues du fichier.
+            var motifs = ReleveBancaireImportService.detecterDoublons(entities, repository);
+            var acceptes = com.reconciliation.dto.DoublonImportLigne.parseDecision(decisionDoublons, doublonsAcceptes);
+            if (acceptes == null && !motifs.isEmpty()) {
+                java.util.List<com.reconciliation.dto.DoublonImportLigne> doublons = new java.util.ArrayList<>();
+                for (var m : motifs.entrySet()) {
+                    var e = entities.get(m.getKey());
+                    doublons.add(new com.reconciliation.dto.DoublonImportLigne(m.getKey() + 1, m.getValue())
+                            .put("numeroCompte", e.getNumeroCompte())
+                            .put("dateComptable", e.getDateComptable())
+                            .put("dateValeur", e.getDateValeur())
+                            .put("libelle", e.getLibelle())
+                            .put("montant", e.getMontant())
+                            .put("banque", e.getBanque()));
+                }
+                java.util.Map<String, Object> body = new java.util.HashMap<>();
+                body.put("doublonsEnAttente", true);
+                body.put("doublons", doublons);
+                body.put("count", 0);
+                body.put("totalRead", result.totalRead);
+                body.put("duplicatesIgnored", 0);
+                body.put("rows", java.util.List.of());
+                body.put("unmappedHeaders", result.unmappedHeaders);
+                return ResponseEntity.ok(body);
+            }
+            java.util.List<com.reconciliation.entity.ReleveBancaireEntity> toInsert = new java.util.ArrayList<>();
+            java.util.List<com.reconciliation.dto.ReleveBancaireRow> rowsInsert = new java.util.ArrayList<>();
+            int rejetes = 0;
+            for (int i = 0; i < entities.size(); i++) {
+                if (motifs.containsKey(i) && (acceptes == null || !acceptes.contains(i + 1))) {
+                    rejetes++;
+                    continue;
+                }
+                var e = entities.get(i);
                 e.setBatchId(batchId);
+                toInsert.add(e);
+                if (i < result.rows.size()) rowsInsert.add(result.rows.get(i));
             }
             int saved = 0;
-            if (!entities.isEmpty()) {
-                repository.saveAll(entities);
-                saved = entities.size();
+            if (!toInsert.isEmpty()) {
+                repository.saveAll(toInsert);
+                saved = toInsert.size();
             }
 
             java.util.Map<String, Object> payload = new java.util.HashMap<>();
             payload.put("batchId", batchId);
             // Retourner les lignes analysées (pour l'aperçu), mais compter seulement celles insérées
-            payload.put("rows", result.rows);
+            payload.put("rows", rowsInsert);
             payload.put("count", saved);
             payload.put("totalRead", result.totalRead);
-            payload.put("duplicatesIgnored", 0);
+            payload.put("duplicatesIgnored", rejetes);
+            payload.put("doublonsEnAttente", false);
             payload.put("unmappedHeaders", result.unmappedHeaders);
             return ResponseEntity.ok(payload);
         } catch (Exception e) {

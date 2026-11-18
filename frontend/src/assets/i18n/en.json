@@ -8979,5 +8979,39 @@
     "noValue": "No value found",
     "noNetwork": "No network found",
     "noOperator": "No operator found"
+  },
+  "BANK_DUP": {
+    "title": "Rows already in the system",
+    "introOperations": "{{count}} operation(s) from the file already exist. Nothing has been saved yet.",
+    "introReleve": "{{count}} statement row(s) already exist. Nothing has been saved yet.",
+    "hint": "Check the rows to load anyway: unchecked rows will be rejected. New rows from the file are always loaded.",
+    "toutCocher": "Check all",
+    "cocherLigne": "Load row {{ligne}}",
+    "summary": "{{coches}} checked row(s) to load, {{rejetes}} rejected",
+    "annuler": "Cancel import",
+    "rejeterTous": "Reject all duplicates",
+    "valider": "Confirm selection",
+    "importAnnule": "Import cancelled: no row was loaded.",
+    "aucuneLigneChargee": "No new row loaded: {{p0}} duplicate(s) rejected.",
+    "motif": {
+      "REFERENCE": "Same reference",
+      "LIBELLE": "Same label",
+      "CLE": "Same amount, date and account/branch"
+    },
+    "col": {
+      "ligne": "Row",
+      "motif": "Reason",
+      "dateOperation": "Operation date",
+      "agence": "Branch",
+      "typeOperation": "Type",
+      "montant": "Amount",
+      "reference": "Reference",
+      "banque": "Bank",
+      "pays": "Country",
+      "numeroCompte": "Account no.",
+      "dateComptable": "Booking date",
+      "dateValeur": "Value date",
+      "libelle": "Label"
+    }
   }
 }
