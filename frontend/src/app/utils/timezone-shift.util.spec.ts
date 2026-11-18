@@ -1,4 +1,11 @@
-import { countryShiftHours, resolveTimezoneShiftHours, shiftDateTimeValue, TIMEZONE_SHIFT_COUNTRIES } from './timezone-shift.util';
+import {
+  countryShiftHours,
+  findTimezoneCountry,
+  resolveTimezoneShiftHours,
+  resolveTimezoneShiftHoursForCountryValue,
+  shiftDateTimeValue,
+  TIMEZONE_SHIFT_COUNTRIES
+} from './timezone-shift.util';
 
 describe('shiftDateTimeValue', () => {
   it('recule d’une heure et repasse sur la veille (Cameroun → Sénégal)', () => {
@@ -73,5 +80,29 @@ describe('resolveTimezoneShiftHours', () => {
     expect(shiftDateTimeValue('15/11/2026 23:59:59', h).value).toBe('16/11/2026 00:59:59');
     expect(shiftDateTimeValue('16/11/2026 00:00:00', h).value).toBe('16/11/2026 01:00:00');
     expect(shiftDateTimeValue('16/11/2026 22:59:59', h).value).toBe('16/11/2026 23:59:59');
+  });
+});
+
+describe('pays lu dans la colonne (traitement automatique)', () => {
+  it('reconnaît les codes ISO et les libellés', () => {
+    expect(findTimezoneCountry('CM')?.utcOffset).toBe(1);
+    expect(findTimezoneCountry(' ga ')?.code).toBe('GA');
+    expect(findTimezoneCountry('Cameroun')?.code).toBe('CM');
+    expect(findTimezoneCountry("Cote d'Ivoire")?.code).toBe('CI');
+    expect(findTimezoneCountry('ZZ')).toBeNull();
+    expect(findTimezoneCountry('')).toBeNull();
+  });
+
+  it('décalage par ligne : CM/GA +1 h, KE +3 h, SN et inconnu 0', () => {
+    expect(resolveTimezoneShiftHoursForCountryValue('CM', false)).toBe(1);
+    expect(resolveTimezoneShiftHoursForCountryValue('GA', false)).toBe(1);
+    expect(resolveTimezoneShiftHoursForCountryValue('KE', false)).toBe(3);
+    expect(resolveTimezoneShiftHoursForCountryValue('SN', false)).toBe(0);
+    expect(resolveTimezoneShiftHoursForCountryValue('ZZ', false)).toBe(0);
+    expect(resolveTimezoneShiftHoursForCountryValue(undefined, false)).toBe(0);
+  });
+
+  it('« column » sans ligne ne décale rien', () => {
+    expect(resolveTimezoneShiftHours('column', false)).toBe(0);
   });
 });

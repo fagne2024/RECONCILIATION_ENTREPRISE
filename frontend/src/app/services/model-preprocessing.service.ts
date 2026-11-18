@@ -29,7 +29,12 @@ import {
   resolveCanonicalColumnKeysInRow
 } from '../utils/row-column.util';
 import { fixCellEncoding, fixCellEncodingIfNeeded } from '../utils/encoding-fixer';
-import { resolveTimezoneShiftHours, shiftDateTimeValue } from '../utils/timezone-shift.util';
+import {
+  resolveTimezoneShiftHours,
+  resolveTimezoneShiftHoursForCountryValue,
+  shiftDateTimeValue,
+  TIMEZONE_COUNTRY_FROM_COLUMN
+} from '../utils/timezone-shift.util';
 import {
   finalizeTextPreserveColumnValue,
   preserveLeadingZeroString,
@@ -375,7 +380,8 @@ export class ModelPreProcessingService {
         const formattedValue = this.applyFormatActionToValue(
           this.coerceFormatCellValueFast(rawValue),
           target.action,
-          primaryKey
+          primaryKey,
+          row
         );
 
         for (const key of target.keys) {
@@ -409,7 +415,8 @@ export class ModelPreProcessingService {
         const formattedValue = this.applyFormatActionToValue(
           this.coerceFormatCellValue(rawValue),
           merged,
-          columnKeys[0]
+          columnKeys[0],
+          row
         );
         const storedValue = this.finalizeFormatColumnValue(columnKeys[0], merged, formattedValue);
 
@@ -1198,7 +1205,8 @@ export class ModelPreProcessingService {
   private applyFormatActionToValue(
     value: string,
     action: ModelFormatAction,
-    columnName?: string
+    columnName?: string,
+    row?: Record<string, string>
   ): string {
     if (!value.length) {
       return value;
@@ -1231,11 +1239,7 @@ export class ModelPreProcessingService {
         result = this.applyRemoveSpaces(value, action);
         break;
       case 'timezoneShift': {
-        const hours = resolveTimezoneShiftHours(
-          action.timezoneCountry,
-          action.timezoneToReference,
-          action.timezoneCustomHours
-        );
+        const hours = this.resolveRowTimezoneShiftHours(action, row);
         result = String(shiftDateTimeValue(value, hours).value);
         break;
       }
@@ -1252,6 +1256,22 @@ export class ModelPreProcessingService {
     }
 
     return result;
+  }
+
+  /**
+   * Décalage horaire d'une ligne : fixe (pays / saisie) ou lu dans la colonne pays de la ligne
+   * (ex. « Pays » = CM → +1 h, GA → +1 h, KE → +3 h). Pays inconnu : 0, la date n'est pas modifiée.
+   */
+  private resolveRowTimezoneShiftHours(action: ModelFormatAction, row?: Record<string, string>): number {
+    if (action.timezoneCountry !== TIMEZONE_COUNTRY_FROM_COLUMN) {
+      return resolveTimezoneShiftHours(action.timezoneCountry, action.timezoneToReference, action.timezoneCustomHours);
+    }
+    const countryColumn = (action.timezoneCountryColumn ?? '').trim();
+    if (!row || !countryColumn) {
+      return 0;
+    }
+    const key = resolveColumnKeyInRow(row, countryColumn) ?? countryColumn;
+    return resolveTimezoneShiftHoursForCountryValue(row[key], action.timezoneToReference);
   }
 
   private finalizeFormatColumnValue(
@@ -1810,6 +1830,9 @@ export class ModelPreProcessingService {
           action.timezoneToReference,
           action.timezoneCustomHours
         );
+        if (action.timezoneCountry === TIMEZONE_COUNTRY_FROM_COLUMN) {
+          return `${columns} — décalage horaire selon le pays de la colonne « ${action.timezoneCountryColumn ?? ''} »${conditionSuffix}`;
+        }
         return `${columns} — décalage horaire ${hours > 0 ? '+' : ''}${hours} h${conditionSuffix}`;
       }
       default:
