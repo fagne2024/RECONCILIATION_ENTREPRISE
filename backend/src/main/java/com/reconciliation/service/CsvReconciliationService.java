@@ -205,6 +205,9 @@ implements DisposableBean {
                 logger.info("🔑 Clés supplémentaires utilisées: {} paires", (Object)request.getAdditionalKeys().size());
             }
             HashMap<String, List<Map<String, String>>> partnerIndex = new HashMap<String, List<Map<String, String>>>();
+            // Lignes partenaire sans clé (ex. Wave api_payout sans identifiant de session) : jamais rapprochables,
+            // elles doivent apparaître en « uniquement partenaire » au lieu de disparaître du résultat.
+            List<Map<String, String>> partnerSansCle = Collections.synchronizedList(new ArrayList<Map<String, String>>());
             if (this.executorService.isShutdown()) {
                 logger.error("❌ ExecutorService est fermé, impossible de traiter la réconciliation");
                 throw new RuntimeException("ExecutorService non disponible");
@@ -223,7 +226,10 @@ implements DisposableBean {
                     for (int j = startIndex; j < endIndex; ++j) {
                         Map partnerRecord = (Map)processedPartnerData.get(j);
                         String partnerKey = this.buildCompositeKey(partnerRecord, normalizedPartnerKeyColumn, request.getAdditionalKeys(), false);
-                        if (partnerKey == null) continue;
+                        if (partnerKey == null) {
+                            partnerSansCle.add(partnerRecord);
+                            continue;
+                        }
                         Map map = partnerIndex;
                         synchronized (map) {
                             partnerIndex.computeIfAbsent(partnerKey, k -> new ArrayList()).add(partnerRecord);
@@ -272,6 +278,11 @@ implements DisposableBean {
                 }
             }
             partnerIndex.clear();
+            if (!partnerSansCle.isEmpty()) {
+                logger.warn("⚠️ {} enregistrement(s) partenaire sans clé '{}' classé(s) en uniquement partenaire", (Object)partnerSansCle.size(), (Object)normalizedPartnerKeyColumn);
+                response.getPartnerOnly().addAll(partnerSansCle);
+                partnerOnlyCount += partnerSansCle.size();
+            }
             logger.info("✅ Nombre total d'enregistrements uniquement partenaire: {}", (Object)partnerOnlyCount);
             response.setTotalBoRecords(filteredBoRecords.size());
             response.setTotalPartnerRecords(processedPartnerData.size());
@@ -760,8 +771,9 @@ implements DisposableBean {
         HashMap<String, List<Map<String, String>>> partnerOnlyByKey = new HashMap<>();
         for (Map<String, String> map : request.getPartnerFileContent()) {
             String partnerKeyComposite = this.buildCompositeKey(map, request.getPartnerKeyColumn(), request.getAdditionalKeys(), false);
-            if (partnerKeyComposite == null || usedPartnerRecords.contains(map)) continue;
-            partnerOnlyByKey.computeIfAbsent(partnerKeyComposite, k -> new ArrayList()).add(map);
+            if (usedPartnerRecords.contains(map)) continue;
+            // Clé vide : ligne non rapprochable, conservée en uniquement partenaire (groupe "").
+            partnerOnlyByKey.computeIfAbsent(partnerKeyComposite == null ? "" : partnerKeyComposite, k -> new ArrayList()).add(map);
         }
         for (List<Map<String, String>> list : partnerOnlyByKey.values()) {
             for (Map<String, String> partnerRecord : list) {
@@ -877,10 +889,13 @@ implements DisposableBean {
 
         // Index des lignes partenaire par clé composite (ordre d'arrivée conservé)
         Map<String, List<Map<String, String>>> partnerIndex = new HashMap<>();
+        List<Map<String, String>> partnerSansCle = new ArrayList<>();
         for (Map<String, String> partnerRecord : partnerRecords) {
             String partnerKey = buildCompositeKey(partnerRecord, request.getPartnerKeyColumn(), request.getAdditionalKeys(), false);
             if (partnerKey != null) {
                 partnerIndex.computeIfAbsent(partnerKey, k -> new ArrayList<>()).add(partnerRecord);
+            } else {
+                partnerSansCle.add(partnerRecord);
             }
         }
         logger.info("✅ Index partenaire créé avec {} clés uniques ({} lignes)", partnerIndex.size(), partnerRecords.size());
@@ -963,6 +978,8 @@ implements DisposableBean {
                 remaining.clear();
             }
         }
+        // Lignes partenaire sans clé : non rapprochables, mais jamais perdues
+        response.getPartnerOnly().addAll(partnerSansCle);
 
         response.setTotalBoRecords(filteredBoRecords.size());
         response.setTotalPartnerRecords(partnerRecords.size());
