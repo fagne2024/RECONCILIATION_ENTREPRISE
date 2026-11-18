@@ -60,6 +60,7 @@ import { DsPaginationComponent } from '../../shared/ui';
 
 import { TranslateService } from '@ngx-translate/core';
 import { I18nService } from '../../services/i18n/i18n.service';
+import { GLPI_TICKET_FORM_URL } from '../../constants/glpi';
 
 /** Ligne renvoyée par GET /api/result8rec/{id}/audit-history */
 export interface Result8RecAuditEntry {
@@ -3630,7 +3631,7 @@ interface AllOkEmailMetrics {
 })
 export class ReconciliationReportComponent implements OnInit, OnDestroy {
     private readonly resultsModuleName = 'Résultats';
-    glpiBaseUrl = 'https://glpi.intouchgroup.net/glpi/public/front/ticket.form.php?id='
+    glpiBaseUrl = `${GLPI_TICKET_FORM_URL}?id=`
     
     // Propriétés de pagination
     currentPage = 1;
@@ -8980,7 +8981,7 @@ reportData: ReconciliationReportData[] = [];
         const params = new URLSearchParams();
         params.set('name', title);
         params.set('content', description);
-        const glpiCreateUrl = `https://glpi.intouchgroup.net/glpi/public/front/ticket.form.php?${params.toString()}`;
+        const glpiCreateUrl = `${GLPI_TICKET_FORM_URL}?${params.toString()}`;
         window.open(glpiCreateUrl, '_blank', 'noopener,noreferrer');
     }
 
@@ -9104,7 +9105,7 @@ reportData: ReconciliationReportData[] = [];
 
     // Obtenir l'URL du ticket GLPI avec l'ID
     getGlpiTicketUrl(idGlpi: string): string {
-        return `https://glpi.intouchgroup.net/glpi/public/front/ticket.form.php?id=${idGlpi}`;
+        return `${GLPI_TICKET_FORM_URL}?id=${idGlpi}`;
     }
 
     getBometierTicketUrl(idGlpi: string): string {

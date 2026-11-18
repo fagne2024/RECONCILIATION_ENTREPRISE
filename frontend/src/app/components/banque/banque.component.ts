@@ -27,6 +27,7 @@ import { MatFormFieldModule } from '@angular/material/form-field';
 import { MatSelectModule } from '@angular/material/select';
 import { NgxMatSelectSearchModule } from 'ngx-mat-select-search';
 import { I18nService } from '../../services/i18n/i18n.service';
+import { GLPI_TICKET_FORM_URL } from '../../constants/glpi';
 
 // Interface locale pour les opérations bancaires avec Date
 interface OperationBancaireDisplay extends Omit<OperationBancaire, 'dateOperation'> {
@@ -7133,13 +7134,13 @@ export class BanqueComponent implements OnInit {
 
   // Ouvrir GLPI pour créer un nouveau ticket
   openGlpiCreate() {
-    const glpiCreateUrl = 'https://glpi.intouchgroup.net/glpi/public/front/ticket.form.php';
+    const glpiCreateUrl = GLPI_TICKET_FORM_URL;
     window.open(glpiCreateUrl, '_blank', 'noopener,noreferrer');
   }
 
   // Obtenir l'URL du ticket GLPI avec l'ID
   getGlpiTicketUrl(idGlpi: string): string {
-    return `https://glpi.intouchgroup.net/glpi/public/front/ticket.form.php?id=${idGlpi}`;
+    return `${GLPI_TICKET_FORM_URL}?id=${idGlpi}`;
   }
 
   getBometierTicketUrl(idGlpi: string): string {

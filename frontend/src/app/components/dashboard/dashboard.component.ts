@@ -43,6 +43,7 @@ import {
 } from '../../shared/result8rec-audit-display';
 import { countriesMatch, countryDisplayLabel, countryNameFromCode, countryNamesFromCodes, normalizeCountryFilterOptions } from '../../utils/country-codes.util';
 import { I18nService } from '../../services/i18n/i18n.service';
+import { GLPI_TICKET_FORM_URL } from '../../constants/glpi';
 
 export type DashboardMetric = 'volume' | 'transactions' | 'revenu';
 
@@ -4836,7 +4837,7 @@ export class DashboardComponent implements OnInit, OnDestroy {
     }
 
     getGlpiTicketUrlFromDashboard(ticketId: string): string {
-      return `https://glpi.intouchgroup.net/glpi/public/front/ticket.form.php?id=${ticketId}`;
+      return `${GLPI_TICKET_FORM_URL}?id=${ticketId}`;
     }
 
     getBometierTicketUrlFromDashboard(ticketId: string): string {

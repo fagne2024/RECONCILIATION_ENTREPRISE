@@ -32,6 +32,7 @@ import { TranslateModule, TranslateService } from '@ngx-translate/core';
 import { forkJoin, of } from 'rxjs';
 import { catchError } from 'rxjs/operators';
 import { I18nService } from '../../services/i18n/i18n.service';
+import { GLPI_TICKET_FORM_URL } from '../../constants/glpi';
 
 type RecoSummaryStatus = 'RECONCILIE' | 'NON_RECONCILIE' | 'EN_COURS' | 'NON_RECONCILIE';
 
@@ -3175,7 +3176,7 @@ export class EtatReconciliationsComponent implements OnInit {
     }
 
     getGlpiTicketUrl(ticketId: string): string {
-      return `https://glpi.intouchgroup.net/glpi/public/front/ticket.form.php?id=${ticketId}`;
+      return `${GLPI_TICKET_FORM_URL}?id=${ticketId}`;
     }
 
     getBometierTicketUrl(ticketId: string): string {

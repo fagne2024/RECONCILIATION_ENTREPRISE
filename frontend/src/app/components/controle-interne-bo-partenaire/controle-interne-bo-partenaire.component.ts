@@ -72,6 +72,7 @@ import { NiveauxValidationConfigService } from '../../services/niveaux-validatio
 import { ProfilService } from '../../services/profil.service';
 import { countriesMatch, countryDisplayLabel, normalizeCountryFilterOptions } from '../../utils/country-codes.util';
 import { I18nService } from '../../services/i18n/i18n.service';
+import { GLPI_TICKET_FORM_URL } from '../../constants/glpi';
 
 
 
@@ -1226,7 +1227,7 @@ private profilService: ProfilService
 
   getGlpiTicketUrl(ticketId: string): string {
     const id = this.resolveTicketNumericId(ticketId);
-    return `https://glpi.intouchgroup.net/glpi/public/front/ticket.form.php?id=${encodeURIComponent(id)}`;
+    return `${GLPI_TICKET_FORM_URL}?id=${encodeURIComponent(id)}`;
   }
 
   resolveTicketNumericId(raw: string): string {
