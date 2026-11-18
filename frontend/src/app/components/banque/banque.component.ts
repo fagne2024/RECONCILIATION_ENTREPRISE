@@ -1689,7 +1689,7 @@ export class BanqueComponent implements OnInit {
   private buildBaseReconKeyForOperation(op: OperationBancaireDisplay): string {
     const date = this.normalizeDateToYmd(op.dateOperation);
     const montantAbs = Math.abs(op.montant || 0);
-    const banque = this.getOperationBanque(op).toUpperCase().replace(/[\s-]/g, '');
+    const banque = BanqueComponent.compactBanque(this.getOperationBanque(op));
     const sens = this.determineOperationSens(op as OperationBancaireDisplay); // 'debit' | 'credit'
     const dateNoDash = (date || '').replace(/-/g, '');
     const montantDigits = String(montantAbs).replace(/\D/g, '');
@@ -1706,7 +1706,7 @@ export class BanqueComponent implements OnInit {
     const credit = (r.credit || 0) > 0 ? Math.abs(r.credit as number) : 0;
     const amount = debit > 0 ? debit : (credit > 0 ? credit : 0);
     try { console.debug('[RECON][DBG][RV][BASE] amount used for key', { id: (r as any).id, debit, credit, amount }); } catch {}
-    const banque = ((r.banque || '').trim() || '').toUpperCase().replace(/[\s-]/g, '');
+    const banque = BanqueComponent.compactBanque(r.banque);
     const sens: 'debit' | 'credit' = (r.debit && r.debit > 0) ? 'debit' : 'credit';
     const dateNoDash = (date || '').replace(/-/g, '');
     const montantDigits = String(amount).replace(/\D/g, '');
@@ -1720,7 +1720,7 @@ export class BanqueComponent implements OnInit {
     const credit = (r.credit || 0) > 0 ? Math.abs(r.credit as number) : 0;
     const amount = debit > 0 ? debit : (credit > 0 ? credit : 0);
     try { console.debug('[RECON][DBG][RV][BASE-ALT] amount used for key', { id: (r as any).id, debit, credit, amount }); } catch {}
-    const banque = ((r.banque || '').trim() || '').toUpperCase().replace(/[\s-]/g, '');
+    const banque = BanqueComponent.compactBanque(r.banque);
     const sens: 'debit' | 'credit' = (r.debit && r.debit > 0) ? 'debit' : 'credit';
     const dateNoDash = (date || '').replace(/-/g, '');
     const montantDigits = String(amount).replace(/\D/g, '');
@@ -5336,11 +5336,12 @@ export class BanqueComponent implements OnInit {
     const counters = new Map<string, number>();
     return items.map(it => {
       const base = getBase(it);
-      const groupKey = `${base.date}|${base.montantAbs}|${base.banque}|${base.sens}`;
+      // Banque compacte aussi pour le compteur : « ECOBANK-ML » et « ECOBANK ML » partagent l'index
+      const banqueCompact = BanqueComponent.compactBanque(base.banque);
+      const groupKey = `${base.date}|${base.montantAbs}|${banqueCompact}|${base.sens}`;
       // Construire la clé d'affichage sans séparateurs, sans espaces ni tirets
       const dateNoDash = (base.date || '').replace(/-/g, '');
       const montantDigits = String(base.montantAbs).replace(/\D/g, '');
-      const banqueCompact = (base.banque || '').toUpperCase().replace(/[\s-]/g, '');
       let current = counters.get(groupKey) || 0;
       let key = '';
       do {
@@ -5354,6 +5355,17 @@ export class BanqueComponent implements OnInit {
     });
   }
 
+  /**
+   * Banque comparable : majuscules, sans accents ni séparateurs
+   * (« ECOBANK-ML », « Ecobank ML » et « ECOBANK_ML » donnent « ECOBANKML »).
+   */
+  static compactBanque(value: unknown): string {
+    return String(value ?? '')
+      .normalize('NFD').replace(/[̀-ͯ]/g, '')
+      .toUpperCase()
+      .replace(/[^A-Z0-9]/g, '');
+  }
+
   /** Référence / libellé comparables : majuscules, sans accents ni séparateurs. */
   private normalizeReconText(value: unknown): string {
     return String(value ?? '')
@@ -5363,16 +5375,52 @@ export class BanqueComponent implements OnInit {
   }
 
   /**
-   * Vrai si le libellé contient la référence entière : une référence finissant par un chiffre
-   * ne doit pas être suivie d'un autre chiffre (« …AP1 » ne correspond pas à « …AP12 »).
+   * Libellé normalisé (comme {@link normalizeReconText}) avec, pour chaque caractère conservé,
+   * l'indication qu'un séparateur (espace, « / », « - »…) le suivait dans le libellé d'origine.
+   * « O03CHDP263210013//8148895105 » : la référence se termine bien avant « 8148… ».
    */
-  private libelleContainsReference(libelleNorm: string, refNorm: string): boolean {
+  private normalizeReconTextWithBoundaries(value: unknown): { text: string; sepAfter: boolean[] } {
+    const raw = String(value ?? '').normalize('NFD').replace(/[̀-ͯ]/g, '').toUpperCase();
+    let text = '';
+    const sepAfter: boolean[] = [];
+    for (const ch of raw) {
+      if (/[A-Z0-9]/.test(ch)) {
+        text += ch;
+        sepAfter.push(false);
+      } else if (text.length) {
+        sepAfter[text.length - 1] = true;
+      }
+    }
+    return { text, sepAfter };
+  }
+
+  /**
+   * Formes de la référence d'une opération recherchées dans le libellé du relevé : la référence
+   * entière, et sans le préfixe « BV » (bordereau de versement Ecobank : l'opération porte
+   * « BVO03CHDP263210013 », le relevé « O03CHDP263210013//… »).
+   */
+  private referenceVariants(refNorm: string): string[] {
+    const out = [refNorm];
+    if (refNorm.startsWith('BV') && refNorm.length - 2 >= BanqueComponent.RECON_REF_MIN_LENGTH) {
+      out.push(refNorm.slice(2));
+    }
+    return out;
+  }
+
+  /**
+   * Vrai si le libellé contient la référence entière : une référence finissant par un chiffre
+   * ne doit pas être suivie d'un autre chiffre (« …AP1 » ne correspond pas à « …AP12 »),
+   * sauf si un séparateur les sépare dans le libellé d'origine (« …0013//8148… »).
+   */
+  private libelleContainsReference(libelleNorm: string, refNorm: string, sepAfter?: boolean[]): boolean {
     let from = 0;
     while (from <= libelleNorm.length - refNorm.length) {
       const pos = libelleNorm.indexOf(refNorm, from);
       if (pos < 0) return false;
-      const next = libelleNorm.charAt(pos + refNorm.length);
-      if (!(/\d$/.test(refNorm) && /\d/.test(next))) return true;
+      const end = pos + refNorm.length;
+      const next = libelleNorm.charAt(end);
+      const separe = !!sepAfter && sepAfter[end - 1] === true;
+      if (separe || !(/\d$/.test(refNorm) && /\d/.test(next))) return true;
       from = pos + 1;
     }
     return false;
@@ -5394,9 +5442,11 @@ export class BanqueComponent implements OnInit {
     const revInfos = releves.map(r => {
       const dateToUse = r.dateValeur ? r.dateValeur : r.dateComptable;
       const debit = r.debit || 0;
+      const lib = this.normalizeReconTextWithBoundaries((r as any).libelle);
       return {
         row: r,
-        libelle: this.normalizeReconText((r as any).libelle),
+        libelle: lib.text,
+        sepAfter: lib.sepAfter,
         date: this.normalizeDateToYmd(dateToUse as any),
         montantAbs: debit > 0 ? Math.abs(debit) : Math.abs(r.credit || (r.montant || 0)),
         sens: (debit > 0 ? 'debit' : 'credit') as 'debit' | 'credit',
@@ -5408,13 +5458,14 @@ export class BanqueComponent implements OnInit {
     for (const op of ops) {
       const refNorm = this.normalizeReconText((op as any).reference);
       if (refNorm.length < BanqueComponent.RECON_REF_MIN_LENGTH) continue;
+      const variants = this.referenceVariants(refNorm);
       const opDate = this.normalizeDateToYmd(op.dateOperation);
       const opMontant = Math.abs(op.montant || 0);
       const opSens = this.determineOperationSens(op as OperationBancaireDisplay);
       let best: typeof revInfos[number] | null = null;
       let bestScore = -1;
       for (const info of revInfos) {
-        if (info.used || !this.libelleContainsReference(info.libelle, refNorm)) continue;
+        if (info.used || !variants.some(v => this.libelleContainsReference(info.libelle, v, info.sepAfter))) continue;
         const score = (Math.abs(info.montantAbs - opMontant) < 0.01 ? 4 : 0)
           + (info.date === opDate ? 2 : 0)
           + (info.sens === opSens ? 1 : 0);

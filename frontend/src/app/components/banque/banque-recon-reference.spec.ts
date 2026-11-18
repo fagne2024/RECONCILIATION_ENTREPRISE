@@ -55,6 +55,30 @@ describe('BanqueComponent - appariement par référence', () => {
     expect(matches.get(o2)).toBe(rA);
   });
 
+  it('Ecobank : référence BV… de l’opération retrouvée sans « BV » dans le libellé du relevé', () => {
+    const o = op(1, 'BVO03CHDP263210013', 250_000);
+    const r = rev(10, 'O03CHDP263210013//8148895105//VERSEMENT ESPECES-VERS DE DJIGUIBA DOUMBIA TL76283868', 250_000);
+    const matches: Map<any, any> = comp.matchOperationsByReference([o], [r]);
+    expect(matches.get(o)).toBe(r);
+  });
+
+  it('un séparateur dans le libellé termine la référence, sans séparateur …13 ≠ …138', () => {
+    const o = op(1, 'O03CHDP263210013', 100);
+    const accolee = rev(10, 'VERS O03CHDP2632100138148895105', 100);
+    expect(comp.matchOperationsByReference([o], [accolee]).size).toBe(0);
+    const separee = rev(11, 'VERS O03CHDP263210013 / 8148895105', 100);
+    expect(comp.matchOperationsByReference([o], [separee]).get(o)).toBe(separee);
+  });
+
+  it('banque comparée sans tiret ni espace : ECOBANK-ML = ECOBANK ML', () => {
+    expect((comp.constructor as any).compactBanque('ECOBANK-ML')).toBe('ECOBANKML');
+    expect((comp.constructor as any).compactBanque(' Ecobank ML ')).toBe('ECOBANKML');
+    const items = [{ b: 'ECOBANK-ML' }, { b: 'ECOBANK ML' }];
+    const keyed = comp.buildKeysWithIndexes(items, (it: any) => ({ date: '2026-11-05', montantAbs: 100, banque: it.b, sens: 'credit' }));
+    // Même groupe : index 1 puis 2 (avant, les deux recevaient l'index 1)
+    expect(keyed.map((k: any) => k.key)).toEqual(['20261105100ECOBANKMLcredit1', '20261105100ECOBANKMLcredit2']);
+  });
+
   it('rapproche une compense Cameroun dont le relevé porte la banque sans pays (pays via le nom de compte)', () => {
     // Cas signalé : opération GRACE-061126CP1 / relevé ECOBANK, compte INTOUCHCM
     comp.popupService = { showWarning: jest.fn() };
