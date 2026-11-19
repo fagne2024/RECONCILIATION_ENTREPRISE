@@ -39,12 +39,25 @@ export interface TraitementFiltre {
   valeurs: string[];
 }
 
+import type { OperateurCondition } from '../utils/cross-dedup.util';
+export type { OperateurCondition } from '../utils/cross-dedup.util';
+
+export interface TraitementConditionDedoublonnage {
+  colonne: string;
+  operateur: OperateurCondition;
+  valeurs: string[];
+}
+
 /** Opération serveur : filtres, dédoublonnage, conversions. Listes optionnelles. */
 export interface TraitementOperation {
   filtres?: TraitementFiltre[];
   dedoublonnerSur?: string[];
   /** Deux colonnes A et B : les lignes portant une valeur présente dans les deux sont supprimées. */
   dedoublonnerEntre?: string[];
+  /** Côté supprimé par dedoublonnerEntre : 'A' (défaut) ou 'B'. L'autre côté est conservé. */
+  supprimerCote?: 'A' | 'B';
+  /** Condition sur une autre colonne : seules les lignes qui la remplissent sont dédoublonnées. */
+  conditionDedoublonnage?: TraitementConditionDedoublonnage | null;
   colonnesNombre?: string[];
   colonnesDate?: string[];
   formatDate?: string;
@@ -90,6 +103,13 @@ export class TraitementLotService {
 
   operer(lotId: number, operation: TraitementOperation): Promise<TraitementResultatOperation> {
     return firstValueFrom(this.http.post<TraitementResultatOperation>(`${this.apiUrl}/${lotId}/operations`, operation));
+  }
+
+  /** Valeurs distinctes d'une colonne du lot (triées, tronquées au-delà de `max`). */
+  valeursDistinctes(lotId: number, colonne: string, max = 2000): Promise<{ valeurs: string[]; tronque: boolean }> {
+    return firstValueFrom(this.http.get<{ valeurs: string[]; tronque: boolean }>(`${this.apiUrl}/${lotId}/valeurs`, {
+      params: { colonne, max: String(max) }
+    }));
   }
 
   supprimer(lotId: number): Promise<void> {

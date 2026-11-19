@@ -110,6 +110,30 @@ public final class TraitementTransformations {
         return valeursRetenues.contains(texte);
     }
 
+    /**
+     * Condition d'éligibilité au dédoublonnage, sur une autre colonne de la ligne. Comparaison
+     * sans espaces de bord et sans casse ; une valeur vide dans la liste (EGAL / DIFFERENT) désigne
+     * les cellules vides. Opérateurs : EGAL (une des valeurs), DIFFERENT (aucune
+     * des valeurs), CONTIENT (contient une des valeurs), VIDE, NON_VIDE. Opérateur inconnu :
+     * exception (fail-closed, on ne supprime pas de lignes sur une condition mal comprise).
+     */
+    public static boolean remplitCondition(Object valeur, String operateur, List<String> valeurs) {
+        String texte = valeur == null ? "" : String.valueOf(valeur).trim().toLowerCase();
+        List<String> cibles = valeurs == null ? List.of() : valeurs.stream()
+                .filter(v -> v != null)
+                .map(v -> v.trim().toLowerCase())
+                .toList();
+        String op = operateur == null ? "" : operateur.trim().toUpperCase();
+        return switch (op) {
+            case "EGAL" -> cibles.contains(texte);
+            case "DIFFERENT" -> !cibles.contains(texte);
+            case "CONTIENT" -> cibles.stream().filter(c -> !c.isEmpty()).anyMatch(texte::contains);
+            case "VIDE" -> texte.isEmpty();
+            case "NON_VIDE" -> !texte.isEmpty();
+            default -> throw new IllegalArgumentException("Opérateur de condition inconnu : " + operateur);
+        };
+    }
+
     // ------------------------------------------------------------------
 
     private static LocalDateTime parserIso(String texte) {

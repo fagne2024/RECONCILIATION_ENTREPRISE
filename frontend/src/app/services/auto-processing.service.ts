@@ -9,6 +9,7 @@ import { AppStateService } from './app-state.service';
 import { ColumnProcessingRule } from '../models/column-processing-rule.model';
 
 export type { ColumnProcessingRule } from '../models/column-processing-rule.model';
+import type { OperateurCondition } from '../utils/cross-dedup.util';
 
 export interface ModelRowFilter {
   id: string;
@@ -121,6 +122,7 @@ export type ModelPreProcessingSectionId =
   | 'columnConcatRules'
   | 'columnMathRules'
   | 'valueMappings'
+  | 'crossDedupRules'
   | 'columnRenameRules';
 
 export const DEFAULT_PRE_PROCESSING_SECTION_ORDER: ModelPreProcessingSectionId[] = [
@@ -129,8 +131,56 @@ export const DEFAULT_PRE_PROCESSING_SECTION_ORDER: ModelPreProcessingSectionId[]
   'columnConcatRules',
   'columnMathRules',
   'valueMappings',
+  'crossDedupRules',
   'columnRenameRules'
 ];
+
+/**
+ * Doublons entre deux colonnes : une ligne est supprimée quand sa valeur dans la colonne du
+ * côté choisi existe aussi dans l'autre colonne (un seul côté supprimé). Condition optionnelle
+ * sur une autre colonne : seules les lignes qui la remplissent sont comparées et supprimées.
+ */
+export interface ModelCrossDedupRule {
+  id: string;
+  columnA: string;
+  columnB: string;
+  deleteSide: 'A' | 'B';
+  conditionColumn?: string;
+  conditionOperator?: OperateurCondition;
+  /** Valeurs de la condition, séparées par « ; » (EGAL, DIFFERENT, CONTIENT). */
+  conditionValue?: string;
+  enabled: boolean;
+}
+
+/**
+ * Ordre des sections : ordre enregistré, puis sections absentes insérées à leur place par
+ * défaut (un modèle enregistré avant l'ajout d'une section la reçoit au bon endroit, ex.
+ * crossDedupRules avant le renommage des en-têtes).
+ */
+export function resolvePreProcessingSectionOrder(order?: ModelPreProcessingSectionId[] | null): ModelPreProcessingSectionId[] {
+  const base = DEFAULT_PRE_PROCESSING_SECTION_ORDER;
+  if (!order?.length) {
+    return [...base];
+  }
+  const resolved: ModelPreProcessingSectionId[] = [];
+  for (const sectionId of order) {
+    if (base.includes(sectionId) && !resolved.includes(sectionId)) {
+      resolved.push(sectionId);
+    }
+  }
+  base.forEach((sectionId, index) => {
+    if (resolved.includes(sectionId)) {
+      return;
+    }
+    const suivante = base.slice(index + 1).find(id => resolved.includes(id));
+    if (suivante) {
+      resolved.splice(resolved.indexOf(suivante), 0, sectionId);
+    } else {
+      resolved.push(sectionId);
+    }
+  });
+  return resolved;
+}
 
 export const ENV_COLUMN_NAME = 'ENV';
 export const ENV_COLUMN_OPTIONS = ['BET', 'HT', 'TOTAL', 'GU3', 'GU2', 'HUBAO', 'TOP20'] as const;
@@ -154,6 +204,8 @@ export interface ModelPreProcessingConfig {
   columnMathRules?: ModelColumnMathRule[];
   valueMappings?: ModelColumnValueMapping[];
   columnRenameRules?: ModelColumnRenameRule[];
+  /** Doublons entre deux colonnes (suppression d'un seul côté). */
+  crossDedupRules?: ModelCrossDedupRule[];
   /** Colonne ENV constante ajoutée sur chaque ligne du fichier final. */
   envColumn?: ModelEnvColumnConfig;
   /** Filtrer les colonnes exportées (liste des colonnes à conserver). */

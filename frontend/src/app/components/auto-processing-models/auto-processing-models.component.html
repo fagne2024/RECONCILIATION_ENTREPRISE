@@ -1875,6 +1875,91 @@
             </div>
           </div>
 
+          <!-- Doublons entre deux colonnes (comme /traitement) -->
+          <div class="preprocessing-subsection">
+            <h5>
+              <span class="format-action-order-badge preprocessing-section-order-badge">{{ getPreProcessingSectionOrderIndex('crossDedupRules') + 1 }}</span>
+              <i class="fas fa-copy"></i> {{ 'APM.crossDedupTitle' | translate }}
+              <button type="button" class="ds-btn ds-btn--secondary btn btn-sm btn-outline-info" (click)="toggleCrossDedupSection()">
+                {{ (showCrossDedupSection ? 'APM.Hide' : 'APM.Show') | translate }}
+              </button>
+            </h5>
+            <p class="section-description">{{ 'APM.crossDedupDescription' | translate }}</p>
+
+            <div *ngIf="showCrossDedupSection">
+              <div *ngIf="modelCrossDedupRules.length === 0" class="alert alert-light">
+                {{ 'APM.crossDedupEmpty' | translate }}
+              </div>
+
+              <div *ngFor="let rule of modelCrossDedupRules; let i = index" class="preprocessing-filter-item">
+                <div class="form-row">
+                  <div class="form-group col-md-3">
+                    <label>{{ 'APM.crossDedupColumnA' | translate }}</label>
+                    <select class="ds-select form-control" [(ngModel)]="rule.columnA" [ngModelOptions]="{standalone: true}">
+                      <option value="">{{ 'LBL.chooseDash' | translate }}</option>
+                      <option *ngFor="let col of getPreProcessingColumns()" [value]="col">{{ col }}</option>
+                    </select>
+                  </div>
+                  <div class="form-group col-md-3">
+                    <label>{{ 'APM.crossDedupColumnB' | translate }}</label>
+                    <select class="ds-select form-control" [(ngModel)]="rule.columnB" [ngModelOptions]="{standalone: true}">
+                      <option value="">{{ 'LBL.chooseDash' | translate }}</option>
+                      <option *ngFor="let col of getPreProcessingColumns()" [value]="col">{{ col }}</option>
+                    </select>
+                  </div>
+                  <div class="form-group col-md-3">
+                    <label>{{ 'APM.crossDedupDeleteSide' | translate }}</label>
+                    <div>
+                      <label class="mr-3">
+                        <input type="radio" [name]="'crossDedupSide-' + rule.id" value="A" [(ngModel)]="rule.deleteSide" [ngModelOptions]="{standalone: true}">
+                        {{ 'APM.crossDedupSideA' | translate }}<ng-container *ngIf="rule.columnA"> ({{ rule.columnA }})</ng-container>
+                      </label>
+                      <label>
+                        <input type="radio" [name]="'crossDedupSide-' + rule.id" value="B" [(ngModel)]="rule.deleteSide" [ngModelOptions]="{standalone: true}">
+                        {{ 'APM.crossDedupSideB' | translate }}<ng-container *ngIf="rule.columnB"> ({{ rule.columnB }})</ng-container>
+                      </label>
+                    </div>
+                  </div>
+                  <div class="form-group col-md-2">
+                    <label>
+                      <input type="checkbox" [(ngModel)]="rule.enabled" [ngModelOptions]="{standalone: true}" class="ds-checkbox">{{ 'TBL.confidence' | translate }}</label>
+                  </div>
+                  <div class="form-group col-md-1">
+                    <label>&nbsp;</label>
+                    <button type="button" class="ds-btn ds-btn--danger btn btn-sm btn-outline-danger btn-block" (click)="removeModelCrossDedupRule(i)">
+                      <i class="fas fa-trash"></i>
+                    </button>
+                  </div>
+                </div>
+                <div *ngIf="rule.columnA && rule.columnA === rule.columnB" class="text-danger small">{{ 'APM.crossDedupSameColumn' | translate }}</div>
+                <div class="form-row">
+                  <div class="form-group col-md-3">
+                    <label>{{ 'APM.crossDedupConditionColumn' | translate }} <span class="text-muted">{{ 'LBL.optional' | translate }}</span></label>
+                    <select class="ds-select form-control" [(ngModel)]="rule.conditionColumn" [ngModelOptions]="{standalone: true}">
+                      <option value="">{{ 'APM.crossDedupNoCondition' | translate }}</option>
+                      <option *ngFor="let col of getPreProcessingColumns()" [value]="col">{{ col }}</option>
+                    </select>
+                  </div>
+                  <div class="form-group col-md-3" *ngIf="rule.conditionColumn">
+                    <label>{{ 'APM.crossDedupConditionOperator' | translate }}</label>
+                    <select class="ds-select form-control" [(ngModel)]="rule.conditionOperator" [ngModelOptions]="{standalone: true}">
+                      <option *ngFor="let op of crossDedupOperators" [value]="op">{{ 'TRT.ConditionOp.' + op | translate }}</option>
+                    </select>
+                  </div>
+                  <div class="form-group col-md-6" *ngIf="rule.conditionColumn && crossDedupConditionNeedsValue(rule)">
+                    <label>{{ 'APM.crossDedupConditionValues' | translate }}</label>
+                    <input type="text" class="ds-input form-control" [(ngModel)]="rule.conditionValue" [ngModelOptions]="{standalone: true}"
+                           placeholder="{{ 'APM.crossDedupConditionPlaceholder' | translate }}">
+                  </div>
+                </div>
+              </div>
+
+              <button type="button" class="ds-btn ds-btn--secondary btn btn-outline-primary btn-sm" (click)="addModelCrossDedupRule()">
+                <i class="fas fa-plus"></i> {{ 'APM.crossDedupAdd' | translate }}
+              </button>
+            </div>
+          </div>
+
           <!-- Renommage des en-têtes de colonnes -->
           <div class="preprocessing-subsection">
             <h5>
