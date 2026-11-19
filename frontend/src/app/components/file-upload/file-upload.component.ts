@@ -37,6 +37,7 @@ import * as Papa from 'papaparse';
 import * as XLSX from 'xlsx';
 import { Router, ActivatedRoute } from '@angular/router';
 import { AppStateService } from '../../services/app-state.service';
+import { ReconciliationFlowStateService, UploadFlowKind } from '../../services/reconciliation-flow-state.service';
 import { ReconciliationTabsService } from '../../services/reconciliation-tabs.service';
 import { forkJoin, Subscription, firstValueFrom } from 'rxjs';
 import { take } from 'rxjs/operators';
@@ -70,6 +71,71 @@ import {
     guessServiceColumn
 } from '../../utils/client-volume-check.util';
 import { formatGridCellAsString, isTransactionIdPreserveColumn, isMsisdnPreserveColumn } from '../../utils/text-cell.util';
+
+/** Popup de filtre affiché (agences, services, statuts, paiements — BO ou partenaire). */
+export type FilterStepId =
+    | 'bo-agency'
+    | 'bo-service'
+    | 'bo-status'
+    | 'bo-service-manual'
+    | 'bo-status-manual'
+    | 'partner-agency'
+    | 'partner-service'
+    | 'partner-status'
+    | 'partner-payment';
+
+/** Actions des popups de filtre qui font passer à l'étape suivante (mémorisées pour le retour arrière). */
+export type FilterStepAction =
+    | 'confirmAgencySelection' | 'skipAgencySelection'
+    | 'confirmServiceSelection' | 'skipServiceSelection'
+    | 'confirmAutoStatusSelection' | 'skipAutoStatusSelection'
+    | 'confirmManualServiceSelection' | 'skipManualServiceSelection'
+    | 'confirmManualStatusSelection' | 'skipManualStatusSelection'
+    | 'confirmPartnerAgencySelection' | 'skipPartnerAgencySelection'
+    | 'confirmPartnerServiceSelection' | 'skipPartnerServiceSelection'
+    | 'confirmPartnerStatusSelection' | 'skipPartnerStatusSelection'
+    | 'confirmPartnerPaymentSelection' | 'skipPartnerPaymentSelection';
+
+/**
+ * Champs qui décrivent l'état des filtres (popups, listes, sélections, données
+ * intermédiaires) et des fichiers chargés : c'est ce qui est mémorisé à chaque
+ * étape pour pouvoir y revenir.
+ */
+const FILTER_STATE_FIELDS = [
+    'showAgencySelection', 'availableAgencies', 'selectedAgencies', 'agencySearchFilter',
+    'agenciesSelectionBeforeSearch', 'agencySelectionData', 'agencyColumn',
+    'showServiceSelection', 'availableServices', 'selectedServices', 'serviceSearchFilter',
+    'servicesSelectionBeforeSearch', 'serviceSelectionData',
+    'showAutoStatusSelection', 'autoAvailableStatuses', 'autoSelectedStatuses', 'autoStatusSearchFilter',
+    'autoStatusSelectionData', 'autoStatusColumn',
+    'showManualServiceSelection', 'manualAvailableServices', 'manualSelectedServices', 'manualServiceSearchFilter',
+    'manualServicesSelectionBeforeSearch', 'manualServiceSelectionData', 'manualStatusColumn',
+    'showManualStatusSelection', 'manualAvailableStatuses', 'manualSelectedStatuses', 'manualStatusSearchFilter',
+    'manualStatusSelectionData',
+    'showPartnerAgencySelection', 'partnerAvailableAgencies', 'partnerSelectedAgencies', 'partnerAgencySearchFilter',
+    'partnerAgenciesSelectionBeforeSearch', 'partnerAgencyColumn', 'partnerAgencySelectionData',
+    'showPartnerServiceSelection', 'partnerAvailableServices', 'partnerSelectedServices', 'partnerServiceSearchFilter',
+    'partnerServicesSelectionBeforeSearch', 'partnerServiceSelectionData', 'partnerServiceColumn', 'partnerStatusColumn',
+    'partnerServiceCounts',
+    'showPartnerStatusSelection', 'partnerAvailableStatuses', 'partnerSelectedStatuses', 'partnerStatusSearchFilter',
+    'partnerStatusSelectionData', 'partnerStatusCounts',
+    'showPartnerPaymentSelection', 'partnerAvailablePayments', 'partnerSelectedPayments', 'partnerPaymentSearchFilter',
+    'partnerPaymentSelectionData', 'partnerPaymentColumn', 'partnerPaymentCounts',
+    'boFile', 'partnerFile', '_boData', '_partnerData',
+    'autoBoFile', 'autoPartnerFile', 'autoBoFileName', 'autoPartnerFileName', 'autoBoData', 'autoPartnerData'
+] as const;
+
+/** Réglages de l'écran conservés quand on quitte la page puis qu'on y revient. */
+const UPLOAD_SESSION_FIELDS = [
+    'reconciliationType', 'manualLogicMode', 'customRatio', 'customTolerance', 'estimatedTime',
+    'assistedPartnerReconciliationModelId', 'assistedBoTreatmentModelId',
+    'autoBoSourceFormat', 'autoPartnerSourceFormat'
+] as const;
+
+type FilterStateSnapshot = Record<string, unknown>;
+
+/** Nombre maximal d'étapes mémorisées (chaque étape ne garde que des références aux données). */
+const MAX_FILTER_STEP_HISTORY = 30;
 
 @Component({
     selector: 'app-file-upload',
@@ -388,7 +454,8 @@ export class FileUploadComponent implements OnInit, OnDestroy {
         private columnRulesProcessor: ColumnRulesProcessorService,
         private cd: ChangeDetectorRef,
         private ngZone: NgZone,
-        private modelNormalizationService: ModelNormalizationService
+        private modelNormalizationService: ModelNormalizationService,
+        private flowStateService: ReconciliationFlowStateService
     ) {
         // Le type de réconciliation est réhydraté dans ngOnInit, une fois le mode actif connu.
     }
@@ -410,6 +477,8 @@ export class FileUploadComponent implements OnInit, OnDestroy {
 
         if (this.route.snapshot.queryParamMap.get('reset') === '1') {
             this.resetUploadSession();
+        } else {
+            this.restoreUploadSessionFromFlowState();
         }
 
         if (this.embedTraitementSection) {
@@ -436,6 +505,173 @@ export class FileUploadComponent implements OnInit, OnDestroy {
 
     goBackToManualLauncher(): void {
         this.router.navigate(['/reconciliation-launcher'], { queryParams: { mode: 'manual' } });
+    }
+
+    // ===== Retour arrière dans le parcours (filtres et pages) =====
+
+    /** Étapes de filtre déjà franchies, de la plus ancienne à la plus récente. */
+    filterStepHistory: FilterStateSnapshot[] = [];
+
+    /** Parcours mémorisé pour cette route (null pour la section embarquée /traitement). */
+    private get uploadFlowKind(): UploadFlowKind | null {
+        if (this.embedTraitementSection) {
+            return null;
+        }
+        if (this.certificationMode) {
+            return 'certification';
+        }
+        if (this.assistedOnly) {
+            return 'assisted';
+        }
+        return this.manualOnly ? 'manual' : null;
+    }
+
+    /** Popup de filtre actuellement affiché (null si aucun). */
+    get activeFilterStep(): FilterStepId | null {
+        if (this.showPartnerPaymentSelection) return 'partner-payment';
+        if (this.showPartnerStatusSelection) return 'partner-status';
+        if (this.showPartnerServiceSelection) return 'partner-service';
+        if (this.showPartnerAgencySelection) return 'partner-agency';
+        if (this.showManualStatusSelection) return 'bo-status-manual';
+        if (this.showManualServiceSelection) return 'bo-service-manual';
+        if (this.showAutoStatusSelection) return 'bo-status';
+        if (this.showServiceSelection) return 'bo-service';
+        if (this.showAgencySelection) return 'bo-agency';
+        return null;
+    }
+
+    get canGoBackFilterStep(): boolean {
+        return this.filterStepHistory.length > 0 && !this.partnerSelectionBusy;
+    }
+
+    /** Bouton de page « Revenir aux filtres » : aucun popup ouvert, pas de réconciliation en cours. */
+    get canReopenPreviousFilterStep(): boolean {
+        return this.canGoBackFilterStep
+            && !this.activeFilterStep
+            && !this.showReconciliationProgress
+            && !this.autoProceedBusy
+            && !this.loading;
+    }
+
+    /**
+     * Exécute une action « Confirmer » / « Passer » d'un popup de filtre et, si elle
+     * fait réellement changer d'étape, mémorise l'état d'avant pour pouvoir y revenir
+     * (avec la sélection faite par l'utilisateur, pas la sélection par défaut).
+     */
+    async runFilterStep(action: FilterStepAction): Promise<void> {
+        const stepBefore = this.activeFilterStep;
+        const snapshot = this.captureFilterState();
+        const historyLengthBefore = this.filterStepHistory.length;
+        const result = (this[action] as () => unknown).call(this);
+        // Test « thenable » et non instanceof Promise : avec zone.js, une fonction async
+        // native ne renvoie pas une instance du Promise global (ZoneAwarePromise).
+        if (result && typeof (result as PromiseLike<unknown>).then === 'function') {
+            await result;
+        }
+        // L'étape a changé (popup suivant, fin des filtres, navigation) : on garde la trace.
+        // Si l'historique a bougé entre-temps (fichier retiré, reset), l'instantané n'a plus de sens.
+        if (stepBefore && this.activeFilterStep !== stepBefore
+            && this.filterStepHistory.length === historyLengthBefore) {
+            this.filterStepHistory.push(snapshot);
+            if (this.filterStepHistory.length > MAX_FILTER_STEP_HISTORY) {
+                this.filterStepHistory.shift();
+            }
+        }
+    }
+
+    /**
+     * Revient à l'étape de filtre précédente en restaurant ses listes, ses données
+     * et la sélection qui avait été faite. Renvoie false s'il n'y a rien à restaurer.
+     */
+    goToPreviousFilterStep(): boolean {
+        if (!this.canGoBackFilterStep) {
+            return false;
+        }
+        const previous = this.filterStepHistory.pop()!;
+        this.applyFilterState(previous);
+        this.errorMessage = '';
+        this.successMessage = '';
+        this.cd.detectChanges();
+        return true;
+    }
+
+    private captureFilterState(): FilterStateSnapshot {
+        const self = this as unknown as Record<string, unknown>;
+        const snapshot: FilterStateSnapshot = {};
+        for (const field of FILTER_STATE_FIELDS) {
+            snapshot[field] = this.copyStateValue(self[field]);
+        }
+        return snapshot;
+    }
+
+    private applyFilterState(snapshot: FilterStateSnapshot): void {
+        const self = this as unknown as Record<string, unknown>;
+        for (const field of FILTER_STATE_FIELDS) {
+            if (field in snapshot) {
+                // Copie : l'instantané doit rester intact si on y revient encore.
+                self[field] = this.copyStateValue(snapshot[field]);
+            }
+        }
+        this._canProceedCache = null;
+    }
+
+    /** Copie superficielle : listes et compteurs sont modifiés sur place (push, +=). */
+    private copyStateValue(value: unknown): unknown {
+        if (Array.isArray(value)) {
+            return value.slice();
+        }
+        if (value && typeof value === 'object' && !(value instanceof Blob)) {
+            return { ...(value as Record<string, unknown>) };
+        }
+        return value;
+    }
+
+    private hasUploadSessionContent(): boolean {
+        return !!(this.boFile || this.partnerFile || this.autoBoFile || this.autoPartnerFile
+            || this._boData.length || this._partnerData.length
+            || this.autoBoData.length || this.autoPartnerData.length
+            || this.filterStepHistory.length);
+    }
+
+    /** Mémorise l'écran (fichiers, filtres, historique) quand on le quitte. */
+    private saveUploadSessionToFlowState(): void {
+        const kind = this.uploadFlowKind;
+        if (!kind) {
+            return;
+        }
+        if (!this.hasUploadSessionContent()) {
+            this.flowStateService.clearUploadSnapshot(kind);
+            return;
+        }
+        const self = this as unknown as Record<string, unknown>;
+        const state: Record<string, unknown> = { filters: this.captureFilterState() };
+        for (const field of UPLOAD_SESSION_FIELDS) {
+            state[field] = self[field];
+        }
+        state['filterStepHistory'] = this.filterStepHistory.slice();
+        this.flowStateService.saveUploadSnapshot(kind, state);
+    }
+
+    /** Restaure l'écran tel qu'il était (retour depuis la sélection des colonnes ou les résultats). */
+    private restoreUploadSessionFromFlowState(): void {
+        const kind = this.uploadFlowKind;
+        const snapshot = kind ? this.flowStateService.getUploadSnapshot(kind) : null;
+        if (!snapshot) {
+            return;
+        }
+        const state = snapshot.state;
+        const self = this as unknown as Record<string, unknown>;
+        if (state['filters']) {
+            this.applyFilterState(state['filters'] as FilterStateSnapshot);
+        }
+        for (const field of UPLOAD_SESSION_FIELDS) {
+            if (field in state) {
+                self[field] = state[field];
+            }
+        }
+        this.filterStepHistory = Array.isArray(state['filterStepHistory'])
+            ? (state['filterStepHistory'] as FilterStateSnapshot[]).slice()
+            : [];
     }
 
     /** Ouvre le modal de traitement de fichier (mode assisté). */
@@ -4313,6 +4549,11 @@ export class FileUploadComponent implements OnInit, OnDestroy {
 
     /** Réinitialise l'écran de chargement (nouvelle réconciliation). */
     private resetUploadSession(): void {
+        this.filterStepHistory = [];
+        const kind = this.uploadFlowKind;
+        if (kind) {
+            this.flowStateService.clearUploadSnapshot(kind);
+        }
         this.boFile = null;
         this.partnerFile = null;
         this.boData = [];
@@ -4352,6 +4593,9 @@ export class FileUploadComponent implements OnInit, OnDestroy {
     private clearCachesOnFileRemoval(fileType: 'bo' | 'partner'): void {
         // Vider le cache AppStateService (données de réconciliation et fichiers)
         this.appStateService.clearData();
+
+        // Les étapes mémorisées référencent le fichier retiré : on ne peut plus y revenir.
+        this.filterStepHistory = [];
 
         // Invalider le cache canProceed
         this._canProceedCache = null;
@@ -7147,9 +7391,9 @@ export class FileUploadComponent implements OnInit, OnDestroy {
 
     // Méthode pour passer la sélection des services/type/statut partenaire
     // Comporte comme "aucun filtrage" en sélectionnant tous les services/types disponibles
-    skipPartnerServiceSelection(): void {
+    skipPartnerServiceSelection(): Promise<void> {
         this.partnerSelectedServices = [...this.partnerAvailableServices];
-        this.confirmPartnerServiceSelection();
+        return this.confirmPartnerServiceSelection();
     }
 
     // Méthode pour annuler la sélection des services partenaire
@@ -7338,9 +7582,9 @@ export class FileUploadComponent implements OnInit, OnDestroy {
 
     // Méthode pour passer la sélection des statuts partenaire
     // Comporte comme "aucun filtrage" en sélectionnant tous les statuts disponibles
-    skipPartnerStatusSelection(): void {
+    skipPartnerStatusSelection(): Promise<void> {
         this.partnerSelectedStatuses = [...this.partnerAvailableStatuses];
-        this.confirmPartnerStatusSelection();
+        return this.confirmPartnerStatusSelection();
     }
 
     // Méthode pour afficher la sélection des paiements pour le partenaire (étape 3)
@@ -7449,6 +7693,10 @@ export class FileUploadComponent implements OnInit, OnDestroy {
 
     // Méthode pour annuler la sélection des paiements partenaire
     cancelPartnerPaymentSelection(): void {
+        // Les statuts sont vidés à l'ouverture des paiements : seul l'historique permet de les réafficher.
+        if (this.activeFilterStep === 'partner-payment' && this.goToPreviousFilterStep()) {
+            return;
+        }
         this.showPartnerPaymentSelection = false;
         this.partnerPaymentSearchFilter = '';
         this.partnerPaymentSelectionData = [];
@@ -7500,6 +7748,9 @@ export class FileUploadComponent implements OnInit, OnDestroy {
 
     // Méthode pour annuler la sélection des statuts partenaire
     cancelPartnerStatusSelection(): void {
+        if (this.activeFilterStep === 'partner-status' && this.goToPreviousFilterStep()) {
+            return;
+        }
         this.showPartnerStatusSelection = false;
         this.partnerStatusSearchFilter = '';
         this.partnerStatusSelectionData = [];
@@ -10075,6 +10326,7 @@ export class FileUploadComponent implements OnInit, OnDestroy {
     }
 
     ngOnDestroy(): void {
+        this.saveUploadSessionToFlowState();
         this.traitementViewDestroyed = true;
         if (this.clientVolumeTimer) {
             clearTimeout(this.clientVolumeTimer);

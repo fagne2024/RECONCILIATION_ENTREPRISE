@@ -12,6 +12,7 @@ import { PopupService } from '../../services/popup.service';
 import { Subscription } from 'rxjs';
 import { ReconciliationRequest } from '../../models/reconciliation-request.model';
 import { I18nService } from '../../services/i18n/i18n.service';
+import { ReconciliationFlowStateService } from '../../services/reconciliation-flow-state.service';
 
 @Component({
     selector: 'app-column-selection',
@@ -19,6 +20,11 @@ import { I18nService } from '../../services/i18n/i18n.service';
     imports: [CommonModule, FormsModule, TranslateModule],
     template: `
         <div class="column-selection-container">
+            <button type="button" class="back-to-files-btn ds-btn ds-btn--secondary ds-btn--sm"
+                    [disabled]="isReconciliationActive()" (click)="goBackToFiles()">
+                <i class="fas fa-arrow-left"></i>
+                {{ 'FU.FlowBack.backToFiles' | translate }}
+            </button>
             <h2>{{ 'CSEL.ui.selectionDesColonnes' | translate }}</h2>
             <p class="description">{{ 'CSEL.ui.selectionnezLesColonnesClesPourLa' | translate }}</p>
 
@@ -213,6 +219,10 @@ import { I18nService } from '../../services/i18n/i18n.service';
     styles: [`
         .column-selection-container {
             padding: 20px;
+        }
+
+        .back-to-files-btn {
+            margin-bottom: 16px;
         }
 
         h2 {
@@ -745,6 +755,9 @@ export class ColumnSelectionComponent implements OnDestroy, OnChanges, OnInit {
     showSuggestions = false;
     isAnalyzing = false;
 
+    /** Sélection restaurée au retour sur la page : ne pas l'écraser par les suggestions automatiques. */
+    private restoredSelection = false;
+
     constructor(
         private reconciliationService: ReconciliationService,
         private appStateService: AppStateService,
@@ -752,7 +765,8 @@ export class ColumnSelectionComponent implements OnDestroy, OnChanges, OnInit {
         private router: Router,
         private cdr: ChangeDetectorRef,
         private popupService: PopupService,
-        private calculService: ConfigurationCalculService
+        private calculService: ConfigurationCalculService,
+        private flowStateService: ReconciliationFlowStateService
     ) {}
 
     ngOnChanges(changes: SimpleChanges) {
@@ -762,7 +776,47 @@ export class ColumnSelectionComponent implements OnDestroy, OnChanges, OnInit {
     }
 
     ngOnDestroy() {
+        this.saveSelectionToFlowState();
         this.subscription.unsubscribe();
+    }
+
+    /** Revient à l'écran des fichiers et filtres, qui est restauré tel qu'il a été laissé. */
+    goBackToFiles(): void {
+        if (this.isReconciliationActive()) {
+            return;
+        }
+        const mode = new URLSearchParams(window.location.search).get('mode');
+        this.router.navigate([mode === 'assisted' ? '/upload-assisted' : '/upload']);
+    }
+
+    /** Mémorise les clés choisies pour les retrouver après un retour arrière. */
+    private saveSelectionToFlowState(): void {
+        if (!this.boColumns.length && !this.partnerColumns.length) {
+            return;
+        }
+        this.flowStateService.saveColumnSelection({
+            boColumns: this.boColumns,
+            partnerColumns: this.partnerColumns,
+            selectedBoKeyColumn: this.selectedBoKeyColumn,
+            selectedPartnerKeyColumn: this.selectedPartnerKeyColumn,
+            additionalKeys: this.additionalKeys,
+            comparisonColumns: this.comparisonColumns,
+            disableAutoAnalysis: this.disableAutoAnalysis
+        });
+    }
+
+    /** Réapplique la sélection mémorisée si les colonnes des fichiers n'ont pas changé. */
+    private restoreSelectionFromFlowState(): void {
+        const saved = this.flowStateService.getColumnSelectionFor(this.boColumns, this.partnerColumns);
+        if (!saved) {
+            return;
+        }
+        this.selectedBoKeyColumn = saved.selectedBoKeyColumn;
+        this.selectedPartnerKeyColumn = saved.selectedPartnerKeyColumn;
+        this.additionalKeys = saved.additionalKeys;
+        this.comparisonColumns = saved.comparisonColumns;
+        this.restoredSelection = true;
+        this.isValid = this.validateSelection();
     }
 
     ngOnInit() {
@@ -846,6 +900,7 @@ export class ColumnSelectionComponent implements OnDestroy, OnChanges, OnInit {
         
         // Si on a au moins un fichier avec des colonnes, on peut continuer
         if (this.boColumns.length > 0 || this.partnerColumns.length > 0) {
+            this.restoreSelectionFromFlowState();
             // Ne pas lancer l'analyse automatique si les deux fichiers ne sont pas disponibles
             if (this.boData?.length === 0 || this.partnerData?.length === 0) {
                 this.disableAutoAnalysis = true;
@@ -1017,7 +1072,9 @@ export class ColumnSelectionComponent implements OnDestroy, OnChanges, OnInit {
         
         this.dataLoaded = true;
         this.loadingInProgress = false;
-        
+
+        this.restoreSelectionFromFlowState();
+
         // Analyser et suggérer les clés automatiquement (seulement si pas désactivée)
         this.launchKeyAnalysis();
         
@@ -1064,8 +1121,10 @@ export class ColumnSelectionComponent implements OnDestroy, OnChanges, OnInit {
                 this.showSuggestions = true;
                 
                 
-                // Appliquer automatiquement les meilleures suggestions
-                this.applyTopSuggestions();
+                // Appliquer automatiquement les meilleures suggestions (sauf sélection restaurée au retour)
+                if (!this.restoredSelection) {
+                    this.applyTopSuggestions();
+                }
                 
             } catch (error) {
                 this.showSuggestions = false;
@@ -1139,8 +1198,10 @@ export class ColumnSelectionComponent implements OnDestroy, OnChanges, OnInit {
                 this.showSuggestions = true;
                 
                 
-                // Appliquer automatiquement les meilleures suggestions
-                this.applyTopSuggestions();
+                // Appliquer automatiquement les meilleures suggestions (sauf sélection restaurée au retour)
+                if (!this.restoredSelection) {
+                    this.applyTopSuggestions();
+                }
                 
             } catch (error) {
                 this.showSuggestions = false;

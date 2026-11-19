@@ -2635,6 +2635,11 @@
     "Retouraulanceur": "Back to launcher",
     "Retourauxservices": "Back to services",
     "Retourauxstatuts": "Back to statuses",
+    "FlowBack": {
+      "previousStep": "Previous step",
+      "reopenFilters": "Back to filters",
+      "backToFiles": "Back to files and filters"
+    },
     "Retourcertification": "Back to certification",
     "Sélection": "— Selection:",
     "Sélectionàlétapesuivante": "(selection at the next step)",
@@ -5838,6 +5843,8 @@
     "partnerGaps": "Partner discrepancies",
     "newReconciliation": "New reconciliation",
     "viewStats": "View statistics",
+    "backToColumns": "Back to column selection",
+    "backToFilters": "Back to files and filters",
     "lines": "rows",
     "columnSelectorTitle": "Select columns for export",
     "selectAll": "Select all",

@@ -502,15 +502,19 @@
             
             <!-- Boutons de confirmation modernes -->
             <div class="manual-service-selection-actions">
+                <button type="button" class="modern-btn ds-btn ds-btn--secondary previous-step-btn" *ngIf="canGoBackFilterStep" (click)="goToPreviousFilterStep()">
+                    <i class="fas fa-arrow-left"></i>
+                    {{ 'FU.FlowBack.previousStep' | translate }}
+                </button>
                 <button type="button" class="modern-btn ds-btn ds-btn--secondary cancel-btn" (click)="cancelAgencySelection()">
                     <i class="fas fa-times"></i>{{ 'COMMON.actions.cancel' | translate }}</button>
-                <button type="button" class="modern-btn ds-btn ds-btn--secondary" (click)="skipAgencySelection()">
+                <button type="button" class="modern-btn ds-btn ds-btn--secondary" (click)="runFilterStep('skipAgencySelection')">
                     <i class="fas fa-forward"></i>
                     {{ 'FU.Passer' | translate }}
                 </button>
                 <button type="button" class="modern-btn ds-btn ds-btn--secondary confirm-btn" 
                         [disabled]="selectedAgencies.length === 0"
-                        (click)="confirmAgencySelection()">
+                        (click)="runFilterStep('confirmAgencySelection')">
                     <i class="fas fa-check"></i>
                     {{ 'FU.Confirmerlasélection' | translate }}
                 </button>
@@ -575,15 +579,19 @@
             </div>
 
             <div class="manual-service-selection-actions">
+                <button type="button" class="modern-btn ds-btn ds-btn--secondary previous-step-btn" *ngIf="canGoBackFilterStep" (click)="goToPreviousFilterStep()">
+                    <i class="fas fa-arrow-left"></i>
+                    {{ 'FU.FlowBack.previousStep' | translate }}
+                </button>
                 <button class="modern-btn ds-btn ds-btn--secondary cancel-btn" type="button" (click)="cancelPartnerAgencySelection()">
                     <i class="fas fa-times"></i>{{ 'COMMON.actions.cancel' | translate }}</button>
-                <button class="modern-btn ds-btn ds-btn--secondary" type="button" (click)="skipPartnerAgencySelection()">
+                <button class="modern-btn ds-btn ds-btn--secondary" type="button" (click)="runFilterStep('skipPartnerAgencySelection')">
                     <i class="fas fa-forward"></i>
                     {{ 'FU.Passer' | translate }}
                 </button>
                 <button class="modern-btn ds-btn ds-btn--secondary confirm-btn" type="button"
                         [disabled]="partnerSelectedAgencies.length === 0"
-                        (click)="confirmPartnerAgencySelection()">
+                        (click)="runFilterStep('confirmPartnerAgencySelection')">
                     <i class="fas fa-check"></i>
                     {{ 'FU.Confirmerlasélection' | translate }}
                 </button>
@@ -657,15 +665,19 @@
             
             <!-- Boutons de confirmation modernes -->
             <div class="manual-service-selection-actions">
+                <button type="button" class="modern-btn ds-btn ds-btn--secondary previous-step-btn" *ngIf="canGoBackFilterStep" (click)="goToPreviousFilterStep()">
+                    <i class="fas fa-arrow-left"></i>
+                    {{ 'FU.FlowBack.previousStep' | translate }}
+                </button>
                 <button type="button" class="modern-btn ds-btn ds-btn--secondary cancel-btn" (click)="cancelManualServiceSelection()">
                     <i class="fas fa-times"></i>{{ 'COMMON.actions.cancel' | translate }}</button>
-                <button type="button" class="modern-btn ds-btn ds-btn--secondary" (click)="skipManualServiceSelection()">
+                <button type="button" class="modern-btn ds-btn ds-btn--secondary" (click)="runFilterStep('skipManualServiceSelection')">
                     <i class="fas fa-forward"></i>
                     {{ 'FU.Passer' | translate }}
                 </button>
                 <button type="button" class="modern-btn ds-btn ds-btn--secondary confirm-btn" 
                         [disabled]="manualSelectedServices.length === 0"
-                        (click)="confirmManualServiceSelection()">
+                        (click)="runFilterStep('confirmManualServiceSelection')">
                     <i class="fas fa-check"></i>
                     {{ 'FU.Confirmerlasélection' | translate }}
                 </button>
@@ -736,15 +748,19 @@
             
             <!-- Boutons de confirmation modernes -->
             <div class="manual-service-selection-actions">
+                <button type="button" class="modern-btn ds-btn ds-btn--secondary previous-step-btn" *ngIf="canGoBackFilterStep" (click)="goToPreviousFilterStep()">
+                    <i class="fas fa-arrow-left"></i>
+                    {{ 'FU.FlowBack.previousStep' | translate }}
+                </button>
                 <button type="button" class="modern-btn ds-btn ds-btn--secondary cancel-btn" (click)="cancelManualStatusSelection()">
                     <i class="fas fa-times"></i>{{ 'COMMON.actions.cancel' | translate }}</button>
-                <button type="button" class="modern-btn ds-btn ds-btn--secondary" (click)="skipManualStatusSelection()">
+                <button type="button" class="modern-btn ds-btn ds-btn--secondary" (click)="runFilterStep('skipManualStatusSelection')">
                     <i class="fas fa-forward"></i>
                     {{ 'FU.Passer' | translate }}
                 </button>
                 <button type="button" class="modern-btn ds-btn ds-btn--secondary confirm-btn" 
                         [disabled]="manualSelectedStatuses.length === 0"
-                        (click)="confirmManualStatusSelection()">
+                        (click)="runFilterStep('confirmManualStatusSelection')">
                     <i class="fas fa-check"></i>
                     {{ 'FU.Confirmerlasélection' | translate }}
                 </button>
@@ -912,6 +928,10 @@
 
         <!-- Boutons pour le mode automatique -->
         <div class="button-container" [class.assisted-actions]="isAssistedLike" *ngIf="reconciliationMode === 'automatic'">
+            <button type="button" class="btn reopen-filters-btn ds-btn ds-btn--secondary" *ngIf="canReopenPreviousFilterStep && !isAssistedReconciliationActive()" (click)="goToPreviousFilterStep()">
+                <i class="fas fa-undo"></i>
+                {{ 'FU.FlowBack.reopenFilters' | translate }}
+            </button>
             <button type="button" class="btn proceed-btn" [class.reconciliation-launch-btn]="isAssistedLike" [class.processing]="isAssistedReconciliationActive()" [disabled]="!canProceedAuto()" (click)="onAutoProceed()">
                 {{ getAutoProceedButtonLabel() }}
             </button>
@@ -995,15 +1015,19 @@
                 
                 <!-- Boutons de confirmation modernes -->
                 <div class="service-selection-actions">
+                    <button type="button" class="modern-btn ds-btn ds-btn--secondary previous-step-btn" *ngIf="canGoBackFilterStep" (click)="goToPreviousFilterStep()">
+                        <i class="fas fa-arrow-left"></i>
+                        {{ 'FU.FlowBack.previousStep' | translate }}
+                    </button>
                     <button type="button" class="modern-btn ds-btn ds-btn--secondary cancel-btn" (click)="cancelAgencySelection()">
                         <i class="fas fa-times"></i>{{ 'COMMON.actions.cancel' | translate }}</button>
-                    <button type="button" class="modern-btn ds-btn ds-btn--secondary" (click)="skipAgencySelection()">
+                    <button type="button" class="modern-btn ds-btn ds-btn--secondary" (click)="runFilterStep('skipAgencySelection')">
                         <i class="fas fa-forward"></i>
                         {{ 'FU.Passer' | translate }}
                     </button>
                     <button type="button" class="modern-btn ds-btn ds-btn--secondary confirm-btn" 
                             [disabled]="selectedAgencies.length === 0"
-                            (click)="confirmAgencySelection()">
+                            (click)="runFilterStep('confirmAgencySelection')">
                         <i class="fas fa-check"></i>
                         {{ 'FU.Confirmerlasélection' | translate }}
                     </button>
@@ -1073,15 +1097,19 @@
                 
                 <!-- Boutons de confirmation modernes -->
                 <div class="service-selection-actions">
+                    <button type="button" class="modern-btn ds-btn ds-btn--secondary previous-step-btn" *ngIf="canGoBackFilterStep" (click)="goToPreviousFilterStep()">
+                        <i class="fas fa-arrow-left"></i>
+                        {{ 'FU.FlowBack.previousStep' | translate }}
+                    </button>
                     <button type="button" class="modern-btn ds-btn ds-btn--secondary cancel-btn" (click)="cancelServiceSelection()">
                         <i class="fas fa-times"></i>{{ 'COMMON.actions.cancel' | translate }}</button>
-                    <button type="button" class="modern-btn ds-btn ds-btn--secondary" (click)="skipServiceSelection()">
+                    <button type="button" class="modern-btn ds-btn ds-btn--secondary" (click)="runFilterStep('skipServiceSelection')">
                         <i class="fas fa-forward"></i>
                         {{ 'FU.Passer' | translate }}
                     </button>
                     <button type="button" class="modern-btn ds-btn ds-btn--secondary confirm-btn" 
                             [disabled]="selectedServices.length === 0"
-                            (click)="confirmServiceSelection()">
+                            (click)="runFilterStep('confirmServiceSelection')">
                         <i class="fas fa-check"></i>
                         {{ 'FU.Confirmerlasélection' | translate }}
                     </button>
@@ -1145,15 +1173,19 @@
             </div>
 
             <div class="service-selection-actions">
+                <button type="button" class="modern-btn ds-btn ds-btn--secondary previous-step-btn" *ngIf="canGoBackFilterStep" (click)="goToPreviousFilterStep()">
+                    <i class="fas fa-arrow-left"></i>
+                    {{ 'FU.FlowBack.previousStep' | translate }}
+                </button>
                 <button type="button" class="modern-btn ds-btn ds-btn--secondary cancel-btn" (click)="cancelAutoStatusSelection()">
                     <i class="fas fa-times"></i>{{ 'COMMON.actions.cancel' | translate }}</button>
-                <button type="button" class="modern-btn ds-btn ds-btn--secondary" (click)="skipAutoStatusSelection()">
+                <button type="button" class="modern-btn ds-btn ds-btn--secondary" (click)="runFilterStep('skipAutoStatusSelection')">
                     <i class="fas fa-forward"></i>
                     {{ 'FU.Passer' | translate }}
                 </button>
                 <button type="button" class="modern-btn ds-btn ds-btn--secondary confirm-btn"
                         [disabled]="autoSelectedStatuses.length === 0"
-                        (click)="confirmAutoStatusSelection()">
+                        (click)="runFilterStep('confirmAutoStatusSelection')">
                     <i class="fas fa-check"></i>
                     {{ 'FU.Confirmerlasélection' | translate }}
                 </button>
@@ -1223,15 +1255,19 @@
             
             <!-- Boutons de confirmation modernes -->
             <div class="service-selection-actions">
+                <button type="button" class="modern-btn ds-btn ds-btn--secondary previous-step-btn" *ngIf="canGoBackFilterStep" (click)="goToPreviousFilterStep()">
+                    <i class="fas fa-arrow-left"></i>
+                    {{ 'FU.FlowBack.previousStep' | translate }}
+                </button>
                 <button type="button" class="modern-btn ds-btn ds-btn--secondary cancel-btn" (click)="cancelPartnerServiceSelection()">
                     <i class="fas fa-times"></i>{{ 'COMMON.actions.cancel' | translate }}</button>
-                <button type="button" class="modern-btn ds-btn ds-btn--secondary" (click)="skipPartnerServiceSelection()">
+                <button type="button" class="modern-btn ds-btn ds-btn--secondary" (click)="runFilterStep('skipPartnerServiceSelection')">
                     <i class="fas fa-forward"></i>
                     {{ 'FU.Passer' | translate }}
                 </button>
                 <button type="button" class="modern-btn ds-btn ds-btn--secondary confirm-btn" 
                         [disabled]="partnerSelectedServices.length === 0 || partnerSelectionBusy"
-                        (click)="confirmPartnerServiceSelection()">
+                        (click)="runFilterStep('confirmPartnerServiceSelection')">
                     <i class="fas fa-check"></i>
                     {{ 'FU.Confirmerlasélection' | translate }}
                 </button>
@@ -1303,13 +1339,13 @@
                     <i class="fas fa-arrow-left"></i>
                     {{ 'FU.Retourauxservices' | translate }}
                 </button>
-                <button type="button" class="modern-btn ds-btn ds-btn--secondary" (click)="skipPartnerStatusSelection()">
+                <button type="button" class="modern-btn ds-btn ds-btn--secondary" (click)="runFilterStep('skipPartnerStatusSelection')">
                     <i class="fas fa-forward"></i>
                     {{ 'FU.Passer' | translate }}
                 </button>
                 <button type="button" class="modern-btn ds-btn ds-btn--secondary confirm-btn" 
                         [disabled]="partnerSelectedStatuses.length === 0 || partnerSelectionBusy"
-                        (click)="confirmPartnerStatusSelection()">
+                        (click)="runFilterStep('confirmPartnerStatusSelection')">
                     <i class="fas fa-check"></i>
                     {{ 'FU.Confirmerlasélection' | translate }}
                 </button>
@@ -1380,13 +1416,13 @@
                     <i class="fas fa-arrow-left"></i>
                     {{ 'FU.Retourauxstatuts' | translate }}
                 </button>
-                <button type="button" class="modern-btn ds-btn ds-btn--secondary" (click)="skipPartnerPaymentSelection()">
+                <button type="button" class="modern-btn ds-btn ds-btn--secondary" (click)="runFilterStep('skipPartnerPaymentSelection')">
                     <i class="fas fa-forward"></i>
                     {{ 'FU.Passer' | translate }}
                 </button>
                 <button type="button" class="modern-btn ds-btn ds-btn--secondary confirm-btn" 
                         [disabled]="partnerSelectedPayments.length === 0"
-                        (click)="confirmPartnerPaymentSelection()">
+                        (click)="runFilterStep('confirmPartnerPaymentSelection')">
                     <i class="fas fa-check"></i>
                     {{ 'FU.Confirmerlasélection' | translate }}
                 </button>
@@ -1522,6 +1558,10 @@
             <strong>{{ 'FU.Grosfichierdétecté' | translate }}</strong> {{ 'FU.Lesystèmeutiliserauntraitementparlotsoptimisépouréviterleserreursdemémoireletraitementpeutprendreplusdetempsmaisseraplusstable' | translate }}
         </div>
         
+        <button type="button" class="btn reopen-filters-btn ds-btn ds-btn--secondary" *ngIf="canReopenPreviousFilterStep" (click)="goToPreviousFilterStep()">
+            <i class="fas fa-undo"></i>
+            {{ 'FU.FlowBack.reopenFilters' | translate }}
+        </button>
         <button type="button" class="btn proceed-btn" [class.reconciliation-launch-btn]="manualOnly" [class.legacy-manual-proceed-btn]="!manualOnly" [disabled]="!canProceed()" (click)="onProceed()">
             {{ (manualOnly ? 'FU.StartReconciliation' : 'FU.StartManualReconciliation') | translate }}
         </button>
