@@ -36,10 +36,13 @@ import { renameKeyPreservingOrder, normalizeColumnKey } from '../../utils/row-co
 import { resolveCanonicalColumnId } from '../../utils/bilingual-column.util';
 import { ModelNormalizationService } from '../../services/model-normalization.service';
 import {
+  ColumnRename,
   describeColumnNormalization,
+  mergedSourceHeaders,
   ModelColumnEquivalence,
   normalizeHeaderKey,
-  planColumnNormalization
+  planColumnNormalization,
+  renameRowColumns
 } from '../../utils/model-column-normalization.util';
 import { AutoProcessingService, AutoProcessingModel } from '../../services/auto-processing.service';
 import * as Papa from 'papaparse';
@@ -7260,6 +7263,8 @@ End Sub`;
       return;
     }
     const plan = planColumnNormalization(this.allColumns, this.modelEquivalenceList, this.modelColumns);
+    // Plusieurs équivalents présents (ex. A et B) : B complète les cellules vides de A, puis disparaît.
+    this.mergeEquivalentColumns(plan.renames);
     if (plan.renames.length) {
       this.renameTreatmentColumns(new Map(plan.renames.map(r => [r.from, r.to])));
     }
@@ -7267,6 +7272,31 @@ End Sub`;
     if (message) {
       this.modelLinkMessage = message;
     }
+  }
+
+  /**
+   * Fusion des équivalents secondaires (`fillFrom`) dans l'équivalent retenu, avant renommage :
+   * chaque cellule vide de `from` reçoit la première valeur non vide des autres équivalents,
+   * qui sont ensuite retirés des lignes et des listes de colonnes.
+   */
+  private mergeEquivalentColumns(renames: readonly ColumnRename[]): void {
+    const merges = renames.filter(r => r.fillFrom?.length);
+    if (!merges.length) {
+      return;
+    }
+    const sources = mergedSourceHeaders(merges);
+    // Renommage identité : seule la fusion est appliquée ici, le renommage suit.
+    const fillMap = new Map(merges.map(r => [r.from, { from: r.from, to: r.from, fillFrom: r.fillFrom }]));
+    const mergeRow = (row: any) => renameRowColumns(row, fillMap, sources);
+    const dropSources = (list: string[]) => list.filter(c => !sources.has(c));
+
+    this.allRows = this.allRows.map(mergeRow);
+    this.combinedRows = this.combinedRows.map(mergeRow);
+    this.originalRows = this.originalRows.map(mergeRow);
+    this.allColumns = dropSources(this.allColumns);
+    this.columns = dropSources(this.columns);
+    this.reorderedColumns = dropSources(this.reorderedColumns);
+    this.selectedCols = dropSources(this.selectedCols);
   }
 
   /** Renomme des colonnes (ancien nom → nouveau) dans les lignes et toutes les listes de colonnes. */

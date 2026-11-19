@@ -33,7 +33,8 @@ type CheckStatus = 'present' | 'equivalent' | 'missing';
 interface CheckResult {
   fileName: string;
   headerFound: boolean;
-  columns: Array<{ columnName: string; status: CheckStatus; foundAs?: string }>;
+  /** foundAs : libellé affiché (« A + B » si plusieurs équivalents) ; foundHeaders : en-têtes réels du fichier. */
+  columns: Array<{ columnName: string; status: CheckStatus; foundAs?: string; foundHeaders?: string[] }>;
   /** En-têtes du fichier qui ne correspondent à aucune colonne du modèle. */
   extraHeaders: string[];
 }
@@ -413,7 +414,7 @@ export class ConfigurationNormalisationComponent implements OnInit, OnDestroy {
     }
     this.addEquivalent(row, header);
     if (this.check) {
-      const headers = [...this.check.columns.filter(c => c.foundAs).map(c => c.foundAs!), ...this.check.extraHeaders];
+      const headers = [...this.check.columns.flatMap(c => c.foundHeaders ?? []), ...this.check.extraHeaders];
       this.check = this.buildCheck(this.check.fileName, headers, this.check.headerFound);
     }
   }
@@ -426,19 +427,21 @@ export class ConfigurationNormalisationComponent implements OnInit, OnDestroy {
     const equivalences = this.rows.map(r => ({ columnName: r.columnName, equivalents: r.equivalents }));
     // Même calcul qu'au chargement d'un fichier ; le statut de chaque colonne est déduit ci-dessous.
     const plan = planColumnNormalization(headers, equivalences);
-    const renamedTo = new Map(plan.renames.map(r => [r.to, r.from]));
+    const renamedTo = new Map(plan.renames.map(r => [r.to, r]));
     const headerKeys = new Map(headers.map(h => [normalizeHeaderKey(h), h]));
     const used = new Set<string>();
     const columns = this.rows.map(r => {
       const direct = headerKeys.get(normalizeHeaderKey(r.columnName));
       if (direct) {
         used.add(direct);
-        return { columnName: r.columnName, status: 'present' as CheckStatus, foundAs: direct };
+        return { columnName: r.columnName, status: 'present' as CheckStatus, foundAs: direct, foundHeaders: [direct] };
       }
       const via = renamedTo.get(r.columnName);
       if (via) {
-        used.add(via);
-        return { columnName: r.columnName, status: 'equivalent' as CheckStatus, foundAs: via };
+        // Plusieurs équivalents présents : le premier est repris, les suivants complètent ses vides.
+        const sources = [via.from, ...(via.fillFrom || [])];
+        sources.forEach(h => used.add(h));
+        return { columnName: r.columnName, status: 'equivalent' as CheckStatus, foundAs: sources.join(' + '), foundHeaders: sources };
       }
       return { columnName: r.columnName, status: 'missing' as CheckStatus };
     });
