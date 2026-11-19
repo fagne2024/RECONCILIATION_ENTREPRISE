@@ -121,7 +121,7 @@ export class TraitementLotService {
 
   /** Valeurs distinctes d'une colonne du lot (triées, tronquées au-delà de `max`). */
   valeursDistinctes(lotId: number, colonne: string, max = 2000): Promise<{ valeurs: string[]; tronque: boolean }> {
-    return firstValueFrom(this.http.get<{ valeurs: string[]; tronque: boolean }>(`${this.apiUrl}/${lotId}/valeurs`, {
+    return firstValueFrom(this.http.get<{ valeurs: string[]; tronque: boolean }>(`${this.apiUrl}/${lotId}/valeurs-condition`, {
       params: { colonne, max: String(max) }
     }));
   }
