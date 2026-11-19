@@ -1,4 +1,4 @@
-import { parseAmountValue, tryParseAmount } from './record-amount.util';
+import { findTransactionAmountColumns, parseAmountValue, transactionAmountOf, tryParseAmount } from './record-amount.util';
 
 describe('parseAmountValue / tryParseAmount', () => {
   it('conserve les zéros après la virgule des milliers', () => {
@@ -21,5 +21,30 @@ describe('parseAmountValue / tryParseAmount', () => {
     expect(tryParseAmount('12,500', { groupedThousands: true })).toBe(12500);
     expect(tryParseAmount('12,500')).toBe(12.5);
     expect(tryParseAmount('texte')).toBeNull();
+  });
+});
+
+describe('findTransactionAmountColumns / transactionAmountOf (équilibre des volumes)', () => {
+  it('fichier Airtel : seul « Transaction Amount », jamais les soldes ni les frais', () => {
+    const headers = ['Transaction ID', 'Transaction Amount', 'Previous Balance', 'Post Balance', 'Service Charge'];
+    expect(findTransactionAmountColumns(headers)).toEqual(['Transaction Amount']);
+    const row = { 'Transaction ID': 'T1', 'Transaction Amount': '1500', 'Previous Balance': '90000', 'Post Balance': '88500', 'Service Charge': '50' };
+    expect(transactionAmountOf(row, ['Transaction Amount'])).toBe(1500);
+  });
+
+  it('préfère la colonne « Montant » exacte (TRXBO), frais exclus', () => {
+    expect(findTransactionAmountColumns(['ID', 'Frais', 'Montant', 'Montant TTC'])).toEqual(['Montant']);
+  });
+
+  it('relevé sans colonne montant : débit + crédit', () => {
+    const columns = findTransactionAmountColumns(['Date', 'Libellé', 'Débit', 'Crédit', 'Solde']);
+    expect(columns).toEqual(['Débit', 'Crédit']);
+    expect(transactionAmountOf({ 'Débit': '', 'Crédit': '2 000,50', Solde: '10' }, columns)).toBe(2000.5);
+    expect(transactionAmountOf({ 'Débit': '-300', 'Crédit': '' }, columns)).toBe(300);
+  });
+
+  it('aucune colonne montant : volume nul', () => {
+    expect(findTransactionAmountColumns(['ID', 'Balance'])).toEqual([]);
+    expect(transactionAmountOf({ ID: '1' }, [])).toBe(0);
   });
 });

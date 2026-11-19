@@ -21,7 +21,7 @@ import { OperationService } from '../../services/operation.service';
 import { ConfigurationCalculService } from '../../services/configuration-calcul.service';
 import { OperationCreateRequest } from '../../models/operation.model';
 import { fixGarbledCharacters } from '../../utils/encoding-fixer';
-import { extractRecordAmount } from '../../utils/record-amount.util';
+import { extractRecordAmount, findTransactionAmountColumns, transactionAmountOf } from '../../utils/record-amount.util';
 import {
     partitionEcartRecords,
     recordMatchesMagicPartition,
@@ -7347,29 +7347,12 @@ private async downloadExcelFile(workbooks: ExcelJS.Workbook[], fileName: string)
             return 0; // Retourner 0 temporairement pendant le calcul
         }
         
-        let result: number;
+        // Équilibre des volumes : uniquement le résultat (correspondances filtrées), des deux côtés.
+        const result = this.calculateResultVolume(type);
         if (type === 'partner') {
-            // Pour le volume partenaire, inclure les correspondances ET les écarts partenaire
-            const matchesVolume = this.calculateTotalVolumePartnerMatches();
-            const partnerOnlyVolume = this.calculateTotalVolumePartnerOnly();
-            result = matchesVolume + partnerOnlyVolume;
-            this.cachedTotalVolumePartner = result; // Mettre en cache
+            this.cachedTotalVolumePartner = result;
         } else {
-            // Pour le volume BO, utiliser la logique originale
-            if (!this.filteredMatches || this.filteredMatches.length === 0) {
-                result = 0;
-            } else {
-                const amountColumn = this.findAmountColumn(type);
-                if (!amountColumn) {
-                    result = 0;
-                } else {
-                    result = this.filteredMatches.reduce((total, match) => {
-                        const amount = parseFloat(match.boData[amountColumn] || '0');
-                        return total + (isNaN(amount) ? 0 : amount);
-                    }, 0);
-                }
-            }
-            this.cachedTotalVolumeBo = result; // Mettre en cache
+            this.cachedTotalVolumeBo = result;
         }
         
         const duration = performance.now() - startTime;
@@ -7394,26 +7377,13 @@ private async downloadExcelFile(workbooks: ExcelJS.Workbook[], fileName: string)
             
             // Calculer le volume BO (rapide)
             const boStart = performance.now();
-            if (!this.filteredMatches || this.filteredMatches.length === 0) {
-                this.cachedTotalVolumeBo = 0;
-            } else {
-                const amountColumn = this.findAmountColumn('bo');
-                if (amountColumn) {
-                    this.cachedTotalVolumeBo = this.filteredMatches.reduce((total, match) => {
-                        const amount = parseFloat(match.boData[amountColumn] || '0');
-                        return total + (isNaN(amount) ? 0 : amount);
-                    }, 0);
-                } else {
-                    this.cachedTotalVolumeBo = 0;
-                }
-            }
+            this.cachedTotalVolumeBo = this.calculateResultVolume('bo');
             const boDuration = performance.now() - boStart;
             
             // Calculer le volume Partner (lent - par chunks)
             const partnerStart = performance.now();
-            const matchesVolume = await this.calculateTotalVolumePartnerMatchesAsync();
-            const partnerOnlyVolume = this.calculateTotalVolumePartnerOnly();
-            this.cachedTotalVolumePartner = matchesVolume + partnerOnlyVolume;
+            // Seul le résultat compte : les écarts partenaire ne font pas partie de l'équilibre.
+            this.cachedTotalVolumePartner = await this.calculateTotalVolumePartnerMatchesAsync();
             const partnerDuration = performance.now() - partnerStart;
             
             // Calculer la différence
@@ -7435,106 +7405,47 @@ private async downloadExcelFile(workbooks: ExcelJS.Workbook[], fileName: string)
     }
     
     /**
-     * Calcule le volume partenaire des correspondances de manière asynchrone par chunks
+     * Colonne(s) montant de transaction d'un côté du résultat, lues sur la première correspondance
+     * (soldes, frais et commissions exclus : voir findTransactionAmountColumns).
      */
+    private resultAmountColumns(side: 'bo' | 'partner'): string[] {
+        const first = this.filteredMatches?.[0];
+        const data = side === 'bo' ? first?.boData : first?.partnerData;
+        return data ? findTransactionAmountColumns(Object.keys(data)) : [];
+    }
+
+    /** Volume d'un côté du résultat : somme du montant de transaction des correspondances filtrées. */
+    private calculateResultVolume(side: 'bo' | 'partner'): number {
+        if (!this.filteredMatches || this.filteredMatches.length === 0) return 0;
+        const columns = this.resultAmountColumns(side);
+        if (!columns.length) return 0;
+        return this.filteredMatches.reduce((total, match) =>
+            total + transactionAmountOf(side === 'bo' ? match.boData : match.partnerData, columns), 0);
+    }
+
+    /** Volume partenaire du résultat, par lots pour ne pas bloquer l'affichage sur les gros volumes. */
     private async calculateTotalVolumePartnerMatchesAsync(): Promise<number> {
         if (!this.filteredMatches || this.filteredMatches.length === 0) return 0;
-        
+        const columns = this.resultAmountColumns('partner');
+        if (!columns.length) return 0;
+
         let total = 0;
-        const CHUNK_SIZE = 1000; // Traiter 1000 matches à la fois
-        
+        const CHUNK_SIZE = 1000;
         for (let i = 0; i < this.filteredMatches.length; i += CHUNK_SIZE) {
-            const chunk = this.filteredMatches.slice(i, i + CHUNK_SIZE);
-            
-            for (const match of chunk) {
-                const partnerData = match.partnerData || {};
-                let recordTotal = 0;
-                
-                // Liste exhaustive des colonnes qui peuvent contenir des montants
-                const possibleAmountColumns = [
-                    'amount', 'Amount', 'AMOUNT',
-                    'montant', 'Montant', 'MONTANT',
-                    'debit', 'Debit', 'DEBIT', 'débit', 'Débit', 'DÉBIT',
-                    'credit', 'Credit', 'CREDIT', 'crédit', 'Crédit', 'CRÉDIT',
-                    'valeur', 'Valeur', 'VALEUR',
-                    'value', 'Value', 'VALUE',
-                    'somme', 'Somme', 'SOMME',
-                    'sum', 'Sum', 'SUM',
-                    'total', 'Total', 'TOTAL',
-                    'montant_credit', 'montant_debit', 'montant_débit', 'montant_crédit',
-                    'montant_operation', 'montant_opération', 'montant_transaction',
-                    'montant_credit_operation', 'montant_débit_operation',
-                    'external_amount', 'External amount', 'EXTERNAL_AMOUNT',
-                    'externalAmount', 'ExternalAmount',
-                    'balance', 'Balance', 'BALANCE'
-                ];
-                
-                // Parcourir toutes les colonnes et sommer tous les montants trouvés en valeur absolue
-                for (const column of Object.keys(partnerData)) {
-                    const lowerColumn = column.toLowerCase();
-                    if (possibleAmountColumns.some(name => lowerColumn.includes(name.toLowerCase()))) {
-                        const amount = parseFloat(partnerData[column] || '0');
-                        if (!isNaN(amount)) {
-                            recordTotal += Math.abs(amount);
-                        }
-                    }
-                }
-                
-                total += recordTotal;
+            const end = Math.min(i + CHUNK_SIZE, this.filteredMatches.length);
+            for (let j = i; j < end; j++) {
+                total += transactionAmountOf(this.filteredMatches[j].partnerData, columns);
             }
-            
-            // Yield au navigateur après chaque chunk pour ne pas bloquer
-            if (i + CHUNK_SIZE < this.filteredMatches.length) {
+            if (end < this.filteredMatches.length) {
                 await this.yieldToBrowser();
             }
         }
-        
         return total;
     }
 
-    /**
-     * Calcule le volume partenaire des correspondances en sommant TOUS les montants possibles
-     * (Amount, debit, credit, etc.) en valeur absolue
-     */
+    /** Volume partenaire des correspondances (montant de transaction uniquement). */
     calculateTotalVolumePartnerMatches(): number {
-        if (!this.filteredMatches || this.filteredMatches.length === 0) return 0;
-        
-        return this.filteredMatches.reduce((total, match) => {
-            const partnerData = match.partnerData || {};
-            let recordTotal = 0;
-            
-            // Liste exhaustive des colonnes qui peuvent contenir des montants
-            const possibleAmountColumns = [
-                'amount', 'Amount', 'AMOUNT',
-                'montant', 'Montant', 'MONTANT',
-                'debit', 'Debit', 'DEBIT', 'débit', 'Débit', 'DÉBIT',
-                'credit', 'Credit', 'CREDIT', 'crédit', 'Crédit', 'CRÉDIT',
-                'valeur', 'Valeur', 'VALEUR',
-                'value', 'Value', 'VALUE',
-                'somme', 'Somme', 'SOMME',
-                'sum', 'Sum', 'SUM',
-                'total', 'Total', 'TOTAL',
-                'montant_credit', 'montant_debit', 'montant_débit', 'montant_crédit',
-                'montant_operation', 'montant_opération', 'montant_transaction',
-                'montant_credit_operation', 'montant_débit_operation',
-                'external_amount', 'External amount', 'EXTERNAL_AMOUNT',
-                'externalAmount', 'ExternalAmount',
-                'balance', 'Balance', 'BALANCE'
-            ];
-            
-            // Parcourir toutes les colonnes et sommer tous les montants trouvés en valeur absolue
-            for (const column of Object.keys(partnerData)) {
-                const lowerColumn = column.toLowerCase();
-                if (possibleAmountColumns.some(name => lowerColumn.includes(name.toLowerCase()))) {
-                    const amount = parseFloat(partnerData[column] || '0');
-                    if (!isNaN(amount)) {
-                        recordTotal += Math.abs(amount);
-                    }
-                }
-            }
-            
-            return total + recordTotal;
-        }, 0);
+        return this.calculateResultVolume('partner');
     }
 
     /** Corrige les dates stockées en numéros de série Excel dans la réponse */
@@ -7593,32 +7504,6 @@ private async downloadExcelFile(workbooks: ExcelJS.Workbook[], fileName: string)
             return formatSpreadsheetDateValue(val);
         }
         return val;
-    }
-
-    private findAmountColumn(type: 'bo' | 'partner'): string | null {
-        if (!this.filteredMatches || this.filteredMatches.length === 0) return null;
-        
-        const firstMatch = this.filteredMatches[0];
-        const data = type === 'bo' ? firstMatch.boData : firstMatch.partnerData;
-        
-        // Liste des noms possibles pour la colonne de montant
-        const possibleAmountColumns = [
-            'montant', 'amount', 'valeur', 'value', 'somme', 'sum', 'total',
-            'credit', 'crédit', 'debit', 'débit', 'montant_credit', 'montant_débit',
-            'montant_credit', 'montant_debit', 'montant_crédit', 'montant_débit',
-            'montant_operation', 'montant_opération', 'montant_transaction',
-            'montant_credit_operation', 'montant_débit_operation'
-        ];
-        
-        // Chercher une colonne qui contient un des noms possibles
-        for (const column of Object.keys(data)) {
-            const lowerColumn = column.toLowerCase();
-            if (possibleAmountColumns.some(name => lowerColumn.includes(name))) {
-                return column;
-            }
-        }
-        
-        return null;
     }
 
     private calculateVolumeDifferenceCallCount = 0;

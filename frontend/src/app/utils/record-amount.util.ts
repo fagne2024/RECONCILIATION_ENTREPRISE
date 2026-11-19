@@ -112,3 +112,62 @@ export function extractRecordAmount(
 
     return 0;
 }
+
+/** Colonnes de montant qui ne sont pas le montant de la transaction (soldes, frais, taxes). */
+const NON_TRANSACTION_AMOUNT_FRAGMENTS = [
+    'balance', 'solde', 'previous', 'post', 'avant', 'apres', 'après',
+    'fee', 'frais', 'commission', 'charge', 'tax', 'taxe', 'tva'
+];
+
+function normalizeAmountHeader(header: string): string {
+    return (header || '').normalize('NFD').replace(/[̀-ͯ]/g, '').toLowerCase().trim();
+}
+
+function isNonTransactionAmountHeader(header: string): boolean {
+    const lower = normalizeAmountHeader(header);
+    return NON_TRANSACTION_AMOUNT_FRAGMENTS.some(fragment => lower.includes(normalizeAmountHeader(fragment)));
+}
+
+/**
+ * Colonne(s) portant le montant de la transaction parmi les en-têtes d'un résultat :
+ * - une colonne « montant » / « amount » (le nom exact d'abord, puis « montant transaction »…) ;
+ * - à défaut, le couple débit / crédit (relevés : une seule des deux renseignée par ligne) ;
+ * - à défaut, une colonne valeur / somme / total.
+ * Les soldes (avant / après), frais, commissions et taxes ne sont jamais retenus : les sommer
+ * gonflerait le volume (ex. « Previous Balance », « Post Balance » d'un fichier partenaire).
+ */
+export function findTransactionAmountColumns(headers: readonly string[]): string[] {
+    const candidates = headers.filter(h => !!h && !isNonTransactionAmountHeader(h));
+    const lower = (h: string) => normalizeAmountHeader(h);
+
+    const amountColumns = candidates.filter(h => lower(h).includes('montant') || lower(h).includes('amount'));
+    if (amountColumns.length) {
+        const exact = amountColumns.find(h => ['montant', 'amount'].includes(lower(h)));
+        const transaction = amountColumns.find(h => lower(h).includes('transaction') || lower(h).includes('operation'));
+        return [exact ?? transaction ?? amountColumns[0]];
+    }
+
+    const debit = candidates.find(h => lower(h).includes('debit'));
+    const credit = candidates.find(h => lower(h).includes('credit'));
+    if (debit || credit) {
+        return [debit, credit].filter((h): h is string => !!h);
+    }
+
+    const other = candidates.find(h => ['valeur', 'value', 'somme', 'sum', 'total'].some(f => lower(h).includes(f)));
+    return other ? [other] : [];
+}
+
+/** Montant de la transaction d'une ligne (valeur absolue), lu sur les colonnes retenues. */
+export function transactionAmountOf(
+    record: Record<string, string> | null | undefined,
+    columns: readonly string[]
+): number {
+    if (!record || !columns.length) {
+        return 0;
+    }
+    let total = 0;
+    for (const column of columns) {
+        total += Math.abs(parseAmountValue(record[column]));
+    }
+    return total;
+}
