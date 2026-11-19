@@ -344,6 +344,11 @@ const DEFAULT_RULES: CalculationRule[] = [
     valeurs: JSON.stringify(['APPRO'])
   },
   {
+    code: 'BANQUE.TYPES_APPRO_SORTANT', module: 'BANQUE', sousModule: 'CLASSIFICATION',
+    libelle: 'Approvisionnements au débit du relevé (sortie du compte)', type: 'LISTE', actif: true, systeme: true,
+    valeurs: JSON.stringify(['FOURNISSEUR'])
+  },
+  {
     code: 'BANQUE.TYPES_COMPENSATION', module: 'BANQUE', sousModule: 'CLASSIFICATION',
     libelle: 'Types compensation', type: 'LISTE', actif: true, systeme: true,
     valeurs: JSON.stringify(['COMPENS', 'COMPENSE'])

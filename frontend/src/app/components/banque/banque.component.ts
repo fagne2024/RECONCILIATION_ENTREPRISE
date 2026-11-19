@@ -2403,10 +2403,23 @@ export class BanqueComponent implements OnInit {
     return tokens.some(token => normalized.includes(token));
   }
 
+  /**
+   * Approvisionnement sortant du compte bancaire : APPROVISIONNEMENT_FOURNISSEUR est un débit au
+   * relevé (InTouch approvisionne le fournisseur), alors qu'un approvisionnement distributeur est
+   * un crédit. Sans cette règle, tout type « APPRO » passait en crédit et l'opération ne
+   * rapprochait jamais sa ligne de relevé (clé date + montant + banque + sens).
+   */
+  private isApproSortant(rawType: string | null | undefined): boolean {
+    const appro = this.calculService.getList('BANQUE.TYPES_APPROVISIONNEMENT', ['APPRO']);
+    const sortant = this.calculService.getList('BANQUE.TYPES_APPRO_SORTANT', ['FOURNISSEUR']);
+    return this.banqueTypeMatches(rawType, appro) && this.banqueTypeMatches(rawType, sortant);
+  }
+
   private getOperationDirection(op: OperationBancaireDisplay): 'debit' | 'credit' {
     const appro = this.calculService.getList('BANQUE.TYPES_APPROVISIONNEMENT', ['APPRO']);
     const comp = this.calculService.getList('BANQUE.TYPES_COMPENSATION', ['COMPENS', 'COMPENSE']);
     const nivel = this.calculService.getList('BANQUE.TYPES_NIVELLEMENT', ['NIVEL', 'NIVELLEMENT']);
+    if (this.isApproSortant(op.typeOperation)) return 'debit';
     if (this.banqueTypeMatches(op.typeOperation, appro)) return 'credit';
     if (this.banqueTypeMatches(op.typeOperation, comp)) return 'debit';
     if (this.banqueTypeMatches(op.typeOperation, nivel)) return (op.montant || 0) < 0 ? 'debit' : 'credit';
@@ -5269,6 +5282,9 @@ export class BanqueComponent implements OnInit {
     const comp = this.calculService.getList('BANQUE.TYPES_COMPENSATION', ['COMPENS', 'COMPENSE']);
     const nivel = this.calculService.getList('BANQUE.TYPES_NIVELLEMENT', ['NIVEL', 'NIVELLEMENT']);
     if (this.banqueTypeMatches(op.typeOperation, comp)) {
+      return 'debit';
+    }
+    if (this.isApproSortant(op.typeOperation)) { // Approvisionnement fournisseur : sortie du compte
       return 'debit';
     }
     if (this.banqueTypeMatches(op.typeOperation, appro)) { // Approvisionnement
