@@ -13,11 +13,7 @@ import {
   findColumnByCanonicalId,
   normalizeReconciliationKeyValue
 } from '../utils/reconciliation-key.util';
-import {
-  MIN_SERVICE_TOKEN_LENGTH,
-  normalizeServiceToken,
-  partnerServiceMatchesBo
-} from '../utils/service-match.util';
+import { partnerServiceMatchesBo } from '../utils/service-match.util';
 
 /** Colonne synthétique injectée dans les données partenaire avant réconciliation. */
 export const PARTNER_CONDITIONAL_KEY_COLUMN = '__PARTNER_RECON_KEY__';
@@ -176,7 +172,7 @@ export class PartnerConditionalKeysService {
         partnerConfig,
         this.buildPartnerFallbackColumns(model, partnerConfig)
       );
-      nextBo = this.applyPairedBoKeysForPartnerConditional(boData, partnerConfig, model);
+      nextBo = this.applyPairedBoKeysForPartnerConditional(boData, partnerConfig, model, partnerData);
     } else if (keys.boKeyColumn === BO_CONDITIONAL_KEY_COLUMN) {
       const boConfig = model.reconciliationKeys?.boConditionalKeys;
       if (boConfig && this.isBoConditionalConfigValid(boData, boConfig)) {
@@ -337,16 +333,29 @@ export class PartnerConditionalKeysService {
 
   /**
    * Construit la colonne BO synthétique en miroir des clés partenaire conditionnelles :
-   * même logique SERVICE/ENV, clé par défaut du modèle BO (ex. Numéro Trans GU),
-   * clé alternative (ex. CLE) pour les règles optionnelles (ex. CASHINMTNCM → CLECI).
+   * clé par défaut du modèle BO (ex. ID Partenaire / Numéro Trans GU), clé de la règle
+   * (ex. Token GU, CLE) pour les lignes concernées par une règle optionnelle.
+   *
+   * Avec les données partenaire, la détection repose UNIQUEMENT sur le fichier partenaire
+   * (sa nomenclature de service) : une ligne BO prend la clé de la règle quand sa valeur
+   * dans la colonne BO de la règle est une clé produite par cette règle côté partenaire.
+   * Le libellé service du BO n'est pas comparé (il diffère souvent : suffixe pays…).
    */
   applyPairedBoKeysForPartnerConditional(
     boData: Record<string, string>[],
     partnerConfig: PartnerConditionalKeysConfig,
-    model: AutoProcessingModel
+    model: AutoProcessingModel,
+    partnerData?: Record<string, string>[]
   ): Record<string, string>[] {
     if (!boData?.length || !this.isConditionalConfigEnabled(partnerConfig)) {
       return boData;
+    }
+
+    if (partnerData?.length) {
+      const fromPartner = this.applyBoKeysFromPartnerRules(boData, partnerData, partnerConfig, model);
+      if (fromPartner) {
+        return fromPartner;
+      }
     }
 
     const boConditional = model.reconciliationKeys?.boConditionalKeys;
@@ -459,6 +468,73 @@ export class PartnerConditionalKeysService {
     });
   }
 
+  /**
+   * Clés BO pilotées par le fichier partenaire : pour chaque règle, on relève les clés que
+   * la règle produit côté partenaire (ex. Token GU des lignes PAIEMENTMARCHAND_MOOV) ; une
+   * ligne BO dont la colonne BO de la règle contient l'une de ces clés prend cette clé,
+   * sinon la clé par défaut du modèle. Retourne null si rien n'est applicable (repli).
+   */
+  private applyBoKeysFromPartnerRules(
+    boData: Record<string, string>[],
+    partnerData: Record<string, string>[],
+    partnerConfig: PartnerConditionalKeysConfig,
+    model: AutoProcessingModel
+  ): Record<string, string>[] | null {
+    const defaultBoKeyCol = this.resolveDefaultBoKeyFromModel(model, boData);
+    const partnerConditionCol = this.findConditionColumn(partnerData, partnerConfig.conditionColumn);
+    if (!defaultBoKeyCol || !partnerConditionCol) {
+      return null;
+    }
+
+    const envConditionValue = this.getEnvConditionValue(partnerConfig);
+    const partnerEnvCol = envConditionValue ? this.findExistingColumn(partnerData, [ENV_COLUMN_NAME]) : null;
+
+    const rules = partnerConfig.rules
+      .filter(r => r.whenValue?.trim() && r.keyColumn?.trim())
+      .map(rule => ({
+        whenValue: rule.whenValue.trim(),
+        partnerKeyCol: this.findExistingColumn(partnerData, [rule.keyColumn.trim()]),
+        boKeyCol: this.resolveBoKeyColumnForPartnerRule(rule, boData, model, defaultBoKeyCol)
+          ?? this.findExistingColumn(boData, [rule.keyColumn.trim()]),
+        partnerKeys: new Set<string>()
+      }))
+      .filter(r => !!r.partnerKeyCol && !!r.boKeyCol);
+    if (!rules.length) {
+      return null;
+    }
+
+    // Clés produites par chaque règle côté partenaire (même ordre de priorité que applyConditionalKeys).
+    for (const row of partnerData) {
+      if (envConditionValue) {
+        const envVal = partnerEnvCol ? (row[partnerEnvCol] || '').trim() : '';
+        if (envVal.toUpperCase() !== envConditionValue.toUpperCase()) {
+          continue;
+        }
+      }
+      const conditionVal = (row[partnerConditionCol] || '').trim();
+      const rule = rules.find(r => this.matchesConditionalRuleValue(conditionVal, r.whenValue));
+      const value = rule ? (row[rule.partnerKeyCol!] || '').trim() : '';
+      if (rule && value) {
+        rule.partnerKeys.add(this.formatOptionalKeyValue(value));
+      }
+    }
+
+    return boData.map(row => {
+      const copy = { ...row };
+      let key = '';
+      for (const rule of rules) {
+        const raw = (copy[rule.boKeyCol!] || '').trim();
+        const value = raw ? this.formatOptionalKeyValue(raw) : '';
+        if (value && rule.partnerKeys.has(value)) {
+          key = value;
+          break;
+        }
+      }
+      copy[BO_CONDITIONAL_KEY_COLUMN] = key || String(copy[defaultBoKeyCol] ?? '').trim();
+      return copy;
+    });
+  }
+
   private resolveBoKeyColumnForPartnerRule(
     rule: PartnerConditionalKeyRule,
     boData: Record<string, string>[],
@@ -546,31 +622,7 @@ export class PartnerConditionalKeysService {
     if (cell.toLowerCase() === rule.toLowerCase()) {
       return true;
     }
-    const cellNorm = normalizeServiceToken(cell);
-    const ruleNorm = normalizeServiceToken(rule);
-    if (cellNorm && cellNorm === ruleNorm) {
-      return true;
-    }
-    // Valeur de règle saisie par l'utilisateur, contenue dans le libellé avec un préfixe /
-    // suffixe pays (PAIEMENTMARCHAND_MOOV ↔ PAIEMENTMARCHAND_MOOV_BF, BF_PAIEMENTMARCHAND_MOOV).
-    // Le rapprochement MOOV GA ci-dessous exige un préfixe TRXBO (GA, GU…) et ne les reconnaissait pas.
-    if (ruleNorm.length >= MIN_SERVICE_TOKEN_LENGTH && cellNorm.includes(ruleNorm)) {
-      return true;
-    }
-    // Mêmes segments dans un autre ordre (BF_MOOV_PAIEMENTMARCHAND).
-    const ruleSegments = this.serviceSegments(rule);
-    if (ruleSegments.length > 1 && ruleSegments.every(segment => cellNorm.includes(segment))) {
-      return true;
-    }
     return partnerServiceMatchesBo(rule, cell) || partnerServiceMatchesBo(cell, rule);
-  }
-
-  /** Segments significatifs d'une valeur de règle (séparés par _, espace, tiret…). */
-  private serviceSegments(value: string): string[] {
-    return (value || '')
-      .split(/[^A-Za-z0-9À-ÿ]+/)
-      .map(part => normalizeServiceToken(part))
-      .filter(part => part.length >= 3);
   }
 
   /** Normalise les clés optionnelles numériques (zéros initiaux, espaces) sans toucher aux clés par défaut. */
