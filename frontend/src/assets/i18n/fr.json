@@ -2081,6 +2081,11 @@
     "Retouraulanceur": "Retour au lanceur",
     "Retourauxservices": "Retour aux services",
     "Retourauxstatuts": "Retour aux statuts",
+    "FlowBack": {
+      "previousStep": "Étape précédente",
+      "reopenFilters": "Revenir aux filtres",
+      "backToFiles": "Retour aux fichiers et filtres"
+    },
     "Retourcertification": "Retour certification",
     "Sélection": "— Sélection :",
     "Sélectionàlétapesuivante": "(sélection à l'étape suivante)",
@@ -4298,6 +4303,8 @@
     "partnerGaps": "Écarts Partenaire",
     "newReconciliation": "Nouvelle réconciliation",
     "viewStats": "Voir les statistiques",
+    "backToColumns": "Revenir à la sélection des colonnes",
+    "backToFilters": "Revenir aux fichiers et filtres",
     "lines": "lignes",
     "columnSelectorTitle": "Sélection des colonnes pour l'export",
     "selectAll": "Tout sélectionner",

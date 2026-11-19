@@ -10,6 +10,7 @@ import { LogoService } from './logo.service';
 import { countryNamesFromCodes } from '../utils/country-codes.util';
 import { ReconciliationResponse } from '../models/reconciliation-response.model';
 import { MagicServiceSummary } from './magic-reconciliation.service';
+import { ReconciliationFlowStateService } from './reconciliation-flow-state.service';
 import {
   APP_NAVIGATION_CATALOG,
   NavigationAccessContext,
@@ -144,7 +145,8 @@ private reconciliationProgressSubject = new BehaviorSubject<boolean>(false);
         private router: Router,
         private paysService: PaysService,
         private themeService: ThemeService,
-        private logoService: LogoService
+        private logoService: LogoService,
+        private flowStateService: ReconciliationFlowStateService
     ) {
         // Charger l'utilisateur et le token depuis le localStorage au démarrage
         this.loadUserFromStorage();
@@ -279,6 +281,7 @@ private reconciliationProgressSubject = new BehaviorSubject<boolean>(false);
         this.clearReconciliationResults();
         this.clearReconciliationData();
         this.clearUploadedFiles();
+        this.flowStateService.clearAll();
         this.setCurrentStep(1);
     }
 
@@ -616,6 +619,8 @@ private reconciliationProgressSubject = new BehaviorSubject<boolean>(false);
         this.token = null;
         this.mustChangePassword = false;
         this.normalizedModuleSet.clear();
+        // Données métier du parcours de réconciliation : jamais conservées d'un compte à l'autre.
+        this.flowStateService.clearAll();
         localStorage.removeItem('userRights');
         localStorage.removeItem('username');
         localStorage.removeItem('auth_token');

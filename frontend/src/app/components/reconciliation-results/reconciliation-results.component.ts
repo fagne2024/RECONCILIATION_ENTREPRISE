@@ -51,6 +51,13 @@ interface ApiError {
     message?: string;
 }
 
+/** Destination du bouton « étape précédente » de la page des résultats. */
+interface PreviousStepTarget {
+    route: string;
+    queryParams?: Record<string, string>;
+    labelKey: string;
+}
+
 @Component({
     selector: 'app-reconciliation-results',
     standalone: true,
@@ -714,6 +721,9 @@ interface ApiError {
             </div>
 
             <div class="action-buttons">
+                <button type="button" class="previous-step-btn ds-btn ds-btn--secondary" *ngIf="previousStepTarget as target" (click)="goToPreviousStep(target)">
+                    ← {{ target.labelKey | translate }}
+                </button>
                 <button type="button" class="new-reconciliation-btn ds-btn ds-btn--primary" (click)="nouvelleReconciliation()">
                     🔄 {{ 'RES.newReconciliation' | translate }}
                 </button>
@@ -7253,6 +7263,33 @@ private async downloadExcelFile(workbooks: ExcelJS.Workbook[], fileName: string)
             }
         }
         return this.response?.partnerOnly || [];
+    }
+
+    /**
+     * Étape précédente du parcours (sans rien effacer) : sélection des colonnes en
+     * mode manuel, écran fichiers/filtres en mode assisté. Ces écrans restaurent
+     * l'état laissé, ce qui permet de corriger un choix et de relancer.
+     * Le mode magique n'a pas d'étape intermédiaire : « Nouvelle réconciliation ».
+     */
+    get previousStepTarget(): PreviousStepTarget | null {
+        if (this.magicServiceSummaries.length > 0) {
+            return null;
+        }
+        const mode = this.appStateService.getReconciliationLaunchMode();
+        const entryPath = this.appStateService.getReconciliationEntryPath();
+        if (mode === 'assisted') {
+            return entryPath === '/upload-assisted'
+                ? { route: '/upload-assisted', labelKey: 'RES.backToFilters' }
+                : { route: '/column-selection', queryParams: { mode: 'assisted' }, labelKey: 'RES.backToColumns' };
+        }
+        if (mode === 'manual') {
+            return { route: '/column-selection', labelKey: 'RES.backToColumns' };
+        }
+        return null;
+    }
+
+    goToPreviousStep(target: PreviousStepTarget): void {
+        this.router.navigate([target.route], target.queryParams ? { queryParams: target.queryParams } : {});
     }
 
     nouvelleReconciliation() {
