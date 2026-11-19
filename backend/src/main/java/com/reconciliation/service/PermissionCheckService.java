@@ -259,8 +259,15 @@ public class PermissionCheckService {
         return permissionName.substring(0, separator);
     }
 
+    /**
+     * Module Réconciliation ou l'un de ses sous-menus à droits propres (« Réconciliation · Lanceur »,
+     * « · Mode Manuel », « · Mode assisté »…). Les équivalences lancer / exécuter magique / modifier
+     * s'y appliquent aussi : le catalogue du Lanceur propose « executer_reconciliation_magique » mais
+     * pas « lancer_reconciliation », exigé par le serveur pour démarrer une réconciliation.
+     */
     private boolean isReconciliationModule(String moduleName) {
-        return "reconciliation".equals(normalizePermissionName(moduleName));
+        String normalized = normalizePermissionName(moduleName);
+        return "reconciliation".equals(normalized) || normalized.startsWith("reconciliation ·");
     }
 
     private boolean isEcartBoSummaryWriteRequest(String apiPath, String httpMethod) {
