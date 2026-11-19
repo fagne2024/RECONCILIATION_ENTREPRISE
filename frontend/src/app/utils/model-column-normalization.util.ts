@@ -7,6 +7,10 @@
  * défaut est absente, on cherche dans le fichier un de ses en-têtes équivalents
  * configurés et on le renomme avec le nom par défaut : la suite du traitement
  * (règles, clés, export, réconciliation) ne voit que les colonnes par défaut.
+ *
+ * Si plusieurs équivalents sont présents (ex. A et B pour « Agence »), le premier
+ * trouvé (ordre de configuration) est renommé et chaque ligne où il est vide
+ * reçoit la valeur du suivant non vide : les deux sources sont prises en compte.
  */
 import { normalizeColumnKey } from './row-column.util';
 
@@ -22,6 +26,12 @@ export interface ColumnRename {
   from: string;
   /** Colonne par défaut du modèle : nom que prend la colonne dans le fichier et à l'export. */
   to: string;
+  /**
+   * Autres équivalents présents dans le fichier, par ordre de priorité : quand `from` est vide
+   * sur une ligne, la première valeur non vide de ces colonnes est reprise. Ces colonnes sont
+   * ensuite retirées (elles sont fusionnées dans `to`, comme `from`).
+   */
+  fillFrom?: string[];
 }
 
 export interface ColumnNormalizationPlan {
@@ -116,7 +126,9 @@ export function planColumnNormalization(
     if (!defaultKey || headerByKey.has(defaultKey)) {
       continue;
     }
-    let found: string | null = null;
+    // Tous les équivalents présents sont retenus : le premier est renommé, les suivants
+    // complètent ses cellules vides (ex. A vide sur les lignes où seule B est renseignée).
+    const found: string[] = [];
     for (const equivalent of eq.equivalents || []) {
       const key = normalizeHeaderKey(equivalent);
       const header = headerByKey.get(key);
@@ -127,12 +139,15 @@ export function planColumnNormalization(
         plan.ignored.push({ from: header, to: eq.columnName });
         continue;
       }
-      found = header;
+      found.push(header);
       used.add(key);
-      break;
     }
-    if (found) {
-      plan.renames.push({ from: found, to: eq.columnName });
+    if (found.length) {
+      const rename: ColumnRename = { from: found[0], to: eq.columnName };
+      if (found.length > 1) {
+        rename.fillFrom = found.slice(1);
+      }
+      plan.renames.push(rename);
     } else if ((eq.equivalents || []).length) {
       plan.missing.push(eq.columnName);
     }
@@ -140,14 +155,44 @@ export function planColumnNormalization(
   return plan;
 }
 
-/** Renomme les clés d'une ligne en conservant l'ordre des colonnes. */
+/** Cellule vide : absente, nulle ou faite uniquement d'espaces. */
+function isBlankCell(value: unknown): boolean {
+  return value === undefined || value === null || String(value).trim() === '';
+}
+
+/** En-têtes fusionnés dans une autre colonne (`fillFrom`) : retirés des lignes et des listes. */
+export function mergedSourceHeaders(renames: readonly ColumnRename[]): Set<string> {
+  const merged = new Set<string>();
+  for (const rename of renames) {
+    (rename.fillFrom || []).forEach(h => merged.add(h));
+  }
+  return merged;
+}
+
+/**
+ * Renomme les clés d'une ligne en conservant l'ordre des colonnes. Pour un renommage avec
+ * `fillFrom`, une valeur vide est complétée par le premier équivalent non vide de la ligne,
+ * et les colonnes `fillFrom` disparaissent.
+ */
 export function renameRowColumns(
   row: Record<string, string>,
-  renameMap: ReadonlyMap<string, ColumnRename>
+  renameMap: ReadonlyMap<string, ColumnRename>,
+  mergedSources: ReadonlySet<string> = new Set()
 ): Record<string, string> {
   const next: Record<string, string> = {};
   for (const key of Object.keys(row)) {
-    next[renameMap.get(key)?.to ?? key] = row[key];
+    if (mergedSources.has(key)) {
+      continue;
+    }
+    const rename = renameMap.get(key);
+    let value = row[key];
+    if (rename?.fillFrom?.length && isBlankCell(value)) {
+      const fallback = rename.fillFrom.find(source => !isBlankCell(row[source]));
+      if (fallback !== undefined) {
+        value = row[fallback];
+      }
+    }
+    next[rename?.to ?? key] = value;
   }
   return next;
 }
@@ -162,11 +207,12 @@ export async function applyColumnNormalizationPlanAsync(
     return rows;
   }
   const renameMap = new Map(plan.renames.map(r => [r.from, r]));
+  const mergedSources = mergedSourceHeaders(plan.renames);
   const batchSize = options.batchSize ?? 20000;
   for (let start = 0; start < rows.length; start += batchSize) {
     const end = Math.min(start + batchSize, rows.length);
     for (let i = start; i < end; i++) {
-      rows[i] = renameRowColumns(rows[i], renameMap);
+      rows[i] = renameRowColumns(rows[i], renameMap, mergedSources);
     }
     if (options.yieldFn && end < rows.length) {
       await options.yieldFn();
@@ -178,7 +224,8 @@ export async function applyColumnNormalizationPlanAsync(
 /** Remplace les en-têtes dans une liste d'en-têtes (catalogue de colonnes, aperçu). */
 export function renameHeaders(headers: readonly string[], plan: ColumnNormalizationPlan): string[] {
   const renameMap = new Map(plan.renames.map(r => [r.from, r]));
-  return headers.map(h => renameMap.get(h)?.to ?? h);
+  const mergedSources = mergedSourceHeaders(plan.renames);
+  return headers.filter(h => !mergedSources.has(h)).map(h => renameMap.get(h)?.to ?? h);
 }
 
 /** Message lisible pour l'utilisateur (vide si rien à signaler). */
@@ -186,7 +233,7 @@ export function describeColumnNormalization(plan: ColumnNormalizationPlan): stri
   const parts: string[] = [];
   if (plan.renames.length) {
     parts.push('Colonnes normalisées : ' + plan.renames
-      .map(r => `« ${r.from} » → « ${r.to} »`)
+      .map(r => [r.from, ...(r.fillFrom || [])].map(h => `« ${h} »`).join(' + ') + ` → « ${r.to} »`)
       .join(', '));
   }
   if (plan.ignored?.length) {

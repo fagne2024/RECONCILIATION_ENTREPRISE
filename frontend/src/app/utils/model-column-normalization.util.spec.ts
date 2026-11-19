@@ -1,6 +1,7 @@
 import {
   applyColumnNormalizationPlanAsync,
   describeColumnNormalization,
+  renameHeaders,
   listColumnsOutsideModel,
   ModelColumnEquivalence,
   planColumnNormalization,
@@ -178,5 +179,50 @@ describe('Colonnes du modèle : les colonnes en plus du fichier chargé sont ign
     expect(templateCoverage(headers, template)).toBe(1);
     expect(templateCoverage(['ID', 'Montant'], template)).toBeCloseTo(1 / 9);
     expect(templateCoverage(headers, [])).toBe(0);
+  });
+});
+
+describe('Normalisation modèle : deux équivalents présents (A et B) pour une même colonne', () => {
+  const config: ModelColumnEquivalence[] = [
+    { columnName: 'Agence', equivalents: ['Code agence', 'Agency'] }
+  ];
+
+  it('A est renommée en Agence et ses lignes vides sont complétées par B', async () => {
+    const rows = [
+      { ID: '1', 'Code agence': 'AG01', Agency: '' },
+      { ID: '2', 'Code agence': '', Agency: 'AG02' },
+      { ID: '3', 'Code agence': '   ', Agency: 'AG03' },
+      { ID: '4', 'Code agence': '', Agency: '' }
+    ];
+    const plan = planColumnNormalization(Object.keys(rows[0]), config);
+
+    expect(plan.renames).toEqual([{ from: 'Code agence', to: 'Agence', fillFrom: ['Agency'] }]);
+    expect(plan.missing).toEqual([]);
+
+    const out = await applyColumnNormalizationPlanAsync(rows, plan);
+
+    expect(out.map(r => r['Agence'])).toEqual(['AG01', 'AG02', 'AG03', '']);
+    // B est fusionnée dans Agence : plus de colonne en double.
+    expect(Object.keys(out[0])).toEqual(['ID', 'Agence']);
+    expect(renameHeaders(['ID', 'Code agence', 'Agency'], plan)).toEqual(['ID', 'Agence']);
+    expect(describeColumnNormalization(plan)).toContain('« Code agence » + « Agency » → « Agence »');
+  });
+
+  it('A renseignée garde la priorité sur B (ordre de configuration)', async () => {
+    const rows = [{ 'Code agence': 'AG01', Agency: 'AUTRE' }];
+    const plan = planColumnNormalization(Object.keys(rows[0]), config);
+    const out = await applyColumnNormalizationPlanAsync(rows, plan);
+    expect(out[0]).toEqual({ Agence: 'AG01' });
+  });
+
+  it('un seul équivalent présent : simple renommage, sans fusion', () => {
+    const plan = planColumnNormalization(['Agency', 'ID'], config);
+    expect(plan.renames).toEqual([{ from: 'Agency', to: 'Agence' }]);
+    expect(plan.renames[0].fillFrom).toBeUndefined();
+  });
+
+  it('la colonne Agence déjà présente n’est jamais touchée', () => {
+    const plan = planColumnNormalization(['Agence', 'Code agence', 'Agency'], config);
+    expect(plan.renames).toEqual([]);
   });
 });
