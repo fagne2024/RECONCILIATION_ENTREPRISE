@@ -13,7 +13,11 @@ import {
   findColumnByCanonicalId,
   normalizeReconciliationKeyValue
 } from '../utils/reconciliation-key.util';
-import { partnerServiceMatchesBo } from '../utils/service-match.util';
+import {
+  MIN_SERVICE_TOKEN_LENGTH,
+  normalizeServiceToken,
+  partnerServiceMatchesBo
+} from '../utils/service-match.util';
 
 /** Colonne synthétique injectée dans les données partenaire avant réconciliation. */
 export const PARTNER_CONDITIONAL_KEY_COLUMN = '__PARTNER_RECON_KEY__';
@@ -542,7 +546,31 @@ export class PartnerConditionalKeysService {
     if (cell.toLowerCase() === rule.toLowerCase()) {
       return true;
     }
+    const cellNorm = normalizeServiceToken(cell);
+    const ruleNorm = normalizeServiceToken(rule);
+    if (cellNorm && cellNorm === ruleNorm) {
+      return true;
+    }
+    // Valeur de règle saisie par l'utilisateur, contenue dans le libellé avec un préfixe /
+    // suffixe pays (PAIEMENTMARCHAND_MOOV ↔ PAIEMENTMARCHAND_MOOV_BF, BF_PAIEMENTMARCHAND_MOOV).
+    // Le rapprochement MOOV GA ci-dessous exige un préfixe TRXBO (GA, GU…) et ne les reconnaissait pas.
+    if (ruleNorm.length >= MIN_SERVICE_TOKEN_LENGTH && cellNorm.includes(ruleNorm)) {
+      return true;
+    }
+    // Mêmes segments dans un autre ordre (BF_MOOV_PAIEMENTMARCHAND).
+    const ruleSegments = this.serviceSegments(rule);
+    if (ruleSegments.length > 1 && ruleSegments.every(segment => cellNorm.includes(segment))) {
+      return true;
+    }
     return partnerServiceMatchesBo(rule, cell) || partnerServiceMatchesBo(cell, rule);
+  }
+
+  /** Segments significatifs d'une valeur de règle (séparés par _, espace, tiret…). */
+  private serviceSegments(value: string): string[] {
+    return (value || '')
+      .split(/[^A-Za-z0-9À-ÿ]+/)
+      .map(part => normalizeServiceToken(part))
+      .filter(part => part.length >= 3);
   }
 
   /** Normalise les clés optionnelles numériques (zéros initiaux, espaces) sans toucher aux clés par défaut. */
