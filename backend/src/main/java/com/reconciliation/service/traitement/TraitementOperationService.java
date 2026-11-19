@@ -38,6 +38,7 @@ public class TraitementOperationService {
 
     private static final int TAILLE_PAGE = 5000;
     private static final int TAILLE_LOT_INSERTION = 1000;
+    private static final int MAX_VALEURS_DISTINCTES = 2000;
 
     private final JdbcTemplate jdbc;
     private final ObjectMapper objectMapper;
@@ -54,16 +55,28 @@ public class TraitementOperationService {
     }
 
     /**
+     * Condition sur une autre colonne : seules les lignes qui la remplissent participent au
+     * dédoublonnage (comparées et supprimables) ; les autres sont conservées telles quelles.
+     * Opérateurs : voir {@link TraitementTransformations#remplitCondition}.
+     */
+    public record ConditionDedoublonnage(String colonne, String operateur, List<String> valeurs) {
+    }
+
+    /**
      * Opération demandée sur un lot. Toutes les listes peuvent être nulles ou vides.
-     * {@code dedoublonnerEntre} = deux colonnes A et B : toute valeur présente à la fois dans A
-     * et dans B entraîne la suppression des lignes qui la portent, côté A comme côté B.
+     * {@code dedoublonnerEntre} = deux colonnes A et B : une valeur présente à la fois dans A et
+     * dans B entraîne la suppression des lignes qui la portent sur <b>un seul côté</b>, choisi par
+     * {@code supprimerCote} ("A" par défaut, ou "B"). L'autre côté est conservé.
+     * {@code conditionDedoublonnage} (optionnelle) restreint les deux dédoublonnages.
      */
     public record Operation(List<FiltreValeurs> filtres,
                             List<String> dedoublonnerSur,
                             List<String> colonnesNombre,
                             List<String> colonnesDate,
                             String formatDate,
-                            List<String> dedoublonnerEntre) {
+                            List<String> dedoublonnerEntre,
+                            ConditionDedoublonnage conditionDedoublonnage,
+                            String supprimerCote) {
     }
 
     /** Résultat : identifiant du nouveau lot et compteurs. */
@@ -86,6 +99,7 @@ public class TraitementOperationService {
         long nouveauLotId = creerLotResultat(entrepriseId, utilisateur, lotSourceId);
         Set<String> clesVues = new HashSet<>();
         String[] croise = colonnesCroisees(operation);
+        boolean supprimerSurB = supprimerSurB(operation);
         Set<String> valeursA = new HashSet<>();
         Set<String> valeursB = new HashSet<>();
         if (croise != null) {
@@ -115,15 +129,17 @@ public class TraitementOperationService {
                         filtrees++;
                         continue;
                     }
-                    if (croise != null) {
-                        String a = valeurNormalisee(ligne.get(croise[0]));
-                        String b = valeurNormalisee(ligne.get(croise[1]));
-                        if ((!a.isEmpty() && valeursB.contains(a)) || (!b.isEmpty() && valeursA.contains(b))) {
+                    boolean eligible = eligibleDedoublonnage(ligne, operation.conditionDedoublonnage());
+                    if (croise != null && eligible) {
+                        // Seul le côté choisi est supprimé : sa valeur est cherchée dans l'autre colonne
+                        String v = valeurNormalisee(ligne.get(croise[supprimerSurB ? 1 : 0]));
+                        Set<String> autreCote = supprimerSurB ? valeursA : valeursB;
+                        if (!v.isEmpty() && autreCote.contains(v)) {
                             doublons++;
                             continue;
                         }
                     }
-                    if (operation.dedoublonnerSur() != null && !operation.dedoublonnerSur().isEmpty()) {
+                    if (eligible && operation.dedoublonnerSur() != null && !operation.dedoublonnerSur().isEmpty()) {
                         String cle = TraitementTransformations.cleDedoublonnage(operation.dedoublonnerSur(), ligne);
                         if (cle != null && !clesVues.add(cle)) {
                             doublons++;
@@ -161,6 +177,47 @@ public class TraitementOperationService {
         return new ResultatOperation(nouveauLotId, entree, sorties, filtrees, doublons);
     }
 
+    /**
+     * Valeurs distinctes d'une colonne du lot (liste déroulante de la condition de
+     * dédoublonnage), triées. Au-delà de {@code max} valeurs, la liste est tronquée.
+     */
+    public Map<String, Object> valeursDistinctes(long lotId, String colonne, int max) {
+        long entrepriseId = entrepriseCourante();
+        verifierLot(lotId, entrepriseId);
+        if (colonne == null || !colonnesUnion(lotId, entrepriseId).contains(colonne)) {
+            throw new IllegalArgumentException("Colonne inconnue dans le lot : « " + colonne + " »");
+        }
+        int plafond = Math.max(1, Math.min(max, MAX_VALEURS_DISTINCTES));
+        Set<String> valeurs = new java.util.TreeSet<>(String.CASE_INSENSITIVE_ORDER);
+        boolean tronque = false;
+        long curseur = 0;
+        while (true) {
+            List<Map<String, Object>> page = jdbc.queryForList(
+                    "SELECT numero, valeurs_json FROM traitement_ligne "
+                            + "WHERE entreprise_id = ? AND lot_id = ? AND numero > ? ORDER BY numero LIMIT ?",
+                    entrepriseId, lotId, curseur, TAILLE_PAGE);
+            for (Map<String, Object> brute : page) {
+                curseur = ((Number) brute.get("numero")).longValue();
+                Object v = lireLigne((String) brute.get("valeurs_json")).get(colonne);
+                String texte = v == null ? "" : String.valueOf(v).trim();
+                if (!valeurs.contains(texte)) {
+                    if (valeurs.size() >= plafond) {
+                        tronque = true;
+                    } else {
+                        valeurs.add(texte);
+                    }
+                }
+            }
+            if (page.size() < TAILLE_PAGE) {
+                break;
+            }
+        }
+        Map<String, Object> resultat = new LinkedHashMap<>();
+        resultat.put("valeurs", new ArrayList<>(valeurs));
+        resultat.put("tronque", tronque);
+        return resultat;
+    }
+
     // ------------------------------------------------------------------
 
     /** Les deux colonnes du dédoublonnage croisé, ou null s'il n'est pas demandé. */
@@ -173,6 +230,18 @@ public class TraitementOperationService {
             throw new IllegalArgumentException("Le dédoublonnage entre colonnes exige deux colonnes différentes.");
         }
         return new String[]{cols.get(0), cols.get(1)};
+    }
+
+    /** Côté supprimé du dédoublonnage croisé : "A" (défaut) ou "B". */
+    private static boolean supprimerSurB(Operation operation) {
+        String cote = operation.supprimerCote();
+        if (cote == null || cote.isBlank() || cote.trim().equalsIgnoreCase("A")) {
+            return false;
+        }
+        if (cote.trim().equalsIgnoreCase("B")) {
+            return true;
+        }
+        throw new IllegalArgumentException("Côté de suppression inconnu : " + cote + " (attendu : A ou B)");
     }
 
     private static String valeurNormalisee(Object valeur) {
@@ -191,7 +260,8 @@ public class TraitementOperationService {
             for (Map<String, Object> brute : page) {
                 curseur = ((Number) brute.get("numero")).longValue();
                 Map<String, Object> ligne = lireLigne((String) brute.get("valeurs_json"));
-                if (!passeFiltres(ligne, operation.filtres())) {
+                if (!passeFiltres(ligne, operation.filtres())
+                        || !eligibleDedoublonnage(ligne, operation.conditionDedoublonnage())) {
                     continue;
                 }
                 String a = valeurNormalisee(ligne.get(croise[0]));
@@ -207,6 +277,15 @@ public class TraitementOperationService {
                 break;
             }
         }
+    }
+
+    /** Vrai si la ligne participe au dédoublonnage (pas de condition = toutes les lignes). */
+    private static boolean eligibleDedoublonnage(Map<String, Object> ligne, ConditionDedoublonnage condition) {
+        if (condition == null || condition.colonne() == null || condition.colonne().isBlank()) {
+            return true;
+        }
+        return TraitementTransformations.remplitCondition(
+                ligne.get(condition.colonne()), condition.operateur(), condition.valeurs());
     }
 
     private void appliquerConversions(Map<String, Object> ligne, Operation operation) {
@@ -267,6 +346,13 @@ public class TraitementOperationService {
         List<String> demandees = new ArrayList<>();
         if (operation.dedoublonnerSur() != null) demandees.addAll(operation.dedoublonnerSur());
         if (operation.dedoublonnerEntre() != null) demandees.addAll(operation.dedoublonnerEntre());
+        if (operation.conditionDedoublonnage() != null && operation.conditionDedoublonnage().colonne() != null
+                && !operation.conditionDedoublonnage().colonne().isBlank()) {
+            demandees.add(operation.conditionDedoublonnage().colonne());
+            // Valide l'opérateur avant de créer le lot résultat
+            TraitementTransformations.remplitCondition("", operation.conditionDedoublonnage().operateur(),
+                    operation.conditionDedoublonnage().valeurs());
+        }
         if (operation.colonnesNombre() != null) demandees.addAll(operation.colonnesNombre());
         if (operation.colonnesDate() != null) demandees.addAll(operation.colonnesDate());
         if (operation.filtres() != null) {

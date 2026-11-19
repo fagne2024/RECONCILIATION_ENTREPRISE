@@ -97,6 +97,14 @@ public class TraitementLotController {
         return ResponseEntity.ok(operations.executer(lotId, operation, utilisateur));
     }
 
+    /** Valeurs distinctes d'une colonne du lot (liste déroulante de la condition de dédoublonnage). */
+    @GetMapping("/{lotId}/valeurs")
+    public ResponseEntity<Map<String, Object>> valeursDistinctes(@PathVariable long lotId,
+                                                                 @RequestParam("colonne") String colonne,
+                                                                 @RequestParam(value = "max", defaultValue = "2000") int max) {
+        return ResponseEntity.ok(operations.valeursDistinctes(lotId, colonne, max));
+    }
+
     /** Supprime le lot et toutes ses lignes. */
     @DeleteMapping("/{lotId}")
     public ResponseEntity<Void> supprimer(@PathVariable long lotId) {

@@ -3,7 +3,7 @@ import { firstValueFrom } from 'rxjs';
 import { SharedUiModule } from '../../shared/shared-ui.module';
 import { CdkDragDrop, moveItemInArray } from '@angular/cdk/drag-drop';
 import { FormBuilder, FormGroup, Validators, FormArray, FormControl } from '@angular/forms';
-import { AutoProcessingService, AutoProcessingModel, DEFAULT_PRE_PROCESSING_SECTION_ORDER, ENV_COLUMN_NAME, ENV_COLUMN_OPTIONS, EnvColumnOption, ModelColumnMathRule, ModelFormatAction, ModelFormatActionType, ModelFormatColumnSettings, ModelPreProcessingConfig, ModelPreProcessingSectionId, ModelRowFilter, ModelColumnValueMapping, ModelColumnConcatRule, ModelColumnRenameRule, ModelEnvColumnConfig, ModelExportColumnFilterConfig, PartnerConditionalKeyRule, PartnerConditionalKeysConfig, BoConditionalKeysConfig, TrxboOppartConfig, TrxboRegularisationRule, TrxboRegularisationComponent, TrxboAggregationType } from '../../services/auto-processing.service';
+import { AutoProcessingService, AutoProcessingModel, DEFAULT_PRE_PROCESSING_SECTION_ORDER, ENV_COLUMN_NAME, ENV_COLUMN_OPTIONS, EnvColumnOption, ModelColumnMathRule, ModelFormatAction, ModelFormatActionType, ModelFormatColumnSettings, ModelPreProcessingConfig, ModelPreProcessingSectionId, ModelRowFilter, ModelColumnValueMapping, ModelColumnConcatRule, ModelColumnRenameRule, ModelCrossDedupRule, resolvePreProcessingSectionOrder, ModelEnvColumnConfig, ModelExportColumnFilterConfig, PartnerConditionalKeyRule, PartnerConditionalKeysConfig, BoConditionalKeysConfig, TrxboOppartConfig, TrxboRegularisationRule, TrxboRegularisationComponent, TrxboAggregationType } from '../../services/auto-processing.service';
 import { FileWatcherService } from '../../services/file-watcher.service';
 import { AppStateService } from '../../services/app-state.service';
 import { ModelManagementService } from '../../services/model-management.service';
@@ -12,6 +12,7 @@ import { ConfigurationCalculService } from '../../services/configuration-calcul.
 import { ModelPreProcessingService } from '../../services/model-preprocessing.service';
 import { resolveTimezoneShiftHours, TIMEZONE_COUNTRY_FROM_COLUMN, TIMEZONE_SHIFT_COUNTRIES } from '../../utils/timezone-shift.util';
 import { TranslateModule } from '@ngx-translate/core';
+import { OPERATEURS_CONDITION } from '../../utils/cross-dedup.util';
 import { I18nService } from '../../services/i18n/i18n.service';
 
 /** Identifiants internes des catégories de modèles (clés de regroupement, jamais traduits). */
@@ -246,6 +247,10 @@ export class AutoProcessingModelsComponent implements OnInit {
   modelColumnMathRules: ModelColumnMathRule[] = [];
   modelValueMappings: ModelColumnValueMapping[] = [];
   modelColumnRenameRules: ModelColumnRenameRule[] = [];
+  modelCrossDedupRules: ModelCrossDedupRule[] = [];
+  readonly crossDedupOperators = OPERATEURS_CONDITION;
+  showCrossDedupSection = false;
+  nextModelCrossDedupId = 1;
   preProcessingSectionOrder: ModelPreProcessingSectionId[] = [...DEFAULT_PRE_PROCESSING_SECTION_ORDER];
   readonly preProcessingSectionLabelKeys: Record<ModelPreProcessingSectionId, string> = {
     rowFilters: 'APM.Filtrerleslignes',
@@ -253,6 +258,7 @@ export class AutoProcessingModelsComponent implements OnInit {
     columnConcatRules: 'APM.Concaténerplusieurscolonnes',
     columnMathRules: 'APM.Additionsoustractiondecolonnes',
     valueMappings: 'APM.Renommerlesvaleursdecolonnes',
+    crossDedupRules: 'APM.crossDedupTitle',
     columnRenameRules: 'APM.Renommerunentêtedecolonne'
   };
   nextModelFilterId = 1;
@@ -1074,6 +1080,9 @@ export class AutoProcessingModelsComponent implements OnInit {
     (config.valueMappings || []).forEach(mapping => {
       mapping.column?.trim() && columns.add(mapping.column.trim());
       mapping.conditionColumn?.trim() && columns.add(mapping.conditionColumn.trim());
+    });
+    (config.crossDedupRules || []).forEach(rule => {
+      [rule.columnA, rule.columnB, rule.conditionColumn].forEach(col => col?.trim() && columns.add(col.trim()));
     });
     (config.columnRenameRules || []).forEach(rule => {
       if (rule.sourceColumn?.trim()) {
@@ -4186,6 +4195,7 @@ export class AutoProcessingModelsComponent implements OnInit {
     this.showFormatActionsSection = false;
     this.showValueMappingsSection = false;
     this.showColumnRenameSection = false;
+    this.showCrossDedupSection = false;
     
     // Réinitialiser les données
     this.correspondenceRules = [];
@@ -4431,6 +4441,31 @@ export class AutoProcessingModelsComponent implements OnInit {
 
   removeModelColumnRenameRule(index: number): void {
     this.modelColumnRenameRules.splice(index, 1);
+  }
+
+  toggleCrossDedupSection(): void {
+    this.showCrossDedupSection = !this.showCrossDedupSection;
+  }
+
+  addModelCrossDedupRule(): void {
+    this.modelCrossDedupRules.push({
+      id: `crossdedup-${this.nextModelCrossDedupId++}`,
+      columnA: '',
+      columnB: '',
+      deleteSide: 'A',
+      conditionColumn: '',
+      conditionOperator: 'EGAL',
+      conditionValue: '',
+      enabled: true
+    });
+  }
+
+  removeModelCrossDedupRule(index: number): void {
+    this.modelCrossDedupRules.splice(index, 1);
+  }
+
+  crossDedupConditionNeedsValue(rule: ModelCrossDedupRule): boolean {
+    return rule.conditionOperator !== 'VIDE' && rule.conditionOperator !== 'NON_VIDE';
   }
 
   addModelColumnConcatRule(): void {
@@ -4955,10 +4990,30 @@ export class AutoProcessingModelsComponent implements OnInit {
         enabled: rule.enabled !== false
       }));
 
+    const crossDedupRules = this.modelCrossDedupRules
+      .filter(rule => rule.columnA && rule.columnB && rule.columnA !== rule.columnB)
+      .map(rule => {
+        const entry: ModelCrossDedupRule = {
+          id: rule.id,
+          columnA: rule.columnA,
+          columnB: rule.columnB,
+          deleteSide: rule.deleteSide === 'B' ? 'B' : 'A',
+          enabled: rule.enabled !== false
+        };
+        if (rule.conditionColumn) {
+          entry.conditionColumn = rule.conditionColumn;
+          entry.conditionOperator = rule.conditionOperator || 'EGAL';
+          if (this.crossDedupConditionNeedsValue(rule) && rule.conditionValue?.trim()) {
+            entry.conditionValue = rule.conditionValue.trim();
+          }
+        }
+        return entry;
+      });
+
     const envColumn = this.buildModelEnvColumnConfig();
     const exportColumnFilter = this.buildModelExportColumnFilterConfig();
 
-    if (!rowFilters.length && !formatActions.length && !columnConcatRules.length && !columnMathRules.length && !valueMappings.length && !columnRenameRules.length && !envColumn && !exportColumnFilter) {
+    if (!rowFilters.length && !formatActions.length && !columnConcatRules.length && !columnMathRules.length && !valueMappings.length && !columnRenameRules.length && !crossDedupRules.length && !envColumn && !exportColumnFilter) {
       return {
         rowFilters: [],
         formatActions: [],
@@ -4966,6 +5021,7 @@ export class AutoProcessingModelsComponent implements OnInit {
         columnMathRules: [],
         valueMappings: [],
         columnRenameRules: [],
+        crossDedupRules: [],
         sectionOrder: [...this.preProcessingSectionOrder]
       };
     }
@@ -4977,6 +5033,7 @@ export class AutoProcessingModelsComponent implements OnInit {
       columnMathRules,
       valueMappings,
       columnRenameRules,
+      crossDedupRules,
       ...(envColumn ? { envColumn } : {}),
       ...(exportColumnFilter ? { exportColumnFilter } : {}),
       sectionOrder: [...this.preProcessingSectionOrder]
@@ -5080,6 +5137,8 @@ export class AutoProcessingModelsComponent implements OnInit {
     this.modelColumnMathRules = [];
     this.modelValueMappings = [];
     this.modelColumnRenameRules = [];
+    this.modelCrossDedupRules = [];
+    this.nextModelCrossDedupId = 1;
     this.modelEnvColumnEnabled = false;
     this.modelEnvColumnValue = '';
     this.modelExportColumnFilterEnabled = false;
@@ -5151,18 +5210,21 @@ export class AutoProcessingModelsComponent implements OnInit {
     }));
 
     if (config.sectionOrder?.length) {
-      const resolved: ModelPreProcessingSectionId[] = [];
-      for (const sectionId of config.sectionOrder) {
-        if (DEFAULT_PRE_PROCESSING_SECTION_ORDER.includes(sectionId) && !resolved.includes(sectionId)) {
-          resolved.push(sectionId);
-        }
-      }
-      for (const sectionId of DEFAULT_PRE_PROCESSING_SECTION_ORDER) {
-        if (!resolved.includes(sectionId)) {
-          resolved.push(sectionId);
-        }
-      }
-      this.preProcessingSectionOrder = resolved;
+      this.preProcessingSectionOrder = resolvePreProcessingSectionOrder(config.sectionOrder);
+    }
+
+    this.modelCrossDedupRules = (config.crossDedupRules || []).map(rule => ({
+      id: rule.id || `crossdedup-${this.nextModelCrossDedupId++}`,
+      columnA: rule.columnA || '',
+      columnB: rule.columnB || '',
+      deleteSide: rule.deleteSide === 'B' ? 'B' : 'A',
+      conditionColumn: rule.conditionColumn || '',
+      conditionOperator: rule.conditionOperator || 'EGAL',
+      conditionValue: rule.conditionValue || '',
+      enabled: rule.enabled !== false
+    }));
+    if (this.modelCrossDedupRules.length) {
+      this.showCrossDedupSection = true;
     }
 
     this.modelColumnRenameRules = (config.columnRenameRules || []).map(rule => ({
@@ -5226,6 +5288,8 @@ export class AutoProcessingModelsComponent implements OnInit {
     this.modelColumnMathRules = [];
     this.modelValueMappings = [];
     this.modelColumnRenameRules = [];
+    this.modelCrossDedupRules = [];
+    this.nextModelCrossDedupId = 1;
     this.modelEnvColumnEnabled = false;
     this.modelEnvColumnValue = '';
     this.modelExportColumnFilterEnabled = false;
@@ -5244,6 +5308,7 @@ export class AutoProcessingModelsComponent implements OnInit {
     this.showColumnMathSection = false;
     this.showValueMappingsSection = false;
     this.showColumnRenameSection = false;
+    this.showCrossDedupSection = false;
     this.showEnvColumnSection = false;
     this.showExportColumnFilterSection = false;
     this.modelEnvColumnEnabled = false;

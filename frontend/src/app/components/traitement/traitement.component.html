@@ -2002,6 +2002,44 @@
      </div>
      
      <div *ngIf="showSections.dedup" class="section-content">
+    <label>{{ 'TRT.ConditionDedoublonnage' | translate }}</label>
+    <p class="hint">{{ 'TRT.ConditionDedoublonnageAide' | translate }}</p>
+    <div class="dedup-cols">
+      <label>{{ 'TRT.ConditionColonne' | translate }}
+        <select [(ngModel)]="dedupCondCol" (ngModelChange)="onDedupCondColChange()">
+          <option value="">{{ 'TRT.ConditionAucune' | translate }}</option>
+          <option *ngFor="let col of columns" [value]="col">{{ col }}</option>
+        </select>
+      </label>
+      <label *ngIf="dedupCondCol">{{ 'TRT.ConditionOperateur' | translate }}
+        <select [(ngModel)]="dedupCondOp">
+          <option *ngFor="let op of dedupCondOperateurs" [value]="op">{{ 'TRT.ConditionOp.' + op | translate }}</option>
+        </select>
+      </label>
+      <label *ngIf="dedupCondCol && dedupCondOp === 'CONTIENT'">{{ 'TRT.ConditionValeurs' | translate }}
+        <input type="text" [(ngModel)]="dedupCondValeurs" class="ds-input">
+      </label>
+    </div>
+    <div *ngIf="dedupCondCol && dedupCondAvecListe()" class="dedup-cond-liste">
+      <div *ngIf="dedupCondChargement" class="hint">{{ 'TRT.ConditionChargement' | translate }}</div>
+      <ng-container *ngIf="!dedupCondChargement">
+        <div class="dedup-cond-outils">
+          <input type="text" [(ngModel)]="dedupCondRecherche" class="ds-input" [placeholder]="'TRT.ConditionRechercher' | translate">
+          <button type="button" class="ds-btn ds-btn--secondary" (click)="toutCocherDedupCond(true)">{{ 'TRT.ConditionToutCocher' | translate }}</button>
+          <button type="button" class="ds-btn ds-btn--secondary" (click)="toutCocherDedupCond(false)">{{ 'TRT.ConditionToutDecocher' | translate }}</button>
+          <span class="hint">{{ 'TRT.ConditionSelection' | translate:{ count: dedupCondSelection.length, total: dedupCondValeursDispo.length } }}</span>
+        </div>
+        <div class="dedup-cond-valeurs">
+          <label *ngFor="let v of dedupCondValeursFiltrees()">
+            <input type="checkbox" class="ds-checkbox" [checked]="dedupCondSelection.includes(v)"
+                   (change)="toggleDedupCondValeur(v, $any($event.target).checked)">
+            {{ v === '' ? ('TRT.ConditionValeurVide' | translate) : v }}
+          </label>
+        </div>
+        <p *ngIf="dedupCondTronque" class="hint">{{ 'TRT.ConditionTronque' | translate:{ max: dedupCondValeursDispo.length } }}</p>
+      </ng-container>
+    </div>
+    <hr>
     <label>{{ 'TRT.SelectionnezLesColonnesAUtiliser' | translate }}</label>
     <div class="dedup-cols">
       <label *ngFor="let col of columns">
@@ -2025,6 +2063,17 @@
           <option value="">--</option>
           <option *ngFor="let col of columns" [value]="col">{{ col }}</option>
         </select>
+      </label>
+    </div>
+    <div class="dedup-cols" role="radiogroup">
+      <span>{{ 'TRT.SupprimerCote' | translate }}</span>
+      <label>
+        <input type="radio" name="crossDedupCote" value="A" [(ngModel)]="crossDedupCote">
+        {{ 'TRT.ColonneA' | translate }}<ng-container *ngIf="crossDedupColA"> ({{ crossDedupColA }})</ng-container>
+      </label>
+      <label>
+        <input type="radio" name="crossDedupCote" value="B" [(ngModel)]="crossDedupCote">
+        {{ 'TRT.ColonneB' | translate }}<ng-container *ngIf="crossDedupColB"> ({{ crossDedupColB }})</ng-container>
       </label>
     </div>
          <button type="button" (click)="deduplicateAcrossColumns()" [disabled]="!crossDedupColA || !crossDedupColB || crossDedupColA === crossDedupColB" class="ds-btn ds-btn--secondary">{{ 'TRT.SupprimerLesDoublonsCroises' | translate }}</button>

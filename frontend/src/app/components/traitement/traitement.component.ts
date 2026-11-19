@@ -8,7 +8,8 @@ import { FormBuilder, FormGroup, FormControl } from '@angular/forms';
 import { MatSelect, MatSelectChange } from '@angular/material/select';
 import { FieldTypeDetectionService, ColumnAnalysis } from '../../services/field-type-detection.service';
 import { DataProcessingService } from '../../services/data-processing.service';
-import { TraitementLotService, TraitementLotResume, TraitementLigne, TraitementOperation } from '../../services/traitement-lot.service';
+import { TraitementLotService, TraitementLotResume, TraitementLigne, TraitementOperation, TraitementConditionDedoublonnage, OperateurCondition } from '../../services/traitement-lot.service';
+import { remplitConditionDedoublonnage, OPERATEURS_CONDITION } from '../../utils/cross-dedup.util';
 import { TraitementFeuillesService } from '../../services/traitement-feuilles.service';
 import { ExportOptimizationService, ExportProgress } from '../../services/export-optimization.service';
 import { fixGarbledCharacters } from '../../utils/encoding-fixer';
@@ -119,6 +120,20 @@ export class TraitementComponent implements OnInit, AfterViewInit, OnDestroy {
   // Dédoublonnage croisé : valeurs de la colonne A comparées à celles de la colonne B
   crossDedupColA = '';
   crossDedupColB = '';
+  // Côté sur lequel les lignes en doublon sont supprimées (un seul côté, l'autre est conservé)
+  crossDedupCote: 'A' | 'B' = 'A';
+  // Condition optionnelle sur une autre colonne : seules les lignes qui la remplissent
+  // participent au dédoublonnage (les autres sont conservées telles quelles).
+  dedupCondCol = '';
+  dedupCondOp: OperateurCondition = 'EGAL';
+  dedupCondValeurs = '';
+  // Liste des valeurs de la colonne de condition (opérateurs EGAL / DIFFERENT)
+  dedupCondValeursDispo: string[] = [];
+  dedupCondSelection: string[] = [];
+  dedupCondRecherche = '';
+  dedupCondTronque = false;
+  dedupCondChargement = false;
+  private readonly maxValeursCondition = 2000;
   formatOptions: any = {
     removeCharacters: false,
     removeSpecialStrings: false,
@@ -1379,6 +1394,10 @@ End Sub`;
       dedoublonnerSur: [], colonnesNombre: [], colonnesDate: [], formatDate: 'yyyy-MM-dd'
     };
     this.serverFiltres = [];
+    this.dedupCondCol = '';
+    this.dedupCondValeurs = '';
+    this.dedupCondSelection = [];
+    this.dedupCondValeursDispo = [];
     this.columns = [];
     this.selectedFiles = [];
     this.fileProcessStats = [];
@@ -2698,13 +2717,18 @@ End Sub`;
       }
       if (this.serverLot) {
         // Gros fichier : le dédoublonnage est fait en base, sur toutes les lignes du lot
-        await this.executerOperationServeur({ dedoublonnerSur: [...this.dedupCols] }, 'dedup');
+        await this.executerOperationServeur({
+          dedoublonnerSur: [...this.dedupCols],
+          conditionDedoublonnage: this.conditionDedoublonnage()
+        }, 'dedup');
         return;
       }
       const totalBefore = this.combinedRows.length;
       const seen = new Set<string>();
       const removedIndexes = new Set<number>();
+      const eligible = this.filtreConditionDedup();
       const deduped = this.combinedRows.filter((row, index) => {
+        if (!eligible(row)) return true;
         const parts = this.dedupCols.map(col => (row[col] ?? '').toString().trim().toLowerCase());
         // Colonnes toutes vides : pas un doublon (ex. Wave api_payout sans identifiant de session API)
         if (parts.every(p => p === '')) {
@@ -2753,24 +2777,34 @@ End Sub`;
         return;
       }
       if (this.serverLot) {
-        await this.executerOperationServeur({ dedoublonnerEntre: [colA, colB] }, 'dedup');
+        await this.executerOperationServeur({
+          dedoublonnerEntre: [colA, colB],
+          supprimerCote: this.crossDedupCote,
+          conditionDedoublonnage: this.conditionDedoublonnage()
+        }, 'dedup');
         return;
       }
+      const eligible = this.filtreConditionDedup();
 
       const normalize = (value: any) => (value ?? '').toString().trim().toLowerCase();
       const valuesA = new Set<string>();
       const valuesB = new Set<string>();
       this.combinedRows.forEach((row) => {
+        if (!eligible(row)) return;
         const a = normalize(row[colA]);
         const b = normalize(row[colB]);
         if (a) valuesA.add(a);
         if (b) valuesB.add(b);
       });
 
+      // Seul le côté choisi est supprimé : sa valeur est cherchée dans l'autre colonne
+      const surB = this.crossDedupCote === 'B';
+      const colSupprimee = surB ? colB : colA;
+      const autreCote = surB ? valuesA : valuesB;
       const isDuplicate = (row: any) => {
-        const a = normalize(row[colA]);
-        const b = normalize(row[colB]);
-        return (a !== '' && valuesB.has(a)) || (b !== '' && valuesA.has(b));
+        if (!eligible(row)) return false;
+        const v = normalize(row[colSupprimee]);
+        return v !== '' && autreCote.has(v);
       };
 
       const totalBefore = this.combinedRows.length;
@@ -2795,10 +2829,96 @@ End Sub`;
       this.combinedRows = kept;
       this.currentPage = 1;
       this.updatePagination();
-      this.showSuccess('dedup', this.translate.instant('TRT.msg.crossDedupRemoved', { count: removedIndexes.size.toLocaleString() }));
+      this.showSuccess('dedup', this.translate.instant('TRT.msg.crossDedupRemoved', {
+        count: removedIndexes.size.toLocaleString(), colonne: colSupprimee
+      }));
     } catch (e) {
       this.showError('dedup', this.t('TRT.msg.duplicateRemovalError'));
     }
+  }
+
+  /** Opérateurs de la condition de dédoublonnage ; VIDE / NON_VIDE n'utilisent pas de valeur. */
+  readonly dedupCondOperateurs: OperateurCondition[] = OPERATEURS_CONDITION;
+
+  dedupCondAvecValeurs(): boolean {
+    return this.dedupCondOp !== 'VIDE' && this.dedupCondOp !== 'NON_VIDE';
+  }
+
+  /** EGAL / DIFFERENT : choix dans la liste des valeurs de la colonne ; CONTIENT : saisie libre. */
+  dedupCondAvecListe(): boolean {
+    return this.dedupCondOp === 'EGAL' || this.dedupCondOp === 'DIFFERENT';
+  }
+
+  /** Colonne de condition choisie : charge ses valeurs distinctes (lot serveur ou lignes en mémoire). */
+  async onDedupCondColChange(): Promise<void> {
+    this.dedupCondSelection = [];
+    this.dedupCondValeursDispo = [];
+    this.dedupCondRecherche = '';
+    this.dedupCondTronque = false;
+    const colonne = this.dedupCondCol;
+    if (!colonne) return;
+    const max = this.maxValeursCondition;
+    this.dedupCondChargement = true;
+    try {
+      if (this.serverLot) {
+        const res = await this.traitementLotService.valeursDistinctes(this.serverLot.lotId, colonne, max);
+        if (colonne !== this.dedupCondCol) return;
+        this.dedupCondValeursDispo = res.valeurs;
+        this.dedupCondTronque = res.tronque;
+      } else {
+        const vues = new Map<string, string>();
+        this.combinedRows.forEach((row: any) => {
+          const texte = (row[colonne] ?? '').toString().trim();
+          const cle = texte.toLowerCase();
+          if (vues.has(cle)) return;
+          if (vues.size >= max) { this.dedupCondTronque = true; return; }
+          vues.set(cle, texte);
+        });
+        this.dedupCondValeursDispo = Array.from(vues.values())
+          .sort((a, b) => a.localeCompare(b, undefined, { numeric: true, sensitivity: 'base' }));
+      }
+    } catch (err) {
+      this.showError('dedup', this.messageErreurServeur(err));
+    } finally {
+      this.dedupCondChargement = false;
+    }
+  }
+
+  dedupCondValeursFiltrees(): string[] {
+    const q = this.dedupCondRecherche.trim().toLowerCase();
+    return q ? this.dedupCondValeursDispo.filter(v => v.toLowerCase().includes(q)) : this.dedupCondValeursDispo;
+  }
+
+  toggleDedupCondValeur(valeur: string, coche: boolean): void {
+    this.dedupCondSelection = coche
+      ? [...this.dedupCondSelection.filter(v => v !== valeur), valeur]
+      : this.dedupCondSelection.filter(v => v !== valeur);
+  }
+
+  /** Coche (ou décoche) toutes les valeurs visibles après recherche. */
+  toutCocherDedupCond(coche: boolean): void {
+    const visibles = this.dedupCondValeursFiltrees();
+    const reste = this.dedupCondSelection.filter(v => !visibles.includes(v));
+    this.dedupCondSelection = coche ? [...reste, ...visibles] : reste;
+  }
+
+  /** Condition saisie, ou null si aucune colonne n'est choisie. */
+  private conditionDedoublonnage(): TraitementConditionDedoublonnage | null {
+    if (!this.dedupCondCol) return null;
+    let valeurs: string[] = [];
+    if (this.dedupCondAvecListe()) {
+      valeurs = [...this.dedupCondSelection];
+    } else if (this.dedupCondAvecValeurs()) {
+      valeurs = this.dedupCondValeurs.split(';').map(v => v.trim()).filter(v => v !== '');
+    }
+    return { colonne: this.dedupCondCol, operateur: this.dedupCondOp, valeurs };
+  }
+
+  /** Même règle que TraitementTransformations.remplitCondition côté serveur. */
+  private filtreConditionDedup(): (row: any) => boolean {
+    const cond = this.conditionDedoublonnage();
+    if (!cond) return () => true;
+    return (row: any) => remplitConditionDedoublonnage(row, cond);
   }
 
   hasFormattingOption(): boolean {

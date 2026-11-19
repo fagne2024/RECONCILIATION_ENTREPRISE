@@ -3,6 +3,8 @@ import {
   AutoProcessingModel,
   ColumnProcessingRule,
   DEFAULT_PRE_PROCESSING_SECTION_ORDER,
+  ModelCrossDedupRule,
+  resolvePreProcessingSectionOrder,
   ENV_COLUMN_NAME,
   ModelFormatAction,
   ModelPreProcessingConfig,
@@ -16,6 +18,7 @@ import {
   parseConditionValues
 } from './auto-processing.service';
 import { buildConcatenatedValue } from '../utils/concat.util';
+import { parseValeursCondition, supprimerDoublonsCroises } from '../utils/cross-dedup.util';
 import {
   BO_RECONCILIATION_KEY_ALIASES,
   PARTNER_REFERENCE_KEY_ALIASES
@@ -159,6 +162,16 @@ export class ModelPreProcessingService {
               'Renommage des valeurs...',
               options
             );
+          }
+          break;
+        case 'crossDedupRules':
+          if (config.crossDedupRules?.length) {
+            await options?.onProgress?.('Doublons entre deux colonnes...', 0, result.length);
+            await options?.yieldFn?.();
+            result = this.applyCrossDedupRules(result, config.crossDedupRules);
+            if (!result.length) {
+              return result;
+            }
           }
           break;
         case 'columnRenameRules':
@@ -691,6 +704,11 @@ export class ModelPreProcessingService {
         case 'valueMappings':
           if (config.valueMappings?.length) {
             result = this.applyValueMappings(result, config.valueMappings);
+          }
+          break;
+        case 'crossDedupRules':
+          if (config.crossDedupRules?.length) {
+            result = this.applyCrossDedupRules(result, config.crossDedupRules);
           }
           break;
         case 'columnRenameRules':
@@ -1497,6 +1515,7 @@ export class ModelPreProcessingService {
       || this.getActiveColumnMathRules(config?.columnMathRules).length > 0
       || this.getActiveValueMappings(config?.valueMappings).length > 0
       || this.getActiveColumnRenameRules(config?.columnRenameRules).length > 0
+      || this.getActiveCrossDedupRules(config?.crossDedupRules).length > 0
       || this.isEnvColumnEnabled(config);
   }
 
@@ -1543,6 +1562,14 @@ export class ModelPreProcessingService {
       }
       if (mapping.conditionColumn?.trim()) {
         columns.add(mapping.conditionColumn.trim());
+      }
+    }
+
+    for (const rule of this.getActiveCrossDedupRules(config?.crossDedupRules)) {
+      columns.add(rule.columnA);
+      columns.add(rule.columnB);
+      if (rule.conditionColumn?.trim()) {
+        columns.add(rule.conditionColumn.trim());
       }
     }
 
@@ -1600,6 +1627,14 @@ export class ModelPreProcessingService {
       }
     }
 
+    for (const rule of this.getActiveCrossDedupRules(config?.crossDedupRules)) {
+      columns.add(rule.columnA);
+      columns.add(rule.columnB);
+      if (rule.conditionColumn?.trim()) {
+        columns.add(rule.conditionColumn.trim());
+      }
+    }
+
     for (const rule of this.getActiveColumnRenameRules(config?.columnRenameRules)) {
       if (rule.sourceColumn) {
         columns.add(rule.sourceColumn);
@@ -1607,6 +1642,12 @@ export class ModelPreProcessingService {
     }
 
     return Array.from(columns);
+  }
+
+  getActiveCrossDedupRules(rules?: ModelCrossDedupRule[] | null): ModelCrossDedupRule[] {
+    return (rules ?? []).filter(
+      rule => rule.enabled !== false && !!rule.columnA && !!rule.columnB && rule.columnA !== rule.columnB
+    );
   }
 
   getActiveFilters(config?: ModelPreProcessingConfig | null): ModelRowFilter[] {
@@ -1666,23 +1707,30 @@ export class ModelPreProcessingService {
   }
 
   resolveSectionOrder(order?: ModelPreProcessingSectionId[] | null): ModelPreProcessingSectionId[] {
-    const base = [...DEFAULT_PRE_PROCESSING_SECTION_ORDER];
-    if (!order?.length) {
-      return base;
-    }
+    return resolvePreProcessingSectionOrder(order);
+  }
 
-    const resolved: ModelPreProcessingSectionId[] = [];
-    for (const sectionId of order) {
-      if (base.includes(sectionId) && !resolved.includes(sectionId)) {
-        resolved.push(sectionId);
+  /** Doublons entre deux colonnes : règles actives appliquées dans l'ordre. */
+  applyCrossDedupRules(
+    rows: Record<string, string>[],
+    rules: ModelCrossDedupRule[]
+  ): Record<string, string>[] {
+    let result = rows;
+    for (const rule of this.getActiveCrossDedupRules(rules)) {
+      const condition = rule.conditionColumn
+        ? {
+          colonne: rule.conditionColumn,
+          operateur: rule.conditionOperator || 'EGAL',
+          valeurs: parseValeursCondition(rule.conditionValue)
+        }
+        : null;
+      const sortie = supprimerDoublonsCroises(result, rule.columnA, rule.columnB, rule.deleteSide === 'B' ? 'B' : 'A', condition);
+      if (sortie.supprimees) {
+        console.log(`[Pré-traitement] Doublons entre « ${rule.columnA} » et « ${rule.columnB} » : ${sortie.supprimees} ligne(s) supprimée(s) côté ${rule.deleteSide === 'B' ? 'B' : 'A'}`);
       }
+      result = sortie.rows;
     }
-    for (const sectionId of base) {
-      if (!resolved.includes(sectionId)) {
-        resolved.push(sectionId);
-      }
-    }
-    return resolved;
+    return result;
   }
 
   getActiveColumnRenameRules(rules?: ModelColumnRenameRule[] | null): ModelColumnRenameRule[] {
@@ -1730,6 +1778,10 @@ export class ModelPreProcessingService {
     if (columnRenameRules.length) {
       parts.push(I18nService.t('MSG.msg.renommageSDEnTetes', { p0: columnRenameRules.length }));
     }
+    const crossDedupRules = this.getActiveCrossDedupRules(config?.crossDedupRules);
+    if (crossDedupRules.length) {
+      parts.push(`${crossDedupRules.length} règle(s) de doublons entre deux colonnes`);
+    }
     if (this.isEnvColumnEnabled(config)) {
       parts.push(I18nService.t('MSG.pp.envColumn', { name: ENV_COLUMN_NAME }));
     }
@@ -1743,6 +1795,13 @@ export class ModelPreProcessingService {
     const detailLines: string[] = [];
     filters.forEach(filter => {
       detailLines.push(I18nService.t('MSG.msg.filtre', { p0: filter.column, p1: filter.selectedValues.join(', ') }));
+    });
+    crossDedupRules.forEach(rule => {
+      const cote = rule.deleteSide === 'B' ? rule.columnB : rule.columnA;
+      const condition = rule.conditionColumn
+        ? ` si ${rule.conditionColumn} ${rule.conditionOperator || 'EGAL'} ${rule.conditionValue ?? ''}`.trimEnd()
+        : '';
+      detailLines.push(`• Doublons : ${rule.columnA} / ${rule.columnB}, suppression côté ${cote}${condition}`);
     });
     formats.forEach(action => {
       detailLines.push(I18nService.t('MSG.msg.format', { p0: this.describeFormatAction(action) }));

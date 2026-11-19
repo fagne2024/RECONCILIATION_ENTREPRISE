@@ -75,4 +75,19 @@ class TraitementTransformationsTest {
         assertThat(TraitementTransformations.appartient(null, List.of(""))).isTrue();
         assertThat(TraitementTransformations.appartient("AUTRE", List.of("OK"))).isFalse();
     }
+
+    @Test
+    void conditionDedoublonnage_operateurs() {
+        assertThat(TraitementTransformations.remplitCondition(" Succès ", "EGAL", List.of("succès", "ok"))).isTrue();
+        assertThat(TraitementTransformations.remplitCondition("ECHEC", "EGAL", List.of("succès"))).isFalse();
+        assertThat(TraitementTransformations.remplitCondition("ECHEC", "DIFFERENT", List.of("succès"))).isTrue();
+        assertThat(TraitementTransformations.remplitCondition("Paiement OM", "CONTIENT", List.of("om"))).isTrue();
+        assertThat(TraitementTransformations.remplitCondition("  ", "VIDE", List.of())).isTrue();
+        assertThat(TraitementTransformations.remplitCondition(null, "NON_VIDE", null)).isFalse();
+        assertThat(TraitementTransformations.remplitCondition(" ", "EGAL", List.of("", "OK"))).isTrue();
+        assertThat(TraitementTransformations.remplitCondition("x", "CONTIENT", List.of(""))).isFalse();
+        org.assertj.core.api.Assertions.assertThatThrownBy(
+                () -> TraitementTransformations.remplitCondition("x", "INCONNU", List.of()))
+                .isInstanceOf(IllegalArgumentException.class);
+    }
 }
