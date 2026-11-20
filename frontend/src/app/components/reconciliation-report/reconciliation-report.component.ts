@@ -6470,10 +6470,57 @@ reportData: ReconciliationReportData[] = [];
         if (code) {
             return countryNameFromCode(code) || code;
         }
+        // Pays lu dans les lignes BO chargées de ce service (colonne Pays / GRX…), quel que
+        // soit le nom du service : vaut pour tout service magique, configuré ou à venir.
+        const fromRows = this.countryFromLoadedRows(service);
+        if (fromRows) {
+            return fromRows;
+        }
         if (Array.isArray(this.allowedCountryCodes) && this.allowedCountryCodes.length === 1) {
             return this.allowedCountryCodes[0];
         }
         return '';
+    }
+
+    private countryByServiceCache: { source: unknown; map: Map<string, string> } | null = null;
+
+    /** Pays le plus fréquent des lignes BO chargées d'un service (tag magique ou colonne Service). */
+    private countryFromLoadedRows(service: string): string {
+        const svc = (service || '').trim();
+        if (!svc) {
+            return '';
+        }
+        const datasets = this.getDetailDatasets();
+        if (this.countryByServiceCache?.source !== datasets.filteredMatches) {
+            const counts = new Map<string, Map<string, number>>();
+            const add = (record: Record<string, string> | undefined) => {
+                if (!record) {
+                    return;
+                }
+                const country = this.pickRecordField(record, ReconciliationReportComponent.BO_FIELD_KEYS.country);
+                if (!country) {
+                    return;
+                }
+                for (const s of [this.getMagicServiceTag(record), this.pickRecordField(record, ReconciliationReportComponent.BO_FIELD_KEYS.service)]) {
+                    if (!s) {
+                        continue;
+                    }
+                    const byCountry = counts.get(s) || new Map<string, number>();
+                    byCountry.set(country, (byCountry.get(country) || 0) + 1);
+                    counts.set(s, byCountry);
+                }
+            };
+            datasets.filteredMatches.forEach(m => add(m.boData));
+            datasets.filteredBoOnly.forEach(add);
+            datasets.filteredMismatches.forEach(add);
+            const map = new Map<string, string>();
+            counts.forEach((byCountry, s) => {
+                const best = Array.from(byCountry.entries()).sort((x, y) => y[1] - x[1])[0][0];
+                map.set(s, best);
+            });
+            this.countryByServiceCache = { source: datasets.filteredMatches, map };
+        }
+        return this.countryByServiceCache.map.get(svc) || '';
     }
 
     /** Vrai quand le rapport doit être cloisonné sur la card (service) sélectionnée. */
@@ -7215,25 +7262,62 @@ reportData: ReconciliationReportData[] = [];
     }
 
     // Méthodes utilitaires pour extraire les informations d'agence/service/pays
-    private getBoAgencyAndService(match: Match) {
-        const boData = match.boData;
+    /** Clés BO (premier nom présent et renseigné ; casse, accents, espaces et « _ » ignorés). */
+    private static readonly BO_FIELD_KEYS = {
+        agency: ['Agence', 'agency'],
+        service: ['Service', 'serv'],
+        country: ['GRX', 'Pays provenance', 'Pays', 'country', 'groupe de réseau'],
+        date: ['Date', 'Date opération', 'dateTransaction', 'jour'],
+        volume: ['Montant', 'amount', 'volume']
+    };
+
+    private static normalizeFieldKey(key: string): string {
+        return (key || '').normalize('NFD').replace(/[\u0300-\u036f]/g, '').toLowerCase().replace(/[\s_-]+/g, '');
+    }
+
+    /** Valeur du premier champ renseigné parmi `keys`, quelle que soit l'écriture de l'en-tête. */
+    private pickRecordField(record: Record<string, string> | undefined, keys: readonly string[]): string {
+        if (!record) {
+            return '';
+        }
+        const byKey = new Map<string, string>();
+        for (const k of Object.keys(record)) {
+            const v = record[k];
+            if (v === undefined || v === null || String(v).trim() === '') {
+                continue;
+            }
+            const nk = ReconciliationReportComponent.normalizeFieldKey(fixGarbledCharacters(k));
+            if (!byKey.has(nk)) {
+                byKey.set(nk, String(v).trim());
+            }
+        }
+        for (const key of keys) {
+            const v = byKey.get(ReconciliationReportComponent.normalizeFieldKey(key));
+            if (v) {
+                return v;
+            }
+        }
+        return '';
+    }
+
+    private readBoInfo(record: Record<string, string> | undefined) {
+        const K = ReconciliationReportComponent.BO_FIELD_KEYS;
+        const data = record || {};
         return {
-            agency: boData['Agence'] || boData['agency'] || boData['agence'] || boData['AGENCE'] || 'Inconnue',
-            service: boData['Service'] || boData['service'] || boData['SERVICE'] || this.getMagicServiceTag(boData) || 'Inconnu',
-            country: boData['GRX'] || boData['grx'] || boData['Pays provenance'] || boData['country'] || boData['pays'] || boData['PAYS'] || 'Inconnu',
-            date: boData['Date'] || boData['date'] || boData['DATE'] || new Date().toISOString().split('T')[0],
-            volume: this.parseAmount(boData['montant'] || boData['amount'] || boData['AMOUNT'] || '0')
+            agency: this.pickRecordField(data, K.agency) || 'Inconnue',
+            service: this.pickRecordField(data, K.service) || this.getMagicServiceTag(data) || 'Inconnu',
+            country: this.pickRecordField(data, K.country) || 'Inconnu',
+            date: this.pickRecordField(data, K.date) || new Date().toISOString().split('T')[0],
+            volume: this.parseAmount(this.pickRecordField(data, K.volume) || '0')
         };
     }
 
+    private getBoAgencyAndService(match: Match) {
+        return this.readBoInfo(match.boData);
+    }
+
     private getBoOnlyAgencyAndService(record: Record<string, string>) {
-        return {
-            agency: record['Agence'] || record['agency'] || record['agence'] || record['AGENCE'] || 'Inconnue',
-            service: record['Service'] || record['service'] || record['SERVICE'] || this.getMagicServiceTag(record) || 'Inconnu',
-            country: record['GRX'] || record['grx'] || record['Pays provenance'] || record['country'] || record['pays'] || record['PAYS'] || 'Inconnu',
-            date: record['Date'] || record['date'] || record['DATE'] || new Date().toISOString().split('T')[0],
-            volume: this.parseAmount(record['montant'] || record['amount'] || record['AMOUNT'] || '0')
-        };
+        return this.readBoInfo(record);
     }
 
     private getMagicServiceTag(record: Record<string, string> | undefined): string {
