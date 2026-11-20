@@ -38,7 +38,8 @@ import {
     formatSpreadsheetDateValue,
     isDateColumnName,
     normalizeRecordDateFields,
-    normalizeRecordsDateFields
+    normalizeRecordsDateFields,
+    normalizeRecordDateFieldsInPlace
 } from '../../utils/date-format.util';
 import { SharedModule } from '../../shared/shared.module';
 import { TranslateService } from '@ngx-translate/core';
@@ -7553,6 +7554,26 @@ private async downloadExcelFile(workbooks: ExcelJS.Workbook[], fileName: string)
             + (response?.partnerOnly?.length ?? 0)
             + (response?.mismatches?.length ?? 0);
         const isPaginatedOrSlim = response?.resultsPaginated === true;
+        // Réconciliation magique : les lignes ont été créées pour ce résultat (marquées
+        // _magicService) ; dates formatées sur place, sans dupliquer toutes les lignes.
+        if (!isPaginatedOrSlim && this.appStateService.getMagicServiceSummaries().length > 0) {
+            if (totalRows <= 100000) {
+                for (const m of response.matches || []) {
+                    normalizeRecordDateFieldsInPlace(m.boData);
+                    normalizeRecordDateFieldsInPlace(m.partnerData);
+                }
+                (response.boOnly || []).forEach(r => normalizeRecordDateFieldsInPlace(r));
+                (response.partnerOnly || []).forEach(r => normalizeRecordDateFieldsInPlace(r));
+                (response.mismatches || []).forEach(r => normalizeRecordDateFieldsInPlace(r));
+            }
+            return {
+                ...response,
+                matches: response.matches || [],
+                boOnly: response.boOnly || [],
+                partnerOnly: response.partnerOnly || [],
+                mismatches: response.mismatches || []
+            };
+        }
         if (isPaginatedOrSlim || totalRows > 100000) {
             return {
                 ...response,

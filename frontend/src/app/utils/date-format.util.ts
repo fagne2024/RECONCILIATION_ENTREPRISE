@@ -116,6 +116,19 @@ export function normalizeRecordDateFields<T extends Record<string, unknown>>(rec
     return out;
 }
 
+/**
+ * Comme normalizeRecordDateFields, mais modifie l'enregistrement sur place (aucune copie) :
+ * pour les gros résultats dont les lignes appartiennent déjà à l'écran (réconciliation magique).
+ */
+export function normalizeRecordDateFieldsInPlace(record: Record<string, unknown> | null | undefined): void {
+    if (!record) return;
+    for (const key of Object.keys(record)) {
+        if (isDateColumnName(key)) {
+            record[key] = formatSpreadsheetDateValue(record[key]);
+        }
+    }
+}
+
 export function normalizeRecordsDateFields<T extends Record<string, unknown>>(records: T[] | undefined | null): T[] {
     if (!records?.length) return records || [];
     return records.map(r => normalizeRecordDateFields(r));

@@ -7016,7 +7016,48 @@ reportData: ReconciliationReportData[] = [];
         return kept.length ? kept : summary;
     }
 
+    private detailDatasetsCache: { deps: unknown[]; value: ReturnType<ReconciliationReportComponent['computeDetailDatasets']> } | null = null;
+
+    /**
+     * Lignes du périmètre (card(s) magique(s)) : mémorisées tant que les sources et le périmètre
+     * ne changent pas. Appelée une dizaine de fois par génération du rapport ; chaque appel
+     * refiltrait toutes les lignes (plus de 150 000 en magique).
+     */
     private getDetailDatasets(): {
+        filteredMatches: Match[];
+        filteredBoOnly: Record<string, string>[];
+        filteredPartnerOnly: Record<string, string>[];
+        filteredMismatches: Record<string, string>[];
+    } {
+        const ctx = this.getMagicPartitionContext();
+        const magicFull = this.appStateService.getMagicFullResponse();
+        const deps: unknown[] = [
+            magicFull?.matches, magicFull?.boOnly, magicFull?.partnerOnly, magicFull?.mismatches,
+            this.response?.matches, this.response?.boOnly, this.response?.partnerOnly, this.response?.mismatches,
+            this.reconciliationTabsService.getFilteredMatches(),
+            this.reconciliationTabsService.getFilteredBoOnly(),
+            this.reconciliationTabsService.getFilteredPartnerOnly(),
+            this.reconciliationTabsService.getFilteredMismatches(),
+            this.appStateService.getMagicServiceSummaries(),
+            this.getReportScopeServices().join(''),
+            this.getReportScopePartnerFile(),
+            ctx.service,
+            ctx.partnerFile
+        ];
+        const cached = this.detailDatasetsCache;
+        if (cached && cached.deps.length === deps.length && cached.deps.every((d, i) => d === deps[i])) {
+            if (ctx.service || ctx.partnerFile) {
+                const services = this.getReportScopeServices();
+                this.reconciliationTabsService.setMagicViewContext(services[0] || ctx.service || '', ctx.partnerFile);
+            }
+            return cached.value;
+        }
+        const value = this.computeDetailDatasets();
+        this.detailDatasetsCache = { deps, value };
+        return value;
+    }
+
+    private computeDetailDatasets(): {
         filteredMatches: Match[];
         filteredBoOnly: Record<string, string>[];
         filteredPartnerOnly: Record<string, string>[];
@@ -7108,8 +7149,35 @@ reportData: ReconciliationReportData[] = [];
      * (toutes les cards/services sélectionnés). Garantit un affichage "par agence" même quand
      * le résumé transmis par la page résultats ne couvre pas le groupe complet.
      */
+    private agencyFromDetailCache: {
+        source: object;
+        rows: AgencySummaryData[];
+        withAgency: boolean;
+        withoutAgency: number;
+    } | null = null;
+
     private buildAgencySummaryFromDetailDatasets(): AgencySummaryData[] {
-        const { filteredMatches, filteredBoOnly, filteredPartnerOnly, filteredMismatches } = this.getDetailDatasets();
+        const datasets = this.getDetailDatasets();
+        const cached = this.agencyFromDetailCache;
+        if (cached && cached.source === datasets) {
+            this.partnerOnlyWithAgencyServiceInIndex = cached.withAgency;
+            this.partnerOnlyWithoutAgencyCount = cached.withoutAgency;
+            return cached.rows.map(r => ({ ...r }));
+        }
+        const rows = this.computeAgencySummaryFromDetailDatasets(datasets);
+        this.agencyFromDetailCache = {
+            source: datasets,
+            rows: rows.map(r => ({ ...r })),
+            withAgency: this.partnerOnlyWithAgencyServiceInIndex,
+            withoutAgency: this.partnerOnlyWithoutAgencyCount
+        };
+        return rows;
+    }
+
+    private computeAgencySummaryFromDetailDatasets(
+        datasets: ReturnType<ReconciliationReportComponent['getDetailDatasets']>
+    ): AgencySummaryData[] {
+        const { filteredMatches, filteredBoOnly, filteredPartnerOnly, filteredMismatches } = datasets;
         type Bucket = {
             agency: string; service: string; country: string; date: string;
             totalVolume: number; recordCount: number;
@@ -7275,29 +7343,49 @@ reportData: ReconciliationReportData[] = [];
         return (key || '').normalize('NFD').replace(/[\u0300-\u036f]/g, '').toLowerCase().replace(/[\s_-]+/g, '');
     }
 
-    /** Valeur du premier champ renseigné parmi `keys`, quelle que soit l'écriture de l'en-tête. */
+    /** Rang de chaque en-tête rencontré dans une liste de clés (-1 = absent), par liste. */
+    private readonly fieldRankCache = new WeakMap<readonly string[], Map<string, number>>();
+
+    /**
+     * Valeur du premier champ renseigné parmi `keys`, quelle que soit l'écriture de l'en-tête.
+     * Le rang d'un en-tête est calculé une seule fois (les lignes partagent les mêmes en-têtes) :
+     * appelé sur chaque ligne de gros résultats magiques.
+     */
     private pickRecordField(record: Record<string, string> | undefined, keys: readonly string[]): string {
         if (!record) {
             return '';
         }
-        const byKey = new Map<string, string>();
-        for (const k of Object.keys(record)) {
-            const v = record[k];
-            if (v === undefined || v === null || String(v).trim() === '') {
+        let ranks = this.fieldRankCache.get(keys);
+        if (!ranks) {
+            ranks = new Map<string, number>();
+            this.fieldRankCache.set(keys, ranks);
+        }
+        let bestRank = Number.MAX_SAFE_INTEGER;
+        let best = '';
+        for (const k in record) {
+            let rank = ranks.get(k);
+            if (rank === undefined) {
+                const nk = ReconciliationReportComponent.normalizeFieldKey(fixGarbledCharacters(k));
+                rank = keys.findIndex(key => ReconciliationReportComponent.normalizeFieldKey(key) === nk);
+                ranks.set(k, rank);
+            }
+            if (rank < 0 || rank >= bestRank) {
                 continue;
             }
-            const nk = ReconciliationReportComponent.normalizeFieldKey(fixGarbledCharacters(k));
-            if (!byKey.has(nk)) {
-                byKey.set(nk, String(v).trim());
+            const v = record[k];
+            if (v === undefined || v === null) {
+                continue;
+            }
+            const text = String(v).trim();
+            if (text) {
+                bestRank = rank;
+                best = text;
+                if (rank === 0) {
+                    break;
+                }
             }
         }
-        for (const key of keys) {
-            const v = byKey.get(ReconciliationReportComponent.normalizeFieldKey(key));
-            if (v) {
-                return v;
-            }
-        }
-        return '';
+        return best;
     }
 
     private readBoInfo(record: Record<string, string> | undefined) {

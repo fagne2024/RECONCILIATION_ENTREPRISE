@@ -531,36 +531,40 @@ export class MagicReconciliationService {
     return { response: merged, summaries };
   }
 
+  /**
+   * Ajoute le résultat d'un service au résultat fusionné. Les lignes viennent d'une réponse
+   * serveur (objets neufs, propres à ce service) : elles sont marquées sur place, sans copie.
+   * Les gros volumes (> 100 000 lignes) faisaient planter le navigateur : chaque ligne
+   * existait 3 à 4 fois en mémoire et push(...tableau) dépasse la pile d'appels.
+   */
   private appendReconcileResult(
     merged: ReconciliationResponse,
     result: ReconciliationResponse,
     service: string,
     partnerFileName: string
   ): void {
-    if (result.matches.length) {
-      merged.matches.push(
-        ...result.matches.map(match => ({
-          ...match,
-          boData: { ...match.boData, _magicService: service, _magicPartnerFile: partnerFileName },
-          partnerData: { ...match.partnerData, _magicService: service, _magicPartnerFile: partnerFileName }
-        }))
-      );
+    const tag = (row: Record<string, string> | null | undefined) => {
+      if (row) {
+        row['_magicService'] = service;
+        row['_magicPartnerFile'] = partnerFileName;
+      }
+    };
+    for (const match of result.matches || []) {
+      tag(match.boData);
+      tag(match.partnerData);
+      merged.matches.push(match);
     }
-    if (result.boOnly.length) {
-      merged.boOnly.push(
-        ...result.boOnly.map(row => ({ ...row, _magicService: service, _magicPartnerFile: partnerFileName }))
-      );
+    for (const row of result.boOnly || []) {
+      tag(row);
+      merged.boOnly.push(row);
     }
-    if (result.partnerOnly.length) {
-      merged.partnerOnly.push(
-        ...result.partnerOnly.map(row => ({ ...row, _magicService: service, _magicPartnerFile: partnerFileName }))
-      );
+    for (const row of result.partnerOnly || []) {
+      tag(row);
+      merged.partnerOnly.push(row);
     }
-    const mismatches = result.mismatches ?? [];
-    if (mismatches.length) {
-      merged.mismatches.push(
-        ...mismatches.map(row => ({ ...row, _magicService: service, _magicPartnerFile: partnerFileName }))
-      );
+    for (const row of result.mismatches || []) {
+      tag(row);
+      merged.mismatches.push(row);
     }
     merged.totalBoRecords += result.totalBoRecords;
     merged.totalPartnerRecords += result.totalPartnerRecords;
@@ -1264,10 +1268,11 @@ export class MagicReconciliationService {
   }
 
   private mergeResponses(target: ReconciliationResponse, source: ReconciliationResponse): void {
-    target.matches.push(...source.matches);
-    target.boOnly.push(...source.boOnly);
-    target.partnerOnly.push(...source.partnerOnly);
-    target.mismatches.push(...(source.mismatches || []));
+    // Pas de push(...tableau) : au-delà de ~100 000 lignes, dépassement de la pile d'appels.
+    for (const m of source.matches) target.matches.push(m);
+    for (const r of source.boOnly) target.boOnly.push(r);
+    for (const r of source.partnerOnly) target.partnerOnly.push(r);
+    for (const r of source.mismatches || []) target.mismatches.push(r);
     target.totalBoRecords += source.totalBoRecords;
     target.totalPartnerRecords += source.totalPartnerRecords;
     target.totalMatches += source.totalMatches;
@@ -1285,22 +1290,24 @@ export class MagicReconciliationService {
     }
   }
 
+  /** Marque sur place le fichier partenaire (lignes propres à ce partenaire, sans copie). */
   private tagResponseWithPartnerFile(
     response: ReconciliationResponse,
     partnerFileName: string
   ): ReconciliationResponse {
-    const tagRow = (row: Record<string, string>) => ({ ...row, _magicPartnerFile: partnerFileName });
-    return {
-      ...response,
-      matches: response.matches.map(m => ({
-        ...m,
-        boData: tagRow(m.boData),
-        partnerData: tagRow(m.partnerData),
-        partnerDataList: m.partnerDataList?.map(tagRow)
-      })),
-      boOnly: response.boOnly.map(tagRow),
-      partnerOnly: response.partnerOnly.map(tagRow),
-      mismatches: (response.mismatches || []).map(tagRow)
+    const tag = (row: Record<string, string> | null | undefined) => {
+      if (row) {
+        row['_magicPartnerFile'] = partnerFileName;
+      }
     };
+    for (const m of response.matches || []) {
+      tag(m.boData);
+      tag(m.partnerData);
+      m.partnerDataList?.forEach(tag);
+    }
+    (response.boOnly || []).forEach(tag);
+    (response.partnerOnly || []).forEach(tag);
+    (response.mismatches || []).forEach(tag);
+    return response;
   }
 }
