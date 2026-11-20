@@ -1,5 +1,6 @@
 package com.reconciliation.service;
 
+import com.reconciliation.entity.EquivalenceCondition;
 import com.reconciliation.entity.ModelColumnEquivalenceEntity;
 import com.reconciliation.repository.AutoProcessingModelRepository;
 import com.reconciliation.repository.ModelColumnEquivalenceRepository;
@@ -95,6 +96,25 @@ class ModelColumnEquivalenceServiceTest {
         assertThrows(ResponseStatusException.class,
                 () -> service.replaceForModel("inconnu", List.of()));
         verify(repository, never()).saveAll(anyList());
+    }
+
+    @Test
+    @DisplayName("conditions : conservées si colonne, valeur(s) et équivalent source valides")
+    void validateKeepsCoherentConditions() {
+        Map<String, ColumnEquivalence> result = service.validate(List.of(
+                new ColumnEquivalence("Montant", List.of("Montant CI", "Montant CO"), List.of(
+                        new EquivalenceCondition(" Service ", List.of(" CASHIN_OM ", "", "CASHIN_OM"), "montant ci"),
+                        new EquivalenceCondition("Service", List.of("CASHOUT_OM"), "Montant CO"),
+                        new EquivalenceCondition("Service", List.of("X"), "Inconnu"),
+                        new EquivalenceCondition("", List.of("X"), "Montant CO"),
+                        new EquivalenceCondition("Service", List.of(" "), "Montant CO")
+                ))
+        ));
+        List<EquivalenceCondition> conditions = result.get(ModelColumnEquivalenceService.normalize("Montant")).conditions();
+        assertEquals(List.of(
+                new EquivalenceCondition("Service", List.of("CASHIN_OM"), "Montant CI"),
+                new EquivalenceCondition("Service", List.of("CASHOUT_OM"), "Montant CO")
+        ), conditions);
     }
 
     private static ModelColumnEquivalenceEntity entity(String modelId, String column, List<String> equivalents) {

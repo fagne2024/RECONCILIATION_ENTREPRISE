@@ -12,10 +12,19 @@ import { PopupService } from '../../services/popup.service';
 import { suggestEquivalentHeaders } from '../../utils/bilingual-column.util';
 import { findHeaderRowIndexInGrid } from '../../utils/model-header-detection.util';
 import {
+  EquivalenceCondition,
   ModelColumnEquivalence,
   normalizeHeaderKey,
+  parseConditionValues,
   planColumnNormalization
 } from '../../utils/model-column-normalization.util';
+
+/** Condition de choix d'équivalent en cours d'édition (valeurs saisies en texte). */
+interface ConditionDraft {
+  column: string;
+  valuesText: string;
+  source: string;
+}
 
 /** Une colonne par défaut du modèle, éditée à l'écran. */
 interface ColumnRow {
@@ -26,6 +35,8 @@ interface ColumnRow {
   /** Colonne ajoutée à la main (absente du fichier modèle). */
   custom: boolean;
   suggestions: string[];
+  /** Conditions de choix de l'équivalent (utiles à partir de deux équivalents). */
+  conditions: ConditionDraft[];
 }
 
 type CheckStatus = 'present' | 'equivalent' | 'missing';
@@ -172,11 +183,14 @@ export class ConfigurationNormalisationComponent implements OnInit, OnDestroy {
       const defaults = await this.collectDefaultColumns(model);
       const saved = this.savedByModel.get(key) || [];
       const byKey = new Map(saved.map(eq => [normalizeHeaderKey(eq.columnName), eq]));
-      const rows: ColumnRow[] = defaults.map(col => this.buildRow(col, byKey.get(normalizeHeaderKey(col))?.equivalents || [], false));
+      const rows: ColumnRow[] = defaults.map(col => {
+        const eq = byKey.get(normalizeHeaderKey(col));
+        return this.buildRow(col, eq?.equivalents || [], false, eq?.conditions);
+      });
       const defaultKeys = new Set(defaults.map(normalizeHeaderKey));
       for (const eq of saved) {
         if (!defaultKeys.has(normalizeHeaderKey(eq.columnName))) {
-          rows.push(this.buildRow(eq.columnName, eq.equivalents || [], true));
+          rows.push(this.buildRow(eq.columnName, eq.equivalents || [], true, eq.conditions));
         }
       }
       this.rows = rows;
@@ -300,7 +314,9 @@ export class ConfigurationNormalisationComponent implements OnInit, OnDestroy {
   }
 
   removeEquivalent(row: ColumnRow, index: number): void {
+    const removedKey = normalizeHeaderKey(row.equivalents[index]);
     row.equivalents = row.equivalents.filter((_, i) => i !== index);
+    row.conditions = row.conditions.filter(c => normalizeHeaderKey(c.source) !== removedKey);
     row.suggestions = this.computeSuggestions(row.columnName, row.equivalents);
     this.markDirty();
   }
@@ -335,7 +351,7 @@ export class ConfigurationNormalisationComponent implements OnInit, OnDestroy {
     try {
       const items = this.rows
         .filter(r => r.equivalents.length > 0)
-        .map(r => ({ columnName: r.columnName, equivalents: r.equivalents }));
+        .map(r => ({ columnName: r.columnName, equivalents: r.equivalents, conditions: this.toConditions(r) }));
       const saved = await firstValueFrom(this.normalizationService.replaceForModel(this.selectedModelKey, items));
       this.savedByModel.set(this.selectedModelKey, saved);
       this.dirty = false;
@@ -424,7 +440,7 @@ export class ConfigurationNormalisationComponent implements OnInit, OnDestroy {
   }
 
   private buildCheck(fileName: string, headers: string[], headerFound: boolean): CheckResult {
-    const equivalences = this.rows.map(r => ({ columnName: r.columnName, equivalents: r.equivalents }));
+    const equivalences = this.rows.map(r => ({ columnName: r.columnName, equivalents: r.equivalents, conditions: this.toConditions(r) }));
     // Même calcul qu'au chargement d'un fichier ; le statut de chaque colonne est déduit ci-dessous.
     const plan = planColumnNormalization(headers, equivalences);
     const renamedTo = new Map(plan.renames.map(r => [r.to, r]));
@@ -490,14 +506,57 @@ export class ConfigurationNormalisationComponent implements OnInit, OnDestroy {
     return row.columnName;
   }
 
-  private buildRow(columnName: string, equivalents: string[], custom: boolean): ColumnRow {
+  private buildRow(columnName: string, equivalents: string[], custom: boolean, conditions?: EquivalenceCondition[]): ColumnRow {
     return {
       columnName,
       equivalents: [...equivalents],
       draft: '',
       custom,
-      suggestions: this.computeSuggestions(columnName, equivalents)
+      suggestions: this.computeSuggestions(columnName, equivalents),
+      conditions: (conditions || []).map(c => ({
+        column: c.column,
+        valuesText: (c.values || []).join(' ; '),
+        source: c.source
+      }))
     };
+  }
+
+  /** Colonnes proposées pour une condition : colonnes du modèle et en-têtes du fichier vérifié. */
+  get conditionColumnOptions(): string[] {
+    const seen = new Set<string>();
+    const options: string[] = [];
+    for (const name of [...this.rows.map(r => r.columnName), ...(this.check?.extraHeaders || [])]) {
+      const key = normalizeHeaderKey(name);
+      if (key && !seen.has(key)) {
+        seen.add(key);
+        options.push(name);
+      }
+    }
+    return options;
+  }
+
+  addCondition(row: ColumnRow): void {
+    const previous = row.conditions[row.conditions.length - 1];
+    // Même colonne de condition que la précédente, équivalent suivant : cas « = X → A, = Y → B ».
+    const usedSources = new Set(row.conditions.map(c => normalizeHeaderKey(c.source)));
+    const source = row.equivalents.find(e => !usedSources.has(normalizeHeaderKey(e))) || row.equivalents[0] || '';
+    row.conditions = [...row.conditions, { column: previous?.column || '', valuesText: '', source }];
+    this.markDirty();
+  }
+
+  removeCondition(row: ColumnRow, index: number): void {
+    row.conditions = row.conditions.filter((_, i) => i !== index);
+    this.markDirty();
+  }
+
+  onConditionChange(): void {
+    this.markDirty();
+  }
+
+  private toConditions(row: ColumnRow): EquivalenceCondition[] {
+    return row.conditions
+      .map(c => ({ column: c.column.trim(), values: parseConditionValues(c.valuesText), source: c.source }))
+      .filter(c => c.column && c.values.length && row.equivalents.includes(c.source));
   }
 
   private computeSuggestions(columnName: string, equivalents: string[]): string[] {

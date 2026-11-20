@@ -21,7 +21,7 @@ import {
   looksLikeGdjReportPreamble,
   looksLikeGdjTransactionalHeader
 } from '../../utils/model-header-detection.util';
-import { buildConcatenatedValue } from '../../utils/concat.util';
+import { buildConcatenatedValue, joinSideBySide } from '../../utils/concat.util';
 import { chooseBatchHeaderSet } from '../../utils/bilingual-column.util';
 import { alignRowsToHeaders } from '../../utils/row-column.util';
 import {
@@ -200,6 +200,8 @@ export class TraitementComponent implements OnInit, AfterViewInit, OnDestroy {
   concatCols: string[] = [];
   concatNewCol: string = '';
   concatSeparator: string = '';
+  /** Fusion côte à côte dans la 1re colonne choisie (en-tête conservé, autres colonnes retirées). */
+  concatMergeIntoFirst = false;
   concatOrderMode: boolean = false;
 
   // --- RENOMMAGE D'EN-TÊTES ---
@@ -5508,9 +5510,65 @@ End Sub`;
     }
   }
 
+  onConcatMergeIntoFirstChange(): void {
+    // Côte à côte : un espace par défaut (ex. « 19/11/2026 23:53 »).
+    if (this.concatMergeIntoFirst && !this.concatSeparator) {
+      this.concatSeparator = ' ';
+    }
+  }
+
+  get canApplyConcat(): boolean {
+    return this.concatMergeIntoFirst ? this.concatCols.length >= 2 : !!this.concatCols.length && !!this.concatNewCol;
+  }
+
+  /**
+   * Fusion côte à côte dans la première colonne choisie : son en-tête est conservé, elle reçoit
+   * les valeurs des colonnes choisies séparées par le séparateur, les autres colonnes sont retirées.
+   * Ex. Date (19/11/2026) + Heure (23:53) → Date = « 19/11/2026 23:53 ».
+   */
+  private applyConcatMergeIntoFirst(): void {
+    const [target, ...others] = this.concatCols;
+    const separator = this.concatSeparator || ' ';
+    const removed = new Set(others);
+    this.originalRows = this.originalRows.map(row => {
+      const newRow: any = {};
+      for (const key of Object.keys(row)) {
+        if (key === target) {
+          newRow[key] = joinSideBySide(this.concatCols.map(col => row[col]), separator);
+        } else if (!removed.has(key)) {
+          newRow[key] = row[key];
+        }
+      }
+      return newRow;
+    });
+    const keep = (list: string[]) => list.filter(c => !removed.has(c));
+    this.allColumns = keep(this.allColumns);
+    this.columns = keep(this.columns);
+    this.reorderedColumns = keep(this.reorderedColumns);
+    this.selectedCols = keep(this.selectedCols);
+    if (this.filterApplied && this.selectedFilterColumn && !removed.has(this.selectedFilterColumn)
+      && this.selectedFilterValues?.length) {
+      this.applyFilter();
+    } else {
+      this.allRows = this.originalRows.clone();
+      this.combinedRows = this.originalRows.clone();
+      this.updateDisplayedRows();
+    }
+    this.showSuccess('concat', I18nService.t('TRT.msg.colonnesFusionneesDans', { p0: others.join(', '), p1: target }));
+    this.concatCols = [target];
+  }
+
   applyConcat() {
     if (this.bloqueSiServeur('concat')) return;
-    if (!this.concatCols.length || !this.concatNewCol) return;
+    if (!this.canApplyConcat) return;
+    if (this.concatMergeIntoFirst) {
+      try {
+        this.applyConcatMergeIntoFirst();
+      } catch (e) {
+        this.showError('concat', this.t('TRT.msg.concatError'));
+      }
+      return;
+    }
     try {
       // Appliquer la concaténation sur toutes les données d'origine
       this.originalRows = this.originalRows.map(row => {
@@ -7316,7 +7374,7 @@ End Sub`;
     }
     const sources = mergedSourceHeaders(merges);
     // Renommage identité : seule la fusion est appliquée ici, le renommage suit.
-    const fillMap = new Map(merges.map(r => [r.from, { from: r.from, to: r.from, fillFrom: r.fillFrom }]));
+    const fillMap = new Map(merges.map(r => [r.from, { from: r.from, to: r.from, fillFrom: r.fillFrom, conditions: r.conditions }]));
     const mergeRow = (row: any) => renameRowColumns(row, fillMap, sources);
     const dropSources = (list: string[]) => list.filter(c => !sources.has(c));
 

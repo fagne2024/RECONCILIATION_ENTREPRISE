@@ -1882,6 +1882,13 @@
         </div>
       </div>
       <div class="filter-group">
+        <label>
+          <input type="checkbox" class="ds-checkbox" [(ngModel)]="concatMergeIntoFirst" (ngModelChange)="onConcatMergeIntoFirstChange()">
+          {{ 'TRT.FusionnerDansPremiereColonne' | translate }}
+        </label>
+        <small class="hint">{{ (concatMergeIntoFirst ? 'TRT.FusionnerDansPremiereColonneAide' : 'TRT.FusionnerDansPremiereColonneOff') | translate: { col: concatCols[0] || '—' } }}</small>
+      </div>
+      <div class="filter-group" *ngIf="!concatMergeIntoFirst">
         <label>{{ 'TRT.NomDeLaNouvelleColonne' | translate }}</label>
         <input type="text" [(ngModel)]="concatNewCol" placeholder="{{ 'TRT.NomDeLaColonne' | translate }}" class="ds-input filter-input">
       </div>
@@ -1890,7 +1897,7 @@
         <input type="text" [(ngModel)]="concatSeparator" placeholder="{{ 'TRT.ExEspace-' | translate }}" class="ds-input filter-input">
       </div>
       <div class="filter-actions">
-        <button type="button" (click)="applyConcat()" [disabled]="!concatCols.length || !concatNewCol" class="ds-btn ds-btn--secondary apply-btn">{{ 'TRT.Concatener' | translate }}</button>
+        <button type="button" (click)="applyConcat()" [disabled]="!canApplyConcat" class="ds-btn ds-btn--secondary apply-btn">{{ 'TRT.Concatener' | translate }}</button>
       </div>
     </div>
          <div *ngIf="successMsg.concat" class="success-msg">{{ successMsg.concat }}</div>

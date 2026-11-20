@@ -40,6 +40,11 @@ public class ModelColumnEquivalenceEntity {
     @Column(name = "equivalents", columnDefinition = "TEXT")
     private List<String> equivalents = new ArrayList<>();
 
+    /** Conditions de choix de l'équivalent quand plusieurs sont présents (JSON, V36). */
+    @Convert(converter = EquivalenceConditionListConverter.class)
+    @Column(name = "conditions", columnDefinition = "TEXT")
+    private List<EquivalenceCondition> conditions = new ArrayList<>();
+
     @Column(name = "date_creation")
     private LocalDateTime dateCreation;
 
@@ -71,6 +76,9 @@ public class ModelColumnEquivalenceEntity {
 
     public List<String> getEquivalents() { return equivalents == null ? new ArrayList<>() : equivalents; }
     public void setEquivalents(List<String> equivalents) { this.equivalents = equivalents; }
+
+    public List<EquivalenceCondition> getConditions() { return conditions == null ? new ArrayList<>() : conditions; }
+    public void setConditions(List<EquivalenceCondition> conditions) { this.conditions = conditions; }
 
     public LocalDateTime getDateCreation() { return dateCreation; }
     public LocalDateTime getDateModification() { return dateModification; }

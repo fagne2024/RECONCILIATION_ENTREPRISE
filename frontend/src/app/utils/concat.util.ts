@@ -51,3 +51,41 @@ export function stripAllWhitespace(value: unknown): string {
   }
   return String(value).replace(WHITESPACE_RE, '');
 }
+
+const pad2 = (n: number) => String(n).padStart(2, '0');
+
+/** Cellule Date Excel : heure seule (jour 30/12/1899) → hh:mm[:ss], sinon jj/mm/aaaa [hh:mm[:ss]]. */
+function formatDateCellForJoin(d: Date): string {
+  const h = d.getHours();
+  const m = d.getMinutes();
+  const s = d.getSeconds();
+  const time = s ? `${pad2(h)}:${pad2(m)}:${pad2(s)}` : `${pad2(h)}:${pad2(m)}`;
+  if (d.getFullYear() <= 1900 && d.getMonth() === 11 && d.getDate() >= 30) {
+    return time;
+  }
+  const date = `${pad2(d.getDate())}/${pad2(d.getMonth() + 1)}/${d.getFullYear()}`;
+  return h || m || s ? `${date} ${time}` : date;
+}
+
+/**
+ * Valeurs mises côte à côte dans une même colonne (ex. Date + Heure → « 19/11/2026 23:53 ») :
+ * contrairement à buildConcatenatedValue, les espaces internes et le séparateur sont conservés ;
+ * les parties vides sont ignorées (pas de séparateur en trop).
+ */
+export function joinSideBySide(parts: unknown[], separator = ' '): string {
+  return parts
+    .map(part => {
+      if (part === null || part === undefined) {
+        return '';
+      }
+      if (part instanceof Date) {
+        return isNaN(part.getTime()) ? '' : formatDateCellForJoin(part);
+      }
+      if (typeof part === 'number' && isFinite(part)) {
+        return preserveLeadingZeroString(part);
+      }
+      return String(part).trim();
+    })
+    .filter(part => part !== '')
+    .join(separator ?? ' ');
+}

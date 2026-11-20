@@ -402,3 +402,30 @@
     margin-left: 0;
   }
 }
+
+/* Conditions de choix de l'équivalent (A / B selon la valeur d'une autre colonne) */
+.eq-conditions {
+  flex-basis: 100%;
+  margin-top: 6px;
+  padding: 8px 10px;
+  border-left: 3px solid var(--ds-color-primary, #2563eb);
+  border-radius: 4px;
+}
+.eq-conditions-head {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+.eq-conditions-hint {
+  margin: 4px 0 0;
+  font-size: 12px;
+  opacity: 0.8;
+}
+.eq-condition {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 6px;
+  margin-top: 6px;
+  font-size: 13px;
+}

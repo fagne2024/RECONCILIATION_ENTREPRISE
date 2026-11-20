@@ -11,14 +11,36 @@
  * Si plusieurs équivalents sont présents (ex. A et B pour « Agence »), le premier
  * trouvé (ordre de configuration) est renommé et chaque ligne où il est vide
  * reçoit la valeur du suivant non vide : les deux sources sont prises en compte.
+ * Des conditions peuvent fixer, ligne par ligne, l'équivalent repris même si les deux sont
+ * renseignés (ex. « Service = CASHIN » → A, « Service = CASHOUT » → B).
  */
 import { normalizeColumnKey } from './row-column.util';
+
+/**
+ * Condition de choix d'un équivalent : quand la colonne `column` du fichier vaut une des
+ * `values` (casse et espaces ignorés), la colonne par défaut reçoit la valeur de `source`.
+ */
+export interface EquivalenceCondition {
+  column: string;
+  values: string[];
+  source: string;
+}
 
 export interface ModelColumnEquivalence {
   id?: number;
   modelId?: string;
   columnName: string;
   equivalents: string[];
+  conditions?: EquivalenceCondition[];
+}
+
+/** Condition résolue sur les en-têtes réels du fichier (valeurs normalisées). */
+export interface ResolvedEquivalenceCondition {
+  /** En-tête du fichier lu pour la condition. */
+  column: string;
+  values: Set<string>;
+  /** En-tête équivalent repris quand la condition est vraie. */
+  source: string;
 }
 
 export interface ColumnRename {
@@ -32,6 +54,11 @@ export interface ColumnRename {
    * ensuite retirées (elles sont fusionnées dans `to`, comme `from`).
    */
   fillFrom?: string[];
+  /**
+   * Conditions (dans l'ordre) : la première vérifiée fixe l'équivalent repris sur la ligne,
+   * même s'il est vide et même si un autre équivalent est renseigné.
+   */
+  conditions?: ResolvedEquivalenceCondition[];
 }
 
 export interface ColumnNormalizationPlan {
@@ -120,6 +147,7 @@ export function planColumnNormalization(
   const defaultKeys = new Set(equivalences.map(eq => normalizeHeaderKey(eq.columnName)));
   const templateKeys = new Set(templateColumns.map(normalizeHeaderKey));
   const used = new Set<string>();
+  const pendingConditions: Array<{ rename: ColumnRename; conditions: EquivalenceCondition[]; found: string[] }> = [];
 
   for (const eq of equivalences) {
     const defaultKey = normalizeHeaderKey(eq.columnName);
@@ -148,11 +176,60 @@ export function planColumnNormalization(
         rename.fillFrom = found.slice(1);
       }
       plan.renames.push(rename);
+      if (found.length > 1 && eq.conditions?.length) {
+        pendingConditions.push({ rename, conditions: eq.conditions, found });
+      }
     } else if ((eq.equivalents || []).length) {
       plan.missing.push(eq.columnName);
     }
   }
+
+  // Conditions résolues une fois tous les renommages connus : la colonne de condition peut être
+  // un en-tête du fichier ou une colonne par défaut obtenue par équivalence (ex. « Service »).
+  for (const { rename, conditions, found } of pendingConditions) {
+    const resolved = resolveEquivalenceConditions(conditions, found, headerByKey, plan.renames);
+    if (resolved.length) {
+      rename.conditions = resolved;
+    }
+  }
   return plan;
+}
+
+/** Valeurs de condition séparées par « ; », « , » ou un retour à la ligne. */
+export function parseConditionValues(text: string): string[] {
+  const values: string[] = [];
+  for (const part of (text || '').split(/[;,\n]/)) {
+    const value = part.trim();
+    if (value && !values.includes(value)) {
+      values.push(value);
+    }
+  }
+  return values;
+}
+
+function normalizeConditionValue(value: unknown): string {
+  return value === undefined || value === null ? '' : String(value).trim().toLowerCase();
+}
+
+function resolveEquivalenceConditions(
+  conditions: readonly EquivalenceCondition[],
+  found: readonly string[],
+  headerByKey: ReadonlyMap<string, string>,
+  renames: readonly ColumnRename[]
+): ResolvedEquivalenceCondition[] {
+  const foundByKey = new Map(found.map(h => [normalizeHeaderKey(h), h]));
+  const resolved: ResolvedEquivalenceCondition[] = [];
+  for (const condition of conditions) {
+    const source = foundByKey.get(normalizeHeaderKey(condition.source));
+    const columnKey = normalizeHeaderKey(condition.column);
+    const column = headerByKey.get(columnKey)
+      ?? renames.find(r => normalizeHeaderKey(r.to) === columnKey)?.from;
+    const values = new Set((condition.values || []).map(normalizeConditionValue).filter(v => v));
+    if (source && column && values.size) {
+      resolved.push({ column, values, source });
+    }
+  }
+  return resolved;
 }
 
 /** Cellule vide : absente, nulle ou faite uniquement d'espaces. */
@@ -186,7 +263,11 @@ export function renameRowColumns(
     }
     const rename = renameMap.get(key);
     let value = row[key];
-    if (rename?.fillFrom?.length && isBlankCell(value)) {
+    const fixed = rename?.conditions?.find(c => c.values.has(normalizeConditionValue(row[c.column])));
+    if (fixed) {
+      // Condition vérifiée : l'équivalent choisi est repris tel quel (même si l'autre est renseigné).
+      value = row[fixed.source] ?? '';
+    } else if (rename?.fillFrom?.length && isBlankCell(value)) {
       const fallback = rename.fillFrom.find(source => !isBlankCell(row[source]));
       if (fallback !== undefined) {
         value = row[fallback];

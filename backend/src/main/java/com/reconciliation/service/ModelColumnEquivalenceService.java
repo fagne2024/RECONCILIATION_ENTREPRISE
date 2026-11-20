@@ -1,5 +1,6 @@
 package com.reconciliation.service;
 
+import com.reconciliation.entity.EquivalenceCondition;
 import com.reconciliation.entity.ModelColumnEquivalenceEntity;
 import com.reconciliation.repository.AutoProcessingModelRepository;
 import com.reconciliation.repository.ModelColumnEquivalenceRepository;
@@ -27,7 +28,11 @@ import java.util.Set;
 public class ModelColumnEquivalenceService {
 
     /** Une colonne par défaut et ses en-têtes équivalents (format d'échange API). */
-    public record ColumnEquivalence(String columnName, List<String> equivalents) {}
+    public record ColumnEquivalence(String columnName, List<String> equivalents, List<EquivalenceCondition> conditions) {
+        public ColumnEquivalence(String columnName, List<String> equivalents) {
+            this(columnName, equivalents, List.of());
+        }
+    }
 
     @Autowired
     private ModelColumnEquivalenceRepository repository;
@@ -80,6 +85,7 @@ public class ModelColumnEquivalenceService {
             }
             entity.setColumnName(entry.getValue().columnName());
             entity.setEquivalents(entry.getValue().equivalents());
+            entity.setConditions(new ArrayList<>(entry.getValue().conditions()));
             toSave.add(entity);
         }
         repository.saveAll(toSave);
@@ -105,7 +111,7 @@ public class ModelColumnEquivalenceService {
                 throw badRequest("La colonne « " + column + " » est déclarée plusieurs fois.");
             }
             owners.put(key, column);
-            result.put(key, new ColumnEquivalence(column, new ArrayList<>()));
+            result.put(key, new ColumnEquivalence(column, new ArrayList<>(), new ArrayList<>()));
         }
 
         for (ColumnEquivalence item : items) {
@@ -128,9 +134,42 @@ public class ModelColumnEquivalenceService {
                 owners.put(eqKey, column);
                 equivalents.add(equivalent);
             }
+            result.get(key).conditions().addAll(cleanConditions(item.conditions(), equivalents));
         }
         result.values().removeIf(item -> item.equivalents().isEmpty());
         return result;
+    }
+
+    /**
+     * Conditions conservées : colonne et valeur(s) renseignées, équivalent source faisant
+     * partie des équivalents de la colonne (sinon la condition ne pourrait jamais s'appliquer).
+     */
+    static List<EquivalenceCondition> cleanConditions(List<EquivalenceCondition> raw, List<String> equivalents) {
+        List<EquivalenceCondition> cleaned = new ArrayList<>();
+        if (raw == null || raw.isEmpty()) {
+            return cleaned;
+        }
+        Map<String, String> byKey = new HashMap<>();
+        equivalents.forEach(e -> byKey.put(normalize(e), e));
+        for (EquivalenceCondition condition : raw) {
+            if (condition == null) {
+                continue;
+            }
+            String column = condition.column() == null ? "" : condition.column().trim();
+            String source = byKey.get(normalize(condition.source()));
+            List<String> values = new ArrayList<>();
+            for (String value : condition.values() == null ? List.<String>of() : condition.values()) {
+                String v = value == null ? "" : value.trim();
+                if (!v.isEmpty() && !values.contains(v)) {
+                    values.add(v);
+                }
+            }
+            if (column.isEmpty() || source == null || values.isEmpty()) {
+                continue;
+            }
+            cleaned.add(new EquivalenceCondition(column, values, source));
+        }
+        return cleaned;
     }
 
     /** Même normalisation que le frontend : casse, accents et espaces ignorés. */

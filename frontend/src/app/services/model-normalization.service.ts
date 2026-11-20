@@ -40,7 +40,7 @@ export class ModelNormalizationService {
 
   /** Remplace les équivalences d'un modèle (les colonnes sans équivalent sont supprimées). */
   replaceForModel(modelId: string, items: ModelColumnEquivalence[]): Observable<ModelColumnEquivalence[]> {
-    const body = items.map(i => ({ columnName: i.columnName, equivalents: i.equivalents }));
+    const body = items.map(i => ({ columnName: i.columnName, equivalents: i.equivalents, conditions: i.conditions || [] }));
     return this.http
       .put<ModelColumnEquivalence[]>(`${this.apiUrl}/models/${encodeURIComponent(modelId)}`, body)
       .pipe(tap(() => this.invalidate()));

@@ -140,6 +140,32 @@
               <i class="fas fa-plus"></i> {{ s }}
             </button>
           </span>
+
+          <!-- Plusieurs équivalents : choix fixé par condition (sinon premier non vide) -->
+          <div class="eq-conditions" *ngIf="row.equivalents.length >= 2">
+            <div class="eq-conditions-head">
+              <span class="suggest-label"><i class="fas fa-code-branch"></i> {{ 'CFG.normalisation.conditionsTitle' | translate }}</span>
+              <button type="button" class="link-btn" (click)="addCondition(row)">
+                <i class="fas fa-plus"></i> {{ 'CFG.normalisation.addCondition' | translate }}
+              </button>
+            </div>
+            <p class="eq-conditions-hint" *ngIf="!row.conditions.length">{{ 'CFG.normalisation.conditionsHint' | translate }}</p>
+            <div class="eq-condition" *ngFor="let c of row.conditions; let ci = index">
+              <span>{{ 'CFG.normalisation.conditionIf' | translate }}</span>
+              <input class="ds-input fld-sm" type="text" list="cfg-normalisation-cond-cols" [(ngModel)]="c.column"
+                     (ngModelChange)="onConditionChange()" [placeholder]="'CFG.normalisation.conditionColumn' | translate" />
+              <span>=</span>
+              <input class="ds-input fld-sm" type="text" [(ngModel)]="c.valuesText"
+                     (ngModelChange)="onConditionChange()" [placeholder]="'CFG.normalisation.conditionValues' | translate" />
+              <span>→ {{ 'CFG.normalisation.conditionTake' | translate }}</span>
+              <select class="ds-select fld-sm" [(ngModel)]="c.source" (ngModelChange)="onConditionChange()">
+                <option *ngFor="let eq of row.equivalents" [value]="eq">{{ eq }}</option>
+              </select>
+              <button type="button" class="link-btn" (click)="removeCondition(row, ci)" [title]="'CFG.normalisation.remove' | translate">
+                <i class="fas fa-times"></i>
+              </button>
+            </div>
+          </div>
         </div>
 
         <div class="col-check" *ngIf="check">
@@ -150,6 +176,10 @@
           </ng-container>
         </div>
       </div>
+
+      <datalist id="cfg-normalisation-cond-cols">
+        <option *ngFor="let col of conditionColumnOptions" [value]="col"></option>
+      </datalist>
 
       <div class="add-col">
         <input class="ds-input" type="text" [(ngModel)]="newColumnName" (keydown.enter)="addCustomColumn()"

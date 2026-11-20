@@ -226,3 +226,40 @@ describe('Normalisation modèle : deux équivalents présents (A et B) pour une 
     expect(plan.renames).toEqual([]);
   });
 });
+
+describe('Normalisation modèle : choix de l’équivalent par condition', () => {
+  const config: ModelColumnEquivalence[] = [
+    {
+      columnName: 'Montant',
+      equivalents: ['Montant CI', 'Montant CO'],
+      conditions: [
+        { column: 'Service', values: ['CASHIN_OM', 'CASHIN_MOMO'], source: 'Montant CI' },
+        { column: 'Service', values: ['cashout_om'], source: 'Montant CO' }
+      ]
+    }
+  ];
+  const headers = ['ID', 'Service', 'Montant CI', 'Montant CO'];
+
+  it('prend A ou B selon la valeur de la colonne de condition, même si les deux sont renseignées', async () => {
+    const plan = planColumnNormalization(headers, config);
+    const rows = await applyColumnNormalizationPlanAsync([
+      { ID: '1', Service: 'CASHIN_OM', 'Montant CI': '100', 'Montant CO': '900' },
+      { ID: '2', Service: ' CashOut_OM ', 'Montant CI': '100', 'Montant CO': '900' },
+      { ID: '3', Service: 'AUTRE', 'Montant CI': '', 'Montant CO': '700' },
+      { ID: '4', Service: 'CASHOUT_OM', 'Montant CI': '100', 'Montant CO': '' }
+    ], plan);
+    expect(rows.map(r => r['Montant'])).toEqual(['100', '900', '700', '']);
+    expect(Object.keys(rows[0])).toEqual(['ID', 'Service', 'Montant']);
+  });
+
+  it('colonne de condition elle-même obtenue par équivalence', async () => {
+    const plan = planColumnNormalization(['Type', 'Montant CI', 'Montant CO'], [
+      ...config,
+      { columnName: 'Service', equivalents: ['Type'] }
+    ]);
+    const rows = await applyColumnNormalizationPlanAsync([
+      { Type: 'CASHOUT_OM', 'Montant CI': '100', 'Montant CO': '900' }
+    ], plan);
+    expect(rows[0]).toEqual({ Service: 'CASHOUT_OM', Montant: '900' });
+  });
+});
