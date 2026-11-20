@@ -441,7 +441,7 @@
     "Requissi2evaleurrenseignée": "(required if the 2nd value is filled in)",
     "Résumédessélections": "Selection summary",
     "extractNone": "No extraction",
-    "extractHint": "Extracts part of the value (e-mail domain, N characters from the left or right) into a new column; the source column is kept. Other checked options are then applied to the extracted value: uncheck “Remove special characters” if it must keep them (e.g. e-mail domain).",
+    "extractHint": "Extracts part of the value (e-mail domain, N characters from the left or right) into a new column; the source column is kept. Special characters (e.g. “.”) of the extracted value are kept.",
     "extractTargetHint": "Optional. With several selected columns, or without a name, the default name is used (e.g. Description_debut_5).",
     "extractFirstCharsSummary": "{{count}} character(s) from the left (from position {{start}})",
     "extractLastCharsSummary": "{{count}} character(s) from the right (from position {{start}} counting from the end)",

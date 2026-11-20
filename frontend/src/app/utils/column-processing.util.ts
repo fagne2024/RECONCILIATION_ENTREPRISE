@@ -154,13 +154,14 @@ function createRuleApplier(rule: ColumnProcessingRule): (value: unknown) => stri
   const toUpperCase = !!rule.toUpperCase;
   const toLowerCase = !!rule.toLowerCase;
   const removeAccents = !!rule.removeAccents;
-  const removeSpecialChars = !!rule.removeSpecialChars;
   const padZeros = !!rule.padZeros;
   const padLen = rule.padZeroLength
     ?? (isMsisdnPreserveColumn(outColumn) ? DEFAULT_MSISDN_DIGIT_LENGTH : 8);
   // Extraction de données (stockée dans formatType) : appliquée en premier, sur la valeur source.
   const extraction = parseExtractionFormat(rule.formatType);
   const formatType = extraction ? undefined : rule.formatType;
+  // Une extraction garde les caractères spéciaux de la valeur extraite (ex. « . » d'un domaine).
+  const removeSpecialChars = !!rule.removeSpecialChars && !extraction;
   const msisdnOut = isMsisdnPreserveColumn(outColumn);
   const hasTransformations = ruleHasTransformations(rule);
 

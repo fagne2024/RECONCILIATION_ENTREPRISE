@@ -441,7 +441,7 @@
     "Requissi2evaleurrenseignée": "(requis si 2e valeur renseignée)",
     "Résumédessélections": "Résumé des sélections",
     "extractNone": "Aucune extraction",
-    "extractHint": "Extrait une partie de la valeur (domaine e-mail, N caractères à gauche ou à droite) vers une nouvelle colonne ; la colonne d'origine est conservée. Les autres options cochées s'appliquent ensuite à la valeur extraite : décochez « Supprimer les caractères spéciaux » si elle doit en garder (ex. domaine e-mail).",
+    "extractHint": "Extrait une partie de la valeur (domaine e-mail, N caractères à gauche ou à droite) vers une nouvelle colonne ; la colonne d'origine est conservée. Les caractères spéciaux (ex. « . ») de la valeur extraite sont gardés.",
     "extractTargetHint": "Facultatif. Si plusieurs colonnes sont sélectionnées, ou sans nom saisi, le nom par défaut est utilisé (ex. Description_debut_5).",
     "extractFirstCharsSummary": "{{count}} caractère(s) à gauche (depuis la position {{start}})",
     "extractLastCharsSummary": "{{count}} caractère(s) à droite (depuis la position {{start}} en partant de la fin)",

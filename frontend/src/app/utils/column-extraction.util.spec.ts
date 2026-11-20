@@ -41,4 +41,14 @@ describe('Extraction de données (Traitement et règles de modèle)', () => {
     expect(out.map(r => r['Téléphone'])).toEqual(['61762960', '60210404']);
     expect(out[0].Description).toBe('retrait 2026111551.jj1623715.544 de ouedraogo 61762960');
   });
+
+  it('règle de modèle : l’extraction garde les caractères spéciaux (« . »)', async () => {
+    const out = await applyColumnProcessingRulesAsync([{ Email: 'jean@intouch.sn' }], [{
+      sourceColumn: 'Email',
+      targetColumn: 'Domaine',
+      formatType: serializeExtractionFormat({ type: 'emailDomain', start: 1, count: 1 }),
+      removeSpecialChars: true
+    }], 1000);
+    expect(out[0]['Domaine']).toBe('intouch.sn');
+  });
 });

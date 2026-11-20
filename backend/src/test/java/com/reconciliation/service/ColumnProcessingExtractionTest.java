@@ -22,6 +22,13 @@ class ColumnProcessingExtractionTest {
     }
 
     @Test
+    void reconnaitUneExtraction() {
+        assertThat(ColumnProcessingService.isExtraction("extract:emailDomain")).isTrue();
+        assertThat(ColumnProcessingService.isExtraction("string")).isFalse();
+        assertThat(ColumnProcessingService.isExtraction(null)).isFalse();
+    }
+
+    @Test
     void positionAuDelaDeLaValeurDonneUneChaineVide() {
         assertThat(ColumnProcessingService.applyExtraction("AB", "extract:firstChars:5:2")).isEmpty();
         assertThat(ColumnProcessingService.applyExtraction(null, "extract:firstChars:1:2")).isEmpty();

@@ -245,6 +245,11 @@ public class ColumnProcessingService {
         }
     }
 
+    static boolean isExtraction(String formatType) {
+        return formatType != null
+            && formatType.trim().regionMatches(true, 0, EXTRACTION_PREFIX, 0, EXTRACTION_PREFIX.length());
+    }
+
     private static int positiveInt(String text) {
         try {
             int n = Integer.parseInt(text.trim());
@@ -317,7 +322,8 @@ public class ColumnProcessingService {
         }
         
         // Ensuite supprimer les caractères spéciaux restants (sauf les espaces)
-        if (rule.isRemoveSpecialChars()) {
+        // Une extraction de données garde les caractères spéciaux (ex. « . » d'un domaine e-mail).
+        if (rule.isRemoveSpecialChars() && !isExtraction(rule.getFormatType())) {
             // Supprimer tous les caractères qui ne sont pas des lettres, chiffres ou espaces
             value = value.replaceAll("[^a-zA-Z0-9\\s]", "");
         }

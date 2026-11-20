@@ -478,6 +478,17 @@ export class AutoProcessingModelsComponent implements OnInit {
       extractCount: [1]
     });
 
+    // Extraction de données : les caractères spéciaux sont conservés (case décochée et grisée).
+    this.columnProcessingRuleForm.get('extractType')?.valueChanges.subscribe(type => {
+      const ctrl = this.columnProcessingRuleForm.get('removeSpecialChars');
+      if (type) {
+        ctrl?.setValue(false, { emitEvent: false });
+        ctrl?.disable({ emitEvent: false });
+      } else {
+        ctrl?.enable({ emitEvent: false });
+      }
+    });
+
     this.modelForm.get('fileType')?.valueChanges.subscribe(fileType => {
       this.updateReconciliationKeysValidation(fileType);
       
@@ -3656,6 +3667,7 @@ export class AutoProcessingModelsComponent implements OnInit {
     const customName = (base.targetColumn || '').trim();
     return {
       ...base,
+      removeSpecialChars: false,
       formatType: serializeExtractionFormat(spec),
       targetColumn: useCustomName && customName ? customName : defaultExtractionColumnName(column, spec)
     };
