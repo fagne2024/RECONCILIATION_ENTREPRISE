@@ -1762,6 +1762,14 @@ export class AutoProcessingModelsComponent implements OnInit {
     this.trxboAggregationTypesArray.markAsDirty();
   }
 
+  /** Amène à l'écran le formulaire de règle de traitement des colonnes (ajout / édition). */
+  private scrollToColumnProcessingRuleForm(): void {
+    setTimeout(() => {
+      document.getElementById('column-processing-rule-form')
+        ?.scrollIntoView({ behavior: 'smooth', block: 'start' });
+    });
+  }
+
   /** Fait défiler la page vers la section « Paramétrage des opérations » ciblée. */
   scrollToPoSection(sectionId: string, event: Event): void {
     event.preventDefault();
@@ -3577,6 +3585,7 @@ export class AutoProcessingModelsComponent implements OnInit {
       extractStart: 1,
       extractCount: 1
     });
+    this.scrollToColumnProcessingRuleForm();
     
     console.log('✅ Règle de traitement ajoutée avec sélection multiple de colonnes:', {
       availableTemplateColumns: this.availableTemplateColumns.length,
@@ -3619,6 +3628,7 @@ export class AutoProcessingModelsComponent implements OnInit {
       padZeros: rule.padZeros || false,
       regexReplace: rule.regexReplace || ''
     });
+    this.scrollToColumnProcessingRuleForm();
     
     console.log('✅ Édition de règle de traitement avec colonnes centralisées:', {
       ruleSourceColumn: rule.sourceColumn,

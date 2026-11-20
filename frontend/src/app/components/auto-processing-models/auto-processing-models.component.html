@@ -1072,6 +1072,168 @@
             </button>
           </div>
 
+          <!-- Formulaire d'ajout/édition de règle de traitement -->
+          <div *ngIf="editingColumnProcessingRule !== null" id="column-processing-rule-form" class="processing-rule-form">
+            <h5>{{ (editingColumnProcessingRule === -1 ? 'APM.NewRule' : 'APM.EditRule') | translate }}</h5>
+            <form [formGroup]="columnProcessingRuleForm" (ngSubmit)="saveColumnProcessingRule()">
+              <div class="form-row">
+                <div class="form-group">
+                  <label>{{ 'APM.Colonnesànettoyer' | translate }}</label>
+                  <div class="columns-selection-container">
+                    <div class="columns-list">
+                      <div *ngFor="let col of availableTemplateColumns" class="column-checkbox-item">
+                        <label class="column-checkbox-label">
+                          <input type="checkbox" 
+                                 [value]="col" 
+                                 (change)="toggleColumnSelection(col, $event.target.checked)"
+                                 [checked]="isColumnSelected(col)" class="ds-checkbox">
+                          <span class="column-name">{{ col }}</span>
+                        </label>
+                      </div>
+                    </div>
+                    <div class="columns-selection-summary">
+                      <small class="form-text text-info">
+                        <i class="fas fa-info-circle"></i> 
+                        {{ getSelectedColumnsCount() }} {{ 'APM.Colonnessélectionnéessur' | translate }} {{ availableTemplateColumns.length }} {{ 'APM.Disponibles' | translate }}
+                      </small>
+                      <button type="button" class="ds-btn ds-btn--secondary btn btn-sm btn-outline-secondary" (click)="selectAllColumns()">
+                        <i class="fas fa-check-double"></i>{{ 'ACT.selectAll' | translate }}</button>
+                      <button type="button" class="ds-btn ds-btn--secondary btn btn-sm btn-outline-secondary" (click)="deselectAllColumns()">
+                        <i class="fas fa-times"></i> {{ 'APM.Toutdésélectionner' | translate }}
+                      </button>
+                    </div>
+                  </div>
+                  <small class="form-text text-muted" *ngIf="availableTemplateColumns.length === 0">
+                    <i class="fas fa-spinner fa-spin"></i> {{ 'APM.Chargementdescolonnesdumodèle' | translate }}
+                  </small>
+                  <small class="form-text text-success" *ngIf="availableTemplateColumns.length > 0">
+                    <i class="fas fa-check"></i> {{ availableTemplateColumns.length }} {{ 'APM.Colonnesdumodèledisponibles' | translate }}
+                  </small>
+                </div>
+              </div>
+
+              <div class="form-row">
+                <div class="form-group">
+                  <label>
+                    <input type="checkbox" formControlName="removeSpecialChars" [checked]="true" class="ds-checkbox">
+                    {{ 'APM.Supprimerlescaractèresspéciaux' | translate }}
+                  </label>
+                  <small class="form-text text-muted">
+                    {{ 'APM.Cetteoptionsupprimeautomatiquementlescaractèresspéciauxdelacolonnesélectionnée' | translate }}
+                  </small>
+                </div>
+              </div>
+
+              <div class="form-row">
+                <div class="form-group">
+                  <label>
+                    <input type="checkbox" formControlName="removeAccents" class="ds-checkbox">
+                    {{ 'APM.Supprimerlesaccents' | translate }}
+                  </label>
+                  <small class="form-text text-muted">
+                    {{ 'APM.Cetteoptionsupprimeautomatiquementtouslesaccentsdesvaleurséèàçetc' | translate }}
+                    <br>{{ 'APM.Exempletéléphonetelephonenuméronumero' | translate }}
+                  </small>
+                </div>
+              </div>
+
+              <div class="form-row">
+                <div class="form-group">
+                  <label>
+                    <input type="checkbox" formControlName="toUpperCase" class="ds-checkbox">
+                    {{ 'APM.Convertirenmajuscules' | translate }}
+                  </label>
+                  <small class="form-text text-muted">
+                    {{ 'APM.Convertittoutesleslettresenmajuscules' | translate }}
+                    <br>{{ 'APM.Exemplehelloworldhelloworld' | translate }}
+                  </small>
+                </div>
+              </div>
+
+              <div class="form-row">
+                <div class="form-group">
+                  <label>
+                    <input type="checkbox" formControlName="toLowerCase" class="ds-checkbox">
+                    {{ 'APM.Convertirenminuscules' | translate }}
+                  </label>
+                  <small class="form-text text-muted">
+                    {{ 'APM.Convertittoutesleslettresenminuscules' | translate }}
+                    <br>{{ 'APM.Exemplehelloworldhelloworld_1' | translate }}
+                  </small>
+                </div>
+              </div>
+
+              <div class="form-row">
+                <div class="form-group">
+                  <label>
+                    <input type="checkbox" formControlName="trimSpaces" class="ds-checkbox">
+                    {{ 'APM.Nettoyerlesespaces' | translate }}
+                  </label>
+                  <small class="form-text text-muted">
+                    {{ 'APM.Supprimelesespacesendébutetfindechaîne' | translate }}
+                    <br>{{ 'APM.Exemplehelloworldhelloworld_2' | translate }}
+                  </small>
+                </div>
+              </div>
+                
+              <!-- Champ pour spécifier les chaînes à supprimer -->
+              <div class="form-row">
+                <div class="form-group">
+                  <label>{{ 'APM.Chaîneàsupprimer_1' | translate }}</label>
+                  <input type="text" formControlName="stringToRemove" class="ds-input form-control" 
+                         placeholder="{{ 'APM.Excmouabc123' | translate }}">
+                  <small class="form-text text-muted">
+                    <strong>{{ 'APM.Sensibleàlacasse' | translate }}</strong><br>
+                    {{ 'APM.Cetteoptionsupprimeautomatiquementlachaînespécifiéedelacolonnesélectionnée' | translate }}<br>
+                    {{ 'APM.Exemple' | translate }} <code>{{ 'APM.CM' | translate }}</code> {{ 'APM.Supprimera' | translate }} <code>{{ 'APM.CM' | translate }}</code> {{ 'APM.Dans' | translate }} <code>{{ 'APM.IDcm123' | translate }}</code> → <code>{{ 'APM.ID123' | translate }}</code><br>
+                    {{ 'APM.Exemple' | translate }} <code>{{ 'APM.ML' | translate }}</code> {{ 'APM.Supprimera' | translate }} <code>{{ 'APM.ML' | translate }}</code> {{ 'APM.Dans' | translate }} <code>{{ 'APM.REFml456' | translate }}</code> → <code>{{ 'APM.REF456' | translate }}</code><br>
+                    {{ 'APM.Cetteoptionpeutêtrecombinéeavecdautresrèglesdenettoyage' | translate }}
+                  </small>
+                </div>
+              </div>
+
+              <!-- Extraction de données (comme l'écran Traitement) : écrit dans une nouvelle colonne -->
+              <div class="form-row">
+                <div class="form-group">
+                  <label><i class="fas fa-search"></i> {{ 'TRT.ExtractionDeDonnees' | translate }}</label>
+                  <select formControlName="extractType" class="ds-select form-control">
+                    <option value="">{{ 'APM.extractNone' | translate }}</option>
+                    <option value="emailDomain">{{ 'TRT.DomaineEmail' | translate }}</option>
+                    <option value="firstChars">{{ 'TRT.GaucheNCaracteres' | translate }}</option>
+                    <option value="lastChars">{{ 'TRT.DroiteNCaracteres' | translate }}</option>
+                  </select>
+                  <small class="form-text text-muted">{{ 'APM.extractHint' | translate }}</small>
+                </div>
+              </div>
+
+              <div class="form-row" *ngIf="columnProcessingRuleForm.get('extractType')?.value === 'firstChars' || columnProcessingRuleForm.get('extractType')?.value === 'lastChars'">
+                <div class="form-group">
+                  <label>{{ 'TRT.PositionDeDepart' | translate }}</label>
+                  <input type="number" min="1" formControlName="extractStart" class="ds-input form-control">
+                  <small class="form-text text-muted">{{ 'TRT.PositionDeDepartDebut' | translate }}</small>
+                </div>
+                <div class="form-group">
+                  <label>{{ 'TRT.NombreDeCaracteres' | translate }}</label>
+                  <input type="number" min="1" formControlName="extractCount" class="ds-input form-control">
+                </div>
+              </div>
+
+              <div class="form-row" *ngIf="columnProcessingRuleForm.get('extractType')?.value">
+                <div class="form-group">
+                  <label>{{ 'TRT.NomDeLaNouvelleColonne' | translate }}</label>
+                  <input type="text" formControlName="targetColumn" class="ds-input form-control"
+                         [placeholder]="'TRT.ExDomaineCodeEtc' | translate">
+                  <small class="form-text text-muted">{{ 'APM.extractTargetHint' | translate }}</small>
+                </div>
+              </div>
+
+              <div class="form-actions">
+                <button type="submit" class="ds-btn ds-btn--primary btn btn-primary">{{ 'APM.Sauvegarder' | translate }}</button>
+                <button type="button" class="ds-btn ds-btn--secondary btn btn-secondary" (click)="cancelColumnProcessingRuleEdit()">{{ 'COMMON.actions.cancel' | translate }}</button>
+              </div>
+            </form>
+           </div>
+
           <!-- Ordre d'exécution des sections de pré-traitement -->
           <div class="preprocessing-subsection preprocessing-section-order">
             <h5>
@@ -2106,167 +2268,6 @@
             </ng-container>
           </div>
                  
-          <!-- Formulaire d'ajout/édition de règle de traitement -->
-          <div *ngIf="editingColumnProcessingRule !== null" class="processing-rule-form">
-            <h5>{{ (editingColumnProcessingRule === -1 ? 'APM.NewRule' : 'APM.EditRule') | translate }}</h5>
-            <form [formGroup]="columnProcessingRuleForm" (ngSubmit)="saveColumnProcessingRule()">
-              <div class="form-row">
-                <div class="form-group">
-                  <label>{{ 'APM.Colonnesànettoyer' | translate }}</label>
-                  <div class="columns-selection-container">
-                    <div class="columns-list">
-                      <div *ngFor="let col of availableTemplateColumns" class="column-checkbox-item">
-                        <label class="column-checkbox-label">
-                          <input type="checkbox" 
-                                 [value]="col" 
-                                 (change)="toggleColumnSelection(col, $event.target.checked)"
-                                 [checked]="isColumnSelected(col)" class="ds-checkbox">
-                          <span class="column-name">{{ col }}</span>
-                        </label>
-                      </div>
-                    </div>
-                    <div class="columns-selection-summary">
-                      <small class="form-text text-info">
-                        <i class="fas fa-info-circle"></i> 
-                        {{ getSelectedColumnsCount() }} {{ 'APM.Colonnessélectionnéessur' | translate }} {{ availableTemplateColumns.length }} {{ 'APM.Disponibles' | translate }}
-                      </small>
-                      <button type="button" class="ds-btn ds-btn--secondary btn btn-sm btn-outline-secondary" (click)="selectAllColumns()">
-                        <i class="fas fa-check-double"></i>{{ 'ACT.selectAll' | translate }}</button>
-                      <button type="button" class="ds-btn ds-btn--secondary btn btn-sm btn-outline-secondary" (click)="deselectAllColumns()">
-                        <i class="fas fa-times"></i> {{ 'APM.Toutdésélectionner' | translate }}
-                      </button>
-                    </div>
-                  </div>
-                  <small class="form-text text-muted" *ngIf="availableTemplateColumns.length === 0">
-                    <i class="fas fa-spinner fa-spin"></i> {{ 'APM.Chargementdescolonnesdumodèle' | translate }}
-                  </small>
-                  <small class="form-text text-success" *ngIf="availableTemplateColumns.length > 0">
-                    <i class="fas fa-check"></i> {{ availableTemplateColumns.length }} {{ 'APM.Colonnesdumodèledisponibles' | translate }}
-                  </small>
-                </div>
-              </div>
-
-              <div class="form-row">
-                <div class="form-group">
-                  <label>
-                    <input type="checkbox" formControlName="removeSpecialChars" [checked]="true" class="ds-checkbox">
-                    {{ 'APM.Supprimerlescaractèresspéciaux' | translate }}
-                  </label>
-                  <small class="form-text text-muted">
-                    {{ 'APM.Cetteoptionsupprimeautomatiquementlescaractèresspéciauxdelacolonnesélectionnée' | translate }}
-                  </small>
-                </div>
-              </div>
-
-              <div class="form-row">
-                <div class="form-group">
-                  <label>
-                    <input type="checkbox" formControlName="removeAccents" class="ds-checkbox">
-                    {{ 'APM.Supprimerlesaccents' | translate }}
-                  </label>
-                  <small class="form-text text-muted">
-                    {{ 'APM.Cetteoptionsupprimeautomatiquementtouslesaccentsdesvaleurséèàçetc' | translate }}
-                    <br>{{ 'APM.Exempletéléphonetelephonenuméronumero' | translate }}
-                  </small>
-                </div>
-              </div>
-
-              <div class="form-row">
-                <div class="form-group">
-                  <label>
-                    <input type="checkbox" formControlName="toUpperCase" class="ds-checkbox">
-                    {{ 'APM.Convertirenmajuscules' | translate }}
-                  </label>
-                  <small class="form-text text-muted">
-                    {{ 'APM.Convertittoutesleslettresenmajuscules' | translate }}
-                    <br>{{ 'APM.Exemplehelloworldhelloworld' | translate }}
-                  </small>
-                </div>
-              </div>
-
-              <div class="form-row">
-                <div class="form-group">
-                  <label>
-                    <input type="checkbox" formControlName="toLowerCase" class="ds-checkbox">
-                    {{ 'APM.Convertirenminuscules' | translate }}
-                  </label>
-                  <small class="form-text text-muted">
-                    {{ 'APM.Convertittoutesleslettresenminuscules' | translate }}
-                    <br>{{ 'APM.Exemplehelloworldhelloworld_1' | translate }}
-                  </small>
-                </div>
-              </div>
-
-              <div class="form-row">
-                <div class="form-group">
-                  <label>
-                    <input type="checkbox" formControlName="trimSpaces" class="ds-checkbox">
-                    {{ 'APM.Nettoyerlesespaces' | translate }}
-                  </label>
-                  <small class="form-text text-muted">
-                    {{ 'APM.Supprimelesespacesendébutetfindechaîne' | translate }}
-                    <br>{{ 'APM.Exemplehelloworldhelloworld_2' | translate }}
-                  </small>
-                </div>
-              </div>
-                
-              <!-- Champ pour spécifier les chaînes à supprimer -->
-              <div class="form-row">
-                <div class="form-group">
-                  <label>{{ 'APM.Chaîneàsupprimer_1' | translate }}</label>
-                  <input type="text" formControlName="stringToRemove" class="ds-input form-control" 
-                         placeholder="{{ 'APM.Excmouabc123' | translate }}">
-                  <small class="form-text text-muted">
-                    <strong>{{ 'APM.Sensibleàlacasse' | translate }}</strong><br>
-                    {{ 'APM.Cetteoptionsupprimeautomatiquementlachaînespécifiéedelacolonnesélectionnée' | translate }}<br>
-                    {{ 'APM.Exemple' | translate }} <code>{{ 'APM.CM' | translate }}</code> {{ 'APM.Supprimera' | translate }} <code>{{ 'APM.CM' | translate }}</code> {{ 'APM.Dans' | translate }} <code>{{ 'APM.IDcm123' | translate }}</code> → <code>{{ 'APM.ID123' | translate }}</code><br>
-                    {{ 'APM.Exemple' | translate }} <code>{{ 'APM.ML' | translate }}</code> {{ 'APM.Supprimera' | translate }} <code>{{ 'APM.ML' | translate }}</code> {{ 'APM.Dans' | translate }} <code>{{ 'APM.REFml456' | translate }}</code> → <code>{{ 'APM.REF456' | translate }}</code><br>
-                    {{ 'APM.Cetteoptionpeutêtrecombinéeavecdautresrèglesdenettoyage' | translate }}
-                  </small>
-                </div>
-              </div>
-
-              <!-- Extraction de données (comme l'écran Traitement) : écrit dans une nouvelle colonne -->
-              <div class="form-row">
-                <div class="form-group">
-                  <label><i class="fas fa-search"></i> {{ 'TRT.ExtractionDeDonnees' | translate }}</label>
-                  <select formControlName="extractType" class="ds-select form-control">
-                    <option value="">{{ 'APM.extractNone' | translate }}</option>
-                    <option value="emailDomain">{{ 'TRT.DomaineEmail' | translate }}</option>
-                    <option value="firstChars">{{ 'TRT.GaucheNCaracteres' | translate }}</option>
-                    <option value="lastChars">{{ 'TRT.DroiteNCaracteres' | translate }}</option>
-                  </select>
-                  <small class="form-text text-muted">{{ 'APM.extractHint' | translate }}</small>
-                </div>
-              </div>
-
-              <div class="form-row" *ngIf="columnProcessingRuleForm.get('extractType')?.value === 'firstChars' || columnProcessingRuleForm.get('extractType')?.value === 'lastChars'">
-                <div class="form-group">
-                  <label>{{ 'TRT.PositionDeDepart' | translate }}</label>
-                  <input type="number" min="1" formControlName="extractStart" class="ds-input form-control">
-                  <small class="form-text text-muted">{{ 'TRT.PositionDeDepartDebut' | translate }}</small>
-                </div>
-                <div class="form-group">
-                  <label>{{ 'TRT.NombreDeCaracteres' | translate }}</label>
-                  <input type="number" min="1" formControlName="extractCount" class="ds-input form-control">
-                </div>
-              </div>
-
-              <div class="form-row" *ngIf="columnProcessingRuleForm.get('extractType')?.value">
-                <div class="form-group">
-                  <label>{{ 'TRT.NomDeLaNouvelleColonne' | translate }}</label>
-                  <input type="text" formControlName="targetColumn" class="ds-input form-control"
-                         [placeholder]="'TRT.ExDomaineCodeEtc' | translate">
-                  <small class="form-text text-muted">{{ 'APM.extractTargetHint' | translate }}</small>
-                </div>
-              </div>
-
-              <div class="form-actions">
-                <button type="submit" class="ds-btn ds-btn--primary btn btn-primary">{{ 'APM.Sauvegarder' | translate }}</button>
-                <button type="button" class="ds-btn ds-btn--secondary btn btn-secondary" (click)="cancelColumnProcessingRuleEdit()">{{ 'COMMON.actions.cancel' | translate }}</button>
-              </div>
-            </form>
-           </div>
          </div>
       </div>
 
