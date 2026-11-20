@@ -6,7 +6,7 @@ import { TranslateModule } from '@ngx-translate/core';
 import { ReconciliationService } from '../../services/reconciliation.service';
 import { AutoProcessingService, AutoProcessingModel, ENV_COLUMN_NAME, ENV_COLUMN_OPTIONS, EnvColumnOption, ProcessingResult, ColumnProcessingRule } from '../../services/auto-processing.service';
 import { PartnerConditionalKeysService } from '../../services/partner-conditional-keys.service';
-import { ModelPreProcessingService } from '../../services/model-preprocessing.service';
+import { ModelPreProcessingService, createPreProcessingUsage } from '../../services/model-preprocessing.service';
 import { ExportOptimizationService } from '../../services/export-optimization.service';
 import { TraitementBackgroundService } from '../../services/traitement-background.service';
 import { OrangeMoneyUtilsService } from '../../services/orange-money-utils.service';
@@ -1833,6 +1833,7 @@ export class FileUploadComponent implements OnInit, OnDestroy {
         if (this.modelPreProcessingService.hasPreProcessing(effectivePreProcessingConfig)) {
             const rowsBeforePreProcessing = workingRows.length;
             const inputRowsBeforePreProcessing = workingRows;
+            const preProcessingUsage = createPreProcessingUsage();
             workingRows = await this.modelPreProcessingService.applyPreProcessingAsync(
                 workingRows,
                 effectivePreProcessingConfig,
@@ -1850,14 +1851,16 @@ export class FileUploadComponent implements OnInit, OnDestroy {
                     },
                     yieldFn: workingRows.length <= 20000
                         ? undefined
-                        : () => this.yieldToMainThread(true)
+                        : () => this.yieldToMainThread(true),
+                    usage: preProcessingUsage
                 }
             );
             workingRows = await this.stripKeyColumnWhitespaceAsync(workingRows);
             preProcessingResultMessage = this.modelPreProcessingService.buildApplicationResult(
                 rowsBeforePreProcessing,
                 workingRows.length,
-                effectivePreProcessingConfig
+                effectivePreProcessingConfig,
+                preProcessingUsage
             );
 
             if (!workingRows.length) {

@@ -65,6 +65,9 @@ const OPERATION_BANCAIRE_TEMPLATE_COLUMNS: string[] = [
 interface PrecomputedFormatTarget {
   keys: readonly string[];
   action: ModelFormatAction;
+  /** Action et colonne configurées d'origine (suivi de ce qui a réellement modifié des données). */
+  source: ModelFormatAction;
+  column: string;
   conditionColumnKey: string | null;
   expectedValues: ReadonlySet<string> | null;
 }
@@ -72,6 +75,22 @@ interface PrecomputedFormatTarget {
 interface ResolvedColumnRenameRule {
   sourceKey: string;
   targetKey: string;
+  rule?: ModelColumnRenameRule;
+}
+
+/**
+ * Ce que le pré-traitement a réellement fait sur les lignes : éléments de configuration
+ * (filtres, formats, règles…) ayant modifié au moins une valeur ou une ligne, et pour les
+ * actions de format, les colonnes effectivement modifiées. Sert au résumé affiché après
+ * traitement, qui ne doit lister que ce qui a été fait.
+ */
+export interface PreProcessingUsage {
+  used: Set<object>;
+  formatColumns: Map<ModelFormatAction, Set<string>>;
+}
+
+export function createPreProcessingUsage(): PreProcessingUsage {
+  return { used: new Set<object>(), formatColumns: new Map<ModelFormatAction, Set<string>>() };
 }
 
 @Injectable({
@@ -104,12 +123,15 @@ export class ModelPreProcessingService {
       batchSize?: number;
       onProgress?: (message: string, done: number, total: number) => void | Promise<void>;
       yieldFn?: () => Promise<void>;
+      /** Si fourni, reçoit ce qui a réellement modifié les données (résumé après traitement). */
+      usage?: PreProcessingUsage;
     }
   ): Promise<Record<string, string>[]> {
     if (!config || !rows?.length) {
       return rows;
     }
 
+    const usage = options?.usage;
     const batchSize = options?.batchSize ?? (rows.length > 100000 ? 10000 : 5000);
     let result = rows;
     const sectionOrder = this.resolveSectionOrder(config.sectionOrder);
@@ -120,7 +142,7 @@ export class ModelPreProcessingService {
           if (config.rowFilters?.length) {
             await options?.onProgress?.(I18nService.t('MSG.msg.filtresDuModele'), 0, result.length);
             await options?.yieldFn?.();
-            result = await this.applyRowFiltersAsync(result, config.rowFilters, batchSize, options);
+            result = await this.applyRowFiltersAsync(result, config.rowFilters, batchSize, options, usage);
             if (!result.length) {
               return result;
             }
@@ -128,7 +150,7 @@ export class ModelPreProcessingService {
           break;
         case 'formatActions':
           if (config.formatActions?.length) {
-            result = await this.applyFormatActionsAsync(result, config.formatActions, batchSize, options);
+            result = await this.applyFormatActionsAsync(result, config.formatActions, batchSize, options, usage);
           }
           break;
         case 'columnConcatRules':
@@ -136,7 +158,7 @@ export class ModelPreProcessingService {
             result = await this.mapRowsBatched(
               result,
               batchSize,
-              row => this.applyColumnConcatRulesToRow(row, config.columnConcatRules!),
+              row => this.applyColumnConcatRulesToRow(row, config.columnConcatRules!, usage),
               'Concaténation du modèle...',
               options
             );
@@ -147,7 +169,7 @@ export class ModelPreProcessingService {
             result = await this.mapRowsBatched(
               result,
               batchSize,
-              row => this.applyColumnMathRulesToRow(row, config.columnMathRules!),
+              row => this.applyColumnMathRulesToRow(row, config.columnMathRules!, usage),
               'Calcul de colonnes...',
               options
             );
@@ -158,7 +180,7 @@ export class ModelPreProcessingService {
             result = await this.mapRowsBatched(
               result,
               batchSize,
-              row => this.applyValueMappingsToRow(row, config.valueMappings!),
+              row => this.applyValueMappingsToRow(row, config.valueMappings!, usage),
               'Renommage des valeurs...',
               options
             );
@@ -168,7 +190,7 @@ export class ModelPreProcessingService {
           if (config.crossDedupRules?.length) {
             await options?.onProgress?.('Doublons entre deux colonnes...', 0, result.length);
             await options?.yieldFn?.();
-            result = this.applyCrossDedupRules(result, config.crossDedupRules);
+            result = this.applyCrossDedupRules(result, config.crossDedupRules, usage);
             if (!result.length) {
               return result;
             }
@@ -180,7 +202,8 @@ export class ModelPreProcessingService {
               result,
               config.columnRenameRules,
               batchSize,
-              options
+              options,
+              usage
             );
           }
           break;
@@ -188,6 +211,9 @@ export class ModelPreProcessingService {
     }
 
     result = this.applyEnvColumnToRows(result, config);
+    if (usage && result.length && config.envColumn && this.isEnvColumnEnabled(config)) {
+      usage.used.add(config.envColumn);
+    }
 
     return normalizeLeadingZeroCellsInRows(result);
   }
@@ -298,7 +324,8 @@ export class ModelPreProcessingService {
     options?: {
       onProgress?: (message: string, done: number, total: number) => void | Promise<void>;
       yieldFn?: () => Promise<void>;
-    }
+    },
+    usage?: PreProcessingUsage
   ): Promise<Record<string, string>[]> {
     const enabledActions = actions.filter(action => action.enabled && action.columns?.length);
     if (!enabledActions.length || !rows.length) {
@@ -321,7 +348,7 @@ export class ModelPreProcessingService {
 
     const inlineLimit = options?.yieldFn ? 8000 : PREPROCESS_INLINE_THRESHOLD;
     if (rows.length <= inlineLimit) {
-      this.applyFormatPlanToRows(rows, plan, 0, rows.length);
+      this.applyFormatPlanToRows(rows, plan, 0, rows.length, usage);
       return rows;
     }
 
@@ -330,7 +357,7 @@ export class ModelPreProcessingService {
 
     for (let start = 0; start < rows.length; start += macroBatch) {
       const macroEnd = Math.min(start + macroBatch, rows.length);
-      this.applyFormatPlanToRows(rows, plan, start, macroEnd);
+      this.applyFormatPlanToRows(rows, plan, start, macroEnd, usage);
       if (macroEnd < rows.length) {
         await options?.onProgress?.(progressMessage, macroEnd, rows.length);
         await options?.yieldFn?.();
@@ -377,6 +404,8 @@ export class ModelPreProcessingService {
         targets.push({
           keys,
           action: merged,
+          source: action,
+          column,
           conditionColumnKey,
           expectedValues
         });
@@ -390,7 +419,8 @@ export class ModelPreProcessingService {
     rows: Record<string, string>[],
     plan: PrecomputedFormatTarget[],
     start: number,
-    end: number
+    end: number,
+    usage?: PreProcessingUsage
   ): void {
     for (let i = start; i < end; i++) {
       const row = rows[i];
@@ -411,8 +441,9 @@ export class ModelPreProcessingService {
           continue;
         }
 
+        const inputValue = this.coerceFormatCellValueFast(rawValue);
         const formattedValue = this.applyFormatActionToValue(
-          this.coerceFormatCellValueFast(rawValue),
+          inputValue,
           target.action,
           primaryKey,
           row
@@ -420,6 +451,11 @@ export class ModelPreProcessingService {
 
         for (const key of target.keys) {
           row[key] = this.finalizeFormatColumnValue(key, target.action, formattedValue);
+        }
+        // Effet de l'action seule : la normalisation de cellule (coercition / finalisation) ne compte
+        // pas, sinon une action sans effet (ex. décalage horaire de 0 h) apparaît dans le résumé.
+        if (usage && formattedValue !== inputValue) {
+          this.markFormatColumnUsed(usage, target.source, target.column);
         }
       }
     }
@@ -465,7 +501,8 @@ export class ModelPreProcessingService {
 
   private applyColumnConcatRulesToRow(
     row: Record<string, string>,
-    rules: ModelColumnConcatRule[]
+    rules: ModelColumnConcatRule[],
+    usage?: PreProcessingUsage
   ): Record<string, string> {
     const activeRules = this.getActiveColumnConcatRules(rules);
     if (!activeRules.length) {
@@ -474,6 +511,7 @@ export class ModelPreProcessingService {
 
     const newRow = row;
     for (const rule of activeRules) {
+      const before = newRow[rule.targetColumn];
       newRow[rule.targetColumn] = buildConcatenatedValue(
         rule.sourceColumns.map(column => {
           const key = resolveColumnKeyInRow(newRow, column) ?? column;
@@ -490,13 +528,17 @@ export class ModelPreProcessingService {
           );
         }
       }
+      if (usage && newRow[rule.targetColumn] !== before) {
+        usage.used.add(rule);
+      }
     }
     return newRow;
   }
 
   private applyColumnMathRulesToRow(
     row: Record<string, string>,
-    rules: ModelColumnMathRule[]
+    rules: ModelColumnMathRule[],
+    usage?: PreProcessingUsage
   ): Record<string, string> {
     const activeRules = this.getActiveColumnMathRules(rules);
     if (!activeRules.length) {
@@ -511,7 +553,11 @@ export class ModelPreProcessingService {
       const valueA = parseAmountValue(rawA);
       const valueB = parseAmountValue(rawB);
       const result = rule.operation === 'subtract' ? valueA - valueB : valueA + valueB;
+      const before = row[rule.targetColumn];
       row[rule.targetColumn] = this.formatMathResult(result, rawA, rawB);
+      if (usage && row[rule.targetColumn] !== before) {
+        usage.used.add(rule);
+      }
     }
     return row;
   }
@@ -529,7 +575,8 @@ export class ModelPreProcessingService {
 
   private applyValueMappingsToRow(
     row: Record<string, string>,
-    mappings: ModelColumnValueMapping[]
+    mappings: ModelColumnValueMapping[],
+    usage?: PreProcessingUsage
   ): Record<string, string> {
     const activeMappings = this.getActiveValueMappings(mappings);
     if (!activeMappings.length) {
@@ -549,6 +596,9 @@ export class ModelPreProcessingService {
         continue;
       }
       row[key] = mapping.toValue;
+      if (usage && mapping.toValue !== currentValue) {
+        usage.used.add(mapping);
+      }
     }
     return row;
   }
@@ -584,7 +634,7 @@ export class ModelPreProcessingService {
       if (!sourceKey || sourceKey === targetKey || !Object.prototype.hasOwnProperty.call(working, sourceKey)) {
         continue;
       }
-      resolved.push({ sourceKey, targetKey });
+      resolved.push({ sourceKey, targetKey, rule });
       working = renameKeyPreservingOrder(working, sourceKey, targetKey);
     }
 
@@ -629,7 +679,8 @@ export class ModelPreProcessingService {
     options?: {
       onProgress?: (message: string, done: number, total: number) => void | Promise<void>;
       yieldFn?: () => Promise<void>;
-    }
+    },
+    usage?: PreProcessingUsage
   ): Promise<Record<string, string>[]> {
     if (!rows.length) {
       return rows;
@@ -638,6 +689,9 @@ export class ModelPreProcessingService {
     const resolvedRules = this.resolveColumnRenameRules(rows[0], rules);
     if (!resolvedRules.length) {
       return rows;
+    }
+    if (usage) {
+      resolvedRules.forEach(resolved => resolved.rule && usage.used.add(resolved.rule));
     }
 
     const message = I18nService.t('MSG.msg.renommageDesEnTetes');
@@ -726,7 +780,8 @@ export class ModelPreProcessingService {
 
   applyRowFilters(
     rows: Record<string, string>[],
-    filters: ModelRowFilter[]
+    filters: ModelRowFilter[],
+    usage?: PreProcessingUsage
   ): Record<string, string>[] {
     if (!filters.length) {
       return rows;
@@ -743,6 +798,7 @@ export class ModelPreProcessingService {
         continue;
       }
 
+      const countBefore = filtered.length;
       filtered = filtered.filter(row => {
         if (!row) {
           return false;
@@ -753,6 +809,9 @@ export class ModelPreProcessingService {
         }
         return filter.selectedValues.includes(String(row[key] ?? ''));
       });
+      if (usage && filtered.length < countBefore) {
+        usage.used.add(filter);
+      }
     }
 
     return filtered;
@@ -765,7 +824,8 @@ export class ModelPreProcessingService {
     options?: {
       onProgress?: (message: string, done: number, total: number) => void | Promise<void>;
       yieldFn?: () => Promise<void>;
-    }
+    },
+    usage?: PreProcessingUsage
   ): Promise<Record<string, string>[]> {
     if (!filters.length || !rows.length) {
       return rows;
@@ -773,7 +833,7 @@ export class ModelPreProcessingService {
 
     const inlineLimit = options?.yieldFn ? 8000 : PREPROCESS_INLINE_THRESHOLD;
     if (rows.length <= inlineLimit) {
-      return this.applyRowFilters(rows, filters);
+      return this.applyRowFilters(rows, filters, usage);
     }
 
     let filtered = rows;
@@ -800,6 +860,9 @@ export class ModelPreProcessingService {
         }
         await options?.onProgress?.(I18nService.t('MSG.msg.filtresDuModele'), end, filtered.length);
         await options?.yieldFn?.();
+      }
+      if (usage && next.length < filtered.length) {
+        usage.used.add(filter);
       }
       filtered = next;
     }
@@ -1713,7 +1776,8 @@ export class ModelPreProcessingService {
   /** Doublons entre deux colonnes : règles actives appliquées dans l'ordre. */
   applyCrossDedupRules(
     rows: Record<string, string>[],
-    rules: ModelCrossDedupRule[]
+    rules: ModelCrossDedupRule[],
+    usage?: PreProcessingUsage
   ): Record<string, string>[] {
     let result = rows;
     for (const rule of this.getActiveCrossDedupRules(rules)) {
@@ -1726,6 +1790,7 @@ export class ModelPreProcessingService {
         : null;
       const sortie = supprimerDoublonsCroises(result, rule.columnA, rule.columnB, rule.deleteSide === 'B' ? 'B' : 'A', condition);
       if (sortie.supprimees) {
+        usage?.used.add(rule);
         console.log(`[Pré-traitement] Doublons entre « ${rule.columnA} » et « ${rule.columnB} » : ${sortie.supprimees} ligne(s) supprimée(s) côté ${rule.deleteSide === 'B' ? 'B' : 'A'}`);
       }
       result = sortie.rows;
@@ -1742,7 +1807,21 @@ export class ModelPreProcessingService {
     );
   }
 
-  getPreProcessingSummary(config?: ModelPreProcessingConfig | null): {
+  private markFormatColumnUsed(usage: PreProcessingUsage, action: ModelFormatAction, column: string): void {
+    usage.used.add(action);
+    let columns = usage.formatColumns.get(action);
+    if (!columns) {
+      columns = new Set<string>();
+      usage.formatColumns.set(action, columns);
+    }
+    columns.add(column);
+  }
+
+  /**
+   * Résumé du pré-traitement. Sans `usage` : toute la configuration active (aperçu avant traitement).
+   * Avec `usage` : uniquement ce qui a réellement modifié les données lors du traitement.
+   */
+  getPreProcessingSummary(config?: ModelPreProcessingConfig | null, usage?: PreProcessingUsage | null): {
     activeFilterCount: number;
     activeFormatCount: number;
     activeConcatCount: number;
@@ -1752,12 +1831,14 @@ export class ModelPreProcessingService {
     summaryText: string;
     detailText: string;
   } {
-    const filters = this.getActiveFilters(config);
-    const formats = this.getActiveFormatActions(config);
-    const concatRules = this.getActiveColumnConcatRules(config?.columnConcatRules);
-    const mathRules = this.getActiveColumnMathRules(config?.columnMathRules);
-    const valueMappings = this.getActiveValueMappings(config?.valueMappings);
-    const columnRenameRules = this.getActiveColumnRenameRules(config?.columnRenameRules);
+    const wasUsed = (item: object): boolean => !usage || usage.used.has(item);
+    const filters = this.getActiveFilters(config).filter(wasUsed);
+    const formats = this.getActiveFormatActions(config).filter(wasUsed);
+    const concatRules = this.getActiveColumnConcatRules(config?.columnConcatRules).filter(wasUsed);
+    const mathRules = this.getActiveColumnMathRules(config?.columnMathRules).filter(wasUsed);
+    const valueMappings = this.getActiveValueMappings(config?.valueMappings).filter(wasUsed);
+    const columnRenameRules = this.getActiveColumnRenameRules(config?.columnRenameRules).filter(wasUsed);
+    const envUsed = this.isEnvColumnEnabled(config) && (!usage || (!!config?.envColumn && usage.used.has(config.envColumn)));
     const parts: string[] = [];
 
     if (filters.length) {
@@ -1778,11 +1859,11 @@ export class ModelPreProcessingService {
     if (columnRenameRules.length) {
       parts.push(I18nService.t('MSG.msg.renommageSDEnTetes', { p0: columnRenameRules.length }));
     }
-    const crossDedupRules = this.getActiveCrossDedupRules(config?.crossDedupRules);
+    const crossDedupRules = this.getActiveCrossDedupRules(config?.crossDedupRules).filter(wasUsed);
     if (crossDedupRules.length) {
       parts.push(`${crossDedupRules.length} règle(s) de doublons entre deux colonnes`);
     }
-    if (this.isEnvColumnEnabled(config)) {
+    if (envUsed) {
       parts.push(I18nService.t('MSG.pp.envColumn', { name: ENV_COLUMN_NAME }));
     }
     if (this.isExportColumnFilterEnabled(config)) {
@@ -1804,7 +1885,10 @@ export class ModelPreProcessingService {
       detailLines.push(`• Doublons : ${rule.columnA} / ${rule.columnB}, suppression côté ${cote}${condition}`);
     });
     formats.forEach(action => {
-      detailLines.push(I18nService.t('MSG.msg.format', { p0: this.describeFormatAction(action) }));
+      const changedColumns = usage?.formatColumns.get(action);
+      detailLines.push(I18nService.t('MSG.msg.format', {
+        p0: this.describeFormatAction(action, changedColumns ? Array.from(changedColumns) : undefined)
+      }));
     });
     concatRules.forEach(rule => {
       const separatorLabel = rule.separator === ' '
@@ -1833,7 +1917,7 @@ export class ModelPreProcessingService {
     columnRenameRules.forEach(rule => {
       detailLines.push(I18nService.t('MSG.msg.enTete', { p0: rule.sourceColumn, p1: rule.targetColumn }));
     });
-    const envValue = this.getActiveEnvColumnValue(config);
+    const envValue = envUsed ? this.getActiveEnvColumnValue(config) : null;
     if (envValue) {
       detailLines.push(`• ${ENV_COLUMN_NAME} : ${envValue}`);
     }
@@ -1901,14 +1985,19 @@ export class ModelPreProcessingService {
   buildApplicationResult(
     rowsBefore: number,
     rowsAfter: number,
-    config?: ModelPreProcessingConfig | null
+    config?: ModelPreProcessingConfig | null,
+    usage?: PreProcessingUsage | null
   ): string {
-    const summary = this.getPreProcessingSummary(config);
+    const summary = this.getPreProcessingSummary(config, usage);
     if (!summary.summaryText) {
       return '';
     }
 
     const removed = rowsBefore - rowsAfter;
+    if (removed <= 0 && usage) {
+      // Résumé de ce qui a été fait : pas de mention des filtres quand aucune ligne n'a été exclue.
+      return I18nService.t('MSG.msg.appliquesSansExclusion', { p0: summary.summaryText, p1: summary.detailText });
+    }
     const filterInfo = removed > 0
       ? I18nService.t('MSG.msg.ligneSExclueSParLes', { p0: removed })
       : I18nService.t('MSG.msg.aucuneLigneExclueParLesFiltres');
@@ -1916,8 +2005,8 @@ export class ModelPreProcessingService {
     return I18nService.t('MSG.msg.appliques', { p0: summary.summaryText, p1: filterInfo, p2: summary.detailText });
   }
 
-  private describeFormatAction(action: ModelFormatAction): string {
-    const columns = action.columns.join(', ');
+  private describeFormatAction(action: ModelFormatAction, onlyColumns?: string[]): string {
+    const columns = (onlyColumns?.length ? onlyColumns : action.columns).join(', ');
     const conditionSuffix = this.describeFormatActionCondition(action);
 
     switch (action.type) {

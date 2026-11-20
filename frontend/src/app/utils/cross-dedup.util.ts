@@ -96,7 +96,11 @@ export function supprimerDoublonsCroises<T extends Record<string, any>>(
   return { rows: rows.filter((_row, i) => !index.has(i)), supprimees: index.size };
 }
 
-/** Valeurs d'une condition saisie en texte : séparées par « ; » (ou retour à la ligne). */
+/**
+ * Valeurs d'une condition saisie en texte : séparées par « ; », « , » ou retour à la ligne.
+ * La virgule est acceptée comme dans les autres conditions des modèles (parseConditionValues) :
+ * une liste saisie avec des virgules était lue comme une seule valeur et la règle ne s'appliquait jamais.
+ */
 export function parseValeursCondition(texte?: string | null): string[] {
-  return (texte || '').split(/[;\n]/).map(v => v.trim()).filter(v => v !== '');
+  return (texte || '').split(/[;,\n]/).map(v => v.trim()).filter(v => v !== '');
 }
