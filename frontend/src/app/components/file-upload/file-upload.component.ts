@@ -30,6 +30,7 @@ import { hasCommaSeparatedSearchFilter, matchesCommaSeparatedFilter } from '../.
 import {
     formatSpreadsheetCellValue,
     formatSpreadsheetDateValue,
+    formatOutputDateTime,
     isDateColumnName,
     isExcelSerialDateValue
 } from '../../utils/date-format.util';
@@ -1959,7 +1960,7 @@ export class FileUploadComponent implements OnInit, OnDestroy {
                 projectionColumns.length ? projectionColumns : undefined
             );
 
-        // Dates : toujours au format jj/mm/aaaa dans le fichier produit (jamais « Tue Jan 06 2026 … GMT »).
+        // Dates : toujours au format AAAA-MM-JJ HH:MM:SS dans le fichier produit (jamais « Tue Jan 06 2026 … GMT »).
         this.normalizeJsDateValuesInRows(finalExportRows);
 
         const dedupResult = this.traitementDedupEnabled && this.traitementDedupColumns.length
@@ -3985,35 +3986,30 @@ export class FileUploadComponent implements OnInit, OnDestroy {
     /** Date JS convertie en texte, ex. « Tue Jan 06 2026 00:00:00 GMT+0000 (temps universel coordonné) ». */
     private static readonly JS_DATE_STRING_RE =
         /^[A-Z][a-z]{2} ([A-Z][a-z]{2}) (\d{2}) (\d{4}) (\d{2}):(\d{2}):(\d{2}) GMT/;
-    private static readonly JS_DATE_MONTHS: Record<string, string> = {
-        Jan: '01', Feb: '02', Mar: '03', Apr: '04', May: '05', Jun: '06',
-        Jul: '07', Aug: '08', Sep: '09', Oct: '10', Nov: '11', Dec: '12'
-    };
 
     /**
-     * Remplace, dans les lignes traitées, les objets Date et les dates JS en texte par jj/mm/aaaa
-     * (l'heure est conservée seulement si elle n'est pas minuit). Modifie les lignes en place.
+     * Dates du fichier produit au format unique AAAA-MM-JJ HH:MM:SS (ex. 2026-11-19 23:59:59) :
+     * colonnes de date et objets/textes Date JS ; tout ce qui suit les secondes est ignoré.
+     * Modifie les lignes en place.
      */
     private normalizeJsDateValuesInRows(rows: Record<string, any>[]): void {
-        const pad = (n: number) => String(n).padStart(2, '0');
-        const withTime = (date: string, h: string, m: string, s: string) =>
-            h === '00' && m === '00' && s === '00' ? date : `${date} ${h}:${m}:${s}`;
+        const dateColumns = new Map<string, boolean>();
+        const isDateColumn = (key: string) => {
+            let v = dateColumns.get(key);
+            if (v === undefined) {
+                v = isDateColumnName(key);
+                dateColumns.set(key, v);
+            }
+            return v;
+        };
         for (const row of rows) {
             if (!row) continue;
             for (const key of Object.keys(row)) {
                 const value = row[key];
-                if (value instanceof Date) {
-                    if (isNaN(value.getTime())) continue;
-                    row[key] = withTime(
-                        `${pad(value.getDate())}/${pad(value.getMonth() + 1)}/${value.getFullYear()}`,
-                        pad(value.getHours()), pad(value.getMinutes()), pad(value.getSeconds())
-                    );
-                } else if (typeof value === 'string' && value.length >= 28) {
-                    const m = FileUploadComponent.JS_DATE_STRING_RE.exec(value.trim());
-                    const month = m ? FileUploadComponent.JS_DATE_MONTHS[m[1]] : undefined;
-                    if (m && month) {
-                        row[key] = withTime(`${m[2]}/${month}/${m[3]}`, m[4], m[5], m[6]);
-                    }
+                if (value instanceof Date
+                    || (typeof value === 'string' && (isDateColumn(key)
+                        || (value.length >= 28 && FileUploadComponent.JS_DATE_STRING_RE.test(value.trim()))))) {
+                    row[key] = formatOutputDateTime(value);
                 }
             }
         }
