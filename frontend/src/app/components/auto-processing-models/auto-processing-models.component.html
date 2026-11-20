@@ -1884,6 +1884,15 @@
                   </div>
                 </div>
 
+                <div class="form-group">
+                  <label>
+                    <input type="checkbox" class="ds-checkbox" [ngModel]="rule.removeSourceColumns !== false"
+                           (ngModelChange)="rule.removeSourceColumns = $event" [ngModelOptions]="{standalone: true}">
+                    {{ 'APM.concatRemoveSources' | translate }}
+                  </label>
+                  <small class="form-text text-muted">{{ 'APM.concatRemoveSourcesHint' | translate }}</small>
+                </div>
+
                 <div class="concat-order-list" *ngIf="rule.sourceColumns.length > 0">
                   <label>{{ 'APM.Ordredeconcaténation' | translate }}</label>
                   <div *ngFor="let col of rule.sourceColumns; let colIndex = index" class="concat-order-item">

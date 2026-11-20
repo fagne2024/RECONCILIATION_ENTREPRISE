@@ -228,6 +228,11 @@ export interface ModelColumnConcatRule {
   targetColumn: string;
   separator: string;
   enabled: boolean;
+  /**
+   * Colonnes sources retirées du résultat (fin du prétraitement) : seule la colonne concaténée
+   * reste. Absent = oui (comportement par défaut) ; false pour les conserver.
+   */
+  removeSourceColumns?: boolean;
 }
 
 export interface ModelColumnMathRule {

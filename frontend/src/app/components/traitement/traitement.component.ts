@@ -203,6 +203,8 @@ export class TraitementComponent implements OnInit, AfterViewInit, OnDestroy {
   concatSeparator: string = '';
   /** Fusion côte à côte dans la 1re colonne choisie (en-tête conservé, autres colonnes retirées). */
   concatMergeIntoFirst = false;
+  /** Après concaténation dans une nouvelle colonne, les colonnes sources sont retirées. */
+  concatRemoveSources = true;
   concatOrderMode: boolean = false;
 
   // --- RENOMMAGE D'EN-TÊTES ---
@@ -5571,6 +5573,8 @@ End Sub`;
       return;
     }
     try {
+      // Colonnes sources retirées du résultat (seule la colonne concaténée reste), sauf option décochée.
+      const removed = new Set(this.concatRemoveSources ? this.concatCols.filter(c => c !== this.concatNewCol) : []);
       // Appliquer la concaténation sur toutes les données d'origine
       this.originalRows = this.originalRows.map(row => {
         const newRow = { ...row };
@@ -5579,8 +5583,19 @@ End Sub`;
           this.concatCols.map(col => row[col]),
           this.concatSeparator ?? ''
         );
+        removed.forEach(col => delete newRow[col]);
         return newRow;
       });
+      if (removed.size) {
+        const keep = (list: string[]) => list.filter(c => !removed.has(c));
+        this.allColumns = keep(this.allColumns);
+        this.columns = keep(this.columns);
+        this.reorderedColumns = keep(this.reorderedColumns);
+        this.selectedCols = keep(this.selectedCols);
+        if (removed.has(this.selectedFilterColumn)) {
+          this.filterApplied = false;
+        }
+      }
       // Mettre à jour la liste des colonnes si besoin
       if (!this.allColumns.includes(this.concatNewCol)) {
         this.allColumns = [this.concatNewCol, ...this.allColumns];
@@ -5600,7 +5615,11 @@ End Sub`;
         this.combinedRows = this.originalRows.clone();
         this.updateDisplayedRows();
       }
-      this.showSuccess('concat', I18nService.t('TRT.msg.colonneCreeeParConcatenation', { p0: this.concatNewCol }));
+      this.showSuccess('concat', I18nService.t('TRT.msg.colonneCreeeParConcatenation', { p0: this.concatNewCol })
+        + (removed.size ? ' ' + I18nService.t('TRT.msg.colonnesSourcesRetirees', { p0: [...removed].join(', ') }) : ''));
+      if (removed.size) {
+        this.concatCols = [];
+      }
     } catch (e) {
       this.showError('concat', this.t('TRT.msg.concatError'));
     }

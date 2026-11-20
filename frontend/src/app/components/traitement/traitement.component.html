@@ -1891,6 +1891,10 @@
       <div class="filter-group" *ngIf="!concatMergeIntoFirst">
         <label>{{ 'TRT.NomDeLaNouvelleColonne' | translate }}</label>
         <input type="text" [(ngModel)]="concatNewCol" placeholder="{{ 'TRT.NomDeLaColonne' | translate }}" class="ds-input filter-input">
+        <label>
+          <input type="checkbox" class="ds-checkbox" [(ngModel)]="concatRemoveSources">
+          {{ 'TRT.RetirerColonnesSources' | translate }}
+        </label>
       </div>
       <div class="filter-group">
         <label>{{ 'TRT.Separateur' | translate }}</label>

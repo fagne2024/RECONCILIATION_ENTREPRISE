@@ -4573,7 +4573,8 @@ export class AutoProcessingModelsComponent implements OnInit {
       sourceColumns: [],
       targetColumn: '',
       separator: '',
-      enabled: true
+      enabled: true,
+      removeSourceColumns: true
     });
   }
 
@@ -5061,7 +5062,8 @@ export class AutoProcessingModelsComponent implements OnInit {
         sourceColumns: [...rule.sourceColumns],
         targetColumn: rule.targetColumn.trim(),
         separator: rule.separator ?? '',
-        enabled: rule.enabled !== false
+        enabled: rule.enabled !== false,
+        removeSourceColumns: rule.removeSourceColumns !== false
       }));
 
     const columnMathRules = this.modelColumnMathRules
@@ -5296,7 +5298,8 @@ export class AutoProcessingModelsComponent implements OnInit {
       sourceColumns: [...(rule.sourceColumns || [])],
       targetColumn: rule.targetColumn || '',
       separator: rule.separator ?? '',
-      enabled: rule.enabled !== false
+      enabled: rule.enabled !== false,
+      removeSourceColumns: rule.removeSourceColumns !== false
     }));
 
     this.modelColumnMathRules = (config.columnMathRules || []).map(rule => ({

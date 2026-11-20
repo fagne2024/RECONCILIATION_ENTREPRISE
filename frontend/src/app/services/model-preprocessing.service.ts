@@ -215,7 +215,52 @@ export class ModelPreProcessingService {
       usage.used.add(config.envColumn);
     }
 
+    // En dernier (les sections suivantes peuvent encore lire les sources) : après une
+    // concaténation, seule la colonne concaténée reste dans le résultat.
+    result = this.removeConcatSourceColumns(result, config);
+
     return normalizeLeadingZeroCellsInRows(result);
+  }
+
+  /**
+   * Retire des lignes les colonnes sources des concaténations actives (sauf option décochée),
+   * jamais une colonne produite par le modèle (cible d'une concaténation ou d'un calcul).
+   */
+  removeConcatSourceColumns(
+    rows: Record<string, string>[],
+    config?: ModelPreProcessingConfig | null
+  ): Record<string, string>[] {
+    const rules = this.getActiveColumnConcatRules(config?.columnConcatRules)
+      .filter(rule => rule.removeSourceColumns !== false);
+    if (!rules.length || !rows?.length) {
+      return rows;
+    }
+    const produced = new Set<string>([
+      ...this.getActiveColumnConcatRules(config?.columnConcatRules).map(r => normalizeColumnKey(r.targetColumn)),
+      ...this.getActiveColumnMathRules(config?.columnMathRules).map(r => normalizeColumnKey(r.targetColumn))
+    ]);
+    const sample = rows[0];
+    const toRemove = new Set<string>();
+    for (const rule of rules) {
+      for (const source of rule.sourceColumns) {
+        if (produced.has(normalizeColumnKey(source))) {
+          continue;
+        }
+        const key = resolveColumnKeyInRow(sample, source);
+        if (key && !produced.has(normalizeColumnKey(key))) {
+          toRemove.add(key);
+        }
+      }
+    }
+    if (!toRemove.size) {
+      return rows;
+    }
+    for (const row of rows) {
+      for (const key of toRemove) {
+        delete row[key];
+      }
+    }
+    return rows;
   }
 
   private applyEnvColumnToRows(
