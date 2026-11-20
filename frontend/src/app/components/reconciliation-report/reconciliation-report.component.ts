@@ -5597,14 +5597,19 @@ reportData: ReconciliationReportData[] = [];
             return {
                 ...item,
                 country: (!rawCountry || unknownCountry)
-                    ? this.inferCountryFromMagicContext(item.service)
+                    ? (this.inferCountryFromMagicContext(item.service)
+                        || this.inferCountryFromMagicContext(item.agency))
                     : rawCountry
             };
         });
 
         const filteredSummary = withCountry.filter(item => {
             if (!item.country) {
-                return this.isMagicScopeActive();
+                // Pays non déductible (ex. TRXGU1 sans colonne Pays, service renommé sans préfixe
+                // pays) : la ligne n'est écartée que si l'utilisateur est limité à certains pays.
+                // Sans restriction (admin / GNL), l'écarter faisait disparaître des services
+                // entiers du rapport (37 lignes sur 3 services affichées sur une seule ligne).
+                return this.isMagicScopeActive() || this.allowedCountryCodes === null;
             }
             return this.shouldIncludeCountry(item.country);
         });

@@ -13,6 +13,12 @@ import { ModelPreProcessingService } from '../../services/model-preprocessing.se
 import { resolveTimezoneShiftHours, TIMEZONE_COUNTRY_FROM_COLUMN, TIMEZONE_SHIFT_COUNTRIES } from '../../utils/timezone-shift.util';
 import { TranslateModule } from '@ngx-translate/core';
 import { OPERATEURS_CONDITION } from '../../utils/cross-dedup.util';
+import {
+  defaultExtractionColumnName,
+  ExtractionType,
+  parseExtractionFormat,
+  serializeExtractionFormat
+} from '../../utils/column-extraction.util';
 import { I18nService } from '../../services/i18n/i18n.service';
 
 /** Identifiants internes des catégories de modèles (clés de regroupement, jamais traduits). */
@@ -465,7 +471,11 @@ export class AutoProcessingModelsComponent implements OnInit {
       stringToRemove: [''],
       padZeros: [false],
       regexReplace: [''],
-      specialCharReplacementMap: this.fb.group({})
+      specialCharReplacementMap: this.fb.group({}),
+      // Extraction de données (comme l'écran Traitement) vers une nouvelle colonne
+      extractType: [''],
+      extractStart: [1],
+      extractCount: [1]
     });
 
     this.modelForm.get('fileType')?.valueChanges.subscribe(fileType => {
@@ -3562,7 +3572,10 @@ export class AutoProcessingModelsComponent implements OnInit {
       removeAccents: false,
       stringToRemove: '',
       padZeros: false,
-      regexReplace: ''
+      regexReplace: '',
+      extractType: '',
+      extractStart: 1,
+      extractCount: 1
     });
     
     console.log('✅ Règle de traitement ajoutée avec sélection multiple de colonnes:', {
@@ -3589,10 +3602,14 @@ export class AutoProcessingModelsComponent implements OnInit {
       this.selectedColumns = [];
     }
     
+    const extraction = parseExtractionFormat(rule.formatType);
     this.columnProcessingRuleForm.patchValue({
       sourceColumn: rule.sourceColumn,
       targetColumn: rule.targetColumn || '',
-      formatType: rule.formatType || '',
+      formatType: extraction ? '' : (rule.formatType || ''),
+      extractType: extraction?.type || '',
+      extractStart: extraction?.start ?? 1,
+      extractCount: extraction?.count ?? 1,
       toUpperCase: rule.toUpperCase || false,
       toLowerCase: rule.toLowerCase || false,
       trimSpaces: rule.trimSpaces || false,
@@ -3609,6 +3626,44 @@ export class AutoProcessingModelsComponent implements OnInit {
       availableTemplateColumns: this.availableTemplateColumns.length,
       availableColumnsForTemplate: this.availableColumnsForTemplate.length
     });
+  }
+
+  /**
+   * Valeurs du formulaire → règle enregistrée. Une extraction de données est stockée dans
+   * `formatType` (extract:…) et écrit dans une nouvelle colonne : nom saisi (une seule colonne
+   * sélectionnée) ou nom par défaut (ex. Description_debut_5), comme l'écran Traitement.
+   */
+  private toColumnProcessingRule(formValue: any, column: string, useCustomName: boolean): ColumnProcessingRule {
+    const { extractType, extractStart, extractCount, ...base } = formValue || {};
+    if (!extractType) {
+      return { ...base };
+    }
+    const spec = {
+      type: extractType as ExtractionType,
+      start: Number(extractStart) || 1,
+      count: Number(extractCount) || 1
+    };
+    const customName = (base.targetColumn || '').trim();
+    return {
+      ...base,
+      formatType: serializeExtractionFormat(spec),
+      targetColumn: useCustomName && customName ? customName : defaultExtractionColumnName(column, spec)
+    };
+  }
+
+  /** Libellé court d'une extraction configurée sur une règle (liste des règles). */
+  describeColumnRuleExtraction(rule: ColumnProcessingRule): string {
+    const extraction = parseExtractionFormat(rule.formatType);
+    if (!extraction) {
+      return '';
+    }
+    const label = extraction.type === 'emailDomain'
+      ? I18nService.t('TRT.DomaineEmail')
+      : I18nService.t(extraction.type === 'firstChars' ? 'APM.extractFirstCharsSummary' : 'APM.extractLastCharsSummary', {
+        count: extraction.count,
+        start: extraction.start
+      });
+    return `${label} → ${rule.targetColumn}`;
   }
 
   saveColumnProcessingRule(): void {
@@ -3650,7 +3705,7 @@ export class AutoProcessingModelsComponent implements OnInit {
             const finalColumn = normalizedColumn !== columnToUpdate ? normalizedColumn : columnToUpdate;
             
             const updatedRule = {
-              ...ruleData,
+              ...this.toColumnProcessingRule(ruleData, finalColumn, true),
               sourceColumn: finalColumn,
               sourceColumns: [finalColumn],
               removeAccents: ruleData.removeAccents || false
@@ -3682,7 +3737,7 @@ export class AutoProcessingModelsComponent implements OnInit {
           
           // Créer la règle pour cette colonne
           const ruleForColumn = {
-            ...ruleData,
+            ...this.toColumnProcessingRule(ruleData, finalColumn, this.selectedColumns.length === 1),
             sourceColumn: finalColumn,
             sourceColumns: [finalColumn],
             removeAccents: ruleData.removeAccents || false

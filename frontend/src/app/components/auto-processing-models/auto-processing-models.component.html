@@ -1053,6 +1053,9 @@
                   <span class="rule-action badge badge-light" *ngIf="rule.trimSpaces">
                     <i class="fas fa-cut"></i> {{ 'APM.Nettoyerespaces' | translate }}
                   </span>
+                  <span class="rule-action badge badge-primary" *ngIf="describeColumnRuleExtraction(rule)">
+                    <i class="fas fa-search"></i> {{ describeColumnRuleExtraction(rule) }}
+                  </span>
                 </div>
                 <div class="rule-details-text" *ngIf="rule.stringToRemove">
                   <small class="text-muted">
@@ -2220,6 +2223,41 @@
                     {{ 'APM.Exemple' | translate }} <code>{{ 'APM.ML' | translate }}</code> {{ 'APM.Supprimera' | translate }} <code>{{ 'APM.ML' | translate }}</code> {{ 'APM.Dans' | translate }} <code>{{ 'APM.REFml456' | translate }}</code> → <code>{{ 'APM.REF456' | translate }}</code><br>
                     {{ 'APM.Cetteoptionpeutêtrecombinéeavecdautresrèglesdenettoyage' | translate }}
                   </small>
+                </div>
+              </div>
+
+              <!-- Extraction de données (comme l'écran Traitement) : écrit dans une nouvelle colonne -->
+              <div class="form-row">
+                <div class="form-group">
+                  <label><i class="fas fa-search"></i> {{ 'TRT.ExtractionDeDonnees' | translate }}</label>
+                  <select formControlName="extractType" class="ds-select form-control">
+                    <option value="">{{ 'APM.extractNone' | translate }}</option>
+                    <option value="emailDomain">{{ 'TRT.DomaineEmail' | translate }}</option>
+                    <option value="firstChars">{{ 'TRT.GaucheNCaracteres' | translate }}</option>
+                    <option value="lastChars">{{ 'TRT.DroiteNCaracteres' | translate }}</option>
+                  </select>
+                  <small class="form-text text-muted">{{ 'APM.extractHint' | translate }}</small>
+                </div>
+              </div>
+
+              <div class="form-row" *ngIf="columnProcessingRuleForm.get('extractType')?.value === 'firstChars' || columnProcessingRuleForm.get('extractType')?.value === 'lastChars'">
+                <div class="form-group">
+                  <label>{{ 'TRT.PositionDeDepart' | translate }}</label>
+                  <input type="number" min="1" formControlName="extractStart" class="ds-input form-control">
+                  <small class="form-text text-muted">{{ 'TRT.PositionDeDepartDebut' | translate }}</small>
+                </div>
+                <div class="form-group">
+                  <label>{{ 'TRT.NombreDeCaracteres' | translate }}</label>
+                  <input type="number" min="1" formControlName="extractCount" class="ds-input form-control">
+                </div>
+              </div>
+
+              <div class="form-row" *ngIf="columnProcessingRuleForm.get('extractType')?.value">
+                <div class="form-group">
+                  <label>{{ 'TRT.NomDeLaNouvelleColonne' | translate }}</label>
+                  <input type="text" formControlName="targetColumn" class="ds-input form-control"
+                         [placeholder]="'TRT.ExDomaineCodeEtc' | translate">
+                  <small class="form-text text-muted">{{ 'APM.extractTargetHint' | translate }}</small>
                 </div>
               </div>
 

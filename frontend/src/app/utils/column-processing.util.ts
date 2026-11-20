@@ -1,4 +1,5 @@
 import { ColumnProcessingRule } from '../models/column-processing-rule.model';
+import { applyExtraction, parseExtractionFormat } from './column-extraction.util';
 import { getOrangeMoneyAliasHeadersForColumn } from './bilingual-column.util';
 import { resolveColumnKeyInRow } from './row-column.util';
 import {
@@ -157,7 +158,9 @@ function createRuleApplier(rule: ColumnProcessingRule): (value: unknown) => stri
   const padZeros = !!rule.padZeros;
   const padLen = rule.padZeroLength
     ?? (isMsisdnPreserveColumn(outColumn) ? DEFAULT_MSISDN_DIGIT_LENGTH : 8);
-  const formatType = rule.formatType;
+  // Extraction de données (stockée dans formatType) : appliquée en premier, sur la valeur source.
+  const extraction = parseExtractionFormat(rule.formatType);
+  const formatType = extraction ? undefined : rule.formatType;
   const msisdnOut = isMsisdnPreserveColumn(outColumn);
   const hasTransformations = ruleHasTransformations(rule);
 
@@ -191,6 +194,9 @@ function createRuleApplier(rule: ColumnProcessingRule): (value: unknown) => stri
     }
 
     let stringValue = preserveLeadingZeroString(value);
+    if (extraction) {
+      stringValue = applyExtraction(stringValue, extraction);
+    }
 
     if (preserveTransactionId) {
       if (trimSpaces) {

@@ -38,6 +38,11 @@ export interface ExportOptions {
   format?: 'csv' | 'xlsx' | 'xls';
   onProgress?: (progress: ExportProgress) => void | Promise<void>;
   yieldFn?: () => Promise<void>;
+  /**
+   * Libellé d'en-tête à écrire pour une colonne (ex. { GRX: 'PAYS' }). Les valeurs restent lues
+   * sous le nom d'origine de la colonne : renommer `columns` à la place vidait la colonne.
+   */
+  headerLabels?: Record<string, string>;
 }
 
 export interface ExportWithCommentColorsOptions {
@@ -140,7 +145,7 @@ export class ExportOptimizationService {
   ): Promise<void> {
     const totalRows = rows.length;
     const encodedColumns = columns.map(col => {
-      const header = col || '';
+      const header = options.headerLabels?.[col] ?? col ?? '';
       return /Ã.|Â.|ï¿½|\uFFFD/.test(header) ? fixCellEncoding(header) : header;
     });
     const parts: BlobPart[] = [];
@@ -211,7 +216,7 @@ export class ExportOptimizationService {
     const chunkSize = options.chunkSize ?? (rows.length > 100000 ? 5000 : rows.length > 20000 ? 2000 : 1000);
     const excelFormat = options.format === 'xls' ? 'xls' : 'xlsx';
     const encodedColumns = columns.map(col => {
-      const header = col || '';
+      const header = options.headerLabels?.[col] ?? col ?? '';
       return /Ã.|Â.|ï¿½|\uFFFD/.test(header) ? fixCellEncoding(header) : header;
     });
 
@@ -527,11 +532,13 @@ export class ExportOptimizationService {
     rows: any[], 
     columns: string[], 
     fileName: string, 
-    format: 'csv' | 'xlsx' | 'xls' = 'csv'
+    format: 'csv' | 'xlsx' | 'xls' = 'csv',
+    headerLabels?: Record<string, string>
   ): void {
+    const headers = columns.map(col => headerLabels?.[col] ?? col);
     if (format === 'csv') {
       const csvContent = [
-        columns.join(';'),
+        headers.join(';'),
         ...rows.map(row => 
           columns.map(col => {
             const raw = this.readRowCell(row, col);
@@ -545,7 +552,7 @@ export class ExportOptimizationService {
       const blob = new Blob(['\uFEFF', csvContent], { type: 'text/csv;charset=utf-8;' });
       this.downloadFile(blob, fileName.endsWith('.csv') ? fileName : fileName + '.csv');
     } else if (format === 'xlsx' || format === 'xls') {
-      const headerRow = columns;
+      const headerRow = headers;
       const dataRows = rows.map(row =>
         columns.map(col => {
           const base = this.serializeCellForExport(col, this.readRowCell(row, col));

@@ -3,6 +3,8 @@ import { convertPdfFiles, isPdfFile } from '../../utils/pdf-table-extractor.util
 import { Overlay, OverlayRef } from '@angular/cdk/overlay';
 import { TemplatePortal } from '@angular/cdk/portal';
 import { RowCollection } from '../../traitement/row-collection';
+import { rattacherLignesDebordantes } from '../../utils/lignes-debordantes.util';
+import { applyExtraction as extraireValeur, defaultExtractionColumnName, ExtractionType } from '../../utils/column-extraction.util';
 import { TranslateService } from '@ngx-translate/core';
 import { FormBuilder, FormGroup, FormControl } from '@angular/forms';
 import { MatSelect, MatSelectChange } from '@angular/material/select';
@@ -653,6 +655,29 @@ End Sub`;
     totalFiles: 0, message: '', summary: '', errors: [], elapsed: '0.0 s', tailleMo: '0,00 Mo', mode: ''
   };
   private processingStartedAt = 0;
+  /** Fausses lignes (suite d'une cellule passée à la ligne) rattachées à la ligne précédente. */
+  private lignesDebordantesRattachees = 0;
+
+  /**
+   * Rattache à la ligne précédente les lignes « débordantes » du dernier fichier lu
+   * (lignes `debut` à la fin) : ex. suite d'une DESCRIPTION passée à la ligne.
+   */
+  private reparerLignesDebordantes(debut: number, nomFichier: string): void {
+    const total = this.allRows.length - debut;
+    if (total < 3) {
+      return;
+    }
+    const { rows, fusions } = rattacherLignesDebordantes({
+      length: total,
+      at: (i: number) => this.allRows.at(debut + i)
+    });
+    if (!rows || !fusions) {
+      return;
+    }
+    this.allRows = [...this.allRows.slice(0, debut), ...rows];
+    this.lignesDebordantesRattachees += fusions;
+    console.info(`[Traitement] ${nomFichier} : ${fusions} ligne(s) débordante(s) rattachée(s) à la ligne précédente`);
+  }
 
   // Le pop-up est rattaché à l'overlay CDK (racine du document) : il reste centré et au-dessus de la page,
   // quels que soient les conteneurs de mise en page parents.
@@ -915,6 +940,7 @@ End Sub`;
     this.displayedRows = [];
     
     let totalRows = 0;
+    this.lignesDebordantesRattachees = 0;
     this.totalFilesToProcess = this.selectedFiles.length;
     this.currentFileIndex = 0;
     this.fileProcessStats = [];
@@ -977,6 +1003,7 @@ End Sub`;
             continue;
           }
           
+          this.reparerLignesDebordantes(beforeRows, file.name);
           let afterRows = this.allRows.length;
           let fileRows = afterRows - beforeRows;
           totalRows += fileRows;
@@ -1059,7 +1086,10 @@ End Sub`;
         status,
         totalProcessed === 0
           ? I18nService.t('TRT.msg.aucuneLigneNAPuEtre')
-          : I18nService.t('TRT.msg.lignesTraiteesEnSFichierS', { p0: totalProcessed.toLocaleString(), p1: processingTime, p2: this.totalFilesToProcess }),
+          : I18nService.t('TRT.msg.lignesTraiteesEnSFichierS', { p0: totalProcessed.toLocaleString(), p1: processingTime, p2: this.totalFilesToProcess })
+            + (this.lignesDebordantesRattachees
+              ? ' ' + I18nService.t('TRT.msg.lignesDebordantesRattachees', { p0: this.lignesDebordantesRattachees })
+              : ''),
         failedStats.map(f => `${f.name} : ${f.errorMsg ?? I18nService.t('COMMON.errors.unknown')}`)
       );
       
@@ -3082,24 +3112,11 @@ End Sub`;
       if (!this.extractCol || !this.extractType) return;
       // Utilise la clé personnalisée si fournie, sinon nom par défaut
       const newCol = this.extractKey?.trim() ? this.extractKey.trim() : this.getExtractionColName();
+      // Même extraction que les règles de traitement des colonnes des modèles.
+      const spec = { type: this.extractType as ExtractionType, start: this.extractStart || 1, count: this.extractCount || 1 };
       this.combinedRows.mutateEach((row) => {
         const value = row[this.extractCol];
-        if (typeof value === 'string') {
-          if (this.extractType === 'emailDomain') {
-            const atIdx = value.indexOf('@');
-            row[newCol] = atIdx !== -1 ? value.substring(atIdx + 1) : '';
-          } else if (this.extractType === 'firstChars') {
-            // Extraction à gauche à partir de extractStart (1-based)
-            const start = Math.max(0, (this.extractStart || 1) - 1);
-            row[newCol] = value.substring(start, start + this.extractCount);
-          } else if (this.extractType === 'lastChars') {
-            // Extraction à droite à partir de extractStart (depuis la fin, 1-based)
-            const start = Math.max(0, value.length - (this.extractStart || 1) - this.extractCount + 1);
-            row[newCol] = value.substring(start, start + this.extractCount);
-          }
-        } else {
-          row[newCol] = '';
-        }
+        row[newCol] = typeof value === 'string' ? extraireValeur(value, spec) : '';
       });
       // Ajoute la colonne extraite en première position si pas déjà présente
       if (!this.columns.includes(newCol)) {
@@ -3114,14 +3131,11 @@ End Sub`;
   }
 
   getExtractionColName(): string {
-    if (this.extractType === 'emailDomain') {
-      return this.extractCol + '_domaine';
-    } else if (this.extractType === 'firstChars') {
-      return this.extractCol + '_debut_' + this.extractCount;
-    } else if (this.extractType === 'lastChars') {
-      return this.extractCol + '_fin_' + this.extractCount;
-    }
-    return this.extractCol + '_extrait';
+    return defaultExtractionColumnName(this.extractCol, {
+      type: this.extractType as ExtractionType,
+      start: this.extractStart || 1,
+      count: this.extractCount
+    });
   }
 
   resetExtraction() {
@@ -3421,8 +3435,10 @@ End Sub`;
         isComplete: false
       };
       
-      // Remplacement de l'en-tête GRX par PAYS
-      const exportColumns = this.columns.map(col => col === 'GRX' ? 'PAYS' : col);
+      // En-tête GRX exporté sous le libellé PAYS : seules les étiquettes changent, les valeurs
+      // sont lues sous GRX (renommer les colonnes lues donnait une colonne PAYS vide).
+      const exportColumns = [...this.columns];
+      const headerLabels = this.exportHeaderLabels();
       
       // Utiliser le nom personnalisé ou le nom par défaut
       const fileName = this.exportFileName.trim() || 'resultat.csv';
@@ -3441,7 +3457,8 @@ End Sub`;
             chunkSize: 5000,
             // Désactivation du Web Worker pour éviter les erreurs d'export sur très gros fichiers
             useWebWorker: false,
-            enableCompression: true
+            enableCompression: true,
+            headerLabels
           }
         );
         
@@ -3463,7 +3480,8 @@ End Sub`;
           this.combinedRows.toArray(),
           exportColumns,
           finalFileName,
-          'csv'
+          'csv',
+          headerLabels
         );
         
         this.isExporting = false;
@@ -3477,6 +3495,11 @@ End Sub`;
 
   exportXLS() {
     this.exportExcel('xls');
+  }
+
+  /** Libellés d'en-tête de l'export : la colonne GRX (code pays) sort sous le nom PAYS. */
+  private exportHeaderLabels(): Record<string, string> {
+    return this.columns.includes('GRX') ? { GRX: 'PAYS' } : {};
   }
 
   exportXLSX() {
@@ -3496,8 +3519,10 @@ End Sub`;
         isComplete: false
       };
       
-      // Remplacement de l'en-tête GRX par PAYS
-      const exportColumns = this.columns.map(col => col === 'GRX' ? 'PAYS' : col);
+      // En-tête GRX exporté sous le libellé PAYS : seules les étiquettes changent, les valeurs
+      // sont lues sous GRX (renommer les colonnes lues donnait une colonne PAYS vide).
+      const exportColumns = [...this.columns];
+      const headerLabels = this.exportHeaderLabels();
       
       // Utiliser le nom personnalisé ou le nom par défaut
       const fileName = this.exportFileName.trim() || `resultat.${format}`;
@@ -3516,7 +3541,8 @@ End Sub`;
             chunkSize: 3000,
             useWebWorker: true,
             enableCompression: true,
-            format: format
+            format: format,
+            headerLabels
           }
         );
         
@@ -3538,7 +3564,8 @@ End Sub`;
           this.combinedRows.toArray(),
           exportColumns,
           finalFileName,
-          format
+          format,
+          headerLabels
         );
         
         this.isExporting = false;
@@ -7012,10 +7039,13 @@ End Sub`;
     const parsed: { name: string; table: CsvParsedTable }[] = [];
     for (const file of files) {
       const text = await file.text();
-      parsed.push({
-        name: file.name,
-        table: parseCsvWithHeaderPlan(text, { stripAirtelPreamble: true }, this.csvRowRange)
-      });
+      const table = parseCsvWithHeaderPlan(text, { stripAirtelPreamble: true }, this.csvRowRange);
+      // Suite d'une cellule passée à la ligne (ex. DESCRIPTION) : rattachée à la ligne précédente.
+      const reparation = rattacherLignesDebordantes({ length: table.rows.length, at: i => table.rows[i] });
+      if (reparation.rows) {
+        table.rows = reparation.rows as Record<string, string>[];
+      }
+      parsed.push({ name: file.name, table });
     }
 
     const infos: CsvBatchFileInfo[] = parsed.map(p => ({

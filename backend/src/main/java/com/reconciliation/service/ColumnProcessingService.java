@@ -213,13 +213,58 @@ public class ColumnProcessingService {
     }
 
     /**
+     * Extraction de données stockée dans formatType (même format que le frontend,
+     * utils/column-extraction.util.ts) : extract:emailDomain, extract:firstChars:debut:nombre,
+     * extract:lastChars:debut:nombre. Positions à partir de 1 ; lastChars part de la fin.
+     */
+    static final String EXTRACTION_PREFIX = "extract:";
+
+    static String applyExtraction(String value, String formatType) {
+        if (value == null) {
+            return "";
+        }
+        String[] parts = formatType.trim().split(":");
+        String type = parts.length > 1 ? parts[1] : "";
+        int start = parts.length > 2 ? positiveInt(parts[2]) : 1;
+        int count = parts.length > 3 ? positiveInt(parts[3]) : 1;
+        switch (type) {
+            case "emailDomain": {
+                int at = value.indexOf('@');
+                return at != -1 ? value.substring(at + 1) : "";
+            }
+            case "firstChars": {
+                int debut = Math.min(start - 1, value.length());
+                return value.substring(debut, Math.min(debut + count, value.length()));
+            }
+            case "lastChars": {
+                int debut = Math.max(0, value.length() - start - count + 1);
+                return value.substring(debut, Math.min(debut + count, value.length()));
+            }
+            default:
+                return value;
+        }
+    }
+
+    private static int positiveInt(String text) {
+        try {
+            int n = Integer.parseInt(text.trim());
+            return n >= 1 ? n : 1;
+        } catch (NumberFormatException e) {
+            return 1;
+        }
+    }
+
+    /**
      * Applique le type de format
      */
     private String applyFormatType(String value, String formatType) {
         if (formatType == null || formatType.isEmpty()) {
             return value;
         }
-        
+        if (formatType.regionMatches(true, 0, EXTRACTION_PREFIX, 0, EXTRACTION_PREFIX.length())) {
+            return applyExtraction(value, formatType);
+        }
+
         switch (formatType.toLowerCase()) {
             case "string":
                 return value;
