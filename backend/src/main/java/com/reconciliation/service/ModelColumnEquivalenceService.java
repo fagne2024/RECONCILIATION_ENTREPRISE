@@ -100,7 +100,6 @@ public class ModelColumnEquivalenceService {
      */
     Map<String, ColumnEquivalence> validate(List<ColumnEquivalence> items) {
         Map<String, ColumnEquivalence> result = new LinkedHashMap<>();
-        Map<String, String> owners = new HashMap<>();
         for (ColumnEquivalence item : items) {
             String column = item == null || item.columnName() == null ? "" : item.columnName().trim();
             if (column.isEmpty()) {
@@ -110,7 +109,6 @@ public class ModelColumnEquivalenceService {
             if (result.containsKey(key)) {
                 throw badRequest("La colonne « " + column + " » est déclarée plusieurs fois.");
             }
-            owners.put(key, column);
             result.put(key, new ColumnEquivalence(column, new ArrayList<>(), new ArrayList<>()));
         }
 
@@ -125,13 +123,12 @@ public class ModelColumnEquivalenceService {
                 if (equivalent.isEmpty() || eqKey.equals(key) || !seen.add(eqKey)) {
                     continue;
                 }
-                String owner = owners.get(eqKey);
-                if (owner != null && !owner.equals(column)) {
-                    throw badRequest("L'en-tête « " + equivalent + " » est déjà "
-                            + (result.containsKey(eqKey) ? "une colonne par défaut" : "équivalent de « " + owner + " »")
+                // Un même en-tête peut être équivalent de plusieurs colonnes (valeur copiée dans
+                // chacune) ; il ne peut pas être une autre colonne par défaut.
+                if (result.containsKey(eqKey)) {
+                    throw badRequest("L'en-tête « " + equivalent + " » est déjà une colonne par défaut"
                             + " : il ne peut pas aussi être équivalent de « " + column + " ».");
                 }
-                owners.put(eqKey, column);
                 equivalents.add(equivalent);
             }
             result.get(key).conditions().addAll(cleanConditions(item.conditions(), equivalents));

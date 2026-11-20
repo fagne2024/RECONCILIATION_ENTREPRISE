@@ -13,6 +13,10 @@
  * reçoit la valeur du suivant non vide : les deux sources sont prises en compte.
  * Des conditions peuvent fixer, ligne par ligne, l'équivalent repris même si les deux sont
  * renseignés (ex. « Service = CASHIN » → A, « Service = CASHOUT » → B).
+ *
+ * Un même en-tête du fichier peut être l'équivalent de plusieurs colonnes (ex. « Montant » pour
+ * « Montant CI » et « Montant CO ») : la première colonne le reprend par renommage, les suivantes
+ * en reçoivent une copie (`copies`).
  */
 import { normalizeColumnKey } from './row-column.util';
 
@@ -63,6 +67,12 @@ export interface ColumnRename {
 
 export interface ColumnNormalizationPlan {
   renames: ColumnRename[];
+  /**
+   * Colonnes par défaut alimentées par un en-tête déjà repris par une autre colonne : la valeur
+   * est copiée (l'en-tête n'est pas renommé une seconde fois). `from`, `fillFrom` et `conditions`
+   * ont le même sens que pour un renommage ; `to` est ajoutée à la fin de la ligne.
+   */
+  copies?: ColumnRename[];
   /** Colonnes par défaut configurées, absentes du fichier sous leur nom et sous leurs équivalents. */
   missing: string[];
   /**
@@ -132,7 +142,7 @@ export function planColumnNormalization(
   equivalences: readonly ModelColumnEquivalence[],
   templateColumns: readonly string[] = []
 ): ColumnNormalizationPlan {
-  const plan: ColumnNormalizationPlan = { renames: [], missing: [], ignored: [] };
+  const plan: ColumnNormalizationPlan = { renames: [], copies: [], missing: [], ignored: [] };
   if (!headers?.length || !equivalences?.length) {
     return plan;
   }
@@ -146,7 +156,8 @@ export function planColumnNormalization(
   }
   const defaultKeys = new Set(equivalences.map(eq => normalizeHeaderKey(eq.columnName)));
   const templateKeys = new Set(templateColumns.map(normalizeHeaderKey));
-  const used = new Set<string>();
+  /** En-têtes déjà renommés : une autre colonne qui les utilise en reçoit une copie. */
+  const renamedKeys = new Set<string>();
   const pendingConditions: Array<{ rename: ColumnRename; conditions: EquivalenceCondition[]; found: string[] }> = [];
 
   for (const eq of equivalences) {
@@ -160,7 +171,7 @@ export function planColumnNormalization(
     for (const equivalent of eq.equivalents || []) {
       const key = normalizeHeaderKey(equivalent);
       const header = headerByKey.get(key);
-      if (!header || used.has(key) || defaultKeys.has(key)) {
+      if (!header || defaultKeys.has(key) || found.includes(header)) {
         continue;
       }
       if (templateKeys.has(key)) {
@@ -168,14 +179,19 @@ export function planColumnNormalization(
         continue;
       }
       found.push(header);
-      used.add(key);
     }
     if (found.length) {
       const rename: ColumnRename = { from: found[0], to: eq.columnName };
       if (found.length > 1) {
         rename.fillFrom = found.slice(1);
       }
-      plan.renames.push(rename);
+      const firstKey = normalizeHeaderKey(found[0]);
+      if (renamedKeys.has(firstKey)) {
+        plan.copies!.push(rename);
+      } else {
+        renamedKeys.add(firstKey);
+        plan.renames.push(rename);
+      }
       if (found.length > 1 && eq.conditions?.length) {
         pendingConditions.push({ rename, conditions: eq.conditions, found });
       }
@@ -237,13 +253,34 @@ function isBlankCell(value: unknown): boolean {
   return value === undefined || value === null || String(value).trim() === '';
 }
 
-/** En-têtes fusionnés dans une autre colonne (`fillFrom`) : retirés des lignes et des listes. */
-export function mergedSourceHeaders(renames: readonly ColumnRename[]): Set<string> {
+/**
+ * En-têtes fusionnés dans une autre colonne (`fillFrom`, y compris des copies) : retirés des lignes
+ * et des listes, sauf s'ils sont eux-mêmes renommés vers une colonne par défaut.
+ */
+export function mergedSourceHeaders(renames: readonly ColumnRename[], copies: readonly ColumnRename[] = []): Set<string> {
   const merged = new Set<string>();
-  for (const rename of renames) {
+  for (const rename of [...renames, ...copies]) {
     (rename.fillFrom || []).forEach(h => merged.add(h));
   }
+  renames.forEach(r => merged.delete(r.from));
   return merged;
+}
+
+/** Valeur d'une colonne par défaut : condition vérifiée, sinon `from`, sinon premier `fillFrom` non vide. */
+export function resolveRenameValue(row: Record<string, string>, rename: ColumnRename): string {
+  const fixed = rename.conditions?.find(c => c.values.has(normalizeConditionValue(row[c.column])));
+  if (fixed) {
+    // Condition vérifiée : l'équivalent choisi est repris tel quel (même si l'autre est renseigné).
+    return row[fixed.source] ?? '';
+  }
+  let value = row[rename.from];
+  if (rename.fillFrom?.length && isBlankCell(value)) {
+    const fallback = rename.fillFrom.find(source => !isBlankCell(row[source]));
+    if (fallback !== undefined) {
+      value = row[fallback];
+    }
+  }
+  return value;
 }
 
 /**
@@ -254,7 +291,8 @@ export function mergedSourceHeaders(renames: readonly ColumnRename[]): Set<strin
 export function renameRowColumns(
   row: Record<string, string>,
   renameMap: ReadonlyMap<string, ColumnRename>,
-  mergedSources: ReadonlySet<string> = new Set()
+  mergedSources: ReadonlySet<string> = new Set(),
+  copies: readonly ColumnRename[] = []
 ): Record<string, string> {
   const next: Record<string, string> = {};
   for (const key of Object.keys(row)) {
@@ -262,18 +300,11 @@ export function renameRowColumns(
       continue;
     }
     const rename = renameMap.get(key);
-    let value = row[key];
-    const fixed = rename?.conditions?.find(c => c.values.has(normalizeConditionValue(row[c.column])));
-    if (fixed) {
-      // Condition vérifiée : l'équivalent choisi est repris tel quel (même si l'autre est renseigné).
-      value = row[fixed.source] ?? '';
-    } else if (rename?.fillFrom?.length && isBlankCell(value)) {
-      const fallback = rename.fillFrom.find(source => !isBlankCell(row[source]));
-      if (fallback !== undefined) {
-        value = row[fallback];
-      }
-    }
-    next[rename?.to ?? key] = value;
+    next[rename?.to ?? key] = rename ? resolveRenameValue(row, rename) : row[key];
+  }
+  // Copies lues sur la ligne d'origine (avant renommage / retrait des sources).
+  for (const copy of copies) {
+    next[copy.to] = resolveRenameValue(row, copy);
   }
   return next;
 }
@@ -284,16 +315,17 @@ export async function applyColumnNormalizationPlanAsync(
   plan: ColumnNormalizationPlan,
   options: { batchSize?: number; yieldFn?: () => Promise<void> | void } = {}
 ): Promise<Record<string, string>[]> {
-  if (!rows?.length || !plan.renames.length) {
+  const copies = plan.copies || [];
+  if (!rows?.length || (!plan.renames.length && !copies.length)) {
     return rows;
   }
   const renameMap = new Map(plan.renames.map(r => [r.from, r]));
-  const mergedSources = mergedSourceHeaders(plan.renames);
+  const mergedSources = mergedSourceHeaders(plan.renames, copies);
   const batchSize = options.batchSize ?? 20000;
   for (let start = 0; start < rows.length; start += batchSize) {
     const end = Math.min(start + batchSize, rows.length);
     for (let i = start; i < end; i++) {
-      rows[i] = renameRowColumns(rows[i], renameMap, mergedSources);
+      rows[i] = renameRowColumns(rows[i], renameMap, mergedSources, copies);
     }
     if (options.yieldFn && end < rows.length) {
       await options.yieldFn();
@@ -305,15 +337,18 @@ export async function applyColumnNormalizationPlanAsync(
 /** Remplace les en-têtes dans une liste d'en-têtes (catalogue de colonnes, aperçu). */
 export function renameHeaders(headers: readonly string[], plan: ColumnNormalizationPlan): string[] {
   const renameMap = new Map(plan.renames.map(r => [r.from, r]));
-  const mergedSources = mergedSourceHeaders(plan.renames);
-  return headers.filter(h => !mergedSources.has(h)).map(h => renameMap.get(h)?.to ?? h);
+  const copies = plan.copies || [];
+  const mergedSources = mergedSourceHeaders(plan.renames, copies);
+  const renamed = headers.filter(h => !mergedSources.has(h)).map(h => renameMap.get(h)?.to ?? h);
+  return [...renamed, ...copies.map(c => c.to).filter(to => !renamed.includes(to))];
 }
 
 /** Message lisible pour l'utilisateur (vide si rien à signaler). */
 export function describeColumnNormalization(plan: ColumnNormalizationPlan): string {
   const parts: string[] = [];
-  if (plan.renames.length) {
-    parts.push('Colonnes normalisées : ' + plan.renames
+  const all = [...plan.renames, ...(plan.copies || [])];
+  if (all.length) {
+    parts.push('Colonnes normalisées : ' + all
       .map(r => [r.from, ...(r.fillFrom || [])].map(h => `« ${h} »`).join(' + ') + ` → « ${r.to} »`)
       .join(', '));
   }

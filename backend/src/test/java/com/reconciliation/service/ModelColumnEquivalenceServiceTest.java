@@ -53,12 +53,14 @@ class ModelColumnEquivalenceServiceTest {
     }
 
     @Test
-    @DisplayName("refuse un en-tête équivalent de deux colonnes")
-    void rejectsEquivalentOwnedTwice() {
-        assertThrows(ResponseStatusException.class, () -> service.validate(List.of(
-                new ColumnEquivalence("Agence", List.of("Client")),
-                new ColumnEquivalence("Agent", List.of("client"))
-        )));
+    @DisplayName("accepte un même en-tête équivalent de deux colonnes (valeur copiée dans chacune)")
+    void acceptsEquivalentSharedByTwoColumns() {
+        Map<String, ColumnEquivalence> result = service.validate(List.of(
+                new ColumnEquivalence("Montant CI", List.of("Montant")),
+                new ColumnEquivalence("Montant CO", List.of("montant"))
+        ));
+        assertEquals(List.of("Montant"), result.get(ModelColumnEquivalenceService.normalize("Montant CI")).equivalents());
+        assertEquals(List.of("montant"), result.get(ModelColumnEquivalenceService.normalize("Montant CO")).equivalents());
     }
 
     @Test

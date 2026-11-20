@@ -42,6 +42,7 @@ import {
   describeColumnNormalization,
   mergedSourceHeaders,
   ModelColumnEquivalence,
+  resolveRenameValue,
   normalizeHeaderKey,
   planColumnNormalization,
   renameRowColumns
@@ -7351,8 +7352,11 @@ End Sub`;
       return;
     }
     const plan = planColumnNormalization(this.allColumns, this.modelEquivalenceList, this.modelColumns);
+    // Un même en-tête équivalent de plusieurs colonnes : copie pour les colonnes suivantes
+    // (avant fusion et renommage, tant que les en-têtes d'origine sont présents).
+    this.addCopiedEquivalentColumns(plan.copies || []);
     // Plusieurs équivalents présents (ex. A et B) : B complète les cellules vides de A, puis disparaît.
-    this.mergeEquivalentColumns(plan.renames);
+    this.mergeEquivalentColumns(plan.renames, plan.copies || []);
     if (plan.renames.length) {
       this.renameTreatmentColumns(new Map(plan.renames.map(r => [r.from, r.to])));
     }
@@ -7367,12 +7371,37 @@ End Sub`;
    * chaque cellule vide de `from` reçoit la première valeur non vide des autres équivalents,
    * qui sont ensuite retirés des lignes et des listes de colonnes.
    */
-  private mergeEquivalentColumns(renames: readonly ColumnRename[]): void {
-    const merges = renames.filter(r => r.fillFrom?.length);
-    if (!merges.length) {
+  private addCopiedEquivalentColumns(copies: readonly ColumnRename[]): void {
+    if (!copies.length) {
       return;
     }
-    const sources = mergedSourceHeaders(merges);
+    const addCopies = (row: any) => {
+      const next = { ...row };
+      for (const copy of copies) {
+        next[copy.to] = resolveRenameValue(row, copy);
+      }
+      return next;
+    };
+    const append = (list: string[]) => [...list, ...copies.map(c => c.to).filter(to => !list.includes(to))];
+    this.allRows = this.allRows.map(addCopies);
+    this.combinedRows = this.combinedRows.map(addCopies);
+    this.originalRows = this.originalRows.map(addCopies);
+    this.allColumns = append(this.allColumns);
+    this.columns = append(this.columns);
+    this.reorderedColumns = append(this.reorderedColumns);
+    if (this.selectedCols.length) {
+      this.selectedCols = append(this.selectedCols);
+    }
+  }
+
+  private mergeEquivalentColumns(renames: readonly ColumnRename[], copies: readonly ColumnRename[] = []): void {
+    const merges = renames.filter(r => r.fillFrom?.length);
+    // Sources des copies déjà lues : celles qui ne sont pas renommées disparaissent aussi.
+    const sources = mergedSourceHeaders(merges, copies);
+    renames.forEach(r => sources.delete(r.from));
+    if (!merges.length && !sources.size) {
+      return;
+    }
     // Renommage identité : seule la fusion est appliquée ici, le renommage suit.
     const fillMap = new Map(merges.map(r => [r.from, { from: r.from, to: r.from, fillFrom: r.fillFrom, conditions: r.conditions }]));
     const mergeRow = (row: any) => renameRowColumns(row, fillMap, sources);

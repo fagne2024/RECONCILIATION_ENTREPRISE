@@ -297,10 +297,9 @@ export class ConfigurationNormalisationComponent implements OnInit, OnDestroy {
     if (key === normalizeHeaderKey(row.columnName) || row.equivalents.some(e => normalizeHeaderKey(e) === key)) {
       return;
     }
-    const conflict = this.rows.find(r => r !== row && (
-      normalizeHeaderKey(r.columnName) === key
-      || r.equivalents.some(e => normalizeHeaderKey(e) === key)
-    ));
+    // Un même en-tête peut être équivalent de plusieurs colonnes (valeur copiée dans chacune) ;
+    // il ne peut pas être une autre colonne par défaut (elle serait renommée).
+    const conflict = this.rows.find(r => r !== row && normalizeHeaderKey(r.columnName) === key);
     if (conflict) {
       this.popupService.showWarning(
         this.t('CFG.normalisation.conflict', { header: label, column: conflict.columnName }),
@@ -443,7 +442,7 @@ export class ConfigurationNormalisationComponent implements OnInit, OnDestroy {
     const equivalences = this.rows.map(r => ({ columnName: r.columnName, equivalents: r.equivalents, conditions: this.toConditions(r) }));
     // Même calcul qu'au chargement d'un fichier ; le statut de chaque colonne est déduit ci-dessous.
     const plan = planColumnNormalization(headers, equivalences);
-    const renamedTo = new Map(plan.renames.map(r => [r.to, r]));
+    const renamedTo = new Map([...plan.renames, ...(plan.copies || [])].map(r => [r.to, r]));
     const headerKeys = new Map(headers.map(h => [normalizeHeaderKey(h), h]));
     const used = new Set<string>();
     const columns = this.rows.map(r => {
