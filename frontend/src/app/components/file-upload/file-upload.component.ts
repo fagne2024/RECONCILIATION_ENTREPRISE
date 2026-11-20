@@ -3001,9 +3001,12 @@ export class FileUploadComponent implements OnInit, OnDestroy {
             for (let m = 0; m < colCount; m++) {
                 const { idx, header } = mappedCols[m];
                 const v = raw[idx];
-                row[header] = v !== undefined && v !== null
-                    ? fixCellEncodingIfNeeded(String(v).trim())
-                    : '';
+                row[header] = v === undefined || v === null
+                    ? ''
+                    // Cellule date Excel (cellDates) : jj/mm/aaaa hh:mm, pas « Thu Nov 19 2026… »
+                    : v instanceof Date
+                        ? formatSpreadsheetDateValue(v)
+                        : fixCellEncodingIfNeeded(String(v).trim());
             }
             if (colCount === 0 || this.isUsefulAssistedTreatmentRow(row, headers)) {
                 rows.push(enrich && !this.assistedRawHeaderCompile ? enrichRowWithCanonicalFrenchColumns(row) : row);
@@ -3045,9 +3048,12 @@ export class FileUploadComponent implements OnInit, OnDestroy {
             for (let m = 0; m < colCount; m++) {
                 const { idx, header } = mappedCols[m];
                 const v = raw[idx];
-                row[header] = v !== undefined && v !== null
-                    ? fixCellEncodingIfNeeded(String(v).trim())
-                    : '';
+                row[header] = v === undefined || v === null
+                    ? ''
+                    // Cellule date Excel (cellDates) : jj/mm/aaaa hh:mm, pas « Thu Nov 19 2026… »
+                    : v instanceof Date
+                        ? formatSpreadsheetDateValue(v)
+                        : fixCellEncodingIfNeeded(String(v).trim());
             }
             if (colCount > 0 && !this.isUsefulAssistedTreatmentRow(row, headers)) {
                 removedLines++;
@@ -3648,7 +3654,8 @@ export class FileUploadComponent implements OnInit, OnDestroy {
         if (fileSizeMB > 1) {
             return {
                 type: 'array',
-                cellDates: false,
+                // Dates Excel en Date (sinon numéro de série, ex. 46345.995 au lieu de 19/11/2026 23:53)
+                cellDates: true,
                 cellNF: false,
                 cellText: false,
                 sheetStubs: false,
@@ -8149,7 +8156,8 @@ export class FileUploadComponent implements OnInit, OnDestroy {
             // Options pour forcer le chargement des feuilles
             const options: XLSX.ParsingOptions = {
                 type: 'array',
-                cellDates: false,
+                // Dates Excel en Date (sinon numéro de série, ex. 46345.995 au lieu de 19/11/2026 23:53)
+                cellDates: true,
                 cellNF: false,
                 cellText: false,
                 sheetStubs: false,
