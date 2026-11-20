@@ -1,6 +1,7 @@
 import {
   applyColumnNormalizationPlanAsync,
   describeColumnNormalization,
+  expandConditionValuesWithMappings,
   renameHeaders,
   listColumnsOutsideModel,
   ModelColumnEquivalence,
@@ -241,7 +242,7 @@ describe('Normalisation modèle : choix de l’équivalent par condition', () =>
   ];
   const headers = ['ID', 'Service', 'Montant CI', 'Montant CO'];
 
-  it('prend A ou B selon la valeur de la colonne de condition, même si les deux sont renseignées', async () => {
+  it('prend A ou B selon la valeur de la colonne de condition ; vide si aucune condition vérifiée', async () => {
     const plan = planColumnNormalization(headers, config);
     const rows = await applyColumnNormalizationPlanAsync([
       { ID: '1', Service: 'CASHIN_OM', 'Montant CI': '100', 'Montant CO': '900' },
@@ -249,7 +250,7 @@ describe('Normalisation modèle : choix de l’équivalent par condition', () =>
       { ID: '3', Service: 'AUTRE', 'Montant CI': '', 'Montant CO': '700' },
       { ID: '4', Service: 'CASHOUT_OM', 'Montant CI': '100', 'Montant CO': '' }
     ], plan);
-    expect(rows.map(r => r['Montant'])).toEqual(['100', '900', '700', '']);
+    expect(rows.map(r => r['Montant'])).toEqual(['100', '900', '', '']);
     expect(Object.keys(rows[0])).toEqual(['ID', 'Service', 'Montant']);
   });
 
@@ -279,17 +280,55 @@ describe('Normalisation modèle : un même en-tête équivalent de plusieurs col
   });
 
   it('avec conditions : chaque colonne reçoit « Montant » seulement pour son service', async () => {
-    const plan = planColumnNormalization(['Service', 'Montant', 'Vide'], [
-      { columnName: 'Montant CI', equivalents: ['Montant', 'Vide'], conditions: [{ column: 'Service', values: ['CASHOUT'], source: 'Vide' }] },
-      { columnName: 'Montant CO', equivalents: ['Montant', 'Vide'], conditions: [{ column: 'Service', values: ['CASHIN'], source: 'Vide' }] }
+    const plan = planColumnNormalization(['Service', 'Montant'], [
+      { columnName: 'Montant CI', equivalents: ['Montant'], conditions: [{ column: 'Service', values: ['CASHIN'], source: 'Montant' }] },
+      { columnName: 'Montant CO', equivalents: ['Montant'], conditions: [{ column: 'Service', values: ['CASHOUT'], source: 'Montant' }] }
     ]);
     const rows = await applyColumnNormalizationPlanAsync([
-      { Service: 'CASHIN', Montant: '100', Vide: '' },
-      { Service: 'CASHOUT', Montant: '200', Vide: '' }
+      { Service: 'CASHIN', Montant: '100' },
+      { Service: 'CASHOUT', Montant: '200' }
     ], plan);
     expect(rows).toEqual([
       { Service: 'CASHIN', 'Montant CI': '100', 'Montant CO': '' },
       { Service: 'CASHOUT', 'Montant CI': '', 'Montant CO': '200' }
     ]);
+  });
+});
+
+describe('Normalisation modèle : cas Orange (Montant CI / Montant CO selon le service)', () => {
+  const config: ModelColumnEquivalence[] = [
+    { columnName: 'Montant CI', equivalents: ['Débit', 'Transfer Amount', 'Montant'],
+      conditions: [{ column: 'Service', values: ['CASHIN_OM'], source: 'Montant' }] },
+    { columnName: 'Montant CO', equivalents: ['Crédit', 'TRANSFER_AMOUNT', 'Montant'],
+      conditions: [{ column: 'Service', values: ['PAIEMENTMARCHAND_OM'], source: 'Montant' }] }
+  ];
+
+  it('un seul équivalent présent : la condition s’applique quand même (plus les mêmes montants partout)', async () => {
+    const plan = planColumnNormalization(['Service', 'Montant'], config);
+    const rows = await applyColumnNormalizationPlanAsync([
+      { Service: 'CASHIN_OM', Montant: '15000' },
+      { Service: 'PAIEMENTMARCHAND_OM', Montant: '2500' },
+      { Service: 'AUTRE', Montant: '7' }
+    ], plan);
+    expect(rows).toEqual([
+      { Service: 'CASHIN_OM', 'Montant CI': '15000', 'Montant CO': '' },
+      { Service: 'PAIEMENTMARCHAND_OM', 'Montant CI': '', 'Montant CO': '2500' },
+      { Service: 'AUTRE', 'Montant CI': '', 'Montant CO': '' }
+    ]);
+  });
+
+  it('valeur d’origine du fichier reconnue via le renommage de valeurs du modèle (Cash in → CASHIN_OM)', async () => {
+    const expanded = expandConditionValuesWithMappings(config, [
+      { column: 'Service', fromValue: 'Cash in', toValue: 'CASHIN_OM', enabled: true },
+      { column: 'Service', fromValue: 'Merchant Payment', toValue: 'PAIEMENTMARCHAND_OM', enabled: true },
+      { column: 'Autre', fromValue: 'Cash in', toValue: 'X', enabled: true }
+    ]);
+    expect(expanded[0].conditions![0].values).toEqual(['CASHIN_OM', 'Cash in']);
+    const plan = planColumnNormalization(['Service', 'Montant'], expanded);
+    const rows = await applyColumnNormalizationPlanAsync([
+      { Service: 'Cash in', Montant: '15000' },
+      { Service: 'Merchant Payment', Montant: '2500' }
+    ], plan);
+    expect(rows.map(r => [r['Montant CI'], r['Montant CO']])).toEqual([['15000', ''], ['', '2500']]);
   });
 });

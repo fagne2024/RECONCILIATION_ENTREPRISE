@@ -60,7 +60,8 @@ export interface ColumnRename {
   fillFrom?: string[];
   /**
    * Conditions (dans l'ordre) : la première vérifiée fixe l'équivalent repris sur la ligne,
-   * même s'il est vide et même si un autre équivalent est renseigné.
+   * même s'il est vide et même si un autre équivalent est renseigné. Si aucune n'est vérifiée,
+   * la colonne reste vide sur la ligne (ex. « Montant CI » seulement pour les CASHIN).
    */
   conditions?: ResolvedEquivalenceCondition[];
 }
@@ -192,7 +193,8 @@ export function planColumnNormalization(
         renamedKeys.add(firstKey);
         plan.renames.push(rename);
       }
-      if (found.length > 1 && eq.conditions?.length) {
+      // Conditions appliquées dès qu'un équivalent est présent (même un seul).
+      if (eq.conditions?.length) {
         pendingConditions.push({ rename, conditions: eq.conditions, found });
       }
     } else if ((eq.equivalents || []).length) {
@@ -209,6 +211,43 @@ export function planColumnNormalization(
     }
   }
   return plan;
+}
+
+/** Renommage de valeur d'un modèle (prétraitement « Renommer des valeurs »). */
+export interface ConditionValueMapping {
+  column: string;
+  fromValue: string;
+  toValue: string;
+  enabled?: boolean;
+}
+
+/**
+ * La normalisation s'applique au chargement, avant le prétraitement du modèle : une condition
+ * écrite avec la valeur renommée (ex. Service = CASHIN_OM) doit aussi reconnaître la valeur
+ * d'origine du fichier (ex. « Cash in » renommé en CASHIN_OM par le modèle).
+ */
+export function expandConditionValuesWithMappings(
+  equivalences: readonly ModelColumnEquivalence[],
+  mappings: readonly ConditionValueMapping[] | null | undefined
+): ModelColumnEquivalence[] {
+  const active = (mappings || []).filter(m => m && m.enabled !== false && m.column && m.fromValue);
+  if (!active.length) {
+    return [...equivalences];
+  }
+  return equivalences.map(eq => {
+    if (!eq.conditions?.length) {
+      return eq;
+    }
+    const conditions = eq.conditions.map(condition => {
+      const columnKey = normalizeHeaderKey(condition.column);
+      const targets = new Set((condition.values || []).map(normalizeConditionValue));
+      const extra = active
+        .filter(m => normalizeHeaderKey(m.column) === columnKey && targets.has(normalizeConditionValue(m.toValue)))
+        .map(m => m.fromValue);
+      return extra.length ? { ...condition, values: [...condition.values, ...extra] } : condition;
+    });
+    return { ...eq, conditions };
+  });
 }
 
 /** Valeurs de condition séparées par « ; », « , » ou un retour à la ligne. */
@@ -268,10 +307,11 @@ export function mergedSourceHeaders(renames: readonly ColumnRename[], copies: re
 
 /** Valeur d'une colonne par défaut : condition vérifiée, sinon `from`, sinon premier `fillFrom` non vide. */
 export function resolveRenameValue(row: Record<string, string>, rename: ColumnRename): string {
-  const fixed = rename.conditions?.find(c => c.values.has(normalizeConditionValue(row[c.column])));
-  if (fixed) {
-    // Condition vérifiée : l'équivalent choisi est repris tel quel (même si l'autre est renseigné).
-    return row[fixed.source] ?? '';
+  if (rename.conditions?.length) {
+    // Condition vérifiée : l'équivalent choisi est repris tel quel (même si l'autre est renseigné) ;
+    // aucune condition vérifiée : la colonne reste vide sur cette ligne.
+    const fixed = rename.conditions.find(c => c.values.has(normalizeConditionValue(row[c.column])));
+    return fixed ? (row[fixed.source] ?? '') : '';
   }
   let value = row[rename.from];
   if (rename.fillFrom?.length && isBlankCell(value)) {

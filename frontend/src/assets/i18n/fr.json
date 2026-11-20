@@ -8348,7 +8348,7 @@
       "suggestions": "Suggestions :",
       "conditionsTitle": "Choix de l'équivalent par condition",
       "addCondition": "Ajouter une condition",
-      "conditionsHint": "Sans condition, le premier équivalent non vide est repris (A, sinon B). Une condition fixe l'équivalent repris selon la valeur d'une autre colonne, même si A et B sont renseignées.",
+      "conditionsHint": "Sans condition, le premier équivalent non vide est repris (A, sinon B). Avec des conditions, la colonne reçoit l'équivalent de la condition vérifiée (ex. Si Service = CASHIN_OM → Montant) et reste vide sur les autres lignes. Les valeurs peuvent être celles du fichier ou celles renommées par le modèle.",
       "conditionIf": "Si",
       "conditionColumn": "Colonne (ex. Service)",
       "conditionValues": "Valeur(s), séparées par « ; »",

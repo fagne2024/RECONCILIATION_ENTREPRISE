@@ -5,6 +5,8 @@ import { tap } from 'rxjs/operators';
 import {
   mergeBuiltInEquivalences,
   applyColumnNormalizationPlanAsync,
+  ConditionValueMapping,
+  expandConditionValuesWithMappings,
   ColumnNormalizationPlan,
   ModelColumnEquivalence,
   planColumnNormalization
@@ -91,7 +93,9 @@ export class ModelNormalizationService {
     modelIds: ReadonlyArray<string | null | undefined>,
     yieldFn?: () => Promise<void> | void,
     templateColumns: readonly string[] = [],
-    builtIn?: { equivalences: readonly ModelColumnEquivalence[]; modelColumns: readonly string[] }
+    builtIn?: { equivalences: readonly ModelColumnEquivalence[]; modelColumns: readonly string[] },
+    /** Renommages de valeurs du modèle : une condition reconnaît aussi la valeur d'origine. */
+    valueMappings?: readonly ConditionValueMapping[] | null
   ): Promise<{ rows: Record<string, string>[]; plan: ColumnNormalizationPlan }> {
     const empty: ColumnNormalizationPlan = { renames: [], missing: [], ignored: [] };
     if (!rows?.length) {
@@ -104,6 +108,7 @@ export class ModelNormalizationService {
     if (!equivalences.length) {
       return { rows, plan: empty };
     }
+    equivalences = expandConditionValuesWithMappings(equivalences, valueMappings);
     const plan = planColumnNormalization(Object.keys(rows[0]), equivalences, templateColumns);
     const normalized = await applyColumnNormalizationPlanAsync(rows, plan, { yieldFn });
     return { rows: normalized, plan };

@@ -40,6 +40,7 @@ import { ModelNormalizationService } from '../../services/model-normalization.se
 import {
   ColumnRename,
   describeColumnNormalization,
+  expandConditionValuesWithMappings,
   mergedSourceHeaders,
   ModelColumnEquivalence,
   resolveRenameValue,
@@ -7276,7 +7277,10 @@ End Sub`;
         this.modelNormalizationService.getForModels([modelId])
       ]);
       this.modelColumns = columns;
-      this.modelEquivalenceList = equivalences;
+      // Conditions écrites avec les valeurs renommées par le modèle (ex. CASHIN_OM) : la valeur
+      // d'origine du fichier (ex. « Cash in ») est aussi reconnue.
+      const model = this.modelList.find(m => this.modelKey(m) === modelId);
+      this.modelEquivalenceList = expandConditionValuesWithMappings(equivalences, model?.preProcessingConfig?.valueMappings);
       this.modelColumnEquivalents = new Map(equivalences.map(eq => [
         normalizeHeaderKey(eq.columnName),
         new Set((eq.equivalents || []).map(normalizeHeaderKey))

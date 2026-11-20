@@ -1796,7 +1796,9 @@ export class FileUploadComponent implements OnInit, OnDestroy {
             modelIds,
             () => this.yieldToMainThread(true),
             await this.resolveWatchFolderTemplateColumns(model),
-            model.bankModel ? { equivalences: BANK_BUILT_IN_EQUIVALENCES, modelColumns: bankModelColumns } : undefined
+            model.bankModel ? { equivalences: BANK_BUILT_IN_EQUIVALENCES, modelColumns: bankModelColumns } : undefined,
+            // Conditions de normalisation écrites avec les valeurs renommées par le modèle (ex. CASHIN_OM).
+            model.preProcessingConfig?.valueMappings
         );
         const normalizationMessage = describeColumnNormalization(normalization.plan);
         if (normalizationMessage) {
@@ -9223,7 +9225,9 @@ export class FileUploadComponent implements OnInit, OnDestroy {
                     rows,
                     list.map(idOf),
                     () => this.yieldToMainThread(true),
-                    templateColumns
+                    templateColumns,
+                    undefined,
+                    list.flatMap(m => m.preProcessingConfig?.valueMappings || [])
                 );
                 const message = describeColumnNormalization(result.plan);
                 if (message) {

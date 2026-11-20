@@ -8348,7 +8348,7 @@
       "suggestions": "Suggestions:",
       "conditionsTitle": "Choose the equivalent by condition",
       "addCondition": "Add a condition",
-      "conditionsHint": "Without a condition, the first non-empty equivalent is used (A, else B). A condition sets which equivalent is used from the value of another column, even when both A and B are filled.",
+      "conditionsHint": "Without a condition, the first non-empty equivalent is used (A, else B). With conditions, the column gets the equivalent of the matching condition (e.g. If Service = CASHIN_OM → Amount) and stays empty on other rows. Values can be the file's values or those renamed by the model.",
       "conditionIf": "If",
       "conditionColumn": "Column (e.g. Service)",
       "conditionValues": "Value(s), separated by “;”",
