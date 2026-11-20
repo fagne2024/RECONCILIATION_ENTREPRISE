@@ -3605,6 +3605,28 @@ export class AutoProcessingModelsComponent implements OnInit {
     });
   }
 
+  /** Nouvelle règle d'extraction de données (formulaire ouvert avec l'extraction présélectionnée). */
+  addColumnExtractionRule(): void {
+    this.addColumnProcessingRule();
+    this.columnProcessingRuleForm.patchValue({ extractType: 'firstChars' });
+  }
+
+  /**
+   * Duplique une règle : formulaire en création, pré-rempli avec ses réglages et ses colonnes.
+   * Le nom de la colonne cible est vidé pour une extraction, afin de ne pas écraser la première.
+   */
+  duplicateColumnProcessingRule(index: number): void {
+    const rule = this.columnProcessingRules[index];
+    if (!rule) {
+      return;
+    }
+    this.editColumnProcessingRule(index);
+    this.editingColumnProcessingRule = -1;
+    if (parseExtractionFormat(rule.formatType)) {
+      this.columnProcessingRuleForm.patchValue({ targetColumn: '' });
+    }
+  }
+
   editColumnProcessingRule(index: number): void {
     this.editingColumnProcessingRule = index;
     const rule = this.columnProcessingRules[index];

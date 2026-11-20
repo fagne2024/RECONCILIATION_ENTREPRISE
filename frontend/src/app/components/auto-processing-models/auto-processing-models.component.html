@@ -1023,6 +1023,10 @@
                   <button type="button" class="ds-btn ds-btn--secondary btn btn-sm btn-outline-primary" (click)="editColumnProcessingRule(i)">
                     <i class="fas fa-edit"></i>
                   </button>
+                  <button type="button" class="ds-btn ds-btn--secondary btn btn-sm btn-outline-secondary"
+                          [title]="'APM.duplicateRule' | translate" (click)="duplicateColumnProcessingRule(i)">
+                    <i class="fas fa-copy"></i>
+                  </button>
                   <button type="button" class="ds-btn ds-btn--danger btn btn-sm btn-outline-danger" (click)="deleteColumnProcessingRule(i)">
                     <i class="fas fa-trash"></i>
                   </button>
@@ -1069,6 +1073,9 @@
           <div class="add-processing-rule-section">
             <button type="button" class="ds-btn ds-btn--secondary btn btn-success" (click)="addColumnProcessingRule()">
               <i class="fas fa-plus"></i> {{ 'APM.Ajouterunerègledenettoyage' | translate }}
+            </button>
+            <button type="button" class="ds-btn ds-btn--secondary btn btn-outline-primary" (click)="addColumnExtractionRule()">
+              <i class="fas fa-search"></i> {{ 'APM.addExtractionRule' | translate }}
             </button>
           </div>
 

@@ -440,6 +440,8 @@
     "Renommerunentêtedecolonne": "Renommer un en-tête de colonne",
     "Requissi2evaleurrenseignée": "(requis si 2e valeur renseignée)",
     "Résumédessélections": "Résumé des sélections",
+    "duplicateRule": "Dupliquer la règle",
+    "addExtractionRule": "Ajouter une extraction de données",
     "extractNone": "Aucune extraction",
     "extractHint": "Extrait une partie de la valeur (domaine e-mail, N caractères à gauche ou à droite) vers une nouvelle colonne ; la colonne d'origine est conservée. Les caractères spéciaux (ex. « . ») de la valeur extraite sont gardés.",
     "extractTargetHint": "Facultatif. Si plusieurs colonnes sont sélectionnées, ou sans nom saisi, le nom par défaut est utilisé (ex. Description_debut_5).",

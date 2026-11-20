@@ -3077,3 +3077,10 @@ textarea.form-control {
   font-size: 0.8rem;
   cursor: pointer;
 }
+
+/* Boutons « Ajouter une règle de nettoyage » / « Ajouter une extraction de données » */
+.add-processing-rule-section {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+}
