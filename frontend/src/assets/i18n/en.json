@@ -78,6 +78,7 @@
     "save": "Save"
   },
   "APM": {
+    "chainesMultiplesAide": "Several strings allowed, separated by commas (e.g. _CM, _CI, _BF): each one is removed when present.",
     "envChoisieAuTraitement": "— chosen before each processing —",
     "paysColonneAide": "Adds a PAYS column on every row of the final file; the country code is asked before each processing.",
     "paysCodeParDefaut": "Suggested country code",

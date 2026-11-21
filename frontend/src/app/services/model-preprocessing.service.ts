@@ -1,3 +1,4 @@
+import { removeSpecialStrings } from '../utils/special-string-removal.util';
 import { Injectable } from '@angular/core';
 import {
   AutoProcessingModel,
@@ -1486,21 +1487,9 @@ export class ModelPreProcessingService {
     return value;
   }
 
+  /** Chaînes à supprimer séparées par des virgules (ex. « _CM, _CI, _BF »). */
   private applyRemoveSpecialString(value: string, action: ModelFormatAction): string {
-    const target = action.specialStringToRemove ?? '';
-    if (!target) {
-      return value;
-    }
-
-    switch (action.specialStringRemovalMode ?? 'all') {
-      case 'start':
-        return value.startsWith(target) ? value.substring(target.length) : value;
-      case 'end':
-        return value.endsWith(target) ? value.substring(0, value.length - target.length) : value;
-      case 'all':
-      default:
-        return value.split(target).join('');
-    }
+    return removeSpecialStrings(value, action.specialStringToRemove, action.specialStringRemovalMode);
   }
 
   private applyRemoveCharacters(value: string, action: ModelFormatAction): string {

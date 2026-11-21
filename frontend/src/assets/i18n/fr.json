@@ -78,6 +78,7 @@
     "save": "Enregistrer"
   },
   "APM": {
+    "chainesMultiplesAide": "Plusieurs chaînes possibles, séparées par des virgules (ex. _CM, _CI, _BF) : chacune est supprimée si elle est présente.",
     "envChoisieAuTraitement": "— choisie avant chaque traitement —",
     "paysColonneAide": "Ajoute une colonne PAYS sur chaque ligne du fichier final ; le code pays est demandé avant chaque traitement.",
     "paysCodeParDefaut": "Code pays proposé",

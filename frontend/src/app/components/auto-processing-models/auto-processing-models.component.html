@@ -1497,7 +1497,9 @@
                             <label>{{ 'APM.Chaîneàsupprimer_1' | translate }}</label>
                             <input type="text" class="ds-input form-control"
                                    [(ngModel)]="getFormatColumnSettings(action, col).specialStringToRemove"
-                                   [ngModelOptions]="{standalone: true}">
+                                   [ngModelOptions]="{standalone: true}"
+                                   placeholder="_CM, _CI, _BF">
+                            <small class="form-text text-muted">{{ 'APM.chainesMultiplesAide' | translate }}</small>
                           </div>
                           <div class="form-group col-md-6">
                             <label>{{ 'APM.Mode' | translate }}</label>
@@ -1688,7 +1690,8 @@
                       <div *ngIf="action.type === 'removeSpecialStrings'" class="form-row">
                         <div class="form-group col-md-6">
                           <label>{{ 'APM.Chaîneàsupprimer_1' | translate }}</label>
-                          <input type="text" class="ds-input form-control" [(ngModel)]="action.specialStringToRemove" [ngModelOptions]="{standalone: true}">
+                          <input type="text" class="ds-input form-control" [(ngModel)]="action.specialStringToRemove" [ngModelOptions]="{standalone: true}" placeholder="_CM, _CI, _BF">
+                          <small class="form-text text-muted">{{ 'APM.chainesMultiplesAide' | translate }}</small>
                         </div>
                         <div class="form-group col-md-6">
                           <label>{{ 'APM.Mode' | translate }}</label>

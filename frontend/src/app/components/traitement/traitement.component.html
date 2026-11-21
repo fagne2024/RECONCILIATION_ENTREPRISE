@@ -2366,7 +2366,7 @@
         <div class="remove-special-strings-options">
           <div class="option-group">
             <label>{{ 'TRT.ChaineASupprimer' | translate }}</label>
-            <input type="text" [(ngModel)]="specialStringToRemove" placeholder="{{ 'TRT.Ex_CM' | translate }}" style="width: 150px;" class="ds-input">
+            <input type="text" [(ngModel)]="specialStringToRemove" placeholder="_CM, _CI, _BF" [title]="'APM.chainesMultiplesAide' | translate" style="width: 200px;" class="ds-input">
           </div>
           <div class="option-group">
             <label>{{ 'TRT.ModeDeSuppression' | translate }}</label>

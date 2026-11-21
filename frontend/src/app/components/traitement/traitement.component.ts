@@ -1,3 +1,4 @@
+import { removeSpecialStrings } from '../../utils/special-string-removal.util';
 import { Component, OnInit, ChangeDetectorRef, AfterViewInit, ViewChild, ViewContainerRef, TemplateRef, inject, OnDestroy } from '@angular/core';
 import { convertPdfFiles, isPdfFile } from '../../utils/pdf-table-extractor.util';
 import { Overlay, OverlayRef } from '@angular/cdk/overlay';
@@ -5977,25 +5978,8 @@ End Sub`;
               return;
             }
             
-            // Appliquer la suppression selon le mode
-            switch (this.specialStringRemovalMode) {
-              case 'all':
-                // Supprimer toutes les occurrences
-                value = value.split(this.specialStringToRemove).join('');
-                break;
-              case 'start':
-                // Supprimer seulement au début
-                if (value.startsWith(this.specialStringToRemove)) {
-                  value = value.substring(this.specialStringToRemove.length);
-                }
-                break;
-              case 'end':
-                // Supprimer seulement à la fin
-                if (value.endsWith(this.specialStringToRemove)) {
-                  value = value.substring(0, value.length - this.specialStringToRemove.length);
-                }
-                break;
-            }
+            // Chaînes séparées par des virgules (ex. « _CM, _CI, _BF »), selon le mode
+            value = removeSpecialStrings(value, this.specialStringToRemove, this.specialStringRemovalMode);
             
             if (value !== originalValue) {
               processedCells++;
@@ -6019,25 +6003,8 @@ End Sub`;
                 return;
               }
               
-              // Appliquer la suppression selon le mode
-              switch (this.specialStringRemovalMode) {
-                case 'all':
-                  // Supprimer toutes les occurrences
-                  value = value.split(this.specialStringToRemove).join('');
-                  break;
-                case 'start':
-                  // Supprimer seulement au début
-                  if (value.startsWith(this.specialStringToRemove)) {
-                    value = value.substring(this.specialStringToRemove.length);
-                  }
-                  break;
-                case 'end':
-                  // Supprimer seulement à la fin
-                  if (value.endsWith(this.specialStringToRemove)) {
-                    value = value.substring(0, value.length - this.specialStringToRemove.length);
-                  }
-                  break;
-              }
+              // Chaînes séparées par des virgules (ex. « _CM, _CI, _BF »), selon le mode
+              value = removeSpecialStrings(value, this.specialStringToRemove, this.specialStringRemovalMode);
               
               row[col] = value;
             }
