@@ -1956,6 +1956,16 @@
 
       // Styles pour la cellule GLPI
       .glpi-cell {
+        white-space: nowrap;
+
+        .glpi-inline-input {
+          width: 110px;
+          padding: 4px 8px;
+          margin-right: 6px;
+          font-size: 13px;
+          vertical-align: middle;
+        }
+
         .btn-glpi-create {
           background: linear-gradient(135deg, #ff6b35 0%, #f7931e 100%);
           color: white;

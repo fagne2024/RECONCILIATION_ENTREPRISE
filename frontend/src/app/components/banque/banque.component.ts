@@ -28,6 +28,7 @@ import { MatSelectModule } from '@angular/material/select';
 import { NgxMatSelectSearchModule } from 'ngx-mat-select-search';
 import { I18nService } from '../../services/i18n/i18n.service';
 import { GLPI_TICKET_FORM_URL } from '../../constants/glpi';
+import { TicketEmailService } from '../../services/ticket-email.service';
 
 // Interface locale pour les opérations bancaires avec Date
 interface OperationBancaireDisplay extends Omit<OperationBancaire, 'dateOperation'> {
@@ -1910,7 +1911,8 @@ export class BanqueComponent implements OnInit {
     private popupService: PopupService,
     private calculService: ConfigurationCalculService,
     private appState: AppStateService,
-    private niveauxConfigService: NiveauxValidationConfigService
+    private niveauxConfigService: NiveauxValidationConfigService,
+    private ticketEmailService: TicketEmailService
   ) { }
 
   private normalizeCountryName(input: string): string {
@@ -2979,6 +2981,95 @@ export class BanqueComponent implements OnInit {
         this.commentReportSaving = false;
         this.popupService.showError(I18nService.t('TBL.msg.echecDuReportDuCommentaireSur2'));
       }
+    });
+  }
+
+  // ----- ID ticket : saisie en ligne (comme sur le rapport de réconciliation) -----
+  private ticketDrafts = new Map<OperationBancaireDisplay, string>();
+  private ticketTimers = new Map<OperationBancaireDisplay, ReturnType<typeof setTimeout>>();
+  private ticketSaving = new Set<OperationBancaireDisplay>();
+
+  getTicketDraft(operation: OperationBancaireDisplay): string {
+    return this.ticketDrafts.get(operation) ?? '';
+  }
+
+  isSavingTicket(operation: OperationBancaireDisplay): boolean {
+    return this.ticketSaving.has(operation);
+  }
+
+  /** Saisie en cours ; l'enregistrement se fait à la validation (Entrée ou sortie du champ). */
+  onTicketDraftChange(operation: OperationBancaireDisplay, value: string) {
+    this.ticketDrafts.set(operation, value ?? '');
+    this.clearTicketTimer(operation);
+  }
+
+  private clearTicketTimer(operation: OperationBancaireDisplay) {
+    const timer = this.ticketTimers.get(operation);
+    if (timer) clearTimeout(timer);
+    this.ticketTimers.delete(operation);
+  }
+
+  saveTicketDraft(operation: OperationBancaireDisplay) {
+    this.clearTicketTimer(operation);
+    const valeur = (this.ticketDrafts.get(operation) || '').trim();
+    if (!valeur || !operation.id || operation.source === 'generale' || this.ticketSaving.has(operation)
+        || valeur === (operation.idGlpi || '').trim()) {
+      return;
+    }
+    this.ticketSaving.add(operation);
+    this.operationBancaireService.updateOperationBancaire(operation.id, { idGlpi: valeur }).subscribe({
+      next: (updated) => {
+        this.ticketSaving.delete(operation);
+        this.ticketDrafts.delete(operation);
+        const idGlpi = updated?.idGlpi ?? valeur;
+        [this.operations, this.filteredOperations].forEach(list =>
+          (list || []).filter(o => o.id === operation.id && o.source === operation.source).forEach(o => { o.idGlpi = idGlpi; }));
+        operation.idGlpi = idGlpi;
+        this.loadDashboardStats(); // compteur « Tickets à créer »
+        void this.proposerEmailTicket(operation, idGlpi);
+      },
+      error: (err) => {
+        this.ticketSaving.delete(operation);
+        console.error("Erreur lors de l'enregistrement de l'ID ticket", err);
+        this.popupService.showError(I18nService.t('BQ.EchecEnregistrementIdTicket'));
+      }
+    });
+  }
+
+  /** E-mail pré-rempli après la saisie d'un ticket : opération bancaire en suspens. */
+  private async proposerEmailTicket(operation: Partial<OperationBancaireDisplay>, ticket: string): Promise<void> {
+    if (!ticket || this.isCreateTicketCase(ticket) || ticket.toLowerCase().includes('modifier')) return;
+    const pays = this.getPaysDisplay(operation as any);
+    const banque = this.getOperationBanque(operation) || '';
+    const montant = Math.round(Number(operation.montant) || 0).toLocaleString('fr-FR');
+    const date = operation.dateOperation ? new Date(operation.dateOperation as any) : null;
+    const dateTexte = date && !isNaN(date.getTime()) ? date.toLocaleDateString('fr-FR') : '-';
+    const lignes = [
+      'Bonjour,',
+      '',
+      `Voici une opération bancaire que nous avons en suspens (ticket ${ticket}) :`,
+      '',
+      `- Pays : ${pays && pays !== '-' ? pays : '-'}`,
+      `- Date de l'opération : ${dateTexte}`,
+      `- Agence : ${operation.agence || '-'}`,
+      `- Type d'opération : ${operation.typeOperation || '-'}`,
+      `- Montant : ${montant}`,
+      `- Référence : ${operation.reference || '-'}`,
+      `- Banque : ${banque || '-'}`,
+      ...(operation.banqueCorrigee ? [`- Banque corrigée : ${operation.banqueCorrigee}`] : []),
+      `- Statut : ${operation.statut || '-'}`,
+      ...(operation.commentaire ? [`- Commentaire : ${operation.commentaire}`] : []),
+      '',
+      'Merci de procéder à son traitement.',
+      '',
+      'Cordialement,'
+    ];
+    await this.ticketEmailService.propose({
+      context: 'banque',
+      pays: operation.codePays || (pays !== '-' ? pays : ''),
+      subject: [`Ticket ${ticket}`, 'Opération bancaire en suspens', operation.typeOperation, operation.agence, banque]
+        .filter(Boolean).join(' - '),
+      body: lignes.join('\n')
     });
   }
 
@@ -7185,9 +7276,14 @@ export class BanqueComponent implements OnInit {
       commentaire: this.editForm.commentaire
     };
 
+    const ticketAvant = (this.selectedOperation.idGlpi || '').trim();
     this.operationBancaireService.updateOperationBancaire(this.selectedOperation.id, updateData).subscribe({
       next: (updatedOperation) => {
         console.log('Opération bancaire modifiée avec succès');
+        const ticketApres = (this.editForm.idGlpi || '').trim();
+        const nouveauTicket = ticketApres && ticketApres !== ticketAvant && !this.isCreateTicketCase(ticketApres)
+          && !ticketApres.toLowerCase().includes('modifier');
+        const opPourMail = { ...this.selectedOperation, ...updateData, ...(updatedOperation || {}) } as OperationBancaireDisplay;
         
         // Vérifier si le statut passe à "Validée" pour ajouter l'info d'impact
         const previousStatut = this.selectedOperation.statut || '';
@@ -7216,7 +7312,10 @@ export class BanqueComponent implements OnInit {
         this.loadOperations(() => this.refreshCommentCorrespondances());
         this.loadDashboardStats(); // Mettre à jour le compteur de tickets
         this.closeEditPopup();
-        this.popupService.showSuccess(message);
+        const succes = this.popupService.showSuccess(message);
+        if (nouveauTicket) {
+          void succes.then(() => this.proposerEmailTicket(opPourMail, ticketApres));
+        }
       },
       error: (error) => {
         console.error('Erreur lors de la modification:', error);

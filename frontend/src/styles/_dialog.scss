@@ -187,6 +187,35 @@
 
   .list-date input { width: auto; }
 
+  // Rédaction d'e-mail (ID ticket renseigné)
+  .popup-email-compose {
+    max-width: 640px;
+    width: 92%;
+
+    .popup-field {
+      display: flex;
+      flex-direction: column;
+      gap: var(--space-1);
+      margin-top: var(--space-3);
+      font-weight: 600;
+      font-size: var(--text-sm);
+    }
+
+    .popup-textarea {
+      min-height: 220px;
+      padding: var(--space-2) var(--space-3);
+      font-weight: 400;
+      line-height: 1.5;
+      resize: vertical;
+    }
+
+    .popup-error {
+      margin: var(--space-3) 0 0;
+      color: var(--color-error-solid);
+      font-size: var(--text-sm);
+    }
+  }
+
   // Autocomplétion
   .autocomplete-wrapper { position: relative; }
 

@@ -693,6 +693,8 @@
     "Bénéficiaire": "Beneficiary",
     "Bénéficiaireréflibellécompte": "Beneficiary / Ref / Label / Account",
     "Chargementdescomptesbanque": "Loading Bank accounts...",
+    "SaisirIdTicket": "Enter the ticket ID then confirm (Enter)",
+    "EchecEnregistrementIdTicket": "Failed to save the ticket ID.",
     "Choisirlaplateformepourcréerunticket": "Choose the platform to create a ticket",
     "Choisiruneoptionpourouvrirleticket": "Choose an option to open the ticket",
     "Choisirunfichier": "Choose a file",
@@ -9112,5 +9114,22 @@
       "dateValeur": "Value date",
       "libelle": "Label"
     }
+  },
+  "MAIL": {
+    "to": "Recipients (To)",
+    "cc": "Copy (Cc)",
+    "subject": "Subject",
+    "body": "Message",
+    "later": "Later",
+    "send": "Send",
+    "titleTransaction": "Ticket entered: e-mail about the gaps to process",
+    "titleBanque": "Ticket entered: e-mail about the pending operation",
+    "intro": "Check the recipients and the message before sending (addresses separated by \";\").",
+    "errNoRecipient": "Enter at least one recipient.",
+    "errInvalid": "Invalid address(es): {{p0}}",
+    "errEmptyBody": "The message is empty.",
+    "sent": "E-mail sent ({{p0}} address(es)).",
+    "sentTitle": "Ticket e-mail",
+    "sendFailed": "The e-mail could not be sent."
   }
 }

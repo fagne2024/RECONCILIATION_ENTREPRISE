@@ -16,7 +16,7 @@ describe('BanqueComponent - correspondances par commentaire', () => {
   beforeEach(() => {
     TestBed.configureTestingModule({ providers: [{ provide: SuiviCompenseOpService, useValue: {} }] });
     comp = TestBed.inject(EnvironmentInjector)
-      .runInContext(() => new BanqueComponent(stub, stub, stub, stub, stub, stub, stub, stub, stub, stub, stub));
+      .runInContext(() => new BanqueComponent(stub, stub, stub, stub, stub, stub, stub, stub, stub, stub, stub, stub));
   });
 
   it('rapproche tout commentaire non vide sauf les tags SUSPENS_', () => {

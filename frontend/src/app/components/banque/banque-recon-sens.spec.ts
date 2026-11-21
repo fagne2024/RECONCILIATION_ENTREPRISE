@@ -20,7 +20,7 @@ describe('BanqueComponent - sens des approvisionnements', () => {
   beforeEach(() => {
     TestBed.configureTestingModule({ providers: [{ provide: SuiviCompenseOpService, useValue: {} }] });
     comp = TestBed.inject(EnvironmentInjector)
-      .runInContext(() => new BanqueComponent(stub, stub, stub, stub, stub, stub, stub, stub, stub, stub, stub));
+      .runInContext(() => new BanqueComponent(stub, stub, stub, stub, stub, stub, stub, stub, stub, stub, stub, stub));
     // Règles de calcul : valeurs par défaut
     comp.calculService = { getList: (_code: string, fallback: string[]) => fallback };
   });

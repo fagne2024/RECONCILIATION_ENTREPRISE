@@ -191,13 +191,10 @@
       </div>
       <div class="filter-item ds-field">
         <label>{{ 'TBL.service' | translate }}</label>
-        <select [(ngModel)]="selectedService" (change)="applyFilters()" class="filter-select ds-select" [disabled]="!!magicServiceFilterLocked">
+        <select [(ngModel)]="selectedService" (change)="applyFilters()" class="filter-select ds-select">
           <option value="">{{ 'FILT.all' | translate }}</option>
           <option *ngFor="let service of filterOptionsServices; trackBy: trackByString" [value]="service">{{service}}</option>
         </select>
-        <small class="magic-filter-hint" *ngIf="magicServiceFilterLocked">
-          {{ 'EBS.Cloisonné' | translate }} {{ magicServiceFilterLocked }} {{ 'EBS.Réconciliationmagique' | translate }}
-        </small>
       </div>
       <div class="filter-item ds-field">
         <label>{{ 'TBL.country' | translate }}</label>

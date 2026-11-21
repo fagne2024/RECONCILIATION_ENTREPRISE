@@ -1,5 +1,5 @@
 import { Injectable } from '@angular/core';
-import { ModernPopupComponent } from '../components/modern-popup/modern-popup.component';
+import { EmailComposeOptions, EmailComposeResult, ModernPopupComponent } from '../components/modern-popup/modern-popup.component';
 import { I18nService } from './i18n/i18n.service';
 
 @Injectable({
@@ -77,6 +77,11 @@ export class PopupService {
    */
   showTextInput(message: string, title: string = I18nService.t('POPUP.input'), defaultValue: string = '', placeholder: string = ''): Promise<string | null> {
     return ModernPopupComponent.showTextInput(message, title, defaultValue, placeholder);
+  }
+
+  /** Rédaction d'un e-mail (À, Cc, objet, message) ; null si fermé sans envoyer. */
+  showEmailCompose(options: EmailComposeOptions): Promise<EmailComposeResult | null> {
+    return ModernPopupComponent.showEmailCompose(options);
   }
 
   showDateInput(message: string, title: string = I18nService.t('POPUP.date'), defaultValue: string = ''): Promise<string | null> {

@@ -92,6 +92,18 @@ public class OperationBancaireController {
         public List<String> copie;
     }
 
+    @Autowired
+    private com.reconciliation.service.TicketEmailService ticketEmailService;
+
+    /** E-mail proposé après la saisie d'un ID ticket : opération bancaire en suspens. */
+    @PostMapping("/send-ticket-email")
+    public ResponseEntity<java.util.Map<String, Object>> sendTicketEmail(
+            @RequestBody com.reconciliation.service.TicketEmailService.TicketEmailRequest request) {
+        com.reconciliation.service.TicketEmailService.Result result = ticketEmailService.send(
+                request, RequestContextUtil.getUsernameFromRequest(), "Opération bancaire en suspens");
+        return ResponseEntity.status(result.status()).body(result.body());
+    }
+
     @PostMapping("/send-reconciliation-email")
     public ResponseEntity<java.util.Map<String, Object>> sendReconciliationEmail(
             @RequestBody ReconciliationBancaireEmailRequest request) {

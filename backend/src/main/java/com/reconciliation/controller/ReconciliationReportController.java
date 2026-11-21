@@ -41,6 +41,7 @@ public class ReconciliationReportController {
     private final ReconciliationPilotReportService pilotReportService;
     private final UserRepository userRepository;
     private final EmailService emailService;
+    private final com.reconciliation.service.TicketEmailService ticketEmailService;
 
     @GetMapping("/manual-trx")
     public ResponseEntity<?> getManualTrx(
@@ -381,6 +382,15 @@ public class ReconciliationReportController {
             log.error("Error in getPilotReport", e);
             return ResponseEntity.internalServerError().body(Map.of("error", e.getMessage()));
         }
+    }
+
+    /** E-mail proposé après la saisie d'un ID ticket : écarts de réconciliation à traiter. */
+    @PostMapping("/send-ticket-email")
+    public ResponseEntity<Map<String, Object>> sendTicketEmail(
+            @RequestBody com.reconciliation.service.TicketEmailService.TicketEmailRequest request) {
+        com.reconciliation.service.TicketEmailService.Result result = ticketEmailService.send(
+                request, RequestContextUtil.getUsernameFromRequest(), "Écarts de réconciliation à traiter");
+        return ResponseEntity.status(result.status()).body(result.body());
     }
 
     /**

@@ -61,6 +61,7 @@ import { DsPaginationComponent } from '../../shared/ui';
 import { TranslateService } from '@ngx-translate/core';
 import { I18nService } from '../../services/i18n/i18n.service';
 import { GLPI_TICKET_FORM_URL } from '../../constants/glpi';
+import { TicketEmailService } from '../../services/ticket-email.service';
 
 /** Ligne renvoyée par GET /api/result8rec/{id}/audit-history */
 export interface Result8RecAuditEntry {
@@ -712,7 +713,7 @@ interface AllOkEmailMetrics {
                             </td>
                             <td class="text-cell">
                                 <div class="glpi-cell">
-                                    <ng-container *ngIf="item.glpiId && item.glpiId.trim() && editingRow !== item; else glpiInput">
+                                    <ng-container *ngIf="item.glpiId && item.glpiId.trim() && editingRow !== item && !isGlpiTyping(item); else glpiInput">
                                         <span class="glpi-link" (click)="showTicketOptionsPopup(item.glpiId)" [title]="'RPT.chooseTicketOption' | translate" style="cursor: pointer;">{{item.glpiId}}</span>
                                     </ng-container>
                                     <ng-template #glpiInput>
@@ -722,6 +723,7 @@ interface AllOkEmailMetrics {
                                                 [placeholder]="'RPT.ticketId' | translate" 
                                                 class="edit-input" 
                                                 [disabled]="item.status === 'OK'"
+                                                (focus)="onGlpiIdInputFocus(item)"
                                                 (ngModelChange)="onGlpiIdInputChange(item, $event)"
                                                 (blur)="onGlpiIdInputBlur(item)"
                                                 (keyup.enter)="onGlpiIdInputEnter(item)"/>
@@ -4473,7 +4475,8 @@ reportData: ReconciliationReportData[] = [];
         private logger: LoggerService,
         private translate: TranslateService,
         private niveauxValidationConfig: NiveauxValidationConfigService,
-        private profilService: ProfilService
+        private profilService: ProfilService,
+        private ticketEmailService: TicketEmailService
     ) {
         // Initialiser filteredReportData pour éviter les erreurs
         this.filteredReportData = [];
@@ -9517,6 +9520,24 @@ reportData: ReconciliationReportData[] = [];
         window.open(url, '_blank', 'noopener,noreferrer');
     }
 
+    /** Lignes dont l'ID ticket est en cours de saisie (le champ reste affiché jusqu'à la validation). */
+    private glpiTyping = new WeakSet<ReconciliationReportData>();
+    /** ID ticket au début de la saisie : l'e-mail n'est proposé que pour un nouveau ticket. */
+    private glpiValueAtFocus = new WeakMap<ReconciliationReportData, string>();
+    /** Ticket pour lequel l'e-mail a déjà été proposé (Entrée puis perte de focus). */
+    private glpiMailProposed = new WeakMap<ReconciliationReportData, string>();
+    private glpiSaveInFlight = new WeakMap<ReconciliationReportData, Promise<void>>();
+
+    isGlpiTyping(item: ReconciliationReportData): boolean {
+        return this.glpiTyping.has(item);
+    }
+
+    onGlpiIdInputFocus(item: ReconciliationReportData) {
+        if (!item || this.glpiTyping.has(item)) return;
+        this.glpiTyping.add(item);
+        this.glpiValueAtFocus.set(item, (this.lastSavedGlpiIds.get(item) ?? item.glpiId ?? '').trim());
+    }
+
     onGlpiIdInputChange(item: ReconciliationReportData, value: string) {
         if (!item || !item.id || this.editingRow === item) {
             return;
@@ -9534,18 +9555,17 @@ reportData: ReconciliationReportData[] = [];
     }
 
     onGlpiIdInputBlur(item: ReconciliationReportData) {
-        if (!item) return;
-        if (!item.id) {
-            if ((item.glpiId || '').trim()) {
-                this.popupService.showWarning(this.translateKey('RPT.row.notSavedMessage'), this.translateKey('RPT.row.notSavedTitle'));
-            }
-            return;
-        }
-        this.triggerGlpiAutoSave(item, true);
+        void this.validateGlpiInput(item);
     }
 
     onGlpiIdInputEnter(item: ReconciliationReportData) {
+        void this.validateGlpiInput(item);
+    }
+
+    /** Entrée ou sortie du champ : enregistre l'ID ticket puis propose l'e-mail des écarts à traiter. */
+    private async validateGlpiInput(item: ReconciliationReportData): Promise<void> {
         if (!item) return;
+        this.glpiTyping.delete(item);
         if (!item.id) {
             if ((item.glpiId || '').trim()) {
                 this.popupService.showWarning(this.translateKey('RPT.row.notSavedMessage'), this.translateKey('RPT.row.notSavedTitle'));
@@ -9553,12 +9573,63 @@ reportData: ReconciliationReportData[] = [];
             return;
         }
         this.triggerGlpiAutoSave(item, true);
+        await this.glpiSaveInFlight.get(item);
+        const saved = (this.lastSavedGlpiIds.get(item) || '').trim();
+        const before = this.glpiValueAtFocus.get(item) ?? '';
+        if (!saved || saved === before || this.glpiMailProposed.get(item) === saved || this.isCreateTicketValue(saved)) {
+            return;
+        }
+        this.glpiMailProposed.set(item, saved);
+        this.glpiValueAtFocus.set(item, saved);
+        await this.proposeTicketEmail(item, saved);
+    }
+
+    private isCreateTicketValue(value: string): boolean {
+        const lower = (value || '').trim().toLowerCase();
+        return !lower || lower.includes('créer') || lower.includes('creer') || lower.includes('modifier');
+    }
+
+    /** E-mail pré-rempli : réconciliation effectuée pour le service, écarts à traiter (ticket). */
+    private async proposeTicketEmail(item: ReconciliationReportData, ticket: string): Promise<void> {
+        const n = (v: unknown) => (Number(v) || 0).toLocaleString('fr-FR');
+        const service = (item.service || '').trim() || '-';
+        const lignes = [
+            'Bonjour,',
+            '',
+            `La réconciliation du service ${service} a été effectuée.`,
+            `Voici les écarts à traiter (ticket ${ticket}) :`,
+            '',
+            `- Service : ${service}`,
+            `- Pays : ${item.country || '-'}`,
+            `- Date : ${item.date || '-'}`,
+            `- Agence : ${item.agency || '-'}`,
+            ...(item.env ? [`- ENV : ${item.env}`] : []),
+            '',
+            `- Transactions : ${n(item.totalTransactions)}`,
+            `- Correspondances : ${n(item.matches)}`,
+            `- Écarts BO (présents uniquement côté BO) : ${n(item.boOnly)}`,
+            `- Écarts partenaire (présents uniquement côté partenaire) : ${n(item.partnerOnly)}`,
+            `- Incohérences : ${n(item.mismatches)}`,
+            `- Taux de correspondance : ${(Number(item.matchRate) || 0).toFixed(2)} %`,
+            ...(item.comment ? ['', `Commentaire : ${item.comment}`] : []),
+            '',
+            'Merci de procéder au traitement de ces écarts.',
+            '',
+            'Cordialement,'
+        ];
+        await this.ticketEmailService.propose({
+            context: 'transaction',
+            pays: item.country,
+            subject: [`Ticket ${ticket}`, `Écarts de réconciliation ${service}`, item.country, item.date]
+                .filter(Boolean).join(' - '),
+            body: lignes.join('\n')
+        });
     }
 
     private triggerGlpiAutoSave(item: ReconciliationReportData, force = false) {
         this.clearGlpiAutoSaveTimer(item);
 
-        if (this.editingRow === item) {
+        if (this.editingRow === item || this.glpiSaveInFlight.has(item)) {
             return;
         }
 
@@ -9573,7 +9644,14 @@ reportData: ReconciliationReportData[] = [];
             return;
         }
 
-        this.saveGlpiIdAutomatically(item, glpiValue);
+        const save = this.saveGlpiIdAutomatically(item, glpiValue).finally(() => {
+            this.glpiSaveInFlight.delete(item);
+            // Valeur modifiée pendant l'enregistrement : enregistrer la dernière saisie.
+            if ((item.glpiId || '').trim() !== (this.lastSavedGlpiIds.get(item) || '') && !this.glpiTyping.has(item)) {
+                this.triggerGlpiAutoSave(item, force);
+            }
+        });
+        this.glpiSaveInFlight.set(item, save);
     }
 
     private async saveGlpiIdAutomatically(item: ReconciliationReportData, glpiId: string) {

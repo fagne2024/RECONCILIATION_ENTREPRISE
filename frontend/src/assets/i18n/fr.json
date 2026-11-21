@@ -693,6 +693,8 @@
     "Bénéficiaire": "Bénéficiaire",
     "Bénéficiaireréflibellécompte": "Bénéficiaire / Réf / Libellé / Compte",
     "Chargementdescomptesbanque": "Chargement des comptes Banque...",
+    "SaisirIdTicket": "Saisir l'ID du ticket puis valider (Entrée)",
+    "EchecEnregistrementIdTicket": "Échec de l'enregistrement de l'ID ticket.",
     "Choisirlaplateformepourcréerunticket": "Choisir la plateforme pour créer un ticket",
     "Choisiruneoptionpourouvrirleticket": "Choisir une option pour ouvrir le ticket",
     "Choisirunfichier": "Choisir un fichier",
@@ -9112,5 +9114,22 @@
       "dateValeur": "Date de valeur",
       "libelle": "Libellé"
     }
+  },
+  "MAIL": {
+    "to": "Destinataires (À)",
+    "cc": "En copie (Cc)",
+    "subject": "Objet",
+    "body": "Message",
+    "later": "Plus tard",
+    "send": "Envoyer",
+    "titleTransaction": "Ticket renseigné : e-mail des écarts à traiter",
+    "titleBanque": "Ticket renseigné : e-mail de l'opération en suspens",
+    "intro": "Vérifiez les destinataires et le message avant l'envoi (adresses séparées par « ; »).",
+    "errNoRecipient": "Renseignez au moins un destinataire.",
+    "errInvalid": "Adresse(s) invalide(s) : {{p0}}",
+    "errEmptyBody": "Le message est vide.",
+    "sent": "E-mail envoyé ({{p0}} adresse(s)).",
+    "sentTitle": "E-mail ticket",
+    "sendFailed": "L'e-mail n'a pas pu être envoyé."
   }
 }

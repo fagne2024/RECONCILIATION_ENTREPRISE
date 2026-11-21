@@ -203,8 +203,8 @@ export class EcartBoSummaryComponent implements OnInit, OnDestroy {
   private selectionKeyCounter = 0;
   private isPersistingLinks = false;
 
-  /** Service magique actif (réconciliation magique) — cloisonne l'affichage. */
-  magicServiceFilterLocked = '';
+  /** Service de la carte magique déjà présélectionné (une seule fois : le filtre reste modifiable). */
+  private magicServicePreselected = '';
 
   constructor(
     private appStateService: AppStateService,
@@ -252,7 +252,7 @@ export class EcartBoSummaryComponent implements OnInit, OnDestroy {
     this.subscription.add(
       this.appStateService.getReconciliationResults().pipe(take(1)).subscribe((response: ReconciliationResponse | null) => {
         if (pendingLines && pendingLines.length > 0) {
-          this.pendingLinesBuffer = this.filterPendingLinesByMagicService(pendingLines);
+          this.pendingLinesBuffer = pendingLines;
           this.prefillBuffer = prefill;
           this.awaitingEnvChoice = true;
           this.pendingEnvSelection = this.sessionDefaultEnvCode || '';
@@ -647,8 +647,7 @@ export class EcartBoSummaryComponent implements OnInit, OnDestroy {
       this.cdr.markForCheck();
       const serverLines = await this.reconciliationService.loadEcartBoSummaryLines(sessionId);
       if (serverLines.length > 0) {
-        const filtered = this.filterPendingLinesByMagicService(serverLines);
-        this.applyPendingLinesFromEcartBo(filtered);
+        this.applyPendingLinesFromEcartBo(serverLines);
         queueMicrotask(() => this.linkMatchingPairs(false));
         return;
       }
@@ -656,8 +655,9 @@ export class EcartBoSummaryComponent implements OnInit, OnDestroy {
 
     await this.ensureBoEcartsLoaded();
 
-    const mismatches = this.applyMagicReconciliationFilter(this.response?.mismatches ?? []);
-    const boOnly = this.applyMagicReconciliationFilter(this.response?.boOnly ?? []);
+    // Pas de cloisonnement par carte magique ici : tous les services restent filtrables.
+    const mismatches = this.response?.mismatches ?? [];
+    const boOnly = this.response?.boOnly ?? [];
     const records = mismatches.concat(boOnly);
     const groupedByAgence = new Map<string, SummaryGroupAccumulator>();
     const chunkSize = EcartBoSummaryComponent.SUMMARY_BUILD_CHUNK_SIZE;
@@ -856,11 +856,14 @@ export class EcartBoSummaryComponent implements OnInit, OnDestroy {
     this.loadSavedSummaryData();
   }
 
-  /** Applique le cloisonnement service depuis la réconciliation magique. */
+  /**
+   * Réconciliation magique : présélectionne le service de la carte ouverte, une seule fois.
+   * Le filtre Service reste libre (autre service ou « Tous »).
+   */
   private syncMagicServiceFilterFromContext(): void {
     const magicService = this.getActiveMagicServiceFilter();
-    this.magicServiceFilterLocked = magicService;
-    if (magicService) {
+    if (magicService && magicService !== this.magicServicePreselected) {
+      this.magicServicePreselected = magicService;
       this.selectedService = magicService;
     }
   }
@@ -868,34 +871,6 @@ export class EcartBoSummaryComponent implements OnInit, OnDestroy {
   private getActiveMagicServiceFilter(): string {
     const magicCtx = this.reconciliationTabsService.getMagicViewContext();
     return (magicCtx.service || this.appStateService.getSelectedMagicService() || '').trim();
-  }
-
-  private ensureMagicViewContext(): void {
-    const magicCtx = this.reconciliationTabsService.getMagicViewContext();
-    const service = magicCtx.service || this.appStateService.getSelectedMagicService();
-    const partnerFile = magicCtx.partnerFile || this.appStateService.getSelectedMagicPartnerFile();
-    if (service && !magicCtx.service) {
-      this.reconciliationTabsService.setMagicViewContext(service, partnerFile);
-    }
-  }
-
-  private applyMagicReconciliationFilter(records: Record<string, string>[]): Record<string, string>[] {
-    const service = this.getActiveMagicServiceFilter();
-    const partnerFile = this.reconciliationTabsService.getMagicViewContext().partnerFile
-      || this.appStateService.getSelectedMagicPartnerFile();
-    if (!service && !partnerFile) {
-      return records;
-    }
-    this.ensureMagicViewContext();
-    return this.reconciliationTabsService.filterBoEcartsByMagicView(records);
-  }
-
-  private filterPendingLinesByMagicService(lines: EcartBoSummaryPendingLine[]): EcartBoSummaryPendingLine[] {
-    const magicService = this.getActiveMagicServiceFilter();
-    if (!magicService) {
-      return lines;
-    }
-    return lines.filter(line => (line.service || '').trim() === magicService);
   }
 
   /**

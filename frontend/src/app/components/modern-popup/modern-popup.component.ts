@@ -12,6 +12,22 @@ export interface PopupConfig {
   linesSaved?: number;
 }
 
+export interface EmailComposeOptions {
+  title: string;
+  intro?: string;
+  to?: string[];
+  cc?: string[];
+  subject?: string;
+  body?: string;
+}
+
+export interface EmailComposeResult {
+  to: string[];
+  cc: string[];
+  subject: string;
+  body: string;
+}
+
 @Component({
   selector: 'app-modern-popup',
   templateUrl: './modern-popup.component.html',
@@ -283,6 +299,93 @@ export class ModernPopupComponent implements OnInit, OnDestroy {
       if (closeBtn) closeBtn.addEventListener('click', () => close(null));
       if (input) input.addEventListener('keydown', (e) => { if ((e as KeyboardEvent).key === 'Enter') close(input!.value); });
       overlay.addEventListener('click', (e) => { if (e.target === overlay) close(null); });
+    });
+  }
+
+  /**
+   * Rédaction d'un e-mail : destinataires, copie, objet et message pré-remplis, modifiables.
+   * Renvoie la saisie, ou null si l'utilisateur ferme sans envoyer.
+   */
+  static showEmailCompose(options: EmailComposeOptions): Promise<EmailComposeResult | null> {
+    return new Promise((resolve) => {
+      const overlay = document.createElement('div');
+      overlay.className = 'modern-popup-overlay ds-dialog';
+      overlay.innerHTML = `
+        <div class="modern-popup popup-email-compose">
+          <div class="popup-header">
+            <h3 class="popup-title"></h3>
+            <button type="button" class="popup-close"><i class="fas fa-times" aria-hidden="true"></i></button>
+          </div>
+          <div class="popup-content">
+            <p class="popup-message"></p>
+            <label class="popup-field"><span data-l="to"></span><input type="text" class="popup-input" data-f="to" /></label>
+            <label class="popup-field"><span data-l="cc"></span><input type="text" class="popup-input" data-f="cc" /></label>
+            <label class="popup-field"><span data-l="subject"></span><input type="text" class="popup-input" data-f="subject" maxlength="200" /></label>
+            <label class="popup-field"><span data-l="body"></span><textarea class="popup-input popup-textarea" data-f="body" rows="12"></textarea></label>
+            <p class="popup-error" role="alert" hidden></p>
+          </div>
+          <div class="popup-actions">
+            <button type="button" class="popup-btn popup-btn-cancel"></button>
+            <button type="button" class="popup-btn popup-btn-confirm popup-btn-info"></button>
+          </div>
+        </div>
+      `;
+      // Textes posés via textContent / value : aucune donnée injectée comme HTML.
+      const q = <T extends Element>(sel: string) => overlay.querySelector(sel) as T;
+      q<HTMLElement>('.popup-title').textContent = options.title;
+      q<HTMLElement>('.popup-message').textContent = options.intro || '';
+      q<HTMLElement>('[data-l="to"]').textContent = I18nService.t('MAIL.to');
+      q<HTMLElement>('[data-l="cc"]').textContent = I18nService.t('MAIL.cc');
+      q<HTMLElement>('[data-l="subject"]').textContent = I18nService.t('MAIL.subject');
+      q<HTMLElement>('[data-l="body"]').textContent = I18nService.t('MAIL.body');
+      q<HTMLElement>('.popup-btn-cancel').textContent = I18nService.t('MAIL.later');
+      q<HTMLElement>('.popup-btn-confirm').textContent = I18nService.t('MAIL.send');
+      const toInput = q<HTMLInputElement>('[data-f="to"]');
+      const ccInput = q<HTMLInputElement>('[data-f="cc"]');
+      const subjectInput = q<HTMLInputElement>('[data-f="subject"]');
+      const bodyInput = q<HTMLTextAreaElement>('[data-f="body"]');
+      const errorEl = q<HTMLElement>('.popup-error');
+      toInput.value = (options.to || []).join('; ');
+      ccInput.value = (options.cc || []).join('; ');
+      toInput.placeholder = 'nom@exemple.com; ...';
+      ccInput.placeholder = 'nom@exemple.com; ...';
+      subjectInput.value = options.subject || '';
+      bodyInput.value = options.body || '';
+
+      document.body.appendChild(overlay);
+      const a11y = attachDialogA11y(overlay, { closeLabel: I18nService.t('COMMON.actions.close') });
+      document.body.style.overflow = 'hidden';
+
+      const close = (result: EmailComposeResult | null) => {
+        overlay.remove();
+        document.body.style.overflow = 'auto';
+        a11y.release();
+        document.removeEventListener('keydown', onEsc);
+        resolve(result);
+      };
+      const onEsc = (e: KeyboardEvent) => { if (e.key === 'Escape') close(null); };
+      document.addEventListener('keydown', onEsc);
+
+      const parse = (v: string) => Array.from(new Set(v.split(/[;,\s]+/).map(m => m.trim()).filter(Boolean)));
+      const valid = (m: string) => /^[^@\s]+@[^@\s]+\.[^@\s]+$/.test(m);
+      q<HTMLElement>('.popup-btn-confirm').addEventListener('click', () => {
+        const to = parse(toInput.value);
+        const cc = parse(ccInput.value);
+        const invalid = [...to, ...cc].filter(m => !valid(m));
+        let error = '';
+        if (!to.length) error = I18nService.t('MAIL.errNoRecipient');
+        else if (invalid.length) error = I18nService.t('MAIL.errInvalid', { p0: invalid.join(', ') });
+        else if (!bodyInput.value.trim()) error = I18nService.t('MAIL.errEmptyBody');
+        if (error) {
+          errorEl.textContent = error;
+          errorEl.hidden = false;
+          return;
+        }
+        close({ to, cc: cc.filter(m => !to.includes(m)), subject: subjectInput.value.trim(), body: bodyInput.value });
+      });
+      q<HTMLElement>('.popup-btn-cancel').addEventListener('click', () => close(null));
+      q<HTMLElement>('.popup-close').addEventListener('click', () => close(null));
+      setTimeout(() => (toInput.value ? bodyInput : toInput).focus(), 0);
     });
   }
 

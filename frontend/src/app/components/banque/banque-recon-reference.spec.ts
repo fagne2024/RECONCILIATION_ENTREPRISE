@@ -17,7 +17,7 @@ describe('BanqueComponent - appariement par référence', () => {
     TestBed.configureTestingModule({ providers: [{ provide: SuiviCompenseOpService, useValue: {} }] });
     // Un champ du composant utilise inject() : construction dans un contexte d'injection (Angular 14.1+)
     comp = TestBed.inject(EnvironmentInjector)
-      .runInContext(() => new BanqueComponent(stub, stub, stub, stub, stub, stub, stub, stub, stub, stub, stub));
+      .runInContext(() => new BanqueComponent(stub, stub, stub, stub, stub, stub, stub, stub, stub, stub, stub, stub));
     // Le sens dépend des règles de calcul (service distant) : fixé ici, il n'entre que dans le départage
     jest.spyOn(comp, 'determineOperationSens').mockReturnValue('credit');
   });

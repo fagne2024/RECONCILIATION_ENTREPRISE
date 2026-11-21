@@ -1535,6 +1535,15 @@
               <td>{{ operation.montant | currency:'XAF':'symbol':'1.0-0' }}</td>
               <td>{{ operation.reference }}</td>
               <td class="glpi-cell">
+                <input *ngIf="isCreateTicketCase(operation.idGlpi) && operation.source !== 'generale'"
+                  class="ds-input glpi-inline-input" type="text" maxlength="255" autocomplete="off"
+                  [ngModel]="getTicketDraft(operation)"
+                  (ngModelChange)="onTicketDraftChange(operation, $event)"
+                  (blur)="saveTicketDraft(operation)"
+                  (keyup.enter)="saveTicketDraft(operation)"
+                  [disabled]="isSavingTicket(operation)"
+                  placeholder="{{ 'TBL.ticketId' | translate }}"
+                  title="{{ 'BQ.SaisirIdTicket' | translate }}">
                 <button type="button" 
                   *ngIf="isCreateTicketCase(operation.idGlpi)" 
                   class="ds-btn ds-btn--secondary btn-glpi-create"
