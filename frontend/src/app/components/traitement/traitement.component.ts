@@ -832,33 +832,46 @@ End Sub`;
   // ----- Colonne PAYS : code pays demandé avant chaque traitement (fichier partenaire) -----
   /** Code pays du traitement en cours ('' = fichier BO, aucune colonne ajoutée). */
   paysTraitement = '';
-  private paysCodesConnus: string[] | null = null;
+  /** Pays connus (code → libellé « CI — Côte d'Ivoire ») pour la liste déroulante. */
+  private paysConnus: { code: string; libelle: string }[] | null = null;
 
   /**
-   * Avant chaque traitement : le code pays du fichier partenaire est obligatoire (colonne PAYS
-   * sur toutes les lignes). « AUCUN (fichier BO) » traite sans ajouter la colonne. Annuler
-   * retire les fichiers ajoutés et ne lance pas le traitement.
+   * Avant chaque traitement : le pays du fichier partenaire est obligatoire (colonne PAYS
+   * sur toutes les lignes), choisi dans la liste des pays. « AUCUN (fichier BO) » traite sans
+   * ajouter la colonne. Annuler retire les fichiers ajoutés et ne lance pas le traitement.
    */
   private async demanderPaysFichier(): Promise<boolean> {
     if (!this.selectedFiles.length || this.showCsvPreview) {
       return true;
     }
-    if (this.paysCodesConnus === null) {
+    if (this.paysConnus === null) {
       try {
         const liste = await firstValueFrom(this.paysService.getPays());
-        this.paysCodesConnus = [...new Set((liste || []).map(p => (p.code || '').trim().toUpperCase()).filter(Boolean))].sort();
+        const parCode = new Map<string, string>();
+        for (const p of liste || []) {
+          const code = (p.code || '').trim().toUpperCase();
+          if (code && !parCode.has(code)) {
+            const nom = (p.nom || '').trim();
+            parCode.set(code, nom ? `${code} — ${nom}` : code);
+          }
+        }
+        this.paysConnus = [...parCode.entries()]
+          .map(([code, libelle]) => ({ code, libelle }))
+          .sort((a, b) => a.libelle.localeCompare(b.libelle, 'fr'));
       } catch {
-        this.paysCodesConnus = [];
+        this.paysConnus = [];
       }
     }
     const aucun = this.t('TRT.paysAucunBo');
+    const message = this.t('TRT.paysDemande', { p0: PAYS_COLUMN_NAME, p1: aucun });
+    const titre = this.t('TRT.paysTitre');
+    const choisir = this.t('LBL.chooseDash');
     for (;;) {
-      const saisie = await this.popupService.showAutocompleteInput(
-        this.t('TRT.paysDemande', { p0: PAYS_COLUMN_NAME, p1: aucun }),
-        this.t('TRT.paysTitre'),
-        [...this.paysCodesConnus, aucun],
-        this.paysTraitement || ''
-      );
+      const precedent = this.paysConnus.find(p => p.code === this.paysTraitement)?.libelle || '';
+      // Liste déroulante des pays ; saisie du code si la liste n'est pas disponible (droits).
+      const saisie = this.paysConnus.length
+        ? await this.popupService.showSelectInput(message, titre, [choisir, ...this.paysConnus.map(p => p.libelle), aucun], precedent || choisir)
+        : await this.popupService.showAutocompleteInput(message, titre, [aucun], this.paysTraitement || '');
       if (saisie === null) {
         this.selectedFiles = [];
         this.showError('upload', this.t('TRT.paysAnnule'));
@@ -869,12 +882,17 @@ End Sub`;
         this.paysTraitement = '';
         return true;
       }
-      const code = valeur.toUpperCase();
+      if (valeur === choisir.trim() || !valeur) {
+        await this.popupService.showWarning(this.t('TRT.paysAChoisir'), titre);
+        continue;
+      }
+      const connu = this.paysConnus.find(p => p.libelle === valeur);
+      const code = connu ? connu.code : valeur.toUpperCase();
       if (/^[A-Z0-9]{2,10}$/.test(code)) {
         this.paysTraitement = code;
         return true;
       }
-      await this.popupService.showWarning(this.t('TRT.paysInvalide', { p0: valeur || '—' }), this.t('TRT.paysTitre'));
+      await this.popupService.showWarning(this.t('TRT.paysInvalide', { p0: valeur || '—' }), titre);
     }
   }
 

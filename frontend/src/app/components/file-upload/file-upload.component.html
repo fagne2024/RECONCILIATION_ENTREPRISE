@@ -1700,19 +1700,27 @@
             <label class="traitement-section-title" for="traitementPaysValue">{{ 'FU.paysSection' | translate }} {{ paysColumnName }}</label>
             <div class="traitement-env-value-row">
                 <label for="traitementPaysValue">{{ 'FU.paysCode' | translate }}</label>
-                <input
+                <select
+                    *ngIf="traitementPaysOptions.length; else paysSaisieLibre"
                     id="traitementPaysValue"
                     class="traitement-env-select"
-                    type="text"
-                    maxlength="10"
-                    autocomplete="off"
-                    list="traitementPaysOptionsList"
                     [(ngModel)]="traitementPaysValue"
-                    [disabled]="traitementProcessing"
-                    placeholder="CI, SN, BF…">
-                <datalist id="traitementPaysOptionsList">
-                    <option *ngFor="let code of traitementPaysOptions; trackBy: trackByValue" [value]="code"></option>
-                </datalist>
+                    [disabled]="traitementProcessing">
+                    <option value="">{{ 'LBL.chooseDash' | translate }}</option>
+                    <option *ngFor="let pays of traitementPaysOptions" [value]="pays.code">{{ pays.code }}{{ pays.nom ? ' — ' + pays.nom : '' }}</option>
+                </select>
+                <!-- Liste des pays indisponible (droits) : saisie du code. -->
+                <ng-template #paysSaisieLibre>
+                    <input
+                        id="traitementPaysValue"
+                        class="traitement-env-select"
+                        type="text"
+                        maxlength="10"
+                        autocomplete="off"
+                        [(ngModel)]="traitementPaysValue"
+                        [disabled]="traitementProcessing"
+                        placeholder="CI, SN, BF…">
+                </ng-template>
             </div>
             <p class="traitement-columns-intro">{{ 'FU.paysAide' | translate }} <strong>{{ paysColumnName }}</strong>.</p>
         </div>
@@ -1722,11 +1730,12 @@
             <label class="traitement-column-filter-toggle">
                 <input
                     type="checkbox"
-                    [(ngModel)]="traitementEnvColumnEnabled"
+                    [ngModel]="traitementEnvActive"
+                    (ngModelChange)="traitementEnvColumnEnabled = $event"
                     [disabled]="traitementProcessing || traitementEnvRequired">
                 <span>{{ 'FU.Ajouterlacolonne' | translate }} {{ envColumnName }} {{ 'FU.Aufichierfinal' | translate }}</span>
             </label>
-            <div class="traitement-env-value-row" *ngIf="traitementEnvColumnEnabled">
+            <div class="traitement-env-value-row" *ngIf="traitementEnvActive">
                 <label for="traitementEnvColumnValue">{{ 'FU.Valeur' | translate }} {{ envColumnName }}</label>
                 <select
                     id="traitementEnvColumnValue"
@@ -1737,7 +1746,7 @@
                     <option *ngFor="let option of envColumnOptions; trackBy: trackByValue" [value]="option">{{ option }}</option>
                 </select>
             </div>
-            <p class="traitement-columns-intro" *ngIf="!traitementEnvColumnEnabled">
+            <p class="traitement-columns-intro" *ngIf="!traitementEnvActive">
                 {{ 'FU.Cochezloptioncidessuspourajouterunecolonne' | translate }} <strong>{{ envColumnName }}</strong> {{ 'FU.BEThttotalgu3gu2hubaotop20surchaqueligneexportée' | translate }}
             </p>
         </div>

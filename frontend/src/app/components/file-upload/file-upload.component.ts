@@ -287,7 +287,8 @@ export class FileUploadComponent implements OnInit, OnDestroy {
     /** Code pays écrit dans la colonne PAYS du fichier partenaire (obligatoire avant le traitement). */
     traitementPaysValue = '';
     readonly paysColumnName = PAYS_COLUMN_NAME;
-    traitementPaysOptions: string[] = [];
+    /** Pays proposés dans la liste déroulante (code + nom). */
+    traitementPaysOptions: { code: string; nom: string }[] = [];
     private traitementPaysOptionsLoaded = false;
     readonly envColumnOptions = ENV_COLUMN_OPTIONS;
     traitementOutputColumnsLoading = false;
@@ -1320,7 +1321,17 @@ export class FileUploadComponent implements OnInit, OnDestroy {
     }
 
     get traitementPaysRequired(): boolean {
-        return this.selectedTraitementModels.some(m => this.isPaysRequiredForModel(m));
+        const required = this.selectedTraitementModels.some(m => this.isPaysRequiredForModel(m));
+        if (required && !this.traitementPaysOptionsLoaded) {
+            // Liste chargée dès que la section s'affiche, quel que soit le chemin de sélection du modèle.
+            this.loadTraitementPaysOptions();
+        }
+        return required;
+    }
+
+    /** Colonne ENV ajoutée : cochée par l'utilisateur, ou imposée par un modèle qui la déclare. */
+    get traitementEnvActive(): boolean {
+        return this.traitementEnvColumnEnabled || this.traitementEnvRequired;
     }
 
     /** Code pays proposé : celui du modèle s'il en a un, sinon le dernier choisi ; liste des codes connus. */
@@ -1344,7 +1355,16 @@ export class FileUploadComponent implements OnInit, OnDestroy {
         this.traitementPaysOptionsLoaded = true;
         this.paysService.getPays().subscribe({
             next: list => {
-                this.traitementPaysOptions = [...new Set((list || []).map(p => (p.code || '').trim().toUpperCase()).filter(Boolean))].sort();
+                const byCode = new Map<string, string>();
+                for (const p of list || []) {
+                    const code = (p.code || '').trim().toUpperCase();
+                    if (code && !byCode.has(code)) {
+                        byCode.set(code, (p.nom || '').trim());
+                    }
+                }
+                this.traitementPaysOptions = [...byCode.entries()]
+                    .map(([code, nom]) => ({ code, nom }))
+                    .sort((a, b) => (a.nom || a.code).localeCompare(b.nom || b.code, 'fr'));
                 this.cd.markForCheck();
             },
             error: () => { this.traitementPaysOptions = []; }
@@ -1402,7 +1422,7 @@ export class FileUploadComponent implements OnInit, OnDestroy {
             return base;
         }
 
-        const envColumn = this.traitementEnvColumnEnabled && this.traitementEnvColumnValue
+        const envColumn = this.traitementEnvActive && this.traitementEnvColumnValue
             ? { enabled: true, value: this.traitementEnvColumnValue }
             : undefined;
 
@@ -1587,7 +1607,11 @@ export class FileUploadComponent implements OnInit, OnDestroy {
             return;
         }
 
-        if (this.traitementEnvColumnEnabled && !this.traitementEnvColumnValue) {
+        if (this.traitementEnvRequired && !this.traitementEnvColumnValue) {
+            // Valeur fixée par le modèle, si le modèle a été choisi sans resynchronisation.
+            this.syncTraitementEnvColumnFromModel();
+        }
+        if (this.traitementEnvActive && !this.traitementEnvColumnValue) {
             await this.popupService.showWarning(
                 I18nService.t('FU.msg.veuillezChoisirUneValeurPourLa', { p0: ENV_COLUMN_NAME }),
                 'Colonne ENV'

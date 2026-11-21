@@ -5022,6 +5022,7 @@
     }
   },
   "TRT": {
+    "paysAChoisir": "Choose the file country (or \"NONE (BO file)\").",
     "paysDemande": "Country code of the partner file: it will be written on every row in the {{p0}} column. Choose \"{{p1}}\" for a BO file (no column added).",
     "paysTitre": "File country",
     "paysAucunBo": "NONE (BO file)",

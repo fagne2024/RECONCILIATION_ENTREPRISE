@@ -5022,6 +5022,7 @@
     }
   },
   "TRT": {
+    "paysAChoisir": "Choisissez le pays du fichier (ou « AUCUN (fichier BO) »).",
     "paysDemande": "Code pays du fichier partenaire : il sera écrit sur chaque ligne dans la colonne {{p0}}. Choisissez « {{p1}} » pour un fichier BO (aucune colonne ajoutée).",
     "paysTitre": "Pays du fichier",
     "paysAucunBo": "AUCUN (fichier BO)",
