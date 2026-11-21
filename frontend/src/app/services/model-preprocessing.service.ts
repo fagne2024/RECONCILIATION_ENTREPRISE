@@ -6,6 +6,7 @@ import {
   ModelCrossDedupRule,
   resolvePreProcessingSectionOrder,
   ENV_COLUMN_NAME,
+  PAYS_COLUMN_NAME,
   ModelFormatAction,
   ModelPreProcessingConfig,
   ModelPreProcessingSectionId,
@@ -214,6 +215,10 @@ export class ModelPreProcessingService {
     if (usage && result.length && config.envColumn && this.isEnvColumnEnabled(config)) {
       usage.used.add(config.envColumn);
     }
+    result = this.applyPaysColumnToRows(result, config);
+    if (usage && result.length && config.paysColumn && this.getActivePaysColumnValue(config)) {
+      usage.used.add(config.paysColumn);
+    }
 
     // En dernier (les sections suivantes peuvent encore lire les sources) : après une
     // concaténation, seule la colonne concaténée reste dans le résultat.
@@ -288,6 +293,35 @@ export class ModelPreProcessingService {
 
   isEnvColumnEnabled(config?: ModelPreProcessingConfig | null): boolean {
     return this.getActiveEnvColumnValue(config) !== null;
+  }
+
+  /** Colonne PAYS remplie avec le code choisi avant le traitement (toutes les lignes). */
+  private applyPaysColumnToRows(
+    rows: Record<string, string>[],
+    config?: ModelPreProcessingConfig | null
+  ): Record<string, string>[] {
+    const pays = this.getActivePaysColumnValue(config);
+    if (!pays || !rows.length) {
+      return rows;
+    }
+    for (const row of rows) {
+      row[PAYS_COLUMN_NAME] = pays;
+    }
+    return rows;
+  }
+
+  /** Code pays à écrire (colonne PAYS activée et code renseigné), sinon null. */
+  getActivePaysColumnValue(config?: ModelPreProcessingConfig | null): string | null {
+    if (!config?.paysColumn?.enabled) {
+      return null;
+    }
+    const value = String(config.paysColumn.value ?? '').trim().toUpperCase();
+    return value || null;
+  }
+
+  /** Le modèle déclare une colonne PAYS (le code est choisi avant chaque traitement). */
+  isPaysColumnDeclared(config?: ModelPreProcessingConfig | null): boolean {
+    return config?.paysColumn?.enabled === true;
   }
 
   isExportColumnFilterEnabled(config?: ModelPreProcessingConfig | null): boolean {
@@ -824,6 +858,7 @@ export class ModelPreProcessingService {
     }
 
     result = this.applyEnvColumnToRows(result, config);
+    result = this.applyPaysColumnToRows(result, config);
 
     return normalizeLeadingZeroCellsInRows(result);
   }
@@ -1629,7 +1664,8 @@ export class ModelPreProcessingService {
       || this.getActiveValueMappings(config?.valueMappings).length > 0
       || this.getActiveColumnRenameRules(config?.columnRenameRules).length > 0
       || this.getActiveCrossDedupRules(config?.crossDedupRules).length > 0
-      || this.isEnvColumnEnabled(config);
+      || this.isEnvColumnEnabled(config)
+      || this.getActivePaysColumnValue(config) !== null;
   }
 
   /** Colonnes référencées par la config pré-traitement (filtres, formatage, etc.). */
@@ -1918,6 +1954,11 @@ export class ModelPreProcessingService {
     if (envUsed) {
       parts.push(I18nService.t('MSG.pp.envColumn', { name: ENV_COLUMN_NAME }));
     }
+    const paysValue = this.getActivePaysColumnValue(config);
+    const paysUsed = !!paysValue && (!usage || (!!config?.paysColumn && usage.used.has(config.paysColumn)));
+    if (paysUsed) {
+      parts.push(I18nService.t('MSG.pp.envColumn', { name: PAYS_COLUMN_NAME }));
+    }
     if (this.isExportColumnFilterEnabled(config)) {
       const kept = config?.exportColumnFilter?.keptColumns?.length ?? 0;
       parts.push(kept > 0
@@ -1977,6 +2018,9 @@ export class ModelPreProcessingService {
     const envValue = envUsed ? this.getActiveEnvColumnValue(config) : null;
     if (envValue) {
       detailLines.push(`• ${ENV_COLUMN_NAME} : ${envValue}`);
+    }
+    if (paysUsed) {
+      detailLines.push(`• ${PAYS_COLUMN_NAME} : ${paysValue}`);
     }
     if (this.isExportColumnFilterEnabled(config)) {
       const kept = config?.exportColumnFilter?.keptColumns || [];
@@ -2210,6 +2254,9 @@ export class ModelPreProcessingService {
         outputColumns.push(ENV_COLUMN_NAME);
       }
     }
+    if (this.isPaysColumnDeclared(cfg) && !outputColumns.includes(PAYS_COLUMN_NAME)) {
+      outputColumns.push(PAYS_COLUMN_NAME);
+    }
 
     return {
       inputColumns: [...input],
@@ -2356,6 +2403,9 @@ export class ModelPreProcessingService {
 
     if (this.isEnvColumnEnabled(cfg)) {
       add(ENV_COLUMN_NAME);
+    }
+    if (this.isPaysColumnDeclared(cfg)) {
+      add(PAYS_COLUMN_NAME);
     }
 
     return dedupeBilingualColumnNames(catalog, defaults);

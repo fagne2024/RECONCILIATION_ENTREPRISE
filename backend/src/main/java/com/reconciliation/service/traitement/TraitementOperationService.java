@@ -76,7 +76,8 @@ public class TraitementOperationService {
                             String formatDate,
                             List<String> dedoublonnerEntre,
                             ConditionDedoublonnage conditionDedoublonnage,
-                            String supprimerCote) {
+                            String supprimerCote,
+                            Map<String, String> colonnesConstantes) {
     }
 
     /** Résultat : identifiant du nouveau lot et compteurs. */
@@ -95,6 +96,16 @@ public class TraitementOperationService {
             throw new IllegalArgumentException("Le lot ne contient aucune colonne à traiter.");
         }
         verifierColonnes(colonnes, operation);
+        // Colonnes à valeur fixe (ex. PAYS = code du fichier partenaire) : ajoutées en fin si absentes.
+        Map<String, String> constantes = colonnesConstantes(operation);
+        if (!constantes.isEmpty()) {
+            colonnes = new ArrayList<>(colonnes);
+            for (String col : constantes.keySet()) {
+                if (!colonnes.contains(col)) {
+                    colonnes.add(col);
+                }
+            }
+        }
 
         long nouveauLotId = creerLotResultat(entrepriseId, utilisateur, lotSourceId);
         Set<String> clesVues = new HashSet<>();
@@ -149,7 +160,11 @@ public class TraitementOperationService {
                     appliquerConversions(ligne, operation);
                     Map<String, Object> sortie = new LinkedHashMap<>();
                     for (String col : colonnes) {
-                        sortie.put(col, ligne.containsKey(col) ? ligne.get(col) : "");
+                        if (constantes.containsKey(col)) {
+                            sortie.put(col, constantes.get(col));
+                        } else {
+                            sortie.put(col, ligne.containsKey(col) ? ligne.get(col) : "");
+                        }
                     }
                     sorties++;
                     bloc.add(new Object[]{entrepriseId, nouveauLotId, fichierId, sorties, versJson(sortie)});
@@ -339,6 +354,29 @@ public class TraitementOperationService {
             }
         }
         return new ArrayList<>(union);
+    }
+
+    /** Colonnes constantes valides : nom non vide (une ligne, 100 car. max), valeur sur une ligne (200 car. max). */
+    static Map<String, String> colonnesConstantes(Operation operation) {
+        Map<String, String> out = new LinkedHashMap<>();
+        if (operation.colonnesConstantes() == null) {
+            return out;
+        }
+        for (Map.Entry<String, String> e : operation.colonnesConstantes().entrySet()) {
+            String nom = e.getKey() == null ? "" : e.getKey().replaceAll("[\\r\\n\\t]+", " ").trim();
+            if (nom.isEmpty() || nom.length() > 100) {
+                throw new IllegalArgumentException("Nom de colonne constante invalide.");
+            }
+            String valeur = e.getValue() == null ? "" : e.getValue().replaceAll("[\\r\\n\\t]+", " ").trim();
+            if (valeur.length() > 200) {
+                throw new IllegalArgumentException("Valeur de colonne constante trop longue : " + nom);
+            }
+            out.put(nom, valeur);
+        }
+        if (out.size() > 20) {
+            throw new IllegalArgumentException("Trop de colonnes constantes.");
+        }
+        return out;
     }
 
     private void verifierColonnes(List<String> colonnes, Operation operation) {

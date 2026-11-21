@@ -61,6 +61,8 @@ export interface TraitementOperation {
   colonnesNombre?: string[];
   colonnesDate?: string[];
   formatDate?: string;
+  /** Colonnes à valeur fixe ajoutées (ou remplacées) sur toutes les lignes, ex. { PAYS: 'CI' }. */
+  colonnesConstantes?: Record<string, string>;
 }
 
 /** Valeurs distinctes d'une colonne du lot (section « Filtrer les lignes »). */

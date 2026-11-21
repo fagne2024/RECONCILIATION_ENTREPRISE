@@ -2223,6 +2223,27 @@
             </div>
           </div>
 
+          <!-- Colonne PAYS -->
+          <div class="preprocessing-subsection">
+            <h5>
+              <i class="fas fa-flag"></i> {{ 'APM.Colonne_1' | translate }} {{ paysColumnName }}
+            </h5>
+            <p class="section-description">{{ 'APM.paysColonneAide' | translate }}</p>
+            <div class="form-row">
+              <div class="form-group col-md-4">
+                <label>
+                  <input type="checkbox" [(ngModel)]="modelPaysColumnEnabled" [ngModelOptions]="{standalone: true}" class="ds-checkbox">
+                  {{ 'APM.Activerlacolonne' | translate }} {{ paysColumnName }}
+                </label>
+              </div>
+              <div class="form-group col-md-4" *ngIf="modelPaysColumnEnabled">
+                <label>{{ 'APM.paysCodeParDefaut' | translate }} <span class="text-muted">{{ 'LBL.optional' | translate }}</span></label>
+                <input type="text" class="ds-input form-control" maxlength="10" [(ngModel)]="modelPaysColumnValue"
+                       [ngModelOptions]="{standalone: true}" placeholder="CI, SN, BF…">
+              </div>
+            </div>
+          </div>
+
           <!-- Filtrer les colonnes à l'export -->
           <div class="preprocessing-subsection">
             <h5>

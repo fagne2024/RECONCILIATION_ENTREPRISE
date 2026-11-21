@@ -192,6 +192,18 @@ export interface ModelEnvColumnConfig {
   value?: EnvColumnOption | string;
 }
 
+/** Colonne PAYS : code pays du fichier partenaire, identique sur chaque ligne. */
+export const PAYS_COLUMN_NAME = 'PAYS';
+
+/**
+ * Colonne PAYS du modèle : activée, le code pays est demandé avant chaque traitement
+ * (value = code proposé par défaut, facultatif).
+ */
+export interface ModelPaysColumnConfig {
+  enabled: boolean;
+  value?: string;
+}
+
 /** Colonnes conservées à l'export (section traitement automatique). */
 export interface ModelExportColumnFilterConfig {
   enabled: boolean;
@@ -209,6 +221,8 @@ export interface ModelPreProcessingConfig {
   crossDedupRules?: ModelCrossDedupRule[];
   /** Colonne ENV constante ajoutée sur chaque ligne du fichier final. */
   envColumn?: ModelEnvColumnConfig;
+  /** Colonne PAYS constante (code pays choisi avant le traitement). */
+  paysColumn?: ModelPaysColumnConfig;
   /** Filtrer les colonnes exportées (liste des colonnes à conserver). */
   exportColumnFilter?: ModelExportColumnFilterConfig;
   /** Ordre d'exécution des sections de pré-traitement. */

@@ -24,7 +24,7 @@ describe('FileUploadComponent — retour arrière dans le parcours', () => {
         const cd = { detectChanges: () => undefined } as any;
         const component = new FileUploadComponent(
             stub, stub, stub, { navigate: () => Promise.resolve(true) } as any, route, appState,
-            stub, stub, stub, stub, stub, stub, stub, stub, stub, cd, stub, stub, flowState
+            stub, stub, stub, stub, stub, stub, stub, stub, stub, cd, stub, stub, flowState, stub
         );
         component.ngOnInit();
         return component;
@@ -145,7 +145,7 @@ describe('FileUploadComponent — retour arrière dans le parcours', () => {
             stub, stub, stub, stub, route,
             { getReconciliationType: () => '1-1', clearData: () => undefined } as any,
             { clearAllData: () => undefined } as any, stub, stub, stub, stub, stub, stub, stub, stub,
-            { detectChanges: () => undefined } as any, stub, stub, flowState
+            { detectChanges: () => undefined } as any, stub, stub, flowState, stub
         );
         (component as any).reconciliationService = { clearData: () => undefined };
         (component as any).closeTraitementModal = () => undefined;

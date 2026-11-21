@@ -4,7 +4,8 @@ import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
 import { TranslateModule } from '@ngx-translate/core';
 import { ReconciliationService } from '../../services/reconciliation.service';
-import { AutoProcessingService, AutoProcessingModel, ENV_COLUMN_NAME, ENV_COLUMN_OPTIONS, EnvColumnOption, ProcessingResult, ColumnProcessingRule } from '../../services/auto-processing.service';
+import { AutoProcessingService, AutoProcessingModel, ENV_COLUMN_NAME, ENV_COLUMN_OPTIONS, PAYS_COLUMN_NAME, EnvColumnOption, ProcessingResult, ColumnProcessingRule } from '../../services/auto-processing.service';
+import { PaysService } from '../../services/pays.service';
 import { PartnerConditionalKeysService } from '../../services/partner-conditional-keys.service';
 import { ModelPreProcessingService, createPreProcessingUsage } from '../../services/model-preprocessing.service';
 import { ExportOptimizationService } from '../../services/export-optimization.service';
@@ -283,6 +284,11 @@ export class FileUploadComponent implements OnInit, OnDestroy {
     traitementEnvColumnEnabled = false;
     traitementEnvColumnValue: EnvColumnOption | '' = '';
     readonly envColumnName = ENV_COLUMN_NAME;
+    /** Code pays écrit dans la colonne PAYS du fichier partenaire (obligatoire avant le traitement). */
+    traitementPaysValue = '';
+    readonly paysColumnName = PAYS_COLUMN_NAME;
+    traitementPaysOptions: string[] = [];
+    private traitementPaysOptionsLoaded = false;
     readonly envColumnOptions = ENV_COLUMN_OPTIONS;
     traitementOutputColumnsLoading = false;
     /** Suppression de doublons avant export (section Traitement). */
@@ -456,7 +462,8 @@ export class FileUploadComponent implements OnInit, OnDestroy {
         private cd: ChangeDetectorRef,
         private ngZone: NgZone,
         private modelNormalizationService: ModelNormalizationService,
-        private flowStateService: ReconciliationFlowStateService
+        private flowStateService: ReconciliationFlowStateService,
+        private paysService: PaysService
     ) {
         // Le type de réconciliation est réhydraté dans ngOnInit, une fois le mode actif connu.
     }
@@ -1299,7 +1306,48 @@ export class FileUploadComponent implements OnInit, OnDestroy {
         this.cd.detectChanges();
     }
 
+    /** Modèle partenaire (ou colonne PAYS déclarée) : le pays doit être choisi avant le traitement. */
+    isPaysRequiredForModel(model?: AutoProcessingModel | null): boolean {
+        if (!model) {
+            return false;
+        }
+        return model.fileType === 'partner' || model.preProcessingConfig?.paysColumn?.enabled === true;
+    }
+
+    get traitementPaysRequired(): boolean {
+        return this.selectedTraitementModels.some(m => this.isPaysRequiredForModel(m));
+    }
+
+    /** Code pays proposé : celui du modèle s'il en a un, sinon le dernier choisi ; liste des codes connus. */
+    private syncTraitementPaysFromModels(): void {
+        if (!this.traitementPaysRequired) {
+            return;
+        }
+        const modelDefault = this.selectedTraitementModels
+            .map(m => (m.preProcessingConfig?.paysColumn?.value || '').trim().toUpperCase())
+            .find(Boolean);
+        if (modelDefault) {
+            this.traitementPaysValue = modelDefault;
+        }
+        this.loadTraitementPaysOptions();
+    }
+
+    private loadTraitementPaysOptions(): void {
+        if (this.traitementPaysOptionsLoaded) {
+            return;
+        }
+        this.traitementPaysOptionsLoaded = true;
+        this.paysService.getPays().subscribe({
+            next: list => {
+                this.traitementPaysOptions = [...new Set((list || []).map(p => (p.code || '').trim().toUpperCase()).filter(Boolean))].sort();
+                this.cd.markForCheck();
+            },
+            error: () => { this.traitementPaysOptions = []; }
+        });
+    }
+
     private syncTraitementEnvColumnFromModel(): void {
+        this.syncTraitementPaysFromModels();
         const model = this.traitementModels.find(m => m.id === this.selectedTraitementModelId);
         const env = model?.preProcessingConfig?.envColumn;
         if (env?.enabled && env.value && ENV_COLUMN_OPTIONS.includes(env.value as EnvColumnOption)) {
@@ -1312,6 +1360,23 @@ export class FileUploadComponent implements OnInit, OnDestroy {
     }
 
     private buildEffectivePreProcessingConfig(model: AutoProcessingModel) {
+        const withPays = this.withTraitementPaysColumn(model, this.buildEffectivePreProcessingConfigSansPays(model));
+        return withPays;
+    }
+
+    /** Ajoute la colonne PAYS (code choisi avant le traitement) pour un modèle partenaire. */
+    private withTraitementPaysColumn(
+        model: AutoProcessingModel,
+        config: AutoProcessingModel['preProcessingConfig']
+    ): AutoProcessingModel['preProcessingConfig'] {
+        const code = (this.traitementPaysValue || '').trim().toUpperCase();
+        if (!code || !this.isPaysRequiredForModel(model)) {
+            return config;
+        }
+        return { ...(config || {}), paysColumn: { enabled: true, value: code } };
+    }
+
+    private buildEffectivePreProcessingConfigSansPays(model: AutoProcessingModel) {
         const base = model.preProcessingConfig;
 
         if (!this.showTraitementEnvSection) {
@@ -1507,6 +1572,15 @@ export class FileUploadComponent implements OnInit, OnDestroy {
             await this.popupService.showWarning(
                 I18nService.t('FU.msg.veuillezChoisirUneValeurPourLa', { p0: ENV_COLUMN_NAME }),
                 'Colonne ENV'
+            );
+            return;
+        }
+
+        this.traitementPaysValue = (this.traitementPaysValue || '').trim().toUpperCase();
+        if (this.traitementPaysRequired && !this.traitementPaysValue) {
+            await this.popupService.showWarning(
+                I18nService.t('FU.paysObligatoire', { p0: PAYS_COLUMN_NAME }),
+                I18nService.t('FU.paysTitre')
             );
             return;
         }

@@ -3,7 +3,7 @@ import { firstValueFrom } from 'rxjs';
 import { SharedUiModule } from '../../shared/shared-ui.module';
 import { CdkDragDrop, moveItemInArray } from '@angular/cdk/drag-drop';
 import { FormBuilder, FormGroup, Validators, FormArray, FormControl } from '@angular/forms';
-import { AutoProcessingService, AutoProcessingModel, DEFAULT_PRE_PROCESSING_SECTION_ORDER, ENV_COLUMN_NAME, ENV_COLUMN_OPTIONS, EnvColumnOption, ModelColumnMathRule, ModelFormatAction, ModelFormatActionType, ModelFormatColumnSettings, ModelPreProcessingConfig, ModelPreProcessingSectionId, ModelRowFilter, ModelColumnValueMapping, ModelColumnConcatRule, ModelColumnRenameRule, ModelCrossDedupRule, resolvePreProcessingSectionOrder, ModelEnvColumnConfig, ModelExportColumnFilterConfig, PartnerConditionalKeyRule, PartnerConditionalKeysConfig, BoConditionalKeysConfig, TrxboOppartConfig, TrxboRegularisationRule, TrxboRegularisationComponent, TrxboAggregationType } from '../../services/auto-processing.service';
+import { AutoProcessingService, AutoProcessingModel, DEFAULT_PRE_PROCESSING_SECTION_ORDER, ENV_COLUMN_NAME, ENV_COLUMN_OPTIONS, EnvColumnOption, ModelColumnMathRule, ModelFormatAction, ModelFormatActionType, ModelFormatColumnSettings, ModelPreProcessingConfig, ModelPreProcessingSectionId, ModelRowFilter, ModelColumnValueMapping, ModelColumnConcatRule, ModelColumnRenameRule, ModelCrossDedupRule, resolvePreProcessingSectionOrder, ModelEnvColumnConfig, ModelPaysColumnConfig, PAYS_COLUMN_NAME, ModelExportColumnFilterConfig, PartnerConditionalKeyRule, PartnerConditionalKeysConfig, BoConditionalKeysConfig, TrxboOppartConfig, TrxboRegularisationRule, TrxboRegularisationComponent, TrxboAggregationType } from '../../services/auto-processing.service';
 import { FileWatcherService } from '../../services/file-watcher.service';
 import { AppStateService } from '../../services/app-state.service';
 import { ModelManagementService } from '../../services/model-management.service';
@@ -246,6 +246,10 @@ export class AutoProcessingModelsComponent implements OnInit {
   modelExportColumns: string[] = [];
   modelExportColumnKeepMap: Record<string, boolean> = {};
   readonly envColumnName = ENV_COLUMN_NAME;
+  /** Colonne PAYS : code pays demandé avant chaque traitement (code par défaut facultatif). */
+  modelPaysColumnEnabled = false;
+  modelPaysColumnValue = '';
+  readonly paysColumnName = PAYS_COLUMN_NAME;
   readonly envColumnOptions = ENV_COLUMN_OPTIONS;
   modelRowFilters: ModelRowFilter[] = [];
   modelFormatActions: ModelFormatAction[] = [];
@@ -1132,6 +1136,9 @@ export class AutoProcessingModelsComponent implements OnInit {
     });
     if (config.envColumn?.enabled && config.envColumn.value?.trim()) {
       columns.add(ENV_COLUMN_NAME);
+    }
+    if (config.paysColumn?.enabled) {
+      columns.add(PAYS_COLUMN_NAME);
     }
     return [...columns];
   }
@@ -4528,6 +4535,14 @@ export class AutoProcessingModelsComponent implements OnInit {
     };
   }
 
+  private buildModelPaysColumnConfig(): ModelPaysColumnConfig | undefined {
+    if (!this.modelPaysColumnEnabled) {
+      return undefined;
+    }
+    const value = (this.modelPaysColumnValue || '').trim().toUpperCase();
+    return value ? { enabled: true, value } : { enabled: true };
+  }
+
   addModelColumnRenameRule(): void {
     const columns = this.getPreProcessingColumns();
     this.modelColumnRenameRules.push({
@@ -5116,9 +5131,10 @@ export class AutoProcessingModelsComponent implements OnInit {
       });
 
     const envColumn = this.buildModelEnvColumnConfig();
+    const paysColumn = this.buildModelPaysColumnConfig();
     const exportColumnFilter = this.buildModelExportColumnFilterConfig();
 
-    if (!rowFilters.length && !formatActions.length && !columnConcatRules.length && !columnMathRules.length && !valueMappings.length && !columnRenameRules.length && !crossDedupRules.length && !envColumn && !exportColumnFilter) {
+    if (!rowFilters.length && !formatActions.length && !columnConcatRules.length && !columnMathRules.length && !valueMappings.length && !columnRenameRules.length && !crossDedupRules.length && !envColumn && !paysColumn && !exportColumnFilter) {
       return {
         rowFilters: [],
         formatActions: [],
@@ -5140,6 +5156,7 @@ export class AutoProcessingModelsComponent implements OnInit {
       columnRenameRules,
       crossDedupRules,
       ...(envColumn ? { envColumn } : {}),
+      ...(paysColumn ? { paysColumn } : {}),
       ...(exportColumnFilter ? { exportColumnFilter } : {}),
       sectionOrder: [...this.preProcessingSectionOrder]
     };
@@ -5246,6 +5263,8 @@ export class AutoProcessingModelsComponent implements OnInit {
     this.nextModelCrossDedupId = 1;
     this.modelEnvColumnEnabled = false;
     this.modelEnvColumnValue = '';
+    this.modelPaysColumnEnabled = false;
+    this.modelPaysColumnValue = '';
     this.modelExportColumnFilterEnabled = false;
     this.modelExportColumns = [];
     this.modelExportColumnKeepMap = {};
@@ -5373,6 +5392,9 @@ export class AutoProcessingModelsComponent implements OnInit {
       this.showEnvColumnSection = true;
     }
 
+    this.modelPaysColumnEnabled = config.paysColumn?.enabled === true;
+    this.modelPaysColumnValue = config.paysColumn?.value || '';
+
     if (config.exportColumnFilter?.enabled) {
       this.modelExportColumnFilterEnabled = true;
       this.showExportColumnFilterSection = true;
@@ -5399,6 +5421,8 @@ export class AutoProcessingModelsComponent implements OnInit {
     this.nextModelCrossDedupId = 1;
     this.modelEnvColumnEnabled = false;
     this.modelEnvColumnValue = '';
+    this.modelPaysColumnEnabled = false;
+    this.modelPaysColumnValue = '';
     this.modelExportColumnFilterEnabled = false;
     this.modelExportColumns = [];
     this.modelExportColumnKeepMap = {};
@@ -5420,6 +5444,8 @@ export class AutoProcessingModelsComponent implements OnInit {
     this.showExportColumnFilterSection = false;
     this.modelEnvColumnEnabled = false;
     this.modelEnvColumnValue = '';
+    this.modelPaysColumnEnabled = false;
+    this.modelPaysColumnValue = '';
     this.modelExportColumnFilterEnabled = false;
     this.modelExportColumns = [];
     this.modelExportColumnKeepMap = {};

@@ -108,6 +108,10 @@ interface FiltreServeur {
   erreur: string;
 }
 
+import { PopupService } from '../../services/popup.service';
+import { firstValueFrom } from 'rxjs';
+import { PaysService } from '../../services/pays.service';
+import { PAYS_COLUMN_NAME } from '../../services/auto-processing.service';
 @Component({
   selector: 'app-traitement',
   templateUrl: './traitement.component.html',
@@ -592,7 +596,9 @@ End Sub`;
     private translate: TranslateService,
     private configurationCalculService: ConfigurationCalculService,
     private autoProcessingService: AutoProcessingService,
-    private modelNormalizationService: ModelNormalizationService
+    private modelNormalizationService: ModelNormalizationService,
+    private popupService: PopupService,
+    private paysService: PaysService
   ) {}
 
   private t(key: string, params?: any): string {
@@ -806,7 +812,9 @@ End Sub`;
       input.value = '';
       this.addFiles(await this.convertirPdfSelectionnes(files));
     }
-    this.processFiles();
+    if (await this.demanderPaysFichier()) {
+      this.processFiles();
+    }
   }
 
   async onDrop(event: DragEvent) {
@@ -816,7 +824,70 @@ End Sub`;
     if (dropped.length) {
       this.addFiles(await this.convertirPdfSelectionnes(dropped));
     }
-    this.processFiles();
+    if (await this.demanderPaysFichier()) {
+      this.processFiles();
+    }
+  }
+
+  // ----- Colonne PAYS : code pays demandé avant chaque traitement (fichier partenaire) -----
+  /** Code pays du traitement en cours ('' = fichier BO, aucune colonne ajoutée). */
+  paysTraitement = '';
+  private paysCodesConnus: string[] | null = null;
+
+  /**
+   * Avant chaque traitement : le code pays du fichier partenaire est obligatoire (colonne PAYS
+   * sur toutes les lignes). « AUCUN (fichier BO) » traite sans ajouter la colonne. Annuler
+   * retire les fichiers ajoutés et ne lance pas le traitement.
+   */
+  private async demanderPaysFichier(): Promise<boolean> {
+    if (!this.selectedFiles.length || this.showCsvPreview) {
+      return true;
+    }
+    if (this.paysCodesConnus === null) {
+      try {
+        const liste = await firstValueFrom(this.paysService.getPays());
+        this.paysCodesConnus = [...new Set((liste || []).map(p => (p.code || '').trim().toUpperCase()).filter(Boolean))].sort();
+      } catch {
+        this.paysCodesConnus = [];
+      }
+    }
+    const aucun = this.t('TRT.paysAucunBo');
+    for (;;) {
+      const saisie = await this.popupService.showAutocompleteInput(
+        this.t('TRT.paysDemande', { p0: PAYS_COLUMN_NAME, p1: aucun }),
+        this.t('TRT.paysTitre'),
+        [...this.paysCodesConnus, aucun],
+        this.paysTraitement || ''
+      );
+      if (saisie === null) {
+        this.selectedFiles = [];
+        this.showError('upload', this.t('TRT.paysAnnule'));
+        return false;
+      }
+      const valeur = saisie.trim();
+      if (valeur === aucun) {
+        this.paysTraitement = '';
+        return true;
+      }
+      const code = valeur.toUpperCase();
+      if (/^[A-Z0-9]{2,10}$/.test(code)) {
+        this.paysTraitement = code;
+        return true;
+      }
+      await this.popupService.showWarning(this.t('TRT.paysInvalide', { p0: valeur || '—' }), this.t('TRT.paysTitre'));
+    }
+  }
+
+  /** Écrit le code pays dans la colonne PAYS de toutes les lignes chargées (navigateur). */
+  private appliquerColonnePays(): void {
+    const code = this.paysTraitement;
+    if (!code || !this.allRows.length) {
+      return;
+    }
+    this.allRows.mutateEach(row => { row[PAYS_COLUMN_NAME] = code; });
+    if (!this.allColumns.includes(PAYS_COLUMN_NAME)) {
+      this.allColumns = [...this.allColumns, PAYS_COLUMN_NAME];
+    }
   }
 
   /** PDF : le tableau est extrait et remplacé par un CSV, qui suit ensuite le circuit normal. */
@@ -1061,6 +1132,7 @@ End Sub`;
       await this.yieldTick();
       this.processingMessage = I18nService.t('TRT.msg.normalisationDesDonnees2', { p0: isLargeUpload ? I18nService.t('TRT.msg.mergeModeOptimized') : 'ultra-rapide' });
       await this.normalizeDataOptimized();
+      this.appliquerColonnePays();
       
       // Finalisation
       this.updateProcessingPopup({ step: I18nService.t('TRT.msg.preparationDeLAffichage'), progress: 95, message: '' });
@@ -1169,9 +1241,16 @@ End Sub`;
       }
 
       this.updateProcessingPopup({ step: I18nService.t('TRT.msg.lectureDuResumeDuLot'), progress: 90, message: '' });
-      const resume = await this.traitementLotService.resume(lotId);
+      let resume = await this.traitementLotService.resume(lotId);
       if (!resume.nbLignes) {
         throw new Error(I18nService.t('TRT.msg.aucuneLigneNAPuEtre2'));
+      }
+      if (this.paysTraitement) {
+        // Colonne PAYS ajoutée côté serveur : nouveau lot identique + la colonne constante.
+        this.updateProcessingPopup({ step: this.t('TRT.paysAjoute', { p0: PAYS_COLUMN_NAME, p1: this.paysTraitement }), progress: 93, message: '' });
+        const op = await this.traitementLotService.operer(lotId, { colonnesConstantes: { [PAYS_COLUMN_NAME]: this.paysTraitement } });
+        this.serverOriginLotId = op.nouveauLotId;
+        resume = await this.traitementLotService.resume(op.nouveauLotId);
       }
       this.appliquerLot(resume);
       await this.chargerPageServeur(1);

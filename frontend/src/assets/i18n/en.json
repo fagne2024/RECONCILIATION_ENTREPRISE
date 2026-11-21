@@ -78,6 +78,8 @@
     "save": "Save"
   },
   "APM": {
+    "paysColonneAide": "Adds a PAYS column on every row of the final file; the country code is asked before each processing.",
+    "paysCodeParDefaut": "Suggested country code",
     "Importerunfichiermodèle": "Upload a model file",
     "Formatsacceptéscsvetexcel": "Accepted formats:",
     "Importdufichiermodèleencours": "Uploading the model file…",
@@ -2477,6 +2479,11 @@
     }
   },
   "FU": {
+    "paysSection": "Partner file country — column",
+    "paysCode": "Country code",
+    "paysAide": "Required: this code is written on every row of the file, in the column",
+    "paysObligatoire": "Enter the country code of the partner file ({{p0}} column) before running the processing.",
+    "paysTitre": "File country",
     "ClientVolume": {
       "Title": "Volume per customer",
       "Button": "Check volume per customer",
@@ -5014,6 +5021,12 @@
     }
   },
   "TRT": {
+    "paysDemande": "Country code of the partner file: it will be written on every row in the {{p0}} column. Choose \"{{p1}}\" for a BO file (no column added).",
+    "paysTitre": "File country",
+    "paysAucunBo": "NONE (BO file)",
+    "paysAnnule": "Processing cancelled: the file country was not entered.",
+    "paysInvalide": "Invalid country code: {{p0}} (2 to 10 letters or digits).",
+    "paysAjoute": "Column {{p0}} = {{p1}} added on all rows.",
     "_CM_ABC→ABC": "\"_CM_ABC\" → \"ABC\"",
     "--ChoisirUneColonne--": "-- Choose a column --",
     "—Ignorer—": "— Ignore —",

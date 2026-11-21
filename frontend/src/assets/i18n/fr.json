@@ -78,6 +78,8 @@
     "save": "Enregistrer"
   },
   "APM": {
+    "paysColonneAide": "Ajoute une colonne PAYS sur chaque ligne du fichier final ; le code pays est demandé avant chaque traitement.",
+    "paysCodeParDefaut": "Code pays proposé",
     "Importerunfichiermodèle": "Importer un fichier modèle",
     "Formatsacceptéscsvetexcel": "Formats acceptés :",
     "Importdufichiermodèleencours": "Import du fichier modèle en cours…",
@@ -2477,6 +2479,11 @@
     }
   },
   "FU": {
+    "paysSection": "Pays du fichier partenaire — colonne",
+    "paysCode": "Code pays",
+    "paysAide": "Obligatoire : ce code est écrit sur chaque ligne du fichier, dans la colonne",
+    "paysObligatoire": "Renseignez le code pays du fichier partenaire (colonne {{p0}}) avant de lancer le traitement.",
+    "paysTitre": "Pays du fichier",
     "ClientVolume": {
       "Title": "Volume par client",
       "Button": "Vérifier le volume par client",
@@ -5014,6 +5021,12 @@
     }
   },
   "TRT": {
+    "paysDemande": "Code pays du fichier partenaire : il sera écrit sur chaque ligne dans la colonne {{p0}}. Choisissez « {{p1}} » pour un fichier BO (aucune colonne ajoutée).",
+    "paysTitre": "Pays du fichier",
+    "paysAucunBo": "AUCUN (fichier BO)",
+    "paysAnnule": "Traitement annulé : le pays du fichier n'a pas été renseigné.",
+    "paysInvalide": "Code pays invalide : {{p0}} (2 à 10 lettres ou chiffres).",
+    "paysAjoute": "Colonne {{p0}} = {{p1}} ajoutée sur toutes les lignes.",
     "_CM_ABC→ABC": "\"_CM_ABC\" → \"ABC\"",
     "--ChoisirUneColonne--": "-- Choisir une colonne --",
     "—Ignorer—": "— Ignorer —",
