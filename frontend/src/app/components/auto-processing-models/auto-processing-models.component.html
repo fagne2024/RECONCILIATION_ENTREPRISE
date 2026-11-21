@@ -2011,7 +2011,12 @@
                   <div class="form-group col-md-2">
                     <label>{{ 'APM.1revaleuractuelle' | translate }}</label>
                     <input type="text" class="ds-input form-control" [(ngModel)]="mapping.fromValue" [ngModelOptions]="{standalone: true}"
-                           placeholder="{{ 'APM.Exmp' | translate }}">
+                           [disabled]="!!mapping.fromEmpty"
+                           placeholder="{{ (mapping.fromEmpty ? 'APM.valeurVideLibelle' : 'APM.Exmp') | translate }}">
+                    <label class="value-empty-toggle" title="{{ 'APM.valeurVideAide' | translate }}">
+                      <input type="checkbox" class="ds-checkbox" [(ngModel)]="mapping.fromEmpty" [ngModelOptions]="{standalone: true}">
+                      {{ 'APM.valeurVide' | translate }}
+                    </label>
                   </div>
                   <div class="form-group col-md-2">
                     <label>{{ 'APM.2evaleuractuelle' | translate }} <span class="text-muted">{{ 'LBL.optional' | translate }}</span></label>

@@ -248,6 +248,8 @@ export interface ModelColumnValueMapping {
   id: string;
   column: string;
   fromValue: string;
+  /** 1re valeur actuelle = vide : le renommage s'applique aux cellules vides (fromValue ignoré). */
+  fromEmpty?: boolean;
   /** Colonne optionnelle : le renommage ne s'applique que si cette colonne a aussi la valeur attendue. */
   conditionColumn?: string;
   /** 2e valeur actuelle optionnelle (associée à conditionColumn). */

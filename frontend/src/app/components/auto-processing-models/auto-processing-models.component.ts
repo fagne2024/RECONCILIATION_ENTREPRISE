@@ -4667,6 +4667,7 @@ export class AutoProcessingModelsComponent implements OnInit {
       id: `mapping-${this.nextModelValueMappingId++}`,
       column: columns[0] || '',
       fromValue: '',
+      fromEmpty: false,
       conditionColumn: '',
       conditionValue: '',
       toValue: '',
@@ -5037,17 +5038,20 @@ export class AutoProcessingModelsComponent implements OnInit {
     });
 
     const valueMappings = this.modelValueMappings
-      .filter(mapping => mapping.column && mapping.fromValue?.trim())
+      .filter(mapping => mapping.column && (mapping.fromEmpty || mapping.fromValue?.trim()))
       .map(mapping => {
         const conditionColumn = mapping.conditionColumn?.trim() || '';
         const conditionValue = mapping.conditionValue?.trim() || '';
         const entry: ModelColumnValueMapping = {
           id: mapping.id,
           column: mapping.column,
-          fromValue: mapping.fromValue.trim(),
+          fromValue: mapping.fromEmpty ? '' : (mapping.fromValue || '').trim(),
           toValue: mapping.toValue ?? '',
           enabled: mapping.enabled !== false
         };
+        if (mapping.fromEmpty) {
+          entry.fromEmpty = true;
+        }
         if (conditionColumn && conditionValue) {
           entry.conditionColumn = conditionColumn;
           entry.conditionValue = conditionValue;
@@ -5287,6 +5291,7 @@ export class AutoProcessingModelsComponent implements OnInit {
       id: mapping.id || `mapping-${this.nextModelValueMappingId++}`,
       column: mapping.column || '',
       fromValue: mapping.fromValue || '',
+      fromEmpty: mapping.fromEmpty === true,
       conditionColumn: mapping.conditionColumn || '',
       conditionValue: mapping.conditionValue || '',
       toValue: mapping.toValue || '',

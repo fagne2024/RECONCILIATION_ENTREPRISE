@@ -217,6 +217,8 @@ export function planColumnNormalization(
 export interface ConditionValueMapping {
   column: string;
   fromValue: string;
+  /** Renommage des cellules vides : une condition sur la nouvelle valeur reconnaît aussi le vide. */
+  fromEmpty?: boolean;
   toValue: string;
   enabled?: boolean;
 }
@@ -230,7 +232,7 @@ export function expandConditionValuesWithMappings(
   equivalences: readonly ModelColumnEquivalence[],
   mappings: readonly ConditionValueMapping[] | null | undefined
 ): ModelColumnEquivalence[] {
-  const active = (mappings || []).filter(m => m && m.enabled !== false && m.column && m.fromValue);
+  const active = (mappings || []).filter(m => m && m.enabled !== false && m.column && (m.fromValue || m.fromEmpty));
   if (!active.length) {
     return [...equivalences];
   }
@@ -243,7 +245,7 @@ export function expandConditionValuesWithMappings(
       const targets = new Set((condition.values || []).map(normalizeConditionValue));
       const extra = active
         .filter(m => normalizeHeaderKey(m.column) === columnKey && targets.has(normalizeConditionValue(m.toValue)))
-        .map(m => m.fromValue);
+        .map(m => (m.fromEmpty ? '' : m.fromValue));
       return extra.length ? { ...condition, values: [...condition.values, ...extra] } : condition;
     });
     return { ...eq, conditions };

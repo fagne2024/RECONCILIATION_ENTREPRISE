@@ -3084,3 +3084,14 @@ textarea.form-control {
   flex-wrap: wrap;
   gap: 8px;
 }
+
+/* Renommer des valeurs : case « Valeur vide » sous la 1re valeur actuelle */
+.value-empty-toggle {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  margin-top: 6px;
+  font-weight: 400;
+  font-size: 0.85rem;
+  cursor: pointer;
+}

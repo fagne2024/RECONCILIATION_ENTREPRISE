@@ -630,13 +630,18 @@ export class ModelPreProcessingService {
 
     for (const mapping of activeMappings) {
       const key = resolveColumnKeyInRow(row, mapping.column);
-      if (!key || row[key] === undefined || row[key] === null) {
+      if (!key) {
         continue;
       }
-      const currentValue = String(row[key]);
-      if (currentValue !== mapping.fromValue) {
+      if (mapping.fromEmpty) {
+        // Cellule vide (absente, null ou seulement des espaces) : reçoit le nouveau libellé.
+        if (row[key] !== undefined && row[key] !== null && String(row[key]).trim() !== '') {
+          continue;
+        }
+      } else if (row[key] === undefined || row[key] === null || String(row[key]) !== mapping.fromValue) {
         continue;
       }
+      const currentValue = row[key] === undefined || row[key] === null ? '' : String(row[key]);
       if (!this.valueMappingConditionMatches(row, mapping)) {
         continue;
       }
@@ -1774,9 +1779,11 @@ export class ModelPreProcessingService {
     return (mappings ?? []).filter(
       mapping => mapping.enabled
         && !!mapping.column
-        && mapping.fromValue !== undefined
-        && mapping.fromValue !== null
-        && String(mapping.fromValue).length > 0
+        && (mapping.fromEmpty === true || (
+          mapping.fromValue !== undefined
+          && mapping.fromValue !== null
+          && String(mapping.fromValue).length > 0
+        ))
     );
   }
 
@@ -1956,7 +1963,12 @@ export class ModelPreProcessingService {
         ? I18nService.t('MSG.pp.condEquals', { column: conditionColumn, value: conditionValue })
         : '';
       detailLines.push(
-        I18nService.t('MSG.msg.renommage', { p0: mapping.column, p1: mapping.fromValue, p2: mapping.toValue, p3: conditionSuffix })
+        I18nService.t('MSG.msg.renommage', {
+          p0: mapping.column,
+          p1: mapping.fromEmpty ? I18nService.t('APM.valeurVideLibelle') : mapping.fromValue,
+          p2: mapping.toValue,
+          p3: conditionSuffix
+        })
       );
     });
     columnRenameRules.forEach(rule => {
