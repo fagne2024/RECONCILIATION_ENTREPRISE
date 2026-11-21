@@ -114,6 +114,7 @@ public class ColumnProcessingRuleService {
             existingRule.setTrimSpaces(updatedRule.isTrimSpaces());
             existingRule.setRemoveSpecialChars(updatedRule.isRemoveSpecialChars());
             existingRule.setRemoveAccents(updatedRule.isRemoveAccents());
+            existingRule.setStringToRemove(updatedRule.getStringToRemove());
             existingRule.setPadZeros(updatedRule.isPadZeros());
             existingRule.setRegexReplace(updatedRule.getRegexReplace());
             existingRule.setSpecialCharReplacementMap(updatedRule.getSpecialCharReplacementMap());

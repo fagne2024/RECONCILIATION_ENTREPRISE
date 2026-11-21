@@ -93,6 +93,8 @@ public class AutoProcessingModelDTO {
         dto.setToLowerCase(entity.isToLowerCase());
         dto.setTrimSpaces(entity.isTrimSpaces());
         dto.setRemoveSpecialChars(entity.isRemoveSpecialChars());
+        dto.setRemoveAccents(entity.isRemoveAccents());
+        dto.setStringToRemove(entity.getStringToRemove());
         dto.setPadZeros(entity.isPadZeros());
         dto.setRegexReplace(entity.getRegexReplace());
         dto.setSpecialCharReplacementMap(entity.getSpecialCharReplacementMap());

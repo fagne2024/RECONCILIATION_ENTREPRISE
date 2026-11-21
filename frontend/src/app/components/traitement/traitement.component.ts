@@ -111,7 +111,7 @@ interface FiltreServeur {
 
 import { PopupService } from '../../services/popup.service';
 import { firstValueFrom } from 'rxjs';
-import { PaysService } from '../../services/pays.service';
+import { PaysService, PAYS_TRAITEMENT_PAR_DEFAUT } from '../../services/pays.service';
 import { PAYS_COLUMN_NAME } from '../../services/auto-processing.service';
 @Component({
   selector: 'app-traitement',
@@ -846,22 +846,13 @@ End Sub`;
       return true;
     }
     if (this.paysConnus === null) {
+      let liste: { code: string; nom: string }[];
       try {
-        const liste = await firstValueFrom(this.paysService.getPays());
-        const parCode = new Map<string, string>();
-        for (const p of liste || []) {
-          const code = (p.code || '').trim().toUpperCase();
-          if (code && !parCode.has(code)) {
-            const nom = (p.nom || '').trim();
-            parCode.set(code, nom ? `${code} — ${nom}` : code);
-          }
-        }
-        this.paysConnus = [...parCode.entries()]
-          .map(([code, libelle]) => ({ code, libelle }))
-          .sort((a, b) => a.libelle.localeCompare(b.libelle, 'fr'));
+        liste = await firstValueFrom(this.paysService.getPaysTraitement());
       } catch {
-        this.paysConnus = [];
+        liste = PAYS_TRAITEMENT_PAR_DEFAUT.map(p => ({ ...p }));
       }
+      this.paysConnus = liste.map(p => ({ code: p.code, libelle: p.nom ? `${p.code} — ${p.nom}` : p.code }));
     }
     const aucun = this.t('TRT.paysAucunBo');
     const message = this.t('TRT.paysDemande', { p0: PAYS_COLUMN_NAME, p1: aucun });

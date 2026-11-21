@@ -1,4 +1,5 @@
-﻿import { Component, OnInit, OnDestroy, ChangeDetectorRef, HostListener } from '@angular/core';
+﻿import { removeSpecialStrings } from '../../utils/special-string-removal.util';
+import { Component, OnInit, OnDestroy, ChangeDetectorRef, HostListener } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
 import { Router, ActivatedRoute } from '@angular/router';
@@ -839,7 +840,7 @@ async launchMagicReconciliation(): Promise<void> {
           if (rule.removeAccents) value = value.normalize('NFD').replace(/[\u0300-\u036f]/g, '');
           if (rule.toUpperCase) value = value.toUpperCase();
           if (rule.toLowerCase) value = value.toLowerCase();
-          if (rule.stringToRemove) value = value.replace(new RegExp(rule.stringToRemove, 'g'), '');
+          if (rule.stringToRemove) value = removeSpecialStrings(value, rule.stringToRemove, 'all');
           if (rule.padZeros) value = value.padStart(10, '0');
           if (rule.regexReplace) value = value.replace(new RegExp(rule.regexReplace, 'g'), '');
           

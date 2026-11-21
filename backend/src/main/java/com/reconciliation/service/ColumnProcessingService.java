@@ -340,12 +340,19 @@ public class ColumnProcessingService {
             return value;
         }
 
-        for (String target : stringToRemove.split(",")) {
-            String trimmed = target.trim();
-            if (trimmed.isEmpty()) {
-                continue;
-            }
-            value = value.replaceAll(escapeRegexSpecialChars(trimmed), "");
+        // Chaînes séparées par des virgules ; la plus longue d'abord (_CITCH avant _CI).
+        java.util.List<String> targets = java.util.Arrays.stream(stringToRemove.split(","))
+                .map(String::trim)
+                .filter(t -> !t.isEmpty())
+                .distinct()
+                .sorted(java.util.Comparator.comparingInt(String::length).reversed())
+                .toList();
+        if (targets.isEmpty()) {
+            // Saisie réduite à « , » ou à des espaces : chaîne prise telle quelle.
+            return value.replace(stringToRemove, "");
+        }
+        for (String target : targets) {
+            value = value.replace(target, "");
         }
         return value;
     }

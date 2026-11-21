@@ -1,3 +1,4 @@
+import { removeSpecialStrings } from './special-string-removal.util';
 import { ColumnProcessingRule } from '../models/column-processing-rule.model';
 import { applyExtraction, parseExtractionFormat } from './column-extraction.util';
 import { getOrangeMoneyAliasHeadersForColumn } from './bilingual-column.util';
@@ -165,9 +166,8 @@ function createRuleApplier(rule: ColumnProcessingRule): (value: unknown) => stri
   const msisdnOut = isMsisdnPreserveColumn(outColumn);
   const hasTransformations = ruleHasTransformations(rule);
 
-  const stringToRemoveRe = rule.stringToRemove?.trim()
-    ? new RegExp(rule.stringToRemove.replace(/[.*+?^${}()|[\]\\]/g, '\\$&'), 'g')
-    : null;
+  // Chaînes à supprimer séparées par des virgules (ex. « _CM, _CI, _BF »), comme côté serveur.
+  const stringToRemove = rule.stringToRemove?.trim() ? rule.stringToRemove : '';
 
   let regexReplaceRe: RegExp | null = null;
   let regexReplaceValue = '';
@@ -209,8 +209,8 @@ function createRuleApplier(rule: ColumnProcessingRule): (value: unknown) => stri
       if (toLowerCase) {
         stringValue = stringValue.toLowerCase();
       }
-      if (stringToRemoveRe) {
-        stringValue = stringValue.replace(stringToRemoveRe, '');
+      if (stringToRemove) {
+        stringValue = removeSpecialStrings(stringValue, stringToRemove, 'all');
       }
       return stringValue;
     }
@@ -221,8 +221,8 @@ function createRuleApplier(rule: ColumnProcessingRule): (value: unknown) => stri
       stringValue = stringValue.normalize('NFD').replace(/\p{M}/gu, '');
     }
 
-    if (stringToRemoveRe) {
-      stringValue = stringValue.replace(stringToRemoveRe, '');
+    if (stringToRemove) {
+      stringValue = removeSpecialStrings(stringValue, stringToRemove, 'all');
     }
 
     for (let i = 0; i < replacementEntries.length; i++) {

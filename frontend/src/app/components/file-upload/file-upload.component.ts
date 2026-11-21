@@ -5,7 +5,7 @@ import { FormsModule } from '@angular/forms';
 import { TranslateModule } from '@ngx-translate/core';
 import { ReconciliationService } from '../../services/reconciliation.service';
 import { AutoProcessingService, AutoProcessingModel, ENV_COLUMN_NAME, ENV_COLUMN_OPTIONS, PAYS_COLUMN_NAME, EnvColumnOption, ProcessingResult, ColumnProcessingRule } from '../../services/auto-processing.service';
-import { PaysService } from '../../services/pays.service';
+import { PaysService, PAYS_TRAITEMENT_PAR_DEFAUT } from '../../services/pays.service';
 import { PartnerConditionalKeysService } from '../../services/partner-conditional-keys.service';
 import { ModelPreProcessingService, createPreProcessingUsage } from '../../services/model-preprocessing.service';
 import { ExportOptimizationService } from '../../services/export-optimization.service';
@@ -1353,21 +1353,15 @@ export class FileUploadComponent implements OnInit, OnDestroy {
             return;
         }
         this.traitementPaysOptionsLoaded = true;
-        this.paysService.getPays().subscribe({
+        this.paysService.getPaysTraitement().subscribe({
             next: list => {
-                const byCode = new Map<string, string>();
-                for (const p of list || []) {
-                    const code = (p.code || '').trim().toUpperCase();
-                    if (code && !byCode.has(code)) {
-                        byCode.set(code, (p.nom || '').trim());
-                    }
-                }
-                this.traitementPaysOptions = [...byCode.entries()]
-                    .map(([code, nom]) => ({ code, nom }))
-                    .sort((a, b) => (a.nom || a.code).localeCompare(b.nom || b.code, 'fr'));
+                this.traitementPaysOptions = list;
                 this.cd.markForCheck();
             },
-            error: () => { this.traitementPaysOptions = []; }
+            error: () => {
+                this.traitementPaysOptions = PAYS_TRAITEMENT_PAR_DEFAUT.map(p => ({ ...p }));
+                this.cd.markForCheck();
+            }
         });
     }
 

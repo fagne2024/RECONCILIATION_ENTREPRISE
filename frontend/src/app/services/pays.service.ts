@@ -1,7 +1,59 @@
 import { Injectable } from '@angular/core';
 import { HttpClient, HttpHeaders } from '@angular/common/http';
-import { Observable } from 'rxjs';
+import { Observable, forkJoin, of } from 'rxjs';
+import { catchError, map } from 'rxjs/operators';
 import { Pays, ProfilPays } from '../models/pays.model';
+
+/** Pays toujours proposés avant un traitement (code → nom). */
+export const PAYS_TRAITEMENT_PAR_DEFAUT: ReadonlyArray<{ code: string; nom: string }> = [
+  { code: 'SN', nom: 'Sénégal' },
+  { code: 'CI', nom: "Côte d'Ivoire" },
+  { code: 'GN', nom: 'Guinée-Conakry' },
+  { code: 'CM', nom: 'Cameroun' },
+  { code: 'GA', nom: 'Gabon' },
+  { code: 'ML', nom: 'Mali' },
+  { code: 'BF', nom: 'Burkina Faso' },
+  { code: 'KE', nom: 'Kenya' },
+  { code: 'TZ', nom: 'Tanzanie' },
+  { code: 'UG', nom: 'Ouganda' },
+  { code: 'MR', nom: 'Mauritanie' },
+  { code: 'GM', nom: 'Gambie' }
+];
+
+export interface PaysTraitement {
+  code: string;
+  nom: string;
+}
+
+/**
+ * Liste des pays du traitement : pays par défaut (dans l'ordre ci-dessus), puis les pays
+ * apparus dans les rapports de réconciliation enregistrés (triés). Le nom vient de la table
+ * des pays quand il est connu, sinon le code seul.
+ */
+export function buildPaysTraitement(
+  rapports: string[] | null | undefined,
+  referentiel: Pays[] | null | undefined
+): PaysTraitement[] {
+  const noms = new Map<string, string>();
+  for (const p of referentiel || []) {
+    const code = (p.code || '').trim().toUpperCase();
+    if (code && p.nom?.trim() && !noms.has(code)) {
+      noms.set(code, p.nom.trim());
+    }
+  }
+  const out = new Map<string, PaysTraitement>();
+  for (const p of PAYS_TRAITEMENT_PAR_DEFAUT) {
+    out.set(p.code, { ...p });
+  }
+  const supplementaires = [...new Set((rapports || [])
+    .map(c => String(c ?? '').trim().toUpperCase())
+    .filter(c => /^[A-Z0-9]{2,10}$/.test(c) && c !== 'GNL' && !out.has(c)))]
+    .sort();
+  for (const code of supplementaires) {
+    out.set(code, { code, nom: noms.get(code) || '' });
+  }
+  return [...out.values()];
+}
 
 @Injectable({ providedIn: 'root' })
 export class PaysService {
@@ -11,6 +63,21 @@ export class PaysService {
 
   private buildContextHeaders(moduleContext?: string): HttpHeaders | undefined {
     return moduleContext ? new HttpHeaders({ 'X-Permission-Module': moduleContext }) : undefined;
+  }
+
+  /**
+   * Pays proposés avant un traitement : pays par défaut + pays des rapports de réconciliation.
+   * Une source indisponible (droits) est ignorée : la liste par défaut reste toujours proposée.
+   */
+  getPaysTraitement(): Observable<PaysTraitement[]> {
+    const rapports$ = this.http.get<{ countries?: string[] }>('/api/result8rec/filters').pipe(
+      map(r => r?.countries || []),
+      catchError(() => of([] as string[]))
+    );
+    const referentiel$ = this.getPays().pipe(catchError(() => of([] as Pays[])));
+    return forkJoin([rapports$, referentiel$]).pipe(
+      map(([rapports, referentiel]) => buildPaysTraitement(rapports, referentiel))
+    );
   }
 
   // CRUD Pays
