@@ -78,6 +78,7 @@
     "save": "Enregistrer"
   },
   "APM": {
+    "envChoisieAuTraitement": "— choisie avant chaque traitement —",
     "paysColonneAide": "Ajoute une colonne PAYS sur chaque ligne du fichier final ; le code pays est demandé avant chaque traitement.",
     "paysCodeParDefaut": "Code pays proposé",
     "Importerunfichiermodèle": "Importer un fichier modèle",

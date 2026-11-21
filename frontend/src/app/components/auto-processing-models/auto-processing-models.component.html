@@ -2216,7 +2216,7 @@
               <div class="form-group col-md-4" *ngIf="modelEnvColumnEnabled">
                 <label>{{ 'APM.Valeur' | translate }} {{ envColumnName }}</label>
                 <select class="ds-select form-control" [(ngModel)]="modelEnvColumnValue" [ngModelOptions]="{standalone: true}">
-                  <option value="">{{ 'LBL.chooseDash' | translate }}</option>
+                  <option value="">{{ 'APM.envChoisieAuTraitement' | translate }}</option>
                   <option *ngFor="let option of envColumnOptions" [value]="option">{{ option }}</option>
                 </select>
               </div>

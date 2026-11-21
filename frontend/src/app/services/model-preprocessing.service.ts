@@ -295,6 +295,11 @@ export class ModelPreProcessingService {
     return this.getActiveEnvColumnValue(config) !== null;
   }
 
+  /** Le modèle déclare une colonne ENV (valeur fixée par le modèle ou choisie avant le traitement). */
+  isEnvColumnDeclared(config?: ModelPreProcessingConfig | null): boolean {
+    return config?.envColumn?.enabled === true;
+  }
+
   /** Colonne PAYS remplie avec le code choisi avant le traitement (toutes les lignes). */
   private applyPaysColumnToRows(
     rows: Record<string, string>[],
@@ -2249,7 +2254,7 @@ export class ModelPreProcessingService {
       this.getActiveColumnRenameRules(cfg?.columnRenameRules)
     );
 
-    if (this.isEnvColumnEnabled(cfg)) {
+    if (this.isEnvColumnDeclared(cfg)) {
       if (!outputColumns.includes(ENV_COLUMN_NAME)) {
         outputColumns.push(ENV_COLUMN_NAME);
       }
@@ -2401,7 +2406,7 @@ export class ModelPreProcessingService {
       add(col);
     }
 
-    if (this.isEnvColumnEnabled(cfg)) {
+    if (this.isEnvColumnDeclared(cfg)) {
       add(ENV_COLUMN_NAME);
     }
     if (this.isPaysColumnDeclared(cfg)) {

@@ -868,7 +868,12 @@ export class FileUploadComponent implements OnInit, OnDestroy {
     }
 
     get showTraitementEnvSection(): boolean {
-        return this.showTraitementColumnSection;
+        return this.showTraitementColumnSection || this.traitementEnvRequired;
+    }
+
+    /** Un modèle sélectionné déclare la colonne ENV : sa valeur doit être choisie avant le traitement. */
+    get traitementEnvRequired(): boolean {
+        return this.selectedTraitementModels.some(m => m.preProcessingConfig?.envColumn?.enabled === true);
     }
 
     get showTraitementDedupSection(): boolean {
@@ -1348,11 +1353,20 @@ export class FileUploadComponent implements OnInit, OnDestroy {
 
     private syncTraitementEnvColumnFromModel(): void {
         this.syncTraitementPaysFromModels();
-        const model = this.traitementModels.find(m => m.id === this.selectedTraitementModelId);
-        const env = model?.preProcessingConfig?.envColumn;
-        if (env?.enabled && env.value && ENV_COLUMN_OPTIONS.includes(env.value as EnvColumnOption)) {
+        const declared = this.selectedTraitementModels
+            .map(m => m.preProcessingConfig?.envColumn)
+            .filter(env => env?.enabled === true);
+        if (declared.length) {
+            // Colonne ENV du modèle : valeur du modèle si fixée, sinon celle déjà choisie (à confirmer).
+            const modelValue = declared
+                .map(env => String(env?.value ?? '').trim())
+                .find(v => ENV_COLUMN_OPTIONS.includes(v as EnvColumnOption));
             this.traitementEnvColumnEnabled = true;
-            this.traitementEnvColumnValue = env.value as EnvColumnOption;
+            if (modelValue) {
+                this.traitementEnvColumnValue = modelValue as EnvColumnOption;
+            } else if (!ENV_COLUMN_OPTIONS.includes(this.traitementEnvColumnValue as EnvColumnOption)) {
+                this.traitementEnvColumnValue = '';
+            }
             return;
         }
         this.traitementEnvColumnEnabled = false;
@@ -1380,6 +1394,11 @@ export class FileUploadComponent implements OnInit, OnDestroy {
         const base = model.preProcessingConfig;
 
         if (!this.showTraitementEnvSection) {
+            return base;
+        }
+        // Plusieurs modèles : la valeur ENV choisie ne concerne que ceux qui déclarent la colonne.
+        if (this.isTraitementMultiModelMode && this.selectedTraitementModelIds.size > 1
+            && base?.envColumn?.enabled !== true) {
             return base;
         }
 

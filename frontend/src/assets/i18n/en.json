@@ -78,6 +78,7 @@
     "save": "Save"
   },
   "APM": {
+    "envChoisieAuTraitement": "— chosen before each processing —",
     "paysColonneAide": "Adds a PAYS column on every row of the final file; the country code is asked before each processing.",
     "paysCodeParDefaut": "Suggested country code",
     "Importerunfichiermodèle": "Upload a model file",

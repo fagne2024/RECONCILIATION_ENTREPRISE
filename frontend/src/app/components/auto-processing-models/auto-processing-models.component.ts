@@ -1134,7 +1134,7 @@ export class AutoProcessingModelsComponent implements OnInit {
       action.columns?.forEach(col => col?.trim() && columns.add(col.trim()));
       Object.keys(action.columnSettings || {}).forEach(col => col?.trim() && columns.add(col.trim()));
     });
-    if (config.envColumn?.enabled && config.envColumn.value?.trim()) {
+    if (config.envColumn?.enabled) {
       columns.add(ENV_COLUMN_NAME);
     }
     if (config.paysColumn?.enabled) {
@@ -4331,6 +4331,12 @@ export class AutoProcessingModelsComponent implements OnInit {
     
     this.editingModel = null;
     this.isDuplicatingModel = false;
+    // Nouveau modèle : colonnes ENV et PAYS activées par défaut (valeurs choisies avant chaque traitement) ;
+    // décocher PAYS si le fichier contient déjà une colonne pays (ex. fichiers BO).
+    this.modelEnvColumnEnabled = true;
+    this.modelEnvColumnValue = '';
+    this.modelPaysColumnEnabled = true;
+    this.modelPaysColumnValue = '';
     this.showCreateForm = true;
     this.errorMessage = '';
     this.successMessage = '';
@@ -4525,14 +4531,14 @@ export class AutoProcessingModelsComponent implements OnInit {
     this.showEnvColumnSection = !this.showEnvColumnSection;
   }
 
+  /** Colonne ENV activée : valeur fixée par le modèle, ou laissée vide (choisie avant chaque traitement). */
   private buildModelEnvColumnConfig(): ModelEnvColumnConfig | undefined {
-    if (!this.modelEnvColumnEnabled || !this.modelEnvColumnValue) {
+    if (!this.modelEnvColumnEnabled) {
       return undefined;
     }
-    return {
-      enabled: true,
-      value: this.modelEnvColumnValue
-    };
+    return this.modelEnvColumnValue
+      ? { enabled: true, value: this.modelEnvColumnValue }
+      : { enabled: true };
   }
 
   private buildModelPaysColumnConfig(): ModelPaysColumnConfig | undefined {
@@ -5384,7 +5390,7 @@ export class AutoProcessingModelsComponent implements OnInit {
       this.showColumnRenameSection = true;
     }
 
-    if (config.envColumn?.enabled && config.envColumn.value) {
+    if (config.envColumn?.enabled) {
       this.modelEnvColumnEnabled = true;
       this.modelEnvColumnValue = ENV_COLUMN_OPTIONS.includes(config.envColumn.value as EnvColumnOption)
         ? config.envColumn.value as EnvColumnOption

@@ -1718,12 +1718,12 @@
         </div>
 
         <div class="traitement-section" *ngIf="showTraitementEnvSection">
-            <label class="traitement-section-title">{{ 'FU.3colonne' | translate }} {{ envColumnName }} <span class="traitement-optional-badge">{{ 'LBL.optional' | translate }}</span></label>
+            <label class="traitement-section-title">{{ 'FU.3colonne' | translate }} {{ envColumnName }} <span class="traitement-optional-badge" *ngIf="!traitementEnvRequired">{{ 'LBL.optional' | translate }}</span></label>
             <label class="traitement-column-filter-toggle">
                 <input
                     type="checkbox"
                     [(ngModel)]="traitementEnvColumnEnabled"
-                    [disabled]="traitementProcessing">
+                    [disabled]="traitementProcessing || traitementEnvRequired">
                 <span>{{ 'FU.Ajouterlacolonne' | translate }} {{ envColumnName }} {{ 'FU.Aufichierfinal' | translate }}</span>
             </label>
             <div class="traitement-env-value-row" *ngIf="traitementEnvColumnEnabled">
