@@ -13,7 +13,6 @@ import {
   findColumnByCanonicalId,
   normalizeReconciliationKeyValue
 } from '../utils/reconciliation-key.util';
-import { partnerServiceMatchesBo } from '../utils/service-match.util';
 
 /** Colonne synthétique injectée dans les données partenaire avant réconciliation. */
 export const PARTNER_CONDITIONAL_KEY_COLUMN = '__PARTNER_RECON_KEY__';
@@ -610,19 +609,14 @@ export class PartnerConditionalKeysService {
   }
 
   /**
-   * Compare une valeur de colonne condition (ex. SERVICE / Service) à la valeur de règle.
-   * Utilise le même rapprochement souple que la réconciliation magique (CASHINMTNCM ↔ CASHINMTNCMPART).
+   * Compare une valeur de colonne condition (ex. SERVICE / Service) à la valeur de la règle :
+   * correspondance EXACTE de ce qui est configuré (casse et espaces autour ignorés).
+   * Ex. règle BF_PAIEMENTMARCHAND_MOOV : ni PAIEMENTMARCHAND_MOOV, ni CI_PAIEMENTMARCHAND_MOOV.
    */
   private matchesConditionalRuleValue(cellValue: string, ruleWhenValue: string): boolean {
     const cell = (cellValue || '').trim();
     const rule = (ruleWhenValue || '').trim();
-    if (!cell || !rule) {
-      return false;
-    }
-    if (cell.toLowerCase() === rule.toLowerCase()) {
-      return true;
-    }
-    return partnerServiceMatchesBo(rule, cell) || partnerServiceMatchesBo(cell, rule);
+    return !!cell && !!rule && cell.toUpperCase() === rule.toUpperCase();
   }
 
   /** Normalise les clés optionnelles numériques (zéros initiaux, espaces) sans toucher aux clés par défaut. */
