@@ -2,18 +2,18 @@ import { buildPaysTraitement, PAYS_TRAITEMENT_PAR_DEFAUT } from './pays.service'
 import { applyColumnProcessingRulesSync } from '../utils/column-processing.util';
 
 describe('Pays proposés avant un traitement', () => {
-  it('12 pays par défaut, puis les pays des rapports (nom du référentiel si connu)', () => {
+  it('13 pays par défaut (dont CITCH = Côte d’Ivoire), puis les pays des rapports (nom du référentiel si connu)', () => {
     const liste = buildPaysTraitement(
       ['ci', 'CITCH', 'BJ', 'GNL', '', 'SN'],
       [{ code: 'BJ', nom: 'Bénin' } as any]
     );
-    expect(liste.slice(0, 12).map(p => p.code)).toEqual(PAYS_TRAITEMENT_PAR_DEFAUT.map(p => p.code));
-    expect(liste.slice(12)).toEqual([{ code: 'BJ', nom: 'Bénin' }, { code: 'CITCH', nom: '' }]);
+    expect(liste.slice(0, 13).map(p => p.code)).toEqual(PAYS_TRAITEMENT_PAR_DEFAUT.map(p => p.code));
+    expect(liste.slice(13)).toEqual([{ code: 'BJ', nom: 'Bénin' }]);
   });
 
   it('sans rapports accessibles : la liste par défaut seule', () => {
     expect(buildPaysTraitement(null, null).map(p => p.code))
-      .toEqual(['SN', 'CI', 'GN', 'CM', 'GA', 'ML', 'BF', 'KE', 'TZ', 'UG', 'MR', 'GM']);
+      .toEqual(['SN', 'CI', 'CITCH', 'GN', 'CM', 'GA', 'ML', 'BF', 'KE', 'TZ', 'UG', 'MR', 'GM']);
   });
 });
 

@@ -8,6 +8,7 @@ import { Pays, ProfilPays } from '../models/pays.model';
 export const PAYS_TRAITEMENT_PAR_DEFAUT: ReadonlyArray<{ code: string; nom: string }> = [
   { code: 'SN', nom: 'Sénégal' },
   { code: 'CI', nom: "Côte d'Ivoire" },
+  { code: 'CITCH', nom: "Côte d'Ivoire" },
   { code: 'GN', nom: 'Guinée-Conakry' },
   { code: 'CM', nom: 'Cameroun' },
   { code: 'GA', nom: 'Gabon' },
@@ -19,6 +20,11 @@ export const PAYS_TRAITEMENT_PAR_DEFAUT: ReadonlyArray<{ code: string; nom: stri
   { code: 'MR', nom: 'Mauritanie' },
   { code: 'GM', nom: 'Gambie' }
 ];
+
+/** Codes de pays « filiale » rattachés à un pays (gardés distincts : règles propres par code). */
+export const PAYS_TRAITEMENT_ALIAS_NOMS: Readonly<Record<string, string>> = {
+  CITCH: "Côte d'Ivoire"
+};
 
 export interface PaysTraitement {
   code: string;
@@ -50,7 +56,7 @@ export function buildPaysTraitement(
     .filter(c => /^[A-Z0-9]{2,10}$/.test(c) && c !== 'GNL' && !out.has(c)))]
     .sort();
   for (const code of supplementaires) {
-    out.set(code, { code, nom: noms.get(code) || '' });
+    out.set(code, { code, nom: PAYS_TRAITEMENT_ALIAS_NOMS[code] || noms.get(code) || '' });
   }
   return [...out.values()];
 }
