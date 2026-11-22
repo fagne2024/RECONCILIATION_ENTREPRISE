@@ -21,6 +21,10 @@ public interface ReleveBancaireRepository extends JpaRepository<ReleveBancaireEn
     /** Libellés déjà enregistrés (contrôle de doublon sur le libellé à l'import). */
     @org.springframework.data.jpa.repository.Query("SELECT r.libelle FROM ReleveBancaireEntity r WHERE r.libelle IS NOT NULL")
     List<String> findAllLibelles();
+
+    /** Combinaisons distinctes pays / banque / numéro / nom de compte déjà enregistrées (pop-up d'import). */
+    @org.springframework.data.jpa.repository.Query("SELECT DISTINCT r.pays, r.banque, r.numeroCompte, r.nomCompte FROM ReleveBancaireEntity r")
+    List<Object[]> findDistinctComptes();
 }
 
 

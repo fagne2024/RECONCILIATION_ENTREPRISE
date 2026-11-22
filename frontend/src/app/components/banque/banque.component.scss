@@ -3409,6 +3409,7 @@
 .releve-missing-popup .import-popup__icon { text-align: center; color: var(--rd-orange, #d97706); }
 .releve-missing-popup h3 { text-align: center; }
 .releve-missing-popup .form-group { display: flex; flex-direction: column; gap: 4px; margin-top: 12px; }
+.releve-missing-popup__optional { font-weight: 400; color: var(--rd-text-muted, #64748b); font-size: .85em; }
 .releve-missing-popup .text-danger { color: var(--rd-red, #dc2626); }
 .releve-missing-popup__actions { display: flex; justify-content: flex-end; gap: 8px; margin-top: 20px; }
 

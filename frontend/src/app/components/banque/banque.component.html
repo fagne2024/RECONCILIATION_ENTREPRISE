@@ -2680,40 +2680,26 @@
       <p>
         {{ (releveMissingPopup.fields.length > 1 ? 'TBL.ui.missingFieldsMany' : 'TBL.ui.missingFieldsOne') | translate: { fields: describeMissingFields(releveMissingPopup.fields) } }}
       </p>
-      <div class="form-group" *ngIf="releveMissingPopup.fields.includes('numeroCompte')">
-        <label for="releveMissingCompte">{{ 'TBL.accountNumber' | translate }}</label>
-        <input id="releveMissingCompte" class="ds-input" type="text" autocomplete="off"
-               [(ngModel)]="releveMissingPopup.values.numeroCompte"
-               (keydown.enter)="confirmReleveMissing()">
-        <small class="text-danger" *ngIf="releveMissingPopup.submitted && !releveMissingPopup.values.numeroCompte.trim()">
-          {{ 'TBL.ui.merciDeRenseignerLeNumeroDe' | translate }}
-        </small>
-      </div>
-      <div class="form-group" *ngIf="releveMissingPopup.fields.includes('nomCompte')">
-        <label for="releveMissingNomCompte">{{ 'TBL.accountName' | translate }}</label>
-        <input id="releveMissingNomCompte" class="ds-input" type="text" autocomplete="off"
-               [(ngModel)]="releveMissingPopup.values.nomCompte"
-               (keydown.enter)="confirmReleveMissing()">
-        <small class="text-danger" *ngIf="releveMissingPopup.submitted && !releveMissingPopup.values.nomCompte.trim()">
-          {{ 'TBL.ui.merciDeRenseignerLeNomDu' | translate }}
-        </small>
-      </div>
-      <div class="form-group" *ngIf="releveMissingPopup.fields.includes('banque')">
-        <label for="releveMissingBanque">{{ 'TBL.bank' | translate }}</label>
-        <input id="releveMissingBanque" class="ds-input" type="text" autocomplete="off"
-               [(ngModel)]="releveMissingPopup.values.banque"
-               (keydown.enter)="confirmReleveMissing()">
-        <small class="text-danger" *ngIf="releveMissingPopup.submitted && !releveMissingPopup.values.banque.trim()">
-          {{ 'TBL.ui.merciDeRenseignerLaBanque' | translate }}
-        </small>
-      </div>
-      <div class="form-group" *ngIf="releveMissingPopup.fields.includes('pays')">
-        <label for="releveMissingPays">{{ 'TBL.ui.paysCodeExMlSnCm' | translate }}</label>
-        <input id="releveMissingPays" class="ds-input" type="text" autocomplete="off"
-               [(ngModel)]="releveMissingPopup.values.pays"
-               (keydown.enter)="confirmReleveMissing()">
-        <small class="text-danger" *ngIf="releveMissingPopup.submitted && !releveMissingPopup.values.pays.trim()">
-          {{ 'TBL.ui.merciDeRenseignerLePays' | translate }}
+      <!-- Listes avec recherche : valeurs déjà présentes dans les relevés, cloisonnées par le pays ; saisie libre possible -->
+      <div class="form-group" *ngFor="let field of releveMissingChampsAffiches">
+        <label [for]="'releveMissing-' + field">
+          {{ releveMissingLabels[field] | translate }}
+          <span class="releve-missing-popup__optional" *ngIf="!isReleveMissingRequired(field)">— {{ 'TBL.ui.releveMissingPaysFiltre' | translate }}</span>
+        </label>
+        <input [id]="'releveMissing-' + field" class="ds-input" type="text" autocomplete="off"
+               [placeholder]="'TBL.ui.releveMissingRecherche' | translate"
+               [ngModel]="releveMissingPopup.values[field]"
+               (ngModelChange)="onReleveMissingInput(field, $event)"
+               (focus)="onReleveMissingInput(field, releveMissingPopup.values[field])"
+               [matAutocomplete]="releveMissingAuto"
+               #releveMissingTrigger="matAutocompleteTrigger"
+               (keydown.enter)="onReleveMissingEnter($event, releveMissingTrigger.panelOpen)">
+        <mat-autocomplete #releveMissingAuto="matAutocomplete"
+                          (optionSelected)="onReleveMissingOptionSelected(field, $event.option.value)">
+          <mat-option *ngFor="let o of releveMissingOptions[field]" [value]="o.value">{{ o.label }}</mat-option>
+        </mat-autocomplete>
+        <small class="text-danger" *ngIf="releveMissingPopup.submitted && isReleveMissingRequired(field) && !releveMissingPopup.values[field].trim()">
+          {{ releveMissingErreurs[field] | translate }}
         </small>
       </div>
       <div class="releve-missing-popup__actions">

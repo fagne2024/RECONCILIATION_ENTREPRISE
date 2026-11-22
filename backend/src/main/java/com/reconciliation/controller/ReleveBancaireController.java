@@ -146,15 +146,57 @@ public class ReleveBancaireController {
      * 2 derniers caractères de la banque.
      */
     private static String countryCodeOf(com.reconciliation.entity.ReleveBancaireEntity e) {
-        String p = e.getPays();
+        return countryCodeOf(e.getPays(), e.getBanque());
+    }
+
+    private static String countryCodeOf(String p, String b) {
         if (p != null && !p.isBlank() && p.trim().length() <= 3) {
             return p.trim().toUpperCase();
         }
-        String b = e.getBanque();
         if (b == null) return null;
         String trimmed = b.trim();
         if (trimmed.length() < 2) return null;
         return trimmed.substring(trimmed.length() - 2).toUpperCase();
+    }
+
+    /**
+     * Comptes déjà connus dans les relevés (pays, banque, numéro et nom de compte), limités aux pays
+     * autorisés de l'utilisateur : alimente les listes déroulantes du pop-up « Informations manquantes ».
+     * Une valeur saisie puis importée apparaît donc à la prochaine saisie.
+     */
+    @GetMapping("/comptes-connus")
+    public ResponseEntity<List<java.util.Map<String, String>>> comptesConnus() {
+        String username = RequestContextUtil.getUsernameFromRequest();
+        List<String> allowedCountries = (username != null && !username.isEmpty())
+                ? paysFilterService.getAllowedPaysCodes(username)
+                : null;
+        if (allowedCountries != null && allowedCountries.isEmpty()) {
+            return ResponseEntity.ok(new ArrayList<>());
+        }
+        java.util.Set<String> vus = new java.util.HashSet<>();
+        List<java.util.Map<String, String>> out = new ArrayList<>();
+        for (Object[] r : repository.findDistinctComptes()) {
+            String pays = trimToEmpty(r[0]);
+            String banque = trimToEmpty(r[1]);
+            String numeroCompte = trimToEmpty(r[2]);
+            String nomCompte = trimToEmpty(r[3]);
+            if (numeroCompte.isEmpty() && nomCompte.isEmpty() && banque.isEmpty()) continue;
+            String code = countryCodeOf(pays.isEmpty() ? null : pays, banque.isEmpty() ? null : banque);
+            if (allowedCountries != null && (code == null || !allowedCountries.contains(code))) continue;
+            String paysAffiche = pays.isEmpty() ? (code == null ? "" : code) : pays;
+            if (!vus.add(paysAffiche.toUpperCase() + "|" + banque + "|" + numeroCompte + "|" + nomCompte)) continue;
+            java.util.Map<String, String> m = new java.util.HashMap<>();
+            m.put("pays", paysAffiche);
+            m.put("banque", banque);
+            m.put("numeroCompte", numeroCompte);
+            m.put("nomCompte", nomCompte);
+            out.add(m);
+        }
+        return ResponseEntity.ok(out);
+    }
+
+    private static String trimToEmpty(Object o) {
+        return o == null ? "" : o.toString().trim();
     }
 
     @GetMapping("/list")

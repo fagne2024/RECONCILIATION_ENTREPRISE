@@ -2,7 +2,7 @@ import { Injectable } from '@angular/core';
 import { HttpClient, HttpHeaders, HttpParams } from '@angular/common/http';
 import { Observable } from 'rxjs';
 import { postFormWithProgress } from '../utils/upload-with-progress.util';
-import { ReleveBancaireRow, ReleveUploadResponse, ReleveListFilter, ReleveImportDefaults, DecisionDoublons } from '../models/releve-bancaire.model';
+import { ReleveBancaireRow, ReleveUploadResponse, ReleveListFilter, ReleveImportDefaults, DecisionDoublons, ReleveCompteConnu } from '../models/releve-bancaire.model';
 
 /** 2e envoi après le pop-up des doublons : lignes en doublon à charger quand même. */
 export function appendDecisionDoublons(form: FormData, decision?: DecisionDoublons): void {
@@ -49,6 +49,11 @@ export class ReleveBancaireService {
     this.appendDefaults(form, defaults);
     appendDecisionDoublons(form, decision);
     return this.http.post<ReleveUploadResponse>(`${this.apiUrl}/upload`, form);
+  }
+
+  /** Comptes déjà connus (pays, banque, numéro, nom), limités aux pays autorisés de l'utilisateur. */
+  comptesConnus(): Observable<ReleveCompteConnu[]> {
+    return this.http.get<ReleveCompteConnu[]>(`${this.apiUrl}/comptes-connus`);
   }
 
   list(filter?: ReleveListFilter | string, moduleContext?: string): Observable<any> {

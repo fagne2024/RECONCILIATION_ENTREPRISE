@@ -1,3 +1,4 @@
+import { MatAutocompleteModule } from '@angular/material/autocomplete';
 import { AppStateService } from '../../services/app-state.service';
 import { Component, OnInit, inject } from '@angular/core';
 import { CommonModule } from '@angular/common';
@@ -13,13 +14,13 @@ import { OperationService } from '../../services/operation.service';
 import { OperationServiceApi } from '../../services/operation.service';
 import { ReleveBancaireService } from '../../services/releve-bancaire.service';
 import { NiveauxValidationConfigService } from '../../services/niveaux-validation-config.service';
-import { ReleveBancaireRow, ReleveImportDefaults, ReleveMissingField, ReleveUploadResponse, DoublonImportLigne, DecisionDoublons } from '../../models/releve-bancaire.model';
+import { ReleveBancaireRow, ReleveCompteConnu, ReleveImportDefaults, ReleveMissingField, ReleveUploadResponse, DoublonImportLigne, DecisionDoublons } from '../../models/releve-bancaire.model';
 import { SuiviCompenseOp, SuiviCompenseReferenceType } from '../../models/suivi-compense-op.model';
 import { SuiviCompenseOpService } from '../../services/suivi-compense-op.service';
 import { ExportOptimizationService } from '../../services/export-optimization.service';
 import { PopupService } from '../../services/popup.service';
 import { ConfigurationCalculService } from '../../services/configuration-calcul.service';
-import { countryDisplayLabel, countriesMatch, normalizeCountryFilterOptions } from '../../utils/country-codes.util';
+import { countryDisplayLabel, countriesMatch, countryIsoCode, knownCountryCodes, normalizeCountryFilterOptions } from '../../utils/country-codes.util';
 import { TranslateModule } from '@ngx-translate/core';
 import { DsPaginationComponent } from '../../shared/ui/pagination/ds-pagination.component';
 import { FileUploadComponent } from '../file-upload/file-upload.component';
@@ -290,7 +291,7 @@ const SUIVI_COMPENSE_HEADER_ALIASES: Record<string, string> = {
   selector: 'app-banque',
   standalone: true,
   imports: [TranslateModule, CommonModule, FormsModule, ReactiveFormsModule, DsPaginationComponent, FileUploadComponent,
-    MatFormFieldModule, MatSelectModule, NgxMatSelectSearchModule],
+    MatFormFieldModule, MatSelectModule, NgxMatSelectSearchModule, MatAutocompleteModule],
   templateUrl: './banque.component.html',
   styleUrls: ['./banque.component.scss']
 })
@@ -4169,7 +4170,7 @@ export class BanqueComponent implements OnInit {
     return String(valeur);
   }
 
-  // ── Colonnes obligatoires absentes du relevé importé (numéro de compte, banque) ──
+  // ── Colonnes obligatoires absentes du relevé importé (pays, numéro de compte, nom, banque) ──
   releveMissingPopup: {
     visible: boolean;
     fields: ReleveMissingField[];
@@ -4177,6 +4178,27 @@ export class BanqueComponent implements OnInit {
     submitted: boolean;
   } = { visible: false, fields: [], values: { numeroCompte: '', nomCompte: '', banque: '', pays: '' }, submitted: false };
   private releveMissingResolver: ((v: ReleveImportDefaults | null) => void) | null = null;
+
+  /** Ordre d'affichage : le pays est toujours proposé en premier, il cloisonne les autres listes. */
+  readonly releveMissingChamps: ReleveMissingField[] = ['pays', 'numeroCompte', 'nomCompte', 'banque'];
+  readonly releveMissingLabels: Record<ReleveMissingField, string> = {
+    pays: 'TBL.ui.paysCodeExMlSnCm',
+    numeroCompte: 'TBL.accountNumber',
+    nomCompte: 'TBL.accountName',
+    banque: 'TBL.bank'
+  };
+  readonly releveMissingErreurs: Record<ReleveMissingField, string> = {
+    pays: 'TBL.ui.merciDeRenseignerLePays',
+    numeroCompte: 'TBL.ui.merciDeRenseignerLeNumeroDe',
+    nomCompte: 'TBL.ui.merciDeRenseignerLeNomDu',
+    banque: 'TBL.ui.merciDeRenseignerLaBanque'
+  };
+  /** Comptes déjà présents dans les relevés (alimentent les listes déroulantes avec recherche). */
+  private releveComptesConnus: ReleveCompteConnu[] = [];
+  releveMissingOptions: Record<ReleveMissingField, { value: string; label: string }[]> = {
+    pays: [], numeroCompte: [], nomCompte: [], banque: []
+  };
+  private static readonly RELEVE_MISSING_MAX_OPTIONS = 100;
 
   /** Détecte la réponse 422 du backend listant les champs à renseigner. */
   private getReleveMissingFields(err: any): ReleveMissingField[] {
@@ -4189,7 +4211,116 @@ export class BanqueComponent implements OnInit {
   /** Ouvre la pop-up et retourne les valeurs saisies, ou null si l'utilisateur annule. */
   private askReleveMissingValues(fields: ReleveMissingField[]): Promise<ReleveImportDefaults | null> {
     this.releveMissingPopup = { visible: true, fields, values: { numeroCompte: '', nomCompte: '', banque: '', pays: '' }, submitted: false };
+    this.releveComptesConnus = [];
+    this.refreshReleveMissingOptions();
+    // Rechargé à chaque ouverture : une valeur saisie lors d'un import précédent est proposée
+    this.releveService.comptesConnus().subscribe({
+      next: list => {
+        this.releveComptesConnus = list || [];
+        const paysConnus = this.valeursDistinctes(this.releveComptesConnus.map(c => countryIsoCode(c.pays) || c.pays));
+        if (paysConnus.length === 1 && !this.releveMissingPopup.values.pays.trim()) {
+          this.releveMissingPopup.values.pays = paysConnus[0];
+        }
+        this.refreshReleveMissingOptions();
+      },
+      error: () => { /* listes vides : la saisie libre reste possible */ }
+    });
     return new Promise(resolve => { this.releveMissingResolver = resolve; });
+  }
+
+  isReleveMissingRequired(field: ReleveMissingField): boolean {
+    return this.releveMissingPopup.fields.includes(field);
+  }
+
+  /** Champs affichés : le pays toujours, les autres seulement s'ils manquent dans le fichier. */
+  get releveMissingChampsAffiches(): ReleveMissingField[] {
+    return this.releveMissingChamps.filter(f => f === 'pays' || this.isReleveMissingRequired(f));
+  }
+
+  onReleveMissingInput(field: ReleveMissingField, value: string): void {
+    this.releveMissingPopup.values[field] = value ?? '';
+    this.refreshReleveMissingOptions();
+  }
+
+  /** Choix d'un compte connu : complète le nom, la banque et le pays associés s'ils sont vides. */
+  onReleveMissingOptionSelected(field: ReleveMissingField, value: string): void {
+    this.releveMissingPopup.values[field] = value ?? '';
+    if (field === 'numeroCompte' || field === 'nomCompte') {
+      const correspondants = this.comptesConnusCloisonnes(field).filter(c => c[field] === value);
+      const v = this.releveMissingPopup.values;
+      const completer = (f: ReleveMissingField, valeurs: string[]) => {
+        const uniques = this.valeursDistinctes(valeurs);
+        if (uniques.length === 1 && !v[f].trim()) v[f] = uniques[0];
+      };
+      if (field === 'numeroCompte') completer('nomCompte', correspondants.map(c => c.nomCompte));
+      else completer('numeroCompte', correspondants.map(c => c.numeroCompte));
+      completer('banque', correspondants.map(c => c.banque));
+      completer('pays', correspondants.map(c => countryIsoCode(c.pays) || c.pays));
+    }
+    this.refreshReleveMissingOptions();
+  }
+
+  /** Entrée : valide la pop-up, sauf si elle sert à choisir une option de la liste. */
+  onReleveMissingEnter(event: Event, panelOpen: boolean): void {
+    if (event.defaultPrevented || panelOpen) return;
+    this.confirmReleveMissing();
+  }
+
+  /** Pays saisi s'il est reconnu (code, nom ou valeur déjà présente), sinon vide : pas de cloisonnement. */
+  private releveMissingPaysEffectif(): string {
+    const saisi = this.releveMissingPopup.values.pays.trim();
+    if (!saisi) return '';
+    if (countryIsoCode(saisi)) return saisi;
+    return this.releveComptesConnus.some(c => c.pays.trim().toLowerCase() === saisi.toLowerCase()) ? saisi : '';
+  }
+
+  /**
+   * Comptes connus pour la liste d'un champ : cloisonnés par le pays choisi et, pour le numéro / nom,
+   * par la banque si elle correspond à une banque connue.
+   */
+  private comptesConnusCloisonnes(field: ReleveMissingField): ReleveCompteConnu[] {
+    if (field === 'pays') return this.releveComptesConnus;
+    const pays = this.releveMissingPaysEffectif();
+    const banque = this.releveMissingPopup.values.banque.trim().toLowerCase();
+    const banqueConnue = field !== 'banque' && !!banque
+      && this.releveComptesConnus.some(c => c.banque.toLowerCase() === banque);
+    return this.releveComptesConnus.filter(c =>
+      (!pays || countriesMatch(c.pays, pays)) &&
+      (!banqueConnue || c.banque.toLowerCase() === banque));
+  }
+
+  private refreshReleveMissingOptions(): void {
+    const v = this.releveMissingPopup.values;
+    const filtrer = (items: { value: string; label: string }[], saisie: string) => {
+      const q = saisie.trim().toLowerCase();
+      const res = q
+        ? items.filter(o => o.value.toLowerCase().includes(q) || o.label.toLowerCase().includes(q))
+        : items.slice();
+      // Les valeurs commençant par la saisie d'abord (recherche par début de numéro de compte)
+      const debut = (o: { value: string; label: string }) =>
+        q && (o.value.toLowerCase().startsWith(q) || o.label.toLowerCase().startsWith(q)) ? 0 : 1;
+      return res
+        .sort((a, b) => debut(a) - debut(b) || a.label.localeCompare(b.label, 'fr', { numeric: true }))
+        .slice(0, BanqueComponent.RELEVE_MISSING_MAX_OPTIONS);
+    };
+    const simple = (field: 'numeroCompte' | 'nomCompte' | 'banque') =>
+      filtrer(this.valeursDistinctes(this.comptesConnusCloisonnes(field).map(c => c[field]))
+        .map(x => ({ value: x, label: x })), v[field]);
+
+    const codesPays = this.valeursDistinctes([
+      ...this.releveComptesConnus.map(c => countryIsoCode(c.pays) || c.pays.trim()),
+      ...knownCountryCodes()
+    ]);
+    const paysOptions = codesPays.map(code => {
+      const nom = countryDisplayLabel(code);
+      return { value: code, label: nom && nom !== code ? `${nom} (${code})` : code };
+    });
+    this.releveMissingOptions = {
+      pays: filtrer(paysOptions, v.pays),
+      numeroCompte: simple('numeroCompte'),
+      nomCompte: simple('nomCompte'),
+      banque: simple('banque')
+    };
   }
 
   get releveMissingValid(): boolean {
@@ -4205,7 +4336,8 @@ export class BanqueComponent implements OnInit {
     if (this.releveMissingPopup.fields.includes('numeroCompte')) out.numeroCompte = v.numeroCompte.trim();
     if (this.releveMissingPopup.fields.includes('nomCompte')) out.nomCompte = v.nomCompte.trim();
     if (this.releveMissingPopup.fields.includes('banque')) out.banque = v.banque.trim();
-    if (this.releveMissingPopup.fields.includes('pays')) out.pays = v.pays.trim();
+    // Le pays (toujours proposé) ne s'applique qu'aux lignes sans pays ; envoyé en code ISO si reconnu
+    if (v.pays.trim()) out.pays = countryIsoCode(v.pays) || v.pays.trim();
     this.releveMissingPopup = { ...this.releveMissingPopup, visible: false };
     this.releveMissingResolver?.(out);
     this.releveMissingResolver = null;

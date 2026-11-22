@@ -55,6 +55,14 @@ export interface ReleveImportDefaults {
   pays?: string;
 }
 
+/** Combinaison pays / banque / compte déjà présente dans les relevés (listes du pop-up d'import). */
+export interface ReleveCompteConnu {
+  pays: string;
+  banque: string;
+  numeroCompte: string;
+  nomCompte: string;
+}
+
 /** Champs obligatoires qu'un fichier de relevé peut ne pas fournir. */
 export type ReleveMissingField = 'numeroCompte' | 'nomCompte' | 'banque' | 'pays';
 
