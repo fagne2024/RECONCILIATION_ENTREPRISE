@@ -592,7 +592,29 @@
     "removeKey": "Retirer cette clé",
     "ui": {
       "ecart": "Ecart"
-    }
+    },
+    "Clémodèle": "→ clé {{name}} =",
+    "Clésmodèle": "Clés {{name}} :",
+    "Clésmodèleconditionnelles": "Clés {{name}} conditionnelles :",
+    "Clésmodèleconditionnellesoptionnel": "Clés {{name}} conditionnelles (optionnel)",
+    "Colonneconditionmodèle": "Colonne condition ({{name}})",
+    "configParModeleBoTitre": "Configuration selon le modèle BO utilisé",
+    "configParModeleBoAide": "Ce modèle partenaire est rattaché à plusieurs modèles BO. Les clés partenaire et les clés conditionnelles ci-dessous sont celles de {{name}} : elles s'appliquent quand le fichier BO est traité avec ce modèle.",
+    "rowFilterCondHelp": "Conditions par valeur (optionnel) : une valeur conservée peut exiger une condition sur une autre colonne. Ex. garder « finished » seulement si actionDone n'est pas vide (NULL compte comme vide).",
+    "rowFilterCondIfValue": "Si {{column}} =",
+    "rowFilterCondThen": "alors",
+    "rowFilterCondValuesLabel": "Valeurs concernées, séparées par des virgules",
+    "rowFilterCondOperatorLabel": "Condition",
+    "rowFilterCondValueLabel": "Valeur comparée",
+    "rowFilterCondAdd": "Ajouter une condition",
+    "rowFilterCondRemove": "Supprimer la condition",
+    "rowFilterOpNotEmpty": "n'est pas vide",
+    "rowFilterOpEmpty": "est vide",
+    "rowFilterOpEquals": "est égal à",
+    "rowFilterOpNotEquals": "est différent de",
+    "rowFilterCondEmptyText": "{{column}} vide",
+    "rowFilterCondNotEmptyText": "{{column}} non vide",
+    "rowFilterCondSummary": "{{values}} si {{condition}}"
   },
   "BQ": {
     "ReconResultByComment": "Par commentaire",

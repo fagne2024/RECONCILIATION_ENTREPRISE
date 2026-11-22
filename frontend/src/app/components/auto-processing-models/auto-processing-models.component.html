@@ -181,6 +181,18 @@
           <strong>{{ 'APM.Information' | translate }}</strong> {{ 'APM.Veuillezdabordsélectionnerunfichiermodèlepourchargerlescolonnesdisponibles' | translate }}
         </div>
 
+        <!-- Plusieurs modèles BO rattachés : une configuration par modèle BO -->
+        <div class="bo-config-switch" *ngIf="hasPerBoModelConfig()">
+          <label>{{ 'APM.configParModeleBoTitre' | translate }}</label>
+          <ds-tabs [tabs]="boConfigTabs"
+                   [activeId]="activeBoConfigModelId || ''"
+                   (activeIdChange)="selectBoConfigModel($event)"
+                   [ariaLabel]="'APM.configParModeleBoTitre' | translate"></ds-tabs>
+          <small class="form-text text-muted d-block">
+            {{ 'APM.configParModeleBoAide' | translate: { name: getConfigBoModelLabel() } }}
+          </small>
+        </div>
+
         <!-- Chargement des colonnes du fichier modèle -->
         <div class="form-row" *ngIf="modelForm.get('templateFile')?.value && !isLoadingTemplateColumns">
           <div class="form-group">
@@ -287,7 +299,9 @@
                     <option *ngFor="let column of availableTemplateColumns" [value]="column">{{ column }}</option>
                   </select>
                   <ng-container *ngIf="getBoConditionalColumnOptions().length > 0">
-                    <span>{{ 'APM.Clébo' | translate }}</span>
+                    <span>{{ getConfigBoModelLabel()
+                      ? ('APM.Clémodèle' | translate: { name: getConfigBoModelLabel() })
+                      : ('APM.Clébo' | translate) }}</span>
                     <select class="ds-select form-control"
                             [(ngModel)]="rule.boKeyColumn"
                             [ngModelOptions]="{standalone: true}">
@@ -390,7 +404,9 @@
             <input type="checkbox"
                    [(ngModel)]="boConditionalKeysEnabled"
                    [ngModelOptions]="{standalone: true}" class="ds-checkbox">
-            {{ 'APM.Clésboconditionnellesoptionnel' | translate }}
+            {{ getConfigBoModelLabel()
+              ? ('APM.Clésmodèleconditionnellesoptionnel' | translate: { name: getConfigBoModelLabel() })
+              : ('APM.Clésboconditionnellesoptionnel' | translate) }}
           </label>
           <small class="form-text text-muted d-block">
             {{ 'APM.Choisirunecolonnecléboselonlavaleurduneautrecolonnedufichierboexsitypeopération' | translate }} <code>{{ 'APM.CASHIN' | translate }}</code> {{ 'APM.Référencetransactionsi' | translate }} <code>{{ 'APM.PAYOUT' | translate }}</code> {{ 'APM.IDexterne' | translate }}
@@ -399,7 +415,9 @@
           <div class="conditional-keys-panel" *ngIf="boConditionalKeysEnabled">
             <div class="form-row" *ngIf="getBoConditionalColumnOptions().length > 0; else noBoColumnsForConditional">
               <div class="form-group col-md-6">
-                <label>{{ 'APM.Colonneconditionbo' | translate }}</label>
+                <label>{{ getConfigBoModelLabel()
+                  ? ('APM.Colonneconditionmodèle' | translate: { name: getConfigBoModelLabel() })
+                  : ('APM.Colonneconditionbo' | translate) }}</label>
                 <select class="ds-select form-control"
                         [(ngModel)]="boConditionColumn"
                         [ngModelOptions]="{standalone: true}">
@@ -483,7 +501,9 @@
               </span>
             </div>
             <div class="summary-item" *ngIf="isBoConditionalKeysConfigValid()">
-              <strong>{{ 'APM.Clésboconditionnelles' | translate }}</strong>
+              <strong>{{ getConfigBoModelLabel()
+                ? ('APM.Clésmodèleconditionnelles' | translate: { name: getConfigBoModelLabel() })
+                : ('APM.Clésboconditionnelles' | translate) }}</strong>
               {{ boConditionColumn }} →
               <span *ngFor="let rule of boConditionalKeyRules; let last = last">
                 <ng-container *ngIf="rule.whenValue && rule.keyColumn">
@@ -494,7 +514,13 @@
             <div class="summary-item" *ngIf="selectedBOModels.length > 0">
               <strong>{{ 'APM.Modèlesbo' | translate }}</strong> {{ getSelectedBOModelNames() }}
             </div>
-            <div class="summary-item" *ngIf="selectedBOKeys.length > 0">
+            <ng-container *ngFor="let modelId of selectedBOModels">
+              <div class="summary-item" *ngIf="(boModelKeySelection[modelId] || []).length > 0">
+                <strong>{{ 'APM.Clésmodèle' | translate: { name: getBoModelName(modelId) } }}</strong>
+                {{ boModelKeySelection[modelId].join(', ') }}
+              </div>
+            </ng-container>
+            <div class="summary-item" *ngIf="selectedBOModels.length === 0 && selectedBOKeys.length > 0">
               <strong>{{ 'APM.Clésbo' | translate }}</strong> {{ selectedBOKeys.join(', ') }}
             </div>
           </div>
@@ -1329,6 +1355,43 @@
                       <i class="fas fa-trash"></i>
                     </button>
                   </div>
+                </div>
+
+                <!-- Conditions par valeur : ex. finished conservé seulement si actionDone n'est pas vide -->
+                <div class="row-filter-conditions">
+                  <small class="form-text text-muted d-block">{{ 'APM.rowFilterCondHelp' | translate }}</small>
+                  <div class="row-filter-condition" *ngFor="let condition of filter.valueConditions || []; let c = index">
+                    <span>{{ 'APM.rowFilterCondIfValue' | translate: { column: filter.column || '…' } }}</span>
+                    <input type="text" class="ds-input form-control row-filter-condition__values"
+                           [value]="getRowFilterConditionValuesInput(condition)"
+                           (input)="updateRowFilterConditionValuesInput(condition, $any($event.target).value)"
+                           [attr.aria-label]="'APM.rowFilterCondValuesLabel' | translate"
+                           placeholder="finished">
+                    <span>{{ 'APM.rowFilterCondThen' | translate }}</span>
+                    <select class="ds-select form-control" [(ngModel)]="condition.column" [ngModelOptions]="{standalone: true}"
+                            [attr.aria-label]="'TBL.column' | translate">
+                      <option value="">{{ 'LBL.chooseDash' | translate }}</option>
+                      <option *ngFor="let col of getPreProcessingColumns()" [value]="col">{{ col }}</option>
+                    </select>
+                    <select class="ds-select form-control" [(ngModel)]="condition.operator" [ngModelOptions]="{standalone: true}"
+                            [attr.aria-label]="'APM.rowFilterCondOperatorLabel' | translate">
+                      <option *ngFor="let op of rowFilterConditionOperators" [value]="op.value">{{ op.labelKey | translate }}</option>
+                    </select>
+                    <input *ngIf="rowFilterConditionNeedsValue(condition)" type="text"
+                           class="ds-input form-control row-filter-condition__value"
+                           [(ngModel)]="condition.value" [ngModelOptions]="{standalone: true}"
+                           [attr.aria-label]="'APM.rowFilterCondValueLabel' | translate">
+                    <button type="button" class="ds-btn ds-btn--danger btn btn-sm btn-outline-danger"
+                            (click)="removeRowFilterValueCondition(filter, c)"
+                            [title]="'APM.rowFilterCondRemove' | translate"
+                            [attr.aria-label]="'APM.rowFilterCondRemove' | translate">
+                      <i class="fas fa-trash"></i>
+                    </button>
+                  </div>
+                  <button type="button" class="ds-btn ds-btn--secondary btn btn-sm btn-outline-primary"
+                          (click)="addRowFilterValueCondition(filter)">
+                    <i class="fas fa-plus"></i> {{ 'APM.rowFilterCondAdd' | translate }}
+                  </button>
                 </div>
               </div>
 

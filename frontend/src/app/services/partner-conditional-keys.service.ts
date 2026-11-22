@@ -39,8 +39,94 @@ export interface PreparedConditionalReconciliationData {
   partnerKeyColumn: string;
 }
 
+/** Modèle BO utilisé pour la réconciliation : id, ou modèle (id / modelId). */
+export type BoModelHint = string | { id?: string; modelId?: string } | null | undefined;
+
 @Injectable({ providedIn: 'root' })
 export class PartnerConditionalKeysService {
+
+  /**
+   * Modèle partenaire rattaché à plusieurs modèles BO avec une configuration par modèle BO :
+   * retourne une copie du modèle partenaire portant la configuration du modèle BO utilisé
+   * (clés partenaire, clés conditionnelles, clés BO de ce seul modèle).
+   * Le modèle BO est celui indiqué, sinon celui dont les colonnes clés figurent dans le fichier BO.
+   * Sans configuration par modèle BO, le modèle est retourné tel quel.
+   */
+  specializeForBoModel(
+    model: AutoProcessingModel,
+    boData: Record<string, string>[],
+    boModelHint?: BoModelHint
+  ): AutoProcessingModel {
+    const rk = model?.reconciliationKeys;
+    const configs = rk?.boModelConfigs;
+    if (!rk || !configs || !Object.keys(configs).length) {
+      return model;
+    }
+    const boModelId = this.resolveUsedBoModelId(model, boData, boModelHint);
+    const { boModelConfigs: _ignored, ...baseKeys } = rk;
+    if (!boModelId) {
+      return { ...model, reconciliationKeys: baseKeys };
+    }
+    const config = configs[boModelId] || {};
+    return {
+      ...model,
+      reconciliationKeys: {
+        ...baseKeys,
+        partnerKeys: config.partnerKeys ?? rk.partnerKeys ?? [],
+        partnerConditionalKeys: config.partnerConditionalKeys ?? rk.partnerConditionalKeys,
+        boConditionalKeys: config.boConditionalKeys ?? rk.boConditionalKeys,
+        boModels: [boModelId],
+        boModelKeys: { [boModelId]: rk.boModelKeys?.[boModelId] || [] },
+        boTreatments: rk.boTreatments?.[boModelId] !== undefined
+          ? { [boModelId]: rk.boTreatments[boModelId] }
+          : {}
+      }
+    };
+  }
+
+  /** Id (tel que stocké dans boModels) du modèle BO utilisé, ou null. */
+  resolveUsedBoModelId(
+    model: AutoProcessingModel,
+    boData: Record<string, string>[],
+    boModelHint?: BoModelHint
+  ): string | null {
+    const rk = model?.reconciliationKeys;
+    const linked = rk?.boModels || [];
+    if (!linked.length) {
+      return null;
+    }
+    const hintIds = typeof boModelHint === 'string'
+      ? [boModelHint]
+      : [boModelHint?.id, boModelHint?.modelId];
+    const hinted = linked.find(id => hintIds.some(h => !!h && String(h) === String(id)));
+    if (hinted) {
+      return hinted;
+    }
+
+    // Détection : modèle BO dont le plus de colonnes clés configurées figurent dans le fichier BO.
+    let best: string | null = null;
+    let bestScore = 0;
+    for (const id of linked) {
+      const config = rk?.boModelConfigs?.[id];
+      const columns = [
+        ...(rk?.boModelKeys?.[id] || []),
+        ...(config?.boConditionalKeys?.enabled ? [
+          config.boConditionalKeys.conditionColumn,
+          config.boConditionalKeys.defaultKeyColumn || '',
+          ...(config.boConditionalKeys.rules || []).map(r => r.keyColumn)
+        ] : []),
+        ...(config?.partnerConditionalKeys?.enabled
+          ? (config.partnerConditionalKeys.rules || []).map(r => r.boKeyColumn || '')
+          : [])
+      ].filter(c => !!c?.trim());
+      const score = new Set(columns.filter(c => !!this.findExistingColumn(boData, [c]))).size;
+      if (score > bestScore) {
+        best = id;
+        bestScore = score;
+      }
+    }
+    return best ?? linked[0];
+  }
 
   isEnabled(config?: PartnerConditionalKeysConfig | null): boolean {
     return this.isConditionalConfigEnabled(config);
@@ -117,8 +203,10 @@ export class PartnerConditionalKeysService {
   tryResolveConditionalPartnerKey(
     model: AutoProcessingModel,
     boData: Record<string, string>[],
-    partnerData: Record<string, string>[]
+    partnerData: Record<string, string>[],
+    boModelHint?: BoModelHint
   ): { boKeyColumn: string; partnerKeyColumn: string } | null {
+    model = this.specializeForBoModel(model, boData, boModelHint);
     const keys = this.resolveReconciliationKeyColumns(model, boData, partnerData);
     if (!keys || keys.partnerKeyColumn !== PARTNER_CONDITIONAL_KEY_COLUMN) {
       return null;
@@ -132,8 +220,10 @@ export class PartnerConditionalKeysService {
   resolveKeysFromPartnerModel(
     model: AutoProcessingModel,
     boData: Record<string, string>[],
-    partnerData: Record<string, string>[]
+    partnerData: Record<string, string>[],
+    boModelHint?: BoModelHint
   ): { boKeyColumn: string; partnerKeyColumn: string } | null {
+    model = this.specializeForBoModel(model, boData, boModelHint);
     if (!this.modelHasReconciliationKeyConfig(model)) {
       return null;
     }
@@ -150,8 +240,10 @@ export class PartnerConditionalKeysService {
   applyModelConditionalKeys(
     boData: Record<string, string>[],
     partnerData: Record<string, string>[],
-    model: AutoProcessingModel
+    model: AutoProcessingModel,
+    boModelHint?: BoModelHint
   ): PreparedConditionalReconciliationData | null {
+    model = this.specializeForBoModel(model, boData, boModelHint);
     const keys = this.resolveReconciliationKeyColumns(model, boData, partnerData);
     if (!keys) {
       return null;
@@ -210,6 +302,7 @@ export class PartnerConditionalKeysService {
     boData: Record<string, string>[],
     partnerData: Record<string, string>[]
   ): { boKeyColumn: string; partnerKeyColumn: string } | null {
+    model = this.specializeForBoModel(model, boData);
     const partnerConditional = model.reconciliationKeys?.partnerConditionalKeys;
     const boConditional = model.reconciliationKeys?.boConditionalKeys;
     const defaultPartnerCol = this.resolvePartnerKeyFromModel(model, partnerData);

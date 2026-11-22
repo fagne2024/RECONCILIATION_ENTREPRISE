@@ -6,7 +6,7 @@ import { TranslateModule } from '@ngx-translate/core';
 import { ReconciliationService } from '../../services/reconciliation.service';
 import { AutoProcessingService, AutoProcessingModel, ENV_COLUMN_NAME, ENV_COLUMN_OPTIONS, PAYS_COLUMN_NAME, EnvColumnOption, ProcessingResult, ColumnProcessingRule } from '../../services/auto-processing.service';
 import { PaysService, PAYS_TRAITEMENT_PAR_DEFAUT } from '../../services/pays.service';
-import { PartnerConditionalKeysService } from '../../services/partner-conditional-keys.service';
+import { BoModelHint, PartnerConditionalKeysService } from '../../services/partner-conditional-keys.service';
 import { ModelPreProcessingService, createPreProcessingUsage } from '../../services/model-preprocessing.service';
 import { ExportOptimizationService } from '../../services/export-optimization.service';
 import { TraitementBackgroundService } from '../../services/traitement-background.service';
@@ -8646,7 +8646,8 @@ export class FileUploadComponent implements OnInit, OnDestroy {
     private resolveKeysFromPartnerModel(
         model: AutoProcessingModel,
         boData: Record<string, string>[],
-        partnerData: Record<string, string>[]
+        partnerData: Record<string, string>[],
+        boModelHint?: BoModelHint
     ): {
         boKeyColumn: string;
         partnerKeyColumn: string;
@@ -8657,7 +8658,8 @@ export class FileUploadComponent implements OnInit, OnDestroy {
         const resolved = this.partnerConditionalKeysService.resolveKeysFromPartnerModel(
             model,
             boData,
-            partnerData
+            partnerData,
+            boModelHint
         );
         if (!resolved) {
             return null;
@@ -8691,6 +8693,8 @@ export class FileUploadComponent implements OnInit, OnDestroy {
 
         try {
             const models = await this.autoProcessingService.getAllModelsUnrestricted();
+            // Modèle BO utilisé : sa configuration s'applique si le modèle partenaire en a une par modèle BO.
+            const boModelHint = this.resolveUsedBoModelHint(models, boFileName);
 
             // Priorité 0 : modèle partenaire mémorisé lors du traitement assisté
             if (this.assistedPartnerReconciliationModelId) {
@@ -8698,7 +8702,7 @@ export class FileUploadComponent implements OnInit, OnDestroy {
                     (m.id || m.modelId) === this.assistedPartnerReconciliationModelId
                 );
                 if (preselected) {
-                    const fromTreatment = this.resolveKeysFromPartnerModel(preselected, boData, partnerData);
+                    const fromTreatment = this.resolveKeysFromPartnerModel(preselected, boData, partnerData, boModelHint);
                     if (fromTreatment) {
                         return fromTreatment;
                     }
@@ -8729,7 +8733,7 @@ export class FileUploadComponent implements OnInit, OnDestroy {
             }
 
             for (const model of partnerModels) {
-                const resolved = this.resolveKeysFromPartnerModel(model, boData, partnerData);
+                const resolved = this.resolveKeysFromPartnerModel(model, boData, partnerData, boModelHint);
                 if (resolved) {
                     return resolved;
                 }
@@ -8758,6 +8762,23 @@ export class FileUploadComponent implements OnInit, OnDestroy {
             I18nService.t('FU.msg.aucunModeleDeReconciliationTrouvePour', { p0: boFileName || 'BO', p1: partnerFileName || 'Partenaire' }) +
             I18nService.t('FU.msg.veuillezConfigurerUnModeleDeTraitement')
         );
+    }
+
+    /**
+     * Modèle BO utilisé pour la réconciliation : celui du traitement assisté, sinon celui
+     * dont le motif correspond au nom du fichier BO.
+     */
+    private resolveUsedBoModelHint(models: AutoProcessingModel[], boFileName: string): BoModelHint {
+        if (this.assistedBoTreatmentModelId) {
+            return this.assistedBoTreatmentModelId;
+        }
+        if (!boFileName) {
+            return null;
+        }
+        return models.find(m =>
+            (m.fileType === 'bo' || m.fileType === 'both')
+            && this.matchesFilePattern(boFileName, m.filePattern)
+        ) ?? null;
     }
 
     private modelHasPartnerKeyConfig(model: AutoProcessingModel): boolean {
@@ -9310,13 +9331,19 @@ export class FileUploadComponent implements OnInit, OnDestroy {
             // Clés de réconciliation de tous les modèles retenus : toujours conservées.
             const keyColumns = [...partnerModels, ...boModels].flatMap(m => {
                 const rk = m.reconciliationKeys;
-                const conditional = [rk?.partnerConditionalKeys, rk?.boConditionalKeys].flatMap(c => c?.enabled ? [
+                const perBo = Object.values(rk?.boModelConfigs || {});
+                const conditional = [
+                    rk?.partnerConditionalKeys,
+                    rk?.boConditionalKeys,
+                    ...perBo.flatMap(c => [c.partnerConditionalKeys, c.boConditionalKeys])
+                ].flatMap(c => c?.enabled ? [
                     c.conditionColumn,
                     c.defaultKeyColumn || '',
                     ...(c.rules || []).flatMap(r => [r.keyColumn, r.boKeyColumn || ''])
                 ] : []);
                 return [
                     ...(rk?.partnerKeys || []),
+                    ...perBo.flatMap(c => c.partnerKeys || []),
                     ...(rk?.boKeys || []),
                     ...Object.values(rk?.boModelKeys || {}).flat(),
                     ...conditional
@@ -9511,9 +9538,17 @@ export class FileUploadComponent implements OnInit, OnDestroy {
                 if (keyDetectionResult.modelId) {
                     try {
                         const models = await this.autoProcessingService.getAllModelsUnrestricted();
-                        const usedModel = models.find(m =>
+                        const foundModel = models.find(m =>
                             (m.id || m.modelId) === keyDetectionResult.modelId
                         );
+                        // Configuration du modèle BO utilisé (modèle partenaire rattaché à plusieurs BO).
+                        const usedModel = foundModel
+                            ? this.partnerConditionalKeysService.specializeForBoModel(
+                                foundModel,
+                                processedBoData,
+                                this.resolveUsedBoModelHint(models, boFileName)
+                            )
+                            : undefined;
 
                         if (usedModel?.reconciliationKeys?.boTreatments) {
                             processedBoData = this.applyBoTreatments(

@@ -3,7 +3,7 @@ import { firstValueFrom } from 'rxjs';
 import { SharedUiModule } from '../../shared/shared-ui.module';
 import { CdkDragDrop, moveItemInArray } from '@angular/cdk/drag-drop';
 import { FormBuilder, FormGroup, Validators, FormArray, FormControl } from '@angular/forms';
-import { AutoProcessingService, AutoProcessingModel, DEFAULT_PRE_PROCESSING_SECTION_ORDER, ENV_COLUMN_NAME, ENV_COLUMN_OPTIONS, EnvColumnOption, ModelColumnMathRule, ModelFormatAction, ModelFormatActionType, ModelFormatColumnSettings, ModelPreProcessingConfig, ModelPreProcessingSectionId, ModelRowFilter, ModelColumnValueMapping, ModelColumnConcatRule, ModelColumnRenameRule, ModelCrossDedupRule, resolvePreProcessingSectionOrder, ModelEnvColumnConfig, ModelPaysColumnConfig, PAYS_COLUMN_NAME, ModelExportColumnFilterConfig, PartnerConditionalKeyRule, PartnerConditionalKeysConfig, BoConditionalKeysConfig, TrxboOppartConfig, TrxboRegularisationRule, TrxboRegularisationComponent, TrxboAggregationType } from '../../services/auto-processing.service';
+import { AutoProcessingService, AutoProcessingModel, DEFAULT_PRE_PROCESSING_SECTION_ORDER, ENV_COLUMN_NAME, ENV_COLUMN_OPTIONS, EnvColumnOption, ModelColumnMathRule, ModelFormatAction, ModelFormatActionType, ModelFormatColumnSettings, ModelPreProcessingConfig, ModelPreProcessingSectionId, ModelRowFilter, ModelColumnValueMapping, ModelColumnConcatRule, ModelColumnRenameRule, ModelCrossDedupRule, resolvePreProcessingSectionOrder, ModelEnvColumnConfig, ModelPaysColumnConfig, PAYS_COLUMN_NAME, ModelExportColumnFilterConfig, PartnerConditionalKeyRule, PartnerConditionalKeysConfig, BoConditionalKeysConfig, BoModelReconciliationConfig, ModelRowFilterConditionOperator, ModelRowFilterValueCondition, TrxboOppartConfig, TrxboRegularisationRule, TrxboRegularisationComponent, TrxboAggregationType } from '../../services/auto-processing.service';
 import { FileWatcherService } from '../../services/file-watcher.service';
 import { AppStateService } from '../../services/app-state.service';
 import { ModelManagementService } from '../../services/model-management.service';
@@ -20,6 +20,7 @@ import {
   serializeExtractionFormat
 } from '../../utils/column-extraction.util';
 import { I18nService } from '../../services/i18n/i18n.service';
+import { DsTab } from '../../shared/ui/tabs/ds-tabs.component';
 
 /** Identifiants internes des catégories de modèles (clés de regroupement, jamais traduits). */
 const CATEGORY_CASHIN = 'Partenaire CASHIN';
@@ -343,6 +344,13 @@ export class AutoProcessingModelsComponent implements OnInit {
   boConditionColumn = '';
   boConditionalDefaultKeyColumn = '';
   boConditionalKeyRules: PartnerConditionalKeyRule[] = [];
+
+  /** Configuration propre à chaque modèle BO rattaché (dès 2 modèles BO). */
+  boModelConfigs: Record<string, BoModelReconciliationConfig> = {};
+  /** Modèle BO dont la configuration est en cours d'édition (onglet). */
+  activeBoConfigModelId: string | null = null;
+  /** Onglets « modèle BO » (référence stable pour ds-tabs, OnPush). */
+  boConfigTabs: DsTab[] = [];
   
   // Colonnes disponibles pour le fichier modèle
   availableTemplateColumns: string[] = [];
@@ -1277,6 +1285,7 @@ export class AutoProcessingModelsComponent implements OnInit {
     });
 
     this.syncBoKeysFromModelSelection();
+    this.syncBoModelConfigsWithSelection();
   }
 
   getAvailableBOModels(): AutoProcessingModel[] {
@@ -1352,9 +1361,30 @@ export class AutoProcessingModelsComponent implements OnInit {
       .sort((a, b) => a.localeCompare(b, 'fr'));
   }
 
-  /** Colonnes affichées dans « Clés BO conditionnelles » (toutes sources BO fusionnées). */
+  /**
+   * Colonnes affichées dans « Clés BO conditionnelles » et « Clé <modèle BO> » : celles du modèle BO
+   * de l'onglet actif quand chaque modèle BO a sa configuration, sinon toutes sources BO fusionnées.
+   */
   getBoConditionalColumnOptions(): string[] {
-    const columns = new Set<string>(this.collectBoColumnsForSelectedModels(this.selectedBOModels));
+    const activeBoId = this.hasPerBoModelConfig() ? this.getConfigBoModelId() : null;
+    const columns = new Set<string>();
+
+    if (activeBoId) {
+      const boModel = this.findBoModel(activeBoId);
+      if (boModel) {
+        this.appendBoColumnsFromModel(columns, boModel, activeBoId);
+      }
+      this.getBoModelFileColumns(activeBoId).forEach(col => columns.add(this.normalizeColumnName(col)));
+      (this.boModelKeySelection[activeBoId] || []).forEach(col => columns.add(this.normalizeColumnName(col)));
+      // Valeurs déjà configurées : toujours proposées pour rester sélectionnées.
+      this.partnerConditionalKeyRules
+        .map(rule => rule.boKeyColumn || '')
+        .filter(col => !!col.trim())
+        .forEach(col => columns.add(this.normalizeColumnName(col)));
+    } else {
+      this.collectBoColumnsForSelectedModels(this.selectedBOModels).forEach(col => columns.add(col));
+      this.availableBOColumns.forEach(col => columns.add(this.normalizeColumnName(col)));
+    }
 
     this.extractColumnsFromConditionalKeys({
       enabled: this.boConditionalKeysEnabled,
@@ -1362,8 +1392,6 @@ export class AutoProcessingModelsComponent implements OnInit {
       defaultKeyColumn: this.boConditionalDefaultKeyColumn,
       rules: this.boConditionalKeyRules
     }).forEach(col => columns.add(this.normalizeColumnName(col)));
-
-    this.availableBOColumns.forEach(col => columns.add(this.normalizeColumnName(col)));
 
     return Array.from(columns)
       .filter(col => !!col)
@@ -2050,7 +2078,9 @@ export class AutoProcessingModelsComponent implements OnInit {
         boModelKeys: formValue.reconciliationKeys?.boModelKeys || {},
         boTreatments: formValue.reconciliationKeys?.boTreatments || {},
         partnerConditionalKeys: this.buildPartnerConditionalKeysConfig(),
-        boConditionalKeys: this.buildBoConditionalKeysConfig()
+        boConditionalKeys: this.buildBoConditionalKeysConfig(),
+        // Plusieurs modèles BO : configuration par modèle BO (remplace la configuration commune).
+        ...(this.buildBoModelConfigsForSave() || {})
       })),
       reconciliationLogic: {
         type: formValue.logicType || 'STANDARD',
@@ -2340,6 +2370,7 @@ export class AutoProcessingModelsComponent implements OnInit {
 
     this.loadPartnerConditionalKeysConfig(sourceModel.reconciliationKeys?.partnerConditionalKeys);
     this.loadBoConditionalKeysConfig(sourceModel.reconciliationKeys?.boConditionalKeys);
+    this.initBoModelConfigs(sourceModel.reconciliationKeys?.boModelConfigs);
 
     console.log('✅ Modèles BO chargés pour édition:', this.selectedBOModels);
     console.log('✅ Clés BO chargées pour édition (corrigées):', this.selectedBOKeys);
@@ -3099,6 +3130,146 @@ export class AutoProcessingModelsComponent implements OnInit {
       return;
     }
     this.boConditionalKeyRules.splice(index, 1);
+  }
+
+  // ===== CONFIGURATION PAR MODÈLE BO (modèle partenaire rattaché à plusieurs modèles BO) =====
+
+  /** Une configuration distincte par modèle BO dès que plusieurs modèles BO sont rattachés. */
+  hasPerBoModelConfig(): boolean {
+    return this.selectedBOModels.length >= 2;
+  }
+
+  /** Modèle BO dont la configuration est affichée (onglet actif, ou l'unique modèle BO). */
+  getConfigBoModelId(): string | null {
+    if (this.activeBoConfigModelId && this.selectedBOModels.includes(this.activeBoConfigModelId)) {
+      return this.activeBoConfigModelId;
+    }
+    return this.selectedBOModels.length === 1 ? this.selectedBOModels[0] : null;
+  }
+
+  /** Nom du modèle BO utilisé dans les libellés (ex. « Clé TRXGU1 ») ; vide si indéterminé. */
+  getConfigBoModelLabel(): string {
+    const id = this.getConfigBoModelId();
+    return id ? this.getBoModelName(id) : '';
+  }
+
+  private refreshBoConfigTabs(): void {
+    this.boConfigTabs = this.hasPerBoModelConfig()
+      ? this.selectedBOModels.map(id => ({ id, label: this.getBoModelName(id), icon: 'fa-file-alt' }))
+      : [];
+  }
+
+  selectBoConfigModel(modelId: string): void {
+    if (modelId === this.activeBoConfigModelId || !this.selectedBOModels.includes(modelId)) {
+      return;
+    }
+    this.captureActiveBoModelConfig();
+    this.activeBoConfigModelId = modelId;
+    this.applyBoModelConfigToFields(this.boModelConfigs[modelId]);
+  }
+
+  /** Configuration en cours d'édition (champs de l'écran). */
+  private buildBoModelConfigFromFields(): BoModelReconciliationConfig {
+    return JSON.parse(JSON.stringify({
+      partnerKeys: [...this.selectedPartnerKeys],
+      partnerConditionalKeys: this.buildPartnerConditionalKeysConfig(),
+      boConditionalKeys: this.buildBoConditionalKeysConfig()
+    }));
+  }
+
+  private captureActiveBoModelConfig(): void {
+    if (this.activeBoConfigModelId && this.selectedBOModels.includes(this.activeBoConfigModelId)) {
+      this.boModelConfigs[this.activeBoConfigModelId] = this.buildBoModelConfigFromFields();
+    }
+  }
+
+  private applyBoModelConfigToFields(config?: BoModelReconciliationConfig): void {
+    if (!config) {
+      return;
+    }
+    this.selectedPartnerKeys = [...(config.partnerKeys || [])];
+    this.loadPartnerConditionalKeysConfig(config.partnerConditionalKeys);
+    this.loadBoConditionalKeysConfig(config.boConditionalKeys);
+    this.modelForm.patchValue({
+      reconciliationKeys: { partnerKeys: this.selectedPartnerKeys }
+    }, { emitEvent: false });
+  }
+
+  /**
+   * Chargement d'un modèle : une configuration par modèle BO rattaché. Un modèle BO sans
+   * configuration propre reprend la configuration commune (comportement antérieur).
+   */
+  private initBoModelConfigs(stored?: Record<string, BoModelReconciliationConfig>): void {
+    this.boModelConfigs = {};
+    this.activeBoConfigModelId = null;
+    this.refreshBoConfigTabs();
+    if (!this.hasPerBoModelConfig()) {
+      return;
+    }
+    const common = this.buildBoModelConfigFromFields();
+    this.selectedBOModels.forEach(id => {
+      this.boModelConfigs[id] = JSON.parse(JSON.stringify(stored?.[id] ?? common));
+    });
+    this.activeBoConfigModelId = this.selectedBOModels[0];
+    this.applyBoModelConfigToFields(this.boModelConfigs[this.activeBoConfigModelId]);
+  }
+
+  /** Aligne les configurations par modèle BO sur la sélection des modèles BO. */
+  private syncBoModelConfigsWithSelection(): void {
+    this.captureActiveBoModelConfig();
+    this.refreshBoConfigTabs();
+    const previousActive = this.activeBoConfigModelId;
+
+    if (!this.hasPerBoModelConfig()) {
+      // Retour à un seul modèle BO : sa configuration devient la configuration commune.
+      const remaining = this.selectedBOModels[0];
+      if (previousActive && remaining && remaining !== previousActive) {
+        this.applyBoModelConfigToFields(this.boModelConfigs[remaining]);
+      }
+      this.boModelConfigs = {};
+      this.activeBoConfigModelId = null;
+      return;
+    }
+
+    // Un nouveau modèle BO démarre avec une copie de la configuration affichée.
+    const current = this.buildBoModelConfigFromFields();
+    Object.keys(this.boModelConfigs)
+      .filter(id => !this.selectedBOModels.includes(id))
+      .forEach(id => delete this.boModelConfigs[id]);
+    this.selectedBOModels.forEach(id => {
+      if (!this.boModelConfigs[id]) {
+        this.boModelConfigs[id] = JSON.parse(JSON.stringify(current));
+      }
+    });
+    if (!previousActive || !this.selectedBOModels.includes(previousActive)) {
+      this.activeBoConfigModelId = this.selectedBOModels[0];
+      this.applyBoModelConfigToFields(this.boModelConfigs[this.activeBoConfigModelId]);
+    }
+  }
+
+  /**
+   * Champs de sauvegarde : configuration par modèle BO et, au niveau commun, celle du premier
+   * modèle BO (repli pour les traitements qui ne connaissent pas le modèle BO utilisé).
+   */
+  private buildBoModelConfigsForSave(): Pick<
+    NonNullable<AutoProcessingModel['reconciliationKeys']>,
+    'partnerKeys' | 'partnerConditionalKeys' | 'boConditionalKeys' | 'boModelConfigs'
+  > | null {
+    if (!this.hasPerBoModelConfig()) {
+      return null;
+    }
+    this.captureActiveBoModelConfig();
+    const boModelConfigs: Record<string, BoModelReconciliationConfig> = {};
+    this.selectedBOModels.forEach(id => {
+      boModelConfigs[id] = this.boModelConfigs[id] ?? this.buildBoModelConfigFromFields();
+    });
+    const first = boModelConfigs[this.selectedBOModels[0]];
+    return {
+      partnerKeys: [...(first.partnerKeys || [])],
+      partnerConditionalKeys: first.partnerConditionalKeys,
+      boConditionalKeys: first.boConditionalKeys,
+      boModelConfigs
+    };
   }
 
   // ===== MÉTHODES POUR LES CLÉS DE RÉCONCILIATION =====
@@ -4316,6 +4487,9 @@ export class AutoProcessingModelsComponent implements OnInit {
     this.templateFileColumns = [];
     this.resetPartnerConditionalKeysConfig();
     this.resetBoConditionalKeysConfig();
+    this.boModelConfigs = {};
+    this.activeBoConfigModelId = null;
+    this.boConfigTabs = [];
     this.availableBOColumns = [];
     this.selectedColumns = []; // Réinitialiser la sélection multiple
     
@@ -4758,6 +4932,51 @@ export class AutoProcessingModelsComponent implements OnInit {
     filter.selectedValues = this.parseFilterValuesInput(input);
   }
 
+  /** Opérateurs proposés pour les conditions d'un filtre de lignes. */
+  readonly rowFilterConditionOperators: { value: ModelRowFilterConditionOperator; labelKey: string }[] = [
+    { value: 'notEmpty', labelKey: 'APM.rowFilterOpNotEmpty' },
+    { value: 'empty', labelKey: 'APM.rowFilterOpEmpty' },
+    { value: 'equals', labelKey: 'APM.rowFilterOpEquals' },
+    { value: 'notEquals', labelKey: 'APM.rowFilterOpNotEquals' }
+  ];
+
+  /** Ajoute une condition (ex. finished → actionDone non vide) ; valeurs pré-remplies avec la dernière valeur conservée. */
+  addRowFilterValueCondition(filter: ModelRowFilter): void {
+    const lastValue = filter.selectedValues?.[filter.selectedValues.length - 1];
+    filter.valueConditions = [
+      ...(filter.valueConditions || []),
+      { values: lastValue ? [lastValue] : [], column: '', operator: 'notEmpty', value: '' }
+    ];
+  }
+
+  removeRowFilterValueCondition(filter: ModelRowFilter, index: number): void {
+    filter.valueConditions = (filter.valueConditions || []).filter((_, i) => i !== index);
+  }
+
+  getRowFilterConditionValuesInput(condition: ModelRowFilterValueCondition): string {
+    return (condition.values || []).join(', ');
+  }
+
+  updateRowFilterConditionValuesInput(condition: ModelRowFilterValueCondition, input: string): void {
+    condition.values = this.parseFilterValuesInput(input);
+  }
+
+  rowFilterConditionNeedsValue(condition: ModelRowFilterValueCondition): boolean {
+    return condition.operator === 'equals' || condition.operator === 'notEquals';
+  }
+
+  private buildRowFilterValueConditionsForSave(filter: ModelRowFilter): Pick<ModelRowFilter, 'valueConditions'> {
+    const valueConditions = (filter.valueConditions || [])
+      .filter(condition => condition.column?.trim() && condition.values?.length)
+      .map(condition => ({
+        values: [...condition.values],
+        column: condition.column.trim(),
+        operator: condition.operator || 'notEmpty',
+        ...(this.rowFilterConditionNeedsValue(condition) ? { value: (condition.value ?? '').trim() } : {})
+      }));
+    return valueConditions.length ? { valueConditions } : {};
+  }
+
   toggleFormatActionColumn(action: ModelFormatAction, column: string, checked: boolean): void {
     if (!action.columns) {
       action.columns = [];
@@ -5039,7 +5258,8 @@ export class AutoProcessingModelsComponent implements OnInit {
         id: filter.id,
         column: filter.column,
         selectedValues: [...filter.selectedValues],
-        enabled: filter.enabled !== false
+        enabled: filter.enabled !== false,
+        ...this.buildRowFilterValueConditionsForSave(filter)
       }));
 
     this.ensureFormatActionIds();
@@ -5290,7 +5510,11 @@ export class AutoProcessingModelsComponent implements OnInit {
       id: filter.id || `filter-${this.nextModelFilterId++}`,
       column: filter.column || '',
       selectedValues: [...(filter.selectedValues || [])],
-      enabled: filter.enabled !== false
+      enabled: filter.enabled !== false,
+      valueConditions: (filter.valueConditions || []).map(condition => ({
+        ...condition,
+        values: [...(condition.values || [])]
+      }))
     }));
 
     this.modelFormatActions = (config.formatActions || [])

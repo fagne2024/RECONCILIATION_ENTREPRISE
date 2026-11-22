@@ -12,6 +12,7 @@ import {
   ModelPreProcessingConfig,
   ModelPreProcessingSectionId,
   ModelRowFilter,
+  ModelRowFilterValueCondition,
   ModelColumnValueMapping,
   ModelColumnConcatRule,
   ModelColumnMathRule,
@@ -894,11 +895,7 @@ export class ModelPreProcessingService {
         if (!row) {
           return false;
         }
-        const key = resolveColumnKeyInRow(row, filter.column);
-        if (!key) {
-          return false;
-        }
-        return filter.selectedValues.includes(String(row[key] ?? ''));
+        return this.rowMatchesRowFilter(row, filter);
       });
       if (usage && filtered.length < countBefore) {
         usage.used.add(filter);
@@ -906,6 +903,49 @@ export class ModelPreProcessingService {
     }
 
     return filtered;
+  }
+
+  /**
+   * Ligne conservée par un filtre : valeur de la colonne parmi les valeurs à conserver et,
+   * pour cette valeur, toutes ses conditions remplies (ex. finished → actionDone non vide).
+   */
+  rowMatchesRowFilter(row: Record<string, string>, filter: ModelRowFilter): boolean {
+    const key = resolveColumnKeyInRow(row, filter.column);
+    if (!key) {
+      return false;
+    }
+    const value = String(row[key] ?? '');
+    if (!filter.selectedValues.includes(value)) {
+      return false;
+    }
+    const trimmed = value.trim();
+    return (filter.valueConditions || [])
+      .filter(condition => condition.column?.trim()
+        && (condition.values || []).some(v => v.trim() === trimmed))
+      .every(condition => this.rowMatchesValueCondition(row, condition));
+  }
+
+  private rowMatchesValueCondition(
+    row: Record<string, string>,
+    condition: ModelRowFilterValueCondition
+  ): boolean {
+    const key = resolveColumnKeyInRow(row, condition.column);
+    const raw = key ? String(row[key] ?? '').trim() : '';
+    // Export d'une requête SQL : NULL peut arriver sous forme de texte « NULL ».
+    const isEmpty = raw === '' || raw.toUpperCase() === 'NULL';
+    const expected = (condition.value ?? '').trim();
+    switch (condition.operator) {
+      case 'empty':
+        return isEmpty;
+      case 'notEmpty':
+        return !isEmpty;
+      case 'equals':
+        return raw === expected;
+      case 'notEquals':
+        return raw !== expected;
+      default:
+        return true;
+    }
   }
 
   private async applyRowFiltersAsync(
@@ -944,8 +984,7 @@ export class ModelPreProcessingService {
           if (!row) {
             continue;
           }
-          const key = resolveColumnKeyInRow(row, filter.column);
-          if (key && filter.selectedValues.includes(String(row[key] ?? ''))) {
+          if (this.rowMatchesRowFilter(row, filter)) {
             next.push(row);
           }
         }
@@ -1962,7 +2001,16 @@ export class ModelPreProcessingService {
 
     const detailLines: string[] = [];
     filters.forEach(filter => {
-      detailLines.push(I18nService.t('MSG.msg.filtre', { p0: filter.column, p1: filter.selectedValues.join(', ') }));
+      const conditions = (filter.valueConditions || [])
+        .filter(c => c.column?.trim() && c.values?.length)
+        .map(c => I18nService.t('APM.rowFilterCondSummary', {
+          values: c.values.join(', '),
+          condition: describeRowFilterCondition(c)
+        }));
+      detailLines.push(I18nService.t('MSG.msg.filtre', {
+        p0: filter.column,
+        p1: [filter.selectedValues.join(', '), ...conditions].join(' ; ')
+      }));
     });
     crossDedupRules.forEach(rule => {
       const cote = rule.deleteSide === 'B' ? rule.columnB : rule.columnA;
@@ -2741,5 +2789,21 @@ export class ModelPreProcessingService {
       }
       return filtered;
     });
+  }
+}
+
+/** Libellé d'une condition de filtre (ex. « actionDone n'est pas vide »). */
+export function describeRowFilterCondition(condition: ModelRowFilterValueCondition): string {
+  switch (condition.operator) {
+    case 'empty':
+      return I18nService.t('APM.rowFilterCondEmptyText', { column: condition.column });
+    case 'notEmpty':
+      return I18nService.t('APM.rowFilterCondNotEmptyText', { column: condition.column });
+    case 'equals':
+      return `${condition.column} = ${condition.value ?? ''}`;
+    case 'notEquals':
+      return `${condition.column} ≠ ${condition.value ?? ''}`;
+    default:
+      return condition.column;
   }
 }

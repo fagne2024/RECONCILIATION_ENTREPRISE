@@ -592,7 +592,29 @@
     "removeKey": "Remove this key",
     "ui": {
       "ecart": "Gap"
-    }
+    },
+    "Clémodèle": "→ {{name}} key =",
+    "Clésmodèle": "{{name}} keys:",
+    "Clésmodèleconditionnelles": "Conditional {{name}} keys:",
+    "Clésmodèleconditionnellesoptionnel": "Conditional {{name}} keys (optional)",
+    "Colonneconditionmodèle": "Condition column ({{name}})",
+    "configParModeleBoTitre": "Configuration per BO model used",
+    "configParModeleBoAide": "This partner model is linked to several BO models. The partner keys and conditional keys below belong to {{name}}: they apply when the BO file is processed with that model.",
+    "rowFilterCondHelp": "Per-value conditions (optional): a kept value can require a condition on another column. E.g. keep \"finished\" only when actionDone is not empty (NULL counts as empty).",
+    "rowFilterCondIfValue": "If {{column}} =",
+    "rowFilterCondThen": "then",
+    "rowFilterCondValuesLabel": "Values concerned, comma-separated",
+    "rowFilterCondOperatorLabel": "Condition",
+    "rowFilterCondValueLabel": "Compared value",
+    "rowFilterCondAdd": "Add a condition",
+    "rowFilterCondRemove": "Remove the condition",
+    "rowFilterOpNotEmpty": "is not empty",
+    "rowFilterOpEmpty": "is empty",
+    "rowFilterOpEquals": "equals",
+    "rowFilterOpNotEquals": "is different from",
+    "rowFilterCondEmptyText": "{{column}} empty",
+    "rowFilterCondNotEmptyText": "{{column}} not empty",
+    "rowFilterCondSummary": "{{values}} if {{condition}}"
   },
   "BQ": {
     "ReconResultByComment": "By comment",

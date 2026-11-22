@@ -17,6 +17,25 @@ export interface ModelRowFilter {
   column: string;
   selectedValues: string[];
   enabled: boolean;
+  /**
+   * Conditions supplémentaires pour certaines valeurs conservées (équivalent SQL
+   * `tag = 'sended' OR (tag = 'finished' AND actionDone IS NOT NULL)`) : une ligne dont la
+   * valeur figure dans `values` n'est conservée que si TOUTES ses conditions sont remplies.
+   */
+  valueConditions?: ModelRowFilterValueCondition[];
+}
+
+/** Opérateur d'une condition de filtre : vide / non vide (NULL compris), égal / différent. */
+export type ModelRowFilterConditionOperator = 'empty' | 'notEmpty' | 'equals' | 'notEquals';
+
+export interface ModelRowFilterValueCondition {
+  /** Valeurs de la colonne filtrée concernées (ex. ['finished']). */
+  values: string[];
+  /** Autre colonne testée (ex. actionDone). */
+  column: string;
+  operator: ModelRowFilterConditionOperator;
+  /** Valeur comparée (equals / notEquals). */
+  value?: string;
 }
 
 export type ModelFormatActionType =
@@ -293,6 +312,17 @@ export interface PartnerConditionalKeysConfig {
 /** Clés BO conditionnelles (optionnel) — même principe sur les colonnes du fichier BO. */
 export type BoConditionalKeysConfig = PartnerConditionalKeysConfig;
 
+/**
+ * Configuration d'un modèle partenaire propre à UN modèle BO rattaché.
+ * Quand plusieurs modèles BO sont rattachés, celle du modèle BO utilisé est appliquée
+ * (clés partenaire, clés conditionnelles partenaire / BO).
+ */
+export interface BoModelReconciliationConfig {
+  partnerKeys?: string[];
+  partnerConditionalKeys?: PartnerConditionalKeysConfig;
+  boConditionalKeys?: BoConditionalKeysConfig;
+}
+
 export interface TrxboOppartConfig {
   operationTypes?: {
     impact?: string;
@@ -387,6 +417,8 @@ export interface AutoProcessingModel {
     boTreatments?: any;
     partnerConditionalKeys?: PartnerConditionalKeysConfig;
     boConditionalKeys?: BoConditionalKeysConfig;
+    /** Configuration par modèle BO rattaché (id du modèle BO → configuration). */
+    boModelConfigs?: Record<string, BoModelReconciliationConfig>;
   };
   boColumnFilters?: BOColumnFilter[]; // Filtres BO appliqués
   columnProcessingRules?: ColumnProcessingRule[]; // Règles de traitement des colonnes

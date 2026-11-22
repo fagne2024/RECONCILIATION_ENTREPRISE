@@ -4,7 +4,7 @@ import { AutoProcessingService, AutoProcessingModel } from './auto-processing.se
 import { ReconciliationService } from './reconciliation.service';
 import { AppStateService } from './app-state.service';
 import { KeySuggestionService } from './key-suggestion.service';
-import { PartnerConditionalKeysService } from './partner-conditional-keys.service';
+import { BoModelHint, PartnerConditionalKeysService } from './partner-conditional-keys.service';
 import { ReconciliationResponse } from '../models/reconciliation-response.model';
 import { bruteForceReconciliationKeyMatch } from '../utils/reconciliation-key.util';
 import { AutoDiscoveryReconciliationService, ReconciliationPlan, ColumnProfile } from './auto-discovery-reconciliation.service';
@@ -283,7 +283,7 @@ export class MagicReconciliationService {
     let mode: 'pattern' | 'discovery' = 'discovery';
 
     onProgress?.({ step: I18nService.t('MSG.msg.rechercheDesClesPour', { p0: partnerFileName }) });
-    keyResult = this.resolveKeysFromModels(models, boFileName, partnerFileName, boData, partnerData);
+    keyResult = this.resolveKeysFromModels(models, boFileName, partnerFileName, boData, partnerData, boModel);
     if (keyResult) {
       mode = 'pattern';
     }
@@ -325,7 +325,11 @@ export class MagicReconciliationService {
 
     let boKeyColumn = keyResult.boKeyColumn;
     let partnerKeyColumn = keyResult.partnerKeyColumn;
-    const usedModel = keyResult.model ?? partnerModel ?? boModel;
+    const foundModel = keyResult.model ?? partnerModel ?? boModel;
+    // Modèle partenaire rattaché à plusieurs modèles BO : configuration du modèle BO utilisé.
+    const usedModel = foundModel
+      ? this.partnerConditionalKeysService.specializeForBoModel(foundModel, processedBo, boModel)
+      : undefined;
     if (usedModel?.reconciliationKeys?.boTreatments) {
       processedBo = this.applyBoTreatments(processedBo, usedModel.reconciliationKeys.boTreatments);
     }
@@ -783,7 +787,8 @@ export class MagicReconciliationService {
     boFileName: string,
     partnerFileName: string,
     boData: Record<string, string>[],
-    partnerData: Record<string, string>[]
+    partnerData: Record<string, string>[],
+    boModelHint?: BoModelHint
   ): { boKeyColumn: string; partnerKeyColumn: string; modelId?: string; model?: AutoProcessingModel } | null {
     let candidates = models.filter(m =>
       (m.fileType === 'partner' || m.fileType === 'both') &&
@@ -806,7 +811,7 @@ export class MagicReconciliationService {
     }
 
     for (const model of candidates) {
-      const resolved = this.resolveKeysFromPartnerModel(model, boData, partnerData);
+      const resolved = this.resolveKeysFromPartnerModel(model, boData, partnerData, boModelHint);
       if (resolved) {
         return { ...resolved, model };
       }
@@ -817,12 +822,14 @@ export class MagicReconciliationService {
   private resolveKeysFromPartnerModel(
     model: AutoProcessingModel,
     boData: Record<string, string>[],
-    partnerData: Record<string, string>[]
+    partnerData: Record<string, string>[],
+    boModelHint?: BoModelHint
   ): { boKeyColumn: string; partnerKeyColumn: string; modelId?: string } | null {
     const resolved = this.partnerConditionalKeysService.resolveKeysFromPartnerModel(
       model,
       boData,
-      partnerData
+      partnerData,
+      boModelHint
     );
     if (!resolved) {
       return null;

@@ -167,4 +167,66 @@ describe('PartnerConditionalKeysService', () => {
     const keys = service.resolveKeysFromPartnerModel(oppartModel, boGa, partnerGa);
     expect(keys).toEqual({ boKeyColumn: 'CLE', partnerKeyColumn: 'Numero Trans GU' });
   });
+
+  describe('modèle partenaire rattaché à plusieurs modèles BO (configuration par modèle BO)', () => {
+    const multiBoModel = {
+      name: 'PARTENAIRE',
+      filePattern: '*PART*.csv',
+      fileType: 'partner',
+      autoApply: true,
+      reconciliationKeys: {
+        partnerKeys: ['Reference'],
+        boKeys: [],
+        boModels: ['trxgu1', 'trxgu2'],
+        boModelKeys: { trxgu1: ['Numéro Trans GU'], trxgu2: ['ID Partenaire'] },
+        boTreatments: { trxgu1: ['t1'], trxgu2: ['t2'] },
+        boModelConfigs: {
+          trxgu1: {
+            partnerKeys: ['Reference'],
+            partnerConditionalKeys: { enabled: false, conditionColumn: '', rules: [] }
+          },
+          trxgu2: {
+            partnerKeys: ['Transaction ID'],
+            partnerConditionalKeys: {
+              enabled: true,
+              conditionColumn: 'SERVICE',
+              rules: [{ whenValue: 'CASHIN', keyColumn: 'Token', boKeyColumn: 'CLE' }]
+            }
+          }
+        }
+      }
+    } as AutoProcessingModel;
+
+    const partner = [{ SERVICE: 'CASHOUT', Reference: 'R1', 'Transaction ID': 'T1', Token: 'K1' }];
+
+    it('applique la configuration du modèle BO indiqué', () => {
+      const bo = [{ 'Numéro Trans GU': 'R1', 'ID Partenaire': 'T1', CLE: 'K1' }];
+      const forGu2 = service.specializeForBoModel(multiBoModel, bo, 'trxgu2');
+      expect(forGu2.reconciliationKeys?.partnerKeys).toEqual(['Transaction ID']);
+      expect(forGu2.reconciliationKeys?.boModels).toEqual(['trxgu2']);
+      expect(forGu2.reconciliationKeys?.boModelKeys).toEqual({ trxgu2: ['ID Partenaire'] });
+      expect(forGu2.reconciliationKeys?.boTreatments).toEqual({ trxgu2: ['t2'] });
+      expect(forGu2.reconciliationKeys?.partnerConditionalKeys?.enabled).toBe(true);
+      expect(forGu2.reconciliationKeys?.boModelConfigs).toBeUndefined();
+
+      expect(service.resolveKeysFromPartnerModel(multiBoModel, bo, partner, { id: 'trxgu1' })).toEqual({
+        boKeyColumn: 'Numéro Trans GU',
+        partnerKeyColumn: 'Reference'
+      });
+    });
+
+    it('détecte le modèle BO d’après les colonnes clés du fichier BO', () => {
+      const boGu2 = [{ 'ID Partenaire': 'T1', CLE: 'K1' }];
+      expect(service.resolveUsedBoModelId(multiBoModel, boGu2)).toBe('trxgu2');
+      const boGu1 = [{ 'Numéro Trans GU': 'R1' }];
+      expect(service.resolveKeysFromPartnerModel(multiBoModel, boGu1, partner)).toEqual({
+        boKeyColumn: 'Numéro Trans GU',
+        partnerKeyColumn: 'Reference'
+      });
+    });
+
+    it('laisse inchangé un modèle sans configuration par modèle BO', () => {
+      expect(service.specializeForBoModel(mtncmModel, boRows, 'trxbo')).toBe(mtncmModel);
+    });
+  });
 });
