@@ -8,6 +8,8 @@ import {
   isLeadingZeroNumericString,
   isMsisdnPreserveColumn,
   isTransactionIdPreserveColumn,
+  isPartnerIdDotPreserveColumn,
+  stripSpecialChars,
   finalizeTextPreserveColumnValue,
   DEFAULT_MSISDN_DIGIT_LENGTH
 } from './text-cell.util';
@@ -163,6 +165,8 @@ function createRuleApplier(rule: ColumnProcessingRule): (value: unknown) => stri
   const formatType = extraction ? undefined : rule.formatType;
   // Une extraction garde les caractères spéciaux de la valeur extraite (ex. « . » d'un domaine).
   const removeSpecialChars = !!rule.removeSpecialChars && !extraction;
+  // ID partenaire (ex. Orange Money MP261121.2357.A64116) : les points font partie de l'identifiant.
+  const keepDots = isPartnerIdDotPreserveColumn(outColumn) || isPartnerIdDotPreserveColumn(rule.sourceColumn);
   const msisdnOut = isMsisdnPreserveColumn(outColumn);
   const hasTransformations = ruleHasTransformations(rule);
 
@@ -231,7 +235,7 @@ function createRuleApplier(rule: ColumnProcessingRule): (value: unknown) => stri
     }
 
     if (removeSpecialChars) {
-      stringValue = stringValue.replace(/[^a-zA-Z0-9\s]/g, '');
+      stringValue = stripSpecialChars(stringValue, keepDots);
     }
 
     if (toUpperCase) {
