@@ -11,6 +11,16 @@ describe('Pays proposés avant un traitement', () => {
     expect(liste.slice(13)).toEqual([{ code: 'BJ', nom: 'Bénin' }]);
   });
 
+  it('pays des rapports donnés par leur nom : ramenés au code (Gabon = GA, pas de doublon)', () => {
+    const liste = buildPaysTraitement(['Gabon', 'SENEGAL', 'Bénin', 'TOGO'], []);
+    const codes = liste.map(p => p.code);
+    expect(codes).not.toContain('GABON');
+    expect(codes).not.toContain('SENEGAL');
+    expect(codes.filter(c => c === 'GA').length).toBe(1);
+    expect(liste.find(p => p.code === 'BJ')?.nom).toBe('Bénin');
+    expect(liste.find(p => p.code === 'TG')?.nom).toBe('Togo');
+  });
+
   it('sans rapports accessibles : la liste par défaut seule', () => {
     expect(buildPaysTraitement(null, null).map(p => p.code))
       .toEqual(['SN', 'CI', 'CITCH', 'GN', 'CM', 'GA', 'ML', 'BF', 'KE', 'TZ', 'UG', 'MR', 'GM']);

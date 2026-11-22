@@ -3,6 +3,7 @@ import { HttpClient, HttpHeaders } from '@angular/common/http';
 import { Observable, forkJoin, of } from 'rxjs';
 import { catchError, map } from 'rxjs/operators';
 import { Pays, ProfilPays } from '../models/pays.model';
+import { countryIsoCode, countryNameFromCode, countryNameKey } from '../utils/country-codes.util';
 
 /** Pays toujours proposés avant un traitement (code → nom). */
 export const PAYS_TRAITEMENT_PAR_DEFAUT: ReadonlyArray<{ code: string; nom: string }> = [
@@ -51,12 +52,27 @@ export function buildPaysTraitement(
   for (const p of PAYS_TRAITEMENT_PAR_DEFAUT) {
     out.set(p.code, { ...p });
   }
+  // Nom → code : un rapport peut porter le nom du pays (« Gabon », « SENEGAL ») au lieu du code.
+  const codeParNom = new Map<string, string>();
+  for (const p of PAYS_TRAITEMENT_PAR_DEFAUT) {
+    if (!PAYS_TRAITEMENT_ALIAS_NOMS[p.code]) codeParNom.set(countryNameKey(p.nom), p.code);
+  }
+  noms.forEach((nom, code) => {
+    if (!codeParNom.has(countryNameKey(nom))) codeParNom.set(countryNameKey(nom), code);
+  });
+  const versCode = (brut: string): string => {
+    const upper = brut.toUpperCase();
+    if (out.has(upper) || noms.has(upper) || PAYS_TRAITEMENT_ALIAS_NOMS[upper]) return upper;
+    return codeParNom.get(countryNameKey(brut)) || countryIsoCode(brut) || upper;
+  };
   const supplementaires = [...new Set((rapports || [])
-    .map(c => String(c ?? '').trim().toUpperCase())
+    .map(c => String(c ?? '').trim())
+    .filter(Boolean)
+    .map(versCode)
     .filter(c => /^[A-Z0-9]{2,10}$/.test(c) && c !== 'GNL' && !out.has(c)))]
     .sort();
   for (const code of supplementaires) {
-    out.set(code, { code, nom: PAYS_TRAITEMENT_ALIAS_NOMS[code] || noms.get(code) || '' });
+    out.set(code, { code, nom: PAYS_TRAITEMENT_ALIAS_NOMS[code] || noms.get(code) || countryNameFromCode(code) || '' });
   }
   return [...out.values()];
 }

@@ -56,6 +56,35 @@ export function countryNameFromCode(code: string | null | undefined): string | n
   return COUNTRY_CODE_TO_NAME[iso] ?? null;
 }
 
+/** Code ISO d'un pays saisi en code, alias (CITCH) ou nom complet ; null si inconnu. */
+export function countryIsoCode(value: string | null | undefined): string | null {
+  const trimmed = (value || '').trim();
+  if (!trimmed) {
+    return null;
+  }
+  const iso = resolveIsoCode(trimmed);
+  if (COUNTRY_CODE_TO_NAME[iso]) {
+    return iso;
+  }
+  const key = countryNameKey(trimmed);
+  const found = Object.entries(COUNTRY_CODE_TO_NAME).find(([, name]) => countryNameKey(name) === key);
+  return found ? found[0] : null;
+}
+
+/** Nom de pays comparable : minuscules, sans accents ni ponctuation (« SENEGAL » = « Sénégal »). */
+export function countryNameKey(value: string | null | undefined): string {
+  return (value || '')
+    .normalize('NFD')
+    .replace(/[̀-ͯ]/g, '')
+    .toLowerCase()
+    .replace(/[^a-z0-9]+/g, '');
+}
+
+/** Tous les codes pays connus du référentiel. */
+export function knownCountryCodes(): string[] {
+  return Object.keys(COUNTRY_CODE_TO_NAME);
+}
+
 /** Libellé pays affiché : code ISO / alias → nom complet, sinon valeur telle quelle. */
 export function countryDisplayLabel(country: string | null | undefined): string {
   if (!country) {

@@ -112,7 +112,8 @@ interface FiltreServeur {
 import { PopupService } from '../../services/popup.service';
 import { firstValueFrom } from 'rxjs';
 import { PaysService, PAYS_TRAITEMENT_PAR_DEFAUT } from '../../services/pays.service';
-import { PAYS_COLUMN_NAME } from '../../services/auto-processing.service';
+import { ENV_COLUMN_NAME, ENV_COLUMN_OPTIONS, PAYS_COLUMN_NAME } from '../../services/auto-processing.service';
+import { countryIsoCode } from '../../utils/country-codes.util';
 @Component({
   selector: 'app-traitement',
   templateUrl: './traitement.component.html',
@@ -830,16 +831,18 @@ End Sub`;
     }
   }
 
-  // ----- Colonne PAYS : code pays demandé avant chaque traitement (fichier partenaire) -----
-  /** Code pays du traitement en cours ('' = fichier BO, aucune colonne ajoutée). */
+  // ----- Colonnes PAYS et ENV : demandées (facultatives) avant chaque traitement -----
+  /** Code pays du traitement en cours ('' = pas de colonne PAYS ajoutée). */
   paysTraitement = '';
+  /** Environnement du traitement en cours ('' = pas de colonne ENV ajoutée). */
+  envTraitement = '';
   /** Pays connus (code → libellé « CI — Côte d'Ivoire ») pour la liste déroulante. */
   private paysConnus: { code: string; libelle: string }[] | null = null;
 
   /**
-   * Avant chaque traitement : le pays du fichier partenaire est obligatoire (colonne PAYS
-   * sur toutes les lignes), choisi dans la liste des pays. « AUCUN (fichier BO) » traite sans
-   * ajouter la colonne. Annuler retire les fichiers ajoutés et ne lance pas le traitement.
+   * Avant chaque traitement : pays puis environnement, tous deux facultatifs. Le choix est écrit
+   * sur chaque ligne du fichier final (colonnes PAYS et ENV) ; « Passer » ou fermer le pop-up
+   * continue le traitement sans ajouter la colonne.
    */
   private async demanderPaysFichier(): Promise<boolean> {
     if (!this.selectedFiles.length || this.showCsvPreview) {
@@ -854,49 +857,63 @@ End Sub`;
       }
       this.paysConnus = liste.map(p => ({ code: p.code, libelle: p.nom ? `${p.code} — ${p.nom}` : p.code }));
     }
-    const aucun = this.t('TRT.paysAucunBo');
-    const message = this.t('TRT.paysDemande', { p0: PAYS_COLUMN_NAME, p1: aucun });
+
+    // 1) Pays (facultatif)
+    const passerPays = this.t('TRT.paysPasser');
     const titre = this.t('TRT.paysTitre');
-    const choisir = this.t('LBL.chooseDash');
+    const message = this.t('TRT.paysDemande', { p0: PAYS_COLUMN_NAME, p1: passerPays });
     for (;;) {
       const precedent = this.paysConnus.find(p => p.code === this.paysTraitement)?.libelle || '';
       // Liste déroulante des pays ; saisie du code si la liste n'est pas disponible (droits).
       const saisie = this.paysConnus.length
-        ? await this.popupService.showSelectInput(message, titre, [choisir, ...this.paysConnus.map(p => p.libelle), aucun], precedent || choisir)
-        : await this.popupService.showAutocompleteInput(message, titre, [aucun], this.paysTraitement || '');
-      if (saisie === null) {
-        this.selectedFiles = [];
-        this.showError('upload', this.t('TRT.paysAnnule'));
-        return false;
-      }
-      const valeur = saisie.trim();
-      if (valeur === aucun) {
+        ? await this.popupService.showSelectInput(message, titre, [passerPays, ...this.paysConnus.map(p => p.libelle)], precedent || passerPays)
+        : await this.popupService.showAutocompleteInput(message, titre, [passerPays], this.paysTraitement || '');
+      const valeur = (saisie ?? '').trim();
+      if (saisie === null || !valeur || valeur === passerPays) {
         this.paysTraitement = '';
-        return true;
-      }
-      if (valeur === choisir.trim() || !valeur) {
-        await this.popupService.showWarning(this.t('TRT.paysAChoisir'), titre);
-        continue;
+        break;
       }
       const connu = this.paysConnus.find(p => p.libelle === valeur);
-      const code = connu ? connu.code : valeur.toUpperCase();
+      const code = connu ? connu.code : (countryIsoCode(valeur) || valeur.toUpperCase());
       if (/^[A-Z0-9]{2,10}$/.test(code)) {
         this.paysTraitement = code;
-        return true;
+        break;
       }
       await this.popupService.showWarning(this.t('TRT.paysInvalide', { p0: valeur || '—' }), titre);
     }
+
+    // 2) Environnement (facultatif)
+    const passerEnv = this.t('TRT.envPasser');
+    const env = await this.popupService.showSelectInput(
+      this.t('TRT.envDemande', { p0: ENV_COLUMN_NAME, p1: passerEnv }),
+      this.t('TRT.envTitre'),
+      [passerEnv, ...ENV_COLUMN_OPTIONS],
+      this.envTraitement || passerEnv
+    );
+    this.envTraitement = env && env.trim() !== passerEnv ? env.trim() : '';
+    return true;
   }
 
-  /** Écrit le code pays dans la colonne PAYS de toutes les lignes chargées (navigateur). */
+  /** Colonnes constantes choisies avant le traitement (PAYS, ENV). */
+  private colonnesConstantesTraitement(): Record<string, string> {
+    const out: Record<string, string> = {};
+    if (this.paysTraitement) out[PAYS_COLUMN_NAME] = this.paysTraitement;
+    if (this.envTraitement) out[ENV_COLUMN_NAME] = this.envTraitement;
+    return out;
+  }
+
+  /** Écrit le pays et l'environnement choisis sur toutes les lignes chargées (navigateur). */
   private appliquerColonnePays(): void {
-    const code = this.paysTraitement;
-    if (!code || !this.allRows.length) {
+    const constantes = Object.entries(this.colonnesConstantesTraitement());
+    if (!constantes.length || !this.allRows.length) {
       return;
     }
-    this.allRows.mutateEach(row => { row[PAYS_COLUMN_NAME] = code; });
-    if (!this.allColumns.includes(PAYS_COLUMN_NAME)) {
-      this.allColumns = [...this.allColumns, PAYS_COLUMN_NAME];
+    this.allRows.mutateEach(row => {
+      for (const [col, val] of constantes) row[col] = val;
+    });
+    const manquantes = constantes.map(([col]) => col).filter(col => !this.allColumns.includes(col));
+    if (manquantes.length) {
+      this.allColumns = [...this.allColumns, ...manquantes];
     }
   }
 
@@ -1255,10 +1272,12 @@ End Sub`;
       if (!resume.nbLignes) {
         throw new Error(I18nService.t('TRT.msg.aucuneLigneNAPuEtre2'));
       }
-      if (this.paysTraitement) {
-        // Colonne PAYS ajoutée côté serveur : nouveau lot identique + la colonne constante.
-        this.updateProcessingPopup({ step: this.t('TRT.paysAjoute', { p0: PAYS_COLUMN_NAME, p1: this.paysTraitement }), progress: 93, message: '' });
-        const op = await this.traitementLotService.operer(lotId, { colonnesConstantes: { [PAYS_COLUMN_NAME]: this.paysTraitement } });
+      const constantes = this.colonnesConstantesTraitement();
+      if (Object.keys(constantes).length) {
+        // Colonnes PAYS / ENV ajoutées côté serveur : nouveau lot identique + les colonnes constantes.
+        const detail = Object.entries(constantes).map(([c, v]) => `${c} = ${v}`).join(', ');
+        this.updateProcessingPopup({ step: this.t('TRT.colonnesConstantesAjoutees', { p0: detail }), progress: 93, message: '' });
+        const op = await this.traitementLotService.operer(lotId, { colonnesConstantes: constantes });
         this.serverOriginLotId = op.nouveauLotId;
         resume = await this.traitementLotService.resume(op.nouveauLotId);
       }
@@ -3594,7 +3613,7 @@ End Sub`;
 
   /** Libellés d'en-tête de l'export : la colonne GRX (code pays) sort sous le nom PAYS. */
   private exportHeaderLabels(): Record<string, string> {
-    return this.columns.includes('GRX') ? { GRX: 'PAYS' } : {};
+    return this.columns.includes('GRX') && !this.columns.includes('PAYS') ? { GRX: 'PAYS' } : {};
   }
 
   exportXLSX() {
@@ -7119,6 +7138,8 @@ End Sub`;
         csvFiles.length ? csvFiles : [this.csvFileToProcess as File]
       );
       await this.pushCsvBatchRows(batch);
+      // Pays / environnement choisis avant l'aperçu : colonnes ajoutées au fichier final
+      this.appliquerColonnePays();
       
       // Finaliser le traitement : le résultat reprend l'en-tête et les lignes de l'aperçu.
       // Les états d'affichage hérités (sélection de colonnes, réorganisation) sont réinitialisés,
@@ -8425,7 +8446,7 @@ End Sub`;
         return;
       }
 
-      const exportColumns = this.columns.map(col => col === 'GRX' ? 'PAYS' : col);
+      const exportColumns = this.columns.map(col => col === 'GRX' && !this.columns.includes('PAYS') ? 'PAYS' : col);
       const csvRows: string[] = [];
       csvRows.push(exportColumns.join(';'));
 
@@ -8462,7 +8483,7 @@ End Sub`;
         return;
       }
 
-      const exportColumns = this.columns.map(col => col === 'GRX' ? 'PAYS' : col);
+      const exportColumns = this.columns.map(col => col === 'GRX' && !this.columns.includes('PAYS') ? 'PAYS' : col);
       
       const exportData = rows.map((row, index) => {
         const exportRow: any = {};
@@ -8517,7 +8538,7 @@ End Sub`;
         return;
       }
 
-      const exportColumns = this.columns.map(col => col === 'GRX' ? 'PAYS' : col);
+      const exportColumns = this.columns.map(col => col === 'GRX' && !this.columns.includes('PAYS') ? 'PAYS' : col);
       
       const exportData = rows.map((row, index) => {
         const exportRow: any = {};
