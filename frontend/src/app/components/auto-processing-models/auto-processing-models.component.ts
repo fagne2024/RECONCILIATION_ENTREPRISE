@@ -3,6 +3,7 @@ import { firstValueFrom } from 'rxjs';
 import { SharedUiModule } from '../../shared/shared-ui.module';
 import { CdkDragDrop, moveItemInArray } from '@angular/cdk/drag-drop';
 import { FormBuilder, FormGroup, Validators, FormArray, FormControl } from '@angular/forms';
+import { PAYS_TRAITEMENT_PAR_DEFAUT } from '../../services/pays.service';
 import { AutoProcessingService, AutoProcessingModel, DEFAULT_PRE_PROCESSING_SECTION_ORDER, ENV_COLUMN_NAME, ENV_COLUMN_OPTIONS, EnvColumnOption, ModelColumnMathRule, ModelFormatAction, ModelFormatActionType, ModelFormatColumnSettings, ModelPreProcessingConfig, ModelPreProcessingSectionId, ModelRowFilter, ModelColumnValueMapping, ModelColumnConcatRule, ModelColumnRenameRule, ModelCrossDedupRule, resolvePreProcessingSectionOrder, ModelEnvColumnConfig, ModelPaysColumnConfig, PAYS_COLUMN_NAME, ModelExportColumnFilterConfig, PartnerConditionalKeyRule, PartnerConditionalKeysConfig, BoConditionalKeysConfig, BoModelReconciliationConfig, ModelRowFilterConditionOperator, ModelRowFilterValueCondition, TrxboOppartConfig, TrxboRegularisationRule, TrxboRegularisationComponent, TrxboAggregationType } from '../../services/auto-processing.service';
 import { FileWatcherService } from '../../services/file-watcher.service';
 import { AppStateService } from '../../services/app-state.service';
@@ -252,6 +253,8 @@ export class AutoProcessingModelsComponent implements OnInit {
   modelPaysColumnValue = '';
   readonly paysColumnName = PAYS_COLUMN_NAME;
   readonly envColumnOptions = ENV_COLUMN_OPTIONS;
+  /** Pays proposés pour la condition pays de « Renommer des valeurs ». */
+  readonly paysConditionOptions = PAYS_TRAITEMENT_PAR_DEFAUT;
   modelRowFilters: ModelRowFilter[] = [];
   modelFormatActions: ModelFormatAction[] = [];
   modelColumnConcatRules: ModelColumnConcatRule[] = [];
@@ -4865,6 +4868,8 @@ export class AutoProcessingModelsComponent implements OnInit {
       fromEmpty: false,
       conditionColumn: '',
       conditionValue: '',
+      envConditionValue: '',
+      paysConditionValue: '',
       toValue: '',
       enabled: true
     });
@@ -5297,6 +5302,14 @@ export class AutoProcessingModelsComponent implements OnInit {
           entry.conditionColumn = conditionColumn;
           entry.conditionValue = conditionValue;
         }
+        const envCondition = mapping.envConditionValue?.trim().toUpperCase();
+        if (envCondition) {
+          entry.envConditionValue = envCondition;
+        }
+        const paysCondition = mapping.paysConditionValue?.trim().toUpperCase();
+        if (paysCondition) {
+          entry.paysConditionValue = paysCondition;
+        }
         return entry;
       });
 
@@ -5543,6 +5556,8 @@ export class AutoProcessingModelsComponent implements OnInit {
       fromEmpty: mapping.fromEmpty === true,
       conditionColumn: mapping.conditionColumn || '',
       conditionValue: mapping.conditionValue || '',
+      envConditionValue: mapping.envConditionValue || '',
+      paysConditionValue: mapping.paysConditionValue || '',
       toValue: mapping.toValue || '',
       enabled: mapping.enabled !== false
     }));

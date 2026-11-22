@@ -96,6 +96,12 @@ export function createPreProcessingUsage(): PreProcessingUsage {
   return { used: new Set<object>(), formatColumns: new Map<ModelFormatAction, Set<string>>() };
 }
 
+/** Valeurs ENV / PAYS du traitement en cours, lues par les conditions de « Renommer des valeurs ». */
+export interface ValueMappingContext {
+  env?: string | null;
+  pays?: string | null;
+}
+
 @Injectable({
   providedIn: 'root'
 })
@@ -180,10 +186,11 @@ export class ModelPreProcessingService {
           break;
         case 'valueMappings':
           if (config.valueMappings?.length) {
+            const valueMappingContext = this.buildValueMappingContext(config);
             result = await this.mapRowsBatched(
               result,
               batchSize,
-              row => this.applyValueMappingsToRow(row, config.valueMappings!, usage),
+              row => this.applyValueMappingsToRow(row, config.valueMappings!, usage, valueMappingContext),
               'Renommage des valeurs...',
               options
             );
@@ -662,7 +669,8 @@ export class ModelPreProcessingService {
   private applyValueMappingsToRow(
     row: Record<string, string>,
     mappings: ModelColumnValueMapping[],
-    usage?: PreProcessingUsage
+    usage?: PreProcessingUsage,
+    context?: ValueMappingContext
   ): Record<string, string> {
     const activeMappings = this.getActiveValueMappings(mappings);
     if (!activeMappings.length) {
@@ -683,7 +691,8 @@ export class ModelPreProcessingService {
         continue;
       }
       const currentValue = row[key] === undefined || row[key] === null ? '' : String(row[key]);
-      if (!this.valueMappingConditionMatches(row, mapping)) {
+      if (!this.valueMappingConditionMatches(row, mapping)
+        || !this.valueMappingEnvPaysMatches(row, mapping, context)) {
         continue;
       }
       row[key] = mapping.toValue;
@@ -848,7 +857,7 @@ export class ModelPreProcessingService {
           break;
         case 'valueMappings':
           if (config.valueMappings?.length) {
-            result = this.applyValueMappings(result, config.valueMappings);
+            result = this.applyValueMappings(result, config.valueMappings, this.buildValueMappingContext(config));
           }
           break;
         case 'crossDedupRules':
@@ -1078,14 +1087,27 @@ export class ModelPreProcessingService {
 
   applyValueMappings(
     rows: Record<string, string>[],
-    mappings: ModelColumnValueMapping[]
+    mappings: ModelColumnValueMapping[],
+    context?: ValueMappingContext
   ): Record<string, string>[] {
     const activeMappings = this.getActiveValueMappings(mappings);
     if (!activeMappings.length) {
       return rows;
     }
 
-    return rows.map(row => this.applyValueMappingsToRow(row, mappings));
+    return rows.map(row => this.applyValueMappingsToRow(row, mappings, undefined, context));
+  }
+
+  /**
+   * ENV / PAYS du traitement (choisis avant le traitement ou fixés par le modèle). Les colonnes ENV et
+   * PAYS ne sont écrites qu'après les sections du modèle : les conditions du renommage lisent donc ces
+   * valeurs, et à défaut la colonne ENV / PAYS déjà présente dans le fichier (ex. « Pays » d'un BO).
+   */
+  private buildValueMappingContext(config?: ModelPreProcessingConfig | null): ValueMappingContext {
+    return {
+      env: this.getActiveEnvColumnValue(config),
+      pays: this.getActivePaysColumnValue(config)
+    };
   }
 
   private resolveFormatActionColumnKeys(
@@ -1870,6 +1892,28 @@ export class ModelPreProcessingService {
       return false;
     }
     return String(row[conditionKey] ?? '') === conditionValue;
+  }
+
+  /** Conditions ENV et pays du renommage (vides = toujours vraies ; sans valeur connue = non remplies). */
+  private valueMappingEnvPaysMatches(
+    row: Record<string, string>,
+    mapping: ModelColumnValueMapping,
+    context?: ValueMappingContext
+  ): boolean {
+    const matches = (expected: string | undefined, fromContext: string | null | undefined, column: string): boolean => {
+      const wanted = (expected ?? '').trim().toUpperCase();
+      if (!wanted) {
+        return true;
+      }
+      let actual = (fromContext ?? '').trim();
+      if (!actual) {
+        const key = resolveColumnKeyInRow(row, column);
+        actual = key ? String(row[key] ?? '').trim() : '';
+      }
+      return actual.toUpperCase() === wanted;
+    };
+    return matches(mapping.envConditionValue, context?.env, ENV_COLUMN_NAME)
+      && matches(mapping.paysConditionValue, context?.pays, PAYS_COLUMN_NAME);
   }
 
   getActiveColumnConcatRules(rules?: ModelColumnConcatRule[] | null): ModelColumnConcatRule[] {

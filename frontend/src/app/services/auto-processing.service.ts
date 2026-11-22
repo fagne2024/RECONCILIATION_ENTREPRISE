@@ -287,6 +287,10 @@ export interface ModelColumnValueMapping {
   conditionColumn?: string;
   /** 2e valeur actuelle optionnelle (associée à conditionColumn). */
   conditionValue?: string;
+  /** Condition ENV optionnelle (ex. BET) : renommage seulement si l'ENV du traitement vaut cette valeur. */
+  envConditionValue?: string;
+  /** Condition pays optionnelle (ex. CI) : renommage seulement si le pays du traitement / de la ligne vaut ce code. */
+  paysConditionValue?: string;
   toValue: string;
   enabled: boolean;
 }
