@@ -32,10 +32,12 @@ describe('column-processing.util', () => {
     expect(row['ID Partenaire']).toBe('MP261121.2357.A64116');
   });
 
-  it('supprime toujours les points hors colonnes identifiant', () => {
-    const row: Record<string, string> = { Libelle: 'A.B-C' };
-    applyColumnProcessingRulesToRow(row, [{ sourceColumn: 'Libelle', targetColumn: 'Libelle', removeSpecialChars: true }]);
-    expect(row.Libelle).toBe('ABC');
+  it('garde les caractères spéciaux de toute colonne sauf ceux de « Chaîne à supprimer »', () => {
+    const row: Record<string, string> = { Libelle: 'A.B-C_D,E#F' };
+    applyColumnProcessingRulesToRow(row, [{
+      sourceColumn: 'Libelle', targetColumn: 'Libelle', removeSpecialChars: true, stringToRemove: '#'
+    }]);
+    expect(row.Libelle).toBe('A.B-C_D,EF');
   });
 
   it('applique les règles en lot synchrone via plan précompilé', () => {

@@ -1,5 +1,4 @@
 ﻿import { removeSpecialStrings } from '../../utils/special-string-removal.util';
-import { isPartnerIdDotPreserveColumn } from '../../utils/text-cell.util';
 import { Component, OnInit, OnDestroy, ChangeDetectorRef, HostListener } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
@@ -837,12 +836,7 @@ async launchMagicReconciliation(): Promise<void> {
           let value = newRow[rule.sourceColumn];
           
           if (rule.trimSpaces) value = value.trim();
-          if (rule.removeSpecialChars) {
-            // ID partenaire (ex. Orange Money MP261121.2357.A64116) : conserver les points.
-            value = isPartnerIdDotPreserveColumn(rule.sourceColumn)
-              ? value.replace(/[^\w\s.]/gi, '')
-              : value.replace(/[^\w\s]/gi, '');
-          }
+          // Caractères spéciaux conservés : seule « Chaîne à supprimer » en retire.
           if (rule.removeAccents) value = value.normalize('NFD').replace(/[\u0300-\u036f]/g, '');
           if (rule.toUpperCase) value = value.toUpperCase();
           if (rule.toLowerCase) value = value.toLowerCase();

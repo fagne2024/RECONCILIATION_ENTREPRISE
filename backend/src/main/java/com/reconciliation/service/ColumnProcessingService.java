@@ -321,30 +321,9 @@ public class ColumnProcessingService {
             }
         }
         
-        // Ensuite supprimer les caractères spéciaux restants (sauf les espaces)
-        // Une extraction de données garde les caractères spéciaux (ex. « . » d'un domaine e-mail).
-        if (rule.isRemoveSpecialChars() && !isExtraction(rule.getFormatType())) {
-            // Supprimer tous les caractères qui ne sont pas des lettres, chiffres ou espaces ;
-            // un ID partenaire (ex. Orange Money MP261121.2357.A64116) garde ses points.
-            boolean keepDots = isPartnerIdDotPreserveColumn(rule.getSourceColumn())
-                || isPartnerIdDotPreserveColumn(rule.getTargetColumn());
-            value = value.replaceAll(keepDots ? "[^a-zA-Z0-9\\s.]" : "[^a-zA-Z0-9\\s]", "");
-        }
-
+        // « Supprimer les caractères spéciaux » n'enlève plus rien d'office : les caractères spéciaux
+        // (. , _ - …) restent intacts sauf s'ils figurent dans « Chaîne à supprimer » (applyStringRemoval).
         return value;
-    }
-
-    /** Colonne « ID Partenaire » (même règle que frontend utils/text-cell.util.ts). */
-    static boolean isPartnerIdDotPreserveColumn(String columnName) {
-        if (columnName == null) {
-            return false;
-        }
-        String lower = java.text.Normalizer.normalize(columnName, java.text.Normalizer.Form.NFD)
-            .replaceAll("\\p{M}", "")
-            .toLowerCase(java.util.Locale.ROOT)
-            .replaceAll("[\\s_-]+", "");
-        return lower.contains("idpartenaire") || lower.contains("partenaireid")
-            || lower.contains("idpartner") || lower.contains("partnerid");
     }
 
     /**

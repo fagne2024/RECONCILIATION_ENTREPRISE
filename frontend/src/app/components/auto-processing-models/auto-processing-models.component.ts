@@ -478,7 +478,7 @@ export class AutoProcessingModelsComponent implements OnInit {
       toUpperCase: [false],
       toLowerCase: [false],
       trimSpaces: [false],
-      removeSpecialChars: [true],
+      removeSpecialChars: [false],
       removeAccents: [false],
       stringToRemove: [''],
       padZeros: [false],

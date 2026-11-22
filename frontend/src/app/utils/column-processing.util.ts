@@ -8,8 +8,6 @@ import {
   isLeadingZeroNumericString,
   isMsisdnPreserveColumn,
   isTransactionIdPreserveColumn,
-  isPartnerIdDotPreserveColumn,
-  stripSpecialChars,
   finalizeTextPreserveColumnValue,
   DEFAULT_MSISDN_DIGIT_LENGTH
 } from './text-cell.util';
@@ -141,7 +139,6 @@ function ruleHasTransformations(rule: ColumnProcessingRule): boolean {
     || rule.toUpperCase
     || rule.toLowerCase
     || rule.removeAccents
-    || rule.removeSpecialChars
     || rule.padZeros
     || rule.stringToRemove?.trim()
     || rule.regexReplace?.trim()
@@ -163,10 +160,6 @@ function createRuleApplier(rule: ColumnProcessingRule): (value: unknown) => stri
   // Extraction de données (stockée dans formatType) : appliquée en premier, sur la valeur source.
   const extraction = parseExtractionFormat(rule.formatType);
   const formatType = extraction ? undefined : rule.formatType;
-  // Une extraction garde les caractères spéciaux de la valeur extraite (ex. « . » d'un domaine).
-  const removeSpecialChars = !!rule.removeSpecialChars && !extraction;
-  // ID partenaire (ex. Orange Money MP261121.2357.A64116) : les points font partie de l'identifiant.
-  const keepDots = isPartnerIdDotPreserveColumn(outColumn) || isPartnerIdDotPreserveColumn(rule.sourceColumn);
   const msisdnOut = isMsisdnPreserveColumn(outColumn);
   const hasTransformations = ruleHasTransformations(rule);
 
@@ -234,9 +227,8 @@ function createRuleApplier(rule: ColumnProcessingRule): (value: unknown) => stri
       stringValue = stringValue.split(from).join(to);
     }
 
-    if (removeSpecialChars) {
-      stringValue = stripSpecialChars(stringValue, keepDots);
-    }
+    // « Supprimer les caractères spéciaux » n'enlève plus rien d'office : les caractères spéciaux
+    // (. , _ - …) restent intacts sauf s'ils figurent dans « Chaîne à supprimer ».
 
     if (toUpperCase) {
       stringValue = stringValue.toUpperCase();

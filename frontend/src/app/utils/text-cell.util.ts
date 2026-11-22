@@ -41,23 +41,6 @@ export function isTransactionIdPreserveColumn(columnName: string): boolean {
 }
 
 /**
- * Colonne identifiant partenaire (ex. « ID Partenaire » MP261121.2357.A64116 des services Orange Money) :
- * la suppression des caractères spéciaux doit y conserver les points.
- */
-export function isPartnerIdDotPreserveColumn(columnName: string): boolean {
-  const lower = normalizeColumnLabelForMatch(columnName).replace(/[\s_-]+/g, '');
-  if (!lower) {
-    return false;
-  }
-  return ['idpartenaire', 'partenaireid', 'idpartner', 'partnerid'].some(p => lower.includes(p));
-}
-
-/** Suppression des caractères spéciaux : garde lettres, chiffres, espaces (et « . » si keepDots). */
-export function stripSpecialChars(value: string, keepDots: boolean): string {
-  return value.replace(keepDots ? /[^a-zA-Z0-9\s.]/g : /[^a-zA-Z0-9\s]/g, '');
-}
-
-/**
  * @deprecated Préférer isMsisdnPreserveColumn — conservé pour compatibilité interne.
  * Ne couvre plus les colonnes clé (reference, transaction, etc.).
  */

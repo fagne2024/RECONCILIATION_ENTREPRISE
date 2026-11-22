@@ -1068,9 +1068,6 @@
                   </div>
                 </div>
                 <div class="rule-badges">
-                  <span class="rule-action badge badge-warning" *ngIf="rule.removeSpecialChars">
-                    <i class="fas fa-magic"></i> {{ 'APM.Supprimercaractèresspéciaux' | translate }}
-                  </span>
                   <span class="rule-action badge badge-info" *ngIf="rule.removeAccents">
                     <i class="fas fa-language"></i> {{ 'APM.Supprimeraccents' | translate }}
                   </span>
@@ -1145,17 +1142,6 @@
                 </div>
               </div>
 
-              <div class="form-row">
-                <div class="form-group">
-                  <label>
-                    <input type="checkbox" formControlName="removeSpecialChars" class="ds-checkbox">
-                    {{ 'APM.Supprimerlescaractèresspéciaux' | translate }}
-                  </label>
-                  <small class="form-text text-muted">
-                    {{ 'APM.Cetteoptionsupprimeautomatiquementlescaractèresspéciauxdelacolonnesélectionnée' | translate }}
-                  </small>
-                </div>
-              </div>
 
               <div class="form-row">
                 <div class="form-group">
