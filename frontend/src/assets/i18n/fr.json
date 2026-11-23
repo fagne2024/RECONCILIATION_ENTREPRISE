@@ -1340,6 +1340,11 @@
       "services": "services",
       "allCountries": "tous pays",
       "shareHint": "Pourcentage = part de l'utilisateur sur le total tous pays de la catégorie ; il donne le rang.",
+      "rankingLabel": "Classement :",
+      "rankingServices": "Par services",
+      "rankingVolume": "Par volume",
+      "volume": "Vol.",
+      "subtitleVolume": "Part de chaque utilisateur sur le volume total tous pays des services × jour traités sur la période (un service resté en traitement ne compte pas)",
       "shareTitle": "{{count}} sur {{total}} (tous pays) = {{pct}} %"
     },
     "period": {
@@ -6066,6 +6071,8 @@
     "switchToLive": "Basculer vers les données en cours",
     "viewDbData": "Voir données en base",
     "liveData": "Données en cours",
+    "currentWeek": "Semaine en cours",
+    "showCurrentWeek": "Afficher uniquement la semaine en cours",
     "showCurrentMonth": "Afficher uniquement le mois en cours",
     "showAllData": "Afficher toutes les données",
     "currentMonth": "Mois en cours",

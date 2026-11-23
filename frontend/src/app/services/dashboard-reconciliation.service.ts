@@ -75,6 +75,8 @@ export interface RecoAuditServiceDayAction {
     serviceDayKey: string;
     /** Niveau actuel du service-jour (ligne la moins avancée) : none | support | cdo | group | termine. */
     serviceDayLevel: string;
+    /** Volume du service-jour (somme des volumes de ses lignes) : classement « par volume ». */
+    serviceDayVolume?: number;
 }
 
 export interface ServiceMetricDetails {

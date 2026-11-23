@@ -228,11 +228,11 @@ interface AllOkEmailMetrics {
                     <button type="button" class="btn btn-toggle-source ds-btn ds-btn--secondary ds-btn--sm" (click)="toggleDataSource()" [title]="(currentSource === 'live' ? 'RPT.switchToDb' : 'RPT.switchToLive') | translate">
                         🔄 {{ (currentSource === 'live' ? 'RPT.viewDbData' : 'RPT.liveData') | translate }}
                     </button>
-                    <button type="button" class="btn btn-voir-plus ds-btn ds-btn--secondary ds-btn--sm" (click)="toggleShowAllMonths()" *ngIf="!hasSelectedRows() && currentSource !== 'live'" [title]="(showAllMonths ? 'RPT.showCurrentMonth' : 'RPT.showAllData') | translate">
-                        {{ (showAllMonths ? '📅' : '📋') }} {{ (showAllMonths ? 'RPT.currentMonth' : 'RPT.seeMore') | translate }}
+                    <button type="button" class="btn btn-voir-plus ds-btn ds-btn--secondary ds-btn--sm" (click)="toggleShowAllMonths()" *ngIf="!hasSelectedRows() && currentSource !== 'live'" [title]="(showAllMonths ? 'RPT.showCurrentWeek' : 'RPT.showAllData') | translate">
+                        {{ (showAllMonths ? '📅' : '📋') }} {{ (showAllMonths ? 'RPT.currentWeek' : 'RPT.seeMore') | translate }}
                     </button>
                     <span class="report-display-mode" *ngIf="!hasSelectedRows() && currentSource !== 'live'">
-                        {{ 'RPT.lineCount' | translate: { mode: (showAllMonths ? 'RPT.all' : 'RPT.currentMonth') | translate, count: kpiSummary.lineCount } }}
+                        {{ 'RPT.lineCount' | translate: { mode: (showAllMonths ? 'RPT.all' : 'RPT.currentWeek') | translate, count: kpiSummary.lineCount } }}
                     </span>
                     <span class="report-loading-more" *ngIf="isLoadingMoreDbReport || isLoadingLiveDetails">
                         ⏳ {{ (isLoadingLiveDetails ? 'RPT.loadingLiveDetails' : 'RPT.loadingPreviousDates') | translate }}
@@ -7928,13 +7928,9 @@ reportData: ReconciliationReportData[] = [];
         this.serviceSearchCtrl.valueChanges.subscribe((search: string | null) => {
             const raw = (search || '').trim();
             const s = raw.toLowerCase();
+            // La recherche ne fait que réduire la liste : seuls les services cochés (libellé complet)
+            // filtrent le rapport. Avant, « cashin » cochait tous les services contenant « cashin ».
             this.filteredServicesDropdown = this.filteredServices.filter(a => a.toLowerCase().includes(s));
-            if (!raw) {
-                this.selectedServices = [];
-            } else {
-                this.selectedServices = this.filteredServices.filter(a => a.toLowerCase().includes(s));
-            }
-            this.filterReport();
         });
         this.paysSearchCtrl.valueChanges.subscribe((search: string | null) => {
             const s = (search || '').toLowerCase();
@@ -8143,35 +8139,18 @@ reportData: ReconciliationReportData[] = [];
         this.filterReport();
     }
 
-    /** Retourne true si la date de l'item est dans le mois précédent OU le 1er du mois courant
-     *  (comparaison locale, insensible timezone). La période affichée par défaut est donc le
-     *  mois précédent (du 01 au 01 du mois courant). */
-    private isItemInCurrentMonth(itemDateStr: string): boolean {
+    /** Vrai si la date de l'item (AAAA-MM-JJ, comparée en local) est dans la semaine affichée par défaut. */
+    private isItemInCurrentWeek(itemDateStr: string): boolean {
         if (!itemDateStr || typeof itemDateStr !== 'string') return false;
-        const now = new Date();
-        const currentYear = now.getFullYear();
-        const currentMonth = now.getMonth();
-        // Mois précédent (0-indexed) avec gestion du passage janvier → décembre de l'année précédente
-        const prevMonth = currentMonth === 0 ? 11 : currentMonth - 1;
-        const prevYear = currentMonth === 0 ? currentYear - 1 : currentYear;
-        // Chaîne YYYY-MM-DD : extraire année/mois en local pour éviter décalage timezone
-        const match = itemDateStr.trim().match(/^(\d{4})-(\d{2})-(\d{2})/);
-        if (match) {
-            const y = parseInt(match[1], 10);
-            const m = parseInt(match[2], 10) - 1; // 0-indexed
-            const day = parseInt(match[3], 10);
-            // Dans le mois précédent (tous les jours)
-            if (y === prevYear && m === prevMonth) return true;
-            // Ou le 1er du mois courant
-            if (y === currentYear && m === currentMonth && day === 1) return true;
-            return false;
+        const match = itemDateStr.trim().match(/^(\d{4}-\d{2}-\d{2})/);
+        let ymd = match ? match[1] : '';
+        if (!ymd) {
+            const d = new Date(itemDateStr);
+            if (isNaN(d.getTime())) return false;
+            ymd = this.toYmdLocal(d);
         }
-        const d = new Date(itemDateStr);
-        if (isNaN(d.getTime())) return false;
-        const inPrevMonth = d.getFullYear() === prevYear && d.getMonth() === prevMonth;
-        const isFirstCurrentMonth =
-            d.getDate() === 1 && d.getFullYear() === currentYear && d.getMonth() === currentMonth;
-        return inPrevMonth || isFirstCurrentMonth;
+        const week = this.currentWeekDateRange();
+        return ymd >= week.startDate && ymd <= week.endDate;
     }
 
     private hasExplicitDateFilter(): boolean {
@@ -8185,12 +8164,16 @@ reportData: ReconciliationReportData[] = [];
         return `${y}-${m}-${day}`;
     }
 
-    private currentMonthDateRange(): { startDate: string; endDate: string } {
+    /**
+     * Période par défaut = semaine en cours : du lundi de la semaine de J-1 (les lignes J-1 sont
+     * traitées le jour J, le lundi montre donc encore la semaine précédente) jusqu'à aujourd'hui inclus.
+     */
+    private currentWeekDateRange(): { startDate: string; endDate: string } {
         const now = new Date();
-        // Période par défaut = mois précédent : du 01 du mois précédent au 01 du mois courant (inclus).
-        const first = new Date(now.getFullYear(), now.getMonth() - 1, 1);
-        const last = new Date(now.getFullYear(), now.getMonth(), 1);
-        return { startDate: this.toYmdLocal(first), endDate: this.toYmdLocal(last) };
+        const ref = new Date(now.getFullYear(), now.getMonth(), now.getDate() - 1);
+        const day = ref.getDay();
+        const monday = new Date(ref.getFullYear(), ref.getMonth(), ref.getDate() + (day === 0 ? -6 : 1 - day));
+        return { startDate: this.toYmdLocal(monday), endDate: this.toYmdLocal(now) };
     }
 
     private getDbReportFetchScope(): { startDate?: string; endDate?: string; key: string } {
@@ -8205,8 +8188,8 @@ reportData: ReconciliationReportData[] = [];
             };
         }
         if (!this.showAllMonths) {
-            const month = this.currentMonthDateRange();
-            return { ...month, key: `month:${month.startDate}:${month.endDate}` };
+            const week = this.currentWeekDateRange();
+            return { ...week, key: `week:${week.startDate}:${week.endDate}` };
         }
         return { key: 'all' };
     }
@@ -8262,7 +8245,7 @@ reportData: ReconciliationReportData[] = [];
         options?: { excludeTraitement?: boolean }
     ): boolean {
         if (this.currentSource !== 'live' && !this.showAllMonths && !this.hasExplicitDateFilter() && item.date) {
-            if (!this.isItemInCurrentMonth(item.date)) {
+            if (!this.isItemInCurrentWeek(item.date)) {
                 return false;
             }
         }
@@ -8272,11 +8255,8 @@ reportData: ReconciliationReportData[] = [];
         }
 
         const agencyMatch = this.selectedAgencies.length === 0 || this.selectedAgencies.includes(item.agency);
-        const qSvc = (this.serviceSearchCtrl.value || '').trim();
-        const serviceMatch =
-            qSvc.length > 0
-                ? this.selectedServices.includes(item.service)
-                : this.selectedServices.length === 0 || this.selectedServices.includes(item.service);
+        // Service exact (libellé complet), jamais « contient ».
+        const serviceMatch = this.selectedServices.length === 0 || this.selectedServices.includes(item.service);
         const countryFilterMatch =
             this.selectedCountries.length === 0 ||
             this.selectedCountries.some(sel => countriesMatch(sel, item.country));

@@ -57,9 +57,9 @@ public interface Result8RecAuditRepository extends JpaRepository<Result8RecAudit
             @Param("service") String service
     );
 
-    /** Niveau actuel des lignes rapport des services-jours concernés (date, service, pays, ENV, traitement). */
+    /** Niveau actuel et volume des lignes rapport des services-jours concernés (date, service, pays, ENV, traitement, volume). */
     @Query("""
-        SELECT r.service, r.country, r.env, r.date, r.traitement
+        SELECT r.service, r.country, r.env, r.date, r.traitement, r.totalVolume
         FROM Result8RecEntity r
         WHERE r.date IN :dates
           AND (:service IS NULL OR r.service = :service)

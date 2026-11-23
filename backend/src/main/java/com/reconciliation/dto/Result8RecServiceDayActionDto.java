@@ -14,5 +14,7 @@ public record Result8RecServiceDayActionDto(
         String actionType,
         String traitementSnapshot,
         String serviceDayKey,
-        String serviceDayLevel
+        String serviceDayLevel,
+        /** Volume du service-jour (somme des volumes de ses lignes rapport) : classement « par volume ». */
+        double serviceDayVolume
 ) {}

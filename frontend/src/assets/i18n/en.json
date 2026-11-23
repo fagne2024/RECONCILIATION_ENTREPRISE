@@ -1340,6 +1340,11 @@
       "services": "services",
       "allCountries": "all countries",
       "shareHint": "Percentage = the user's share of the category's all-country total; it sets the rank.",
+      "rankingLabel": "Ranking:",
+      "rankingServices": "By services",
+      "rankingVolume": "By volume",
+      "volume": "Vol.",
+      "subtitleVolume": "Each user's share of the all-country total volume of the service-days processed over the period (a service still in progress does not count)",
       "shareTitle": "{{count}} of {{total}} (all countries) = {{pct}} %"
     },
     "period": {
@@ -6066,6 +6071,8 @@
     "switchToLive": "Switch to live data",
     "viewDbData": "View saved data",
     "liveData": "Live data",
+    "currentWeek": "Current week",
+    "showCurrentWeek": "Show the current week only",
     "showCurrentMonth": "Show current month only",
     "showAllData": "Show all data",
     "currentMonth": "Current month",

@@ -171,10 +171,14 @@ public class Result8RecAuditService {
 
         // Niveau actuel de chaque service-jour = niveau de sa ligne la moins avancée.
         Map<String, Integer> dayLevel = new java.util.HashMap<>();
+        // Volume de chaque service-jour : somme des volumes de ses lignes (classement « par volume »).
+        Map<String, Double> dayVolume = new java.util.HashMap<>();
         for (Object[] line : auditRepository.findTraitementsForDates(dates, service)) {
             String key = serviceDayKey(line[3], line[0], line[1], line[2]);
             int priority = levelPriority(traitementKind(line[4] != null ? String.valueOf(line[4]) : null));
             dayLevel.merge(key, priority, Math::min);
+            double volume = line.length > 5 && line[5] instanceof Number n ? n.doubleValue() : 0d;
+            dayVolume.merge(key, volume, Double::sum);
         }
 
         List<com.reconciliation.dto.Result8RecServiceDayActionDto> out = new ArrayList<>();
@@ -188,7 +192,8 @@ public class Result8RecAuditService {
                 continue;
             }
             String level = LEVELS[dayLevel.getOrDefault(key, 0)];
-            out.add(new com.reconciliation.dto.Result8RecServiceDayActionDto(username, actionType, snapshot, key, level));
+            out.add(new com.reconciliation.dto.Result8RecServiceDayActionDto(
+                    username, actionType, snapshot, key, level, dayVolume.getOrDefault(key, 0d)));
         }
         return out;
     }

@@ -1406,3 +1406,13 @@
     }
   }
 }
+
+/* Top utilisateurs : choix du classement (services / volume) */
+.tu-ranking {
+  display: inline-flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 6px;
+  margin-left: auto;
+  font-size: 12px;
+}

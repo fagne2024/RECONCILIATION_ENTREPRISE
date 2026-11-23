@@ -152,6 +152,38 @@ export class EtatReconciliationsComponent implements OnInit {
     /** Réglages affichés (Configuration > Top utilisateurs). */
     topUsersConfig: TopUsersConfig = cloneTopUsersConfig(DEFAULT_TOP_USERS_CONFIG);
     private topUsersLoadToken = 0;
+    /** Classement affiché : par nombre de services × jour, ou par volume de ces services. */
+    topUsersRanking: 'services' | 'volume' = EtatReconciliationsComponent.readTopUsersRanking();
+    /** Dernières données chargées : le changement de classement ne recharge pas le serveur. */
+    private topUsersData: {
+        current: RecoAuditServiceDayAction[];
+        previous: RecoAuditServiceDayAction[];
+        allCountries: RecoAuditServiceDayAction[];
+    } | null = null;
+    private static readonly TOP_USERS_RANKING_KEY = 'etatReco.topUsersRanking';
+
+    private static readTopUsersRanking(): 'services' | 'volume' {
+        try {
+            return localStorage.getItem(EtatReconciliationsComponent.TOP_USERS_RANKING_KEY) === 'volume' ? 'volume' : 'services';
+        } catch {
+            return 'services';
+        }
+    }
+
+    setTopUsersRanking(mode: 'services' | 'volume'): void {
+        if (mode === this.topUsersRanking) {
+            return;
+        }
+        this.topUsersRanking = mode;
+        try { localStorage.setItem(EtatReconciliationsComponent.TOP_USERS_RANKING_KEY, mode); } catch { /* facultatif */ }
+        if (!this.topUsersData || !this.topUsersConfig.enabled) {
+            return;
+        }
+        const token = ++this.topUsersLoadToken;
+        this.topUsersLoading = true;
+        const d = this.topUsersData;
+        this.loadTopUserPhotos(this.buildTopUserCategories(d.current, d.previous, d.allCountries), token);
+    }
 
   trackByIndex = (index: number): number => index;
 
@@ -1667,6 +1699,11 @@ export class EtatReconciliationsComponent implements OnInit {
                     if (token !== this.topUsersLoadToken) {
                         return;
                     }
+                    this.topUsersData = {
+                        current: current || [],
+                        previous: previous || [],
+                        allCountries: allCountries ?? current ?? []
+                    };
                     const categories = this.buildTopUserCategories(
                         current || [], previous || [], allCountries ?? current ?? []);
                     this.loadTopUserPhotos(categories, token);
@@ -1720,9 +1757,10 @@ export class EtatReconciliationsComponent implements OnInit {
         const limit = Math.max(1, Number(cfg.topN) || 1);
         const categories: TopUsersCategoryConfig[] = (cfg.categories || []).filter(c => c?.enabled);
 
-        const counts = this.aggregateTopUserCounts(current, categories).counts;
-        const prevCounts = this.aggregateTopUserCounts(previous, categories).counts;
-        const globalTotals = this.aggregateTopUserCounts(allCountries, categories).totals;
+        const byVolume = this.topUsersRanking === 'volume';
+        const counts = this.aggregateTopUserCounts(current, categories, byVolume).counts;
+        const prevCounts = this.aggregateTopUserCounts(previous, categories, byVolume).counts;
+        const globalTotals = this.aggregateTopUserCounts(allCountries, categories, byVolume).totals;
 
         return categories.map((def, index) => {
             const perUser = counts[def.id] || new Map<string, number>();
@@ -1771,8 +1809,11 @@ export class EtatReconciliationsComponent implements OnInit {
      */
     private aggregateTopUserCounts(
         actions: RecoAuditServiceDayAction[],
-        categories: TopUsersCategoryConfig[]
+        categories: TopUsersCategoryConfig[],
+        byVolume = false
     ): { counts: Record<string, Map<string, number>>; totals: Record<string, number> } {
+        // Par volume : chaque service-jour pèse son volume au lieu de 1.
+        const dayVolume = new Map<string, number>();
         const perCategory: Record<string, Map<string, Set<string>>> = {};
         /** Services × jour distincts de la catégorie, tous utilisateurs confondus (dénominateur du %). */
         const allDays: Record<string, Set<string>> = {};
@@ -1787,6 +1828,7 @@ export class EtatReconciliationsComponent implements OnInit {
             if (!username || !dayKey) {
                 continue;
             }
+            dayVolume.set(dayKey, Math.abs(Number(entry.serviceDayVolume) || 0));
             const action = this.normalizeAuditToken(entry.actionType);
             const kind = resolveTraitementKind(entry.traitementSnapshot);
             const dayPriority = priority[entry.serviceDayLevel] ?? 0;
@@ -1815,11 +1857,19 @@ export class EtatReconciliationsComponent implements OnInit {
         }
         const result: Record<string, Map<string, number>> = {};
         const totals: Record<string, number> = {};
+        const weight = (days: Set<string>): number => {
+            if (!byVolume) {
+                return days.size;
+            }
+            let sum = 0;
+            days.forEach(k => { sum += dayVolume.get(k) || 0; });
+            return Math.round(sum);
+        };
         for (const category of categories) {
             const counts = new Map<string, number>();
-            perCategory[category.id].forEach((days, username) => counts.set(username, days.size));
+            perCategory[category.id].forEach((days, username) => counts.set(username, weight(days)));
             result[category.id] = counts;
-            totals[category.id] = allDays[category.id].size;
+            totals[category.id] = weight(allDays[category.id]);
         }
         return { counts: result, totals };
     }
