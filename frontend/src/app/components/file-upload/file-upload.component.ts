@@ -6524,20 +6524,61 @@ export class FileUploadComponent implements OnInit, OnDestroy {
     }
 
     // Méthodes pour le mode automatique
-    onAutoBoFileSelected(event: Event): void {
+    async onAutoBoFileSelected(event: Event): Promise<void> {
         const input = event.target as HTMLInputElement;
         if (input.files?.length) {
-            this.autoBoFile = input.files[0];
+            const file = input.files[0];
+            if (!(await this.verifierModeleConfigurePourFichier(file.name, true))) {
+                this.resetFileInput(this.autoBoFileInputRef);
+                return;
+            }
+            this.autoBoFile = file;
             this.autoBoFileName = this.autoBoFile.name; // Conserver le nom du fichier
             this.cd.detectChanges(); // Forcer la mise à jour de la vue
             this.parseAutoFile(this.autoBoFile, true);
         }
     }
 
-    onAutoPartnerFileSelected(event: Event): void {
+    /**
+     * Mode assisté : le fichier chargé doit correspondre (motif du nom) à un modèle configuré
+     * du bon type, sinon message d'erreur immédiat, avant tout lancement de la réconciliation.
+     * Si la liste des modèles est indisponible, le contrôle reste fait au lancement.
+     */
+    private async verifierModeleConfigurePourFichier(fileName: string, isBo: boolean): Promise<boolean> {
+        if (this.certificationMode || !fileName) {
+            return true;
+        }
+        let models: AutoProcessingModel[];
+        try {
+            models = await this.autoProcessingService.getAllModelsUnrestricted();
+        } catch {
+            return true;
+        }
+        const types = isBo ? ['bo', 'both'] : ['partner', 'both'];
+        const configure = (models || []).some(m =>
+            types.includes(String(m.fileType || '').toLowerCase())
+            && this.matchesFilePattern(fileName, m.filePattern)
+        );
+        if (configure) {
+            return true;
+        }
+        await this.popupService.showError(
+            I18nService.t(isBo ? 'FU.msg.modeleBoNonConfigure' : 'FU.msg.modelePartenaireNonConfigure', { p0: fileName })
+                + I18nService.t('FU.msg.configurezUnModeleDansModelesDe'),
+            I18nService.t('FU.msg.modeleNonConfigure')
+        );
+        return false;
+    }
+
+    async onAutoPartnerFileSelected(event: Event): Promise<void> {
         const input = event.target as HTMLInputElement;
         if (input.files?.length) {
-            this.autoPartnerFile = input.files[0];
+            const file = input.files[0];
+            if (!(await this.verifierModeleConfigurePourFichier(file.name, false))) {
+                this.resetFileInput(this.autoPartnerFileInputRef);
+                return;
+            }
+            this.autoPartnerFile = file;
             this.autoPartnerFileName = this.autoPartnerFile.name;
             void this.rememberPartnerModelFromFileName(this.autoPartnerFileName);
             this.cd.detectChanges();
