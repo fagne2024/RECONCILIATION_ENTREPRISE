@@ -240,7 +240,7 @@ export class DashboardReconciliationService {
     /**
      * Charge result8rec sur une plage pour un affichage progressif :
      * d'abord la journée la plus récente, puis le reste de la plage en une
-     * seule requête (3 requêtes maximum au total, compatible rate limiting).
+     * seule requête, découpée en tranches de dates si le backend la refuse (413).
      */
     async loadResult8RecProgressive(
         startDate: string,
@@ -299,10 +299,33 @@ export class DashboardReconciliationService {
         //     déclenchait le 429 Too Many Requests du rate limiting backend.)
         //    Les dates sont triées DESC : dates[0] (la plus récente) est déjà chargée,
         //    la plage restante va de la plus ancienne (dates[len-1]) à dates[1].
-        const rangeStart = dates[dates.length - 1];
-        const rangeEnd = dates[1];
-        const restRows = await this.requestWith429Retry(() => this.getResult8RecDataScoped(rangeStart, rangeEnd, moduleContext));
-        mergeRows(Array.isArray(restRows) ? restRows : []);
+        //    Le backend refuse (413) une plage de plus de 5 000 lignes sans filtre pays :
+        //    la plage est alors chargée par tranches de dates, redécoupées en deux tant
+        //    qu'elles dépassent le plafond (requêtes séquentielles, compatibles rate limiting).
+        const pending: string[][] = [dates.slice(1)];
+        while (pending.length) {
+            if (isCancelled?.()) {
+                return snapshot();
+            }
+            const chunk = pending.shift()!;
+            const rangeStart = chunk[chunk.length - 1];
+            const rangeEnd = chunk[0];
+            try {
+                const rows = await this.requestWith429Retry(() => this.getResult8RecDataScoped(rangeStart, rangeEnd, moduleContext));
+                mergeRows(Array.isArray(rows) ? rows : []);
+            } catch (err) {
+                const tropDeLignes = err instanceof HttpErrorResponse && err.status === 413;
+                if (!tropDeLignes || chunk.length < 2) {
+                    throw err;
+                }
+                const milieu = Math.ceil(chunk.length / 2);
+                pending.unshift(chunk.slice(0, milieu), chunk.slice(milieu));
+                continue;
+            }
+            if (pending.length && !isCancelled?.()) {
+                onBatch(snapshot(), false, false);
+            }
+        }
         if (!isCancelled?.()) {
             onBatch(snapshot(), false, true);
         }
