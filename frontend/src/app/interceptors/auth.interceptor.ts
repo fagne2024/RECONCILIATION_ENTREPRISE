@@ -41,6 +41,13 @@ export class AuthInterceptor implements HttpInterceptor {
       headers['Authorization'] = `Bearer ${token}`;
     }
 
+    // Utilisateur affiché par le navigateur : le backend répond 401 si le cookie de session
+    // appartient à un autre compte (session désynchronisée) -> déconnexion ci-dessous.
+    const sessionUser = this.appState.getUsername();
+    if (sessionUser && !this.isAuthRequest(req.url)) {
+      headers['X-Session-User'] = encodeURIComponent(sessionUser);
+    }
+
     const routePath = this.router.url.split('?')[0];
     const navContext = findNavigationAccessContextByRoute(routePath);
     if (navContext && this.appState.hasNavigationAccess(navContext)) {

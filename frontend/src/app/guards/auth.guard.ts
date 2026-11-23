@@ -16,6 +16,12 @@ export class AuthGuard implements CanActivate {
     route: ActivatedRouteSnapshot,
     state: RouterStateSnapshot
   ): boolean {
+    // Session expirée (jeton périmé) : déconnexion automatique au lieu d'erreurs « permission ».
+    if (this.appState.isAuthenticated() && this.appState.isSessionExpired()) {
+      this.appState.expireSession();
+      return false;
+    }
+
     // Vérifier si l'utilisateur est connecté avec un token JWT valide
     const isAuthenticated = this.appState.isAuthenticated();
     const userRights = this.appState.getUserRights();

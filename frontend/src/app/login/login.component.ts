@@ -123,6 +123,7 @@ export class LoginComponent implements OnInit {
             permissions,
             pays: response.pays
           }, response.username, token);
+          this.appState.setSessionExpiresAt(response.sessionExpiresAt);
 
           // Changement de mot de passe obligatoire (ex. mot de passe provisoire du SUPER_ADMIN)
           this.appState.setMustChangePassword(response.mustChangePassword === true);
@@ -188,6 +189,9 @@ export class LoginComponent implements OnInit {
 
       this.router.navigateByUrl(this.appState.resolveAccessibleRoute(returnUrl));
       return;
+    }
+    if (this.route.snapshot.queryParams['sessionExpiree'] === '1') {
+      this.error = I18nService.t('LOGIN.msg.sessionExpiree');
     }
     // Détecter l'entreprise à la saisie de l'identifiant pour prévisualiser sa
     // marque (logo + couleurs) AVANT même de cliquer sur « Connexion ».
@@ -351,6 +355,7 @@ export class LoginComponent implements OnInit {
           permissions,
           pays: response.pays
         }, response.username, token);
+        this.appState.setSessionExpiresAt(response.sessionExpiresAt);
 
         // Changement de mot de passe obligatoire (ex. mot de passe provisoire du SUPER_ADMIN)
         this.appState.setMustChangePassword(response.mustChangePassword === true);

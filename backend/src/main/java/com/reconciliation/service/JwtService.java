@@ -27,6 +27,11 @@ public class JwtService {
     @Value("${jwt.expiration:86400000}") // 24 heures par défaut
     private Long expiration;
 
+    /** Durée de validité d'un jeton (ms), exposée au frontend pour la déconnexion automatique. */
+    public long getExpirationMs() {
+        return expiration;
+    }
+
     /** Claim portant le role : SUPER_ADMIN | ADMIN | USER. */
     public static final String CLAIM_ROLE = "role";
     /** Claim portant l'identifiant d'entreprise ; absent/null pour le SUPER_ADMIN. */

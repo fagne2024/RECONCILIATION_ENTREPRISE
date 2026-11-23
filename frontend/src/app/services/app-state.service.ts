@@ -150,6 +150,97 @@ private reconciliationProgressSubject = new BehaviorSubject<boolean>(false);
     ) {
         // Charger l'utilisateur et le token depuis le localStorage au démarrage
         this.loadUserFromStorage();
+        this.restoreSessionExpiry();
+    }
+
+    // ----- Expiration de session : déconnexion automatique -----
+    private static readonly SESSION_EXPIRES_KEY = 'sessionExpiresAt';
+    private sessionExpiryTimer: ReturnType<typeof setTimeout> | null = null;
+    private sessionVisibilityListenerAdded = false;
+
+    /** Heure d'expiration du jeton (ms epoch) renvoyée par le backend à la connexion. */
+    setSessionExpiresAt(expiresAt: number | null | undefined): void {
+        const ts = Number(expiresAt);
+        if (!Number.isFinite(ts) || ts <= 0) {
+            this.clearSessionExpiry();
+            return;
+        }
+        try { localStorage.setItem(AppStateService.SESSION_EXPIRES_KEY, String(ts)); } catch { /* stockage indisponible */ }
+        this.scheduleSessionExpiry(ts);
+    }
+
+    /** Vrai si la session connue du navigateur a dépassé l'heure d'expiration du jeton. */
+    isSessionExpired(): boolean {
+        const ts = this.readSessionExpiresAt();
+        return ts > 0 && Date.now() >= ts;
+    }
+
+    /** Session expirée : déconnexion puis retour à l'écran de connexion. */
+    expireSession(): void {
+        if (!this.isAuthenticated()) {
+            this.clearSessionExpiry();
+            return;
+        }
+        const currentUrl = this.router.url || '/';
+        this.logout();
+        if (!currentUrl.startsWith('/login')) {
+            this.router.navigate(['/login'], { queryParams: { returnUrl: currentUrl, sessionExpiree: '1' } });
+        }
+    }
+
+    private readSessionExpiresAt(): number {
+        try {
+            const ts = Number(localStorage.getItem(AppStateService.SESSION_EXPIRES_KEY));
+            return Number.isFinite(ts) && ts > 0 ? ts : 0;
+        } catch {
+            return 0;
+        }
+    }
+
+    private restoreSessionExpiry(): void {
+        if (!this.isAuthenticated()) {
+            return;
+        }
+        if (this.isSessionExpired()) {
+            // Jeton déjà expiré à l'ouverture : la session n'est pas restaurée.
+            this.logout();
+            return;
+        }
+        const ts = this.readSessionExpiresAt();
+        if (ts > 0) {
+            this.scheduleSessionExpiry(ts);
+        }
+    }
+
+    private scheduleSessionExpiry(expiresAt: number): void {
+        if (this.sessionExpiryTimer) {
+            clearTimeout(this.sessionExpiryTimer);
+        }
+        const delay = expiresAt - Date.now();
+        if (delay <= 0) {
+            this.sessionExpiryTimer = null;
+            this.expireSession();
+            return;
+        }
+        // Plafond de setTimeout (~24,8 jours) ; au-delà, le contrôle au retour sur l'onglet suffit.
+        this.sessionExpiryTimer = setTimeout(() => this.expireSession(), Math.min(delay, 2147483647));
+        if (!this.sessionVisibilityListenerAdded && typeof document !== 'undefined') {
+            this.sessionVisibilityListenerAdded = true;
+            // Poste en veille / onglet en arrière-plan : les minuteries peuvent être retardées.
+            document.addEventListener('visibilitychange', () => {
+                if (document.visibilityState === 'visible' && this.isSessionExpired()) {
+                    this.expireSession();
+                }
+            });
+        }
+    }
+
+    private clearSessionExpiry(): void {
+        if (this.sessionExpiryTimer) {
+            clearTimeout(this.sessionExpiryTimer);
+            this.sessionExpiryTimer = null;
+        }
+        try { localStorage.removeItem(AppStateService.SESSION_EXPIRES_KEY); } catch { /* stockage indisponible */ }
     }
 
     setCurrentStep(step: number) {
@@ -625,6 +716,7 @@ private reconciliationProgressSubject = new BehaviorSubject<boolean>(false);
         localStorage.removeItem('username');
         localStorage.removeItem('auth_token');
         localStorage.removeItem('mustChangePassword');
+        this.clearSessionExpiry();
         // La marque (logo + thème) est propre à l'entreprise : on repasse aux
         // valeurs par défaut de l'application pour ne jamais laisser « fuiter »
         // le thème d'une entreprise vers un autre compte (ex. SUPER_ADMIN).

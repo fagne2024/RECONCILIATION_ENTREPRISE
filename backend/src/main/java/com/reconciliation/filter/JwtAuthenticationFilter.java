@@ -103,6 +103,20 @@ public class JwtAuthenticationFilter extends OncePerRequestFilter {
 
                 // Valider le token
                 if (jwtService.validateToken(jwt, username)) {
+                    if (isSessionUserMismatch(request, username)) {
+                        // Le cookie ne correspond plus à l'utilisateur affiché par le navigateur
+                        // (session expirée puis cookie d'une autre session, ex. environnement de
+                        // test sur le même domaine) : 401 pour que le frontend déconnecte, au lieu
+                        // de refus « permission » trompeurs avec les droits d'un autre compte.
+                        log.debug("Session desynchronisee: cookie={} navigateur={} sur {} {}",
+                            username, request.getHeader(SESSION_USER_HEADER), request.getMethod(), request.getRequestURI());
+                        SecurityContextHolder.clearContext();
+                        TenantContext.clear();
+                        response.setStatus(HttpServletResponse.SC_UNAUTHORIZED);
+                        response.setContentType("application/json;charset=UTF-8");
+                        response.getWriter().write("{\"error\":\"session_mismatch\"}");
+                        return;
+                    }
                     if (!userDetails.isEnabled() || !userDetails.isAccountNonLocked()) {
                         SecurityContextHolder.clearContext();
                         response.setStatus(HttpServletResponse.SC_UNAUTHORIZED);
@@ -165,6 +179,22 @@ public class JwtAuthenticationFilter extends OncePerRequestFilter {
         if (jetonDuCookie && authCookieService != null && authCookieService.read(request) != null) {
             authCookieService.clear(request, response);
         }
+    }
+
+    /** Utilisateur connecté côté navigateur, envoyé par le frontend sur chaque appel API. */
+    static final String SESSION_USER_HEADER = "X-Session-User";
+
+    /**
+     * Vrai si le navigateur annonce un autre utilisateur que celui du jeton. Ignoré sur
+     * /api/auth/** (connexion, 2FA, déconnexion) et pour les clients sans l'en-tête.
+     */
+    private boolean isSessionUserMismatch(HttpServletRequest request, String tokenUsername) {
+        String sessionUser = request.getHeader(SESSION_USER_HEADER);
+        if (sessionUser == null || sessionUser.isBlank() || request.getRequestURI().startsWith("/api/auth/")) {
+            return false;
+        }
+        String decoded = java.net.URLDecoder.decode(sessionUser.trim(), java.nio.charset.StandardCharsets.UTF_8);
+        return !decoded.equalsIgnoreCase(tokenUsername);
     }
 
     private String extractJwt(HttpServletRequest request) {

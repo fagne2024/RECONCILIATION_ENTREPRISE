@@ -156,6 +156,7 @@ public class AuthController {
         authCookieService.addTokenCookie(request, httpResponse, token);
 
         body.put("authenticated", true);
+        body.put("sessionExpiresAt", System.currentTimeMillis() + jwtService.getExpirationMs());
         body.put("requires2FA", false);
         putScopeFields(body, user);
 
@@ -315,6 +316,7 @@ public class AuthController {
             Map<String, Object> response = new java.util.HashMap<>();
             response.put("username", user.getUsername());
             response.put("authenticated", true);
+            response.put("sessionExpiresAt", System.currentTimeMillis() + jwtService.getExpirationMs());
             putScopeFields(response, user);
 
             if (AdminRoleUtil.isAdminUser(user)) {

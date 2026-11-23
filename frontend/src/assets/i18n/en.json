@@ -3179,6 +3179,7 @@
       "qrCode2fa": "2FA QR code"
     },
     "msg": {
+      "sessionExpiree": "Your session has expired: please sign in again.",
       "sessionDAuthentificationManquanteDansLa": "Authentication session missing from the server response.",
       "nomDUtilisateurOuMotDe": "Incorrect username or password. Please check your credentials.",
       "impossibleDeSeConnecterAuServeur": "Unable to connect to the server. Check your network connection.",
