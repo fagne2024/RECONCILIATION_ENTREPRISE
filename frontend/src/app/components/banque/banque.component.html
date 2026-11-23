@@ -835,7 +835,9 @@
               <td class="right">{{ r.debit !== null && r.debit !== undefined ? (r.debit | number:'1.0-0') : '-' }}</td>
               <td class="right">{{ r.credit !== null && r.credit !== undefined ? (r.credit | number:'1.0-0') : '-' }}</td>
               <td class="right">{{ r.montant !== null && r.montant !== undefined ? (r.montant | number:'1.0-0') : '-' }}</td>
+              <td>{{ r.numeroCheque || '-' }}</td>
               <td>{{ r.devise || '-' }}</td>
+              <td>{{ r.numeroSerie || '-' }}</td>
               <!-- Suspens relevé : toujours KO -->
               <td><span class="badge status-ko">KO</span></td>
             </tr>
@@ -934,7 +936,9 @@
               <td class="right">{{ r.debit !== null && r.debit !== undefined ? (r.debit | number:'1.0-0') : '-' }}</td>
               <td class="right">{{ r.credit !== null && r.credit !== undefined ? (r.credit | number:'1.0-0') : '-' }}</td>
               <td class="right">{{ r.montant !== null && r.montant !== undefined ? (r.montant | number:'1.0-0') : '-' }}</td>
+              <td>{{ r.numeroCheque || '-' }}</td>
               <td>{{ r.devise || '-' }}</td>
+              <td>{{ r.numeroSerie || '-' }}</td>
               <td class="right">
                 <!-- Correspondance : toujours OK -->
                 <span class="badge status-ok">{{ 'COMMON.actions.ok' | translate }}</span>
