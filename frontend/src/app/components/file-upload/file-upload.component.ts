@@ -6540,8 +6540,10 @@ export class FileUploadComponent implements OnInit, OnDestroy {
     }
 
     /**
-     * Mode assisté : le fichier chargé doit correspondre (motif du nom) à un modèle configuré
-     * du bon type, sinon message d'erreur immédiat, avant tout lancement de la réconciliation.
+     * Mode assisté : le fichier chargé doit correspondre (motif du nom) à un modèle configuré,
+     * sinon message d'erreur immédiat, avant tout lancement de la réconciliation.
+     * Tout type de modèle compte : la réconciliation retrouve aussi le modèle partenaire à partir
+     * du nom du fichier BO (ex. « MOOV_….csv » chargé en BO, modèle partenaire « *MOOV*.csv »).
      * Si la liste des modèles est indisponible, le contrôle reste fait au lancement.
      */
     private async verifierModeleConfigurePourFichier(fileName: string, isBo: boolean): Promise<boolean> {
@@ -6554,11 +6556,7 @@ export class FileUploadComponent implements OnInit, OnDestroy {
         } catch {
             return true;
         }
-        const types = isBo ? ['bo', 'both'] : ['partner', 'both'];
-        const configure = (models || []).some(m =>
-            types.includes(String(m.fileType || '').toLowerCase())
-            && this.matchesFilePattern(fileName, m.filePattern)
-        );
+        const configure = (models || []).some(m => this.matchesFilePattern(fileName, m.filePattern));
         if (configure) {
             return true;
         }
