@@ -2508,10 +2508,10 @@
     }
   },
   "FU": {
-    "paysSection": "Pays du fichier partenaire — colonne",
+    "paysSection": "Pays du fichier — colonne",
+    "paysAucun": "Aucun (pas de colonne PAYS)",
     "paysCode": "Code pays",
-    "paysAide": "Obligatoire : ce code est écrit sur chaque ligne du fichier, dans la colonne",
-    "paysObligatoire": "Renseignez le code pays du fichier partenaire (colonne {{p0}}) avant de lancer le traitement.",
+    "paysAide": "Facultatif : le code choisi est écrit sur chaque ligne du fichier, dans la colonne",
     "paysTitre": "Pays du fichier",
     "ClientVolume": {
       "Title": "Volume par client",

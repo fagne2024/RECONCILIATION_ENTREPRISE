@@ -1696,8 +1696,8 @@
             </ng-container>
         </div>
 
-        <div class="traitement-section" *ngIf="traitementPaysRequired">
-            <label class="traitement-section-title" for="traitementPaysValue">{{ 'FU.paysSection' | translate }} {{ paysColumnName }}</label>
+        <div class="traitement-section" *ngIf="showTraitementPaysSection">
+            <label class="traitement-section-title" for="traitementPaysValue">{{ 'FU.paysSection' | translate }} {{ paysColumnName }} <span class="traitement-optional-badge">{{ 'LBL.optional' | translate }}</span></label>
             <div class="traitement-env-value-row">
                 <label for="traitementPaysValue">{{ 'FU.paysCode' | translate }}</label>
                 <select
@@ -1706,7 +1706,7 @@
                     class="traitement-env-select"
                     [(ngModel)]="traitementPaysValue"
                     [disabled]="traitementProcessing">
-                    <option value="">{{ 'LBL.chooseDash' | translate }}</option>
+                    <option value="">{{ 'FU.paysAucun' | translate }}</option>
                     <option *ngFor="let pays of traitementPaysOptions" [value]="pays.code">{{ pays.code }}{{ pays.nom ? ' — ' + pays.nom : '' }}</option>
                 </select>
                 <!-- Liste des pays indisponible (droits) : saisie du code. -->
@@ -1726,13 +1726,13 @@
         </div>
 
         <div class="traitement-section" *ngIf="showTraitementEnvSection">
-            <label class="traitement-section-title">{{ 'FU.3colonne' | translate }} {{ envColumnName }} <span class="traitement-optional-badge" *ngIf="!traitementEnvRequired">{{ 'LBL.optional' | translate }}</span></label>
+            <label class="traitement-section-title">{{ 'FU.3colonne' | translate }} {{ envColumnName }} <span class="traitement-optional-badge">{{ 'LBL.optional' | translate }}</span></label>
             <label class="traitement-column-filter-toggle">
                 <input
                     type="checkbox"
                     [ngModel]="traitementEnvActive"
                     (ngModelChange)="traitementEnvColumnEnabled = $event"
-                    [disabled]="traitementProcessing || traitementEnvRequired">
+                    [disabled]="traitementProcessing">
                 <span>{{ 'FU.Ajouterlacolonne' | translate }} {{ envColumnName }} {{ 'FU.Aufichierfinal' | translate }}</span>
             </label>
             <div class="traitement-env-value-row" *ngIf="traitementEnvActive">

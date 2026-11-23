@@ -2508,10 +2508,10 @@
     }
   },
   "FU": {
-    "paysSection": "Partner file country — column",
+    "paysSection": "File country — column",
+    "paysAucun": "None (no PAYS column)",
     "paysCode": "Country code",
-    "paysAide": "Required: this code is written on every row of the file, in the column",
-    "paysObligatoire": "Enter the country code of the partner file ({{p0}} column) before running the processing.",
+    "paysAide": "Optional: the selected code is written on every row of the file, in the column",
     "paysTitre": "File country",
     "ClientVolume": {
       "Title": "Volume per customer",

@@ -872,7 +872,7 @@ export class FileUploadComponent implements OnInit, OnDestroy {
         return this.showTraitementColumnSection || this.traitementEnvRequired;
     }
 
-    /** Un modèle sélectionné déclare la colonne ENV : sa valeur doit être choisie avant le traitement. */
+    /** Un modèle sélectionné déclare la colonne ENV : section affichée et colonne cochée par défaut (facultative). */
     get traitementEnvRequired(): boolean {
         return this.selectedTraitementModels.some(m => m.preProcessingConfig?.envColumn?.enabled === true);
     }
@@ -1320,23 +1320,27 @@ export class FileUploadComponent implements OnInit, OnDestroy {
         return model.fileType === 'partner' || model.preProcessingConfig?.paysColumn?.enabled === true;
     }
 
-    get traitementPaysRequired(): boolean {
-        const required = this.selectedTraitementModels.some(m => this.isPaysRequiredForModel(m));
-        if (required && !this.traitementPaysOptionsLoaded) {
+    /**
+     * Pays du fichier (facultatif, comme dans le module Traitement) : proposé dès qu'un modèle est
+     * sélectionné ; sans choix, aucune colonne PAYS n'est ajoutée.
+     */
+    get showTraitementPaysSection(): boolean {
+        const visible = this.selectedTraitementModels.length > 0;
+        if (visible && !this.traitementPaysOptionsLoaded) {
             // Liste chargée dès que la section s'affiche, quel que soit le chemin de sélection du modèle.
             this.loadTraitementPaysOptions();
         }
-        return required;
+        return visible;
     }
 
-    /** Colonne ENV ajoutée : cochée par l'utilisateur, ou imposée par un modèle qui la déclare. */
+    /** Colonne ENV ajoutée : cochée par défaut si un modèle la déclare, décochable (facultative). */
     get traitementEnvActive(): boolean {
-        return this.traitementEnvColumnEnabled || this.traitementEnvRequired;
+        return this.traitementEnvColumnEnabled;
     }
 
     /** Code pays proposé : celui du modèle s'il en a un, sinon le dernier choisi ; liste des codes connus. */
     private syncTraitementPaysFromModels(): void {
-        if (!this.traitementPaysRequired) {
+        if (!this.showTraitementPaysSection) {
             return;
         }
         const modelDefault = this.selectedTraitementModels
@@ -1392,14 +1396,17 @@ export class FileUploadComponent implements OnInit, OnDestroy {
         return withPays;
     }
 
-    /** Ajoute la colonne PAYS (code choisi avant le traitement) pour un modèle partenaire. */
+    /**
+     * Colonne PAYS : code choisi avant le traitement, écrit sur toutes les lignes. Sans code choisi,
+     * aucune colonne PAYS, même si le modèle en déclare une avec un code par défaut (choix « Aucun »).
+     */
     private withTraitementPaysColumn(
         model: AutoProcessingModel,
         config: AutoProcessingModel['preProcessingConfig']
     ): AutoProcessingModel['preProcessingConfig'] {
         const code = (this.traitementPaysValue || '').trim().toUpperCase();
-        if (!code || !this.isPaysRequiredForModel(model)) {
-            return config;
+        if (!code) {
+            return config?.paysColumn?.enabled ? { ...config, paysColumn: { enabled: false, value: '' } } : config;
         }
         return { ...(config || {}), paysColumn: { enabled: true, value: code } };
     }
@@ -1601,26 +1608,8 @@ export class FileUploadComponent implements OnInit, OnDestroy {
             return;
         }
 
-        if (this.traitementEnvRequired && !this.traitementEnvColumnValue) {
-            // Valeur fixée par le modèle, si le modèle a été choisi sans resynchronisation.
-            this.syncTraitementEnvColumnFromModel();
-        }
-        if (this.traitementEnvActive && !this.traitementEnvColumnValue) {
-            await this.popupService.showWarning(
-                I18nService.t('FU.msg.veuillezChoisirUneValeurPourLa', { p0: ENV_COLUMN_NAME }),
-                'Colonne ENV'
-            );
-            return;
-        }
-
+        // Pays et ENV facultatifs (comme dans le module Traitement) : sans valeur, pas de colonne.
         this.traitementPaysValue = (this.traitementPaysValue || '').trim().toUpperCase();
-        if (this.traitementPaysRequired && !this.traitementPaysValue) {
-            await this.popupService.showWarning(
-                I18nService.t('FU.paysObligatoire', { p0: PAYS_COLUMN_NAME }),
-                I18nService.t('FU.paysTitre')
-            );
-            return;
-        }
 
         if (this.traitementDedupEnabled && !this.traitementDedupColumns.length) {
             await this.popupService.showWarning(
@@ -2046,6 +2035,20 @@ export class FileUploadComponent implements OnInit, OnDestroy {
                 if (ignored.length) {
                     ignoredColumnsMessage = I18nService.t('FU.msg.colonnesHorsModeleIgnorees', { p0: ignored.length, p1: ignored.join(', ') });
                     console.info(`[Colonnes du modèle] ${model.name} — ${ignoredColumnsMessage}`);
+                }
+            }
+        }
+
+        // Colonnes PAYS / ENV choisies avant le traitement (facultatives) : conservées même si le
+        // modèle ne les déclare pas, sauf si l'utilisateur les a décochées dans le filtre de colonnes.
+        if (projectionColumns.length) {
+            const choisies = [
+                effectivePreProcessingConfig?.paysColumn?.enabled ? PAYS_COLUMN_NAME : '',
+                effectivePreProcessingConfig?.envColumn?.enabled ? ENV_COLUMN_NAME : ''
+            ];
+            for (const col of choisies) {
+                if (col && !projectionColumns.includes(col) && this.traitementColumnKeepMap[col] !== false) {
+                    projectionColumns = [...projectionColumns, col];
                 }
             }
         }
