@@ -1,5 +1,5 @@
 import { Injectable } from '@angular/core';
-import { HttpInterceptor, HttpRequest, HttpHandler, HttpEvent, HttpErrorResponse } from '@angular/common/http';
+import { HttpInterceptor, HttpRequest, HttpHandler, HttpEvent, HttpErrorResponse, HttpContextToken } from '@angular/common/http';
 import { Observable, throwError } from 'rxjs';
 import { catchError } from 'rxjs/operators';
 import { Router } from '@angular/router';
@@ -8,6 +8,12 @@ import { UserLogService } from '../services/user-log.service';
 import { PopupService } from '../services/popup.service';
 import { findNavigationAccessContextByRoute } from '../constants/app-navigation-catalog';
 import { I18nService } from '../services/i18n/i18n.service';
+
+/**
+ * À positionner sur une requête facultative (ex. enrichissement d'une liste) : un 403 est alors
+ * géré silencieusement par l'appelant, sans pop-up « Permission refusée ».
+ */
+export const SILENCE_PERMISSION_DENIED = new HttpContextToken<boolean>(() => false);
 
 @Injectable()
 export class AuthInterceptor implements HttpInterceptor {
@@ -64,7 +70,7 @@ export class AuthInterceptor implements HttpInterceptor {
           this.handleSessionExpired();
         }
 
-        if (error.status === 403 && !this.isAuthRequest(req.url)) {
+        if (error.status === 403 && !this.isAuthRequest(req.url) && !req.context.get(SILENCE_PERMISSION_DENIED)) {
           this.showPermissionDeniedMessage(error);
         }
 

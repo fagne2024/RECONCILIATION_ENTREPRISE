@@ -1,8 +1,9 @@
 import { Injectable } from '@angular/core';
-import { HttpClient, HttpHeaders } from '@angular/common/http';
+import { HttpClient, HttpContext, HttpHeaders } from '@angular/common/http';
 import { Observable, forkJoin, of } from 'rxjs';
 import { catchError, map } from 'rxjs/operators';
 import { Pays, ProfilPays } from '../models/pays.model';
+import { SILENCE_PERMISSION_DENIED } from '../interceptors/auth.interceptor';
 import { countryIsoCode, countryNameFromCode, countryNameKey } from '../utils/country-codes.util';
 
 /** Pays toujours proposés avant un traitement (code → nom). */
@@ -89,14 +90,16 @@ export class PaysService {
 
   /**
    * Pays proposés avant un traitement : pays par défaut + pays des rapports de réconciliation.
-   * Une source indisponible (droits) est ignorée : la liste par défaut reste toujours proposée.
+   * Une source indisponible (droits) est ignorée sans pop-up : la liste par défaut reste toujours
+   * proposée (ex. profil agent TRX sans « consulter_pays » dans le module Profil).
    */
   getPaysTraitement(): Observable<PaysTraitement[]> {
-    const rapports$ = this.http.get<{ countries?: string[] }>('/api/result8rec/filters').pipe(
+    const context = new HttpContext().set(SILENCE_PERMISSION_DENIED, true);
+    const rapports$ = this.http.get<{ countries?: string[] }>('/api/result8rec/filters', { context }).pipe(
       map(r => r?.countries || []),
       catchError(() => of([] as string[]))
     );
-    const referentiel$ = this.getPays().pipe(catchError(() => of([] as Pays[])));
+    const referentiel$ = this.http.get<Pays[]>(this.apiUrl, { context }).pipe(catchError(() => of([] as Pays[])));
     return forkJoin([rapports$, referentiel$]).pipe(
       map(([rapports, referentiel]) => buildPaysTraitement(rapports, referentiel))
     );
