@@ -4640,3 +4640,18 @@ button:disabled:hover {
     overflow-wrap: anywhere;
   }
 }
+
+/* Export par date : choix des dates à exporter */
+.periods-selection {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 8px;
+  margin-bottom: 8px;
+}
+.period-item .period-label {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  cursor: pointer;
+}

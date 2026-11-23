@@ -1633,6 +1633,56 @@ export class FileUploadComponent implements OnInit, OnDestroy {
         await this.applySingleModelTraitement(model, this.traitementFiles);
     }
 
+    /**
+     * Traitement automatique : si le fichier final a une colonne service (ex. « Service ») vide
+     * sur des lignes, prévient l'utilisateur et lui permet de saisir le service à y écrire.
+     * « Annuler » ou une saisie vide laisse les lignes telles quelles.
+     */
+    private async proposerServicePourLignesVides(
+        rows: Record<string, string>[],
+        projectionColumns: string[],
+        model: AutoProcessingModel
+    ): Promise<Record<string, string>[]> {
+        if (!rows.length) {
+            return rows;
+        }
+        const colonnes = projectionColumns.length ? projectionColumns : Object.keys(rows[0] ?? {});
+        const norm = (c: string) => c.normalize('NFD').replace(/[\u0300-\u036f]/g, '').trim().toLowerCase();
+        const colonne = colonnes.find(c => norm(c) === 'service') || colonnes.find(c => /service/.test(norm(c)));
+        if (!colonne) {
+            return rows;
+        }
+        let vides = 0;
+        const valeurs = new Set<string>();
+        for (const row of rows) {
+            const v = String(row[colonne] ?? '').trim();
+            if (v) {
+                valeurs.add(v);
+            } else {
+                vides++;
+            }
+        }
+        if (!vides) {
+            return rows;
+        }
+        const saisie = await this.popupService.showAutocompleteInput(
+            I18nService.t('FU.msg.serviceVideDemande', {
+                p0: colonne,
+                p1: vides.toLocaleString(),
+                p2: rows.length.toLocaleString(),
+                p3: model.name || ''
+            }),
+            I18nService.t('FU.msg.serviceVideTitre'),
+            [...valeurs].sort((a, b) => a.localeCompare(b)).slice(0, 500),
+            ''
+        );
+        const service = (saisie || '').trim();
+        if (!service) {
+            return rows;
+        }
+        return rows.map(row => String(row[colonne] ?? '').trim() ? row : { ...row, [colonne]: service });
+    }
+
     /** Traite plusieurs modèles en une fois (module /traitement) — même fichier(s) pour chaque modèle. */
     private async applyEmbedMultiModelTraitement(): Promise<void> {
         const models = this.selectedTraitementModels;
@@ -2062,6 +2112,9 @@ export class FileUploadComponent implements OnInit, OnDestroy {
                 model
             );
         }
+
+        // Colonne service du modèle vide : l'utilisateur est prévenu et peut saisir le service.
+        exportRows = await this.proposerServicePourLignesVides(exportRows, projectionColumns, model);
 
         // Modèle banque : les montants (colonnes texte) sont convertis en nombres avant le résultat.
         if (model.bankModel) {

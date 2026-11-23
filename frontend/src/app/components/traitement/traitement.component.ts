@@ -7890,6 +7890,8 @@ End Sub`;
     });
 
 
+    // Nouvelle détection : toutes les périodes sont de nouveau cochées.
+    this.unselectedPeriodKeys.clear();
     this.detectedPeriods = Array.from(periodMap.entries())
       .map(([key, count]) => ({
         key,
@@ -7901,6 +7903,36 @@ End Sub`;
 
     // Calculer le nombre total de pages pour la pagination
     this.detectedPeriodsTotalPages = Math.ceil(this.detectedPeriods.length / this.detectedPeriodsPageSize);
+  }
+
+  /** Périodes décochées : exclues de l'export (toutes cochées par défaut). */
+  unselectedPeriodKeys = new Set<string>();
+
+  isPeriodSelected(key: string): boolean {
+    return !this.unselectedPeriodKeys.has(key);
+  }
+
+  togglePeriodSelection(key: string, selected: boolean): void {
+    if (selected) {
+      this.unselectedPeriodKeys.delete(key);
+    } else {
+      this.unselectedPeriodKeys.add(key);
+    }
+  }
+
+  selectAllPeriods(selected: boolean): void {
+    this.unselectedPeriodKeys.clear();
+    if (!selected) {
+      this.detectedPeriods.forEach(p => this.unselectedPeriodKeys.add(p.key));
+    }
+  }
+
+  get selectedPeriodsCount(): number {
+    return this.detectedPeriods.filter(p => this.isPeriodSelected(p.key)).length;
+  }
+
+  get selectedPagedPeriodsCount(): number {
+    return this.getPagedDetectedPeriods().filter(p => this.isPeriodSelected(p.key)).length;
   }
 
   /**
@@ -7979,6 +8011,10 @@ End Sub`;
       this.showError('exportDate', this.t('TRT.msg.noPeriodDetected'));
       return;
     }
+    if (this.selectedPeriodsCount === 0) {
+      this.showError('exportDate', this.t('TRT.msg.noPeriodSelected'));
+      return;
+    }
 
     try {
       // Grouper les données pour toutes les périodes
@@ -7989,6 +8025,9 @@ End Sub`;
 
       
       for (const [periodKey, rows] of periodGroups.entries()) {
+        if (!this.isPeriodSelected(periodKey)) {
+          continue; // Date décochée : non exportée.
+        }
         try {
           const periodLabel = this.formatPeriodLabel(periodKey, this.exportDatePeriod);
           const fileName = this.generateExportFileName(periodKey, periodLabel);
@@ -8262,6 +8301,10 @@ End Sub`;
       this.showError('exportDate', this.t('TRT.msg.noPeriodDetected'));
       return;
     }
+    if (this.selectedPeriodsCount === 0) {
+      this.showError('exportDate', this.t('TRT.msg.noPeriodSelected'));
+      return;
+    }
 
     try {
       // Obtenir les périodes de la page courante
@@ -8280,6 +8323,9 @@ End Sub`;
 
       
       for (const [periodKey, rows] of periodGroups.entries()) {
+        if (!this.isPeriodSelected(periodKey)) {
+          continue; // Date décochée : non exportée.
+        }
         try {
           const periodLabel = this.formatPeriodLabel(periodKey, this.exportDatePeriod);
           const fileName = this.generateExportFileName(periodKey, periodLabel);

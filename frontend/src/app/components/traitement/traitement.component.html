@@ -2220,12 +2220,12 @@
         <button type="button" (click)="exportByDate()" 
                 [disabled]="!exportDateCol || !exportDatePeriod || !exportDateFormat" 
                 class="ds-btn ds-btn--secondary apply-btn">
-          <i class="fas fa-download"></i> {{ 'TRT.ExportCurrentPage' | translate }} {{  getPagedDetectedPeriods().length }} {{ 'TRT.Files' | translate }})
+          <i class="fas fa-download"></i> {{ 'TRT.ExportCurrentPage' | translate }} {{  selectedPagedPeriodsCount }} {{ 'TRT.Files' | translate }})
         </button>
         <button type="button" (click)="exportAllPages()" 
                 [disabled]="!exportDateCol || !exportDatePeriod || !exportDateFormat" 
                 class="ds-btn ds-btn--secondary btn btn-outline-primary">
-          <i class="fas fa-download"></i> {{ 'TRT.ExportAllPages' | translate }} {{  detectedPeriods.length }} {{ 'TRT.Files' | translate }})
+          <i class="fas fa-download"></i> {{ 'TRT.ExportAllPages' | translate }} {{  selectedPeriodsCount }} {{ 'TRT.Files' | translate }})
         </button>
         <button type="button" (click)="forceRedetectPeriods()" 
                 [disabled]="!exportDateCol || !exportDatePeriod" 
@@ -2250,9 +2250,19 @@
           </select>
         </div>
       </div>
+      <div class="periods-selection">
+        <span>{{ 'TRT.periodsSelected' | translate: { n: selectedPeriodsCount, total: detectedPeriods.length } }}</span>
+        <button type="button" class="ds-btn ds-btn--secondary btn btn-sm" (click)="selectAllPeriods(true)">{{ 'TRT.periodsSelectAll' | translate }}</button>
+        <button type="button" class="ds-btn ds-btn--secondary btn btn-sm" (click)="selectAllPeriods(false)">{{ 'TRT.periodsSelectNone' | translate }}</button>
+      </div>
       <div class="periods-list">
         <div *ngFor="let period of getPagedDetectedPeriods()" class="period-item">
-          <span class="period-label">{{ period.label }}</span>
+          <label class="period-label">
+            <input type="checkbox" class="ds-checkbox"
+                   [checked]="isPeriodSelected(period.key)"
+                   (change)="togglePeriodSelection(period.key, $any($event.target).checked)">
+            {{ period.label }}
+          </label>
           <span class="period-count">{{ period.count }} {{ 'TRT.Rows' | translate }}</span>
         </div>
       </div>
