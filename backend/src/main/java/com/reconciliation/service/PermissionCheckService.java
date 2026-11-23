@@ -212,10 +212,18 @@ public class PermissionCheckService {
         return "importer".equals(permissionName) || permissionName.startsWith("importer_");
     }
 
+    /**
+     * Droits d'export. « consulter_export » et « download » sont les permissions générées pour
+     * les endpoints GET …/export et …/download (cochées par l'admin dans le profil) : elles
+     * doivent ouvrir l'export, sinon un profil qui les a reçues (ex. Agent Reconciliation TRX,
+     * module Traitement) obtient un 403 au téléchargement.
+     */
     private boolean isExporterPermission(String permissionName) {
         return "exporter".equals(permissionName)
             || permissionName.startsWith("exporter_")
-            || permissionName.startsWith("telecharger_");
+            || permissionName.startsWith("telecharger_")
+            || "consulter_export".equals(permissionName)
+            || "download".equals(permissionName);
     }
 
     private boolean isReconciliationReadEquivalent(String permissionName) {
