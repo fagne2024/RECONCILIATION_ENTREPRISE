@@ -590,7 +590,7 @@
         <div class="actions">
           <button type="button" class="ds-btn ds-btn--primary btn-primary" (click)="toggleSelectAllCurrentPage()" [class.active]="selectAllOnPage" title="{{ 'BQ.Sélectionnerdésélectionnerlapage' | translate }}" *ngIf="reconView==='corr_operation' || reconView==='corr_releve'">
             <i class="fas" [ngClass]="{ 'fa-square': !selectAllOnPage, 'fa-check-square': selectAllOnPage }"></i>
-            {{ selectAllOnPage ? ('ACT.deselectAll' | translate) : ('BQ.Sélectionnerlapage' | translate) }}
+            {{ selectAllOnPage ? ('ACT.deselectAll' | translate) : ('ACT.selectAll' | translate) }}
           </button>
           <button type="button" class="ds-btn ds-btn--primary btn-primary" (click)="toggleSelectionModeOps()" [class.active]="isSelectionModeOps" title="{{ 'BQ.Sélectionmultiple' | translate }}" *ngIf="reconView==='operation'">
             <i class="fas fa-check-square"></i>
@@ -675,9 +675,9 @@
           <!-- Actions sélection pour vue opérations -->
           <div class="bulk-actions" *ngIf="reconView==='operation' && isSelectionModeOps">
             <ng-container *ngIf="isSelectionModeOps">
-              <button type="button" class="ds-btn ds-btn--secondary btn-selection-toggle" (click)="selectAllOpsCurrentPage()" [disabled]="selectAllOpsOnPage">
+              <button type="button" class="ds-btn ds-btn--secondary btn-selection-toggle" (click)="selectAllOpsCurrentPage()" [disabled]="allOpsSelected">
                 <i class="fas fa-check-double"></i>
-                {{ 'BQ.Sélectionnerlapage' | translate }}
+                {{ 'ACT.selectAll' | translate }}
               </button>
               <button type="button" class="ds-btn ds-btn--secondary btn-bulk-cancel" (click)="deselectAllOps()" [disabled]="!hasSelectedOps">
                 <i class="fas fa-times"></i>
@@ -751,10 +751,10 @@
             <tr>
               <th style="width:34px;" *ngIf="isSelectionModeOps">
                 <input type="checkbox"
-                       [checked]="selectAllOpsOnPage && (pagedLeftOps.length>0)"
-                       [indeterminate]="hasSelectedOps && !selectAllOpsOnPage"
+                       [checked]="allOpsSelected"
+                       [indeterminate]="hasSelectedOps && !allOpsSelected"
                        (change)="toggleSelectAllOpsHeader()"
-                       title="{{ 'BQ.Sélectionnerdésélectionnerlapage' | translate }}">
+                       title="{{ 'TBL.ui.selectionnerDeselectionnerToutesLesLigne' | translate }}">
               </th>
               <th>{{ 'TBL.country' | translate }}</th>
               <th>{{ 'TBL.operationDate' | translate }}</th>

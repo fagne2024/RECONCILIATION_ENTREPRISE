@@ -927,14 +927,29 @@ export class BanqueComponent implements OnInit {
     if (this.selectedOpIds.has(id)) this.selectedOpIds.delete(id); else this.selectedOpIds.add(id);
   }
 
+  /** Lignes de la vue « opérations » (toutes pages, filtres appliqués) portant un identifiant. */
+  private get allOpsSelectable(): OperationBancaireDisplay[] {
+    return (this.filteredLeftOps || []).filter(op => typeof (op as any).id === 'number');
+  }
+
+  get allOpsSelected(): boolean {
+    const all = this.allOpsSelectable;
+    return all.length > 0 && all.every(op => this.selectedOpIds.has((op as any).id));
+  }
+
   selectAllOpsCurrentPage() {
-    // Sélectionner toutes les opérations filtrées (pas seulement celles de la page courante)
-    (this.operations || []).forEach(op => {
-      const id = (op as any).id as number | undefined;
-      if (typeof id === 'number') this.selectedOpIds.add(id);
-    });
-    this.selectAllOpsOnPage = true;
-    console.log(`✅ ${this.selectedOpIds.size} opérations bancaires sélectionnées (filtrées)`);
+    // Toutes les opérations filtrées, sur toutes les pages.
+    this.allOpsSelectable.forEach(op => this.selectedOpIds.add((op as any).id));
+    this.selectAllOpsOnPage = this.allOpsSelected;
+  }
+
+  toggleSelectAllOpsHeader() {
+    if (this.allOpsSelected) {
+      this.allOpsSelectable.forEach(op => this.selectedOpIds.delete((op as any).id));
+    } else {
+      this.allOpsSelectable.forEach(op => this.selectedOpIds.add((op as any).id));
+    }
+    this.selectAllOpsOnPage = this.allOpsSelected;
   }
 
   deselectAllOps() {
@@ -1777,9 +1792,10 @@ export class BanqueComponent implements OnInit {
   }
 
   toggleSelectAllCurrentPage() {
-    const list = this.reconView === 'corr_operation' ? this.pagedMatchedOps : this.pagedMatchedReleves;
-    const keys = list.map((it: any) => it.key).filter((k: any) => !!k);
-    const allSelected = keys.every((k: string) => this.selectedReconKeys.has(k));
+    // Toutes les lignes filtrées de la vue, sur toutes les pages (pas seulement la page affichée).
+    const list: any[] = this.reconView === 'corr_operation' ? this.filteredMatchedOps : this.filteredMatchedReleves;
+    const keys: string[] = (list || []).map((it: any) => it.key).filter((k: any) => !!k);
+    const allSelected = keys.length > 0 && keys.every((k: string) => this.selectedReconKeys.has(k));
     if (allSelected) {
       keys.forEach(k => this.selectedReconKeys.delete(k));
       this.selectAllOnPage = false;
@@ -3996,23 +4012,7 @@ export class BanqueComponent implements OnInit {
     if (this.releveFilterDateDebut || this.releveFilterDateFin) {
       filtered = filtered.filter((r: any) => {
         const dateField = this.releveFilterDateField === 'valeur' ? r.dateValeur : r.dateComptable;
-        if (!dateField) return false;
-        
-        const itemDate = new Date(dateField);
-        if (isNaN(itemDate.getTime())) return false;
-        
-        if (this.releveFilterDateDebut) {
-          const startDate = new Date(this.releveFilterDateDebut);
-          if (itemDate < startDate) return false;
-        }
-        
-        if (this.releveFilterDateFin) {
-          const endDate = new Date(this.releveFilterDateFin);
-          endDate.setHours(23, 59, 59, 999); // Inclure toute la journée
-          if (itemDate > endDate) return false;
-        }
-        
-        return true;
+        return this.dateDansIntervalle(dateField, this.releveFilterDateDebut, this.releveFilterDateFin);
       });
     }
     
@@ -4464,15 +4464,8 @@ export class BanqueComponent implements OnInit {
 
   get filteredSuiviCompenseRows(): SuiviCompenseOp[] {
     const f = this.suiviFilters;
-    const debut = f.dateDebut ? new Date(f.dateDebut).getTime() : null;
-    const fin = f.dateFin ? new Date(f.dateFin + 'T23:59:59').getTime() : null;
     return this.suiviCompenseRows.filter(r => {
-      if (debut !== null || fin !== null) {
-        const t = r.dateOperation ? new Date(r.dateOperation as any).getTime() : NaN;
-        if (isNaN(t)) return false;
-        if (debut !== null && t < debut) return false;
-        if (fin !== null && t > fin) return false;
-      }
+      if (!this.dateDansIntervalle(r.dateOperation as any, f.dateDebut, f.dateFin)) return false;
       return containsFilter(r.codeAgence, f.codeAgence)
         && containsFilter(r.banque, f.banque)
         && containsFilter(r.compteBancaire, f.compteBancaire)
@@ -5270,15 +5263,7 @@ export class BanqueComponent implements OnInit {
         containsFilter(operation.idGlpi, f.idGlpi) &&
         (f.montant == null || Number(operation.montant) === Number(f.montant));
 
-      let matchDate = true;
-      if (this.filters.dateDebut) {
-        const dateDebut = new Date(this.filters.dateDebut);
-        matchDate = matchDate && operation.dateOperation >= dateDebut;
-      }
-      if (this.filters.dateFin) {
-        const dateFin = new Date(this.filters.dateFin);
-        matchDate = matchDate && operation.dateOperation <= dateFin;
-      }
+      const matchDate = this.dateDansIntervalle(operation.dateOperation, this.filters.dateDebut, this.filters.dateFin);
 
       return matchPays && matchType && matchStatut && matchTraitement && matchDate && matchReconStatut && matchColonnes;
     });
@@ -5328,8 +5313,8 @@ export class BanqueComponent implements OnInit {
   }
   
   onOperationsReconStatusFilterChange() {
-    this.currentPage = 1; // Retour à la première page lors du changement de filtre
-    this.applyOperationsFilters();
+    // applyFilters applique aussi ce filtre, sans perdre pays / dates / colonnes.
+    this.applyFilters();
   }
   
   applyOperationsFilters() {
@@ -5428,6 +5413,21 @@ export class BanqueComponent implements OnInit {
       return isNaN(d.getTime()) ? null : d;
     }
     return null;
+  }
+
+  /**
+   * Filtre « date début / date fin » : comparaison par jour (AAAA-MM-JJ), bornes incluses.
+   * Une date « AAAA-MM-JJ… » reçue du serveur est lue telle quelle (pas de décalage de fuseau) ;
+   * un objet Date est lu en heure locale, comme l'affiche le tableau.
+   */
+  private dateDansIntervalle(value: Date | string | number | undefined | null, debut?: string, fin?: string): boolean {
+    if (!debut && !fin) return true;
+    const iso = typeof value === 'string' ? value.trim().match(/^(\d{4}-\d{2}-\d{2})/) : null;
+    const jour = iso ? iso[1] : this.normalizeDateToYmd(value);
+    if (!jour) return false;
+    if (debut && jour < debut) return false;
+    if (fin && jour > fin) return false;
+    return true;
   }
 
   private normalizeDateToYmd(d: Date | string | number | undefined | null): string {
