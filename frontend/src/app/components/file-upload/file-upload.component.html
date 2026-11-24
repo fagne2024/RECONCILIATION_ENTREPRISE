@@ -1701,6 +1701,14 @@
             <label class="traitement-section-title">
                 <i class="fas fa-eye"></i> {{ 'FU.preview.titre' | translate }} <span class="traitement-optional-badge">{{ 'LBL.optional' | translate }}</span>
             </label>
+            <!-- Aperçu validé : résumé replié, réglages toujours appliqués -->
+            <div class="tp-confirmed" *ngIf="traitementPreviewConfirmed && traitementPreviews.length">
+                <span><i class="fas fa-check-circle"></i>
+                    {{ 'FU.preview.valide' | translate: { p0: traitementPreviews[0].file.name } }}</span>
+                <button type="button" class="traitement-columns-action-btn" (click)="reopenTraitementPreview()">{{ 'FU.preview.modifier' | translate }}</button>
+                <p class="tp-muted" *ngIf="traitementPreviewSaveMessage">{{ traitementPreviewSaveMessage }}</p>
+            </div>
+            <ng-container *ngIf="!traitementPreviewConfirmed || !traitementPreviews.length">
             <p class="traitement-columns-intro">{{ 'FU.preview.intro' | translate }}</p>
             <div class="tp-target" *ngIf="selectedTraitementModels.length > 1">
                 <label>{{ 'FU.preview.modeleAPrevisualiser' | translate }}
@@ -1830,10 +1838,15 @@
             </div>
 
             <div class="tp-confirm" *ngIf="traitementPreviews.length">
+                <label class="traitement-column-filter-toggle" *ngIf="traitementPreviewManualLinks().length">
+                    <input type="checkbox" [(ngModel)]="traitementPreviewSaveLinks">
+                    <span>{{ 'FU.preview.enregistrerLiens' | translate }}</span>
+                </label>
                 <button type="button" class="ds-btn ds-btn--primary" [disabled]="!canApplyTraitement()" (click)="confirmTraitementPreviewAndApply()">
                     <i class="fas fa-check"></i> {{ 'FU.preview.confirmerEtLancer' | translate }}
                 </button>
             </div>
+            </ng-container>
         </div>
 
         <div class="traitement-section" *ngIf="showTraitementPaysSection">

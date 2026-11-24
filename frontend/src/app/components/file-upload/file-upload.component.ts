@@ -754,6 +754,7 @@ export class FileUploadComponent implements OnInit, OnDestroy {
     }
 
     clearTraitementPreview(): void {
+        this.traitementPreviewConfirmed = false;
         this.traitementPreviewSampleIndex = 0;
         this.traitementPreviewStore.clear();
         this.traitementPreviews = [];
@@ -778,6 +779,7 @@ export class FileUploadComponent implements OnInit, OnDestroy {
             return;
         }
         this.traitementPreviewLoading = true;
+        this.traitementPreviewConfirmed = false;
         this.cd.detectChanges();
         try {
             const context = await this.buildTraitementPreviewContext(model);
@@ -1061,7 +1063,78 @@ export class FileUploadComponent implements OnInit, OnDestroy {
 
     /** Confirme les colonnes de l'aperçu et lance le traitement avec ces réglages. */
     async confirmTraitementPreviewAndApply(): Promise<void> {
+        this.traitementPreviewSaveMessage = '';
+        if (this.traitementPreviewSaveLinks) {
+            await this.saveTraitementPreviewLinksAsEquivalences();
+        }
+        // Aperçu validé : replié (les réglages restent appliqués), réouvrable via « Modifier ».
+        this.traitementPreviewConfirmed = true;
+        this.cd.detectChanges();
         await this.applyAssistedFileTreatment();
+    }
+
+    /** Aperçu validé : la section est repliée en une ligne de résumé. */
+    traitementPreviewConfirmed = false;
+    /** Enregistrer les liens validés dans Configuration > Normalisation modèle (tous modèles). */
+    traitementPreviewSaveLinks = true;
+    /** Résultat de l'enregistrement des liens, affiché dans le résumé replié. */
+    traitementPreviewSaveMessage = '';
+
+    reopenTraitementPreview(): void {
+        this.traitementPreviewConfirmed = false;
+        this.cd.detectChanges();
+    }
+
+    /** Liens choisis à la main sur l'échantillon (colonne du modèle ← colonne du fichier). */
+    traitementPreviewManualLinks(): Array<{ column: string; fileColumn: string }> {
+        const sample = this.traitementPreviews[0];
+        if (!sample) {
+            return [];
+        }
+        return Object.entries(sample.links)
+            .filter(([column, file]) => !!file && file !== PREVIEW_LINK_NONE && file !== column)
+            .map(([column, fileColumn]) => ({ column, fileColumn }));
+    }
+
+    /**
+     * Les liens validés deviennent des équivalences du modèle : les prochains fichiers au même
+     * format sont reliés automatiquement, pour tout modèle. Fusion avec l'existant (relu à jour) ;
+     * un échec (droits, réseau) n'empêche pas le traitement.
+     */
+    private async saveTraitementPreviewLinksAsEquivalences(): Promise<void> {
+        const links = this.traitementPreviewManualLinks();
+        const model = this.traitementPreviewContext?.model;
+        const modelId = model?.modelId || model?.id;
+        if (!links.length || !modelId) {
+            return;
+        }
+        try {
+            const existing = await firstValueFrom(this.modelNormalizationService.list(modelId));
+            const items = (existing || []).filter(e => !e.modelId || e.modelId === modelId)
+                .map(e => ({ ...e, equivalents: [...(e.equivalents || [])], conditions: e.conditions || [] }));
+            let changed = false;
+            for (const { column, fileColumn } of links) {
+                const key = column.trim().toLowerCase();
+                let item = items.find(e => e.columnName.trim().toLowerCase() === key);
+                if (!item) {
+                    item = { modelId, columnName: column, equivalents: [], conditions: [] };
+                    items.push(item);
+                }
+                if (!item.equivalents.some(eq => eq.trim().toLowerCase() === fileColumn.trim().toLowerCase())) {
+                    item.equivalents.push(fileColumn);
+                    changed = true;
+                }
+            }
+            if (changed) {
+                await firstValueFrom(this.modelNormalizationService.replaceForModel(modelId, items));
+                this.traitementPreviewSaveMessage = I18nService.t('FU.preview.liensEnregistres', {
+                    p0: links.map(l => `${l.column} ← ${l.fileColumn}`).join(', ')
+                });
+            }
+        } catch (error: any) {
+            console.warn('[Prévisualisation] Enregistrement des équivalences impossible', error);
+            this.traitementPreviewSaveMessage = I18nService.t('FU.preview.liensNonEnregistres');
+        }
     }
 
     /** Réglages confirmés pour un modèle (seulement si l'aperçu a été fait pour lui). */
