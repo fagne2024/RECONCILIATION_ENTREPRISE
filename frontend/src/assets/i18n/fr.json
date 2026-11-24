@@ -1353,6 +1353,7 @@
       "30_jours": "30 derniers jours",
       "semaine": "cette semaine (lundi à dimanche, jusqu'à J-1)",
       "semaine_passee": "semaine passée",
+      "semaine_fallback": "semaine passée (aucune donnée le lundi de la semaine en cours)",
       "mois": "mois en cours",
       "trimestre": "trimestre en cours",
       "semestre": "semestre en cours",
@@ -8388,6 +8389,8 @@
       "SAVE_ERROR": "{{count}} erreur(s) lors de la sauvegarde"
     },
     "normalisation": {
+      "modelSearchPlaceholder": "Rechercher ou choisir un modèle…",
+      "noModelMatch": "Aucun modèle ne correspond",
       "title": "Normalisation modèle",
       "subtitle": "Pour chaque modèle, associez aux colonnes par défaut leurs en-têtes équivalents (autre langue, nouvelle version du fichier, libellé propre à un partenaire). Au chargement d'un fichier, en traitement comme en réconciliation, chaque en-tête équivalent trouvé est renommé avec le libellé de la colonne d'origine avant le traitement : le fichier téléchargé porte la colonne d'origine.",
       "close": "Fermer",

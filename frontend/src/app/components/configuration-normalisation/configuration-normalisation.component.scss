@@ -78,6 +78,27 @@
     .fld {
       min-width: 300px;
     }
+
+    /* Champ modèle : recherche + liste déroulante (mat-autocomplete) */
+    .model-combo {
+      position: relative;
+      display: block;
+
+      .fld {
+        width: 100%;
+        padding-right: 30px;
+      }
+
+      .model-combo-caret {
+        position: absolute;
+        right: 10px;
+        top: 50%;
+        transform: translateY(-50%);
+        font-size: 11px;
+        color: var(--muted);
+        pointer-events: none;
+      }
+    }
   }
 
   .search {

@@ -1353,6 +1353,7 @@
       "30_jours": "last 30 days",
       "semaine": "this week (Monday to Sunday, up to D-1)",
       "semaine_passee": "previous week",
+      "semaine_fallback": "previous week (no data on Monday of the current week)",
       "mois": "current month",
       "trimestre": "current quarter",
       "semestre": "current half-year",
@@ -8388,6 +8389,8 @@
       "SAVE_ERROR": "{{count}} error(s) while saving"
     },
     "normalisation": {
+      "modelSearchPlaceholder": "Search or choose a model…",
+      "noModelMatch": "No matching model",
       "title": "Model normalization",
       "subtitle": "For each model, link the default columns to their equivalent headers (other language, new file version, partner-specific label). When a file is loaded, in processing as in reconciliation, every equivalent header found is renamed to the original column label before processing: the downloaded file carries the original column.",
       "close": "Close",

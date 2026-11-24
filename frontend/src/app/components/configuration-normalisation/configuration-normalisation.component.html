@@ -26,11 +26,22 @@
       <div class="tools">
         <label class="fld-label">
           <span>{{ 'CFG.normalisation.model' | translate }}</span>
-          <select class="ds-select fld" [ngModel]="selectedModelKey" (ngModelChange)="onModelChange($event)">
-            <option *ngFor="let m of models" [value]="modelKey(m)">
+          <!-- Liste déroulante + recherche : la saisie filtre les modèles (autocomplétion) -->
+          <span class="model-combo">
+            <input class="ds-input fld" type="text" [(ngModel)]="modelQuery"
+                   [matAutocomplete]="modelAuto"
+                   (focus)="$any($event.target).select()"
+                   [placeholder]="'CFG.normalisation.modelSearchPlaceholder' | translate" />
+            <i class="fas fa-chevron-down model-combo-caret" aria-hidden="true"></i>
+          </span>
+          <mat-autocomplete #modelAuto="matAutocomplete" [displayWith]="displayModel"
+                            (optionSelected)="onModelOptionSelected($event.option.value)"
+                            (closed)="onModelPanelClosed()">
+            <mat-option *ngFor="let m of filteredModels" [value]="modelKey(m)">
               {{ m.name }} — {{ modelTypeLabel(m) }}{{ savedCount(m) ? ' (' + savedCount(m) + ')' : '' }}
-            </option>
-          </select>
+            </mat-option>
+            <mat-option *ngIf="!filteredModels.length" disabled>{{ 'CFG.normalisation.noModelMatch' | translate }}</mat-option>
+          </mat-autocomplete>
         </label>
 
         <label class="search">

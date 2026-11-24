@@ -1,6 +1,7 @@
 import { ChangeDetectorRef, Component, OnDestroy, OnInit } from '@angular/core';
 import { CommonModule, Location } from '@angular/common';
 import { FormsModule } from '@angular/forms';
+import { MatAutocompleteModule } from '@angular/material/autocomplete';
 import { TranslateModule, TranslateService } from '@ngx-translate/core';
 import { firstValueFrom, Subject } from 'rxjs';
 import * as XLSX from 'xlsx';
@@ -62,7 +63,7 @@ interface CheckResult {
 @Component({
   selector: 'app-configuration-normalisation',
   standalone: true,
-  imports: [CommonModule, FormsModule, TranslateModule],
+  imports: [CommonModule, FormsModule, TranslateModule, MatAutocompleteModule],
   templateUrl: './configuration-normalisation.component.html',
   styleUrls: ['./configuration-normalisation.component.scss']
 })
@@ -71,6 +72,8 @@ export class ConfigurationNormalisationComponent implements OnInit, OnDestroy {
 
   models: AutoProcessingModel[] = [];
   selectedModelKey = '';
+  /** Contenu du champ modèle : clé du modèle choisi, ou texte de recherche en cours de saisie. */
+  modelQuery = '';
   rows: ColumnRow[] = [];
   searchTerm = '';
   newColumnName = '';
@@ -152,16 +155,49 @@ export class ConfigurationNormalisationComponent implements OnInit, OnDestroy {
       .reduce((n, eq) => n + (eq.equivalents?.length || 0), 0);
   }
 
+  /** Libellé d'un modèle dans le champ de recherche (clé du modèle → « nom — type »). */
+  displayModel = (key: string | null): string => {
+    const model = this.models.find(m => this.modelKey(m) === key);
+    return model ? `${model.name} — ${this.modelTypeLabel(model)}` : (key || '');
+  };
+
+  /** Modèles proposés : tous si le champ affiche le modèle courant, sinon filtrés par la saisie. */
+  get filteredModels(): AutoProcessingModel[] {
+    const query = (this.modelQuery || '').trim();
+    if (!query || this.models.some(m => this.modelKey(m) === query)) {
+      return this.models;
+    }
+    const needle = this.normalizeSearch(query);
+    return this.models.filter(m => this.normalizeSearch(this.displayModel(this.modelKey(m))).includes(needle));
+  }
+
+  private normalizeSearch(value: string): string {
+    return (value || '').normalize('NFD').replace(/[̀-ͯ]/g, '').toLowerCase();
+  }
+
+  async onModelOptionSelected(key: string): Promise<void> {
+    if (key === this.selectedModelKey) {
+      this.modelQuery = key;
+      return;
+    }
+    await this.onModelChange(key);
+  }
+
+  /** Panneau fermé sans choix : le champ réaffiche le modèle sélectionné. */
+  onModelPanelClosed(): void {
+    if (!this.models.some(m => this.modelKey(m) === this.modelQuery)) {
+      this.modelQuery = this.selectedModelKey;
+    }
+  }
+
   async onModelChange(key: string): Promise<void> {
     if (this.dirty && !(await this.popupService.showConfirm(
       this.t('CFG.normalisation.discardConfirm'),
       this.t('CFG.normalisation.title')
     ))) {
-      // Revenir à la sélection précédente dans la liste déroulante.
-      const previous = this.selectedModelKey;
-      this.selectedModelKey = '';
+      // Revenir à la sélection précédente dans le champ.
+      this.modelQuery = this.selectedModelKey;
       this.cd.detectChanges();
-      this.selectedModelKey = previous;
       return;
     }
     await this.selectModel(key);
@@ -169,6 +205,7 @@ export class ConfigurationNormalisationComponent implements OnInit, OnDestroy {
 
   private async selectModel(key: string): Promise<void> {
     this.selectedModelKey = key;
+    this.modelQuery = key;
     this.check = null;
     this.searchTerm = '';
     this.errorMessage = '';

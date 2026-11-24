@@ -2007,11 +2007,17 @@ export class BanqueComponent implements OnInit {
   /** Réconciliation silencieuse pour rendre le Résultat immédiatement accessible. */
   private autoReconcile() {
     this.reconVoirTout = false;
-    if (!this.reconPays) {
-      this.reconResultPairs = [];
-      this.reconBaseLists = null;
-      return;
-    }
+    // Pays vide = « Tous les pays » : la réconciliation porte sur l'ensemble des pays.
+    this.reconcile(true);
+  }
+
+  /**
+   * Section réconciliation ouverte sans résultat encore calculé : lance la réconciliation
+   * par défaut (tous les pays) dès que les opérations et les relevés sont chargés.
+   */
+  private refreshReconIfVisible() {
+    if (this.activeSection !== 'securite' || this.reconciling || this.reconVoirTout || this.reconBaseLists) return;
+    if (!this.operations?.length || !this.releveAllRows?.length) return;
     this.reconcile(true);
   }
 
@@ -4834,6 +4840,7 @@ export class BanqueComponent implements OnInit {
         this.relevePage = 1;
         this.totalReleveLignes = this.releveAllRows.length;
         this.updateTotalSuspensKO();
+        this.refreshReconIfVisible();
       },
       error: (err) => {
         // Afficher un message explicite en cas d'échec
@@ -5131,9 +5138,6 @@ export class BanqueComponent implements OnInit {
             });
             this.paysList = normalizeCountryFilterOptions(rawPays);
             this.reconPaysOptions = [...this.paysList];
-            if (!this.reconPays && this.reconPaysOptions.length === 1) {
-              this.reconPays = this.reconPaysOptions[0];
-            }
             if (this.reconPays && !this.reconPaysOptions.some(p => countriesMatch(p, this.reconPays))) {
               const mapped = countryDisplayLabel(this.reconPays);
               const match = mapped ? this.reconPaysOptions.find(p => countriesMatch(p, mapped)) : undefined;
@@ -5151,6 +5155,7 @@ export class BanqueComponent implements OnInit {
             }
             this.updatePagedOperations();
             this.updateTotalSuspensKO();
+            this.refreshReconIfVisible();
             console.log('Opérations bancaires chargées:', this.operations.length, '(bancaire:', opsBancaires.length, ', generale:', opsGenerales.length + ')');
             onLoaded?.();
           },
@@ -5742,10 +5747,6 @@ export class BanqueComponent implements OnInit {
         this.popupService.showWarning(msg);
       }
     };
-    if (!this.reconPays && !this.reconVoirTout) {
-      warn('Veuillez choisir un pays. La date est optionnelle.');
-      return;
-    }
     if (!this.operations || !this.operations.length) {
       warn('Aucune opération bancaire disponible.');
       return;
@@ -6093,10 +6094,6 @@ export class BanqueComponent implements OnInit {
   exportingReconResult: '' | 'excel' | 'pdf' = '';
 
   openReconResult() {
-    if (!this.reconPays) {
-      this.popupService.showWarning(I18nService.t('TBL.msg.veuillezChoisirUnPays'));
-      return;
-    }
     // Toujours recalculer sur les données chargées : pas besoin d'avoir cliqué sur « Réconcilier »
     this.reconVoirTout = false;
     this.reconcile(true);
@@ -6991,11 +6988,12 @@ export class BanqueComponent implements OnInit {
     this.reconDateAvantVoirTout = '';
     this.voirToutStatut = '';
     this.voirToutSearch = '';
-    if (this.reconPays) {
+    // Pays vide = « Tous les pays » : on réconcilie aussi l'ensemble des pays.
+    if (this.reconPays || this.operations?.length) {
       this.reconcile(true);
       return;
     }
-    // Aucun pays choisi : on vide les résultats affichés
+    // Aucune donnée : on vide les résultats affichés
     this.leftOnlyOperations = [];
     this.rightOnlyReleves = [];
     this.matchedOperations = [];

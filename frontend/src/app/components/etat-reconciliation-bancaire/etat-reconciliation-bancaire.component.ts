@@ -97,6 +97,8 @@ export class EtatReconciliationBancaireComponent implements OnInit {
     private readonly moduleContext = 'BANQUE';
 
     period: BankPeriod = 'semaine';
+    /** « Semaine en cours » sans relevé le lundi : la semaine passée est affichée à la place. */
+    weekFallbackToPrevious = false;
     country = '';
     banque = '';
     searchQuery = '';
@@ -285,18 +287,21 @@ export class EtatReconciliationBancaireComponent implements OnInit {
     }
 
     load(): void {
-        const range = computePeriodRange(this.period);
-        const prev = previousRange(range.start, range.end);
-        this.rangeStart = range.start;
-        this.rangeEnd = range.end;
+        const current = computePeriodRange(this.period);
+        // « Semaine en cours » : si aucun relevé le lundi, on affiche la semaine passée (lundi → dimanche).
+        const fallback = this.period === 'semaine' ? computePeriodRange('semaine_passee') : null;
+        const earliest = fallback ?? current;
+        const prev = previousRange(earliest.start, earliest.end);
+        this.rangeStart = current.start;
+        this.rangeEnd = current.end;
+        this.weekFallbackToPrevious = false;
         this.loading = true;
         this.error = '';
-        this.loadTopUsers();
 
         this.operationsUnavailable = false;
 
         forkJoin({
-            releves: this.releveService.list({ dateDebut: prev.start, dateFin: range.end, dateField: 'comptable' }, this.moduleContext),
+            releves: this.releveService.list({ dateDebut: prev.start, dateFin: current.end, dateField: 'comptable' }, this.moduleContext),
             // Les opérations donnent le niveau de traitement (validation, clôture, terminé).
             operations: this.operationBancaireService.getAllOperationsBancaires(this.moduleContext).pipe(
                 catchError(() => {
@@ -310,6 +315,11 @@ export class EtatReconciliationBancaireComponent implements OnInit {
                     Array.isArray(releves) ? (releves as ReleveBancaireRow[]) : [],
                     Array.isArray(operations) ? operations : []
                 );
+                this.weekFallbackToPrevious = !!fallback && !this.allRows.some(r => !!r.days[current.start]);
+                const range = this.weekFallbackToPrevious && fallback ? fallback : current;
+                this.rangeStart = range.start;
+                this.rangeEnd = range.end;
+                this.loadTopUsers();
                 this.countries = Array.from(new Set(this.allRows.map(r => r.country).filter(Boolean))).sort();
                 this.banques = Array.from(new Set(this.allRows.map(r => r.banque).filter(Boolean))).sort();
                 if (this.country && !this.countries.includes(this.country)) {
@@ -326,6 +336,7 @@ export class EtatReconciliationBancaireComponent implements OnInit {
             error: (err) => {
                 this.loading = false;
                 this.error = err?.error?.message || this.t('EBQ.loadError');
+                this.loadTopUsers();
             }
         });
     }
@@ -336,7 +347,7 @@ export class EtatReconciliationBancaireComponent implements OnInit {
             const d = parseLocalYmd(date);
             const dd = String(d.getDate()).padStart(2, '0');
             const mm = String(d.getMonth() + 1).padStart(2, '0');
-            return { date, label: `${names[(d.getDay() + 6) % 7]} ${dd}/${mm}` };
+            return { date, label: `${names[d.getDay()]} ${dd}/${mm}` };
         });
         this.windowStart = this.days.length > MAX_INLINE_DAYS ? Math.max(0, this.days.length - WINDOW_SIZE) : 0;
         this.updateVisibleDays();
@@ -564,7 +575,8 @@ export class EtatReconciliationBancaireComponent implements OnInit {
     }
 
     get periodSubtitle(): string {
-        const label = this.t('ETA.period.' + this.period) || this.t('ETA.period.semaine');
+        const key = this.period === 'semaine' && this.weekFallbackToPrevious ? 'semaine_fallback' : this.period;
+        const label = this.t('ETA.period.' + key) || this.t('ETA.period.semaine');
         return this.t('ETA.periodPrefix') + label;
     }
 

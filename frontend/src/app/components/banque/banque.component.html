@@ -538,7 +538,7 @@
         <div class="filter-group">
           <label>{{ 'TBL.country' | translate }}</label>
           <select class="ds-select" [(ngModel)]="reconPays" (change)="onReconPaysChange()">
-            <option value="">{{ 'BQ.Choisirunpays' | translate }}</option>
+            <option value="">{{ 'FILT.allCountries' | translate }}</option>
             <option *ngFor="let pays of reconPaysOptions" [value]="pays">{{ pays }}</option>
           </select>
         </div>
@@ -546,7 +546,7 @@
           <label>{{ 'TBL.date' | translate }}<span class="muted">{{ 'BQ.Optionnelle' | translate }}</span></label>
           <input class="ds-input" type="date" [(ngModel)]="reconDate" (change)="onReconDateChange()">
         </div>
-        <button type="button" class="ds-btn ds-btn--primary btn-primary" (click)="reconVoirTout = false; reconcile()" [disabled]="reconciling || !reconPays">
+        <button type="button" class="ds-btn ds-btn--primary btn-primary" (click)="reconVoirTout = false; reconcile()" [disabled]="reconciling">
           <i class="fas fa-link" [class.spin]="reconciling"></i>
           {{ 'BQ.Réconcilier' | translate }}
         </button>
@@ -556,7 +556,7 @@
           {{ (reconVoirTout ? 'BQ.VoirMoins' : 'BQ.VoirTout') | translate }}
         </button>
         <button type="button" class="ds-btn ds-btn--secondary btn-outline recon-result-btn" (click)="openReconResult()"
-                [disabled]="reconciling || !reconPays" title="{{ 'BQ.ReconResultTitle' | translate }}">
+                [disabled]="reconciling" title="{{ 'BQ.ReconResultTitle' | translate }}">
           <i class="fas fa-table-columns"></i>
           {{ 'BQ.ReconResult' | translate }}
           <span class="recon-result-count" *ngIf="reconResultPairs.length">{{ reconResultPairs.length }}</span>
@@ -585,7 +585,7 @@
       </div>
 
       <!-- Barre d'actions pour la réconciliation -->
-      <div class="releve-header" style="margin-bottom: 12px;" *ngIf="reconPays || reconVoirTout">
+      <div class="releve-header" style="margin-bottom: 12px;">
         <h3>{{ 'BQ.Actionsderéconciliation' | translate }}</h3>
         <div class="actions">
           <button type="button" class="ds-btn ds-btn--primary btn-primary" (click)="toggleSelectAllCurrentPage()" [class.active]="selectAllOnPage" title="{{ 'BQ.Sélectionnerdésélectionnerlapage' | translate }}" *ngIf="reconView==='corr_operation' || reconView==='corr_releve'">
@@ -642,23 +642,13 @@
           </button>
         </div>
 
-        <!-- Message d'information si pas de données de réconciliation -->
-        <div class="recon-info-message" *ngIf="!reconPays && !reconVoirTout">
-          <div class="info-card">
-            <i class="fas fa-info-circle"></i>
-            <div class="info-content">
-              <h4>{{ 'BQ.Aucuneréconciliationencours' | translate }}</h4>
-              <p>{{ 'BQ.Pourvoirlesfiltresokkovousdevezdabordlanceruneréconciliationensélectionnantunpaysetencliquantsurréconcilier' | translate }}</p>
-            </div>
-          </div>
-        </div>
 
-        <div class="recon-info-message" *ngIf="(reconPays || reconVoirTout) && !(leftOnlyOperations?.length || rightOnlyReleves?.length || matchedOperations?.length || matchedReleves?.length)">
+        <div class="recon-info-message" *ngIf="!(leftOnlyOperations?.length || rightOnlyReleves?.length || matchedOperations?.length || matchedReleves?.length)">
           <div class="info-card">
             <i class="fas fa-exclamation-triangle"></i>
             <div class="info-content">
               <h4>{{ 'BQ.Aucunedonnéederéconciliationtrouvée' | translate }}</h4>
-              <p>{{ 'BQ.Laréconciliationpour' | translate }} <strong>{{ reconPays }}</strong> {{ 'BQ.Natrouvéaucunedonnéeàcomparervérifiezquevousavezdesopérationsbancairesetdesrelevésimportéspourcepays' | translate }}</p>
+              <p>{{ 'BQ.Laréconciliationpour' | translate }} <strong>{{ reconPays || ('FILT.allCountries' | translate) }}</strong> {{ 'BQ.Natrouvéaucunedonnéeàcomparervérifiezquevousavezdesopérationsbancairesetdesrelevésimportéspourcepays' | translate }}</p>
             </div>
           </div>
         </div>
@@ -1089,7 +1079,7 @@
           </div>
         </ng-container>
 
-        <div class="pagination small" *ngIf="(reconPays || reconVoirTout) && reconView!=='all'">
+        <div class="pagination small" *ngIf="reconView!=='all'">
           <ds-pagination
             [page]="reconCurrentPage"
             [pageCount]="reconCurrentTotalPages"
@@ -1792,7 +1782,7 @@
       <div class="popup-header">
         <h2>
           <i class="fas fa-table-columns"></i> {{ 'BQ.ReconResultTitle' | translate }}
-          <span class="rr-context">{{ reconPays }}<ng-container *ngIf="reconDate"> · {{ reconDate | date:'dd/MM/yyyy' }}</ng-container></span>
+          <span class="rr-context">{{ reconPays || ('FILT.allCountries' | translate) }}<ng-container *ngIf="reconDate"> · {{ reconDate | date:'dd/MM/yyyy' }}</ng-container></span>
         </h2>
         <div class="rr-header-actions">
           <button type="button" class="ds-btn ds-btn--secondary btn-outline rr-export rr-export--excel" (click)="exportReconResultExcel()"

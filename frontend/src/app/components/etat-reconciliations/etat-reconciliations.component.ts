@@ -114,6 +114,8 @@ export interface TopUserCategory {
 export class EtatReconciliationsComponent implements OnInit {
     private readonly moduleContext = 'Résultats';
 
+    /** « Semaine en cours » sans donnée le lundi : la semaine passée est affichée à la place. */
+    weekFallbackToPrevious = false;
     summaryPeriod: 'jour' | 'semaine' | 'semaine_passee' | '7_jours' | '30_jours' | 'mois' | 'trimestre' | 'semestre' | 'annee' = 'semaine';
 
     reconciliationSummaryEnv: string = 'BET';
@@ -379,12 +381,20 @@ export class EtatReconciliationsComponent implements OnInit {
     }
 
     onSummaryPeriodChange(): void {
+        this.weekFallbackToPrevious = false;
         this.loadReconciliationSummary();
     }
 
     get summaryPeriodSubtitle(): string {
-        const label = this.t('ETA.period.' + this.summaryPeriod) || this.t('ETA.period.semaine');
+        const key = this.summaryPeriod === 'semaine' && this.weekFallbackToPrevious ? 'semaine_fallback' : this.summaryPeriod;
+        const label = this.t('ETA.period.' + key) || this.t('ETA.period.semaine');
         return this.t('ETA.periodPrefix') + label;
+    }
+
+    /** Date locale depuis YYYY-MM-DD (sans décalage de fuseau). */
+    private parseYmdLocal(iso: string): Date {
+        const [y, m, d] = iso.split('-').map(Number);
+        return new Date(y, m - 1, d);
     }
 
     private loadFilterOptions(): void {
@@ -1198,7 +1208,8 @@ export class EtatReconciliationsComponent implements OnInit {
         }
         const dayNames = this.shortDayNames();
         this.weekDays.forEach((dayInfo, dayIndex) => {
-            labels.push(dayNames[dayIndex] || dayInfo.label.split(' ')[0]);
+            const dow = this.parseYmdLocal(dayInfo.date).getDay();
+            labels.push(dayNames[dow] || dayInfo.label.split(' ')[0]);
             let r = 0;
             let es = 0;
             let ec = 0;
@@ -1304,7 +1315,11 @@ export class EtatReconciliationsComponent implements OnInit {
         let periodEnd = new Date(reference);
         let capWeekDisplayToJ1 = false;
 
-        switch (this.summaryPeriod) {
+        // Semaine en cours sans donnée le lundi : on affiche la semaine passée (lundi → dimanche).
+        const effectivePeriod = this.summaryPeriod === 'semaine' && this.weekFallbackToPrevious
+            ? 'semaine_passee'
+            : this.summaryPeriod;
+        switch (effectivePeriod) {
             case 'jour': {
                 periodStart = new Date(reference);
                 periodStart.setHours(0, 0, 0, 0);
@@ -1413,7 +1428,7 @@ export class EtatReconciliationsComponent implements OnInit {
             const day = d.getDate().toString().padStart(2, '0');
             const dateStr = `${y}-${m}-${day}`;
             const dow = d.getDay();
-            const label = `${dayNames[(dow + 6) % 7]} ${day}/${m}`;
+            const label = `${dayNames[dow]} ${day}/${m}`;
             this.weekDays.push({ label, date: dateStr });
         }
         this.updateVisibleDaysWindow();
@@ -1579,6 +1594,14 @@ export class EtatReconciliationsComponent implements OnInit {
         this.computeReconciliationStats();
     }
 
+    /** Vrai si la semaine en cours n'a aucune donnée result8rec le lundi (on bascule alors sur la semaine passée). */
+    private shouldFallBackToPreviousWeek(data: Result8RecData[], mondayStr: string): boolean {
+        if (this.summaryPeriod !== 'semaine' || this.weekFallbackToPrevious) {
+            return false;
+        }
+        return !(data || []).some(item => this.extractResult8DateOnly(item.date) === mondayStr);
+    }
+
     /**
      * Charge le résumé "État des réconciliations" à partir de result8rec
      * pour la date + environnement sélectionnés.
@@ -1602,6 +1625,11 @@ export class EtatReconciliationsComponent implements OnInit {
                     return;
                 }
                 try {
+                    if (isComplete && this.shouldFallBackToPreviousWeek(data, ctx.periodStartStr)) {
+                        this.weekFallbackToPrevious = true;
+                        this.loadReconciliationSummary();
+                        return;
+                    }
                     this.processReconciliationSummaryData(data, ctx);
                     if (isFirst) {
                         this.reconciliationSummaryLoading = false;
