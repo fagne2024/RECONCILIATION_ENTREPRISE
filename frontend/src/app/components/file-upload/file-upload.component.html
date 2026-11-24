@@ -1738,6 +1738,10 @@
                         <i class="fas fa-exclamation-triangle"></i> {{ 'FU.preview.aucuneLigneRetenue' | translate }}
                     </p>
 
+                    <p class="tp-alert" *ngIf="traitementPreviewMissingFilterColumns(p).length">
+                        <i class="fas fa-exclamation-triangle"></i> {{ 'FU.preview.filtreNonLie' | translate: { p0: traitementPreviewMissingFilterColumns(p).join(', ') } }}
+                    </p>
+
                     <!-- Paramétrage manuel de l'en-tête et des données -->
                     <div class="tp-range">
                         <label class="traitement-column-filter-toggle">
@@ -1781,7 +1785,7 @@
                             </thead>
                             <tbody>
                                 <tr *ngFor="let m of p.mapping" [class.is-missing]="m.status === 'none'">
-                                    <td>{{ m.column }}</td>
+                                    <td>{{ m.column }} <span class="tp-badge tp-badge--filter" *ngIf="isTraitementPreviewFilterColumn(m.column)">{{ 'FU.preview.filtre' | translate }}</span></td>
                                     <td>
                                         <select class="ds-select tp-select" [ngModel]="p.links[m.column] || ''"
                                                 (ngModelChange)="onTraitementPreviewLinkChange(p, m.column, $event)">

@@ -816,6 +816,20 @@ export class FileUploadComponent implements OnInit, OnDestroy {
                 bankModelColumns
             )
             : await this.modelNormalizationService.getForModels(modelIds);
+        // Colonnes des filtres de lignes : elles doivent exister avant le pré-traitement,
+        // sinon le filtre exclut tout. Elles sont ajoutées au tableau des liens.
+        const baseColumns = expected.length ? expected : templateColumns;
+        const filterColumns = (model.preProcessingConfig?.rowFilters || [])
+            .filter((f: any) => f?.enabled !== false && String(f?.column || '').trim())
+            .map((f: any) => String(f.column).trim());
+        const lower = new Set(baseColumns.map(c => c.trim().toLowerCase()));
+        const modelColumns = [...baseColumns];
+        for (const column of filterColumns) {
+            if (!lower.has(column.toLowerCase())) {
+                lower.add(column.toLowerCase());
+                modelColumns.push(column);
+            }
+        }
         return {
             model,
             modelIds,
@@ -825,7 +839,9 @@ export class FileUploadComponent implements OnInit, OnDestroy {
             alternatives: equivalences.length
                 ? new Map(equivalences.map(eq => [eq.columnName, eq.equivalents]))
                 : undefined,
-            modelColumns: expected.length ? expected : templateColumns
+            modelColumns,
+            keptColumns: baseColumns,
+            filterColumns
         };
     }
 
@@ -918,6 +934,7 @@ export class FileUploadComponent implements OnInit, OnDestroy {
         const columns = context.modelColumns;
         const headerRow = Object.fromEntries(headers.map(h => [h, ''])) as Record<string, string>;
         const fuzzy = resolveFixedHeaderMapping(headers, columns);
+        const filterColumns = new Set(context.filterColumns.map(c => c.toLowerCase()));
         const renameTo = new Map<string, string>();
         [...normalization.plan.renames, ...(normalization.plan.copies || [])].forEach(r => renameTo.set(r.to, r.from));
         const used = new Set<string>();
@@ -934,7 +951,8 @@ export class FileUploadComponent implements OnInit, OnDestroy {
             } else if (renameTo.has(column)) {
                 fileColumn = renameTo.get(column)!;
                 status = 'equivalent';
-            } else if (fuzzy[i]) {
+            } else if (fuzzy[i] && !filterColumns.has(column.toLowerCase())) {
+                // Rapprochement approché : fait après le pré-traitement, donc inutile au filtre.
                 fileColumn = fuzzy[i]!;
                 status = 'approx';
             }
@@ -948,7 +966,7 @@ export class FileUploadComponent implements OnInit, OnDestroy {
         if (columns.length) {
             const aligned = alignRowsToHeaders(normalization.rows, columns);
             p.sampleRows = aligned.slice(0, 5);
-            p.keptSampleCount = filterRealDataRows(aligned, columns).length;
+            p.keptSampleCount = filterRealDataRows(alignRowsToHeaders(normalization.rows, context.keptColumns), context.keptColumns).length;
         } else {
             p.sampleRows = normalization.rows.slice(0, 5);
             p.keptSampleCount = normalization.rows.length;
@@ -1012,6 +1030,19 @@ export class FileUploadComponent implements OnInit, OnDestroy {
             await this.computeTraitementPreviewMapping(p, this.traitementPreviewContext);
         }
         this.cd.detectChanges();
+    }
+
+    /** Colonne utilisée par un filtre de lignes du modèle. */
+    isTraitementPreviewFilterColumn(column: string): boolean {
+        const key = (column || '').trim().toLowerCase();
+        return !!this.traitementPreviewContext?.filterColumns.some(c => c.toLowerCase() === key);
+    }
+
+    /** Colonnes de filtre sans colonne du fichier : le filtre exclurait toutes les lignes. */
+    traitementPreviewMissingFilterColumns(p: TraitementFilePreview): string[] {
+        return p.mapping
+            .filter(m => !m.fileColumn && this.isTraitementPreviewFilterColumn(m.column))
+            .map(m => m.column);
     }
 
     /** Ligne affichée comme en-tête / début des données dans les lignes brutes. */
@@ -2428,7 +2459,13 @@ export class FileUploadComponent implements OnInit, OnDestroy {
                 );
                 return {
                     success: false,
-                    warningMessage: [I18nService.t('FU.msg.aucuneLigneRestanteApresPreTraitement'), reason]
+                    // Souvent une colonne de filtre non reliée : l'aperçu permet de la lier.
+                    noReadableData: true,
+                    warningMessage: [
+                        I18nService.t('FU.msg.aucuneLigneRestanteApresPreTraitement'),
+                        reason,
+                        I18nService.t('FU.preview.ouvertureAuto')
+                    ]
                         .filter(Boolean)
                         .join(' ')
                 };

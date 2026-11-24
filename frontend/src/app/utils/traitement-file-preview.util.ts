@@ -66,7 +66,7 @@ export interface TraitementFilePreview {
 
 /** Contexte du modèle commun à tous les aperçus. */
 export interface TraitementPreviewContext {
-  model: { id?: string; modelId?: string; bankModel?: boolean; preProcessingConfig?: { valueMappings?: any } };
+  model: { id?: string; modelId?: string; bankModel?: boolean; preProcessingConfig?: { valueMappings?: any; rowFilters?: any[] } };
   modelIds: Array<string | undefined>;
   expected: string[];
   templateColumns: string[];
@@ -74,6 +74,10 @@ export interface TraitementPreviewContext {
   alternatives?: Map<string, string[]>;
   /** Colonnes du modèle proposées dans le tableau des liens. */
   modelColumns: string[];
+  /** Colonnes servant à compter les lignes retenues (en-tête attendu du modèle). */
+  keptColumns: string[];
+  /** Colonnes des filtres de lignes du pré-traitement (sans rapprochement approché). */
+  filterColumns: string[];
 }
 
 /** Détection automatique sur la grille d'aperçu. */
