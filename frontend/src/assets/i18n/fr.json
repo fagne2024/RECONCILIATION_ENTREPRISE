@@ -2877,6 +2877,7 @@
       "laConfigurationDesModelesEstReservee": "La configuration des modèles est réservée aux utilisateurs ayant accès au module « Modèles de traitement ». Contactez un administrateur.",
       "aideConfigurationDesModelesDeReconciliat": "📚 Aide - Configuration des Modèles de Réconciliation\n\n🔧 Pour configurer un modèle de réconciliation :\n\n1. Allez dans \"Modèles de Traitement\" \n2. Cliquez sur \"Créer un nouveau modèle\"\n3. Configurez :\n   - Nom du modèle (ex: \"Oppart\")\n   - Pattern de fichier (ex: \"*OPPART*.xls\")\n   - Type: \"partner\"\n   - Clés de réconciliation :\n     * Partner Keys: [\"Numero Trans GU\"]\n     * BO Keys: [\"Numero Trans GU\"]\n\n💡 Exemple pour vos fichiers :\n   - Modèle \"Oppart\" : Pattern \"*OPPART*.xls\", Type \"partner\"\n   - Modèle \"TRXBO\" : Pattern \"*TRXBO*.xls\", Type \"bo\"\n\n✅ Une fois configuré, la réconciliation automatique utilisera ces modèles.",
       "colonnes": "{{p0}} — colonnes : {{p1}} / {{p2}}...",
+      "normalisationEnTetesFichier": "Normalisation des en-têtes {{p0}}/{{p1}} : {{p2}}",
       "fusionUltraRapideMo": "Fusion ultra-rapide {{p0}}/{{p1}} : {{p2}} ({{p3}} Mo)",
       "fusionFeuille": "Fusion feuille {{p0}}/{{p1}} : {{p2}}",
       "normalisation": "{{p0}} — normalisation : {{p1}} / {{p2}}...",

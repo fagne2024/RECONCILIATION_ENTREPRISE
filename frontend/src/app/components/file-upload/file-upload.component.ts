@@ -1921,11 +1921,38 @@ export class FileUploadComponent implements OnInit, OnDestroy {
             ? new Map(equivalences.map(eq => [eq.columnName, eq.equivalents]))
             : undefined;
 
+        // Normalisation des en-têtes vers le modèle (Configuration > Normalisation modèle) :
+        // colonnes par défaut absentes → chaque en-tête équivalent configuré est renommé avec le
+        // nom de la colonne d'origine ; le fichier téléchargé porte donc la colonne d'origine.
+        // Seule exception : un équivalent qui est une colonne du vrai fichier modèle (erreur de
+        // configuration), ignoré et signalé.
+        const needsCompilation = await this.needsAssistedCompilation(files);
+        const templateColumnsForNormalization = await this.resolveWatchFolderTemplateColumns(model);
+        const normalizationMessages: string[] = [];
+        const normalizeToModel = async (rows: Record<string, string>[], source: string) => {
+            const result = await this.modelNormalizationService.normalizeRows(
+                rows,
+                modelIds,
+                () => this.yieldToMainThread(true),
+                templateColumnsForNormalization,
+                model.bankModel ? { equivalences: BANK_BUILT_IN_EQUIVALENCES, modelColumns: bankModelColumns } : undefined,
+                // Conditions de normalisation écrites avec les valeurs renommées par le modèle (ex. CASHIN_OM).
+                model.preProcessingConfig?.valueMappings
+            );
+            const message = describeColumnNormalization(result.plan);
+            if (message) {
+                console.info(`[Normalisation modèle] ${model.name} — ${source} : ${message}`);
+                normalizationMessages.push(needsCompilation ? `${source} : ${message}` : message);
+            }
+            return result.rows;
+        };
+
+        // Plusieurs fichiers : chaque fichier est normalisé vers le modèle AVANT la compilation,
+        // pour obtenir un jeu uniforme sur lequel le traitement s'applique ensuite.
         let compiled: Awaited<ReturnType<FileUploadComponent['loadSingleAssistedTreatmentFile']>>;
         try {
-            const needsCompilation = await this.needsAssistedCompilation(files);
             compiled = needsCompilation
-                ? await this.compileAssistedTreatmentFileRows(files, expectedHeaderColumns)
+                ? await this.compileAssistedTreatmentFileRows(files, expectedHeaderColumns, normalizeToModel)
                 : await this.loadSingleAssistedTreatmentFile(files[0], expectedHeaderColumns);
         } finally {
             this.assistedHeaderAlternatives = undefined;
@@ -1942,26 +1969,14 @@ export class FileUploadComponent implements OnInit, OnDestroy {
                 warningMessage: I18nService.t('FU.msg.aucuneDonneeLisibleDansLesFichiers')
             };
         }
-        // Colonnes par défaut absentes : chaque en-tête équivalent configuré est renommé avec le
-        // nom de la colonne d'origine avant le traitement ; le fichier téléchargé porte donc la
-        // colonne d'origine. Seule exception : un équivalent qui est une colonne du vrai fichier
-        // modèle (erreur de configuration), ignoré et signalé.
-        const normalization = await this.modelNormalizationService.normalizeRows(
-            compiled.rows,
-            modelIds,
-            () => this.yieldToMainThread(true),
-            await this.resolveWatchFolderTemplateColumns(model),
-            model.bankModel ? { equivalences: BANK_BUILT_IN_EQUIVALENCES, modelColumns: bankModelColumns } : undefined,
-            // Conditions de normalisation écrites avec les valeurs renommées par le modèle (ex. CASHIN_OM).
-            model.preProcessingConfig?.valueMappings
-        );
-        const normalizationMessage = describeColumnNormalization(normalization.plan);
-        if (normalizationMessage) {
-            console.info(`[Normalisation modèle] ${model.name} — ${normalizationMessage}`);
-        }
+        // Fichier unique : normalisation ici ; plusieurs fichiers : déjà faite fichier par fichier.
+        const normalizedRows = needsCompilation
+            ? compiled.rows
+            : await normalizeToModel(compiled.rows, files[0]?.name || '');
+        const normalizationMessage = normalizationMessages.join('\n');
 
         const inputColumns = this.collectAssistedTreatmentInputColumns(model, columnRules);
-        let workingRows = normalization.rows;
+        let workingRows = normalizedRows;
         const needsEnrichment = this.needsAssistedColumnEnrichment(workingRows[0], inputColumns);
 
         if (needsEnrichment) {
@@ -2315,9 +2330,20 @@ export class FileUploadComponent implements OnInit, OnDestroy {
         return [...seen];
     }
 
+    /**
+     * Compilation de plusieurs fichiers en un modèle uniforme, AVANT tout traitement :
+     * 1. lecture de chaque fichier (détection de sa ligne d'en-tête) ;
+     * 2. normalisation de SES en-têtes vers les colonnes du modèle (`normalizeFile` :
+     *    Configuration > Normalisation modèle, équivalents conditionnels compris) ;
+     * 3. empilement sur un seul jeu de colonnes (celles du modèle).
+     * Sans l'étape 2, chaque fichier aux en-têtes différents (autre langue, autre version)
+     * était aligné par rapprochement approximatif, puis la normalisation ne voyait que les
+     * en-têtes du premier fichier.
+     */
     private async compileAssistedTreatmentFileRows(
         files: File[],
-        expectedHeaderColumns: string[] = []
+        expectedHeaderColumns: string[] = [],
+        normalizeFile?: (rows: Record<string, string>[], fileName: string) => Promise<Record<string, string>[]>
     ): Promise<{
         rows: Record<string, string>[];
         sourceSummary: string;
@@ -2338,7 +2364,14 @@ export class FileUploadComponent implements OnInit, OnDestroy {
 
                 const parsed = await this.readAssistedTreatmentFileRows(file, expectedHeaderColumns);
                 if (parsed.rows.length) {
-                    this.appendRowsSafely(compiled, parsed.rows);
+                    let fileRows = parsed.rows;
+                    if (normalizeFile) {
+                        this.setTraitementProgressNoUi(
+                            I18nService.t('FU.msg.normalisationEnTetesFichier', { p0: i + 1, p1: files.length, p2: file.name })
+                        );
+                        fileRows = await normalizeFile(fileRows, file.name);
+                    }
+                    this.appendRowsSafely(compiled, fileRows);
                     const headerInfo = parsed.headerLine >= 0
                         ? I18nService.t('FU.msg.enTeteLigne', { p0: parsed.headerLine + 1 })
                         : '';

@@ -4,12 +4,11 @@ import { firstValueFrom, Observable } from 'rxjs';
 import { tap } from 'rxjs/operators';
 import {
   mergeBuiltInEquivalences,
-  applyColumnNormalizationPlanAsync,
   ConditionValueMapping,
   expandConditionValuesWithMappings,
   ColumnNormalizationPlan,
   ModelColumnEquivalence,
-  planColumnNormalization
+  normalizeRowsByHeaderSet
 } from '../utils/model-column-normalization.util';
 
 /**
@@ -109,8 +108,8 @@ export class ModelNormalizationService {
       return { rows, plan: empty };
     }
     equivalences = expandConditionValuesWithMappings(equivalences, valueMappings);
-    const plan = planColumnNormalization(Object.keys(rows[0]), equivalences, templateColumns);
-    const normalized = await applyColumnNormalizationPlanAsync(rows, plan, { yieldFn });
-    return { rows: normalized, plan };
+    // Un plan par jeu d'en-têtes : des lignes issues de plusieurs fichiers (en-têtes différents)
+    // sont toutes normalisées, pas seulement celles qui ressemblent à la première ligne.
+    return normalizeRowsByHeaderSet(rows, equivalences, templateColumns, { yieldFn });
   }
 }

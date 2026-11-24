@@ -2877,6 +2877,7 @@
       "laConfigurationDesModelesEstReservee": "Model configuration is reserved for users with access to the “Processing models” module. Contact an administrator.",
       "aideConfigurationDesModelesDeReconciliat": "📚 Help - Reconciliation model configuration\n\n🔧 To configure a reconciliation model:\n\n1. Go to \"Processing models\" \n2. Click \"Create a new model\"\n3. Configure:\n   - Model name (e.g. \"Oppart\")\n   - File pattern (e.g. \"*OPPART*.xls\")\n   - Type: \"partner\"\n   - Reconciliation keys:\n     * Partner Keys: [\"Numero Trans GU\"]\n     * BO Keys: [\"Numero Trans GU\"]\n\n💡 Example for your files:\n   - Model \"Oppart\": Pattern \"*OPPART*.xls\", Type \"partner\"\n   - Model \"TRXBO\": Pattern \"*TRXBO*.xls\", Type \"bo\"\n\n✅ Once configured, automatic reconciliation will use these models.",
       "colonnes": "{{p0}} — columns: {{p1}} / {{p2}}...",
+      "normalisationEnTetesFichier": "Normalising headers {{p0}}/{{p1}}: {{p2}}",
       "fusionUltraRapideMo": "Ultra-fast merge {{p0}}/{{p1}}: {{p2}} ({{p3}} MB)",
       "fusionFeuille": "Sheet merge {{p0}}/{{p1}}: {{p2}}",
       "normalisation": "{{p0}} — normalisation: {{p1}} / {{p2}}...",

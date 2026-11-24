@@ -376,6 +376,89 @@ export async function applyColumnNormalizationPlanAsync(
   return rows;
 }
 
+/**
+ * Regroupe les lignes par jeu d'en-têtes (même liste de clés dans le même ordre).
+ * Plusieurs fichiers compilés ou empilés ont chacun leur propre jeu : un plan de
+ * normalisation calculé sur la seule première ligne ne valait que pour le premier fichier.
+ */
+export function groupRowIndexesByHeaders(rows: readonly Record<string, string>[]): Array<{ headers: string[]; indexes: number[] }> {
+  const groups = new Map<string, { headers: string[]; indexes: number[] }>();
+  let lastSignature = '';
+  let lastGroup: { headers: string[]; indexes: number[] } | undefined;
+  for (let i = 0; i < rows.length; i++) {
+    const headers = Object.keys(rows[i] || {});
+    const signature = headers.join('\u0001');
+    if (lastGroup && signature === lastSignature) {
+      lastGroup.indexes.push(i);
+      continue;
+    }
+    let group = groups.get(signature);
+    if (!group) {
+      group = { headers, indexes: [] };
+      groups.set(signature, group);
+    }
+    group.indexes.push(i);
+    lastSignature = signature;
+    lastGroup = group;
+  }
+  return Array.from(groups.values());
+}
+
+/** Réunit les plans de plusieurs jeux d'en-têtes (pour le message de normalisation). */
+export function mergeColumnNormalizationPlans(plans: readonly ColumnNormalizationPlan[]): ColumnNormalizationPlan {
+  const uniq = (list: ColumnRename[]): ColumnRename[] => {
+    const seen = new Set<string>();
+    return list.filter(r => {
+      const key = `${r.from}\u0001${r.to}\u0001${(r.fillFrom || []).join('\u0002')}`;
+      if (seen.has(key)) {
+        return false;
+      }
+      seen.add(key);
+      return true;
+    });
+  };
+  return {
+    renames: uniq(plans.flatMap(p => p.renames)),
+    copies: uniq(plans.flatMap(p => p.copies || [])),
+    missing: Array.from(new Set(plans.flatMap(p => p.missing))),
+    ignored: uniq(plans.flatMap(p => p.ignored))
+  };
+}
+
+/**
+ * Normalise des lignes pouvant provenir de plusieurs fichiers aux en-têtes différents :
+ * un plan par jeu d'en-têtes, appliqué aux seules lignes de ce jeu (ordre des lignes conservé).
+ */
+export async function normalizeRowsByHeaderSet(
+  rows: Record<string, string>[],
+  equivalences: readonly ModelColumnEquivalence[],
+  templateColumns: readonly string[] = [],
+  options: { yieldFn?: () => Promise<void> | void } = {}
+): Promise<{ rows: Record<string, string>[]; plan: ColumnNormalizationPlan }> {
+  const groups = groupRowIndexesByHeaders(rows);
+  if (groups.length <= 1) {
+    const plan = planColumnNormalization(groups[0]?.headers || [], equivalences, templateColumns);
+    return { rows: await applyColumnNormalizationPlanAsync(rows, plan, options), plan };
+  }
+  const plans: ColumnNormalizationPlan[] = [];
+  for (const group of groups) {
+    const plan = planColumnNormalization(group.headers, equivalences, templateColumns);
+    plans.push(plan);
+    if (!plan.renames.length && !(plan.copies || []).length) {
+      continue;
+    }
+    const subset = group.indexes.map(i => rows[i]);
+    await applyColumnNormalizationPlanAsync(subset, plan, options);
+    group.indexes.forEach((rowIndex, j) => {
+      rows[rowIndex] = subset[j];
+    });
+    if (options.yieldFn) {
+      await options.yieldFn();
+    }
+  }
+  return { rows, plan: mergeColumnNormalizationPlans(plans) };
+}
+
 /** Remplace les en-têtes dans une liste d'en-têtes (catalogue de colonnes, aperçu). */
 export function renameHeaders(headers: readonly string[], plan: ColumnNormalizationPlan): string[] {
   const renameMap = new Map(plan.renames.map(r => [r.from, r]));
