@@ -1697,11 +1697,19 @@
         </div>
 
         <!-- Prévisualisation des fichiers : en-tête détecté, paramétrage manuel, liens de colonnes -->
-        <div class="traitement-section traitement-preview-section" *ngIf="traitementFiles.length > 0 && selectedTraitementModels.length === 1">
+        <div class="traitement-section traitement-preview-section" *ngIf="traitementFiles.length > 0 && selectedTraitementModels.length > 0">
             <label class="traitement-section-title">
                 <i class="fas fa-eye"></i> {{ 'FU.preview.titre' | translate }} <span class="traitement-optional-badge">{{ 'LBL.optional' | translate }}</span>
             </label>
             <p class="traitement-columns-intro">{{ 'FU.preview.intro' | translate }}</p>
+            <div class="tp-target" *ngIf="selectedTraitementModels.length > 1">
+                <label>{{ 'FU.preview.modeleAPrevisualiser' | translate }}
+                    <select class="ds-select" [ngModel]="traitementPreviewTargetModel ? getTraitementModelId(traitementPreviewTargetModel) : ''"
+                            (ngModelChange)="onTraitementPreviewTargetChange($event)">
+                        <option *ngFor="let m of selectedTraitementModels" [value]="getTraitementModelId(m)">{{ m.name }}</option>
+                    </select>
+                </label>
+            </div>
             <button type="button" class="ds-btn ds-btn--secondary" [disabled]="!canPreviewTraitement || traitementPreviewLoading" (click)="previewTraitementFiles()">
                 <i class="fas" [ngClass]="traitementPreviewLoading ? 'fa-spinner fa-spin' : 'fa-search'"></i>
                 {{ (traitementPreviews.length ? 'FU.preview.actualiser' : 'FU.preview.previsualiser') | translate }}

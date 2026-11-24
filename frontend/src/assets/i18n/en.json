@@ -2515,6 +2515,8 @@
   },
   "FU": {
     "preview": {
+      "ouvertureAuto": "The file preview is open below to check the header and the columns.",
+      "modeleAPrevisualiser": "Model to preview",
       "titre": "File preview",
       "intro": "Check the detected header line and the columns linked to the model for each file. You can set the header and data lines manually and choose the file column for each model column: these settings are used by the processing.",
       "previsualiser": "Preview files",

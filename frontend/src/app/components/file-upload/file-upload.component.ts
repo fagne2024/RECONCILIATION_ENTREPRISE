@@ -725,32 +725,52 @@ export class FileUploadComponent implements OnInit, OnDestroy {
     // paramétrage manuel de l'en-tête et des données, liens de colonnes confirmés.
     // ------------------------------------------------------------------
 
+    /** Aperçu affiché (celui du modèle choisi dans « Modèle à prévisualiser »). */
     traitementPreviews: TraitementFilePreview[] = [];
     traitementPreviewLoading = false;
-    /** Modèle pour lequel l'aperçu a été construit (les réglages ne valent que pour lui). */
-    private traitementPreviewModelId = '';
+    /** Modèle dont l'aperçu est affiché. */
+    traitementPreviewTargetId = '';
     /** Colonnes du modèle affichées dans le tableau des liens. */
     traitementPreviewModelColumns: string[] = [];
     readonly previewLinkNone = PREVIEW_LINK_NONE;
+    /** Aperçus construits, par modèle (les réglages d'un modèle ne valent que pour lui). */
+    private traitementPreviewStore = new Map<string, { previews: TraitementFilePreview[]; context: TraitementPreviewContext }>();
     /** Réglages confirmés des fichiers lus pendant un traitement (clé = nom du fichier). */
     private assistedFileSettings: Map<string, TraitementFileSettings> | undefined;
 
-    /** Un seul modèle sélectionné : l'aperçu est possible. */
+    /** Au moins un fichier et un modèle sélectionné : l'aperçu est possible. */
     get canPreviewTraitement(): boolean {
         return !this.traitementProcessing
             && this.traitementFiles.length > 0
-            && this.selectedTraitementModels.length === 1;
+            && this.selectedTraitementModels.length > 0;
+    }
+
+    /** Modèle prévisualisé : celui choisi, sinon le premier modèle sélectionné. */
+    get traitementPreviewTargetModel(): AutoProcessingModel | undefined {
+        const selected = this.selectedTraitementModels;
+        return selected.find(m => this.getTraitementModelId(m) === this.traitementPreviewTargetId) || selected[0];
     }
 
     clearTraitementPreview(): void {
+        this.traitementPreviewStore.clear();
         this.traitementPreviews = [];
-        this.traitementPreviewModelId = '';
+        this.traitementPreviewContext = null;
         this.traitementPreviewModelColumns = [];
     }
 
-    /** Construit l'aperçu de chaque fichier pour le modèle sélectionné. */
-    async previewTraitementFiles(): Promise<void> {
-        const model = this.selectedTraitementModels[0];
+    /** Affiche l'aperçu déjà construit pour un modèle (sinon section vide, à prévisualiser). */
+    onTraitementPreviewTargetChange(modelId: string): void {
+        this.traitementPreviewTargetId = modelId;
+        const stored = this.traitementPreviewStore.get(modelId);
+        this.traitementPreviews = stored?.previews || [];
+        this.traitementPreviewContext = stored?.context || null;
+        this.traitementPreviewModelColumns = stored?.context.modelColumns || [];
+        this.cd.detectChanges();
+    }
+
+    /** Construit l'aperçu de chaque fichier pour le modèle à prévisualiser. */
+    async previewTraitementFiles(modelToPreview?: AutoProcessingModel): Promise<void> {
+        const model = modelToPreview || this.traitementPreviewTargetModel;
         if (!this.canPreviewTraitement || !model?.id) {
             return;
         }
@@ -762,8 +782,10 @@ export class FileUploadComponent implements OnInit, OnDestroy {
             for (const file of this.traitementFiles) {
                 previews.push(await this.loadTraitementFilePreview(file, context));
             }
+            const id = this.getTraitementModelId(model);
+            this.traitementPreviewStore.set(id, { previews, context });
+            this.traitementPreviewTargetId = id;
             this.traitementPreviewContext = context;
-            this.traitementPreviewModelId = this.getTraitementModelId(model);
             this.traitementPreviewModelColumns = context.modelColumns;
             this.traitementPreviews = previews;
         } catch (error: any) {
@@ -1008,11 +1030,12 @@ export class FileUploadComponent implements OnInit, OnDestroy {
 
     /** Réglages confirmés pour un modèle (seulement si l'aperçu a été fait pour lui). */
     private getTraitementFileSettingsForModel(model: AutoProcessingModel): Map<string, TraitementFileSettings> | undefined {
-        if (!this.traitementPreviews.length || this.traitementPreviewModelId !== this.getTraitementModelId(model)) {
+        const stored = this.traitementPreviewStore.get(this.getTraitementModelId(model));
+        if (!stored?.previews.length) {
             return undefined;
         }
         const settings = new Map<string, TraitementFileSettings>();
-        for (const p of this.traitementPreviews) {
+        for (const p of stored.previews) {
             if (p.manualRange || Object.keys(p.links).length) {
                 settings.set(p.file.name, { range: p.manualRange, links: { ...p.links } });
             }
@@ -1179,7 +1202,7 @@ export class FileUploadComponent implements OnInit, OnDestroy {
         }
     }
 
-    private getTraitementModelId(model?: AutoProcessingModel | null): string {
+    getTraitementModelId(model?: AutoProcessingModel | null): string {
         return model?.id || model?.modelId || '';
     }
 
@@ -2047,6 +2070,7 @@ export class FileUploadComponent implements OnInit, OnDestroy {
 
         const successes: string[] = [];
         const skipped: string[] = [];
+        let previewAfter: AutoProcessingModel | undefined;
 
         try {
             for (let i = 0; i < models.length; i++) {
@@ -2068,6 +2092,9 @@ export class FileUploadComponent implements OnInit, OnDestroy {
                     });
                 } else if (result.warningMessage) {
                     skipped.push(`${model.name} : ${result.warningMessage}`);
+                    if (result.noReadableData && !previewAfter) {
+                        previewAfter = model;
+                    }
                 }
             }
 
@@ -2109,6 +2136,9 @@ export class FileUploadComponent implements OnInit, OnDestroy {
             this.traitementProgressMessage = '';
             this.safeTraitementDetectChanges();
         }
+        if (previewAfter && !this.traitementViewDestroyed && this.traitementFiles.length) {
+            await this.previewTraitementFiles(previewAfter);
+        }
     }
 
     private async applySingleModelTraitement(model: AutoProcessingModel, files: File[]): Promise<void> {
@@ -2126,9 +2156,13 @@ export class FileUploadComponent implements OnInit, OnDestroy {
             }
         );
 
+        let previewAfter: AutoProcessingModel | undefined;
         try {
             const result = await this.runAssistedFileTreatmentForModel(model, files);
             if (!result.success) {
+                if (result.noReadableData) {
+                    previewAfter = model;
+                }
                 this.traitementBackgroundService.failTraitement(result.warningMessage || I18nService.t('FU.msg.traitementSansResultat'));
                 if (result.warningMessage && !this.traitementViewDestroyed) {
                     await this.popupService.showWarning(result.warningMessage, 'Traitement');
@@ -2223,6 +2257,9 @@ export class FileUploadComponent implements OnInit, OnDestroy {
             this.traitementProgressMessage = '';
             this.safeTraitementDetectChanges();
         }
+        if (previewAfter && !this.traitementViewDestroyed) {
+            await this.previewTraitementFiles(previewAfter);
+        }
     }
 
     private async runAssistedFileTreatmentForModel(
@@ -2237,6 +2274,8 @@ export class FileUploadComponent implements OnInit, OnDestroy {
         preProcessingResultMessage?: string;
         exportRows?: Record<string, string>[];
         warningMessage?: string;
+        /** Aucune ligne lue : la prévisualisation est ouverte pour diagnostiquer. */
+        noReadableData?: boolean;
     }> {
         const columnRules = await this.getTraitementColumnRules(model.id!);
         const expectedHeaderColumns = await this.resolveModelExpectedHeaderColumns(model, columnRules);
@@ -2311,7 +2350,9 @@ export class FileUploadComponent implements OnInit, OnDestroy {
         if (!compiled.rows.length) {
             return {
                 success: false,
+                noReadableData: true,
                 warningMessage: I18nService.t('FU.msg.aucuneDonneeLisibleDansLesFichiers')
+                    + ' ' + I18nService.t('FU.preview.ouvertureAuto')
             };
         }
         // Fichier unique : normalisation ici ; plusieurs fichiers : déjà faite fichier par fichier.

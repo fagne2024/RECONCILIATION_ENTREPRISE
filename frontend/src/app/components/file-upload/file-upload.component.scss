@@ -2752,3 +2752,15 @@
         margin-top: 12px;
     }
 }
+
+.traitement-preview-section .tp-target {
+    margin-bottom: 10px;
+
+    label {
+        display: flex;
+        flex-direction: column;
+        gap: 4px;
+        font-size: 0.85rem;
+        max-width: 360px;
+    }
+}

@@ -2515,6 +2515,8 @@
   },
   "FU": {
     "preview": {
+      "ouvertureAuto": "La prévisualisation des fichiers est ouverte ci-dessous pour vérifier l'en-tête et les colonnes.",
+      "modeleAPrevisualiser": "Modèle à prévisualiser",
       "titre": "Prévisualisation des fichiers",
       "intro": "Vérifiez la ligne d'en-tête détectée et les colonnes reliées au modèle pour chaque fichier. Vous pouvez paramétrer l'en-tête et les données à la main et choisir la colonne du fichier pour chaque colonne du modèle : ces réglages sont utilisés au traitement.",
       "previsualiser": "Prévisualiser les fichiers",
