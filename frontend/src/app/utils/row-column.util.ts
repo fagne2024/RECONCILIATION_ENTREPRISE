@@ -277,6 +277,15 @@ export function alignRowsToHeaders(
  * puis rapprochement souple (mots communs) pour un en-tête légèrement modifié.
  * Une clé du fichier ne sert qu'à une seule colonne fixée.
  */
+/**
+ * Colonne du fichier retenue pour chaque colonne fixée (même règle que alignRowsToHeaders) :
+ * sert à l'aperçu du traitement pour montrer les rapprochements faits automatiquement.
+ */
+export function resolveFixedHeaderMapping(fileHeaders: string[], fixed: string[]): (string | null)[] {
+  const row = Object.fromEntries(fileHeaders.map(h => [h, ''])) as Record<string, string>;
+  return mapFixedHeadersToKeys(row, fixed.map(h => (h || '').trim()));
+}
+
 function mapFixedHeadersToKeys(row: Record<string, string>, fixed: string[]): (string | null)[] {
   const mapping: (string | null)[] = fixed.map(h => resolveColumnKeyInRow(row, h));
   const claimed = new Set(mapping.filter((k): k is string => !!k));

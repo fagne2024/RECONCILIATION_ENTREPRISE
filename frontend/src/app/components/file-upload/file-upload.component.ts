@@ -25,7 +25,20 @@ import {
   resolveCanonicalColumnId,
   findEquivalentHeader
 } from '../../utils/bilingual-column.util';
-import { resolveColumnKeyInRow, deduplicateHeaderNames, alignRowsToHeaders, filterRealDataRows, keepSecondDuplicateColumns, looksLikeOrangeMoneyStatement } from '../../utils/row-column.util';
+import { resolveColumnKeyInRow, deduplicateHeaderNames, alignRowsToHeaders, filterRealDataRows, keepSecondDuplicateColumns, looksLikeOrangeMoneyStatement, resolveFixedHeaderMapping } from '../../utils/row-column.util';
+import {
+    applyColumnLinks,
+    csvPreviewGrid,
+    detectPreviewRange,
+    ManualRowRange,
+    PREVIEW_LINK_NONE,
+    rowsFromGrid,
+    TraitementFilePreview,
+    TraitementFileSettings,
+    TraitementPreviewContext,
+    TraitementPreviewLinkStatus,
+    validateRowRange
+} from '../../utils/traitement-file-preview.util';
 import { stripAllWhitespace } from '../../utils/concat.util';
 import { hasCommaSeparatedSearchFilter, matchesCommaSeparatedFilter } from '../../utils/search-filter.util';
 import {
@@ -48,7 +61,7 @@ import { I18nService } from '../../services/i18n/i18n.service';
 import { FileWatcherService } from '../../services/file-watcher.service';
 import { ProgressIndicatorService } from '../../services/progress-indicator.service';
 import { ColumnRulesProcessorService } from '../../services/column-rules-processor.service';
-import { readCsvFileUltraFast, readCsvContentUltraFast } from '../../utils/fast-csv-reader.util';
+import { readCsvFileUltraFast, readCsvContentUltraFast, resolveCsvHeaderPlan, detectCsvDelimiter } from '../../utils/fast-csv-reader.util';
 import { findHeaderLineIndexInCsvLines, findHeaderRowIndexInGrid, detectGenericHeaderRowIndex, isMarkerCellValue } from '../../utils/model-header-detection.util';
 import {
     BANK_BUILT_IN_EQUIVALENCES,
@@ -707,10 +720,333 @@ export class FileUploadComponent implements OnInit, OnDestroy {
         this.cd.detectChanges();
     }
 
+    // ------------------------------------------------------------------
+    // Prévisualisation des fichiers (traitement automatique) : lignes brutes, en-tête détecté,
+    // paramétrage manuel de l'en-tête et des données, liens de colonnes confirmés.
+    // ------------------------------------------------------------------
+
+    traitementPreviews: TraitementFilePreview[] = [];
+    traitementPreviewLoading = false;
+    /** Modèle pour lequel l'aperçu a été construit (les réglages ne valent que pour lui). */
+    private traitementPreviewModelId = '';
+    /** Colonnes du modèle affichées dans le tableau des liens. */
+    traitementPreviewModelColumns: string[] = [];
+    readonly previewLinkNone = PREVIEW_LINK_NONE;
+    /** Réglages confirmés des fichiers lus pendant un traitement (clé = nom du fichier). */
+    private assistedFileSettings: Map<string, TraitementFileSettings> | undefined;
+
+    /** Un seul modèle sélectionné : l'aperçu est possible. */
+    get canPreviewTraitement(): boolean {
+        return !this.traitementProcessing
+            && this.traitementFiles.length > 0
+            && this.selectedTraitementModels.length === 1;
+    }
+
+    clearTraitementPreview(): void {
+        this.traitementPreviews = [];
+        this.traitementPreviewModelId = '';
+        this.traitementPreviewModelColumns = [];
+    }
+
+    /** Construit l'aperçu de chaque fichier pour le modèle sélectionné. */
+    async previewTraitementFiles(): Promise<void> {
+        const model = this.selectedTraitementModels[0];
+        if (!this.canPreviewTraitement || !model?.id) {
+            return;
+        }
+        this.traitementPreviewLoading = true;
+        this.cd.detectChanges();
+        try {
+            const context = await this.buildTraitementPreviewContext(model);
+            const previews: TraitementFilePreview[] = [];
+            for (const file of this.traitementFiles) {
+                previews.push(await this.loadTraitementFilePreview(file, context));
+            }
+            this.traitementPreviewContext = context;
+            this.traitementPreviewModelId = this.getTraitementModelId(model);
+            this.traitementPreviewModelColumns = context.modelColumns;
+            this.traitementPreviews = previews;
+        } catch (error: any) {
+            await this.popupService.showError(
+                I18nService.t('FU.preview.erreur', { p0: error?.message || error }),
+                I18nService.t('MSG.error')
+            );
+        } finally {
+            this.traitementPreviewLoading = false;
+            this.cd.detectChanges();
+        }
+    }
+
+    private traitementPreviewContext: TraitementPreviewContext | null = null;
+
+    private async buildTraitementPreviewContext(model: AutoProcessingModel): Promise<TraitementPreviewContext> {
+        const columnRules = await this.getTraitementColumnRules(model.id!);
+        const expected = await this.resolveModelExpectedHeaderColumns(model, columnRules);
+        const templateColumns = await this.resolveWatchFolderTemplateColumns(model);
+        const modelIds = [model.modelId, model.id];
+        const bankModelColumns = model.bankModel
+            ? Array.from(new Set([...expected, ...templateColumns]))
+            : [];
+        const equivalences = model.bankModel
+            ? mergeBuiltInEquivalences(
+                await this.modelNormalizationService.getForModels(modelIds),
+                BANK_BUILT_IN_EQUIVALENCES,
+                bankModelColumns
+            )
+            : await this.modelNormalizationService.getForModels(modelIds);
+        return {
+            model,
+            modelIds,
+            expected,
+            templateColumns,
+            bankModelColumns,
+            alternatives: equivalences.length
+                ? new Map(equivalences.map(eq => [eq.columnName, eq.equivalents]))
+                : undefined,
+            modelColumns: expected.length ? expected : templateColumns
+        };
+    }
+
+    /** Lit le début d'un fichier (CSV : 256 Ko ; Excel : 60 premières lignes de la 1re feuille). */
+    private async loadTraitementFilePreview(file: File, context: TraitementPreviewContext): Promise<TraitementFilePreview> {
+        const preview: TraitementFilePreview = {
+            file,
+            kind: 'csv',
+            grid: [],
+            rawLines: [],
+            autoRange: { headerLine: 1, dataStartLine: 2, source: 'none' },
+            manualEnabled: false,
+            headerLineInput: null,
+            dataLineInput: null,
+            rangeError: '',
+            fileColumns: [],
+            links: {},
+            mapping: [],
+            sampleRows: [],
+            keptSampleCount: 0,
+            unlinkedFileColumns: [],
+            normalizationMessage: '',
+            error: ''
+        };
+        const name = file.name.toLowerCase();
+        try {
+            if (name.endsWith('.csv') || name.endsWith('.txt')) {
+                const blob = file.slice(0, 256 * 1024);
+                let text = await blob.text();
+                if (text.charCodeAt(0) === 0xFEFF) {
+                    text = text.slice(1);
+                }
+                const delimiter = resolveCsvHeaderPlan(
+                    text.split(/\r?\n/),
+                    detectCsvDelimiter(text),
+                    context.expected
+                ).delimiter;
+                preview.delimiter = delimiter;
+                preview.grid = csvPreviewGrid(text, delimiter, file.size > 256 * 1024);
+                preview.rawLines = text.split(/\r?\n/).slice(0, preview.grid.length)
+                    .map((line, i) => ({ n: i + 1, text: line.length > 400 ? line.slice(0, 400) + '…' : line }));
+            } else if (this.isExcelFile(name)) {
+                preview.kind = 'excel';
+                const data = new Uint8Array(await this.readFileAsArrayBuffer(file));
+                const workbook = XLSX.read(data, { type: 'array', sheetRows: 60 });
+                const sheetName = this.getWorkbookSheetNamesWithData(workbook)[0];
+                preview.sheetName = sheetName;
+                preview.grid = sheetName ? this.workbookSheetToGrid(workbook.Sheets[sheetName]) : [];
+                preview.rawLines = preview.grid.map((cells, i) => {
+                    const line = (cells || []).map(c => String(c ?? '')).join(' | ');
+                    return { n: i + 1, text: line.length > 400 ? line.slice(0, 400) + '…' : line };
+                });
+            } else {
+                preview.error = I18nService.t('FU.preview.formatNonPrevisualisable');
+                return preview;
+            }
+            preview.autoRange = detectPreviewRange(preview.grid, context.expected, context.alternatives);
+            await this.computeTraitementPreviewMapping(preview, context);
+        } catch (error: any) {
+            preview.error = error?.message || String(error);
+        }
+        return preview;
+    }
+
+    /** Plage utilisée : manuelle si confirmée, sinon détection automatique. */
+    traitementPreviewRange(p: TraitementFilePreview): ManualRowRange {
+        return p.manualRange || p.autoRange;
+    }
+
+    /**
+     * Liens et aperçu des données : même chaîne que le traitement (liens confirmés,
+     * Normalisation modèle, alignement sur les colonnes du modèle).
+     */
+    private async computeTraitementPreviewMapping(p: TraitementFilePreview, context: TraitementPreviewContext): Promise<void> {
+        const range = this.traitementPreviewRange(p);
+        const { headers, rows } = rowsFromGrid(p.grid, range, h => this.normalizeColumnName(h), 20);
+        p.fileColumns = headers;
+
+        const linked = applyColumnLinks(rows.map(r => ({ ...r })), p.links);
+        const normalization = await this.modelNormalizationService.normalizeRows(
+            linked,
+            context.modelIds,
+            undefined,
+            context.templateColumns,
+            context.model.bankModel ? { equivalences: BANK_BUILT_IN_EQUIVALENCES, modelColumns: context.bankModelColumns } : undefined,
+            context.model.preProcessingConfig?.valueMappings
+        );
+        p.normalizationMessage = describeColumnNormalization(normalization.plan);
+
+        const columns = context.modelColumns;
+        const headerRow = Object.fromEntries(headers.map(h => [h, ''])) as Record<string, string>;
+        const fuzzy = resolveFixedHeaderMapping(headers, columns);
+        const renameTo = new Map<string, string>();
+        [...normalization.plan.renames, ...(normalization.plan.copies || [])].forEach(r => renameTo.set(r.to, r.from));
+        const used = new Set<string>();
+        p.mapping = columns.map((column, i) => {
+            const manual = p.links[column];
+            let fileColumn = '';
+            let status: TraitementPreviewLinkStatus = 'none';
+            if (manual) {
+                fileColumn = manual === PREVIEW_LINK_NONE ? '' : manual;
+                status = 'manual';
+            } else if (headers.includes(column) || resolveColumnKeyInRow(headerRow, column) === column) {
+                fileColumn = column;
+                status = 'exact';
+            } else if (renameTo.has(column)) {
+                fileColumn = renameTo.get(column)!;
+                status = 'equivalent';
+            } else if (fuzzy[i]) {
+                fileColumn = fuzzy[i]!;
+                status = 'approx';
+            }
+            if (fileColumn) {
+                used.add(fileColumn);
+            }
+            return { column, fileColumn, status };
+        });
+        p.unlinkedFileColumns = headers.filter(h => !used.has(h));
+
+        if (columns.length) {
+            const aligned = alignRowsToHeaders(normalization.rows, columns);
+            p.sampleRows = aligned.slice(0, 5);
+            p.keptSampleCount = filterRealDataRows(aligned, columns).length;
+        } else {
+            p.sampleRows = normalization.rows.slice(0, 5);
+            p.keptSampleCount = normalization.rows.length;
+        }
+        p.sampleTotal = rows.length;
+    }
+
+    async onTraitementPreviewLinkChange(p: TraitementFilePreview, column: string, value: string): Promise<void> {
+        if (value) {
+            p.links = { ...p.links, [column]: value };
+        } else {
+            const { [column]: _removed, ...rest } = p.links;
+            p.links = rest;
+        }
+        if (this.traitementPreviewContext) {
+            await this.computeTraitementPreviewMapping(p, this.traitementPreviewContext);
+        }
+        this.cd.detectChanges();
+    }
+
+    async resetTraitementPreviewLinks(p: TraitementFilePreview): Promise<void> {
+        p.links = {};
+        if (this.traitementPreviewContext) {
+            await this.computeTraitementPreviewMapping(p, this.traitementPreviewContext);
+        }
+        this.cd.detectChanges();
+    }
+
+    toggleTraitementPreviewManual(p: TraitementFilePreview, enabled: boolean): void {
+        p.manualEnabled = enabled;
+        p.rangeError = '';
+        if (enabled) {
+            const range = this.traitementPreviewRange(p);
+            p.headerLineInput = range.headerLine;
+            p.dataLineInput = range.dataStartLine;
+        }
+    }
+
+    async applyTraitementPreviewRange(p: TraitementFilePreview): Promise<void> {
+        const range = { headerLine: Number(p.headerLineInput), dataStartLine: Number(p.dataLineInput) };
+        const error = validateRowRange(range, p.grid.length);
+        p.rangeError = error || '';
+        if (error) {
+            return;
+        }
+        p.manualRange = range;
+        // Nouvel en-tête : les liens choisis sur l'ancien ne s'appliquent plus.
+        p.links = {};
+        if (this.traitementPreviewContext) {
+            await this.computeTraitementPreviewMapping(p, this.traitementPreviewContext);
+        }
+        this.cd.detectChanges();
+    }
+
+    async resetTraitementPreviewRange(p: TraitementFilePreview): Promise<void> {
+        p.manualRange = undefined;
+        p.manualEnabled = false;
+        p.rangeError = '';
+        p.links = {};
+        if (this.traitementPreviewContext) {
+            await this.computeTraitementPreviewMapping(p, this.traitementPreviewContext);
+        }
+        this.cd.detectChanges();
+    }
+
+    /** Ligne affichée comme en-tête / début des données dans les lignes brutes. */
+    isTraitementPreviewHeaderLine(p: TraitementFilePreview, n: number): boolean {
+        return this.traitementPreviewRange(p).headerLine === n;
+    }
+
+    isTraitementPreviewDataLine(p: TraitementFilePreview, n: number): boolean {
+        return this.traitementPreviewRange(p).dataStartLine === n;
+    }
+
+    /** Confirme les colonnes de l'aperçu et lance le traitement avec ces réglages. */
+    async confirmTraitementPreviewAndApply(): Promise<void> {
+        await this.applyAssistedFileTreatment();
+    }
+
+    /** Réglages confirmés pour un modèle (seulement si l'aperçu a été fait pour lui). */
+    private getTraitementFileSettingsForModel(model: AutoProcessingModel): Map<string, TraitementFileSettings> | undefined {
+        if (!this.traitementPreviews.length || this.traitementPreviewModelId !== this.getTraitementModelId(model)) {
+            return undefined;
+        }
+        const settings = new Map<string, TraitementFileSettings>();
+        for (const p of this.traitementPreviews) {
+            if (p.manualRange || Object.keys(p.links).length) {
+                settings.set(p.file.name, { range: p.manualRange, links: { ...p.links } });
+            }
+        }
+        return settings.size ? settings : undefined;
+    }
+
+    /** Excel lu avec un en-tête / des données imposés : même plage sur chaque feuille contenant des données. */
+    private async readAssistedExcelWithRange(file: File, range: ManualRowRange): Promise<{
+        rows: Record<string, string>[];
+        headerLine: number;
+        removedLines: number;
+    }> {
+        const data = new Uint8Array(await this.readFileAsArrayBuffer(file));
+        const workbook = await this.readAssistedXlsxWorkbook(data, file.size / (1024 * 1024));
+        const rows: Record<string, string>[] = [];
+        for (const sheetName of this.getWorkbookSheetNamesWithData(workbook)) {
+            const sheet = workbook.Sheets?.[sheetName];
+            if (!sheet) {
+                continue;
+            }
+            const grid = await this.workbookSheetToGridAsync(sheet);
+            const parsed = rowsFromGrid(grid, range, h => this.normalizeColumnName(h));
+            this.appendRowsSafely(rows, parsed.rows);
+            await this.yieldToMainThread(true);
+        }
+        return { rows, headerLine: range.headerLine - 1, removedLines: 0 };
+    }
+
     resetTraitementPanel(): void {
         if (this.traitementProcessing) {
             return;
         }
+        this.clearTraitementPreview();
         this.traitementFiles = [];
         this.selectedTraitementModelId = '';
         this.selectedTraitementModelIds.clear();
@@ -1097,6 +1433,7 @@ export class FileUploadComponent implements OnInit, OnDestroy {
             }
         }
         this.traitementFiles = [...this.traitementFiles, ...newFiles];
+        this.clearTraitementPreview();
         this.suggestTraitementModelFromFiles();
         this.cd.detectChanges();
     }
@@ -1105,6 +1442,7 @@ export class FileUploadComponent implements OnInit, OnDestroy {
         event?.stopPropagation();
         this.traitementFiles.splice(index, 1);
         this.traitementFiles = [...this.traitementFiles];
+        this.clearTraitementPreview();
         if (this.traitementFiles.length) {
             this.suggestTraitementModelFromFiles();
         } else {
@@ -1214,6 +1552,7 @@ export class FileUploadComponent implements OnInit, OnDestroy {
     }
 
     onTraitementModelSelectionChange(): void {
+        this.clearTraitementPreview();
         this.traitementDedupEnabled = false;
         this.traitementDedupColumns = [];
         this.clearTraitementColumnCatalog();
@@ -1927,9 +2266,13 @@ export class FileUploadComponent implements OnInit, OnDestroy {
         // Seule exception : un équivalent qui est une colonne du vrai fichier modèle (erreur de
         // configuration), ignoré et signalé.
         const needsCompilation = await this.needsAssistedCompilation(files);
+        // Réglages confirmés à la prévisualisation (en-tête / données, liens de colonnes).
+        const fileSettings = this.getTraitementFileSettingsForModel(model);
         const templateColumnsForNormalization = await this.resolveWatchFolderTemplateColumns(model);
         const normalizationMessages: string[] = [];
         const normalizeToModel = async (rows: Record<string, string>[], source: string) => {
+            // Liens confirmés d'abord : la colonne choisie prend le nom de la colonne du modèle.
+            applyColumnLinks(rows, fileSettings?.get(source)?.links);
             const result = await this.modelNormalizationService.normalizeRows(
                 rows,
                 modelIds,
@@ -1950,12 +2293,14 @@ export class FileUploadComponent implements OnInit, OnDestroy {
         // Plusieurs fichiers : chaque fichier est normalisé vers le modèle AVANT la compilation,
         // pour obtenir un jeu uniforme sur lequel le traitement s'applique ensuite.
         let compiled: Awaited<ReturnType<FileUploadComponent['loadSingleAssistedTreatmentFile']>>;
+        this.assistedFileSettings = fileSettings;
         try {
             compiled = needsCompilation
                 ? await this.compileAssistedTreatmentFileRows(files, expectedHeaderColumns, normalizeToModel)
                 : await this.loadSingleAssistedTreatmentFile(files[0], expectedHeaderColumns);
         } finally {
             this.assistedHeaderAlternatives = undefined;
+            this.assistedFileSettings = undefined;
         }
 
         await this.updateTraitementProgress(
@@ -4497,13 +4842,17 @@ export class FileUploadComponent implements OnInit, OnDestroy {
         removedLines: number;
     }> {
         const fileName = file.name.toLowerCase();
+        // En-tête / données paramétrés à la prévisualisation : remplacent la détection automatique.
+        const manualRange = this.assistedFileSettings?.get(file.name)?.range;
 
-        if (fileName.endsWith('.csv')) {
-            return this.readAssistedTreatmentCsvFileFast(file, expectedHeaderColumns);
+        if (fileName.endsWith('.csv') || (manualRange && fileName.endsWith('.txt'))) {
+            return this.readAssistedTreatmentCsvFileFast(file, expectedHeaderColumns, manualRange);
         }
 
         if (this.isExcelFile(fileName)) {
-            return this.readAssistedTreatmentExcelFile(file, expectedHeaderColumns);
+            return manualRange
+                ? this.readAssistedExcelWithRange(file, manualRange)
+                : this.readAssistedTreatmentExcelFile(file, expectedHeaderColumns);
         }
 
         return Promise.reject(new Error(I18nService.t('FU.msg.formatNonSupporteUtilisezCsvOu')));
@@ -4514,7 +4863,8 @@ export class FileUploadComponent implements OnInit, OnDestroy {
      */
     private async readAssistedTreatmentCsvFileFast(
         file: File,
-        expectedHeaderColumns: string[] = []
+        expectedHeaderColumns: string[] = [],
+        manualRange?: ManualRowRange
     ): Promise<{
         rows: Record<string, string>[];
         headerLine: number;
@@ -4523,6 +4873,7 @@ export class FileUploadComponent implements OnInit, OnDestroy {
         return readCsvFileUltraFast(file, {
             stripAirtelPreamble: true,
             expectedHeaderColumns,
+            manualRange,
             normalizeHeader: (header, index) =>
                 this.normalizeColumnName(header || `Col${index + 1}`),
             onProgress: (processed, total) => {

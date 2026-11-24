@@ -34,6 +34,11 @@ export interface FastCsvReadOptions {
     /** Reçoit chaque ligne au fil de la lecture : évite de garder tout le fichier en objets. */
     onRow?: (row: Record<string, string>) => void;
     yieldFn?: () => Promise<void>;
+    /**
+     * En-tête et première ligne de données choisis à la main (lignes physiques, 1 = première
+     * ligne du fichier, lignes vides comprises) : remplace la détection automatique.
+     */
+    manualRange?: { headerLine: number; dataStartLine: number };
 }
 
 /** Position de l'en-tête détectée dans un fichier (index parmi les lignes non vides). */
@@ -278,6 +283,9 @@ export async function readCsvFileUltraFast(
     file: File,
     options: FastCsvReadOptions = {}
 ): Promise<FastCsvReadResult> {
+    if (options.manualRange) {
+        return readCsvFileWithManualRange(file, options, options.manualRange);
+    }
     let plan: CsvHeaderPlan | null = null;
     let delimiter = '';
     try {
@@ -297,6 +305,99 @@ export async function readCsvFileUltraFast(
         delimiter = '';
     }
     return readCsvFileStreaming(file, options, plan, delimiter);
+}
+
+/** Texte d'un Blob : Blob.text() si disponible, sinon FileReader (navigateurs anciens, jsdom). */
+function readBlobText(blob: Blob): Promise<string> {
+    if (typeof (blob as Blob & { text?: unknown }).text === 'function') {
+        return blob.text();
+    }
+    return new Promise((resolve, reject) => {
+        const reader = new FileReader();
+        reader.onload = () => resolve(String(reader.result ?? ''));
+        reader.onerror = () => reject(reader.error);
+        reader.readAsText(blob, 'UTF-8');
+    });
+}
+
+/** Lecture avec en-tête / données imposés (paramétrage manuel de la prévisualisation). */
+async function readCsvFileWithManualRange(
+    file: File,
+    options: FastCsvReadOptions,
+    range: { headerLine: number; dataStartLine: number }
+): Promise<FastCsvReadResult> {
+    let delimiter = '';
+    try {
+        const preview = stripBom(await readBlobText(file.slice(0, PREVIEW_BYTES)));
+        delimiter = resolveCsvHeaderPlan(
+            preview.split(/\r?\n/),
+            detectCsvDelimiter(preview),
+            options.expectedHeaderColumns ?? []
+        ).delimiter;
+    } catch {
+        // Aperçu illisible : séparateur détecté par PapaParse.
+        delimiter = '';
+    }
+    const yieldFn = options.yieldFn || (file.size > WORKER_THRESHOLD_BYTES
+        ? function () { return new Promise<void>(resolve => setTimeout(resolve, 0)); }
+        : undefined);
+    const estimatedTotal = estimateRowCount(file.size);
+
+    return new Promise((resolve, reject) => {
+        let headers: string[] | null = null;
+        let line = 0;
+        let skipped = 0;
+        let processedLines = 0;
+        const rows: Record<string, string>[] = [];
+
+        Papa.parse<string[]>(file, {
+            skipEmptyLines: false,
+            encoding: 'UTF-8',
+            delimiter,
+            worker: false,
+            step: (results: Papa.ParseStepResult<string[]>, parser: Papa.Parser) => {
+                line++;
+                const cells = (results.data as string[]).map(cell => String(cell ?? '').trim());
+                if (line === 1 && cells.length) {
+                    cells[0] = stripBom(cells[0]);
+                }
+                if (line < range.headerLine) {
+                    skipped++;
+                    return;
+                }
+                if (line === range.headerLine) {
+                    headers = deduplicateHeaderNames(finalizeHeaderRow(cells, options));
+                    return;
+                }
+                if (line < range.dataStartLine || !headers || !cells.some(cell => cell)) {
+                    skipped++;
+                    return;
+                }
+                const row: Record<string, string> = {};
+                headers.forEach((header, index) => {
+                    row[header] = maybeFixCell(String(cells[index] ?? ''));
+                });
+                if (options.onRow) {
+                    options.onRow(row);
+                } else {
+                    rows.push(row);
+                }
+                processedLines++;
+                if (processedLines % PROGRESS_EVERY_ROWS === 0) {
+                    options.onProgress?.(processedLines, estimatedTotal);
+                }
+                if (yieldFn && processedLines % YIELD_EVERY_ROWS === 0) {
+                    parser.pause();
+                    void yieldFn().then(() => parser.resume()).catch(() => parser.resume());
+                }
+            },
+            complete: () => {
+                options.onProgress?.(processedLines, processedLines || estimatedTotal);
+                resolve({ rows: options.onRow ? [] : rows, headerLine: range.headerLine - 1, removedLines: skipped });
+            },
+            error: (error: Error) => reject(error)
+        });
+    });
 }
 
 function readCsvFileStreaming(

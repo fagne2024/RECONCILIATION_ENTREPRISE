@@ -1696,6 +1696,126 @@
             </ng-container>
         </div>
 
+        <!-- Prévisualisation des fichiers : en-tête détecté, paramétrage manuel, liens de colonnes -->
+        <div class="traitement-section traitement-preview-section" *ngIf="traitementFiles.length > 0 && selectedTraitementModels.length === 1">
+            <label class="traitement-section-title">
+                <i class="fas fa-eye"></i> {{ 'FU.preview.titre' | translate }} <span class="traitement-optional-badge">{{ 'LBL.optional' | translate }}</span>
+            </label>
+            <p class="traitement-columns-intro">{{ 'FU.preview.intro' | translate }}</p>
+            <button type="button" class="ds-btn ds-btn--secondary" [disabled]="!canPreviewTraitement || traitementPreviewLoading" (click)="previewTraitementFiles()">
+                <i class="fas" [ngClass]="traitementPreviewLoading ? 'fa-spinner fa-spin' : 'fa-search'"></i>
+                {{ (traitementPreviews.length ? 'FU.preview.actualiser' : 'FU.preview.previsualiser') | translate }}
+            </button>
+
+            <div class="tp-file" *ngFor="let p of traitementPreviews; let fi = index">
+                <div class="tp-file-head">
+                    <strong><i class="fas fa-file-alt"></i> {{ p.file.name }}</strong>
+                    <span class="tp-muted" *ngIf="p.kind === 'csv' && p.delimiter">{{ 'FU.preview.separateur' | translate }} <code>{{ p.delimiter === '\t' ? 'tab' : p.delimiter }}</code></span>
+                    <span class="tp-muted" *ngIf="p.kind === 'excel' && p.sheetName">{{ 'FU.preview.feuille' | translate }} {{ p.sheetName }}</span>
+                </div>
+
+                <p class="tp-alert tp-alert--error" *ngIf="p.error"><i class="fas fa-exclamation-circle"></i> {{ p.error }}</p>
+
+                <ng-container *ngIf="!p.error">
+                    <p class="tp-detect">
+                        <strong>{{ 'FU.preview.detection' | translate }}</strong>
+                        {{ 'FU.preview.enTeteDonnees' | translate: { p0: p.autoRange.headerLine, p1: p.autoRange.dataStartLine } }}
+                        <ng-container *ngIf="p.manualRange"> — <strong>{{ 'FU.preview.parametrageApplique' | translate }}</strong>
+                            {{ 'FU.preview.enTeteDonnees' | translate: { p0: p.manualRange.headerLine, p1: p.manualRange.dataStartLine } }}</ng-container>
+                    </p>
+                    <p class="tp-alert" *ngIf="p.autoRange.source === 'none' && !p.manualRange">
+                        <i class="fas fa-exclamation-triangle"></i> {{ 'FU.preview.enTeteNonDetecte' | translate }}
+                    </p>
+                    <p class="tp-alert" *ngIf="(p.sampleTotal || 0) > 0 && p.keptSampleCount === 0">
+                        <i class="fas fa-exclamation-triangle"></i> {{ 'FU.preview.aucuneLigneRetenue' | translate }}
+                    </p>
+
+                    <!-- Paramétrage manuel de l'en-tête et des données -->
+                    <div class="tp-range">
+                        <label class="traitement-column-filter-toggle">
+                            <input type="checkbox" [checked]="p.manualEnabled" (change)="toggleTraitementPreviewManual(p, $any($event.target).checked)">
+                            <span>{{ 'FU.preview.parametrerManuellement' | translate }}</span>
+                        </label>
+                        <div class="tp-range-fields" *ngIf="p.manualEnabled">
+                            <label>{{ 'FU.preview.ligneEnTete' | translate }}
+                                <input class="ds-input" type="number" min="1" [(ngModel)]="p.headerLineInput">
+                            </label>
+                            <label>{{ 'FU.preview.premiereLigneDonnees' | translate }}
+                                <input class="ds-input" type="number" min="1" [(ngModel)]="p.dataLineInput">
+                            </label>
+                            <button type="button" class="ds-btn ds-btn--secondary" (click)="applyTraitementPreviewRange(p)">{{ 'ACT.apply' | translate }}</button>
+                            <button type="button" class="ds-btn ds-btn--secondary" (click)="resetTraitementPreviewRange(p)">{{ 'FU.preview.detectionAuto' | translate }}</button>
+                            <p class="tp-alert tp-alert--error" *ngIf="p.rangeError">{{ p.rangeError }}</p>
+                        </div>
+                        <div class="tp-lines">
+                            <div class="tp-line" *ngFor="let line of p.rawLines"
+                                 [class.is-header]="isTraitementPreviewHeaderLine(p, line.n)"
+                                 [class.is-data]="isTraitementPreviewDataLine(p, line.n)">
+                                <span class="tp-line-num">{{ line.n }}</span>
+                                <span class="tp-line-text">{{ line.text }}</span>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Confirmation des colonnes : colonne du modèle ← colonne du fichier -->
+                    <div class="tp-mapping" *ngIf="p.mapping.length">
+                        <div class="tp-mapping-head">
+                            <strong>{{ 'FU.preview.colonnes' | translate }}</strong>
+                            <button type="button" class="traitement-columns-action-btn" (click)="resetTraitementPreviewLinks(p)">{{ 'FU.preview.liensAuto' | translate }}</button>
+                        </div>
+                        <table class="tp-table">
+                            <thead>
+                                <tr>
+                                    <th>{{ 'FU.preview.colonneModele' | translate }}</th>
+                                    <th>{{ 'FU.preview.colonneFichier' | translate }}</th>
+                                    <th>{{ 'FU.preview.origine' | translate }}</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                <tr *ngFor="let m of p.mapping" [class.is-missing]="m.status === 'none'">
+                                    <td>{{ m.column }}</td>
+                                    <td>
+                                        <select class="ds-select tp-select" [ngModel]="p.links[m.column] || ''"
+                                                (ngModelChange)="onTraitementPreviewLinkChange(p, m.column, $event)">
+                                            <option value="">{{ 'FU.preview.automatique' | translate }}{{ m.status !== 'manual' ? ' : ' + (m.fileColumn || ('FU.preview.nonLiee' | translate)) : '' }}</option>
+                                            <option [value]="previewLinkNone">{{ 'FU.preview.aucune' | translate }}</option>
+                                            <option *ngFor="let c of p.fileColumns" [value]="c">{{ c }}</option>
+                                        </select>
+                                    </td>
+                                    <td><span class="tp-badge" [ngClass]="'tp-badge--' + m.status">{{ ('FU.preview.statut.' + m.status) | translate }}</span></td>
+                                </tr>
+                            </tbody>
+                        </table>
+                        <p class="tp-muted" *ngIf="p.unlinkedFileColumns.length">
+                            {{ 'FU.preview.colonnesFichierSansLien' | translate }} {{ p.unlinkedFileColumns.join(', ') }}
+                        </p>
+                    </div>
+
+                    <!-- Données telles qu'elles seront traitées -->
+                    <div class="tp-sample" *ngIf="p.sampleRows.length">
+                        <strong>{{ 'FU.preview.apercuDonnees' | translate: { p0: p.keptSampleCount, p1: p.sampleTotal || 0 } }}</strong>
+                        <div class="tp-sample-scroll">
+                            <table class="tp-table">
+                                <thead><tr><th *ngFor="let c of traitementPreviewModelColumns.length ? traitementPreviewModelColumns : p.fileColumns">{{ c }}</th></tr></thead>
+                                <tbody>
+                                    <tr *ngFor="let row of p.sampleRows">
+                                        <td *ngFor="let c of traitementPreviewModelColumns.length ? traitementPreviewModelColumns : p.fileColumns">{{ row[c] }}</td>
+                                    </tr>
+                                </tbody>
+                            </table>
+                        </div>
+                    </div>
+                    <p class="tp-muted" *ngIf="p.normalizationMessage">{{ p.normalizationMessage }}</p>
+                </ng-container>
+            </div>
+
+            <div class="tp-confirm" *ngIf="traitementPreviews.length">
+                <button type="button" class="ds-btn ds-btn--primary" [disabled]="!canApplyTraitement()" (click)="confirmTraitementPreviewAndApply()">
+                    <i class="fas fa-check"></i> {{ 'FU.preview.confirmerEtLancer' | translate }}
+                </button>
+            </div>
+        </div>
+
         <div class="traitement-section" *ngIf="showTraitementPaysSection">
             <label class="traitement-section-title" for="traitementPaysValue">{{ 'FU.paysSection' | translate }} {{ paysColumnName }} <span class="traitement-optional-badge">{{ 'LBL.optional' | translate }}</span></label>
             <div class="traitement-env-value-row">
