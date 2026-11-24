@@ -1697,7 +1697,7 @@
         </div>
 
         <!-- Prévisualisation des fichiers : en-tête détecté, paramétrage manuel, liens de colonnes -->
-        <div class="traitement-section traitement-preview-section" *ngIf="traitementFiles.length > 0 && selectedTraitementModels.length > 0">
+        <div class="traitement-section traitement-preview-section" *ngIf="traitementFiles.length > 0 && selectedTraitementModels.length > 0 && !traitementPreviewHidden">
             <label class="traitement-section-title">
                 <i class="fas fa-eye"></i> {{ 'FU.preview.titre' | translate }} <span class="traitement-optional-badge">{{ 'LBL.optional' | translate }}</span>
             </label>

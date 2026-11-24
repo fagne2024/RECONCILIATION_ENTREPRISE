@@ -754,6 +754,7 @@ export class FileUploadComponent implements OnInit, OnDestroy {
     }
 
     clearTraitementPreview(): void {
+        this.traitementPreviewHidden = false;
         this.traitementPreviewConfirmed = false;
         this.traitementPreviewSampleIndex = 0;
         this.traitementPreviewStore.clear();
@@ -780,6 +781,7 @@ export class FileUploadComponent implements OnInit, OnDestroy {
         }
         this.traitementPreviewLoading = true;
         this.traitementPreviewConfirmed = false;
+        this.traitementPreviewHidden = false;
         this.cd.detectChanges();
         try {
             const context = await this.buildTraitementPreviewContext(model);
@@ -1075,6 +1077,8 @@ export class FileUploadComponent implements OnInit, OnDestroy {
 
     /** Aperçu validé : la section est repliée en une ligne de résumé. */
     traitementPreviewConfirmed = false;
+    /** Traitement appliqué : section de prévisualisation masquée (réaffichée si fichiers/modèle changent ou échec). */
+    traitementPreviewHidden = false;
     /** Enregistrer les liens validés dans Configuration > Normalisation modèle (tous modèles). */
     traitementPreviewSaveLinks = true;
     /** Résultat de l'enregistrement des liens, affiché dans le résumé replié. */
@@ -2083,6 +2087,8 @@ export class FileUploadComponent implements OnInit, OnDestroy {
         if (!this.canApplyTraitement()) {
             return;
         }
+        // Traitement appliqué : la prévisualisation est masquée (réglages conservés).
+        this.traitementPreviewHidden = true;
 
         // Pays et ENV facultatifs (comme dans le module Traitement) : sans valeur, pas de colonne.
         this.traitementPaysValue = (this.traitementPaysValue || '').trim().toUpperCase();
