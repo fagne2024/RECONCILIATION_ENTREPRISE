@@ -57,6 +57,14 @@ describe('Prévisualisation des fichiers du traitement automatique', () => {
     expect(rows[0]).toEqual({ Reference: '', Status: 'OK', Amount: '10' });
   });
 
+  it('ignore un lien dont la colonne est absente du fichier (autre format du lot)', () => {
+    const rows = [{ 'Statut transaction': 'Transaction Success', Montant: '10' }];
+
+    applyColumnLinks(rows, { 'Statut transaction': 'Transaction Status' });
+
+    expect(rows[0]).toEqual({ 'Statut transaction': 'Transaction Success', Montant: '10' });
+  });
+
   it('la lecture complète respecte l\'en-tête et la première ligne de données imposés', async () => {
     const file = new File([csv], 'rapport.csv', { type: 'text/csv' });
 

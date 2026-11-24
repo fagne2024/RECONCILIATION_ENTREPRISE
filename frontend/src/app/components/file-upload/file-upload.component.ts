@@ -736,7 +736,9 @@ export class FileUploadComponent implements OnInit, OnDestroy {
     /** Aperçus construits, par modèle (les réglages d'un modèle ne valent que pour lui). */
     private traitementPreviewStore = new Map<string, { previews: TraitementFilePreview[]; context: TraitementPreviewContext }>();
     /** Réglages confirmés des fichiers lus pendant un traitement (clé = nom du fichier). */
-    private assistedFileSettings: Map<string, TraitementFileSettings> | undefined;
+    private assistedFileSettings: TraitementFileSettings | undefined;
+    /** Fichier échantillon de la prévisualisation (index dans traitementFiles). */
+    traitementPreviewSampleIndex = 0;
 
     /** Au moins un fichier et un modèle sélectionné : l'aperçu est possible. */
     get canPreviewTraitement(): boolean {
@@ -752,6 +754,7 @@ export class FileUploadComponent implements OnInit, OnDestroy {
     }
 
     clearTraitementPreview(): void {
+        this.traitementPreviewSampleIndex = 0;
         this.traitementPreviewStore.clear();
         this.traitementPreviews = [];
         this.traitementPreviewContext = null;
@@ -779,9 +782,10 @@ export class FileUploadComponent implements OnInit, OnDestroy {
         try {
             const context = await this.buildTraitementPreviewContext(model);
             const previews: TraitementFilePreview[] = [];
-            for (const file of this.traitementFiles) {
-                previews.push(await this.loadTraitementFilePreview(file, context));
-            }
+            // Un seul fichier échantillon : ses réglages s'appliquent à tous les fichiers.
+            const index = Math.min(Math.max(0, this.traitementPreviewSampleIndex), this.traitementFiles.length - 1);
+            this.traitementPreviewSampleIndex = index;
+            previews.push(await this.loadTraitementFilePreview(this.traitementFiles[index], context));
             const id = this.getTraitementModelId(model);
             this.traitementPreviewStore.set(id, { previews, context });
             this.traitementPreviewTargetId = id;
@@ -818,7 +822,8 @@ export class FileUploadComponent implements OnInit, OnDestroy {
             : await this.modelNormalizationService.getForModels(modelIds);
         // Colonnes des filtres de lignes : elles doivent exister avant le pré-traitement,
         // sinon le filtre exclut tout. Elles sont ajoutées au tableau des liens.
-        const baseColumns = expected.length ? expected : templateColumns;
+        // Colonnes du modèle (fichier modèle du dossier surveillé) ; à défaut, en-tête attendu.
+        const baseColumns = templateColumns.length ? templateColumns : expected;
         const filterColumns = (model.preProcessingConfig?.rowFilters || [])
             .filter((f: any) => f?.enabled !== false && String(f?.column || '').trim())
             .map((f: any) => String(f.column).trim());
@@ -1060,18 +1065,19 @@ export class FileUploadComponent implements OnInit, OnDestroy {
     }
 
     /** Réglages confirmés pour un modèle (seulement si l'aperçu a été fait pour lui). */
-    private getTraitementFileSettingsForModel(model: AutoProcessingModel): Map<string, TraitementFileSettings> | undefined {
-        const stored = this.traitementPreviewStore.get(this.getTraitementModelId(model));
-        if (!stored?.previews.length) {
+    private getTraitementFileSettingsForModel(model: AutoProcessingModel): TraitementFileSettings | undefined {
+        const sample = this.traitementPreviewStore.get(this.getTraitementModelId(model))?.previews[0];
+        if (!sample || (!sample.manualRange && !Object.keys(sample.links).length)) {
             return undefined;
         }
-        const settings = new Map<string, TraitementFileSettings>();
-        for (const p of stored.previews) {
-            if (p.manualRange || Object.keys(p.links).length) {
-                settings.set(p.file.name, { range: p.manualRange, links: { ...p.links } });
-            }
-        }
-        return settings.size ? settings : undefined;
+        // Réglages de l'échantillon appliqués à tous les fichiers du lot.
+        return { range: sample.manualRange, links: { ...sample.links } };
+    }
+
+    /** Change le fichier échantillon et reconstruit l'aperçu. */
+    async onTraitementPreviewSampleChange(index: number): Promise<void> {
+        this.traitementPreviewSampleIndex = Number(index) || 0;
+        await this.previewTraitementFiles();
     }
 
     /** Excel lu avec un en-tête / des données imposés : même plage sur chaque feuille contenant des données. */
@@ -2342,7 +2348,7 @@ export class FileUploadComponent implements OnInit, OnDestroy {
         const normalizationMessages: string[] = [];
         const normalizeToModel = async (rows: Record<string, string>[], source: string) => {
             // Liens confirmés d'abord : la colonne choisie prend le nom de la colonne du modèle.
-            applyColumnLinks(rows, fileSettings?.get(source)?.links);
+            applyColumnLinks(rows, fileSettings?.links);
             const result = await this.modelNormalizationService.normalizeRows(
                 rows,
                 modelIds,
@@ -2366,7 +2372,7 @@ export class FileUploadComponent implements OnInit, OnDestroy {
         this.assistedFileSettings = fileSettings;
         try {
             compiled = needsCompilation
-                ? await this.compileAssistedTreatmentFileRows(files, expectedHeaderColumns, normalizeToModel)
+                ? await this.compileAssistedTreatmentFileRows(files, expectedHeaderColumns, normalizeToModel, templateColumnsForNormalization)
                 : await this.loadSingleAssistedTreatmentFile(files[0], expectedHeaderColumns);
         } finally {
             this.assistedHeaderAlternatives = undefined;
@@ -2766,7 +2772,8 @@ export class FileUploadComponent implements OnInit, OnDestroy {
     private async compileAssistedTreatmentFileRows(
         files: File[],
         expectedHeaderColumns: string[] = [],
-        normalizeFile?: (rows: Record<string, string>[], fileName: string) => Promise<Record<string, string>[]>
+        normalizeFile?: (rows: Record<string, string>[], fileName: string) => Promise<Record<string, string>[]>,
+        normalizedModelColumns: string[] = []
     ): Promise<{
         rows: Record<string, string>[];
         sourceSummary: string;
@@ -2815,7 +2822,18 @@ export class FileUploadComponent implements OnInit, OnDestroy {
         // - modèle défini : colonnes du modèle (dans sa langue) ;
         // - sinon : le système choisit la langue du lot (EN ou FR).
         let unified: Record<string, string>[] = compiled;
-        if (compiled.length) {
+        if (compiled.length && normalizeFile) {
+            // Fichiers déjà normalisés vers le modèle : leurs colonnes portent les noms du modèle.
+            // Pas de rapprochement approché (il plaçait « Montant » sous « Transaction ID ») :
+            // union exacte des colonnes, lignes réelles comptées sur les colonnes du modèle.
+            const union = this.collectRowKeys(compiled);
+            const unionSet = new Set(union);
+            const modelColumns = normalizedModelColumns.filter(c => unionSet.has(c));
+            unified = filterRealDataRows(
+                alignRowsToHeaders(compiled, union),
+                modelColumns.length >= 2 ? modelColumns : union
+            );
+        } else if (compiled.length) {
             const headers = expectedHeaderColumns.length
                 ? expectedHeaderColumns
                 : chooseBatchHeaderSet(this.collectRowKeys(compiled));
@@ -4921,7 +4939,7 @@ export class FileUploadComponent implements OnInit, OnDestroy {
     }> {
         const fileName = file.name.toLowerCase();
         // En-tête / données paramétrés à la prévisualisation : remplacent la détection automatique.
-        const manualRange = this.assistedFileSettings?.get(file.name)?.range;
+        const manualRange = this.assistedFileSettings?.range;
 
         if (fileName.endsWith('.csv') || (manualRange && fileName.endsWith('.txt'))) {
             return this.readAssistedTreatmentCsvFileFast(file, expectedHeaderColumns, manualRange);

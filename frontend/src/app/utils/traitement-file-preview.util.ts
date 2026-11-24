@@ -188,8 +188,14 @@ export function applyColumnLinks(rows: Record<string, string>[], links: Record<s
   if (!entries.length || !rows.length) {
     return rows;
   }
-  const renames = entries.filter(([, file]) => file !== PREVIEW_LINK_NONE);
+  // Réglages de l'échantillon appliqués à tous les fichiers : un lien dont la colonne est
+  // absente de ce fichier (autre format) est ignoré, la normalisation s'en charge.
+  const firstRow = rows[0];
+  const renames = entries.filter(([, file]) => file !== PREVIEW_LINK_NONE && file in firstRow);
   const empties = entries.filter(([, file]) => file === PREVIEW_LINK_NONE).map(([model]) => model);
+  if (!renames.length && !empties.length) {
+    return rows;
+  }
   for (let i = 0; i < rows.length; i++) {
     const row = rows[i];
     // Valeurs lues avant toute réécriture : deux liens peuvent s'échanger des colonnes.

@@ -1710,6 +1710,14 @@
                     </select>
                 </label>
             </div>
+            <div class="tp-target" *ngIf="traitementFiles.length > 1">
+                <label>{{ 'FU.preview.fichierEchantillon' | translate }}
+                    <select class="ds-select" [ngModel]="traitementPreviewSampleIndex"
+                            (ngModelChange)="onTraitementPreviewSampleChange($event)" [disabled]="traitementPreviewLoading">
+                        <option *ngFor="let f of traitementFiles; let i = index" [ngValue]="i">{{ f.name }}</option>
+                    </select>
+                </label>
+            </div>
             <button type="button" class="ds-btn ds-btn--secondary" [disabled]="!canPreviewTraitement || traitementPreviewLoading" (click)="previewTraitementFiles()">
                 <i class="fas" [ngClass]="traitementPreviewLoading ? 'fa-spinner fa-spin' : 'fa-search'"></i>
                 {{ (traitementPreviews.length ? 'FU.preview.actualiser' : 'FU.preview.previsualiser') | translate }}
