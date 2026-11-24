@@ -1146,7 +1146,8 @@ export class ModelPreProcessingService {
    */
   resolveReconciliationDedupColumnKeys(
     model: AutoProcessingModel,
-    sampleRow: Record<string, string>
+    sampleRow: Record<string, string>,
+    allModels?: AutoProcessingModel[]
   ): string[] {
     if (!sampleRow || !Object.keys(sampleRow).length) {
       return [];
@@ -1181,6 +1182,13 @@ export class ModelPreProcessingService {
       }
     }
 
+    // Modèle BO sans clé propre : clés que les modèles partenaires déclarent pour lui
+    // (ex. TRXGU1 → ID Partenaire + Token GU). Sans cela, le repli générique retenait
+    // la colonne calculée CLE (Téléphone + Montant) et supprimait des transactions légitimes.
+    if (!resolved.length && allModels?.length) {
+      addCandidates(this.collectBoKeysDeclaredByPartners(model, allModels));
+    }
+
     const modelHint = `${model.name || ''} ${model.filePattern || ''} ${model.templateFile || ''}`.toLowerCase();
     if (modelHint.includes('airtel')) {
       addCandidates([
@@ -1210,10 +1218,59 @@ export class ModelPreProcessingService {
     }
 
     if (!resolved.length) {
-      addCandidates([...PARTNER_REFERENCE_KEY_ALIASES, ...BO_RECONCILIATION_KEY_ALIASES]);
+      // Repli générique : jamais sur une colonne calculée par le modèle (concaténation, calcul),
+      // qui n'identifie pas une transaction (ex. CLE = Téléphone client + Montant).
+      const computed = new Set([
+        ...this.getActiveColumnConcatRules(model.preProcessingConfig?.columnConcatRules).map(r => normalizeColumnKey(r.targetColumn)),
+        ...this.getActiveColumnMathRules(model.preProcessingConfig?.columnMathRules).map(r => normalizeColumnKey(r.targetColumn))
+      ]);
+      addCandidates(
+        [...PARTNER_REFERENCE_KEY_ALIASES, ...BO_RECONCILIATION_KEY_ALIASES]
+          .filter(alias => !computed.has(normalizeColumnKey(alias)))
+      );
     }
 
     return resolved;
+  }
+
+  /** Colonnes BO déclarées comme clé pour `boModel` par les modèles partenaires qui lui sont rattachés. */
+  private collectBoKeysDeclaredByPartners(boModel: AutoProcessingModel, allModels: AutoProcessingModel[]): string[] {
+    const ids = [boModel.modelId, boModel.id].filter((v): v is string => !!v);
+    if (!ids.length) {
+      return [];
+    }
+    const keys: string[] = [];
+    const add = (col?: string) => {
+      const value = (col || '').trim();
+      if (value && !keys.includes(value)) {
+        keys.push(value);
+      }
+    };
+    const addConditional = (cfg?: { enabled?: boolean; rules?: Array<{ keyColumn?: string }>; defaultKeyColumn?: string }) => {
+      if (!cfg?.enabled) {
+        return;
+      }
+      (cfg.rules || []).forEach(r => add(r.keyColumn));
+      add(cfg.defaultKeyColumn);
+    };
+    for (const pm of allModels) {
+      if (pm === boModel || pm.bankModel) {
+        continue;
+      }
+      const rk = pm.reconciliationKeys;
+      if (!rk) {
+        continue;
+      }
+      for (const id of ids) {
+        const cols = rk.boModelKeys?.[id];
+        if (Array.isArray(cols)) {
+          cols.forEach(c => add(c));
+          addConditional(rk.boConditionalKeys);
+          addConditional(rk.boModelConfigs?.[id]?.boConditionalKeys);
+        }
+      }
+    }
+    return keys;
   }
 
   /**
@@ -1243,7 +1300,8 @@ export class ModelPreProcessingService {
   deduplicateRowsByConfiguredColumns(
     rows: Record<string, string>[],
     configuredColumns: string[],
-    model?: AutoProcessingModel
+    model?: AutoProcessingModel,
+    allModels?: AutoProcessingModel[]
   ): {
     uniqueRows: Record<string, string>[];
     duplicatesRemoved: number;
@@ -1257,7 +1315,7 @@ export class ModelPreProcessingService {
     let dedupColumns = this.resolveDedupColumnKeysInRows(sampleRow, configuredColumns);
 
     if (!dedupColumns.length && model) {
-      dedupColumns = this.resolveReconciliationDedupColumnKeys(model, sampleRow);
+      dedupColumns = this.resolveReconciliationDedupColumnKeys(model, sampleRow, allModels);
     }
 
     // Modèle banque sans colonnes de dédoublonnage choisies : aucune ligne n'est supprimée.
@@ -1277,7 +1335,8 @@ export class ModelPreProcessingService {
    */
   deduplicateRowsByReconciliationKey(
     model: AutoProcessingModel,
-    rows: Record<string, string>[]
+    rows: Record<string, string>[],
+    allModels?: AutoProcessingModel[]
   ): {
     uniqueRows: Record<string, string>[];
     duplicatesRemoved: number;
@@ -1293,7 +1352,7 @@ export class ModelPreProcessingService {
     }
 
     const sampleRow = rows.find(r => Object.keys(r).length > 0) || rows[0];
-    const dedupColumns = this.resolveReconciliationDedupColumnKeys(model, sampleRow);
+    const dedupColumns = this.resolveReconciliationDedupColumnKeys(model, sampleRow, allModels);
 
     if (!dedupColumns.length) {
       return this.deduplicateRowsByAllColumns(rows);

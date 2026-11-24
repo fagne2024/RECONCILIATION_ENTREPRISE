@@ -257,6 +257,8 @@ export class FileUploadComponent implements OnInit, OnDestroy {
     showTraitementModal = false;
     traitementFiles: File[] = [];
     traitementModels: AutoProcessingModel[] = [];
+    /** Tous les modèles (y compris hors filtre banque) : clés BO déclarées par les modèles partenaires. */
+    private traitementAllModels: AutoProcessingModel[] = [];
     selectedTraitementModelId = '';
     /** Sélection multiple des modèles (module /traitement uniquement). */
     selectedTraitementModelIds = new Set<string>();
@@ -1052,6 +1054,7 @@ export class FileUploadComponent implements OnInit, OnDestroy {
             // En /upload-assisted, le bouton "Traitement de fichier" doit lister tous les modèles,
             // même si l'utilisateur n'a pas accès au module de gestion des modèles.
             const allModels = await this.autoProcessingService.getAllModelsUnrestricted(true);
+            this.traitementAllModels = allModels;
             this.traitementModels = this.bankModelsOnly
                 ? allModels.filter(model => model.bankModel === true)
                 : allModels;
@@ -1287,7 +1290,8 @@ export class FileUploadComponent implements OnInit, OnDestroy {
         ) as Record<string, string>;
         const fromModel = this.modelPreProcessingService.resolveReconciliationDedupColumnKeys(
             model,
-            sampleRow
+            sampleRow,
+            this.traitementAllModels
         );
         const selected: string[] = [];
 
@@ -2134,11 +2138,13 @@ export class FileUploadComponent implements OnInit, OnDestroy {
             ? this.modelPreProcessingService.deduplicateRowsByConfiguredColumns(
                 finalExportRows,
                 this.traitementDedupColumns,
-                model
+                model,
+                this.traitementAllModels
             )
             : this.modelPreProcessingService.deduplicateRowsByReconciliationKey(
                 model,
-                finalExportRows
+                finalExportRows,
+                this.traitementAllModels
             );
         finalExportRows = dedupResult.uniqueRows;
 
