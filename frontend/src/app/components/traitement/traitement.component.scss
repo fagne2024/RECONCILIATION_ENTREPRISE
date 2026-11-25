@@ -4771,10 +4771,16 @@ button:disabled:hover {
   min-width: 260px;
 }
 
+// auto-fit : les cartes s'étirent pour occuper toute la largeur, même quand un groupe en a peu
+.trt-tools {
+  width: 100%;
+}
+
 .trt-tools-grid {
   display: grid;
-  grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
+  grid-template-columns: repeat(auto-fit, minmax(240px, 1fr));
   gap: 16px;
+  width: 100%;
 }
 
 .trt-tool-card {
