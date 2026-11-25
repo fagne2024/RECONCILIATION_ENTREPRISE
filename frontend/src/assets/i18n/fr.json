@@ -1267,7 +1267,12 @@
       "actRapprochement": "Lignes validées",
       "catClotures": "Clôtures (lignes clôturées)",
       "actClotures": "Lignes clôturées",
-      "lines": "lignes"
+      "lines": "lignes",
+      "rankingLines": "Par lignes",
+      "rankingAverageHint": "Moyenne de la part en lignes et de la part en volume",
+      "subtitleVolume": "Part de chaque utilisateur sur le volume total (somme des montants) des lignes traitées sur les opérations bancaires (une ligne importée mais non traitée ne compte pas)",
+      "subtitleAverage": "Moyenne de la part de chaque utilisateur en lignes traitées et de sa part en volume (une ligne importée mais non traitée ne compte pas)",
+      "shareTitleAverage": "lignes {{linesPct}} % · volume {{volumePct}} % → moyenne {{pct}} %"
     },
     "title": "État de réconciliation bancaire",
     "refresh": "Actualiser",
@@ -1345,7 +1350,13 @@
       "rankingVolume": "Par volume",
       "volume": "Vol.",
       "subtitleVolume": "Part de chaque utilisateur sur le volume total tous pays des services × jour traités sur la période (un service resté en traitement ne compte pas)",
-      "shareTitle": "{{count}} sur {{total}} (tous pays) = {{pct}} %"
+      "shareTitle": "{{count}} sur {{total}} (tous pays) = {{pct}} %",
+      "rankingAverage": "Moyenne",
+      "rankingAverageHint": "Moyenne de la part en services et de la part en volume",
+      "subtitleAverage": "Moyenne de la part de chaque utilisateur en services × jour et de sa part en volume, sur le total tous pays (un service resté en traitement ne compte pas)",
+      "shareHintAverage": "Pourcentage = moyenne de la part en services et de la part en volume, sur le total tous pays de la catégorie ; il donne le rang.",
+      "shareTitleAverage": "services {{servicesPct}} % · volume {{volumePct}} % → moyenne {{pct}} %",
+      "points": "pt"
     },
     "period": {
       "jour": "jour de référence (J-1)",

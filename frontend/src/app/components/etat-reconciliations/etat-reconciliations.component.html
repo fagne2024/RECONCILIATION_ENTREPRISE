@@ -37,7 +37,7 @@
                     <b>{{ 'ETA.topUsers.title' | translate:{ count: topUsersConfig.topN } }}</b>
                     <span class="tu-period">· {{ summaryPeriodSubtitle }}</span>
                 </div>
-                <span class="tu-sub">{{ (topUsersRanking === 'volume' ? 'ETA.topUsers.subtitleVolume' : 'ETA.topUsers.subtitle') | translate }}</span>
+                <span class="tu-sub">{{ (topUsersRanking === 'volume' ? 'ETA.topUsers.subtitleVolume' : topUsersRanking === 'moyenne' ? 'ETA.topUsers.subtitleAverage' : 'ETA.topUsers.subtitle') | translate }}</span>
                 <div class="tu-ranking" role="group" [attr.aria-label]="'ETA.topUsers.rankingLabel' | translate">
                     <span>{{ 'ETA.topUsers.rankingLabel' | translate }}</span>
                     <button type="button" class="ds-btn btn-sm" [class.ds-btn--primary]="topUsersRanking === 'services'"
@@ -46,6 +46,10 @@
                     <button type="button" class="ds-btn btn-sm" [class.ds-btn--primary]="topUsersRanking === 'volume'"
                             [class.ds-btn--secondary]="topUsersRanking !== 'volume'" [attr.aria-pressed]="topUsersRanking === 'volume'"
                             (click)="setTopUsersRanking('volume')">{{ 'ETA.topUsers.rankingVolume' | translate }}</button>
+                    <button type="button" class="ds-btn btn-sm" [class.ds-btn--primary]="topUsersRanking === 'moyenne'"
+                            [class.ds-btn--secondary]="topUsersRanking !== 'moyenne'" [attr.aria-pressed]="topUsersRanking === 'moyenne'"
+                            [title]="'ETA.topUsers.rankingAverageHint' | translate"
+                            (click)="setTopUsersRanking('moyenne')">{{ 'ETA.topUsers.rankingAverage' | translate }}</button>
                 </div>
             </div>
 
@@ -61,7 +65,7 @@
                 >
                     <div class="tu-col-head">
                         <h2><i></i>{{ cat.customTitle || (cat.titleKey | translate) }}</h2>
-                        <small [title]="'ETA.topUsers.shareHint' | translate"><ng-container *ngIf="topUsersRanking === 'volume'; else totServices">{{ 'ETA.topUsers.volume' | translate }} {{ cat.total | number:'1.0-0' }}</ng-container><ng-template #totServices>{{ cat.total }} {{ 'ETA.topUsers.services' | translate }}</ng-template> · {{ 'ETA.topUsers.allCountries' | translate }}</small>
+                        <small [title]="(topUsersRanking === 'moyenne' ? 'ETA.topUsers.shareHintAverage' : 'ETA.topUsers.shareHint') | translate"><ng-container *ngIf="topUsersRanking === 'moyenne'">{{ cat.total }} {{ 'ETA.topUsers.services' | translate }} · {{ 'ETA.topUsers.volume' | translate }} {{ (cat.volumeTotal || 0) | number:'1.0-0' }}</ng-container><ng-container *ngIf="topUsersRanking === 'volume'; else totServicesOrAvg">{{ 'ETA.topUsers.volume' | translate }} {{ cat.total | number:'1.0-0' }}</ng-container><ng-template #totServicesOrAvg><ng-container *ngIf="topUsersRanking !== 'moyenne'">{{ cat.total }} {{ 'ETA.topUsers.services' | translate }}</ng-container></ng-template> · {{ 'ETA.topUsers.allCountries' | translate }}</small>
                     </div>
 
                     <div class="tu-empty" *ngIf="!cat.users.length">
@@ -71,7 +75,9 @@
                     <div
                         class="tu-user"
                         *ngFor="let user of cat.users; let i = index; trackBy: trackByUsername"
-                        [title]="user.displayName + ' : ' + ('ETA.topUsers.shareTitle' | translate:{ count: (user.count | number:'1.0-0'), total: (cat.total | number:'1.0-0'), pct: (user.sharePct | number:'1.0-1') })"
+                        [title]="user.displayName + ' : ' + (topUsersRanking === 'moyenne'
+                            ? ('ETA.topUsers.shareTitleAverage' | translate:{ servicesPct: (user.servicesPct | number:'1.0-1'), volumePct: (user.volumePct | number:'1.0-1'), pct: (user.sharePct | number:'1.0-1') })
+                            : ('ETA.topUsers.shareTitle' | translate:{ count: (user.count | number:'1.0-0'), total: (cat.total | number:'1.0-0'), pct: (user.sharePct | number:'1.0-1') }))"
                     >
                         <span class="ph" [class.p1]="i === 0">
                             <img
@@ -93,11 +99,15 @@
 
                         <div class="nb">
                             <b>{{ user.sharePct | number:'1.0-1' }} %</b>
-                            <span class="cnt" *ngIf="topUsersRanking !== 'volume'">{{ user.count }} {{ 'ETA.topUsers.services' | translate }}</span>
+                            <span class="cnt" *ngIf="topUsersRanking === 'services'">{{ user.count }} {{ 'ETA.topUsers.services' | translate }}</span>
                             <span class="cnt" *ngIf="topUsersRanking === 'volume'">{{ 'ETA.topUsers.volume' | translate }} {{ user.count | number:'1.0-0' }}</span>
+                            <ng-container *ngIf="topUsersRanking === 'moyenne'">
+                                <span class="cnt">{{ user.services }} {{ 'ETA.topUsers.services' | translate }} ({{ user.servicesPct | number:'1.0-1' }} %)</span>
+                                <span class="cnt">{{ 'ETA.topUsers.volume' | translate }} {{ user.volume | number:'1.0-0' }} ({{ user.volumePct | number:'1.0-1' }} %)</span>
+                            </ng-container>
                             <span class="d eq" *ngIf="topUsersConfig.showDelta && user.delta === 0">{{ 'ETA.topUsers.stable' | translate }}</span>
-                            <span class="d up" *ngIf="topUsersConfig.showDelta && user.delta > 0">▲ {{ user.delta | number:'1.0-0' }}</span>
-                            <span class="d dn" *ngIf="topUsersConfig.showDelta && user.delta < 0">▼ {{ -user.delta | number:'1.0-0' }}</span>
+                            <span class="d up" *ngIf="topUsersConfig.showDelta && user.delta > 0">▲ {{ user.delta | number:(topUsersRanking === 'moyenne' ? '1.0-1' : '1.0-0') }}<ng-container *ngIf="topUsersRanking === 'moyenne'"> {{ 'ETA.topUsers.points' | translate }}</ng-container></span>
+                            <span class="d dn" *ngIf="topUsersConfig.showDelta && user.delta < 0">▼ {{ -user.delta | number:(topUsersRanking === 'moyenne' ? '1.0-1' : '1.0-0') }}<ng-container *ngIf="topUsersRanking === 'moyenne'"> {{ 'ETA.topUsers.points' | translate }}</ng-container></span>
                         </div>
 
                         <div class="bar"><i [style.width.%]="user.sharePct"></i></div>

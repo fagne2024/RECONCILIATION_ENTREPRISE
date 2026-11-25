@@ -1267,7 +1267,12 @@
       "actRapprochement": "Validated lines",
       "catClotures": "Closures (closed lines)",
       "actClotures": "Closed lines",
-      "lines": "lines"
+      "lines": "lines",
+      "rankingLines": "By lines",
+      "rankingAverageHint": "Average of the share in lines and the share in volume",
+      "subtitleVolume": "Each user's share of the total volume (sum of amounts) of processed lines on bank operations (an imported but unprocessed line does not count)",
+      "subtitleAverage": "Average of each user's share of processed lines and share of volume (an imported but unprocessed line does not count)",
+      "shareTitleAverage": "lines {{linesPct}} % · volume {{volumePct}} % → average {{pct}} %"
     },
     "title": "Bank reconciliation status",
     "refresh": "Refresh",
@@ -1345,7 +1350,13 @@
       "rankingVolume": "By volume",
       "volume": "Vol.",
       "subtitleVolume": "Each user's share of the all-country total volume of the service-days processed over the period (a service still in progress does not count)",
-      "shareTitle": "{{count}} of {{total}} (all countries) = {{pct}} %"
+      "shareTitle": "{{count}} of {{total}} (all countries) = {{pct}} %",
+      "rankingAverage": "Average",
+      "rankingAverageHint": "Average of the share in services and the share in volume",
+      "subtitleAverage": "Average of each user's share of service-days and share of volume, over the all-country total (a service still in progress does not count)",
+      "shareHintAverage": "Percentage = average of the share in services and the share in volume, over the category's all-country total; it gives the rank.",
+      "shareTitleAverage": "services {{servicesPct}} % · volume {{volumePct}} % → average {{pct}} %",
+      "points": "pt"
     },
     "period": {
       "jour": "reference day (D-1)",

@@ -54,14 +54,33 @@ public class OperationBancaireAuditService {
      * Classement par lignes utiles sur [debut, fin[ : actionType = catégorie (agents, rapprochement, clotures).
      * Agents : lignes importées dont la réconciliation est OK ; responsables : lignes validées ;
      * clôtures : lignes clôturées. Chaque ligne n'est comptée qu'une fois par utilisateur et catégorie.
+     * Le volume est la somme des montants (valeur absolue) de ces lignes.
      */
     @Transactional(readOnly = true)
     public List<com.reconciliation.dto.OperationBancaireAuditStatDto> rankUsefulLines(LocalDateTime debut, LocalDateTime fin) {
         List<com.reconciliation.dto.OperationBancaireAuditStatDto> all = new ArrayList<>();
-        all.addAll(auditRepository.countAgentLignesReconciliees(debut, fin));
-        all.addAll(auditRepository.countLignesValidees(debut, fin));
-        all.addAll(auditRepository.countLignesCloturees(debut, fin));
+        all.addAll(aggregateLines("agents", auditRepository.findAgentLignesReconciliees(debut, fin)));
+        all.addAll(aggregateLines("rapprochement", auditRepository.findLignesValidees(debut, fin)));
+        all.addAll(aggregateLines("clotures", auditRepository.findLignesCloturees(debut, fin)));
         return all;
+    }
+
+    /** Par utilisateur : nombre de lignes distinctes et somme de leurs montants en valeur absolue. */
+    static List<com.reconciliation.dto.OperationBancaireAuditStatDto> aggregateLines(
+            String category, List<com.reconciliation.dto.OperationBancaireAuditLineDto> lines) {
+        Map<String, Map<Long, Double>> perUser = new LinkedHashMap<>();
+        for (com.reconciliation.dto.OperationBancaireAuditLineDto line : lines == null
+                ? List.<com.reconciliation.dto.OperationBancaireAuditLineDto>of() : lines) {
+            if (line == null || line.operationId() == null) continue;
+            String username = line.username() == null ? "" : line.username().trim();
+            if (username.isEmpty()) continue;
+            double montant = line.montant() == null || line.montant().isNaN() ? 0d : Math.abs(line.montant());
+            perUser.computeIfAbsent(username, k -> new LinkedHashMap<>()).putIfAbsent(line.operationId(), montant);
+        }
+        List<com.reconciliation.dto.OperationBancaireAuditStatDto> result = new ArrayList<>();
+        perUser.forEach((username, ops) -> result.add(new com.reconciliation.dto.OperationBancaireAuditStatDto(
+                username, category, ops.size(), ops.values().stream().mapToDouble(Double::doubleValue).sum())));
+        return result;
     }
 
     /** Journalise la création de plusieurs opérations déjà enregistrées (import de fichier). */

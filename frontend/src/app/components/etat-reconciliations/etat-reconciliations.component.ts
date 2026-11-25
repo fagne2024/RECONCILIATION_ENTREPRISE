@@ -33,7 +33,7 @@ import { forkJoin, of } from 'rxjs';
 import { catchError } from 'rxjs/operators';
 import { I18nService } from '../../services/i18n/i18n.service';
 import { GLPI_TICKET_FORM_URL } from '../../constants/glpi';
-import { rankByShare } from '../../utils/top-users-share.util';
+import { rankByAverageShare, rankByShare } from '../../utils/top-users-share.util';
 
 type RecoSummaryStatus = 'RECONCILIE' | 'NON_RECONCILIE' | 'EN_COURS' | 'NON_RECONCILIE';
 
@@ -88,8 +88,16 @@ export interface TopUserEntry {
     barPct: number;
     /** Part (%) de l'utilisateur sur le total de la catégorie, tous pays confondus : donne le rang. */
     sharePct: number;
+    /** Classement « moyenne » : services × jour, volume et part de chacun (%). */
+    services?: number;
+    volume?: number;
+    servicesPct?: number;
+    volumePct?: number;
     photo?: string | null;
 }
+
+/** Classement du Top : par services × jour, par volume, ou moyenne des deux parts. */
+export type TopUsersRanking = 'services' | 'volume' | 'moyenne';
 
 /** Une catégorie (colonne) du « Top des utilisateurs ». */
 export interface TopUserCategory {
@@ -102,6 +110,8 @@ export interface TopUserCategory {
     customActionLabel?: string | null;
     accent: string;
     total: number;
+    /** Classement « moyenne » : total tous pays en volume (`total` = services). */
+    volumeTotal?: number;
     users: TopUserEntry[];
 }
 @Component({
@@ -154,8 +164,8 @@ export class EtatReconciliationsComponent implements OnInit {
     /** Réglages affichés (Configuration > Top utilisateurs). */
     topUsersConfig: TopUsersConfig = cloneTopUsersConfig(DEFAULT_TOP_USERS_CONFIG);
     private topUsersLoadToken = 0;
-    /** Classement affiché : par nombre de services × jour, ou par volume de ces services. */
-    topUsersRanking: 'services' | 'volume' = EtatReconciliationsComponent.readTopUsersRanking();
+    /** Classement affiché : par services × jour, par volume de ces services, ou moyenne des deux parts. */
+    topUsersRanking: TopUsersRanking = EtatReconciliationsComponent.readTopUsersRanking();
     /** Dernières données chargées : le changement de classement ne recharge pas le serveur. */
     private topUsersData: {
         current: RecoAuditServiceDayAction[];
@@ -164,15 +174,16 @@ export class EtatReconciliationsComponent implements OnInit {
     } | null = null;
     private static readonly TOP_USERS_RANKING_KEY = 'etatReco.topUsersRanking';
 
-    private static readTopUsersRanking(): 'services' | 'volume' {
+    private static readTopUsersRanking(): TopUsersRanking {
         try {
-            return localStorage.getItem(EtatReconciliationsComponent.TOP_USERS_RANKING_KEY) === 'volume' ? 'volume' : 'services';
+            const saved = localStorage.getItem(EtatReconciliationsComponent.TOP_USERS_RANKING_KEY);
+            return saved === 'volume' || saved === 'moyenne' ? saved : 'services';
         } catch {
             return 'services';
         }
     }
 
-    setTopUsersRanking(mode: 'services' | 'volume'): void {
+    setTopUsersRanking(mode: TopUsersRanking): void {
         if (mode === this.topUsersRanking) {
             return;
         }
@@ -1785,6 +1796,9 @@ export class EtatReconciliationsComponent implements OnInit {
         const limit = Math.max(1, Number(cfg.topN) || 1);
         const categories: TopUsersCategoryConfig[] = (cfg.categories || []).filter(c => c?.enabled);
 
+        if (this.topUsersRanking === 'moyenne') {
+            return this.buildTopUserCategoriesAverage(current, previous, allCountries, categories, limit);
+        }
         const byVolume = this.topUsersRanking === 'volume';
         const counts = this.aggregateTopUserCounts(current, categories, byVolume).counts;
         const prevCounts = this.aggregateTopUserCounts(previous, categories, byVolume).counts;
@@ -1815,6 +1829,65 @@ export class EtatReconciliationsComponent implements OnInit {
                 customActionLabel: def.actionLabel ?? null,
                 accent: this.accentForIndex(index),
                 total,
+                users
+            };
+        });
+    }
+
+    /**
+     * Classement « moyenne » : rang = (part en services × jour + part en volume) / 2, chaque part
+     * étant calculée sur le total tous pays de la catégorie. L'évolution est l'écart, en points,
+     * avec la moyenne de la période précédente.
+     */
+    private buildTopUserCategoriesAverage(
+        current: RecoAuditServiceDayAction[],
+        previous: RecoAuditServiceDayAction[],
+        allCountries: RecoAuditServiceDayAction[],
+        categories: TopUsersCategoryConfig[],
+        limit: number
+    ): TopUserCategory[] {
+        const svc = this.aggregateTopUserCounts(current, categories, false).counts;
+        const vol = this.aggregateTopUserCounts(current, categories, true).counts;
+        const prevSvc = this.aggregateTopUserCounts(previous, categories, false);
+        const prevVol = this.aggregateTopUserCounts(previous, categories, true);
+        const svcTotals = this.aggregateTopUserCounts(allCountries, categories, false).totals;
+        const volTotals = this.aggregateTopUserCounts(allCountries, categories, true).totals;
+        const empty = () => new Map<string, number>();
+
+        return categories.map((def, index) => {
+            const total = svcTotals[def.id] || 0;
+            const volumeTotal = volTotals[def.id] || 0;
+            const ranked = rankByAverageShare(svc[def.id] || empty(), total, vol[def.id] || empty(), volumeTotal);
+            // Période précédente : même périmètre ; ses totaux sont ceux de la période précédente.
+            const prevRanked = rankByAverageShare(
+                prevSvc.counts[def.id] || empty(), prevSvc.totals[def.id] || 0,
+                prevVol.counts[def.id] || empty(), prevVol.totals[def.id] || 0);
+            const prevPct = new Map(prevRanked.map(r => [r.username, r.exactPct]));
+            const max = ranked.reduce((m, e) => Math.max(m, e.exactPct), 0);
+            const users: TopUserEntry[] = ranked.slice(0, limit).map(entry => ({
+                username: entry.username,
+                displayName: this.formatUsernameDisplay(entry.username),
+                initials: this.usernameInitials(entry.username),
+                count: entry.services,
+                delta: Math.round((entry.exactPct - (prevPct.get(entry.username) || 0)) * 10) / 10,
+                barPct: max > 0 ? Math.round((entry.exactPct / max) * 100) : 0,
+                sharePct: entry.sharePct,
+                services: entry.services,
+                volume: entry.volume,
+                servicesPct: entry.servicesPct,
+                volumePct: entry.volumePct,
+                photo: null
+            }));
+            const builtin = BUILTIN_CATEGORY_KEYS[def.id];
+            return {
+                key: def.id,
+                titleKey: builtin ? builtin.titleKey : '',
+                actionLabelKey: builtin ? builtin.actionLabelKey : '',
+                customTitle: def.title ?? (builtin ? null : def.id),
+                customActionLabel: def.actionLabel ?? null,
+                accent: this.accentForIndex(index),
+                total,
+                volumeTotal,
                 users
             };
         });

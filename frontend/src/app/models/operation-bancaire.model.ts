@@ -101,4 +101,6 @@ export interface OperationBancaireAuditStat {
     username: string;
     actionType: string;
     count: number;
+    /** Somme des montants (valeur absolue) des lignes comptées ; renseigné par /audit-ranking. */
+    volume?: number;
 }

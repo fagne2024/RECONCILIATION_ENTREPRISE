@@ -31,7 +31,7 @@ import {
     sparkHeights,
     toIsoDate
 } from './etat-reconciliation-bancaire.util';
-import { rankByShare } from '../../utils/top-users-share.util';
+import { rankByAverageShare, rankByShare } from '../../utils/top-users-share.util';
 
 type StatusFilter = 'ALL' | BankStatus;
 
@@ -45,8 +45,16 @@ export interface BankTopUser {
     barPct: number;
     /** Part (%) de l'utilisateur sur le total de la catégorie, tous pays confondus : donne le rang. */
     sharePct: number;
+    /** Classement « moyenne » : lignes, volume et part de chacun (%). */
+    lines?: number;
+    volume?: number;
+    linesPct?: number;
+    volumePct?: number;
     photo?: string | null;
 }
+
+/** Classement du top banque : par lignes utiles, par volume de ces lignes, ou moyenne des deux parts. */
+export type BankTopRanking = 'lignes' | 'volume' | 'moyenne';
 
 /** Une catégorie (colonne) du top banque. */
 export interface BankTopCategory {
@@ -55,6 +63,8 @@ export interface BankTopCategory {
     actionLabelKey: string;
     accent: string;
     total: number;
+    /** Classement « moyenne » : volume total (`total` = lignes). */
+    volumeTotal?: number;
     users: BankTopUser[];
 }
 
@@ -144,6 +154,29 @@ export class EtatReconciliationBancaireComponent implements OnInit {
     topUsersCategories: BankTopCategory[] = [];
     topUsersConfig: TopUsersConfig = cloneTopUsersConfig(DEFAULT_TOP_USERS_CONFIG);
     private topUsersToken = 0;
+    /** Classement affiché ; en changer ne recharge pas le serveur. */
+    topUsersRanking: BankTopRanking = EtatReconciliationBancaireComponent.readTopUsersRanking();
+    private topUsersData: { current: OperationBancaireAuditStat[]; previous: OperationBancaireAuditStat[] } | null = null;
+    private static readonly TOP_USERS_RANKING_KEY = 'etatBanque.topUsersRanking';
+
+    private static readTopUsersRanking(): BankTopRanking {
+        try {
+            const saved = localStorage.getItem(EtatReconciliationBancaireComponent.TOP_USERS_RANKING_KEY);
+            return saved === 'volume' || saved === 'moyenne' ? saved : 'lignes';
+        } catch {
+            return 'lignes';
+        }
+    }
+
+    setTopUsersRanking(mode: BankTopRanking): void {
+        if (mode === this.topUsersRanking) return;
+        this.topUsersRanking = mode;
+        try { localStorage.setItem(EtatReconciliationBancaireComponent.TOP_USERS_RANKING_KEY, mode); } catch { /* facultatif */ }
+        if (!this.topUsersData || !this.topUsersConfig.enabled) return;
+        const token = ++this.topUsersToken;
+        this.topUsersLoading = true;
+        this.attachTopPhotos(this.buildTopCategories(this.topUsersData.current, this.topUsersData.previous), token);
+    }
     trackByCategoryKey = (_: number, item: BankTopCategory): string => item.key;
     trackByUsername = (_: number, item: BankTopUser): string => item.username;
 
@@ -179,17 +212,19 @@ export class EtatReconciliationBancaireComponent implements OnInit {
                     .pipe(catchError(() => of([] as OperationBancaireAuditStat[])))
             }).pipe(take(1)).subscribe(({ current, previous }) => {
                 if (token !== this.topUsersToken) return;
+                this.topUsersData = { current: current || [], previous: previous || [] };
                 this.attachTopPhotos(this.buildTopCategories(current || [], previous || []), token);
             });
         });
     }
 
-    private aggregateTop(stats: OperationBancaireAuditStat[]): Record<string, Map<string, number>> {
+    /** Par catégorie puis utilisateur : nombre de lignes utiles, ou leur volume si `byVolume`. */
+    private aggregateTop(stats: OperationBancaireAuditStat[], byVolume = false): Record<string, Map<string, number>> {
         const result: Record<string, Map<string, number>> = {};
         BANK_TOP_DEFS.forEach(d => result[d.key] = new Map<string, number>());
         for (const st of stats) {
             const username = (st?.username || '').trim();
-            const count = Number(st?.count) || 0;
+            const count = byVolume ? Math.abs(Number(st?.volume) || 0) : Number(st?.count) || 0;
             if (!username || count <= 0) continue;
             const action = (st.actionType || '').trim().toUpperCase();
             for (const d of BANK_TOP_DEFS) {
@@ -204,14 +239,18 @@ export class EtatReconciliationBancaireComponent implements OnInit {
 
     private buildTopCategories(current: OperationBancaireAuditStat[], previous: OperationBancaireAuditStat[]): BankTopCategory[] {
         const limit = Math.max(1, Number(this.topUsersConfig.topN) || 3);
-        const counts = this.aggregateTop(current);
-        const prevCounts = this.aggregateTop(previous);
+        if (this.topUsersRanking === 'moyenne') {
+            return this.buildTopCategoriesAverage(current, previous, limit);
+        }
+        const byVolume = this.topUsersRanking === 'volume';
+        const counts = this.aggregateTop(current, byVolume);
+        const prevCounts = this.aggregateTop(previous, byVolume);
         return BANK_TOP_DEFS.map(def => {
             const perUser = counts[def.key];
             const prevPerUser = prevCounts[def.key];
             // Le classement banque (/audit-ranking) couvre déjà tous les pays : le total de la
             // catégorie est la somme des lignes, et la part de chacun sur ce total donne le rang.
-            const total = Array.from(perUser.values()).reduce((a, b) => a + b, 0);
+            const total = Math.round(Array.from(perUser.values()).reduce((a, b) => a + b, 0));
             const ranked = rankByShare(perUser, total);
             const max = ranked.reduce((m, e) => Math.max(m, e.count), 0);
             return {
@@ -224,10 +263,57 @@ export class EtatReconciliationBancaireComponent implements OnInit {
                     username: e.username,
                     displayName: this.formatUsername(e.username),
                     initials: this.usernameInitials(e.username),
-                    count: e.count,
-                    delta: e.count - (prevPerUser.get(e.username) || 0),
+                    count: Math.round(e.count),
+                    delta: Math.round(e.count - (prevPerUser.get(e.username) || 0)),
                     barPct: max > 0 ? Math.round((e.count / max) * 100) : 0,
                     sharePct: e.sharePct,
+                    photo: null
+                }))
+            };
+        });
+    }
+
+    /**
+     * Classement « moyenne » : rang = (part en lignes + part en volume) / 2, sur le total de la
+     * catégorie. L'évolution est l'écart, en points, avec la moyenne de la période précédente.
+     */
+    private buildTopCategoriesAverage(
+        current: OperationBancaireAuditStat[],
+        previous: OperationBancaireAuditStat[],
+        limit: number
+    ): BankTopCategory[] {
+        const lines = this.aggregateTop(current);
+        const vols = this.aggregateTop(current, true);
+        const prevLines = this.aggregateTop(previous);
+        const prevVols = this.aggregateTop(previous, true);
+        const sum = (m: Map<string, number>): number => Array.from(m.values()).reduce((a, b) => a + b, 0);
+        return BANK_TOP_DEFS.map(def => {
+            const total = sum(lines[def.key]);
+            const volumeTotal = sum(vols[def.key]);
+            const ranked = rankByAverageShare(lines[def.key], total, vols[def.key], volumeTotal);
+            const prevPct = new Map(rankByAverageShare(
+                prevLines[def.key], sum(prevLines[def.key]), prevVols[def.key], sum(prevVols[def.key])
+            ).map(r => [r.username, r.exactPct]));
+            const max = ranked.reduce((m, e) => Math.max(m, e.exactPct), 0);
+            return {
+                key: def.key,
+                titleKey: def.titleKey,
+                actionLabelKey: def.actionLabelKey,
+                accent: def.accent,
+                total,
+                volumeTotal: Math.round(volumeTotal),
+                users: ranked.slice(0, limit).map(e => ({
+                    username: e.username,
+                    displayName: this.formatUsername(e.username),
+                    initials: this.usernameInitials(e.username),
+                    count: e.services,
+                    delta: Math.round((e.exactPct - (prevPct.get(e.username) || 0)) * 10) / 10,
+                    barPct: max > 0 ? Math.round((e.exactPct / max) * 100) : 0,
+                    sharePct: e.sharePct,
+                    lines: e.services,
+                    volume: Math.round(e.volume),
+                    linesPct: e.servicesPct,
+                    volumePct: e.volumePct,
                     photo: null
                 }))
             };
