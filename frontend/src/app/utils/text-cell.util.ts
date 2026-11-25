@@ -153,8 +153,33 @@ function applyLeadingZeroKeep(value: string, keepCount: number): string {
 }
 
 /**
+ * Applique « supprimer / conserver des caractères » (cut) en gérant le mode
+ * « ne pas conserver le 0 initial » : le 0 est retiré AVANT le comptage des caractères
+ * (066696187, conserver 8 → 66696187, et non 06669618 puis 6669618). Si la valeur ne commence
+ * pas par 0 mais que le résultat oui (ex. 241065124, supprimer 3 → 065124), le 0 est retiré du
+ * résultat. Un seul 0 est retiré.
+ */
+export function applyRemoveCharactersWithLeadingZero(
+  value: unknown,
+  leadingZeroMode: LeadingZeroMode | 'auto' | undefined,
+  cut: (text: string) => string
+): string {
+  const text = preserveLeadingZeroString(value);
+  if (leadingZeroMode !== 'strip' || !isNumericLikeString(text)) {
+    return cut(text);
+  }
+  const withoutZero = stripSingleLeadingZero(text);
+  if (withoutZero !== text) {
+    return cut(withoutZero);
+  }
+  const result = cut(text);
+  return isNumericLikeString(result) ? stripSingleLeadingZero(result) : result;
+}
+
+/**
  * Finalise une cellule après l'action « supprimer / conserver des caractères ».
  * Le zéro initial n'est modifié que si leadingZeroMode est explicitement configuré.
+ * Mode « strip » : traité pendant le découpage (applyRemoveCharactersWithLeadingZero), rien ici.
  */
 export function finalizeRemoveCharactersCell(
   _columnName: string,
@@ -173,9 +198,6 @@ export function finalizeRemoveCharactersCell(
 
   if (leadingZeroMode === 'keep') {
     return applyLeadingZeroKeep(text, keepCount);
-  }
-  if (leadingZeroMode === 'strip' && isNumericLikeString(text)) {
-    return stripSingleLeadingZero(text);
   }
   return text;
 }

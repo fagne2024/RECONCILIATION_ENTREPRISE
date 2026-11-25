@@ -49,6 +49,7 @@ import {
   normalizeLeadingZeroCellsInRows,
   keepCharactersFromString,
   finalizeRemoveCharactersCell,
+  applyRemoveCharactersWithLeadingZero,
   isMsisdnPreserveColumn
 } from '../utils/text-cell.util';
 import { I18nService } from './i18n/i18n.service';
@@ -584,7 +585,7 @@ export class ModelPreProcessingService {
         const storedValue = this.finalizeFormatColumnValue(columnKeys[0], merged, formattedValue);
 
         for (const aliasKey of columnKeys) {
-          row[aliasKey] = this.finalizeFormatColumnValue(aliasKey, merged, storedValue);
+          row[aliasKey] = storedValue;
         }
       }
     }
@@ -1565,14 +1566,8 @@ export class ModelPreProcessingService {
         result = value;
     }
 
-    if (columnName && action.type === 'removeCharacters') {
-      return finalizeRemoveCharactersCell(columnName, result, {
-        removeCharMode: action.removeCharMode ?? 'remove',
-        removeCharCount: action.removeCharCount,
-        leadingZeroMode: action.leadingZeroMode
-      });
-    }
-
+    // La finalisation « supprimer / conserver des caractères » (zéro initial) est faite une seule
+    // fois par l'appelant (finalizeFormatColumnValue) : l'appliquer ici aussi retirait deux zéros.
     return result;
   }
 
@@ -1613,11 +1608,18 @@ export class ModelPreProcessingService {
   }
 
   private applyRemoveCharacters(value: string, action: ModelFormatAction): string {
+    return applyRemoveCharactersWithLeadingZero(
+      value,
+      action.leadingZeroMode,
+      text => this.cutCharacters(text, action)
+    );
+  }
+
+  private cutCharacters(text: string, action: ModelFormatAction): string {
     const mode = action.removeCharMode ?? 'remove';
     const position = action.removeCharPosition ?? 'start';
     const count = Math.max(1, Number(action.removeCharCount) || 1);
     const specificPosition = Math.max(1, Number(action.removeCharSpecificPosition) || 1);
-    const text = preserveLeadingZeroString(value);
 
     if (mode === 'keep') {
       return keepCharactersFromString(text, position, count, specificPosition);

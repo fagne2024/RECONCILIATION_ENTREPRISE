@@ -31,6 +31,7 @@ import {
   formatCellForCsvExport,
   keepCharactersFromString,
   finalizeRemoveCharactersCell,
+  applyRemoveCharactersWithLeadingZero,
   LeadingZeroMode,
   isMsisdnPreserveColumn,
   isLeadingZeroNumericString
@@ -5803,9 +5804,16 @@ End Sub`;
 
 
   private transformCharactersValue(value: string): string {
+    return applyRemoveCharactersWithLeadingZero(
+      value,
+      this.removeCharLeadingZeroMode,
+      text => this.cutCharactersValue(text)
+    );
+  }
+
+  private cutCharactersValue(text: string): string {
     const count = Math.max(1, Number(this.removeCharCount) || 1);
     const specificPosition = Math.max(1, Number(this.removeCharSpecificPosition) || 1);
-    const text = preserveLeadingZeroString(value);
 
     if (this.removeCharMode === 'keep') {
       return keepCharactersFromString(
