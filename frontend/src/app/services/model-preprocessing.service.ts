@@ -50,6 +50,7 @@ import {
   keepCharactersFromString,
   finalizeRemoveCharactersCell,
   applyRemoveCharactersWithLeadingZero,
+  unwrapExcelTextFormula,
   isMsisdnPreserveColumn
 } from '../utils/text-cell.util';
 import { I18nService } from './i18n/i18n.service';
@@ -1502,10 +1503,10 @@ export class ModelPreProcessingService {
 
     const asString = String(value);
     if (!/Ã.|Â.|ï¿½|\uFFFD/.test(asString)) {
-      return asString.trim();
+      return unwrapExcelTextFormula(asString.trim());
     }
 
-    return fixCellEncodingIfNeeded(asString).trim();
+    return unwrapExcelTextFormula(fixCellEncodingIfNeeded(asString).trim());
   }
 
   private coerceFormatCellValue(value: unknown): string {
@@ -1518,7 +1519,7 @@ export class ModelPreProcessingService {
       }
       return preserveLeadingZeroString(value);
     }
-    return fixCellEncodingIfNeeded(String(value)).trim();
+    return unwrapExcelTextFormula(fixCellEncodingIfNeeded(String(value)).trim());
   }
 
   private applyFormatActionToValue(

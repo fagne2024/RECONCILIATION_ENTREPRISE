@@ -32,6 +32,13 @@ describe('ModelPreProcessingService — zéro initial non conservé', () => {
     })).toEqual(['66696187', '65589036']);
   });
 
+  it('valeurs au format texte Excel ="…" (export GU) : enveloppe retirée puis 0 retiré', () => {
+    expect(run(['="066696187"', '="065124"', '="062911742"'], {
+      removeCharMode: 'keep', removeCharPosition: 'start', removeCharCount: 8, leadingZeroMode: 'strip',
+      applyConditionEnabled: true, conditionColumn: 'Pays', conditionValue: 'GA'
+    })).toEqual(['66696187', '65124', '62911742']);
+  });
+
   it('un seul 0 est retiré (pas de double finalisation)', () => {
     expect(run(['00123'], { removeCharMode: 'keep', removeCharPosition: 'start', removeCharCount: 10, leadingZeroMode: 'strip' }))
       .toEqual(['0123']);

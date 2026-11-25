@@ -48,7 +48,18 @@ export function isTextPreserveColumn(columnName: string): boolean {
   return isMsisdnPreserveColumn(columnName);
 }
 
-/** Convertit une valeur cellule en chaîne sans notation scientifique. */
+const EXCEL_TEXT_FORMULA = /^=\s*"([\s\S]*)"$/;
+
+/**
+ * Retire l'enveloppe de formule texte Excel des exports (ex. GU : ="066696187" → 066696187),
+ * utilisée pour conserver le 0 initial à l'ouverture dans Excel.
+ */
+export function unwrapExcelTextFormula(value: string): string {
+  const match = EXCEL_TEXT_FORMULA.exec(value);
+  return match ? match[1].replace(/""/g, '"').trim() : value;
+}
+
+/** Convertit une valeur cellule en chaîne sans notation scientifique ni enveloppe ="…". */
 export function preserveLeadingZeroString(value: unknown): string {
   if (value === null || value === undefined) {
     return '';
@@ -62,7 +73,7 @@ export function preserveLeadingZeroString(value: unknown): string {
     }
     return String(value);
   }
-  return String(value).trim();
+  return unwrapExcelTextFormula(String(value).trim());
 }
 
 /** Valeur numérique commençant par 0 : doit rester du texte (ex. 0501415273). */
