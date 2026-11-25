@@ -595,11 +595,32 @@ export class PartnerConditionalKeysService {
       return null;
     }
 
+    // Clés par défaut côté partenaire (ex. ID Partenaire des lignes cash-in) : mêmes colonnes
+    // de repli que applyPartnerConditionalKeys.
+    const partnerFallbackColumns = this.buildFallbackKeyColumnList(
+      partnerConfig,
+      model.reconciliationKeys?.partnerKeys
+    );
+    const partnerModelDefaultCol = partnerFallbackColumns.length
+      ? this.findExistingColumn(partnerData, partnerFallbackColumns)
+      : null;
+    const partnerConditionalDefaultCol = partnerConfig.defaultKeyColumn?.trim()
+      ? this.findExistingColumn(partnerData, [partnerConfig.defaultKeyColumn])
+      : null;
+    const partnerDefaultKeys = new Set<string>();
+
     // Clés produites par chaque règle côté partenaire (même ordre de priorité que applyConditionalKeys).
     for (const row of partnerData) {
+      const addDefaultKey = () => {
+        const key = this.resolveDefaultKeyValue(row, partnerModelDefaultCol, partnerConditionalDefaultCol);
+        if (key) {
+          partnerDefaultKeys.add(key);
+        }
+      };
       if (envConditionValue) {
         const envVal = partnerEnvCol ? (row[partnerEnvCol] || '').trim() : '';
         if (envVal.toUpperCase() !== envConditionValue.toUpperCase()) {
+          addDefaultKey();
           continue;
         }
       }
@@ -608,11 +629,21 @@ export class PartnerConditionalKeysService {
       const value = rule ? (row[rule.partnerKeyCol!] || '').trim() : '';
       if (rule && value) {
         rule.partnerKeys.add(this.formatOptionalKeyValue(value));
+      } else {
+        addDefaultKey();
       }
     }
 
     return boData.map(row => {
       const copy = { ...row };
+      // Une ligne BO dont la clé par défaut existe côté partenaire (ex. cash-in DKO8OJDFW0)
+      // garde cette clé : son Token GU, même présent sur une ligne partenaire de la règle
+      // (ex. paiement marchand), ne doit pas la détourner vers cette autre ligne.
+      const defaultKey = String(copy[defaultBoKeyCol] ?? '').trim();
+      if (defaultKey && partnerDefaultKeys.has(defaultKey)) {
+        copy[BO_CONDITIONAL_KEY_COLUMN] = defaultKey;
+        return copy;
+      }
       let key = '';
       for (const rule of rules) {
         const raw = (copy[rule.boKeyCol!] || '').trim();

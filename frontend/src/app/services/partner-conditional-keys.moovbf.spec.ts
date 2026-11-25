@@ -65,6 +65,23 @@ describe('Clés conditionnelles MOOVBF ↔ TRXGU1 (détection sur le partenaire)
     expect(prepared.partnerData.map(r => r[PARTNER_CONDITIONAL_KEY_COLUMN])).toEqual(['DKCASH1', '1794978328935']);
   });
 
+  it('un cash-in BO dont le Token GU figure sur un paiement marchand partenaire garde son ID Partenaire', () => {
+    // Cas réel TRXGU1 ↔ MOOV du 24/11/2026 : le cash-in DKO8OJDFW0 porte côté BO le token
+    // 1795559988083, aussi présent sur le paiement marchand partenaire DKO6OJDES8 (absent du BO).
+    const prepared = service.applyModelConditionalKeys(
+      [bo('DKO8OJDFW0', 'BF_CASHIN_MOOV', '1795559988083')],
+      [
+        partner('DKO8OJDFW0', 'BF_CASHIN_MOOV', ''),
+        partner('DKO6OJDES8', 'PAIEMENTMARCHAND_MOOV', '1795559988083')
+      ],
+      moovbf
+    )!;
+
+    expect(prepared.boData[0][BO_CONDITIONAL_KEY_COLUMN]).toBe('DKO8OJDFW0');
+    expect(prepared.partnerData.map(r => r[PARTNER_CONDITIONAL_KEY_COLUMN]))
+      .toEqual(['DKO8OJDFW0', '1795559988083']);
+  });
+
   it('un libellé BO « paiement marchand » sans token côté partenaire garde la clé par défaut', () => {
     const prepared = service.applyModelConditionalKeys(
       [bo('DKMP2', 'PAIEMENTMARCHAND_MOOV', '999')],
