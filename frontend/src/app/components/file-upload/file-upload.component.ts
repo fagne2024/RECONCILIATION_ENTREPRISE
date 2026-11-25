@@ -25,7 +25,7 @@ import {
   resolveCanonicalColumnId,
   findEquivalentHeader
 } from '../../utils/bilingual-column.util';
-import { resolveColumnKeyInRow, deduplicateHeaderNames, alignRowsToHeaders, filterRealDataRows, keepSecondDuplicateColumns, looksLikeOrangeMoneyStatement, resolveFixedHeaderMapping } from '../../utils/row-column.util';
+import { resolveColumnKeyInRow, deduplicateHeaderNames, alignRowsToHeaders, filterRealDataRows, keepSecondDuplicateColumns, looksLikeOrangeMoneyStatement, resolveFixedHeaderMapping, findDuplicateColumnGroups, applyDuplicateColumnChoice, uniqueHeaderNames, normalizeColumnKey, DuplicateColumnGroup } from '../../utils/row-column.util';
 import {
     applyColumnLinks,
     csvPreviewGrid,
@@ -233,6 +233,20 @@ export class FileUploadComponent implements OnInit, OnDestroy {
 
     // Contrôle du volume par client (popup proposé au chargement BO / partenaire, mode manuel)
     clientVolumeStep: 'ask' | 'columns' | 'results' | null = null;
+
+    /** Pop-up « colonnes en double » : choix de l'occurrence gardée pour chaque colonne. */
+    duplicateColumnsDialog: {
+        fileName: string;
+        groups: {
+            base: string;
+            selected: string;
+            options: { key: string; label: string; samples: string[] }[];
+        }[];
+        resolve: (choices: Map<string, string> | null) => void;
+    } | null = null;
+
+    /** Choix faits pendant la session (base normalisée → n° d'occurrence), réutilisés sans redemander. */
+    private duplicateColumnSessionChoices = new Map<string, number>();
     clientVolumeTarget: 'bo' | 'partner' = 'bo';
     clientVolumeColumns: string[] = [];
     clientVolumePhoneColumn = '';
@@ -5005,7 +5019,86 @@ export class FileUploadComponent implements OnInit, OnDestroy {
         if (this.orangeMoneyUtilsService.isOrangeMoneyFile(file.name) || looksLikeOrangeMoneyStatement(columns)) {
             parsed.rows = keepSecondDuplicateColumns(parsed.rows);
         }
+        parsed.rows = await this.resolveDuplicateColumns(parsed.rows, file.name);
         return parsed;
+    }
+
+    /**
+     * Colonnes portant le même nom dans un fichier (« X », « X (2) »…) : l'utilisateur choisit
+     * l'occurrence gardée (pop-up avec des valeurs d'exemple). Elle prend le nom de la colonne,
+     * les autres sont retirées. Un choix déjà fait pendant la session est réappliqué sans redemander.
+     * Fermer la pop-up garde la 1re occurrence (comportement précédent).
+     */
+    private async resolveDuplicateColumns<T extends Record<string, any>>(rows: T[], fileName: string): Promise<T[]> {
+        if (!rows?.length) {
+            return rows;
+        }
+        const columns = this.collectRowKeys(rows.slice(0, 50) as Record<string, string>[]);
+        const groups = findDuplicateColumnGroups(columns);
+        if (!groups.length) {
+            return rows;
+        }
+
+        const remembered = (group: DuplicateColumnGroup): string | null => {
+            const index = this.duplicateColumnSessionChoices.get(normalizeColumnKey(group.base));
+            return index !== undefined && index < group.keys.length ? group.keys[index] : null;
+        };
+        let choices: Map<string, string> | null = null;
+        if (groups.every(g => remembered(g) !== null)) {
+            choices = new Map(groups.map(g => [g.base, remembered(g)!] as [string, string]));
+        } else {
+            const sample = rows.slice(0, 200);
+            choices = await new Promise<Map<string, string> | null>(resolve => {
+                this.duplicateColumnsDialog = {
+                    fileName,
+                    groups: groups.map(g => ({
+                        base: g.base,
+                        selected: remembered(g) ?? g.keys[0],
+                        options: g.keys.map((key, i) => ({
+                            key,
+                            label: I18nService.t('FU.DuplicateColumns.Occurrence', { n: i + 1 }),
+                            samples: this.collectDuplicateColumnSamples(sample, key)
+                        }))
+                    })),
+                    resolve
+                };
+                this.cd.detectChanges();
+            });
+            if (choices) {
+                for (const group of groups) {
+                    const index = group.keys.indexOf(choices.get(group.base) ?? group.base);
+                    this.duplicateColumnSessionChoices.set(normalizeColumnKey(group.base), Math.max(0, index));
+                }
+            }
+        }
+        return applyDuplicateColumnChoice(rows, groups, choices ?? new Map());
+    }
+
+    /** Jusqu'à 3 valeurs non vides distinctes d'une colonne, pour aider au choix. */
+    private collectDuplicateColumnSamples(rows: Record<string, any>[], key: string): string[] {
+        const values: string[] = [];
+        for (const row of rows) {
+            const value = String(row[key] ?? '').trim();
+            if (value && !values.includes(value)) {
+                values.push(value);
+                if (values.length === 3) break;
+            }
+        }
+        return values;
+    }
+
+    confirmDuplicateColumns(): void {
+        const dialog = this.duplicateColumnsDialog;
+        if (!dialog) return;
+        this.duplicateColumnsDialog = null;
+        dialog.resolve(new Map(dialog.groups.map(g => [g.base, g.selected] as [string, string])));
+    }
+
+    cancelDuplicateColumns(): void {
+        const dialog = this.duplicateColumnsDialog;
+        if (!dialog) return;
+        this.duplicateColumnsDialog = null;
+        dialog.resolve(null);
     }
 
     private readAssistedTreatmentFileRowsRaw(
@@ -6001,8 +6094,11 @@ export class FileUploadComponent implements OnInit, OnDestroy {
 
     private parseCSV(file: File, isBo: boolean): void {
         // Traitement commun une fois le fichier analysé (identique pour flux continu
-        // et parsing classique).
+        // et parsing classique), après le choix des colonnes en double.
         const onComplete = (rows: Record<string, string>[]) => {
+            void this.resolveDuplicateColumns(rows, file.name).then(applyRows);
+        };
+        const applyRows = (rows: Record<string, string>[]) => {
             if (isBo) {
                 this.boData = rows;
                 
@@ -6752,28 +6848,34 @@ export class FileUploadComponent implements OnInit, OnDestroy {
                 );
                 
                 
-                // Vérifier si des en-têtes valides ont été trouvés
-                if (!headers || headers.length === 0 || headers.every(h => !h || h.trim() === '')) {
-                    const fallbackHeaders = jsonData[0]?.map((h, idx) => h || `Col${idx + 1}`) || [];
-                    const correctedHeaders = fallbackHeaders.map(header => this.normalizeColumnName(header));
-                    
-                    // Créer les lignes de données
-                    const rows: any[] = [];
-                    for (let i = 1; i < jsonData.length; i++) {
-                        const rowData = jsonData[i] as any[];
-                        if (!rowData || rowData.length === 0) continue;
-                        
-                        const row: any = {};
-                        correctedHeaders.forEach((header: string, index: number) => {
-                            const value = rowData[index];
-                            this.assignExcelCellValue(row, header, value);
-                        });
-                        rows.push(row);
-                    }
-                    
+                // Vérifier si des en-têtes valides ont été trouvés (sinon 1re ligne, ou ColN)
+                const noHeaders = !headers || headers.length === 0 || headers.every(h => !h || h.trim() === '');
+                const sourceHeaders = noHeaders
+                    ? (jsonData[0]?.map((h, idx) => h || `Col${idx + 1}`) || [])
+                    : headers;
+                const dataStartIndex = noHeaders ? 1 : headerRowIndex + 1;
+                // En-têtes en double rendus uniques (« X (2) ») : sinon la 2e colonne écrasait la 1re,
+                // et le choix de la colonne gardée n'était pas possible.
+                const correctedHeaders = uniqueHeaderNames(sourceHeaders.map((header: string) => this.normalizeColumnName(header)));
+
+                // Créer les lignes de données
+                const rawRows: any[] = [];
+                for (let i = dataStartIndex; i < jsonData.length; i++) {
+                    const rowData = jsonData[i] as any[];
+                    if (!rowData || rowData.length === 0) continue;
+
+                    const row: any = {};
+                    correctedHeaders.forEach((header: string, index: number) => {
+                        const value = rowData[index];
+                        this.assignExcelCellValue(row, header, value);
+                    });
+                    rawRows.push(row);
+                }
+
+                void this.resolveDuplicateColumns(rawRows, file.name).then(rows => {
                     if (isBo) {
                         this.boData = this.applyOrangeMoneyColumnSelection(this.normalizeData(rows), file.name);
-                        
+
                         // Vérifier si c'est un fichier TRXBO et déclencher la sélection des services (pour le mode manuel)
                         if (this.reconciliationMode === 'manual') {
                             setTimeout(() => {
@@ -6790,7 +6892,7 @@ export class FileUploadComponent implements OnInit, OnDestroy {
                         }
                     } else {
                         this.partnerData = this.applyOrangeMoneyColumnSelection(this.normalizeData(this.convertDebitCreditToNumber(rows)), file.name);
-                        
+
                         // Vérifier si le fichier partenaire a des colonnes service/type/statut et déclencher la sélection (pour le mode manuel)
                         if (this.reconciliationMode === 'manual') {
                             setTimeout(() => {
@@ -6807,73 +6909,17 @@ export class FileUploadComponent implements OnInit, OnDestroy {
                     }
                     // Forcer la détection des changements
                     this.cd.detectChanges();
-                } else {
-                    // Corriger les caractères spéciaux dans les en-têtes
-                    const correctedHeaders = headers.map(header => this.normalizeColumnName(header));
-                    
-                    // Créer les lignes de données en commençant après la ligne d'en-tête
-                    const rows: any[] = [];
-                    for (let i = headerRowIndex + 1; i < jsonData.length; i++) {
-                        const rowData = jsonData[i] as any[];
-                        if (!rowData || rowData.length === 0) continue;
-                        
-                        const row: any = {};
-                        correctedHeaders.forEach((header: string, index: number) => {
-                            const value = rowData[index];
-                            this.assignExcelCellValue(row, header, value);
-                        });
-                        rows.push(row);
+
+                    // Appliquer le filtrage automatique Orange Money si nécessaire
+                    if (isOrangeMoneyFile) {
+                        this.applyAutomaticOrangeMoneyFilterForFileUpload(file.name, isBo);
                     }
-                    
-                    
-                    if (isBo) {
-                        this.boData = this.applyOrangeMoneyColumnSelection(this.normalizeData(rows), file.name);
-                        
-                        // Vérifier si c'est un fichier TRXBO et déclencher la sélection des services (pour le mode manuel)
-                        if (this.reconciliationMode === 'manual') {
-                            setTimeout(() => {
-                                if (this.boData && this.boData.length > 0) {
-                                    if (this.detectTRXBOAndExtractServicesForManual(this.boData)) {
-                                        if (this.availableAgencies.length > 0) {
-                                            this.showAgencySelectionStep();
-                                        } else {
-                                            this.showManualServiceSelectionStep();
-                                        }
-                                    }
-                                }
-                            }, 100);
-                        }
-                    } else {
-                        this.partnerData = this.applyOrangeMoneyColumnSelection(this.normalizeData(this.convertDebitCreditToNumber(rows)), file.name);
-                        
-                        // Vérifier si le fichier partenaire a des colonnes service/type/statut et déclencher la sélection (pour le mode manuel)
-                        if (this.reconciliationMode === 'manual') {
-                            setTimeout(() => {
-                                if (this.partnerData && this.partnerData.length > 0) {
-                                    const pr = this.detectPartnerServiceTypeAndStatusForManual(this.partnerData);
-                                    if (pr === 'agency') {
-                                        this.showPartnerAgencySelectionStep();
-                                    } else if (pr === 'services') {
-                                        this.showManualPartnerServiceSelectionStep();
-                                    }
-                                }
-                            }, 100);
-                        }
+
+                    // Mettre à jour l'estimation seulement si les deux fichiers sont chargés
+                    if (this.boFile && this.partnerFile) {
+                        this.updateEstimatedTime();
                     }
-                    // Forcer la détection des changements
-                    this.cd.detectChanges();
-                }
-                
-                
-                // Appliquer le filtrage automatique Orange Money si nécessaire
-                if (isOrangeMoneyFile) {
-                    this.applyAutomaticOrangeMoneyFilterForFileUpload(file.name, isBo);
-                }
-                
-                // Mettre à jour l'estimation seulement si les deux fichiers sont chargés
-                if (this.boFile && this.partnerFile) {
-                    this.updateEstimatedTime();
-                }
+                });
                 
             } catch (error) {
                 this.errorMessage = I18nService.t('FU.msg.erreurLorsDeLaLectureDu2', { p0: error });
@@ -8625,7 +8671,7 @@ export class FileUploadComponent implements OnInit, OnDestroy {
                 yieldFn: () => this.yieldToMainThread(true)
             });
 
-            const data = rows as Record<string, string>[];
+            const data = await this.resolveDuplicateColumns(rows as Record<string, string>[], file.name);
 
             if (isBo) {
                 this.autoBoSourceFormat = 'csv';
@@ -8775,7 +8821,7 @@ export class FileUploadComponent implements OnInit, OnDestroy {
                 // Vérifier si des en-têtes valides ont été trouvés
                 if (!headers || headers.length === 0 || headers.every(h => !h || h.trim() === '')) {
                     const fallbackHeaders = jsonData[0]?.map((h, idx) => h || `Col${idx + 1}`) || [];
-                    const correctedHeaders = fallbackHeaders.map(header => this.normalizeColumnName(header));
+                    const correctedHeaders = uniqueHeaderNames(fallbackHeaders.map(header => this.normalizeColumnName(header)));
                     
                     // Créer les lignes de données avec traitement par chunks pour les gros fichiers
                     const rows: any[] = [];
@@ -8805,22 +8851,24 @@ export class FileUploadComponent implements OnInit, OnDestroy {
                         }
                     }
                     
-                    if (isBo) {
-                        this.autoBoData = rows;
-                    } else {
-                        this.autoPartnerData = this.convertDebitCreditToNumber(rows);
-                        
-                        // Vérifier si le fichier partenaire contient des colonnes service/type/statut
-                        this.handleAutoPartnerSelectionFlow();
-                    }
-                    
-                    // Invalider le cache de canProceed
-                    this._canProceedCache = null;
-                    // Forcer la détection des changements pour mettre à jour la vue
-                    this.cd.detectChanges();
+                    void this.resolveDuplicateColumns(rows, file.name).then(rows => {
+                        if (isBo) {
+                            this.autoBoData = rows;
+                        } else {
+                            this.autoPartnerData = this.convertDebitCreditToNumber(rows);
+
+                            // Vérifier si le fichier partenaire contient des colonnes service/type/statut
+                            this.handleAutoPartnerSelectionFlow();
+                        }
+
+                        // Invalider le cache de canProceed
+                        this._canProceedCache = null;
+                        // Forcer la détection des changements pour mettre à jour la vue
+                        this.cd.detectChanges();
+                    });
                 } else {
                     // Corriger les caractères spéciaux dans les en-têtes
-                    const correctedHeaders = headers.map(header => this.normalizeColumnName(header));
+                    const correctedHeaders = uniqueHeaderNames(headers.map(header => this.normalizeColumnName(header)));
                     
                     // Créer les lignes de données en commençant après la ligne d'en-tête
                     const rows: any[] = [];
@@ -8852,28 +8900,30 @@ export class FileUploadComponent implements OnInit, OnDestroy {
                     }
                     
                     
-                    if (isBo) {
-                        this.autoBoData = rows;
+                    void this.resolveDuplicateColumns(rows, file.name).then(rows => {
+                        if (isBo) {
+                            this.autoBoData = rows;
                         
-                        // Vérifier si c'est un fichier TRXBO et déclencher la sélection des agences ou services
-                        if (this.detectTRXBOAndExtractServices(this.autoBoData)) {
-                            if (this.availableAgencies.length > 0) {
-                                this.showAgencySelectionStep();
-                            } else {
-                                this.showServiceSelectionStep();
+                            // Vérifier si c'est un fichier TRXBO et déclencher la sélection des agences ou services
+                            if (this.detectTRXBOAndExtractServices(this.autoBoData)) {
+                                if (this.availableAgencies.length > 0) {
+                                    this.showAgencySelectionStep();
+                                } else {
+                                    this.showServiceSelectionStep();
+                                }
                             }
-                        }
-                    } else {
-                        this.autoPartnerData = this.convertDebitCreditToNumber(rows);
+                        } else {
+                            this.autoPartnerData = this.convertDebitCreditToNumber(rows);
                         
-                        // Vérifier si le fichier partenaire contient des colonnes service/type/statut
-                        this.handleAutoPartnerSelectionFlow();
-                    }
+                            // Vérifier si le fichier partenaire contient des colonnes service/type/statut
+                            this.handleAutoPartnerSelectionFlow();
+                        }
                     
-                    // Invalider le cache de canProceed
-                    this._canProceedCache = null;
-                    // Forcer la détection des changements pour mettre à jour la vue
-                    this.cd.detectChanges();
+                        // Invalider le cache de canProceed
+                        this._canProceedCache = null;
+                        // Forcer la détection des changements pour mettre à jour la vue
+                        this.cd.detectChanges();
+                    });
                 }
                 
                 

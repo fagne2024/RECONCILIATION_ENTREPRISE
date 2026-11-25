@@ -28,6 +28,94 @@ export function deduplicateHeaderNames(headers: string[]): string[] {
   return result;
 }
 
+/** Colonne présente plusieurs fois dans un fichier : clés des occurrences, dans l'ordre du fichier. */
+export interface DuplicateColumnGroup {
+  /** Nom de la 1re occurrence (nom conservé après le choix). */
+  base: string;
+  /** Clés des occurrences : base, puis « base (2) » / « base_1 »… */
+  keys: string[];
+}
+
+const DUPLICATE_SUFFIXES = [/^(.*\S) \((\d+)\)$/, /^(.*\S)_(\d+)$/];
+
+/**
+ * Repère les colonnes en double renommées à la lecture : « X (2) » (lecteur CSV de l'application)
+ * ou « X_1 » (PapaParse). Une clé suffixée n'est retenue que si la colonne « X » existe aussi.
+ */
+export function findDuplicateColumnGroups(columns: string[]): DuplicateColumnGroup[] {
+  const byNormalized = new Map<string, string>();
+  for (const column of columns) {
+    const key = normalizeColumnKey(column);
+    if (!byNormalized.has(key)) {
+      byNormalized.set(key, column);
+    }
+  }
+  const groups = new Map<string, DuplicateColumnGroup>();
+  for (const column of columns) {
+    for (const pattern of DUPLICATE_SUFFIXES) {
+      const match = pattern.exec(column.trim());
+      if (!match) continue;
+      const base = byNormalized.get(normalizeColumnKey(match[1]));
+      if (!base || base === column) continue;
+      const group = groups.get(base) ?? { base, keys: [base] };
+      group.keys.push(column);
+      groups.set(base, group);
+      break;
+    }
+  }
+  // Ordre des occurrences = ordre des colonnes dans le fichier.
+  const order = new Map(columns.map((c, i) => [c, i] as [string, number]));
+  return [...groups.values()].map(g => ({
+    base: g.base,
+    keys: [...g.keys].sort((a, b) => (order.get(a) ?? 0) - (order.get(b) ?? 0))
+  }));
+}
+
+/**
+ * Garde, pour chaque colonne en double, l'occurrence choisie : sa valeur est placée sous le nom
+ * de la 1re occurrence (à sa position), les autres occurrences sont retirées.
+ * `choices` : nom de base → clé de l'occurrence gardée.
+ */
+export function applyDuplicateColumnChoice<T extends Record<string, any>>(
+  rows: T[],
+  groups: DuplicateColumnGroup[],
+  choices: Map<string, string>
+): T[] {
+  if (!rows?.length || !groups.length) return rows;
+  const dropped = new Set<string>();
+  const sourceOf = new Map<string, string>();
+  for (const group of groups) {
+    const chosen = choices.get(group.base) ?? group.base;
+    sourceOf.set(group.base, group.keys.includes(chosen) ? chosen : group.base);
+    group.keys.filter(k => k !== group.base).forEach(k => dropped.add(k));
+  }
+  return rows.map(row => {
+    const out: Record<string, any> = {};
+    for (const key of Object.keys(row)) {
+      if (dropped.has(key)) continue;
+      const source = sourceOf.get(key);
+      out[key] = source ? row[source] : row[key];
+    }
+    return out as T;
+  });
+}
+
+/**
+ * En-têtes lus en tableau (Excel) : rend uniques les libellés en double (« X (2) »), pour ne pas
+ * écraser une occurrence par une autre lors de la construction des lignes.
+ */
+export function uniqueHeaderNames(headers: string[]): string[] {
+  const seen = new Map<string, number>();
+  return headers.map(header => {
+    const cleaned = header ?? '';
+    if (!cleaned.trim()) return cleaned;
+    const key = normalizeColumnKey(cleaned);
+    const count = (seen.get(key) ?? 0) + 1;
+    seen.set(key, count);
+    return count === 1 ? cleaned : `${cleaned} (${count})`;
+  });
+}
+
 /** Colonnes présentes deux fois dans un relevé Orange Money dont on garde la 2e occurrence. */
 export const ORANGE_MONEY_KEEP_SECOND_COLUMNS = ['N° de Compte'];
 

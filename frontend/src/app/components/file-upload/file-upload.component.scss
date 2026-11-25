@@ -2794,3 +2794,50 @@
     align-items: center;
     flex-wrap: wrap;
 }
+
+/* Colonnes en double : choix de l'occurrence gardée (au-dessus des autres fenêtres de chargement) */
+.duplicate-columns-overlay {
+    z-index: var(--z-overlay);
+}
+
+.duplicate-columns-modal {
+    max-width: 640px;
+
+    .duplicate-columns-group {
+        border: 1px solid var(--color-border);
+        border-radius: 12px;
+        padding: var(--space-3);
+        margin: 0 0 var(--space-3);
+
+        legend {
+            padding: 0 var(--space-2);
+            font-weight: 600;
+            color: var(--color-text-primary);
+        }
+    }
+
+    .duplicate-columns-option {
+        display: grid;
+        grid-template-columns: auto auto 1fr;
+        align-items: center;
+        gap: var(--space-2);
+        padding: var(--space-2);
+        border-radius: 8px;
+        cursor: pointer;
+
+        &.selected {
+            background: var(--color-surface-sunken);
+        }
+    }
+
+    .duplicate-columns-label {
+        font-weight: 600;
+        color: var(--color-text-primary);
+        white-space: nowrap;
+    }
+
+    .duplicate-columns-samples {
+        color: var(--color-text-muted);
+        overflow-wrap: anywhere;
+    }
+}

@@ -2566,6 +2566,14 @@
     "paysCode": "Code pays",
     "paysAide": "Facultatif : le code choisi est écrit sur chaque ligne du fichier, dans la colonne",
     "paysTitre": "Pays du fichier",
+    "DuplicateColumns": {
+      "Title": "Colonnes en double",
+      "Intro": "Le fichier {{file}} contient plusieurs colonnes portant le même nom. Choisissez celle à garder pour chacune.",
+      "Occurrence": "Colonne n° {{n}}",
+      "Empty": "(vide)",
+      "KeepFirst": "Garder la 1re",
+      "Confirm": "Valider"
+    },
     "ClientVolume": {
       "Title": "Volume par client",
       "Button": "Vérifier le volume par client",

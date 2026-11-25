@@ -1582,6 +1582,40 @@
 </div>
 
 <!-- Modal traitement de fichier (mode assisté) -->
+<!-- Colonnes en double dans un fichier : choix de l'occurrence gardée -->
+<div class="manual-service-selection-overlay duplicate-columns-overlay" *ngIf="duplicateColumnsDialog as dlg">
+    <div class="manual-service-selection-modal client-volume-modal duplicate-columns-modal" role="dialog" aria-modal="true"
+         [attr.aria-label]="'FU.DuplicateColumns.Title' | translate">
+        <div class="client-volume-header">
+            <h3>
+                <i class="fas fa-clone"></i>
+                {{ 'FU.DuplicateColumns.Title' | translate }}
+            </h3>
+            <button type="button" class="close-modal-btn" (click)="cancelDuplicateColumns()" [attr.aria-label]="'FU.DuplicateColumns.KeepFirst' | translate">
+                <i class="fas fa-times"></i>
+            </button>
+        </div>
+        <p class="client-volume-rule">{{ 'FU.DuplicateColumns.Intro' | translate: { file: dlg.fileName } }}</p>
+
+        <fieldset class="duplicate-columns-group" *ngFor="let group of dlg.groups">
+            <legend>{{ group.base }}</legend>
+            <label class="duplicate-columns-option" *ngFor="let opt of group.options" [class.selected]="group.selected === opt.key">
+                <input type="radio" [name]="'dup-' + group.base" [value]="opt.key" [(ngModel)]="group.selected">
+                <span class="duplicate-columns-label">{{ opt.label }}</span>
+                <span class="duplicate-columns-samples">
+                    <ng-container *ngIf="opt.samples.length; else noSample">{{ opt.samples.join(' · ') }}</ng-container>
+                    <ng-template #noSample><em>{{ 'FU.DuplicateColumns.Empty' | translate }}</em></ng-template>
+                </span>
+            </label>
+        </fieldset>
+
+        <div class="client-volume-actions">
+            <button type="button" class="ds-btn ds-btn--secondary" (click)="cancelDuplicateColumns()">{{ 'FU.DuplicateColumns.KeepFirst' | translate }}</button>
+            <button type="button" class="ds-btn ds-btn--primary" (click)="confirmDuplicateColumns()">{{ 'FU.DuplicateColumns.Confirm' | translate }}</button>
+        </div>
+    </div>
+</div>
+
 <div class="traitement-modal-overlay" *ngIf="showTraitementModal && isAssistedLike && !embedTraitementSection" (click)="closeTraitementModal()">
     <div class="traitement-modal" (click)="$event.stopPropagation()">
         <div class="traitement-modal-header">

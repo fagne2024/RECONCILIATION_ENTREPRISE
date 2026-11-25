@@ -2566,6 +2566,14 @@
     "paysCode": "Country code",
     "paysAide": "Optional: the selected code is written on every row of the file, in the column",
     "paysTitre": "File country",
+    "DuplicateColumns": {
+      "Title": "Duplicate columns",
+      "Intro": "The file {{file}} has several columns with the same name. Choose the one to keep for each.",
+      "Occurrence": "Column #{{n}}",
+      "Empty": "(empty)",
+      "KeepFirst": "Keep the first",
+      "Confirm": "Confirm"
+    },
     "ClientVolume": {
       "Title": "Volume per customer",
       "Button": "Check volume per customer",
