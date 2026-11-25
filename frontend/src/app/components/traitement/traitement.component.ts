@@ -3697,6 +3697,101 @@ End Sub`;
     this.showSections[sectionName] = !this.showSections[sectionName];
   }
 
+  // --- CATALOGUE DES OUTILS (cartes de l'étape 2) ---
+  readonly toolFilters: Array<'all' | 'clean' | 'merge' | 'split' | 'partner'> = ['all', 'clean', 'merge', 'split', 'partner'];
+  toolFilter: 'all' | 'clean' | 'merge' | 'split' | 'partner' = 'all';
+  toolSearch = '';
+  readonly toolCards: Array<{
+    key: 'autoTreatment' | 'multiMerge' | 'compileHeaders' | 'sheetSplit' | 'totalEnergie';
+    cat: 'clean' | 'merge' | 'split' | 'partner';
+    icon: string;
+    titleKey: string;
+    formats: string[];
+  }> = [
+    { key: 'autoTreatment', cat: 'clean', icon: 'fa-magic', titleKey: 'TRT.TraitementAutomatique', formats: ['CSV', 'TSV', 'XLSX'] },
+    { key: 'multiMerge', cat: 'merge', icon: 'fa-layer-group', titleKey: 'TRT.FusionMultiFichiersCSV', formats: ['CSV'] },
+    { key: 'compileHeaders', cat: 'merge', icon: 'fa-columns', titleKey: 'TRT.CompilationEn-tetesDifferents', formats: ['CSV', 'XLS', 'XLSX'] },
+    { key: 'sheetSplit', cat: 'split', icon: 'fa-clone', titleKey: 'TRT.SeparationDesFeuillesExcel', formats: ['XLS', 'XLSX'] },
+    { key: 'totalEnergie', cat: 'partner', icon: 'fa-bolt', titleKey: 'TRT.TotalEnergie', formats: ['CSV', 'XLS', 'XLSX'] }
+  ];
+
+  get visibleToolCards() {
+    const q = (this.toolSearch || '').trim().toLowerCase();
+    return this.toolCards.filter(tool => {
+      if (this.toolFilter !== 'all' && tool.cat !== this.toolFilter) return false;
+      if (!q) return true;
+      const texte = `${this.t(tool.titleKey)} ${this.t('TRT.outils.desc.' + tool.key)} ${tool.formats.join(' ')}`.toLowerCase();
+      return texte.includes(q);
+    });
+  }
+
+  // --- OPÉRATIONS SUR LE FICHIER CHARGÉ (cartes de l'étape 3) ---
+  readonly opGroups: Array<'inspect' | 'transform' | 'export'> = ['inspect', 'transform', 'export'];
+  readonly opCards: Array<{
+    key: 'preview' | 'selectCols' | 'extract' | 'filter' | 'columnRename' | 'concat' | 'format' | 'dedup' | 'exportByType' | 'exportByDate';
+    group: 'inspect' | 'transform' | 'export';
+    icon: string;
+    titleKey: string;
+  }> = [
+    { key: 'preview', group: 'inspect', icon: 'fa-table', titleKey: 'TRT.ApercuDesDonneesCombinees' },
+    { key: 'selectCols', group: 'transform', icon: 'fa-columns', titleKey: 'TRT.SelectionDesColonnesAConserver' },
+    { key: 'extract', group: 'transform', icon: 'fa-search', titleKey: 'TRT.ExtractionDeDonnees' },
+    { key: 'filter', group: 'transform', icon: 'fa-filter', titleKey: 'TRT.FiltrerLesLignes' },
+    { key: 'columnRename', group: 'transform', icon: 'fa-i-cursor', titleKey: 'TRT.RenommerUnEn-tete' },
+    { key: 'concat', group: 'transform', icon: 'fa-link', titleKey: 'TRT.ConcatenerPlusieursColonnes' },
+    { key: 'format', group: 'transform', icon: 'fa-magic', titleKey: 'TRT.FormatageAutomatique' },
+    { key: 'dedup', group: 'transform', icon: 'fa-copy', titleKey: 'TRT.SuppressionDeDoublons' },
+    { key: 'exportByType', group: 'export', icon: 'fa-file-export', titleKey: 'TRT.ExportParType' },
+    { key: 'exportByDate', group: 'export', icon: 'fa-calendar-alt', titleKey: 'TRT.ExportParDate' }
+  ];
+
+  /** Mêmes conditions d'affichage que les sections correspondantes du template. */
+  private isOpAvailable(key: string): boolean {
+    const nbCols = this.columns.length;
+    const nbRows = this.combinedRows.length;
+    switch (key) {
+      case 'preview': return nbRows > 0;
+      case 'selectCols': return this.allColumns.length > 0;
+      case 'filter': return nbCols > 0 && !this.serverLot;
+      case 'concat': return nbCols > 1;
+      case 'exportByType':
+      case 'exportByDate': return nbCols > 0 && nbRows > 0;
+      default: return nbCols > 0;
+    }
+  }
+
+  availableOps(group: 'inspect' | 'transform' | 'export') {
+    return this.opCards.filter(op => op.group === group && this.isOpAvailable(op.key));
+  }
+
+  get hasAvailableOps(): boolean {
+    return this.opCards.some(op => this.isOpAvailable(op.key));
+  }
+
+  get selectedFileNames(): string {
+    return this.selectedFiles.map(f => f.name).join(', ');
+  }
+
+  /** Ouvre (ou ferme) une opération depuis sa carte et fait défiler la page jusqu'à elle. */
+  openOp(key: 'preview' | 'selectCols' | 'extract' | 'filter' | 'columnRename' | 'concat' | 'format' | 'dedup' | 'exportByType' | 'exportByDate'): void {
+    const ouvrir = !this.showSections[key];
+    this.showSections[key] = ouvrir;
+    if (!ouvrir) return;
+    setTimeout(() => {
+      document.getElementById('trt-op-' + key)?.scrollIntoView({ behavior: 'smooth', block: 'start' });
+    });
+  }
+
+  /** Ouvre (ou ferme) un outil depuis sa carte et fait défiler la page jusqu'à lui. */
+  openTool(key: 'autoTreatment' | 'multiMerge' | 'compileHeaders' | 'sheetSplit' | 'totalEnergie'): void {
+    const ouvrir = !this.showSections[key];
+    this.showSections[key] = ouvrir;
+    if (!ouvrir) return;
+    setTimeout(() => {
+      document.getElementById('trt-tool-' + key)?.scrollIntoView({ behavior: 'smooth', block: 'start' });
+    });
+  }
+
   /** Rafraîchit la page /traitement pendant le traitement automatique embarqué. */
   onAutoTreatmentProgress(_message: string): void {
     this.cd.detectChanges();

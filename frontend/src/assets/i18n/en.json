@@ -5879,7 +5879,55 @@
       "reinitialiserLesLiens": "Reset links"
     },
     "msg.srvOpAppliquee": "Operation applied: {{p0}} rows kept out of {{p1}} ({{p2}} duplicates removed, {{p3}} rows filtered).",
-    "msg.srvOpAucuneLigneRetiree": "Operation applied, no rows removed: {{p0}} rows kept out of {{p1}} ({{p2}} duplicates removed, {{p3}} rows filtered)."
+    "msg.srvOpAucuneLigneRetiree": "Operation applied, no rows removed: {{p0}} rows kept out of {{p1}} ({{p2}} duplicates removed, {{p3}} rows filtered).",
+    "outils": {
+      "etapeImporter": "Import your files",
+      "etapeImporterAide": "Load one or more files to clean, filter, transform and export them.",
+      "etapeOutils": "Processing tools",
+      "etapeOutilsAide": "Standalone tools, each with its own files. Open the one you need.",
+      "filtrer": "Filter by tool type",
+      "rechercher": "Search for a tool",
+      "ouvrir": "Open",
+      "fermer": "Close",
+      "aucun": "No tool matches your search.",
+      "cat": {
+        "all": "All",
+        "clean": "Clean",
+        "merge": "Combine",
+        "split": "Split",
+        "partner": "Partners"
+      },
+      "desc": {
+        "autoTreatment": "Normalizes and formats your files using the processing templates.",
+        "multiMerge": "Stacks several CSV files with the same structure into one file, with each file's identifier.",
+        "compileHeaders": "Maps the columns of one file onto the header structure of another file.",
+        "sheetSplit": "Creates a separate file for each sheet of an Excel workbook.",
+        "totalEnergie": "Preset processing for Total Energie files (PDA code, station).",
+        "preview": "View the rows, reorder the columns and compare with a template.",
+        "selectCols": "Keep only the columns you need.",
+        "extract": "Extract part of a column into a new column.",
+        "filter": "Keep only the rows that meet one or more conditions.",
+        "columnRename": "Change the name of a column in the header row.",
+        "concat": "Join several columns into one, with the separator of your choice.",
+        "format": "Clean values: spaces, characters, numbers, dates, time offset.",
+        "dedup": "Remove duplicate rows based on one or more columns.",
+        "exportByType": "Split the rows into separate files based on a column's value.",
+        "exportByDate": "Export the rows by period from a date column."
+      },
+      "fichierCharge": "Loaded file",
+      "fichiersCharges": "Loaded files",
+      "etAutres": "and {{n}} more",
+      "lignesColonnes": "{{l}} rows · {{c}} columns",
+      "changerFichier": "Change file",
+      "retirer": "Remove",
+      "etapeOperations": "File operations",
+      "etapeOperationsAide": "Open an operation to configure it and apply it to the loaded file.",
+      "groupe": {
+        "inspect": "Inspect",
+        "transform": "Transform",
+        "export": "Export"
+      }
+    }
   },
   "RES": {
     "results": "Results",

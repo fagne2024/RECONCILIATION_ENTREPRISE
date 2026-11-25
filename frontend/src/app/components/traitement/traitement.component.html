@@ -50,18 +50,8 @@
   <!-- CONTENU PRINCIPAL -->
   <div class="main">
     <div class="traitement-container">
-      <div class="header-section">
-        <h2>{{ 'TRT.TraitementDeFichiersCSVTSV' | translate }}</h2>
-        <div class="header-actions">
-          <button type="button" class="ds-btn ds-btn--secondary btn btn-outline-secondary" (click)="toggleAllSections()">
-            <i class="fas fa-eye" *ngIf="!allSectionsVisible"></i>
-            <i class="fas fa-eye-slash" *ngIf="allSectionsVisible"></i>
-            {{ (allSectionsVisible ? 'TRT.HideAll' : 'TRT.ShowAll') | translate }}
-          </button>
-          <button type="button" class="ds-btn ds-btn--secondary new-treatment-btn" (click)="newTraitement()">{{ 'TRT.NouveauTraitement1' | translate }}</button>
-        </div>
-      </div>
-  
+      <!-- En-tête « Traitement de fichiers » retiré : doublon du titre de page et des boutons de la barre du haut -->
+
   <!-- Pop-up de suivi du traitement : progression pendant, résultat (succès / avertissement / erreur) après -->
   <ng-container #procPopupAnchor></ng-container>
   <ng-template #procPopupTpl>
@@ -122,8 +112,16 @@
     </div>
   </div>
   
+  <div class="trt-step">
+    <span class="trt-step-num">1</span>
+    <div>
+      <h2 class="trt-step-title">{{ 'TRT.outils.etapeImporter' | translate }}</h2>
+      <p class="trt-step-sub">{{ 'TRT.outils.etapeImporterAide' | translate }}</p>
+    </div>
+  </div>
   <div class="upload-area" (drop)="onDrop($event)" (dragover)="onDragOver($event)">
-    <p>{{ 'TRT.Glissez-deposezVosFichiersCSVTSV' | translate }}</p>
+    <i class="fas fa-cloud-upload-alt upload-area-icon" aria-hidden="true"></i>
+    <p class="upload-area-title">{{ 'TRT.Glissez-deposezVosFichiersCSVTSV' | translate }}</p>
     <input type="file" multiple [attr.accept]="acceptedFileAcceptAttr" (change)="onFileSelected($event)" id="fileInput" hidden />
     <button type="button" (click)="triggerFileInput()" [disabled]="isProcessing" class="ds-btn ds-btn--secondary">{{ 'TRT.SelectionnerDesFichiersCSVTSV' | translate }}</button>
     <div class="upload-info">
@@ -251,7 +249,49 @@
   </section>
   <div *ngIf="successMsg.upload" class="success-msg" [innerHTML]="successMsg.upload"></div>
 
-<div class="auto-treatment-section">
+<!-- Catalogue des outils autonomes : chaque carte ouvre l'outil correspondant -->
+<section class="trt-tools" aria-labelledby="trt-tools-title">
+  <div class="trt-step">
+    <span class="trt-step-num">2</span>
+    <div>
+      <h2 class="trt-step-title" id="trt-tools-title">{{ 'TRT.outils.etapeOutils' | translate }}</h2>
+      <p class="trt-step-sub">{{ 'TRT.outils.etapeOutilsAide' | translate }}</p>
+    </div>
+  </div>
+  <div class="trt-tools-toolbar">
+    <div class="trt-chips" role="group" [attr.aria-label]="'TRT.outils.filtrer' | translate">
+      <button type="button" class="trt-chip" *ngFor="let f of toolFilters"
+              [attr.aria-pressed]="toolFilter === f" (click)="toolFilter = f">
+        {{ ('TRT.outils.cat.' + f) | translate }}
+      </button>
+    </div>
+    <input type="search" class="ds-input trt-tools-search" [(ngModel)]="toolSearch"
+           [placeholder]="'TRT.outils.rechercher' | translate"
+           [attr.aria-label]="'TRT.outils.rechercher' | translate">
+  </div>
+  <div class="trt-tools-grid">
+    <article class="trt-tool-card" *ngFor="let tool of visibleToolCards" [class.is-open]="showSections[tool.key]">
+      <div class="trt-tool-head">
+        <span class="trt-tool-icon"><i class="fas" [ngClass]="tool.icon" aria-hidden="true"></i></span>
+        <div>
+          <span class="trt-tool-cat">{{ ('TRT.outils.cat.' + tool.cat) | translate }}</span>
+          <h3>{{ tool.titleKey | translate }}</h3>
+        </div>
+      </div>
+      <p>{{ ('TRT.outils.desc.' + tool.key) | translate }}</p>
+      <div class="trt-tool-foot">
+        <span class="trt-tool-tags"><span class="trt-tag" *ngFor="let fmt of tool.formats">{{ fmt }}</span></span>
+        <button type="button" class="ds-btn" [ngClass]="showSections[tool.key] ? 'ds-btn--secondary' : 'ds-btn--primary'"
+                (click)="openTool(tool.key)">
+          {{ (showSections[tool.key] ? 'TRT.outils.fermer' : 'TRT.outils.ouvrir') | translate }}
+        </button>
+      </div>
+    </article>
+    <p class="trt-tools-none" *ngIf="visibleToolCards.length === 0">{{ 'TRT.outils.aucun' | translate }}</p>
+  </div>
+</section>
+
+<div class="auto-treatment-section" id="trt-tool-autoTreatment" *ngIf="showSections.autoTreatment">
   <div class="section-header">
     <h4>
       <i class="fas fa-magic"></i>{{ 'TRT.TraitementAutomatique' | translate }}<button type="button" class="ds-btn ds-btn--secondary btn btn-sm btn-outline-info" (click)="toggleSection('autoTreatment')">
@@ -274,7 +314,7 @@
   </div>
 </div>
 
-<div class="total-energie-section">
+<div class="total-energie-section" id="trt-tool-totalEnergie" *ngIf="showSections.totalEnergie">
   <div class="section-header">
     <h4>
       <i class="fas fa-bolt"></i>{{ 'TRT.TotalEnergie' | translate }}<button type="button" class="ds-btn ds-btn--secondary btn btn-sm btn-outline-info" (click)="toggleSection('totalEnergie')">
@@ -558,7 +598,7 @@
   </div>
 </div>
 
-<div class="total-energie-section">
+<div class="total-energie-section" id="trt-tool-compileHeaders" *ngIf="showSections.compileHeaders">
   <div class="section-header">
     <h4>
       <i class="fas fa-columns"></i>{{ 'TRT.CompilationEn-tetesDifferents' | translate }}<button type="button" class="ds-btn ds-btn--secondary btn btn-sm btn-outline-info" (click)="toggleSection('compileHeaders')">
@@ -725,7 +765,7 @@
   </div>
 </div>
 
-<div class="sheet-split-section">
+<div class="sheet-split-section" id="trt-tool-sheetSplit" *ngIf="showSections.sheetSplit">
   <div class="section-header">
     <h4>
       <i class="fas fa-clone"></i>{{ 'TRT.SeparationDesFeuillesExcel' | translate }}<button type="button" class="ds-btn ds-btn--secondary btn btn-sm btn-outline-info" (click)="toggleSection('sheetSplit')">
@@ -880,7 +920,7 @@
 </div>
   
 
-<div class="multi-merge-section">
+<div class="multi-merge-section" id="trt-tool-multiMerge" *ngIf="showSections.multiMerge">
   <div class="section-header">
     <h4>
       <i class="fas fa-layer-group"></i>{{ 'TRT.FusionMultiFichiersCSV' | translate }}<button type="button" class="ds-btn ds-btn--secondary btn btn-sm btn-outline-info" (click)="toggleSection('multiMerge')">
@@ -1177,12 +1217,27 @@
     </div>
   </div>
   
-  <div *ngIf="selectedFiles.length > 0" class="file-list">
-    <h4>{{ 'TRT.FichiersSelectionnes' | translate }}</h4>
-    <ul>
-      <li *ngFor="let file of selectedFiles">{{ file.name }}</li>
-    </ul>
-  </div>
+  <!-- Fichier(s) chargé(s) : nom, volumétrie et actions -->
+  <section *ngIf="selectedFiles.length > 0" class="trt-file-bar" aria-labelledby="trt-file-bar-label">
+    <div class="trt-file-bar-main">
+      <span class="trt-file-bar-label" id="trt-file-bar-label">
+        {{ (selectedFiles.length > 1 ? 'TRT.outils.fichiersCharges' : 'TRT.outils.fichierCharge') | translate }}
+      </span>
+      <h2 class="trt-file-bar-name">
+        {{ selectedFiles[0].name }}<span *ngIf="selectedFiles.length > 1" class="trt-file-bar-more"> {{ 'TRT.outils.etAutres' | translate: { n: selectedFiles.length - 1 } }}</span>
+      </h2>
+      <div class="trt-file-bar-meta">
+        <span>{{ 'TRT.outils.lignesColonnes' | translate: { l: ((serverLot ? serverLot.nbLignes : combinedRows.length) | number), c: (serverLot ? serverColumns.length : columns.length) } }}</span>
+        <span *ngIf="selectedFiles.length > 1" class="trt-file-bar-list" [title]="selectedFileNames">{{ selectedFileNames }}</span>
+      </div>
+    </div>
+    <div class="trt-file-bar-actions">
+      <button type="button" class="ds-btn ds-btn--secondary" (click)="triggerFileInput()" [disabled]="isProcessing">
+        <i class="fas fa-file-upload" aria-hidden="true"></i>{{ 'TRT.outils.changerFichier' | translate }}</button>
+      <button type="button" class="ds-btn ds-btn--secondary" (click)="newTraitement()" [disabled]="isProcessing">
+        <i class="fas fa-times" aria-hidden="true"></i>{{ 'TRT.outils.retirer' | translate }}</button>
+    </div>
+  </section>
   
    <!-- Indication Fichier GDJ (LA GABONAISE DES JEUX) -->
    <div *ngIf="isGdjFile" class="orange-money-indicator">
@@ -1193,8 +1248,39 @@
      </div>
    </div>
   
+  <!-- Étape 3 : opérations sur le fichier chargé, regroupées en cartes (Inspecter / Transformer / Exporter) -->
+  <section *ngIf="hasAvailableOps" class="trt-tools trt-ops" aria-labelledby="trt-ops-title">
+    <div class="trt-step">
+      <span class="trt-step-num">3</span>
+      <div>
+        <h2 class="trt-step-title" id="trt-ops-title">{{ 'TRT.outils.etapeOperations' | translate }}</h2>
+        <p class="trt-step-sub">{{ 'TRT.outils.etapeOperationsAide' | translate }}</p>
+      </div>
+    </div>
+    <ng-container *ngFor="let group of opGroups">
+      <div class="trt-ops-group" *ngIf="availableOps(group).length > 0">
+        <h3 class="trt-ops-group-title">{{ ('TRT.outils.groupe.' + group) | translate }}</h3>
+        <div class="trt-tools-grid">
+          <article class="trt-tool-card" *ngFor="let op of availableOps(group)" [class.is-open]="showSections[op.key]">
+            <div class="trt-tool-head">
+              <span class="trt-tool-icon"><i class="fas" [ngClass]="op.icon" aria-hidden="true"></i></span>
+              <h3>{{ op.titleKey | translate }}</h3>
+            </div>
+            <p>{{ ('TRT.outils.desc.' + op.key) | translate }}</p>
+            <div class="trt-tool-foot trt-tool-foot--end">
+              <button type="button" class="ds-btn" [ngClass]="showSections[op.key] ? 'ds-btn--secondary' : 'ds-btn--primary'"
+                      [attr.aria-expanded]="showSections[op.key]" (click)="openOp(op.key)">
+                {{ (showSections[op.key] ? 'TRT.outils.fermer' : 'TRT.outils.ouvrir') | translate }}
+              </button>
+            </div>
+          </article>
+        </div>
+      </div>
+    </ng-container>
+  </section>
+
   <!-- Aperçu des données combinées en première position -->
-  <div *ngIf="combinedRows.length > 0" class="preview-table" style="margin-top: 32px;">
+  <div *ngIf="combinedRows.length > 0 && showSections.preview" id="trt-op-preview" class="preview-table" style="margin-top: 32px;">
     <div class="section-header">
       <h4>
         <i class="fas fa-table"></i>{{ 'TRT.ApercuDesDonneesCombinees' | translate }}<button type="button" class="ds-btn ds-btn--secondary btn btn-sm btn-outline-info" (click)="toggleSection('preview')">
@@ -1472,7 +1558,7 @@
    </div>
    </div>
   
-  <div *ngIf="allColumns.length > 0" class="select-cols-section">
+  <div *ngIf="allColumns.length > 0 && showSections.selectCols" id="trt-op-selectCols" class="select-cols-section">
     <div class="section-header">
       <h4>
         <i class="fas fa-columns"></i>{{ 'TRT.SelectionDesColonnesAConserver' | translate }}<button type="button" class="ds-btn ds-btn--secondary btn btn-sm btn-outline-info" (click)="toggleSection('selectCols')">
@@ -1503,7 +1589,7 @@
      <div *ngIf="errorMsg.select" class="error-msg">{{ errorMsg.select }}</div>
    </div>
    </div>
-     <div *ngIf="columns.length > 0" class="extract-section">
+     <div *ngIf="columns.length > 0 && showSections.extract" id="trt-op-extract" class="extract-section">
      <div class="section-header">
        <h4>
          <i class="fas fa-search"></i>{{ 'TRT.ExtractionDeDonnees' | translate }}<button type="button" class="ds-btn ds-btn--secondary btn btn-sm btn-outline-info" (click)="toggleSection('extract')">
@@ -1651,7 +1737,7 @@
    </div>
    </div>
      <!-- Toujours affichée après un chargement en mode navigateur (même si un filtre a tout exclu) ; en mode serveur, le filtre est dans le bloc du lot -->
-     <div *ngIf="columns.length > 0 && !serverLot" class="filtre-section" style="margin-bottom: 24px;">
+     <div *ngIf="columns.length > 0 && !serverLot && showSections.filter" id="trt-op-filter" class="filtre-section" style="margin-bottom: 24px;">
      <div class="section-header">
        <h4>
          <i class="fas fa-filter"></i>{{ 'TRT.FiltrerLesLignes' | translate }}<button type="button" class="ds-btn ds-btn--secondary btn btn-sm btn-outline-info" (click)="toggleSection('filter')">
@@ -1774,7 +1860,7 @@
    </div>
    </div>
 
-     <div *ngIf="columns.length > 0" class="column-rename-section" style="margin-bottom: 24px;">
+     <div *ngIf="columns.length > 0 && showSections.columnRename" id="trt-op-columnRename" class="column-rename-section" style="margin-bottom: 24px;">
      <div class="section-header">
        <h4>
          <i class="fas fa-i-cursor"></i>{{ 'TRT.RenommerUnEn-tete' | translate }}<button type="button" class="ds-btn ds-btn--secondary btn btn-sm btn-outline-info" (click)="toggleSection('columnRename')">
@@ -1809,7 +1895,7 @@
      </div>
      </div>
 
-     <div *ngIf="columns.length > 1" class="concat-section" style="margin-bottom: 24px;">
+     <div *ngIf="columns.length > 1 && showSections.concat" id="trt-op-concat" class="concat-section" style="margin-bottom: 24px;">
      <div class="section-header">
        <h4>
          <i class="fas fa-link"></i>{{ 'TRT.ConcatenerPlusieursColonnes' | translate }}<button type="button" class="ds-btn ds-btn--secondary btn btn-sm btn-outline-info" (click)="toggleSection('concat')">
@@ -1914,7 +2000,7 @@
     {{ successMsg.performance }}
   </div>
   
-     <div *ngIf="columns.length > 0 && combinedRows.length > 0" class="export-by-type-section">
+     <div *ngIf="columns.length > 0 && combinedRows.length > 0 && showSections.exportByType" id="trt-op-exportByType" class="export-by-type-section">
      <div class="section-header">
        <h4>
          <i class="fas fa-file-export"></i>{{ 'TRT.ExportParType' | translate }}<button type="button" class="ds-btn ds-btn--secondary btn btn-sm btn-outline-info" (click)="toggleSection('exportByType')">
@@ -2001,7 +2087,7 @@
      <div *ngIf="errorMsg.exportType" class="error-msg">{{ errorMsg.exportType }}</div>
    </div>
    </div>
-     <div *ngIf="columns.length > 0" class="dedup-section">
+     <div *ngIf="columns.length > 0 && showSections.dedup" id="trt-op-dedup" class="dedup-section">
      <div class="section-header">
        <h4>
          <i class="fas fa-copy"></i>{{ 'TRT.SuppressionDeDoublons' | translate }}<button type="button" class="ds-btn ds-btn--secondary btn btn-sm btn-outline-info" (click)="toggleSection('dedup')">
@@ -2092,7 +2178,7 @@
      <div *ngIf="errorMsg.dedup" class="error-msg">{{ errorMsg.dedup }}</div>
    </div>
    </div>
-     <div *ngIf="columns.length > 0 && combinedRows.length > 0" class="export-by-date-section">
+     <div *ngIf="columns.length > 0 && combinedRows.length > 0 && showSections.exportByDate" id="trt-op-exportByDate" class="export-by-date-section">
      <div class="section-header">
        <h4>
          <i class="fas fa-calendar-alt"></i>{{ 'TRT.ExportParDate' | translate }}<button type="button" class="ds-btn ds-btn--secondary btn btn-sm btn-outline-info" (click)="toggleSection('exportByDate')">
@@ -2308,7 +2394,7 @@
    </div>
    </div>
 
-     <div *ngIf="columns.length > 0" class="format-section">
+     <div *ngIf="columns.length > 0 && showSections.format" id="trt-op-format" class="format-section">
      <div class="section-header">
        <h4>
          <i class="fas fa-magic"></i>{{ 'TRT.FormatageAutomatique' | translate }}<button type="button" class="ds-btn ds-btn--secondary btn btn-sm btn-outline-info" (click)="toggleSection('format')">

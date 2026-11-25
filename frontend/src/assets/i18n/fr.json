@@ -5879,7 +5879,55 @@
       "reinitialiserLesLiens": "Réinitialiser les liens"
     },
     "msg.srvOpAppliquee": "Opération appliquée : {{p0}} lignes conservées sur {{p1}} ({{p2}} doublons supprimés, {{p3}} lignes filtrées).",
-    "msg.srvOpAucuneLigneRetiree": "Opération appliquée, aucune ligne retirée : {{p0}} lignes conservées sur {{p1}} ({{p2}} doublons supprimés, {{p3}} lignes filtrées)."
+    "msg.srvOpAucuneLigneRetiree": "Opération appliquée, aucune ligne retirée : {{p0}} lignes conservées sur {{p1}} ({{p2}} doublons supprimés, {{p3}} lignes filtrées).",
+    "outils": {
+      "etapeImporter": "Importer vos fichiers",
+      "etapeImporterAide": "Chargez un ou plusieurs fichiers pour les nettoyer, filtrer, transformer puis exporter.",
+      "etapeOutils": "Outils de traitement",
+      "etapeOutilsAide": "Outils autonomes, chacun avec ses propres fichiers. Ouvrez celui dont vous avez besoin.",
+      "filtrer": "Filtrer par type d'outil",
+      "rechercher": "Rechercher un outil",
+      "ouvrir": "Ouvrir",
+      "fermer": "Fermer",
+      "aucun": "Aucun outil ne correspond à votre recherche.",
+      "cat": {
+        "all": "Tous",
+        "clean": "Nettoyer",
+        "merge": "Combiner",
+        "split": "Séparer",
+        "partner": "Partenaires"
+      },
+      "desc": {
+        "autoTreatment": "Normalise et formate vos fichiers à partir des modèles de traitement.",
+        "multiMerge": "Empile plusieurs CSV de même structure en un seul fichier, avec l'identifiant de chaque fichier.",
+        "compileHeaders": "Reporte les colonnes d'un fichier dans la structure d'en-têtes d'un autre fichier.",
+        "sheetSplit": "Crée un fichier distinct pour chaque feuille d'un classeur Excel.",
+        "totalEnergie": "Traitement préconfiguré pour les fichiers Total Energie (code PDA, station).",
+        "preview": "Affichez les lignes, réorganisez les colonnes et comparez avec un modèle.",
+        "selectCols": "Gardez uniquement les colonnes utiles.",
+        "extract": "Extrayez une partie d'une colonne dans une nouvelle colonne.",
+        "filter": "Ne gardez que les lignes qui répondent à une ou plusieurs conditions.",
+        "columnRename": "Changez le nom d'une colonne dans la ligne d'en-tête.",
+        "concat": "Assemblez plusieurs colonnes en une seule, avec le séparateur de votre choix.",
+        "format": "Nettoyez les valeurs : espaces, caractères, nombres, dates, décalage horaire.",
+        "dedup": "Supprimez les lignes en double selon une ou plusieurs colonnes.",
+        "exportByType": "Répartissez les lignes en fichiers distincts selon la valeur d'une colonne.",
+        "exportByDate": "Exportez les lignes par période à partir d'une colonne de date."
+      },
+      "fichierCharge": "Fichier chargé",
+      "fichiersCharges": "Fichiers chargés",
+      "etAutres": "et {{n}} autre(s)",
+      "lignesColonnes": "{{l}} lignes · {{c}} colonnes",
+      "changerFichier": "Changer de fichier",
+      "retirer": "Retirer",
+      "etapeOperations": "Opérations sur le fichier",
+      "etapeOperationsAide": "Ouvrez une opération pour la configurer et l'appliquer au fichier chargé.",
+      "groupe": {
+        "inspect": "Inspecter",
+        "transform": "Transformer",
+        "export": "Exporter"
+      }
+    }
   },
   "RES": {
     "results": "Résultats",
