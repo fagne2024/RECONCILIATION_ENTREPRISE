@@ -84,4 +84,16 @@ class ReleveBancaireImportServiceMontantTest {
         assertNull(rows.get(0).credit);
         assertEquals(-2500d, rows.get(0).montant);
     }
+    @Test
+    void uneSeuleColonneDateValautPourLesDeuxDatesEtCompteBancaireEstLeNumeroDeCompte() throws Exception {
+        List<ReleveBancaireRow> rows = parse(
+                "Date;Code agence;Banque;Compte bancaire;Montant;Mode de paiement;Référence;ID ticket;Service;Réseau",
+                "18/11/2026;CPCA27196 ;ECOBANK OPS;100349613001;2 971 358;Virement ;CPCA2719-181126CP1;ODMD1126429399;;");
+
+        assertEquals(1, rows.size());
+        assertEquals(java.time.LocalDate.of(2026, 11, 18), rows.get(0).dateComptable);
+        assertEquals(java.time.LocalDate.of(2026, 11, 18), rows.get(0).dateValeur);
+        assertEquals("100349613001", rows.get(0).numeroCompte);
+        assertEquals("CPCA2719-181126CP1", rows.get(0).libelle);
+    }
 }

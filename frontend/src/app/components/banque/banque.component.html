@@ -418,6 +418,11 @@
           <i class="fas fa-trash" [class.spin]="isBulkDeletingReleve"></i>
           {{ isBulkDeletingReleve ? ('ACT.deleting' | translate) : ('TBL.ui.supprimer' | translate) + selectedReleveIds.size + ')' }}
         </button>
+        <input class="ds-input bulk-comment-input" type="text" maxlength="1000" list="bqCommentTags" [(ngModel)]="bulkCommentDraft['releve']"
+               [disabled]="isBulkCommenting" placeholder="{{ 'BQ.bulkCommentPlaceholder' | translate }}" style="min-width:200px;">
+        <button type="button" class="ds-btn ds-btn--secondary btn-bulk-action" (click)="bulkCommentSelection('releve')" [disabled]="isBulkCommenting || !hasSelectedReleve">
+          <i class="fas fa-comment"></i> {{ 'BQ.bulkCommentBouton' | translate: { n: selectedReleveIds.size } }}
+        </button>
       </div>
 
       <div class="operations-table-container" *ngIf="releveRows.length">
@@ -686,6 +691,11 @@
               </button>
               <button type="button" class="ds-btn ds-btn--secondary btn-warning" (click)="quickBulkOps('Rejetée')" [disabled]="isBulkUpdatingOps || !hasSelectedOps">
                 <i class="fas fa-ban"></i> {{ 'BQ.Rejeter' | translate }}
+              </button>
+              <input class="ds-input bulk-comment-input" type="text" maxlength="1000" list="bqCommentTags" [(ngModel)]="bulkCommentDraft['ops']"
+                     [disabled]="isBulkCommenting" placeholder="{{ 'BQ.bulkCommentPlaceholder' | translate }}" style="min-width:200px;">
+              <button type="button" class="ds-btn ds-btn--secondary btn-bulk-action" (click)="bulkCommentSelection('ops')" [disabled]="isBulkCommenting || !hasSelectedOps">
+                <i class="fas fa-comment"></i> {{ 'BQ.bulkCommentBouton' | translate: { n: selectedOpIds.size } }}
               </button>
             </ng-container>
           </div>
@@ -1477,6 +1487,11 @@
           </button>
           <button type="button" class="ds-btn ds-btn--secondary btn-warning" (click)="quickBulkMain('Rejetée')" [disabled]="isBulkUpdatingMain || !hasSelectedMainOps">
             <i class="fas fa-ban"></i> {{ 'BQ.Rejeter' | translate }}
+          </button>
+          <input class="ds-input bulk-comment-input" type="text" maxlength="1000" list="bqCommentTags" [(ngModel)]="bulkCommentDraft['main']"
+                 [disabled]="isBulkCommenting" placeholder="{{ 'BQ.bulkCommentPlaceholder' | translate }}" style="min-width:200px;">
+          <button type="button" class="ds-btn ds-btn--secondary btn-bulk-action" (click)="bulkCommentSelection('main')" [disabled]="isBulkCommenting || !hasSelectedMainOps">
+            <i class="fas fa-comment"></i> {{ 'BQ.bulkCommentBouton' | translate: { n: selectedMainOpIds.size } }}
           </button>
         </div>
       </div>

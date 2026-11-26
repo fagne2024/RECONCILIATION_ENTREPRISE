@@ -183,6 +183,7 @@ const RELEVE_IMPORT_HEADER_ALIASES: Record<string, string> = {
   numerocompte: 'Numéro de compte',
   numerodecompte: 'Numéro de compte',
   compte: 'Numéro de compte',
+  comptebancaire: 'Numéro de compte',
   datecomptable: 'Date comptable',
   dateoperation: 'Date comptable',
   date: 'Date comptable',
@@ -1266,6 +1267,59 @@ export class BanqueComponent implements OnInit {
   }
 
   deselectAllReleve() { this.selectedReleveIds.clear(); }
+
+  // ----- Commentaire en masse sur les lignes sélectionnées (opérations, liste principale, relevé) -----
+  bulkCommentDraft: Record<'ops' | 'main' | 'releve', string> = { ops: '', main: '', releve: '' };
+  isBulkCommenting = false;
+
+  /** Met le même commentaire (vide = effacement) sur toutes les lignes sélectionnées. */
+  async bulkCommentSelection(source: 'ops' | 'main' | 'releve') {
+    const commentaire = (this.bulkCommentDraft[source] || '').trim();
+    const sel = source === 'ops' ? this.selectedOpIds : source === 'main' ? this.selectedMainOpIds : this.selectedReleveIds;
+    if (!sel.size) { this.popupService.showWarning(I18nService.t('OPS.noSelection')); return; }
+    // Seules les opérations bancaires portent un commentaire (pas les opérations générales)
+    const targets = source === 'releve'
+      ? Array.from(sel.values())
+      : this.opsParIds(Array.from(sel.values())).map(o => o.id as number);
+    if (!targets.length) { this.popupService.showWarning(I18nService.t('BQ.bulkCommentAucuneLigne')); return; }
+    const ok = await this.popupService.showConfirm(
+      commentaire
+        ? I18nService.t('BQ.bulkCommentConfirm', { p0: commentaire, p1: targets.length })
+        : I18nService.t('BQ.bulkCommentEffacerConfirm', { p0: targets.length }),
+      I18nService.t('BQ.bulkCommentTitre')
+    );
+    if (!ok) return;
+    this.isBulkCommenting = true;
+    const faits = new Set<number>();
+    try {
+      for (let i = 0; i < targets.length; i += 10) {
+        const lot = targets.slice(i, i + 10);
+        const resultats = await Promise.all(lot.map(id => firstValueFrom<unknown>(
+          source === 'releve'
+            ? this.releveService.updateCommentaire(id, commentaire)
+            : this.operationBancaireService.updateOperationBancaire(id, { commentaire })
+        ).then(() => id, () => null)));
+        resultats.forEach(id => { if (id != null) faits.add(id); });
+      }
+    } finally {
+      this.isBulkCommenting = false;
+    }
+    if (source === 'releve') {
+      [this.releveAllRows, this.releveRows].forEach(list =>
+        (list || []).filter(r => r.id != null && faits.has(r.id)).forEach(r => { r.commentaire = commentaire; }));
+    } else {
+      [this.operations, this.filteredOperations, this.pagedOperations].forEach(list =>
+        (list || []).filter(o => o.source !== 'generale' && faits.has(o.id as number)).forEach(o => { o.commentaire = commentaire; }));
+    }
+    this.refreshCommentCorrespondances();
+    const echecs = targets.length - faits.size;
+    if (echecs > 0) {
+      this.popupService.showError(I18nService.t('BQ.bulkCommentPartiel', { p0: faits.size, p1: targets.length, p2: echecs }));
+    } else {
+      this.popupService.showSuccess(I18nService.t('BQ.bulkCommentOk', { p0: faits.size }));
+      this.bulkCommentDraft[source] = '';
+    }
+  }
 
   async bulkDeleteSelectedReleve() {
     if (!this.hasSelectedReleve) { this.popupService.showWarning(I18nService.t('TBL.msg.aucuneLigneDeReleveSelectionnee')); return; }

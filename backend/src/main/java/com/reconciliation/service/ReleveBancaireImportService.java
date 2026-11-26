@@ -56,6 +56,9 @@ public class ReleveBancaireImportService {
                 dto.numeroCompte = getString(row, colIndex.get("numeroCompte"));
                 dto.dateComptable = getDate(row, colIndex.get("dateComptable"));
                 dto.dateValeur = getDate(row, colIndex.get("dateValeur"));
+                // Une seule colonne de date (ex. « Date ») : elle vaut pour la date comptable et la date de valeur
+                if (dto.dateValeur == null) dto.dateValeur = dto.dateComptable;
+                if (dto.dateComptable == null) dto.dateComptable = dto.dateValeur;
                 dto.libelle = getString(row, colIndex.get("libelle"));
                 // Colonne référence présente : elle prime sur le libellé (repli sur le libellé si elle est vide)
                 String reference = getString(row, colIndex.get("reference"));
@@ -373,6 +376,7 @@ public class ReleveBancaireImportService {
         m.put("numerodecompte", "numeroCompte");
         m.put("numerocompte", "numeroCompte");
         m.put("compte", "numeroCompte");
+        m.put("comptebancaire", "numeroCompte");
 
         m.put("datecomptable", "dateComptable");
         m.put("dateoperation", "dateComptable");
