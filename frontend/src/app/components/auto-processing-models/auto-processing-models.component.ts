@@ -290,6 +290,7 @@ export class AutoProcessingModelsComponent implements OnInit {
     { type: 'removeDecimals', labelKey: 'APM.actionRemoveDecimals' },
     { type: 'keepLastDigits', labelKey: 'APM.actionKeepLastDigits' },
     { type: 'removeZeroDecimals', labelKey: 'APM.actionRemoveZeroDecimals' },
+    { type: 'compactDate', labelKey: 'APM.actionCompactDate' },
     { type: 'removeSpaces', labelKey: 'APM.actionRemoveSpaces' },
     { type: 'timezoneShift', labelKey: 'APM.actionTimezoneShift' }
   ];
@@ -4999,7 +5000,7 @@ export class AutoProcessingModelsComponent implements OnInit {
   }
 
   actionNeedsPerColumnSettings(type: ModelFormatActionType): boolean {
-    return type !== 'removeNumbers' && type !== 'removeZeroDecimals';
+    return type !== 'removeNumbers' && type !== 'removeZeroDecimals' && type !== 'compactDate';
   }
 
   private normalizeLeadingZeroMode(mode?: string | null): 'none' | 'keep' | 'strip' {

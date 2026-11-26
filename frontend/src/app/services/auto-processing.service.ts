@@ -46,6 +46,7 @@ export type ModelFormatActionType =
   | 'removeDecimals'
   | 'keepLastDigits'
   | 'removeZeroDecimals'
+  | 'compactDate'
   | 'removeSpaces'
   | 'timezoneShift';
 

@@ -56,6 +56,7 @@ import {
   isMsisdnPreserveColumn
 } from '../utils/text-cell.util';
 import { I18nService } from './i18n/i18n.service';
+import { formatCompactDateTime } from '../utils/date-format.util';
 
 /** Aligné sur COLUMN_RULES_SYNC_THRESHOLD : pas de micro-lots ni yield en dessous. */
 const PREPROCESS_INLINE_THRESHOLD = 20000;
@@ -1699,6 +1700,9 @@ export class ModelPreProcessingService {
       case 'removeZeroDecimals':
         result = value.endsWith('.0') ? value.slice(0, -2) : value;
         break;
+      case 'compactDate':
+        result = String(formatCompactDateTime(value));
+        break;
       case 'removeSpaces':
         result = this.applyRemoveSpaces(value, action);
         break;
@@ -2462,6 +2466,8 @@ export class ModelPreProcessingService {
         return I18nService.t('MSG.msg.garderDerniersChiffres', { p0: columns, p1: action.keepLastDigitsCount ?? 3, p2: conditionSuffix });
       case 'removeZeroDecimals':
         return I18nService.t('MSG.msg.supprimer0EnFinDeValeur', { p0: columns, p1: conditionSuffix });
+      case 'compactDate':
+        return I18nService.t('MSG.msg.dateCompacte', { p0: columns, p1: conditionSuffix });
       case 'removeSpaces':
         return I18nService.t('MSG.msg.supprimerEspaces', { p0: columns, p1: action.removeSpacesType ?? 'all', p2: conditionSuffix });
       case 'timezoneShift': {
