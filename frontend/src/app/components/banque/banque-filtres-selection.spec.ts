@@ -7,6 +7,7 @@ import { EnvironmentInjector } from '@angular/core';
 import { TestBed } from '@angular/core/testing';
 import { BanqueComponent } from './banque.component';
 import { SuiviCompenseOpService } from '../../services/suivi-compense-op.service';
+import { BanqueDossierLieService } from '../../services/banque-dossier-lie.service';
 
 /**
  * /banque : intervalle de dates (la date de fin incluait seulement minuit, les opérations du
@@ -17,7 +18,7 @@ describe('BanqueComponent - filtres de date et sélection multiple', () => {
   let comp: any;
 
   beforeEach(() => {
-    TestBed.configureTestingModule({ providers: [{ provide: SuiviCompenseOpService, useValue: {} }] });
+    TestBed.configureTestingModule({ providers: [{ provide: SuiviCompenseOpService, useValue: {} }, { provide: BanqueDossierLieService, useValue: { dossierOf: () => null } }] });
     comp = TestBed.inject(EnvironmentInjector)
       .runInContext(() => new BanqueComponent(stub, stub, stub, stub, stub, stub, stub, stub, stub, stub, stub, stub));
   });

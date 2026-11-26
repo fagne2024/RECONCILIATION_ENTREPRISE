@@ -423,6 +423,12 @@
         <button type="button" class="ds-btn ds-btn--secondary btn-bulk-action" (click)="bulkCommentSelection('releve')" [disabled]="isBulkCommenting || !hasSelectedReleve">
           <i class="fas fa-comment"></i> {{ 'BQ.bulkCommentBouton' | translate: { n: selectedReleveIds.size } }}
         </button>
+        <button type="button" class="ds-btn ds-btn--secondary btn-bulk-action" (click)="lierSelectionEnDossier()" [disabled]="!nbLignesALier" [title]="'BQDL.intro' | translate">
+          <i class="fas fa-folder-tree"></i> {{ 'BQDL.lier' | translate: { n: nbLignesALier } }}
+        </button>
+        <button type="button" class="ds-btn ds-btn--ghost btn-bulk-action" (click)="ouvrirListeDossiers()">
+          <i class="fas fa-folder-open"></i> {{ 'BQDL.liste' | translate }}
+        </button>
       </div>
 
       <div class="operations-table-container" *ngIf="releveRows.length">
@@ -502,6 +508,10 @@
                 </ng-template>
               </td>
                 <td class="actions-col" *ngIf="showActionsColumn">
+                  <button type="button" class="btn-icon bq-dossier-icon" *ngIf="dossierDe('RELEVE', r.id) as dl"
+                          (click)="ouvrirDossier(dl, $event)" [title]="'BQDL.voir' | translate: { p0: dl.libelle }">
+                    <i class="fas fa-folder-tree"></i>
+                  </button>
                   <button type="button" class="btn-icon" (click)="openReleveEdit(r)" [disabled]="!r.id" title="{{ 'BQ.Modifiercetteligne' | translate }}">
                     <i class="fas fa-edit"></i>
                   </button>
@@ -696,6 +706,12 @@
                      [disabled]="isBulkCommenting" placeholder="{{ 'BQ.bulkCommentPlaceholder' | translate }}" style="min-width:200px;">
               <button type="button" class="ds-btn ds-btn--secondary btn-bulk-action" (click)="bulkCommentSelection('ops')" [disabled]="isBulkCommenting || !hasSelectedOps">
                 <i class="fas fa-comment"></i> {{ 'BQ.bulkCommentBouton' | translate: { n: selectedOpIds.size } }}
+              </button>
+              <button type="button" class="ds-btn ds-btn--secondary btn-bulk-action" (click)="lierSelectionEnDossier()" [disabled]="!nbLignesALier" [title]="'BQDL.intro' | translate">
+                <i class="fas fa-folder-tree"></i> {{ 'BQDL.lier' | translate: { n: nbLignesALier } }}
+              </button>
+              <button type="button" class="ds-btn ds-btn--ghost btn-bulk-action" (click)="ouvrirListeDossiers()">
+                <i class="fas fa-folder-open"></i> {{ 'BQDL.liste' | translate }}
               </button>
             </ng-container>
           </div>
@@ -1493,6 +1509,12 @@
           <button type="button" class="ds-btn ds-btn--secondary btn-bulk-action" (click)="bulkCommentSelection('main')" [disabled]="isBulkCommenting || !hasSelectedMainOps">
             <i class="fas fa-comment"></i> {{ 'BQ.bulkCommentBouton' | translate: { n: selectedMainOpIds.size } }}
           </button>
+          <button type="button" class="ds-btn ds-btn--secondary btn-bulk-action" (click)="lierSelectionEnDossier()" [disabled]="!nbLignesALier" [title]="'BQDL.intro' | translate">
+            <i class="fas fa-folder-tree"></i> {{ 'BQDL.lier' | translate: { n: nbLignesALier } }}
+          </button>
+          <button type="button" class="ds-btn ds-btn--ghost btn-bulk-action" (click)="ouvrirListeDossiers()">
+            <i class="fas fa-folder-open"></i> {{ 'BQDL.liste' | translate }}
+          </button>
         </div>
       </div>
 
@@ -1614,6 +1636,10 @@
                 </ng-template>
               </td>
               <td class="actions" *ngIf="showActionsColumn">
+                <button type="button" class="btn-icon bq-dossier-icon" *ngIf="operation.source !== 'generale' && dossierDe('OPERATION', operation.id) as dl"
+                        (click)="ouvrirDossier(dl, $event)" [title]="'BQDL.voir' | translate: { p0: dl.libelle }">
+                  <i class="fas fa-folder-tree"></i>
+                </button>
                 <button type="button" class="btn-icon" (click)="viewOperation(operation)" title="{{ 'ACT.view' | translate }}">
                   <i class="fas fa-eye"></i>
                 </button>
@@ -1800,6 +1826,13 @@
           <span class="rr-context">{{ reconPays || ('FILT.allCountries' | translate) }}<ng-container *ngIf="reconDate"> · {{ reconDate | date:'dd/MM/yyyy' }}</ng-container></span>
         </h2>
         <div class="rr-header-actions">
+          <button type="button" class="ds-btn ds-btn--primary rr-export" (click)="lierSelectionEnDossier()" [disabled]="!nbLignesALier"
+                  [title]="'BQDL.intro' | translate">
+            <i class="fas fa-folder-tree"></i> {{ 'BQDL.lier' | translate: { n: nbLignesALier } }}
+          </button>
+          <button type="button" class="ds-btn ds-btn--secondary btn-outline rr-export" (click)="ouvrirListeDossiers()">
+            <i class="fas fa-folder-open"></i> {{ 'BQDL.liste' | translate }}
+          </button>
           <button type="button" class="ds-btn ds-btn--secondary btn-outline rr-export rr-export--excel" (click)="exportReconResultExcel()"
                   [disabled]="!!exportingReconResult || !filteredReconResultPairs.length">
             <i class="fas" [ngClass]="exportingReconResult==='excel' ? 'fa-spinner spin' : 'fa-file-excel'"></i> {{ 'BQ.ReconResultExportExcel' | translate }}
@@ -1886,11 +1919,15 @@
           <table class="rr-table">
             <thead>
               <tr class="rr-group-row">
+                <th class="rr-group rr-sel" aria-hidden="true"></th>
                 <th colspan="6" class="rr-group rr-group--op"><i class="fas fa-building-columns"></i> {{ 'BQ.ReconResultOperations' | translate }}</th>
                 <th class="rr-group rr-group--link" aria-hidden="true"></th>
                 <th colspan="5" class="rr-group rr-group--rev"><i class="fas fa-file-invoice-dollar"></i> {{ 'BQ.ReconResultReleves' | translate }}</th>
               </tr>
               <tr>
+                <th class="rr-sel">
+                  <input type="checkbox" [checked]="allPagedResultPairsSelected" (change)="toggleAllPagedResultPairs()" [attr.aria-label]="'BQ.Sélectionmultiple' | translate">
+                </th>
                 <th class="rr-op">{{ 'TBL.date' | translate }}</th>
                 <th class="rr-op">{{ 'TBL.operationType' | translate }}</th>
                 <th class="rr-op">{{ 'TBL.agency' | translate }}</th>
@@ -1906,7 +1943,8 @@
               </tr>
             </thead>
             <tbody>
-              <tr *ngFor="let p of pagedReconResultPairs; trackBy: trackByReconPair" [class.rr-row--gap]="p.ecart !== 0">
+              <tr *ngFor="let p of pagedReconResultPairs; trackBy: trackByReconPair" [class.rr-row--gap]="p.ecart !== 0" [class.rr-row--selected]="selectedResultPairKeys.has(p.key)">
+                <td class="rr-sel"><input type="checkbox" [checked]="selectedResultPairKeys.has(p.key)" (change)="toggleResultPairSelection(p)" [attr.aria-label]="'BQ.Sélectionmultiple' | translate"></td>
                 <ng-container *ngIf="p.op as op; else rrOpVide">
                   <td class="rr-op">{{ op.dateOperation | date:'dd/MM/yyyy' }}</td>
                   <td class="rr-op rr-type">{{ op.typeOperation }}</td>
@@ -1933,6 +1971,11 @@
                   </span>
                   </ng-template>
                   <div class="rr-comment" *ngIf="p.commentaire" [title]="p.commentaire">{{ p.commentaire }}</div>
+                  <ng-container *ngIf="(p.op && p.op.source !== 'generale' ? dossierDe('OPERATION', p.op.id) : null) || dossierDe('RELEVE', p.rev?.id) as dl">
+                    <button type="button" class="bq-dossier-badge" (click)="ouvrirDossier(dl, $event)" [title]="'BQDL.voir' | translate: { p0: dl.libelle }">
+                      <i class="fas fa-folder-tree"></i> {{ dl.libelle }}
+                    </button>
+                  </ng-container>
                   <div class="rr-key" *ngIf="p.matchBy!=='COMMENTAIRE' && isReconResultKeyShown(p.key)">
                     <code>{{ p.key }}</code>
                   </div>
@@ -1960,7 +2003,7 @@
                 </ng-template>
               </tr>
               <tr *ngIf="!filteredReconResultPairs.length">
-                <td colspan="12" class="rr-empty">{{ 'BQ.ReconResultEmpty' | translate }}</td>
+                <td colspan="13" class="rr-empty">{{ 'BQ.ReconResultEmpty' | translate }}</td>
               </tr>
             </tbody>
           </table>
@@ -2790,6 +2833,8 @@
       </ng-container>
     </div>
   </div>
+  <!-- Dossiers liés : création, détail et liste (au-dessus des autres pop-ups de la page) -->
+  <app-banque-dossier-lie [operations]="$any(operations)" [releves]="releveAllRows" (changed)="onDossiersLiesChanged()"></app-banque-dossier-lie>
 </div><!-- .banque-page -->
 
 

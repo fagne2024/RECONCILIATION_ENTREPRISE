@@ -7,6 +7,7 @@ import { EnvironmentInjector } from '@angular/core';
 import { TestBed } from '@angular/core/testing';
 import { BanqueComponent } from './banque.component';
 import { SuiviCompenseOpService } from '../../services/suivi-compense-op.service';
+import { BanqueDossierLieService } from '../../services/banque-dossier-lie.service';
 
 /**
  * Cas réel Guinée (Ecobank) : APPROVISIONNEMENT_FOURNISSEUR BOLHT-131126AP1, 679 000 776, est un
@@ -18,7 +19,7 @@ describe('BanqueComponent - sens des approvisionnements', () => {
   let comp: any;
 
   beforeEach(() => {
-    TestBed.configureTestingModule({ providers: [{ provide: SuiviCompenseOpService, useValue: {} }] });
+    TestBed.configureTestingModule({ providers: [{ provide: SuiviCompenseOpService, useValue: {} }, { provide: BanqueDossierLieService, useValue: { dossierOf: () => null } }] });
     comp = TestBed.inject(EnvironmentInjector)
       .runInContext(() => new BanqueComponent(stub, stub, stub, stub, stub, stub, stub, stub, stub, stub, stub, stub));
     // Règles de calcul : valeurs par défaut

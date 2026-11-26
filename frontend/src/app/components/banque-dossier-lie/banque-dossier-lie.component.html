@@ -1,0 +1,257 @@
+<!-- ===== Création / modification d'un dossier lié ===== -->
+<div class="dl-overlay" *ngIf="showEditor" (click)="closeEditor()">
+  <div class="dl-popup dl-popup--large" (click)="$event.stopPropagation()" role="dialog" aria-modal="true" aria-labelledby="dlEditTitle">
+    <div class="dl-header">
+      <h2 id="dlEditTitle"><i class="fas fa-folder-tree"></i> {{ (editId ? 'BQDL.titreModification' : 'BQDL.titreEdition') | translate }}</h2>
+      <button type="button" class="dl-close" (click)="closeEditor()" [attr.aria-label]="'COMMON.actions.close' | translate"><i class="fas fa-times"></i></button>
+    </div>
+
+    <div class="dl-content">
+      <p class="dl-intro">{{ 'BQDL.intro' | translate }}</p>
+
+      <div class="dl-form">
+        <label class="dl-field dl-field--wide">
+          <span>{{ 'BQDL.libelle' | translate }} *</span>
+          <input class="ds-input" type="text" maxlength="255" [(ngModel)]="libelle" placeholder="{{ 'BQDL.libellePlaceholder' | translate }}">
+        </label>
+        <label class="dl-field" *ngIf="!editId || dossierExistantId">
+          <span>{{ 'BQDL.ajouterAExistant' | translate }}</span>
+          <select class="ds-select" [ngModel]="dossierExistantId" (ngModelChange)="onDossierExistantChange($event)">
+            <option [ngValue]="null">{{ 'BQDL.nouveauDossier' | translate }}</option>
+            <option *ngFor="let d of dossiers" [ngValue]="d.id">{{ d.libelle }} (#{{ d.id }})</option>
+          </select>
+        </label>
+        <label class="dl-field dl-field--full">
+          <span>{{ 'BQDL.commentaire' | translate }}</span>
+          <textarea class="ds-textarea" rows="2" maxlength="1000" [(ngModel)]="commentaire"></textarea>
+        </label>
+      </div>
+
+      <div class="ds-banner dl-warning" *ngIf="nbConflits > 0">
+        <i class="fas fa-exclamation-triangle"></i> {{ 'BQDL.conflits' | translate: { p0: nbConflits } }}
+      </div>
+
+      <div class="ds-table-scroll">
+        <table class="ds-table ds-table--compact dl-table">
+          <thead>
+            <tr>
+              <th>{{ 'BQDL.type' | translate }}</th>
+              <th>{{ 'TBL.date' | translate }}</th>
+              <th>{{ 'BQDL.description' | translate }}</th>
+              <th class="dl-num">{{ 'TBL.amount' | translate }}</th>
+              <th>{{ 'BQDL.role' | translate }}</th>
+              <th></th>
+            </tr>
+          </thead>
+          <tbody>
+            <tr *ngIf="!lignes.length"><td colspan="6" class="dl-empty">{{ 'BQDL.aucuneLigne' | translate }}</td></tr>
+            <tr *ngFor="let l of lignes; trackBy: trackByKey">
+              <td>
+                <span class="ds-badge" [class.ds-badge--tone-info]="l.typeLigne==='OPERATION'" [class.ds-badge--tone-neutral]="l.typeLigne==='RELEVE'">
+                  <i class="fas" [ngClass]="l.typeLigne==='OPERATION' ? 'fa-building-columns' : 'fa-file-invoice-dollar'"></i>
+                  {{ (l.typeLigne==='OPERATION' ? 'BQDL.operation' : 'BQDL.releve') | translate }}
+                </span>
+              </td>
+              <td>{{ candidatDate(l) | date:'dd/MM/yyyy' }}</td>
+              <td class="dl-desc" [title]="candidatDescription(l)">
+                {{ candidatDescription(l) || '—' }}
+                <div class="dl-conflit" *ngIf="l.autreDossier as a"><i class="fas fa-link"></i> {{ 'BQDL.dejaDans' | translate: { p0: a.libelle } }}</div>
+              </td>
+              <td class="dl-num">
+                {{ l.montant | number:'1.0-2':'fr' }}
+                <span class="dl-sens" *ngIf="l.typeLigne==='RELEVE'">{{ (sensReleve(l.rev)==='debit' ? 'BQ.ReconResultDebit' : 'BQ.ReconResultCredit') | translate }}</span>
+              </td>
+              <td>
+                <select class="ds-select dl-role-select" [(ngModel)]="l.role" [attr.aria-label]="'BQDL.role' | translate">
+                  <option *ngFor="let r of roles" [ngValue]="r">{{ ('BQDL.roles.' + r) | translate }}</option>
+                </select>
+              </td>
+              <td><button type="button" class="ds-btn ds-btn--ghost ds-btn--sm" (click)="removeLigne(l)" [title]="'BQDL.retirer' | translate"><i class="fas fa-times"></i></button></td>
+            </tr>
+          </tbody>
+        </table>
+      </div>
+
+      <div class="dl-search">
+        <label class="dl-field dl-field--full">
+          <span>{{ 'BQDL.ajouterLigne' | translate }}</span>
+          <input class="ds-input" type="search" [(ngModel)]="recherche" placeholder="{{ 'BQDL.recherchePlaceholder' | translate }}">
+        </label>
+        <ul class="dl-results" *ngIf="recherche.trim().length >= 2">
+          <li *ngIf="!resultatsRecherche.length" class="dl-empty">{{ 'BQDL.aucunResultat' | translate }}</li>
+          <li *ngFor="let c of resultatsRecherche">
+            <button type="button" class="dl-result" (click)="addCandidat(c)">
+              <i class="fas fa-plus"></i>
+              <span class="ds-badge" [class.ds-badge--tone-info]="c.typeLigne==='OPERATION'">{{ (c.typeLigne==='OPERATION' ? 'BQDL.operation' : 'BQDL.releve') | translate }}</span>
+              <span>{{ candidatDate(c) | date:'dd/MM/yyyy' }}</span>
+              <span class="dl-desc">{{ candidatDescription(c) }}</span>
+              <strong class="dl-num">{{ candidatMontant(c) | number:'1.0-2':'fr' }}</strong>
+            </button>
+          </li>
+        </ul>
+      </div>
+
+      <ng-container *ngTemplateOutlet="syntheseTpl; context: { $implicit: syntheseEdition }"></ng-container>
+    </div>
+
+    <div class="dl-footer">
+      <button type="button" class="ds-btn ds-btn--secondary" (click)="closeEditor()">{{ 'COMMON.actions.cancel' | translate }}</button>
+      <button type="button" class="ds-btn ds-btn--primary" (click)="save()" [disabled]="saving || lignes.length < 2 || !libelle.trim()">
+        <i class="fas" [ngClass]="saving ? 'fa-spinner fa-spin' : 'fa-save'"></i> {{ 'COMMON.actions.save' | translate }}
+      </button>
+    </div>
+  </div>
+</div>
+
+<!-- ===== Détail d'un dossier lié ===== -->
+<div class="dl-overlay" *ngIf="showDetail" (click)="closeDetail()">
+  <div class="dl-popup dl-popup--large" (click)="$event.stopPropagation()" role="dialog" aria-modal="true" aria-labelledby="dlDetailTitle">
+    <div class="dl-header">
+      <h2 id="dlDetailTitle"><i class="fas fa-folder-open"></i> {{ detail?.dossier?.libelle || ('BQDL.titreDetail' | translate) }}</h2>
+      <button type="button" class="dl-close" (click)="closeDetail()" [attr.aria-label]="'COMMON.actions.close' | translate"><i class="fas fa-times"></i></button>
+    </div>
+
+    <div class="dl-content">
+      <div class="dl-empty" *ngIf="detailLoading"><i class="fas fa-spinner fa-spin"></i> {{ 'BQDL.chargement' | translate }}</div>
+
+      <ng-container *ngIf="detail as d">
+        <p class="dl-meta">
+          {{ 'BQDL.creePar' | translate: { p0: d.dossier.createdBy || '—', p1: (d.dossier.createdAt | date:'dd/MM/yyyy HH:mm') } }}
+          <ng-container *ngIf="d.dossier.updatedAt"> · {{ 'BQDL.modifiePar' | translate: { p0: d.dossier.updatedBy || '—', p1: (d.dossier.updatedAt | date:'dd/MM/yyyy HH:mm') } }}</ng-container>
+        </p>
+        <p class="dl-commentaire" *ngIf="d.dossier.commentaire"><i class="fas fa-comment"></i> {{ d.dossier.commentaire }}</p>
+
+        <ng-container *ngTemplateOutlet="syntheseTpl; context: { $implicit: d.synthese }"></ng-container>
+
+        <section class="dl-section" *ngFor="let s of sections">
+          <h3>
+            {{ ('BQDL.roles.' + s.role) | translate }}
+            <span class="dl-section-total">{{ s.lignes.length }} · {{ s.total | number:'1.0-2':'fr' }}</span>
+          </h3>
+
+          <div class="dl-card" *ngFor="let l of s.lignes">
+            <ng-container *ngIf="l.operation as o">
+              <div class="dl-card-head">
+                <span class="ds-badge ds-badge--tone-info"><i class="fas fa-building-columns"></i> {{ 'BQDL.operation' | translate }} #{{ o.id }}</span>
+                <strong>{{ o.typeOperation }}</strong>
+                <span class="dl-card-amount">{{ o.montant | number:'1.0-2':'fr' }}</span>
+              </div>
+              <dl class="dl-grid">
+                <div><dt>{{ 'TBL.date' | translate }}</dt><dd>{{ o.dateOperation | date:'dd/MM/yyyy HH:mm' }}</dd></div>
+                <div><dt>{{ 'TBL.agency' | translate }}</dt><dd>{{ o.agence || '—' }}</dd></div>
+                <div><dt>{{ 'BQDL.pays' | translate }}</dt><dd>{{ o.pays || '—' }}</dd></div>
+                <div><dt>{{ 'TBL.reference' | translate }}</dt><dd>{{ o.reference || '—' }}</dd></div>
+                <div><dt>{{ 'BQDL.beneficiaire' | translate }}</dt><dd>{{ o.nomBeneficiaire || '—' }}</dd></div>
+                <div><dt>{{ 'BQDL.compteADebiter' | translate }}</dt><dd>{{ o.compteADebiter || '—' }}</dd></div>
+                <div><dt>{{ 'TBL.bank' | translate }}</dt><dd>{{ o.bo || '—' }}<ng-container *ngIf="o.banqueCorrigee"> → {{ o.banqueCorrigee }}</ng-container></dd></div>
+                <div><dt>{{ 'BQDL.modePaiement' | translate }}</dt><dd>{{ o.modePaiement || '—' }}</dd></div>
+                <div><dt>{{ 'BQDL.idGlpi' | translate }}</dt><dd>{{ o.idGlpi || '—' }}</dd></div>
+                <div><dt>{{ 'BQDL.statut' | translate }}</dt><dd>{{ o.statut || '—' }}<ng-container *ngIf="o.traitement"> · {{ o.traitement }}</ng-container></dd></div>
+                <div><dt>{{ 'BQDL.reconciliation' | translate }}</dt><dd>{{ o.reconStatus || '—' }}</dd></div>
+                <div><dt>{{ 'BQDL.demandeurValideur' | translate }}</dt><dd>{{ o.demandeur || '—' }} / {{ o.valideur || '—' }}</dd></div>
+                <div class="dl-grid-full" *ngIf="o.commentaire"><dt>{{ 'BQDL.commentaire' | translate }}</dt><dd>{{ o.commentaire }}</dd></div>
+              </dl>
+            </ng-container>
+
+            <ng-container *ngIf="l.releve as r">
+              <div class="dl-card-head">
+                <span class="ds-badge ds-badge--tone-neutral"><i class="fas fa-file-invoice-dollar"></i> {{ 'BQDL.releve' | translate }} #{{ r.id }}</span>
+                <strong class="dl-card-libelle" [title]="r.libelle || ''">{{ r.libelle || '—' }}</strong>
+                <span class="dl-card-amount">
+                  {{ l.montant | number:'1.0-2':'fr' }}
+                  <span class="dl-sens">{{ (sensReleve(r)==='debit' ? 'BQ.ReconResultDebit' : 'BQ.ReconResultCredit') | translate }}</span>
+                </span>
+              </div>
+              <dl class="dl-grid">
+                <div><dt>{{ 'BQDL.dateComptable' | translate }}</dt><dd>{{ r.dateComptable | date:'dd/MM/yyyy' }}</dd></div>
+                <div><dt>{{ 'TBL.valueDate' | translate }}</dt><dd>{{ r.dateValeur | date:'dd/MM/yyyy' }}</dd></div>
+                <div><dt>{{ 'BQDL.compte' | translate }}</dt><dd>{{ r.numeroCompte || '—' }}<ng-container *ngIf="r.nomCompte"> · {{ r.nomCompte }}</ng-container></dd></div>
+                <div><dt>{{ 'TBL.bank' | translate }}</dt><dd>{{ r.banque || '—' }}<ng-container *ngIf="r.pays"> ({{ r.pays }})</ng-container></dd></div>
+                <div><dt>{{ 'BQ.ReconResultDebit' | translate }}</dt><dd>{{ r.debit ? (r.debit | number:'1.0-2':'fr') : '—' }}</dd></div>
+                <div><dt>{{ 'BQ.ReconResultCredit' | translate }}</dt><dd>{{ r.credit ? (r.credit | number:'1.0-2':'fr') : '—' }}</dd></div>
+                <div><dt>{{ 'BQDL.devise' | translate }}</dt><dd>{{ r.devise || '—' }}</dd></div>
+                <div><dt>{{ 'BQDL.numeroCheque' | translate }}</dt><dd>{{ r.numeroCheque || '—' }}</dd></div>
+                <div><dt>{{ 'BQDL.reconciliation' | translate }}</dt><dd>{{ r.reconStatus || '—' }}</dd></div>
+                <div class="dl-grid-full" *ngIf="r.commentaire"><dt>{{ 'BQDL.commentaire' | translate }}</dt><dd>{{ r.commentaire }}</dd></div>
+              </dl>
+            </ng-container>
+
+            <div class="dl-empty" *ngIf="!l.operation && !l.releve">
+              <i class="fas fa-ban"></i> {{ 'BQDL.ligneSupprimee' | translate: { p0: (l.typeLigne==='OPERATION' ? ('BQDL.operation' | translate) : ('BQDL.releve' | translate)), p1: l.ligneId } }}
+            </div>
+          </div>
+        </section>
+      </ng-container>
+    </div>
+
+    <div class="dl-footer" *ngIf="detail as d">
+      <button type="button" class="ds-btn ds-btn--danger" (click)="deleteDossier(d.dossier)"><i class="fas fa-trash"></i> {{ 'BQDL.supprimerDossier' | translate }}</button>
+      <span class="dl-spacer"></span>
+      <button type="button" class="ds-btn ds-btn--secondary" (click)="closeDetail()">{{ 'COMMON.actions.close' | translate }}</button>
+      <button type="button" class="ds-btn ds-btn--primary" (click)="editDossier(d)"><i class="fas fa-edit"></i> {{ 'BQDL.modifier' | translate }}</button>
+    </div>
+  </div>
+</div>
+
+<!-- ===== Liste des dossiers liés ===== -->
+<div class="dl-overlay" *ngIf="showList" (click)="closeList()">
+  <div class="dl-popup" (click)="$event.stopPropagation()" role="dialog" aria-modal="true" aria-labelledby="dlListTitle">
+    <div class="dl-header">
+      <h2 id="dlListTitle"><i class="fas fa-folder-tree"></i> {{ 'BQDL.titreListe' | translate }}</h2>
+      <button type="button" class="dl-close" (click)="closeList()" [attr.aria-label]="'COMMON.actions.close' | translate"><i class="fas fa-times"></i></button>
+    </div>
+    <div class="dl-content">
+      <input class="ds-input dl-list-filter" type="search" [(ngModel)]="listFilter" placeholder="{{ 'BQ.Recherche' | translate }}">
+      <div class="dl-empty" *ngIf="!dossiersFiltres.length">{{ 'BQDL.aucunDossier' | translate }}</div>
+      <table class="ds-table ds-table--compact" *ngIf="dossiersFiltres.length">
+        <thead>
+          <tr>
+            <th>{{ 'BQDL.libelle' | translate }}</th>
+            <th class="dl-num">{{ 'BQDL.nbOperations' | translate }}</th>
+            <th class="dl-num">{{ 'BQDL.nbReleves' | translate }}</th>
+            <th>{{ 'BQDL.creeLe' | translate }}</th>
+            <th></th>
+          </tr>
+        </thead>
+        <tbody>
+          <tr *ngFor="let d of dossiersFiltres">
+            <td>{{ d.libelle }}<div class="dl-sub" *ngIf="d.commentaire">{{ d.commentaire }}</div></td>
+            <td class="dl-num">{{ compter(d, 'OPERATION') }}</td>
+            <td class="dl-num">{{ compter(d, 'RELEVE') }}</td>
+            <td>{{ d.createdAt | date:'dd/MM/yyyy HH:mm' }}<div class="dl-sub">{{ d.createdBy }}</div></td>
+            <td><button type="button" class="ds-btn ds-btn--secondary ds-btn--sm" (click)="openDetail(d.id)"><i class="fas fa-eye"></i> {{ 'BQDL.details' | translate }}</button></td>
+          </tr>
+        </tbody>
+      </table>
+    </div>
+  </div>
+</div>
+
+<!-- Synthèse du préfinancement (édition en direct et détail) -->
+<ng-template #syntheseTpl let-s>
+  <div class="ds-kpi-strip dl-kpis">
+    <div class="ds-kpi-strip__item">
+      <span class="ds-kpi-strip__label">{{ 'BQDL.roles.APPRO' | translate }}</span>
+      <span class="ds-kpi-strip__value">{{ s.appro | number:'1.0-2':'fr' }}</span>
+      <span class="dl-kpi-sub" [class.dl-kpi-sub--ko]="s.ecartAppro !== 0">{{ 'BQDL.contrepartie' | translate }} {{ s.approContrepartie | number:'1.0-2':'fr' }}<ng-container *ngIf="s.ecartAppro !== 0"> · {{ 'BQDL.ecart' | translate }} {{ s.ecartAppro | number:'1.0-2':'fr' }}</ng-container></span>
+    </div>
+    <span class="ds-kpi-strip__sep"></span>
+    <div class="ds-kpi-strip__item">
+      <span class="ds-kpi-strip__label">{{ 'BQDL.roles.REMBOURSEMENT' | translate }}</span>
+      <span class="ds-kpi-strip__value">{{ s.remboursement | number:'1.0-2':'fr' }}</span>
+      <span class="dl-kpi-sub" [class.dl-kpi-sub--ko]="s.ecartRemboursement !== 0">{{ 'BQDL.contrepartie' | translate }} {{ s.remboursementContrepartie | number:'1.0-2':'fr' }}<ng-container *ngIf="s.ecartRemboursement !== 0"> · {{ 'BQDL.ecart' | translate }} {{ s.ecartRemboursement | number:'1.0-2':'fr' }}</ng-container></span>
+    </div>
+    <span class="ds-kpi-strip__sep"></span>
+    <div class="ds-kpi-strip__item">
+      <span class="ds-kpi-strip__label">{{ 'BQDL.montantUtilise' | translate }}</span>
+      <span class="ds-kpi-strip__value">{{ s.montantUtilise | number:'1.0-2':'fr' }}</span>
+      <span class="dl-kpi-sub">{{ 'BQDL.montantUtiliseHint' | translate }}</span>
+    </div>
+    <span class="ds-kpi-strip__sep"></span>
+    <div class="ds-kpi-strip__item">
+      <span class="ds-kpi-strip__label">{{ 'BQDL.totalFrais' | translate }}</span>
+      <span class="ds-kpi-strip__value">{{ s.totalFrais | number:'1.0-2':'fr' }}</span>
+      <span class="dl-kpi-sub">{{ 'BQDL.fraisDetail' | translate: { p0: (s.fraisAppro | number:'1.0-2':'fr'), p1: (s.fraisRemboursement | number:'1.0-2':'fr') } }}</span>
+    </div>
+  </div>
+</ng-template>

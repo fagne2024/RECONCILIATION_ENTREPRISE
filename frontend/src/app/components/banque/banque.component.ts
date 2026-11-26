@@ -1,6 +1,6 @@
 import { MatAutocompleteModule } from '@angular/material/autocomplete';
 import { AppStateService } from '../../services/app-state.service';
-import { Component, OnInit, inject } from '@angular/core';
+import { Component, OnInit, ViewChild, inject } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { FormsModule, ReactiveFormsModule } from '@angular/forms';
 import { Router } from '@angular/router';
@@ -28,6 +28,9 @@ import { MatFormFieldModule } from '@angular/material/form-field';
 import { MatSelectModule } from '@angular/material/select';
 import { NgxMatSelectSearchModule } from 'ngx-mat-select-search';
 import { I18nService } from '../../services/i18n/i18n.service';
+import { BanqueDossierLieComponent } from '../banque-dossier-lie/banque-dossier-lie.component';
+import { BanqueDossierLieService } from '../../services/banque-dossier-lie.service';
+import { DossierCandidat, DossierResume, DossierTypeLigne } from '../../utils/banque-dossier-lie.util';
 import { GLPI_TICKET_FORM_URL } from '../../constants/glpi';
 import { TicketEmailService } from '../../services/ticket-email.service';
 
@@ -292,7 +295,7 @@ const SUIVI_COMPENSE_HEADER_ALIASES: Record<string, string> = {
   selector: 'app-banque',
   standalone: true,
   imports: [TranslateModule, CommonModule, FormsModule, ReactiveFormsModule, DsPaginationComponent, FileUploadComponent,
-    MatFormFieldModule, MatSelectModule, NgxMatSelectSearchModule, MatAutocompleteModule],
+    MatFormFieldModule, MatSelectModule, NgxMatSelectSearchModule, MatAutocompleteModule, BanqueDossierLieComponent],
   templateUrl: './banque.component.html',
   styleUrls: ['./banque.component.scss']
 })
@@ -1319,6 +1322,82 @@ export class BanqueComponent implements OnInit {
       this.popupService.showSuccess(I18nService.t('BQ.bulkCommentOk', { p0: faits.size }));
       this.bulkCommentDraft[source] = '';
     }
+  }
+
+  // ----- Dossiers liés : opérations + relevés d'une même opération métier (appro, frais, remboursement…) -----
+  @ViewChild(BanqueDossierLieComponent) dossiersLies?: BanqueDossierLieComponent;
+  readonly dossierLieService = inject(BanqueDossierLieService);
+  /** Paires du résultat de réconciliation cochées pour être liées en dossier. */
+  selectedResultPairKeys = new Set<string>();
+
+  /** Dossier auquel appartient une ligne (badge cliquable dans les tableaux). */
+  dossierDe(type: DossierTypeLigne, id: number | null | undefined): DossierResume | null {
+    return this.dossierLieService.dossierOf(type, id);
+  }
+
+  ouvrirDossier(d: DossierResume | null, event?: Event): void {
+    event?.stopPropagation();
+    if (d) this.dossiersLies?.openDetail(d.id);
+  }
+
+  ouvrirListeDossiers(): void {
+    this.dossiersLies?.openList();
+  }
+
+  toggleResultPairSelection(p: ReconResultPair): void {
+    if (this.selectedResultPairKeys.has(p.key)) this.selectedResultPairKeys.delete(p.key); else this.selectedResultPairKeys.add(p.key);
+  }
+
+  get allPagedResultPairsSelected(): boolean {
+    const page = this.pagedReconResultPairs;
+    return page.length > 0 && page.every(p => this.selectedResultPairKeys.has(p.key));
+  }
+
+  toggleAllPagedResultPairs(): void {
+    const all = this.allPagedResultPairsSelected;
+    this.pagedReconResultPairs.forEach(p => all ? this.selectedResultPairKeys.delete(p.key) : this.selectedResultPairKeys.add(p.key));
+  }
+
+  /** Nombre de lignes sélectionnées (toutes vues confondues) qui seront proposées dans le dossier. */
+  get nbLignesALier(): number {
+    return this.candidatsDossier().length;
+  }
+
+  /**
+   * Ouvre la création d'un dossier lié avec toutes les lignes sélectionnées : paires du résultat de
+   * réconciliation (opération + relevé en face), opérations (réconciliation et liste principale) et relevés.
+   */
+  lierSelectionEnDossier(): void {
+    const candidats = this.candidatsDossier();
+    if (!candidats.length) { this.popupService.showWarning(I18nService.t('BQDL.aucuneSelection')); return; }
+    this.dossiersLies?.openEditor(candidats);
+  }
+
+  private candidatsDossier(): DossierCandidat[] {
+    const res: DossierCandidat[] = [];
+    (this.reconResultPairs || []).filter(p => this.selectedResultPairKeys.has(p.key)).forEach(p => {
+      const opId = p.op && p.op.source !== 'generale' ? (p.op.id as number) : null;
+      if (opId != null) res.push({ typeLigne: 'OPERATION', op: p.op as any, pairOpId: opId });
+      if (p.rev?.id != null) res.push({ typeLigne: 'RELEVE', rev: p.rev, pairOpId: opId });
+    });
+    const opIds = new Set<number>([...this.selectedOpIds, ...this.selectedMainOpIds]);
+    this.opsParIds(Array.from(opIds)).forEach(op => res.push({ typeLigne: 'OPERATION', op: op as any }));
+    if (this.selectedReleveIds.size) {
+      const revById = new Map<number, ReleveBancaireRow>();
+      [...(this.releveAllRows || []), ...(this.releveRows || [])].forEach(r => { if (r.id != null) revById.set(r.id, r); });
+      this.selectedReleveIds.forEach(id => { const r = revById.get(id); if (r) res.push({ typeLigne: 'RELEVE', rev: r }); });
+    }
+    const vus = new Set<string>();
+    return res.filter(c => {
+      const k = `${c.typeLigne}:${c.typeLigne === 'OPERATION' ? c.op?.id : c.rev?.id}`;
+      if (vus.has(k)) return false;
+      vus.add(k);
+      return true;
+    });
+  }
+
+  onDossiersLiesChanged(): void {
+    this.selectedResultPairKeys.clear();
   }
 
   async bulkDeleteSelectedReleve() {

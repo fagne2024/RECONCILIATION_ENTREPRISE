@@ -7,6 +7,7 @@ import { EnvironmentInjector } from '@angular/core';
 import { TestBed } from '@angular/core/testing';
 import { BanqueComponent } from './banque.component';
 import { SuiviCompenseOpService } from '../../services/suivi-compense-op.service';
+import { BanqueDossierLieService } from '../../services/banque-dossier-lie.service';
 
 /** Une ligne sans vis-à-vis commentée (hors SUSPENS_*) passe dans les correspondances. */
 describe('BanqueComponent - correspondances par commentaire', () => {
@@ -14,7 +15,7 @@ describe('BanqueComponent - correspondances par commentaire', () => {
   let comp: any;
 
   beforeEach(() => {
-    TestBed.configureTestingModule({ providers: [{ provide: SuiviCompenseOpService, useValue: {} }] });
+    TestBed.configureTestingModule({ providers: [{ provide: SuiviCompenseOpService, useValue: {} }, { provide: BanqueDossierLieService, useValue: { dossierOf: () => null } }] });
     comp = TestBed.inject(EnvironmentInjector)
       .runInContext(() => new BanqueComponent(stub, stub, stub, stub, stub, stub, stub, stub, stub, stub, stub, stub));
   });

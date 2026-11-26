@@ -7,6 +7,7 @@ import { EnvironmentInjector } from '@angular/core';
 import { TestBed } from '@angular/core/testing';
 import { BanqueComponent } from './banque.component';
 import { SuiviCompenseOpService } from '../../services/suivi-compense-op.service';
+import { BanqueDossierLieService } from '../../services/banque-dossier-lie.service';
 
 /** Appariement prioritaire référence de l'opération ↔ libellé du relevé (étape 1 de la réconciliation). */
 describe('BanqueComponent - appariement par référence', () => {
@@ -14,7 +15,7 @@ describe('BanqueComponent - appariement par référence', () => {
   let comp: any;
 
   beforeEach(() => {
-    TestBed.configureTestingModule({ providers: [{ provide: SuiviCompenseOpService, useValue: {} }] });
+    TestBed.configureTestingModule({ providers: [{ provide: SuiviCompenseOpService, useValue: {} }, { provide: BanqueDossierLieService, useValue: { dossierOf: () => null } }] });
     // Un champ du composant utilise inject() : construction dans un contexte d'injection (Angular 14.1+)
     comp = TestBed.inject(EnvironmentInjector)
       .runInContext(() => new BanqueComponent(stub, stub, stub, stub, stub, stub, stub, stub, stub, stub, stub, stub));
