@@ -4,7 +4,7 @@ import { SharedUiModule } from '../../shared/shared-ui.module';
 import { CdkDragDrop, moveItemInArray } from '@angular/cdk/drag-drop';
 import { FormBuilder, FormGroup, Validators, FormArray, FormControl } from '@angular/forms';
 import { PAYS_TRAITEMENT_PAR_DEFAUT } from '../../services/pays.service';
-import { AutoProcessingService, AutoProcessingModel, DEFAULT_PRE_PROCESSING_SECTION_ORDER, ENV_COLUMN_NAME, ENV_COLUMN_OPTIONS, EnvColumnOption, ModelColumnMathRule, ModelFormatAction, ModelFormatActionType, ModelFormatColumnSettings, ModelPreProcessingConfig, ModelPreProcessingSectionId, ModelRowFilter, ModelColumnValueMapping, ModelColumnConcatRule, ModelColumnRenameRule, ModelCrossDedupRule, resolvePreProcessingSectionOrder, ModelEnvColumnConfig, ModelPaysColumnConfig, PAYS_COLUMN_NAME, ModelExportColumnFilterConfig, PartnerConditionalKeyRule, PartnerConditionalKeysConfig, BoConditionalKeysConfig, BoModelReconciliationConfig, ModelRowFilterConditionOperator, ModelRowFilterValueCondition, TrxboOppartConfig, TrxboRegularisationRule, TrxboRegularisationComponent, TrxboAggregationType } from '../../services/auto-processing.service';
+import { AutoProcessingService, AutoProcessingModel, DEFAULT_PRE_PROCESSING_SECTION_ORDER, ENV_COLUMN_NAME, ENV_COLUMN_OPTIONS, EnvColumnOption, ModelColumnMathRule, COLUMN_MATH_OPERATIONS, ModelFormatAction, ModelFormatActionType, ModelFormatColumnSettings, ModelPreProcessingConfig, ModelPreProcessingSectionId, ModelRowFilter, ModelColumnValueMapping, ModelColumnConcatRule, ModelColumnRenameRule, ModelCrossDedupRule, resolvePreProcessingSectionOrder, ModelEnvColumnConfig, ModelPaysColumnConfig, PAYS_COLUMN_NAME, ModelExportColumnFilterConfig, PartnerConditionalKeyRule, PartnerConditionalKeysConfig, BoConditionalKeysConfig, BoModelReconciliationConfig, ModelRowFilterConditionOperator, ModelRowFilterValueCondition, TrxboOppartConfig, TrxboRegularisationRule, TrxboRegularisationComponent, TrxboAggregationType } from '../../services/auto-processing.service';
 import { FileWatcherService } from '../../services/file-watcher.service';
 import { AppStateService } from '../../services/app-state.service';
 import { ModelManagementService } from '../../services/model-management.service';
@@ -5576,7 +5576,7 @@ export class AutoProcessingModelsComponent implements OnInit {
       sourceColumnA: rule.sourceColumnA || '',
       sourceColumnB: rule.sourceColumnB || '',
       targetColumn: rule.targetColumn || '',
-      operation: rule.operation === 'subtract' ? 'subtract' : 'add',
+      operation: COLUMN_MATH_OPERATIONS.includes(rule.operation) ? rule.operation : 'add',
       enabled: rule.enabled !== false
     }));
 

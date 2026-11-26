@@ -183,3 +183,30 @@ export function formatOutputDateTime(val: unknown): unknown {
     }
     return val;
 }
+
+/**
+ * Date compacte sans séparateurs → date lisible :
+ * AAAAMMJJHHMMSS (14 chiffres) → « AAAA-MM-JJ HH:MM:SS », AAAAMMJJHHMM (12) → « AAAA-MM-JJ HH:MM:00 »,
+ * AAAAMMJJ (8) → « AAAA-MM-JJ ». Équivaut à la formule Excel
+ * TEXTE(STXT(G2;1;4)&"-"&STXT(G2;5;2)&…;"aaaa-mm-jj hh:mm:ss").
+ * Accepte un « .0 » final et le format texte Excel ="…". Valeur non reconnue ou date
+ * impossible (ex. 20260231) : renvoyée telle quelle.
+ */
+export function formatCompactDateTime(val: unknown): unknown {
+    if (val === undefined || val === null || val === '') return val;
+    let str = String(val).trim();
+    const texteExcel = /^="(.*)"$/.exec(str);
+    if (texteExcel) str = texteExcel[1].trim();
+    if (str.endsWith('.0')) str = str.slice(0, -2);
+    const m = /^(\d{4})(\d{2})(\d{2})(?:(\d{2})(\d{2})(\d{2})?)?$/.exec(str);
+    if (!m) return val;
+    const [, y, mo, d, h, mi, s] = m;
+    const year = Number(y), month = Number(mo), day = Number(d);
+    const jourValide = month >= 1 && month <= 12 && day >= 1
+        && day <= new Date(year, month, 0).getDate();
+    if (!jourValide) return val;
+    if (h === undefined) return `${y}-${mo}-${d}`;
+    const sec = s ?? '00';
+    if (Number(h) > 23 || Number(mi) > 59 || Number(sec) > 59) return val;
+    return `${y}-${mo}-${d} ${h}:${mi}:${sec}`;
+}

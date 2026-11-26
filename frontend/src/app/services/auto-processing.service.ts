@@ -273,8 +273,29 @@ export interface ModelColumnMathRule {
   sourceColumnA: string;
   sourceColumnB: string;
   targetColumn: string;
-  operation: 'add' | 'subtract';
+  operation: ColumnMathOperation;
   enabled: boolean;
+}
+
+/** Opérations entre deux colonnes : + − × ÷ (division par zéro → cellule vide). */
+export type ColumnMathOperation = 'add' | 'subtract' | 'multiply' | 'divide';
+
+export const COLUMN_MATH_OPERATIONS: readonly ColumnMathOperation[] = ['add', 'subtract', 'multiply', 'divide'];
+
+export const COLUMN_MATH_OPERATORS: Record<ColumnMathOperation, string> = {
+  add: '+',
+  subtract: '−',
+  multiply: '×',
+  divide: '÷'
+};
+
+export function computeColumnMath(operation: ColumnMathOperation, a: number, b: number): number {
+  switch (operation) {
+    case 'subtract': return a - b;
+    case 'multiply': return a * b;
+    case 'divide': return b === 0 ? NaN : a / b;
+    default: return a + b;
+  }
 }
 
 export interface ModelColumnValueMapping {

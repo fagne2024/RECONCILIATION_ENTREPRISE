@@ -2586,6 +2586,23 @@
         <button type="button" (click)="applyRemoveZeroDecimalsFormatting()" [disabled]="!formatSelections['removeZeroDecimals'].length" class="ds-btn ds-btn--secondary">{{ 'ACT.apply' | translate }}</button>
       </div>
 
+      <!-- Option : Date compacte AAAAMMJJHHMMSS → AAAA-MM-JJ HH:MM:SS -->
+      <label>
+        <input type="checkbox" [(ngModel)]="formatOptions['compactDate']" class="ds-checkbox">{{ 'TRT.DateCompacte' | translate }}</label>
+      <div *ngIf="formatOptions['compactDate']" class="format-columns">
+        <label>{{ 'LBL.columnsToProcess' | translate }}</label>
+        <select multiple [(ngModel)]="formatSelections['compactDate']" class="ds-select">
+          <option *ngFor="let col of columns" [value]="col">{{ col }}</option>
+        </select>
+        <div class="remove-zero-decimals-help">
+          <small class="help-text">{{ 'TRT.DateCompacteAide' | translate }}
+            <br><strong>{{ 'TRT.Exemple' | translate }}</strong> "20261124220323" → "2026-11-24 22:03:23"
+            <br><strong>{{ 'TRT.AutresExemples' | translate }}</strong> "202611242203" → "2026-11-24 22:03:00", "20261124" → "2026-11-24"
+            <br><strong>{{ 'TRT.Note' | translate }}</strong>{{ 'TRT.DateCompacteNote' | translate }}</small>
+        </div>
+        <button type="button" (click)="applyCompactDateFormatting()" [disabled]="!formatSelections['compactDate'].length" class="ds-btn ds-btn--secondary">{{ 'ACT.apply' | translate }}</button>
+      </div>
+
       <!-- Option : Supprimer les espaces -->
       <label>
         <input type="checkbox" [(ngModel)]="formatOptions['removeSpaces']" class="ds-checkbox">{{ 'TRT.SupprimerLesEspaces' | translate }}</label>

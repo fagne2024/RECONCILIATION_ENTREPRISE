@@ -115,6 +115,7 @@ import { firstValueFrom } from 'rxjs';
 import { PaysService, PAYS_TRAITEMENT_PAR_DEFAUT } from '../../services/pays.service';
 import { ENV_COLUMN_NAME, ENV_COLUMN_OPTIONS, PAYS_COLUMN_NAME } from '../../services/auto-processing.service';
 import { countryIsoCode } from '../../utils/country-codes.util';
+import { formatCompactDateTime } from '../../utils/date-format.util';
 @Component({
   selector: 'app-traitement',
   templateUrl: './traitement.component.html',
@@ -156,6 +157,7 @@ export class TraitementComponent implements OnInit, AfterViewInit, OnDestroy {
     removeDecimals: false,
     keepLastDigits: false,
     removeZeroDecimals: false,
+    compactDate: false,
     removeSpaces: false
   };
   extractCol: string = '';
@@ -382,6 +384,7 @@ export class TraitementComponent implements OnInit, AfterViewInit, OnDestroy {
     removeDecimals: [],
     keepLastDigits: [],
     removeZeroDecimals: [],
+    compactDate: [],
     removeSpaces: []
   };
 
@@ -3070,7 +3073,7 @@ End Sub`;
   }
 
   hasFormattingOption(): boolean {
-    return this.formatOptions.removeCharacters || this.formatOptions.removeNumbers || this.formatOptions.removeIndicatif || this.formatOptions.removeDecimals || this.formatOptions.keepLastDigits || this.formatOptions.removeZeroDecimals || this.formatOptions.removeSpaces;
+    return this.formatOptions.removeCharacters || this.formatOptions.removeNumbers || this.formatOptions.removeIndicatif || this.formatOptions.removeDecimals || this.formatOptions.keepLastDigits || this.formatOptions.removeZeroDecimals || this.formatOptions.compactDate || this.formatOptions.removeSpaces;
   }
 
   hasHeaderFormattingOption(): boolean {
@@ -3190,6 +3193,9 @@ End Sub`;
     }
     if (this.formatOptions.removeZeroDecimals) {
       this.applyRemoveZeroDecimalsFormatting();
+    }
+    if (this.formatOptions.compactDate) {
+      this.applyCompactDateFormatting();
     }
     if (this.formatOptions.removeSpaces) {
       this.applyRemoveSpacesFormatting();
@@ -6662,6 +6668,42 @@ End Sub`;
       this.cd.detectChanges();
     } catch (error) {
       this.showError('format', this.t('TRT.msg.removeDotZeroError'));
+    }
+  }
+
+  /**
+   * Date compacte AAAAMMJJHHMMSS (ex. 20261124220323) → « AAAA-MM-JJ HH:MM:SS »
+   * (équivalent de la formule Excel TEXTE(STXT(…);"aaaa-mm-jj hh:mm:ss")).
+   */
+  applyCompactDateFormatting() {
+    if (this.bloqueSiServeur('format')) return;
+    const colonnes = this.formatSelections['compactDate'];
+    if (!colonnes.length) {
+      this.showError('format', this.t('TRT.msg.selectAtLeastOneColumn'));
+      return;
+    }
+    try {
+      let modifiees = 0;
+      const convertir = (row: any, compter: boolean) => {
+        for (const col of colonnes) {
+          const avant = row[col];
+          if (avant === undefined || avant === null || avant === '') continue;
+          const apres = formatCompactDateTime(avant);
+          if (apres !== avant) {
+            row[col] = apres;
+            if (compter) modifiees++;
+          }
+        }
+      };
+      this.combinedRows.mutateEach(row => convertir(row, true));
+      if (!this.selectionApplied) {
+        this.allRows.mutateEach(row => convertir(row, false));
+      }
+      this.showSuccess('format', I18nService.t('TRT.msg.dateCompacteAppliquee', { p0: colonnes.length, p1: modifiees }));
+      this.updateDisplayedRowsForPage();
+      this.cd.detectChanges();
+    } catch (error) {
+      this.showError('format', this.t('TRT.msg.dateCompacteErreur'));
     }
   }
 

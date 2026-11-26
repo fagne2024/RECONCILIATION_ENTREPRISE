@@ -16,6 +16,8 @@ import {
   ModelColumnValueMapping,
   ModelColumnConcatRule,
   ModelColumnMathRule,
+  COLUMN_MATH_OPERATORS,
+  computeColumnMath,
   ModelColumnRenameRule,
   matchesConditionValues,
   parseConditionValues
@@ -647,7 +649,7 @@ export class ModelPreProcessingService {
       const rawB = keyB ? row[keyB] : undefined;
       const valueA = parseAmountValue(rawA);
       const valueB = parseAmountValue(rawB);
-      const result = rule.operation === 'subtract' ? valueA - valueB : valueA + valueB;
+      const result = computeColumnMath(rule.operation, valueA, valueB);
       const before = row[rule.targetColumn];
       row[rule.targetColumn] = this.formatMathResult(result, rawA, rawB);
       if (usage && row[rule.targetColumn] !== before) {
@@ -2140,7 +2142,7 @@ export class ModelPreProcessingService {
       );
     });
     mathRules.forEach(rule => {
-      const operator = rule.operation === 'subtract' ? '−' : '+';
+      const operator = COLUMN_MATH_OPERATORS[rule.operation] ?? '+';
       detailLines.push(
         I18nService.t('MSG.msg.calcul', { p0: rule.sourceColumnA, p1: operator, p2: rule.sourceColumnB, p3: rule.targetColumn })
       );
