@@ -38,6 +38,90 @@ describe('ModelPreProcessingService — conditions ENV et pays du renommage des 
     expect(out.map(r => r['Service'])).toEqual(['CASHIN_OM_BET_CI', 'Cash in', 'Cash in']);
   });
 
+  it('condition évaluée sur les colonnes ENV / PAYS du résultat : pas d’alias (Pays provenance, Country, Devise)', async () => {
+    const out = await run(null, null, [
+      { Service: 'Cash in', ENV: 'BET', 'Pays provenance': 'CI' },
+      { Service: 'Cash in', ENV: 'BET', Country: 'CI' },
+      { Service: 'Cash in', 'Country of origin': 'SN', Devise: 'SN' },
+      { Service: 'Cash in', ENV: 'BET', PAYS: 'CI' }
+    ]);
+    expect(out.map(r => r['Service'])).toEqual(['Cash in', 'Cash in', 'Cash in', 'CASHIN_OM_BET_CI']);
+  });
+
+  it('ENV / PAYS vides dans le résultat : le renommage conditionnel n’est pas appliqué', async () => {
+    const out = await run(null, null, [
+      { Service: 'Cash in', ENV: '  ', PAYS: 'CI' },
+      { Service: 'Cash out', ENV: '' }
+    ]);
+    expect(out.map(r => r['Service'])).toEqual(['Cash in', 'Cash out']);
+  });
+
+  describe('ENV / PAYS produits par une section placée après le renommage des valeurs', () => {
+    const base = (extra: Partial<ModelPreProcessingConfig>) => ({
+      valueMappings: mappings.map(m => ({ ...m })),
+      ...extra
+    } as ModelPreProcessingConfig);
+
+    it('renommage d’en-tête Country → PAYS (ordre par défaut) : condition lue sur le PAYS du résultat', async () => {
+      const cfg = base({
+        columnRenameRules: [
+          { id: 'r1', sourceColumn: 'Country', targetColumn: 'PAYS', enabled: true },
+          { id: 'r2', sourceColumn: 'Environnement', targetColumn: 'ENV', enabled: true }
+        ]
+      });
+      const out = await service.applyPreProcessingAsync([
+        { Service: 'Cash in', Environnement: 'BET', Country: 'CI' },
+        { Service: 'Cash in', Environnement: 'BET', Country: 'ML' },
+        { Service: 'Cash in', Environnement: 'BET' },
+        { Service: 'Cash out', Environnement: 'HT', Country: 'CI' }
+      ], cfg, {});
+      expect(out.map(r => r['Service'])).toEqual(['CASHIN_OM_BET_CI', 'Cash in', 'Cash in', 'CASHOUT_HT']);
+      expect(out.every(r => Object.keys(r).every(k => !k.startsWith('__')))).toBe(true);
+    });
+
+    it('même résultat avec le traitement synchrone', () => {
+      const cfg = base({
+        columnRenameRules: [{ id: 'r1', sourceColumn: 'Country', targetColumn: 'PAYS', enabled: true }]
+      });
+      const out = service.applyPreProcessing([
+        { Service: 'Cash in', Country: 'SN' },
+        { Service: 'Cash in', Country: 'CI' }
+      ], cfg);
+      expect(out.map(r => r['Service'])).toEqual(['CASHIN_OM_SN', 'Cash in']);
+      expect(Object.keys(out[0])).toEqual(['Service', 'PAYS']);
+    });
+
+    it('la colonne renommée suit aussi un renommage d’en-tête postérieur', async () => {
+      const cfg = base({
+        columnRenameRules: [
+          { id: 'r1', sourceColumn: 'Country', targetColumn: 'PAYS', enabled: true },
+          { id: 'r2', sourceColumn: 'Service', targetColumn: 'Libellé', enabled: true }
+        ]
+      });
+      const out = await service.applyPreProcessingAsync([{ Service: 'Cash in', Country: 'SN' }], cfg, {});
+      expect(out[0]).toEqual({ 'Libellé': 'CASHIN_OM_SN', PAYS: 'SN' });
+    });
+
+    it('PAYS retiré du résultat (source d’une concaténation) : renommage non appliqué', async () => {
+      const cfg = base({
+        columnConcatRules: [{ id: 'c1', sourceColumns: ['PAYS', 'Ref'], targetColumn: 'Clé', separator: '-', enabled: true }]
+      });
+      const out = await service.applyPreProcessingAsync([{ Service: 'Cash in', PAYS: 'SN', Ref: '1' }], cfg, {});
+      expect(out[0]['Service']).toBe('Cash in');
+      expect(out[0]['PAYS']).toBeUndefined();
+    });
+
+    it('PAYS choisi avant le traitement : pas d’attente, la valeur choisie est celle du résultat', async () => {
+      const cfg = base({
+        paysColumn: { enabled: true, value: 'SN' },
+        columnRenameRules: [{ id: 'r1', sourceColumn: 'Country', targetColumn: 'PAYS', enabled: true }]
+      });
+      const out = await service.applyPreProcessingAsync([{ Service: 'Cash in', Country: 'CI' }], cfg, {});
+      expect(out[0]['Service']).toBe('CASHIN_OM_SN');
+      expect(out[0]['PAYS']).toBe('SN');
+    });
+  });
+
   it('un renommage sans condition ENV / pays s’applique toujours', async () => {
     const cfg = {
       valueMappings: [{ id: 'm', column: 'Service', fromValue: 'A', toValue: 'B', enabled: true }],

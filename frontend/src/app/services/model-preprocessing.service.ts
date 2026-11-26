@@ -104,7 +104,19 @@ export function createPreProcessingUsage(): PreProcessingUsage {
 export interface ValueMappingContext {
   env?: string | null;
   pays?: string | null;
+  /**
+   * Une section exécutée après le renommage des valeurs crée, modifie ou retire la colonne ENV / PAYS :
+   * la condition correspondante ne peut être évaluée qu'en fin de traitement, sur le résultat.
+   */
+  deferEnv?: boolean;
+  deferPays?: boolean;
 }
+
+/**
+ * Colonne technique (retirée en fin de traitement) : renommages en attente de la vérification
+ * ENV / PAYS sur le résultat. Entrées « index du renommage actif \u001f colonne » séparées par \u001e.
+ */
+const PENDING_VALUE_MAPPINGS_KEY = '__RENOMMAGE_ENV_PAYS_EN_ATTENTE__';
 
 @Injectable({
   providedIn: 'root'
@@ -236,6 +248,9 @@ export class ModelPreProcessingService {
     // En dernier (les sections suivantes peuvent encore lire les sources) : après une
     // concaténation, seule la colonne concaténée reste dans le résultat.
     result = this.removeConcatSourceColumns(result, config);
+
+    // Renommages conditionnés par un ENV / PAYS produit après eux : vérifiés sur le résultat final.
+    result = this.applyDeferredValueMappings(result, config, usage);
 
     return normalizeLeadingZeroCellsInRows(result);
   }
@@ -695,8 +710,17 @@ export class ModelPreProcessingService {
         continue;
       }
       const currentValue = row[key] === undefined || row[key] === null ? '' : String(row[key]);
-      if (!this.valueMappingConditionMatches(row, mapping)
-        || !this.valueMappingEnvPaysMatches(row, mapping, context)) {
+      if (!this.valueMappingConditionMatches(row, mapping)) {
+        continue;
+      }
+      const envPays = this.valueMappingEnvPaysMatches(row, mapping, context);
+      if (envPays === 'defer') {
+        const entry = `${activeMappings.indexOf(mapping)}\u001f${key}`;
+        const pending = row[PENDING_VALUE_MAPPINGS_KEY];
+        row[PENDING_VALUE_MAPPINGS_KEY] = pending ? `${pending}\u001e${entry}` : entry;
+        continue;
+      }
+      if (!envPays) {
         continue;
       }
       row[key] = mapping.toValue;
@@ -879,6 +903,7 @@ export class ModelPreProcessingService {
 
     result = this.applyEnvColumnToRows(result, config);
     result = this.applyPaysColumnToRows(result, config);
+    result = this.applyDeferredValueMappings(result, config);
 
     return normalizeLeadingZeroCellsInRows(result);
   }
@@ -1104,17 +1129,134 @@ export class ModelPreProcessingService {
 
   /**
    * ENV / PAYS du traitement (choisis avant le traitement ou fixés par le modèle). Les colonnes ENV et
-   * PAYS ne sont écrites qu'après les sections du modèle : les conditions du renommage lisent donc ces
-   * valeurs, et à défaut la colonne ENV / PAYS déjà présente dans le fichier (ex. « Pays » d'un BO).
+   * PAYS ne sont écrites qu'après les sections du modèle : ce sont pourtant elles qui figureront dans le
+   * résultat, les conditions du renommage lisent donc ces valeurs, et à défaut la colonne ENV / PAYS
+   * déjà présente dans le fichier (ex. « Pays » d'un BO), qui est reprise telle quelle dans le résultat.
    */
   private buildValueMappingContext(config?: ModelPreProcessingConfig | null): ValueMappingContext {
+    const env = this.getActiveEnvColumnValue(config);
+    const pays = this.getActivePaysColumnValue(config);
     return {
-      env: this.getActiveEnvColumnValue(config),
-      pays: this.getActivePaysColumnValue(config)
+      env,
+      pays,
+      deferEnv: !env && this.isColumnChangedAfterValueMappings(config, ENV_COLUMN_NAME),
+      deferPays: !pays && this.isColumnChangedAfterValueMappings(config, PAYS_COLUMN_NAME)
     };
   }
 
+  /**
+   * Une section placée après « Renommer des valeurs » peut créer, modifier ou retirer cette colonne
+   * (renommage d'en-tête, concaténation, calcul, action de format), ou elle est retirée en fin de
+   * traitement comme source d'une concaténation : sa valeur dans le résultat n'est pas encore connue.
+   */
+  private isColumnChangedAfterValueMappings(config: ModelPreProcessingConfig | null | undefined, column: string): boolean {
+    if (!config) {
+      return false;
+    }
+    const probe: Record<string, string> = { [column]: '' };
+    const target = normalizeColumnKey(column);
+    const touches = (name?: string | null): boolean => !!name?.trim()
+      && (normalizeColumnKey(name) === target || resolveColumnKeyInRow(probe, name.trim()) === column);
+
+    const order = this.resolveSectionOrder(config.sectionOrder);
+    const later = new Set(order.slice(order.indexOf('valueMappings') + 1));
+    if (later.has('columnRenameRules')
+      && this.getActiveColumnRenameRules(config.columnRenameRules)
+        .some(rule => touches(rule.sourceColumn) || touches(rule.targetColumn))) {
+      return true;
+    }
+    if (later.has('columnConcatRules')
+      && this.getActiveColumnConcatRules(config.columnConcatRules).some(rule => touches(rule.targetColumn))) {
+      return true;
+    }
+    if (later.has('columnMathRules')
+      && this.getActiveColumnMathRules(config.columnMathRules).some(rule => touches(rule.targetColumn))) {
+      return true;
+    }
+    if (later.has('formatActions')
+      && this.getActiveFormatActions(config).some(action => action.columns.some(touches))) {
+      return true;
+    }
+    return this.getActiveColumnConcatRules(config.columnConcatRules)
+      .some(rule => rule.removeSourceColumns !== false && rule.sourceColumns.some(touches));
+  }
+
+  /**
+   * Applique les renommages mis en attente (ENV / PAYS produits après eux), en vérifiant la condition
+   * sur les colonnes ENV / PAYS du résultat final, puis retire la colonne technique.
+   */
+  private applyDeferredValueMappings(
+    rows: Record<string, string>[],
+    config?: ModelPreProcessingConfig | null,
+    usage?: PreProcessingUsage
+  ): Record<string, string>[] {
+    const activeMappings = this.getActiveValueMappings(config?.valueMappings);
+    if (!rows?.length || !activeMappings.length) {
+      return rows;
+    }
+    const renameRules = this.getActiveColumnRenameRules(config?.columnRenameRules);
+    for (const row of rows) {
+      const pending = row[PENDING_VALUE_MAPPINGS_KEY];
+      if (pending === undefined) {
+        continue;
+      }
+      delete row[PENDING_VALUE_MAPPINGS_KEY];
+      const renamedKeys = new Set<string>();
+      for (const entry of String(pending).split('\u001e')) {
+        const separator = entry.indexOf('\u001f');
+        const mapping = activeMappings[Number(entry.slice(0, separator))];
+        const key = mapping ? this.followColumnRenames(row, entry.slice(separator + 1), renameRules) : null;
+        // Un seul renommage par cellule : le premier (ordre de la liste) dont la condition est remplie.
+        if (!mapping || !key || renamedKeys.has(key) || this.valueMappingEnvPaysMatches(row, mapping) !== true) {
+          continue;
+        }
+        const currentValue = row[key] === undefined || row[key] === null ? '' : String(row[key]);
+        row[key] = mapping.toValue;
+        renamedKeys.add(key);
+        if (usage && mapping.toValue !== currentValue) {
+          usage.used.add(mapping);
+        }
+      }
+    }
+    return rows;
+  }
+
+  /** Nom final d'une colonne après les renommages d'en-tête (null si elle n'est plus dans la ligne). */
+  private followColumnRenames(
+    row: Record<string, string>,
+    column: string,
+    renameRules: ModelColumnRenameRule[]
+  ): string | null {
+    let current = column;
+    if (!Object.prototype.hasOwnProperty.call(row, current)) {
+      for (const rule of renameRules) {
+        if (resolveColumnKeyInRow({ [current]: '' }, rule.sourceColumn) === current) {
+          current = rule.targetColumn.trim();
+        }
+      }
+    }
+    return Object.prototype.hasOwnProperty.call(row, current) ? current : null;
+  }
+
   private resolveFormatActionColumnKeys(
+    sampleRow: Record<string, string>,
+    column: string
+  ): string[] {
+    const keys = this.resolveFormatActionColumnKeysSansVariantes(sampleRow, column);
+    if (!keys.length) {
+      return keys;
+    }
+    // Même colonne présente sous plusieurs écritures (ex. « téléphone client » du fichier et sa copie
+    // « Téléphone client » au nom du modèle) : toutes reçoivent la valeur formatée, sinon l'export,
+    // qui fusionne ces colonnes, peut reprendre la valeur d'origine.
+    const names = new Set(keys.map(key => this.normalizeColumnKey(key)));
+    names.add(this.normalizeColumnKey(column));
+    const variants = Object.keys(sampleRow)
+      .filter(key => !keys.includes(key) && names.has(this.normalizeColumnKey(key)));
+    return variants.length ? [...keys, ...variants] : keys;
+  }
+
+  private resolveFormatActionColumnKeysSansVariantes(
     sampleRow: Record<string, string>,
     column: string
   ): string[] {
@@ -1958,12 +2100,17 @@ export class ModelPreProcessingService {
     return String(row[conditionKey] ?? '') === conditionValue;
   }
 
-  /** Conditions ENV et pays du renommage (vides = toujours vraies ; sans valeur connue = non remplies). */
+  /**
+   * Conditions ENV et pays du renommage, évaluées sur le résultat du modèle : la valeur des colonnes
+   * ENV / PAYS de la ligne produite (écrite par le modèle, sinon colonne ENV / PAYS déjà présente).
+   * Condition vide = toujours vraie ; ENV / PAYS absent ou vide dans le résultat = renommage non appliqué.
+   * Pas de correspondance par alias : « Pays provenance », « Country », « Devise »… ne remplacent pas PAYS.
+   */
   private valueMappingEnvPaysMatches(
     row: Record<string, string>,
     mapping: ModelColumnValueMapping,
     context?: ValueMappingContext
-  ): boolean {
+  ): boolean | 'defer' {
     const matches = (expected: string | undefined, fromContext: string | null | undefined, column: string): boolean => {
       const wanted = (expected ?? '').trim().toUpperCase();
       if (!wanted) {
@@ -1971,13 +2118,32 @@ export class ModelPreProcessingService {
       }
       let actual = (fromContext ?? '').trim();
       if (!actual) {
-        const key = resolveColumnKeyInRow(row, column);
+        const key = this.findResultColumnKey(row, column);
         actual = key ? String(row[key] ?? '').trim() : '';
       }
-      return actual.toUpperCase() === wanted;
+      return actual !== '' && actual.toUpperCase() === wanted;
     };
-    return matches(mapping.envConditionValue, context?.env, ENV_COLUMN_NAME)
-      && matches(mapping.paysConditionValue, context?.pays, PAYS_COLUMN_NAME);
+    const deferEnv = !!context?.deferEnv && !!mapping.envConditionValue?.trim();
+    const deferPays = !!context?.deferPays && !!mapping.paysConditionValue?.trim();
+    if ((!deferEnv && !matches(mapping.envConditionValue, context?.env, ENV_COLUMN_NAME))
+      || (!deferPays && !matches(mapping.paysConditionValue, context?.pays, PAYS_COLUMN_NAME))) {
+      return false;
+    }
+    return deferEnv || deferPays ? 'defer' : true;
+  }
+
+  /** Colonne du résultat portant exactement ce nom (casse / accents / espaces ignorés), sans alias. */
+  private findResultColumnKey(row: Record<string, string>, column: string): string | null {
+    if (Object.prototype.hasOwnProperty.call(row, column)) {
+      return column;
+    }
+    const target = normalizeColumnKey(column);
+    for (const key of Object.keys(row)) {
+      if (normalizeColumnKey(key) === target) {
+        return key;
+      }
+    }
+    return null;
   }
 
   getActiveColumnConcatRules(rules?: ModelColumnConcatRule[] | null): ModelColumnConcatRule[] {
@@ -2129,9 +2295,18 @@ export class ModelPreProcessingService {
     });
     formats.forEach(action => {
       const changedColumns = usage?.formatColumns.get(action);
-      detailLines.push(I18nService.t('MSG.msg.format', {
-        p0: this.describeFormatAction(action, changedColumns ? Array.from(changedColumns) : undefined)
-      }));
+      // Paramètres par colonne (et leur condition) prioritaires sur ceux de l'action : chaque colonne
+      // est décrite avec ce qui lui a réellement été appliqué ; colonnes de même réglage regroupées.
+      const byDescription = new Map<string, string[]>();
+      for (const column of changedColumns ? Array.from(changedColumns) : action.columns) {
+        const key = this.describeFormatAction(this.formatActionAppliedToColumn(action, column), ['\u0000']);
+        byDescription.set(key, [...(byDescription.get(key) ?? []), column]);
+      }
+      byDescription.forEach(columns => {
+        detailLines.push(I18nService.t('MSG.msg.format', {
+          p0: this.describeFormatAction(this.formatActionAppliedToColumn(action, columns[0]), columns)
+        }));
+      });
     });
     concatRules.forEach(rule => {
       const separatorLabel = rule.separator === ' '
@@ -2303,6 +2478,23 @@ export class ModelPreProcessingService {
       default:
         return `${columns}${conditionSuffix}`;
     }
+  }
+
+  /**
+   * Réglages réellement appliqués à une colonne (comme buildFormatActionPlan) : paramètres de la
+   * colonne prioritaires ; sans condition propre à la colonne, celle de l'action s'applique.
+   */
+  private formatActionAppliedToColumn(action: ModelFormatAction, column: string): ModelFormatAction {
+    const merged = this.mergeFormatActionForColumn(action, column);
+    if (this.findFormatColumnSettings(action, column)?.applyConditionEnabled === true) {
+      return merged;
+    }
+    return {
+      ...merged,
+      applyConditionEnabled: action.applyConditionEnabled,
+      conditionColumn: action.conditionColumn,
+      conditionValue: action.conditionValue
+    };
   }
 
   private describeFormatActionCondition(action: ModelFormatAction): string {

@@ -812,13 +812,30 @@ export function mergeBilingualColumnsInRows(
   const groups = groupHeadersByCanonicalId([...allHeaders]);
   const columns = dedupeBilingualColumnNames([...allHeaders], preferredHeaders);
 
+  // Valeur lue d'abord dans la colonne au nom du modèle : c'est elle que le traitement modifie
+  // (format, concaténation, renommage…) quand le fichier a la même colonne sous un autre nom
+  // (ex. « téléphone client » + copie « Téléphone client ») ; l'autre garde la valeur d'origine.
+  const preferredSet = new Set(preferredHeaders);
+  const preferredNorm = new Set(preferredHeaders.map(h => normalizeHeaderForMatch(h)));
+  const rank = (key: string, outputKey: string): number =>
+    preferredSet.has(key) ? 0 : key === outputKey ? 1 : preferredNorm.has(normalizeHeaderForMatch(key)) ? 2 : 3;
+  const readOrder = new Map<string, { outputKey: string; keys: string[] }>();
+  for (const [id, keys] of groups) {
+    const outputKey = pickPreferredBilingualColumn(keys, preferredHeaders);
+    if (outputKey) {
+      readOrder.set(id, {
+        outputKey,
+        keys: keys
+          .map((key, index) => ({ key, index }))
+          .sort((a, b) => rank(a.key, outputKey) - rank(b.key, outputKey) || a.index - b.index)
+          .map(entry => entry.key)
+      });
+    }
+  }
+
   const mergedRows = rows.map(row => {
     const merged: Record<string, string> = {};
-    for (const [id, keys] of groups) {
-      const outputKey = pickPreferredBilingualColumn(keys, preferredHeaders);
-      if (!outputKey) {
-        continue;
-      }
+    for (const { outputKey, keys } of readOrder.values()) {
       let value = '';
       for (const key of keys) {
         const cell = row[key];
