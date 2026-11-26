@@ -246,14 +246,50 @@ public class SuiviCompenseOpImportService {
         Cell c = row.getCell(col);
         if (c == null) return null;
         try {
-            if (c.getCellType() == CellType.NUMERIC && DateUtil.isCellDateFormatted(c)) {
-                return c.getLocalDateTimeCellValue().toLocalDate();
+            CellType type = c.getCellType() == CellType.FORMULA ? c.getCachedFormulaResultType() : c.getCellType();
+            if (type == CellType.NUMERIC) {
+                // Date Excel, avec ou sans format date reconnu (fichier issu du traitement automatique)
+                if (DateUtil.isCellDateFormatted(c)) return c.getLocalDateTimeCellValue().toLocalDate();
+                return fromExcelSerial(c.getNumericCellValue());
             }
-            String s = c.toString().trim();
-            if (s.isEmpty()) return null;
-            if (s.matches("\\d{4}-\\d{2}-\\d{2}.*")) return LocalDate.parse(s.substring(0, 10));
-            if (s.matches("\\d{2}/\\d{2}/\\d{4}")) return LocalDate.parse(s, DateTimeFormatter.ofPattern("dd/MM/yyyy"));
+            return parseDate(c.toString());
         } catch (Exception ignored) { }
         return null;
+    }
+
+    private static final java.util.regex.Pattern DATE_JMA =
+            java.util.regex.Pattern.compile("^(\\d{1,2})[/.\\-](\\d{1,2})[/.\\-](\\d{2}|\\d{4})(?:[ T].*)?$");
+    private static final java.util.regex.Pattern DATE_AMJ =
+            java.util.regex.Pattern.compile("^(\\d{4})[/.\\-](\\d{1,2})[/.\\-](\\d{1,2})(?:[ T].*)?$");
+
+    /**
+     * Date saisie en texte : jj/mm/aaaa (ou jj-mm-aa, jj.mm.aaaa), aaaa-mm-jj, aaaammjj, éventuellement suivie
+     * d'une heure, ou numéro de série Excel (« 46344 », « 46344.0 »). Espaces insécables ignorés.
+     */
+    static LocalDate parseDate(String raw) {
+        if (raw == null) return null;
+        String s = raw.replaceAll("[\u00A0\u202F\uFEFF]", " ").trim();
+        if (s.isEmpty()) return null;
+        try {
+            java.util.regex.Matcher m = DATE_AMJ.matcher(s);
+            if (m.matches()) {
+                return LocalDate.of(Integer.parseInt(m.group(1)), Integer.parseInt(m.group(2)), Integer.parseInt(m.group(3)));
+            }
+            m = DATE_JMA.matcher(s);
+            if (m.matches()) {
+                int annee = Integer.parseInt(m.group(3));
+                if (m.group(3).length() == 2) annee += 2000;
+                return LocalDate.of(annee, Integer.parseInt(m.group(2)), Integer.parseInt(m.group(1)));
+            }
+            if (s.matches("\\d{8}")) return LocalDate.parse(s, DateTimeFormatter.BASIC_ISO_DATE);
+            if (s.matches("\\d{5}(?:[.,]\\d+)?")) return fromExcelSerial(Double.parseDouble(s.replace(',', '.')));
+        } catch (Exception ignored) { }
+        return null;
+    }
+
+    /** Numéro de série Excel (jours depuis le 30/12/1899), limité aux années 1955 à 2119. */
+    private static LocalDate fromExcelSerial(double serial) {
+        if (serial < 20000 || serial > 80000) return null;
+        return LocalDate.of(1899, 12, 30).plusDays((long) Math.floor(serial));
     }
 }

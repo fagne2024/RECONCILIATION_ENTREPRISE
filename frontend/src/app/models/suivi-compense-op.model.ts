@@ -31,6 +31,20 @@ export interface SuiviCompenseOpCreateRequest {
   typeReference: SuiviCompenseReferenceType;
 }
 
+/** Modification d'une ligne : référence modifiable (vide = inchangée). */
+export interface SuiviCompenseOpUpdateRequest {
+  dateOperation: string; // yyyy-MM-dd
+  codeAgence?: string;
+  banque?: string;
+  compteBancaire?: string;
+  montant: number;
+  modePaiement?: string;
+  reference?: string;
+  idTicket?: string;
+  service?: string;
+  reseau?: string;
+}
+
 export interface SuiviCompenseOpUploadResponse {
   totalRead: number;
   saved: number;

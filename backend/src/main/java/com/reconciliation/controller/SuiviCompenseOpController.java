@@ -139,6 +139,64 @@ public class SuiviCompenseOpController {
         return ResponseEntity.status(HttpStatus.CREATED).body(repository.save(e));
     }
 
+    /** Modification d'une ligne (date, agence/service, banque, montant…, référence). */
+    public record UpdateSuiviCompenseRequest(
+            java.time.LocalDate dateOperation, String codeAgence, String banque, String compteBancaire,
+            Double montant, String modePaiement, String reference, String idTicket, String service, String reseau) {}
+
+    /**
+     * Modifie une ligne du suivi (ex. date restée vide à l'import). La référence est modifiable mais doit
+     * rester unique ; vide, l'ancienne est conservée. La clé de doublon est recalculée.
+     */
+    @PutMapping("/{id}")
+    public ResponseEntity<?> update(@PathVariable Long id, @RequestBody UpdateSuiviCompenseRequest req) {
+        var opt = repository.findById(id);
+        if (opt.isEmpty()) return ResponseEntity.notFound().build();
+        if (req == null || req.dateOperation() == null) {
+            return ResponseEntity.badRequest().body(Map.of("error", "La date est obligatoire."));
+        }
+        if (req.montant() == null || req.montant() == 0) {
+            return ResponseEntity.badRequest().body(Map.of("error", "Le montant est obligatoire."));
+        }
+        SuiviCompenseOpEntity e = opt.get();
+        e.setDateOperation(req.dateOperation());
+        e.setCodeAgence(trimToNull(req.codeAgence()));
+        e.setBanque(trimToNull(req.banque()));
+        e.setCompteBancaire(trimToNull(req.compteBancaire()));
+        e.setMontant(req.montant());
+        e.setModePaiement(trimToNull(req.modePaiement()));
+        e.setIdTicket(trimToNull(req.idTicket()));
+        e.setService(trimToNull(req.service()));
+        e.setReseau(trimToNull(req.reseau()));
+        if (SuiviCompenseOpImportService.agenceOuService(e) == null) {
+            return ResponseEntity.badRequest().body(Map.of("error", "Le code agence ou le service est obligatoire."));
+        }
+        String reference = trimToNull(req.reference());
+        if (reference != null) {
+            String norm = com.reconciliation.util.BankingDedupKey.normalizeText(reference);
+            boolean pris = repository.findByReferenceIn(List.of(reference)).stream()
+                    .anyMatch(o -> !o.getId().equals(id)
+                            && norm.equals(com.reconciliation.util.BankingDedupKey.normalizeText(o.getReference())));
+            if (pris) {
+                return ResponseEntity.status(HttpStatus.CONFLICT)
+                        .body(Map.of("error", "La référence " + reference + " existe déjà sur une autre ligne."));
+            }
+            e.setReference(reference);
+        }
+        String ref = e.getReference();
+        e.setDedupKey(ref != null && !ref.isBlank()
+                ? com.reconciliation.util.BankingDedupKey.of("REF", ref)
+                : com.reconciliation.util.BankingDedupKey.of("AMT", e.getDateOperation(),
+                        SuiviCompenseOpImportService.agenceOuService(e), e.getMontant(), e.getBanque()));
+        boolean doublon = repository.findByDedupKeyIn(List.of(e.getDedupKey())).stream()
+                .anyMatch(o -> !o.getId().equals(id));
+        if (doublon) {
+            return ResponseEntity.status(HttpStatus.CONFLICT)
+                    .body(Map.of("error", "Une autre ligne identique existe déjà dans le suivi."));
+        }
+        return ResponseEntity.ok(repository.save(e));
+    }
+
     private static String trimToNull(String value) {
         return value == null || value.isBlank() ? null : value.trim();
     }

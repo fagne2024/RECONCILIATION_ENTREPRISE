@@ -4724,10 +4724,13 @@ export class BanqueComponent implements OnInit {
   showCreateSuiviPopup = false;
   creatingSuivi = false;
   createSuiviForm = this.emptySuiviForm();
+  /** Ligne en cours de modification (null = ajout d'une nouvelle ligne). */
+  editingSuiviId: number | null = null;
 
   private emptySuiviForm() {
     return {
       typeReference: 'COMPENSE' as SuiviCompenseReferenceType,
+      reference: '',
       dateOperation: new Date().toISOString().split('T')[0],
       codeAgence: '',
       banque: '',
@@ -4741,7 +4744,29 @@ export class BanqueComponent implements OnInit {
   }
 
   openCreateSuiviCompense() {
+    this.editingSuiviId = null;
     this.createSuiviForm = this.emptySuiviForm();
+    this.showCreateSuiviPopup = true;
+  }
+
+  /** Modifier une ligne du suivi (ex. date restée vide à l'import) dans le même formulaire que l'ajout. */
+  openEditSuiviCompense(row: SuiviCompenseOp) {
+    if (!row?.id) return;
+    this.editingSuiviId = row.id;
+    const date = row.dateOperation ? String(row.dateOperation).slice(0, 10) : '';
+    this.createSuiviForm = {
+      ...this.emptySuiviForm(),
+      dateOperation: date,
+      reference: row.reference || '',
+      codeAgence: row.codeAgence || '',
+      banque: row.banque || '',
+      compteBancaire: row.compteBancaire || '',
+      montant: row.montant ?? null,
+      modePaiement: row.modePaiement || '',
+      idTicket: row.idTicket || '',
+      service: row.service || '',
+      reseau: row.reseau || ''
+    };
     this.showCreateSuiviPopup = true;
   }
 
@@ -4781,6 +4806,7 @@ export class BanqueComponent implements OnInit {
   saveCreateSuiviCompense() {
     if (!this.isCreateSuiviFormValid() || this.creatingSuivi) return;
     const f = this.createSuiviForm;
+    if (this.editingSuiviId != null) { this.saveEditSuiviCompense(this.editingSuiviId); return; }
     this.creatingSuivi = true;
     this.suiviCompenseService.create({
       typeReference: f.typeReference,
@@ -4802,6 +4828,33 @@ export class BanqueComponent implements OnInit {
       },
       error: (err) => {
         this.popupService.showError('❌ ' + (err?.error?.error || 'Ajout de la ligne impossible'));
+      }
+    });
+  }
+
+  private saveEditSuiviCompense(id: number) {
+    const f = this.createSuiviForm;
+    this.creatingSuivi = true;
+    this.suiviCompenseService.update(id, {
+      dateOperation: f.dateOperation,
+      reference: f.reference.trim() || undefined,
+      codeAgence: f.codeAgence.trim() || undefined,
+      banque: f.banque.trim() || undefined,
+      compteBancaire: f.compteBancaire.trim() || undefined,
+      montant: Number(f.montant),
+      modePaiement: f.modePaiement.trim() || undefined,
+      idTicket: f.idTicket.trim() || undefined,
+      service: f.service.trim() || undefined,
+      reseau: f.reseau.trim() || undefined
+    }).pipe(finalize(() => this.creatingSuivi = false)).subscribe({
+      next: (saved) => {
+        this.showCreateSuiviPopup = false;
+        this.editingSuiviId = null;
+        this.loadSuiviCompense();
+        this.popupService.showSuccess(I18nService.t('BQSUIVI.modifiee', { p0: saved?.reference || '' }));
+      },
+      error: (err) => {
+        this.popupService.showError(err?.error?.error || I18nService.t('BQSUIVI.modificationImpossible'));
       }
     });
   }

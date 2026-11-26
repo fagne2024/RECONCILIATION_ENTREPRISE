@@ -9412,5 +9412,11 @@
       "FRAIS_REMBOURSEMENT": "Fees on returned amount",
       "AUTRE": "Other"
     }
+  },
+  "BQSUIVI": {
+    "titreModification": "Edit clearing OP tracking line",
+    "reference": "Reference",
+    "modifiee": "Line {{p0}} updated.",
+    "modificationImpossible": "Unable to update the line."
   }
 }

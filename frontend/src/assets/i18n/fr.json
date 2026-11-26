@@ -9412,5 +9412,11 @@
       "FRAIS_REMBOURSEMENT": "Frais sur le montant retourné",
       "AUTRE": "Autre"
     }
+  },
+  "BQSUIVI": {
+    "titreModification": "Modifier la ligne du suivi compense OP",
+    "reference": "Référence",
+    "modifiee": "Ligne {{p0}} modifiée.",
+    "modificationImpossible": "Modification de la ligne impossible."
   }
 }

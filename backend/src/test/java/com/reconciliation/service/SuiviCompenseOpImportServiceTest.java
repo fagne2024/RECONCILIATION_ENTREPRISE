@@ -120,4 +120,62 @@ class SuiviCompenseOpImportServiceTest {
         List<String> existing = List.of("GRACE-061126CP1", "grace-061126cp3", "GRACE-061126CP3X", "GRACE-061126AP9");
         assertEquals("GRACE-061126CP4", SuiviCompenseOpImportService.nextReference("GRACE", day, "COMPENSE", existing));
     }
+
+    @Test
+    void lesDatesSontLuesSousToutesLeursFormes() {
+        LocalDate d = LocalDate.of(2026, 11, 18);
+        assertEquals(d, SuiviCompenseOpImportService.parseDate("18/11/2026"));
+        assertEquals(d, SuiviCompenseOpImportService.parseDate(" 18/11/2026 00:00:00 "));
+        assertEquals(d, SuiviCompenseOpImportService.parseDate("18-11-26"));
+        assertEquals(d, SuiviCompenseOpImportService.parseDate("18.11.2026"));
+        assertEquals(LocalDate.of(2026, 11, 8), SuiviCompenseOpImportService.parseDate("8/11/2026"));
+        assertEquals(d, SuiviCompenseOpImportService.parseDate("2026-11-18T00:00:00"));
+        assertEquals(d, SuiviCompenseOpImportService.parseDate("20261118"));
+        // Numéro de série Excel (date exportée sans format date)
+        assertEquals(d, SuiviCompenseOpImportService.parseDate("46344"));
+        assertEquals(d, SuiviCompenseOpImportService.parseDate("46344.0"));
+        assertNull(SuiviCompenseOpImportService.parseDate("31/02/2026"));
+        assertNull(SuiviCompenseOpImportService.parseDate("Virement"));
+        assertNull(SuiviCompenseOpImportService.parseDate(""));
+    }
+
+    @Test
+    void dateExcelNumeriqueSansFormatDate() throws Exception {
+        // Fichier produit par le traitement automatique : la date est un nombre sans format date
+        try (var wb = new org.apache.poi.xssf.usermodel.XSSFWorkbook()) {
+            var sheet = wb.createSheet("Suivi");
+            var h = sheet.createRow(0);
+            String[] headers = {"Date", "Code agence", "Banque", "Montant", "Référence"};
+            for (int i = 0; i < headers.length; i++) h.createCell(i).setCellValue(headers[i]);
+            var r = sheet.createRow(1);
+            r.createCell(0).setCellValue(46344d);
+            r.createCell(1).setCellValue("CPCA27196");
+            r.createCell(2).setCellValue("ECOBANK OPS");
+            r.createCell(3).setCellValue(2971358d);
+            r.createCell(4).setCellValue("CPCA2719-181126CP1");
+            var bos = new java.io.ByteArrayOutputStream();
+            wb.write(bos);
+            MockMultipartFile file = new MockMultipartFile("file", "suivi.xlsx",
+                    "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet", bos.toByteArray());
+
+            List<SuiviCompenseOpEntity> rows = service.parse(file);
+
+            assertEquals(1, rows.size());
+            assertEquals(LocalDate.of(2026, 11, 18), rows.get(0).getDateOperation());
+        }
+    }
+
+    @Test
+    void fichierDuSuiviAvecEspacesEnFinDeValeur() throws Exception {
+        String content = String.join("\n",
+                "Date\tCode agence\tBanque\tCompte bancaire\tMontant\tMode de paiement\tRéférence\tID ticket\tService\tRéseau",
+                "18/11/2026\tCPCA27196 \tECOBANK OPS\t1,0035E+11\t2 971 358\tVirement \tCPCA2719-181126CP1\tODMD1126429399\t\t");
+        MockMultipartFile file = new MockMultipartFile("file", "suivi.txt", "text/plain", content.getBytes(StandardCharsets.UTF_8));
+
+        List<SuiviCompenseOpEntity> rows = service.parse(file);
+
+        assertEquals(1, rows.size());
+        assertEquals(LocalDate.of(2026, 11, 18), rows.get(0).getDateOperation());
+        assertEquals(2971358.0, rows.get(0).getMontant());
+    }
 }
