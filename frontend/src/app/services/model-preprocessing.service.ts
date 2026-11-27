@@ -18,12 +18,20 @@ import {
   ModelColumnMathRule,
   COLUMN_MATH_OPERATORS,
   computeColumnMath,
+  isColumnMathConstantB,
   ModelColumnRenameRule,
   matchesConditionValues,
   parseConditionValues
 } from './auto-processing.service';
 import { buildConcatenatedValue } from '../utils/concat.util';
 import { parseValeursCondition, supprimerDoublonsCroises } from '../utils/cross-dedup.util';
+import {
+  describeModelConditions,
+  getActiveModelConditions,
+  getModelConditionColumns,
+  ModelCondition,
+  rowMatchesModelConditions
+} from '../utils/model-conditions.util';
 import {
   BO_RECONCILIATION_KEY_ALIASES,
   PARTNER_REFERENCE_KEY_ALIASES
@@ -78,12 +86,16 @@ interface PrecomputedFormatTarget {
   column: string;
   conditionColumnKey: string | null;
   expectedValues: ReadonlySet<string> | null;
+  /** Conditions multiples de l'action et de la colonne (toutes remplies). */
+  extraConditions: ModelCondition[];
 }
 
 interface ResolvedColumnRenameRule {
   sourceKey: string;
   targetKey: string;
   rule?: ModelColumnRenameRule;
+  /** Conditions actives : renommage par ligne (voir ModelColumnRenameRule.conditions). */
+  conditions?: ModelCondition[];
 }
 
 /**
@@ -520,7 +532,8 @@ export class ModelPreProcessingService {
           source: action,
           column,
           conditionColumnKey,
-          expectedValues
+          expectedValues,
+          extraConditions: this.getFormatExtraConditions(action, column)
         });
       }
     }
@@ -546,6 +559,9 @@ export class ModelPreProcessingService {
           if (!target.expectedValues.has(conditionValue)) {
             continue;
           }
+        }
+        if (target.extraConditions.length && !rowMatchesModelConditions(row, target.extraConditions)) {
+          continue;
         }
 
         const primaryKey = target.keys[0];
@@ -581,7 +597,8 @@ export class ModelPreProcessingService {
     for (const action of orderedActions) {
       for (const column of action.columns) {
         const merged = this.mergeFormatActionForColumn(action, column);
-        if (!this.isFormatActionConditionMet(row, action, column)) {
+        if (!this.isFormatActionConditionMet(row, action, column)
+          || !rowMatchesModelConditions(row, this.getFormatExtraConditions(action, column))) {
           continue;
         }
 
@@ -625,6 +642,13 @@ export class ModelPreProcessingService {
     const newRow = row;
     for (const rule of activeRules) {
       const before = newRow[rule.targetColumn];
+      if (!rowMatchesModelConditions(newRow, rule.conditions)) {
+        // Ligne hors conditions : colonne existante inchangée, nouvelle colonne vide.
+        if (before === undefined) {
+          newRow[rule.targetColumn] = '';
+        }
+        continue;
+      }
       newRow[rule.targetColumn] = buildConcatenatedValue(
         rule.sourceColumns.map(column => {
           const key = resolveColumnKeyInRow(newRow, column) ?? column;
@@ -659,15 +683,24 @@ export class ModelPreProcessingService {
     }
 
     for (const rule of activeRules) {
+      if (!rowMatchesModelConditions(row, rule.conditions)) {
+        // Ligne hors conditions : colonne existante inchangée, nouvelle colonne vide.
+        if (row[rule.targetColumn] === undefined) {
+          row[rule.targetColumn] = '';
+        }
+        continue;
+      }
       const keyA = resolveColumnKeyInRow(row, rule.sourceColumnA);
-      const keyB = resolveColumnKeyInRow(row, rule.sourceColumnB);
       const rawA = keyA ? row[keyA] : undefined;
-      const rawB = keyB ? row[keyB] : undefined;
+      const constantB = isColumnMathConstantB(rule);
+      const keyB = constantB ? null : resolveColumnKeyInRow(row, rule.sourceColumnB);
+      const rawB = constantB ? String(rule.constantB).trim() : keyB ? row[keyB] : undefined;
       const valueA = parseAmountValue(rawA);
       const valueB = parseAmountValue(rawB);
       const result = computeColumnMath(rule.operation, valueA, valueB);
       const before = row[rule.targetColumn];
-      row[rule.targetColumn] = this.formatMathResult(result, rawA, rawB);
+      // Nombre fixe : le format décimal (virgule / point) suit celui de la colonne A.
+      row[rule.targetColumn] = this.formatMathResult(result, rawA, constantB ? undefined : rawB);
       if (usage && row[rule.targetColumn] !== before) {
         usage.used.add(rule);
       }
@@ -763,11 +796,47 @@ export class ModelPreProcessingService {
       if (!sourceKey || sourceKey === targetKey || !Object.prototype.hasOwnProperty.call(working, sourceKey)) {
         continue;
       }
-      resolved.push({ sourceKey, targetKey, rule });
-      working = renameKeyPreservingOrder(working, sourceKey, targetKey);
+      const conditions = getActiveModelConditions(rule.conditions);
+      if (conditions.length) {
+        resolved.push({ sourceKey, targetKey, rule, conditions });
+        // L'ancienne colonne reste (lignes hors conditions), la nouvelle est ajoutée juste après.
+        working = this.splitColumnByConditions(working, sourceKey, targetKey, false);
+      } else {
+        resolved.push({ sourceKey, targetKey, rule });
+        working = renameKeyPreservingOrder(working, sourceKey, targetKey);
+      }
     }
 
     return resolved;
+  }
+
+  /**
+   * Renommage conditionnel d'une ligne : la valeur passe sous `targetKey` si la ligne remplit les
+   * conditions (l'ancienne colonne est alors vidée), sinon elle reste sous `sourceKey` (la nouvelle
+   * colonne est vide, ou garde sa valeur si elle existait déjà). La nouvelle colonne est placée juste
+   * après l'ancienne pour que toutes les lignes aient les mêmes colonnes dans le même ordre.
+   */
+  private splitColumnByConditions(
+    row: Record<string, string>,
+    sourceKey: string,
+    targetKey: string,
+    matches: boolean
+  ): Record<string, string> {
+    const value = row[sourceKey];
+    const existingTarget = Object.prototype.hasOwnProperty.call(row, targetKey) ? row[targetKey] : '';
+    const result: Record<string, string> = {};
+    for (const key of Object.keys(row)) {
+      if (key === targetKey) {
+        continue;
+      }
+      if (key === sourceKey) {
+        result[sourceKey] = matches ? '' : value;
+        result[targetKey] = matches ? value : existingTarget;
+      } else {
+        result[key] = row[key];
+      }
+    }
+    return result;
   }
 
   private applyResolvedColumnRenamesToRow(
@@ -778,7 +847,7 @@ export class ModelPreProcessingService {
       return row;
     }
 
-    if (resolvedRules.length === 1) {
+    if (resolvedRules.length === 1 && !resolvedRules[0].conditions) {
       const { sourceKey, targetKey } = resolvedRules[0];
       if (!Object.prototype.hasOwnProperty.call(row, sourceKey)) {
         return row;
@@ -788,11 +857,13 @@ export class ModelPreProcessingService {
 
     let current: Record<string, string> = row;
     let changed = false;
-    for (const { sourceKey, targetKey } of resolvedRules) {
+    for (const { sourceKey, targetKey, conditions } of resolvedRules) {
       if (!Object.prototype.hasOwnProperty.call(current, sourceKey)) {
         continue;
       }
-      const next = renameKeyPreservingOrder(current, sourceKey, targetKey);
+      const next = conditions
+        ? this.splitColumnByConditions(current, sourceKey, targetKey, rowMatchesModelConditions(current, conditions))
+        : renameKeyPreservingOrder(current, sourceKey, targetKey);
       if (next !== current) {
         current = next;
         changed = true;
@@ -1964,7 +2035,9 @@ export class ModelPreProcessingService {
 
     for (const rule of this.getActiveColumnMathRules(config?.columnMathRules)) {
       columns.add(rule.sourceColumnA);
-      columns.add(rule.sourceColumnB);
+      if (!isColumnMathConstantB(rule)) {
+        columns.add(rule.sourceColumnB);
+      }
       if (rule.targetColumn) {
         columns.add(rule.targetColumn);
       }
@@ -1995,6 +2068,8 @@ export class ModelPreProcessingService {
         columns.add(rule.targetColumn);
       }
     }
+
+    this.collectModelConditionColumns(config).forEach(column => columns.add(column));
 
     return Array.from(columns);
   }
@@ -2029,7 +2104,9 @@ export class ModelPreProcessingService {
 
     for (const rule of this.getActiveColumnMathRules(config?.columnMathRules)) {
       columns.add(rule.sourceColumnA);
-      columns.add(rule.sourceColumnB);
+      if (!isColumnMathConstantB(rule)) {
+        columns.add(rule.sourceColumnB);
+      }
     }
 
     for (const mapping of this.getActiveValueMappings(config?.valueMappings)) {
@@ -2055,6 +2132,25 @@ export class ModelPreProcessingService {
       }
     }
 
+    this.collectModelConditionColumns(config).forEach(column => columns.add(column));
+
+    return Array.from(columns);
+  }
+
+  /** Colonnes lues par les conditions multiples de toutes les options du modèle. */
+  collectModelConditionColumns(config?: ModelPreProcessingConfig | null): string[] {
+    const columns = new Set<string>();
+    const add = (conditions?: ModelCondition[] | null) =>
+      getModelConditionColumns(conditions).forEach(column => columns.add(column));
+    for (const action of this.getActiveFormatActions(config)) {
+      add(action.conditions);
+      Object.values(action.columnSettings ?? {}).forEach(settings => add(settings.conditions));
+    }
+    this.getActiveColumnConcatRules(config?.columnConcatRules).forEach(rule => add(rule.conditions));
+    this.getActiveColumnMathRules(config?.columnMathRules).forEach(rule => add(rule.conditions));
+    this.getActiveValueMappings(config?.valueMappings).forEach(mapping => add(mapping.conditions));
+    this.getActiveCrossDedupRules(config?.crossDedupRules).forEach(rule => add(rule.conditions));
+    this.getActiveColumnRenameRules(config?.columnRenameRules).forEach(rule => add(rule.conditions));
     return Array.from(columns);
   }
 
@@ -2092,6 +2188,9 @@ export class ModelPreProcessingService {
     row: Record<string, string>,
     mapping: ModelColumnValueMapping
   ): boolean {
+    if (!rowMatchesModelConditions(row, mapping.conditions)) {
+      return false;
+    }
     const conditionColumn = (mapping.conditionColumn ?? '').trim();
     const conditionValue = (mapping.conditionValue ?? '').trim();
     if (!conditionColumn || !conditionValue) {
@@ -2162,9 +2261,11 @@ export class ModelPreProcessingService {
     return (rules ?? []).filter(
       rule => rule.enabled
         && !!rule.sourceColumnA
-        && !!rule.sourceColumnB
         && !!rule.targetColumn?.trim()
-        && rule.sourceColumnA !== rule.sourceColumnB
+        && (isColumnMathConstantB(rule)
+          // Nombre fixe : doit être un nombre valide (ex. 100, 1,5, -2).
+          ? tryParseAmount(String(rule.constantB).trim()) !== null
+          : !!rule.sourceColumnB && rule.sourceColumnA !== rule.sourceColumnB)
     );
   }
 
@@ -2187,7 +2288,11 @@ export class ModelPreProcessingService {
           valeurs: parseValeursCondition(rule.conditionValue)
         }
         : null;
-      const sortie = supprimerDoublonsCroises(result, rule.columnA, rule.columnB, rule.deleteSide === 'B' ? 'B' : 'A', condition);
+      const extra = getActiveModelConditions(rule.conditions);
+      const sortie = supprimerDoublonsCroises(
+        result, rule.columnA, rule.columnB, rule.deleteSide === 'B' ? 'B' : 'A', condition,
+        extra.length ? row => rowMatchesModelConditions(row, extra) : undefined
+      );
       if (sortie.supprimees) {
         usage?.used.add(rule);
         console.log(`[Pré-traitement] Doublons entre « ${rule.columnA} » et « ${rule.columnB} » : ${sortie.supprimees} ligne(s) supprimée(s) côté ${rule.deleteSide === 'B' ? 'B' : 'A'}`);
@@ -2295,20 +2400,21 @@ export class ModelPreProcessingService {
       const condition = rule.conditionColumn
         ? ` si ${rule.conditionColumn} ${rule.conditionOperator || 'EGAL'} ${rule.conditionValue ?? ''}`.trimEnd()
         : '';
-      detailLines.push(`• Doublons : ${rule.columnA} / ${rule.columnB}, suppression côté ${cote}${condition}`);
+      detailLines.push(`• Doublons : ${rule.columnA} / ${rule.columnB}, suppression côté ${cote}${condition}${describeModelConditions(rule.conditions)}`);
     });
     formats.forEach(action => {
       const changedColumns = usage?.formatColumns.get(action);
       // Paramètres par colonne (et leur condition) prioritaires sur ceux de l'action : chaque colonne
       // est décrite avec ce qui lui a réellement été appliqué ; colonnes de même réglage regroupées.
       const byDescription = new Map<string, string[]>();
+      const extraText = (column: string) => describeModelConditions(this.getFormatExtraConditions(action, column));
       for (const column of changedColumns ? Array.from(changedColumns) : action.columns) {
-        const key = this.describeFormatAction(this.formatActionAppliedToColumn(action, column), ['\u0000']);
+        const key = this.describeFormatAction(this.formatActionAppliedToColumn(action, column), ['\u0000']) + extraText(column);
         byDescription.set(key, [...(byDescription.get(key) ?? []), column]);
       }
       byDescription.forEach(columns => {
         detailLines.push(I18nService.t('MSG.msg.format', {
-          p0: this.describeFormatAction(this.formatActionAppliedToColumn(action, columns[0]), columns)
+          p0: this.describeFormatAction(this.formatActionAppliedToColumn(action, columns[0]), columns) + extraText(columns[0])
         }));
       });
     });
@@ -2318,12 +2424,18 @@ export class ModelPreProcessingService {
         : `« ${rule.separator} »`;
       detailLines.push(
         I18nService.t('MSG.msg.concatenationSeparateur', { p0: rule.sourceColumns.join(' + '), p1: rule.targetColumn, p2: separatorLabel })
+        + describeModelConditions(rule.conditions)
       );
     });
     mathRules.forEach(rule => {
       const operator = COLUMN_MATH_OPERATORS[rule.operation] ?? '+';
       detailLines.push(
-        I18nService.t('MSG.msg.calcul', { p0: rule.sourceColumnA, p1: operator, p2: rule.sourceColumnB, p3: rule.targetColumn })
+        I18nService.t('MSG.msg.calcul', {
+          p0: rule.sourceColumnA,
+          p1: operator,
+          p2: isColumnMathConstantB(rule) ? String(rule.constantB).trim() : rule.sourceColumnB,
+          p3: rule.targetColumn
+        }) + describeModelConditions(rule.conditions)
       );
     });
     valueMappings.forEach(mapping => {
@@ -2338,11 +2450,12 @@ export class ModelPreProcessingService {
           p1: mapping.fromEmpty ? I18nService.t('APM.valeurVideLibelle') : mapping.fromValue,
           p2: mapping.toValue,
           p3: conditionSuffix
-        })
+        }) + describeModelConditions(mapping.conditions)
       );
     });
     columnRenameRules.forEach(rule => {
-      detailLines.push(I18nService.t('MSG.msg.enTete', { p0: rule.sourceColumn, p1: rule.targetColumn }));
+      detailLines.push(I18nService.t('MSG.msg.enTete', { p0: rule.sourceColumn, p1: rule.targetColumn })
+        + describeModelConditions(rule.conditions));
     });
     const envValue = envUsed ? this.getActiveEnvColumnValue(config) : null;
     if (envValue) {
@@ -2503,6 +2616,14 @@ export class ModelPreProcessingService {
     };
   }
 
+  /** Conditions multiples d'une action de format pour une colonne : celles de l'action + celles de la colonne. */
+  private getFormatExtraConditions(action: ModelFormatAction, column: string): ModelCondition[] {
+    return [
+      ...getActiveModelConditions(action.conditions),
+      ...getActiveModelConditions(this.findFormatColumnSettings(action, column)?.conditions)
+    ];
+  }
+
   private describeFormatActionCondition(action: ModelFormatAction): string {
     if (!action.applyConditionEnabled || !action.conditionColumn?.trim()) {
       return '';
@@ -2580,7 +2701,9 @@ export class ModelPreProcessingService {
       }
       for (const rule of this.getActiveColumnMathRules(cfg.columnMathRules)) {
         addInput(rule.sourceColumnA);
-        addInput(rule.sourceColumnB);
+        if (!isColumnMathConstantB(rule)) {
+          addInput(rule.sourceColumnB);
+        }
         addOutput(rule.targetColumn);
       }
       for (const mapping of this.getActiveValueMappings(cfg.valueMappings)) {
@@ -2590,6 +2713,7 @@ export class ModelPreProcessingService {
         }
         addOutput(mapping.column);
       }
+      this.collectModelConditionColumns(cfg).forEach(column => addInput(column));
     }
 
     const outputColumns = this.applyRenameRulesToOutputColumns(

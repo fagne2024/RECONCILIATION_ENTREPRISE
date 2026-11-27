@@ -1,0 +1,40 @@
+<div class="model-conditions">
+  <div class="model-conditions__header">
+    <span class="model-conditions__title">{{ label || ('APM.cond.titre' | translate) }}</span>
+    <span class="model-conditions__hint" *ngIf="conditions?.length">{{ 'APM.cond.toutesRemplies' | translate }}</span>
+  </div>
+
+  <div class="model-conditions__row" *ngFor="let condition of conditions; let i = index; trackBy: trackByIndex">
+    <div class="model-conditions__fields">
+      <select class="ds-select form-control model-conditions__column" [(ngModel)]="condition.column"
+              [ngModelOptions]="{standalone: true}" [attr.aria-label]="'APM.cond.colonne' | translate">
+        <option value="">{{ 'APM.cond.colonne' | translate }}</option>
+        <option *ngFor="let col of columns" [value]="col">{{ col }}</option>
+      </select>
+      <select class="ds-select form-control model-conditions__operator" [(ngModel)]="condition.operator"
+              [ngModelOptions]="{standalone: true}" [attr.aria-label]="'APM.cond.operateur' | translate">
+        <option *ngFor="let op of operators" [value]="op">{{ ('TRT.ConditionOp.' + op) | translate }}</option>
+      </select>
+      <input *ngIf="needsValues(condition)" type="text" class="ds-input form-control model-conditions__values"
+             [ngModel]="valuesText(condition)" (ngModelChange)="setValuesText(condition, $event)"
+             [ngModelOptions]="{standalone: true}"
+             [attr.aria-label]="'APM.cond.valeurs' | translate" placeholder="{{ 'APM.cond.valeursExemple' | translate }}">
+      <button type="button" class="ds-btn ds-btn--danger btn btn-sm btn-outline-danger" (click)="remove(i)"
+              [attr.aria-label]="'APM.cond.supprimer' | translate" [title]="'APM.cond.supprimer' | translate">
+        <i class="fas fa-trash" aria-hidden="true"></i>
+      </button>
+    </div>
+    <div class="model-conditions__suggestions" *ngIf="needsValues(condition) && suggestions(condition).length">
+      <span class="model-conditions__suggestions-label">{{ 'APM.cond.valeursConnues' | translate }}</span>
+      <button type="button" class="model-conditions__chip" *ngFor="let value of suggestions(condition)"
+              [class.model-conditions__chip--selected]="isSelected(condition, value)"
+              [attr.aria-pressed]="isSelected(condition, value)" (click)="toggleValue(condition, value)">
+        {{ value }}
+      </button>
+    </div>
+  </div>
+
+  <button type="button" class="ds-btn ds-btn--secondary btn btn-outline-primary btn-sm" (click)="add()">
+    <i class="fas fa-plus" aria-hidden="true"></i> {{ 'APM.cond.ajouter' | translate }}
+  </button>
+</div>

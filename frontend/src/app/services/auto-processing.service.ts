@@ -11,6 +11,8 @@ import { I18nService } from './i18n/i18n.service';
 
 export type { ColumnProcessingRule } from '../models/column-processing-rule.model';
 import type { OperateurCondition } from '../utils/cross-dedup.util';
+import type { ModelCondition } from '../utils/model-conditions.util';
+export type { ModelCondition } from '../utils/model-conditions.util';
 
 export interface ModelRowFilter {
   id: string;
@@ -77,6 +79,8 @@ export interface ModelFormatColumnSettings {
   applyConditionEnabled?: boolean;
   conditionColumn?: string;
   conditionValue?: string;
+  /** Conditions supplémentaires sur d'autres colonnes : toutes doivent être remplies (ET). */
+  conditions?: ModelCondition[];
 }
 
 export interface ModelFormatAction {
@@ -114,6 +118,8 @@ export interface ModelFormatAction {
   applyConditionEnabled?: boolean;
   conditionColumn?: string;
   conditionValue?: string;
+  /** Conditions supplémentaires sur d'autres colonnes : toutes doivent être remplies (ET). */
+  conditions?: ModelCondition[];
 }
 
 /** Parse une liste de valeurs de condition séparées par des virgules. */
@@ -171,6 +177,8 @@ export interface ModelCrossDedupRule {
   /** Valeurs de la condition, séparées par « ; » (EGAL, DIFFERENT, CONTIENT). */
   conditionValue?: string;
   enabled: boolean;
+  /** Conditions supplémentaires sur d'autres colonnes : toutes doivent être remplies (ET). */
+  conditions?: ModelCondition[];
 }
 
 /**
@@ -254,6 +262,12 @@ export interface ModelColumnRenameRule {
   sourceColumn: string;
   targetColumn: string;
   enabled: boolean;
+  /**
+   * Conditions sur d'autres colonnes (toutes remplies) : renommage PAR LIGNE. Les lignes qui les
+   * remplissent ont leur valeur sous le nouveau nom, les autres la gardent sous l'ancien ; les deux
+   * colonnes existent alors (vides là où la valeur n'est pas). Sans condition : renommage de l'en-tête.
+   */
+  conditions?: ModelCondition[];
 }
 
 export interface ModelColumnConcatRule {
@@ -267,15 +281,27 @@ export interface ModelColumnConcatRule {
    * reste. Absent = oui (comportement par défaut) ; false pour les conserver.
    */
   removeSourceColumns?: boolean;
+  /** Conditions supplémentaires sur d'autres colonnes : toutes doivent être remplies (ET). */
+  conditions?: ModelCondition[];
 }
 
 export interface ModelColumnMathRule {
   id: string;
   sourceColumnA: string;
+  /** Colonne B (vide quand B est un nombre fixe). */
   sourceColumnB: string;
+  /** B = nombre fixe saisi (ex. « 100 », « 1,5 ») au lieu d'une colonne. Absent = B est une colonne. */
+  constantB?: string;
   targetColumn: string;
   operation: ColumnMathOperation;
   enabled: boolean;
+  /** Conditions supplémentaires sur d'autres colonnes : toutes doivent être remplies (ET). */
+  conditions?: ModelCondition[];
+}
+
+/** La règle utilise un nombre fixe pour B (champ présent, même vide pendant la saisie). */
+export function isColumnMathConstantB(rule: Pick<ModelColumnMathRule, 'constantB'>): boolean {
+  return rule.constantB !== undefined && rule.constantB !== null;
 }
 
 /** Opérations entre deux colonnes : + − × ÷ (division par zéro → cellule vide). */
@@ -315,6 +341,8 @@ export interface ModelColumnValueMapping {
   paysConditionValue?: string;
   toValue: string;
   enabled: boolean;
+  /** Conditions supplémentaires sur d'autres colonnes : toutes doivent être remplies (ET). */
+  conditions?: ModelCondition[];
 }
 
 /** Règle : si la colonne condition a une valeur donnée, utiliser une autre colonne comme clé. */

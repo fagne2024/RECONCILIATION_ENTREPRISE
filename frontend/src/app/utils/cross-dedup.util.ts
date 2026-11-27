@@ -56,7 +56,9 @@ export function indexDoublonsCroises(
   colonneA: string,
   colonneB: string,
   cote: CoteSuppression,
-  condition?: ConditionDedoublonnage | null
+  condition?: ConditionDedoublonnage | null,
+  /** Filtre supplémentaire (ex. conditions multiples d'un modèle) : seules ces lignes sont comparées. */
+  filtre?: (row: Record<string, any>) => boolean
 ): Set<number> {
   const supprimees = new Set<number>();
   if (!colonneA || !colonneB || colonneA === colonneB) {
@@ -68,13 +70,13 @@ export function indexDoublonsCroises(
   const valeursAutreCote = new Set<string>();
   for (let i = 0; i < rows.length; i++) {
     const row = rows[i];
-    if (!remplitConditionDedoublonnage(row, condition)) continue;
+    if (!remplitConditionDedoublonnage(row, condition) || (filtre && !filtre(row))) continue;
     const v = normaliser(lireCellule(row, autreColonne));
     if (v) valeursAutreCote.add(v);
   }
   for (let i = 0; i < rows.length; i++) {
     const row = rows[i];
-    if (!remplitConditionDedoublonnage(row, condition)) continue;
+    if (!remplitConditionDedoublonnage(row, condition) || (filtre && !filtre(row))) continue;
     const v = normaliser(lireCellule(row, colonneSupprimee));
     if (v && valeursAutreCote.has(v)) supprimees.add(i);
   }
@@ -87,9 +89,10 @@ export function supprimerDoublonsCroises<T extends Record<string, any>>(
   colonneA: string,
   colonneB: string,
   cote: CoteSuppression,
-  condition?: ConditionDedoublonnage | null
+  condition?: ConditionDedoublonnage | null,
+  filtre?: (row: Record<string, any>) => boolean
 ): { rows: T[]; supprimees: number } {
-  const index = indexDoublonsCroises(rows, colonneA, colonneB, cote, condition);
+  const index = indexDoublonsCroises(rows, colonneA, colonneB, cote, condition, filtre);
   if (!index.size) {
     return { rows, supprimees: 0 };
   }

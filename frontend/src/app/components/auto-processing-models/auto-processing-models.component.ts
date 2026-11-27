@@ -4,7 +4,7 @@ import { SharedUiModule } from '../../shared/shared-ui.module';
 import { CdkDragDrop, moveItemInArray } from '@angular/cdk/drag-drop';
 import { FormBuilder, FormGroup, Validators, FormArray, FormControl } from '@angular/forms';
 import { PAYS_TRAITEMENT_PAR_DEFAUT } from '../../services/pays.service';
-import { AutoProcessingService, AutoProcessingModel, DEFAULT_PRE_PROCESSING_SECTION_ORDER, ENV_COLUMN_NAME, ENV_COLUMN_OPTIONS, EnvColumnOption, ModelColumnMathRule, COLUMN_MATH_OPERATIONS, ModelFormatAction, ModelFormatActionType, ModelFormatColumnSettings, ModelPreProcessingConfig, ModelPreProcessingSectionId, ModelRowFilter, ModelColumnValueMapping, ModelColumnConcatRule, ModelColumnRenameRule, ModelCrossDedupRule, resolvePreProcessingSectionOrder, ModelEnvColumnConfig, ModelPaysColumnConfig, PAYS_COLUMN_NAME, ModelExportColumnFilterConfig, PartnerConditionalKeyRule, PartnerConditionalKeysConfig, BoConditionalKeysConfig, BoModelReconciliationConfig, ModelRowFilterConditionOperator, ModelRowFilterValueCondition, TrxboOppartConfig, TrxboRegularisationRule, TrxboRegularisationComponent, TrxboAggregationType } from '../../services/auto-processing.service';
+import { AutoProcessingService, AutoProcessingModel, DEFAULT_PRE_PROCESSING_SECTION_ORDER, ENV_COLUMN_NAME, ENV_COLUMN_OPTIONS, EnvColumnOption, ModelColumnMathRule, COLUMN_MATH_OPERATIONS, isColumnMathConstantB, ModelFormatAction, ModelFormatActionType, ModelFormatColumnSettings, ModelPreProcessingConfig, ModelPreProcessingSectionId, ModelRowFilter, ModelColumnValueMapping, ModelColumnConcatRule, ModelColumnRenameRule, ModelCrossDedupRule, resolvePreProcessingSectionOrder, ModelEnvColumnConfig, ModelPaysColumnConfig, PAYS_COLUMN_NAME, ModelExportColumnFilterConfig, PartnerConditionalKeyRule, PartnerConditionalKeysConfig, BoConditionalKeysConfig, BoModelReconciliationConfig, ModelRowFilterConditionOperator, ModelRowFilterValueCondition, TrxboOppartConfig, TrxboRegularisationRule, TrxboRegularisationComponent, TrxboAggregationType } from '../../services/auto-processing.service';
 import { FileWatcherService } from '../../services/file-watcher.service';
 import { AppStateService } from '../../services/app-state.service';
 import { ModelManagementService } from '../../services/model-management.service';
@@ -13,6 +13,10 @@ import { ConfigurationCalculService } from '../../services/configuration-calcul.
 import { ModelPreProcessingService } from '../../services/model-preprocessing.service';
 import { resolveTimezoneShiftHours, TIMEZONE_COUNTRY_FROM_COLUMN, TIMEZONE_SHIFT_COUNTRIES } from '../../utils/timezone-shift.util';
 import { TranslateModule } from '@ngx-translate/core';
+import { ModelConditionsEditorComponent } from '../model-conditions-editor/model-conditions-editor.component';
+import { cloneModelConditions, ModelCondition } from '../../utils/model-conditions.util';
+import { normalizeColumnKey } from '../../utils/row-column.util';
+import { parseConditionValues } from '../../services/auto-processing.service';
 import { OPERATEURS_CONDITION } from '../../utils/cross-dedup.util';
 import {
   defaultExtractionColumnName,
@@ -182,7 +186,7 @@ const DEFAULT_TRXBO_OPPART_CONFIG: TrxboOppartDefaults = {
 @Component({
   selector: 'app-auto-processing-models',
   standalone: true,
-  imports: [TranslateModule, SharedUiModule],
+  imports: [TranslateModule, SharedUiModule, ModelConditionsEditorComponent],
   templateUrl: './auto-processing-models.component.html',
   styleUrls: ['./auto-processing-models.component.css']
 })
@@ -263,6 +267,12 @@ export class AutoProcessingModelsComponent implements OnInit {
   modelColumnRenameRules: ModelColumnRenameRule[] = [];
   modelCrossDedupRules: ModelCrossDedupRule[] = [];
   readonly crossDedupOperators = OPERATEURS_CONDITION;
+
+  /**
+   * Valeurs proposées pour une colonne dans les conditions : exemples du fichier modèle et valeurs
+   * déjà utilisées dans le modèle (filtres, renommages, conditions existantes).
+   */
+  readonly conditionValueSuggestions = (column: string): string[] => this.collectConditionValueSuggestions(column);
   showCrossDedupSection = false;
   nextModelCrossDedupId = 1;
   preProcessingSectionOrder: ModelPreProcessingSectionId[] = [...DEFAULT_PRE_PROCESSING_SECTION_ORDER];
@@ -1136,7 +1146,7 @@ export class AutoProcessingModelsComponent implements OnInit {
       }
     });
     (config.columnMathRules || []).forEach(rule => {
-      [rule.sourceColumnA, rule.sourceColumnB, rule.targetColumn].forEach(col => {
+      [rule.sourceColumnA, isColumnMathConstantB(rule) ? '' : rule.sourceColumnB, rule.targetColumn].forEach(col => {
         if (col?.trim()) {
           columns.add(col.trim());
         }
@@ -4793,6 +4803,81 @@ export class AutoProcessingModelsComponent implements OnInit {
     });
   }
 
+  /** Copie modifiable des conditions d'une option (aucune = undefined). */
+  private copyModelConditions(conditions?: ModelCondition[] | null): ModelCondition[] | undefined {
+    return conditions?.length
+      ? conditions.map(condition => ({ ...condition, values: [...(condition.values || [])] }))
+      : undefined;
+  }
+
+  /** Valeurs connues d'une colonne : exemples du fichier modèle + valeurs déjà saisies dans le modèle. */
+  private collectConditionValueSuggestions(column: string): string[] {
+    const target = normalizeColumnKey(column);
+    const sameColumn = (name?: string | null) => !!name && normalizeColumnKey(name) === target;
+    const values = new Map<string, string>();
+    const add = (value: unknown) => {
+      const text = String(value ?? '').trim();
+      if (text && text.toLowerCase() !== 'null' && !values.has(text.toLowerCase())) {
+        values.set(text.toLowerCase(), text);
+      }
+    };
+
+    const templateFile = this.modelForm?.get('templateFile')?.value;
+    const file = this.availableFiles.find(f => f?.fileName === templateFile);
+    for (const row of (file?.sampleData ?? []) as Record<string, unknown>[]) {
+      const key = Object.keys(row || {}).find(k => sameColumn(k));
+      if (key) {
+        add(row[key]);
+      }
+    }
+    this.modelRowFilters.filter(f => sameColumn(f.column)).forEach(f => (f.selectedValues || []).forEach(add));
+    this.modelValueMappings.forEach(mapping => {
+      if (sameColumn(mapping.column)) {
+        add(mapping.fromValue);
+        add(mapping.toValue);
+      }
+      if (sameColumn(mapping.conditionColumn)) {
+        add(mapping.conditionValue);
+      }
+    });
+    const fromConditions = (conditions?: ModelCondition[] | null) =>
+      (conditions || []).filter(c => sameColumn(c.column)).forEach(c => (c.values || []).forEach(add));
+    this.modelFormatActions.forEach(action => {
+      if (sameColumn(action.conditionColumn)) {
+        parseConditionValues(action.conditionValue).forEach(add);
+      }
+      fromConditions(action.conditions);
+      Object.values(action.columnSettings || {}).forEach(settings => {
+        if (sameColumn(settings.conditionColumn)) {
+          parseConditionValues(settings.conditionValue).forEach(add);
+        }
+        fromConditions(settings.conditions);
+      });
+    });
+    this.modelColumnConcatRules.forEach(rule => fromConditions(rule.conditions));
+    this.modelColumnMathRules.forEach(rule => fromConditions(rule.conditions));
+    this.modelValueMappings.forEach(mapping => fromConditions(mapping.conditions));
+    this.modelCrossDedupRules.forEach(rule => fromConditions(rule.conditions));
+    return Array.from(values.values()).sort((a, b) => a.localeCompare(b, 'fr'));
+  }
+
+  /** Valeur de la liste « Colonne B » : une colonne, ou le choix « Nombre fixe ». */
+  readonly mathConstantBOption = '__NOMBRE_FIXE__';
+
+  getMathRuleColumnBSelection(rule: ModelColumnMathRule): string {
+    return isColumnMathConstantB(rule) ? this.mathConstantBOption : rule.sourceColumnB;
+  }
+
+  onMathRuleColumnBChange(rule: ModelColumnMathRule, value: string): void {
+    if (value === this.mathConstantBOption) {
+      rule.sourceColumnB = '';
+      rule.constantB = rule.constantB ?? '';
+    } else {
+      delete rule.constantB;
+      rule.sourceColumnB = value;
+    }
+  }
+
   removeModelColumnMathRule(index: number): void {
     this.modelColumnMathRules.splice(index, 1);
   }
@@ -5276,9 +5361,13 @@ export class AutoProcessingModelsComponent implements OnInit {
         id: action.id || this.createFormatActionId(),
         order: index + 1,
         columns: [...(action.columns || [])],
+        conditions: cloneModelConditions(action.conditions),
         columnSettings: action.columnSettings
           ? Object.fromEntries(
-            Object.entries(action.columnSettings).map(([column, settings]) => [column, { ...settings }])
+            Object.entries(action.columnSettings).map(([column, settings]) => [
+              column,
+              { ...settings, conditions: cloneModelConditions(settings.conditions) }
+            ])
           )
           : undefined
       };
@@ -5311,6 +5400,10 @@ export class AutoProcessingModelsComponent implements OnInit {
         if (paysCondition) {
           entry.paysConditionValue = paysCondition;
         }
+        const conditions = cloneModelConditions(mapping.conditions);
+        if (conditions) {
+          entry.conditions = conditions;
+        }
         return entry;
       });
 
@@ -5322,23 +5415,27 @@ export class AutoProcessingModelsComponent implements OnInit {
         targetColumn: rule.targetColumn.trim(),
         separator: rule.separator ?? '',
         enabled: rule.enabled !== false,
-        removeSourceColumns: rule.removeSourceColumns !== false
+        removeSourceColumns: rule.removeSourceColumns !== false,
+        conditions: cloneModelConditions(rule.conditions)
       }));
 
     const columnMathRules = this.modelColumnMathRules
       .filter(rule =>
         rule.targetColumn?.trim()
         && rule.sourceColumnA
-        && rule.sourceColumnB
-        && rule.sourceColumnA !== rule.sourceColumnB
+        && (isColumnMathConstantB(rule)
+          ? !!String(rule.constantB).trim()
+          : !!rule.sourceColumnB && rule.sourceColumnA !== rule.sourceColumnB)
       )
       .map(rule => ({
         id: rule.id,
         sourceColumnA: rule.sourceColumnA,
-        sourceColumnB: rule.sourceColumnB,
+        sourceColumnB: isColumnMathConstantB(rule) ? '' : rule.sourceColumnB,
+        ...(isColumnMathConstantB(rule) ? { constantB: String(rule.constantB).trim() } : {}),
         targetColumn: rule.targetColumn.trim(),
         operation: rule.operation,
-        enabled: rule.enabled !== false
+        enabled: rule.enabled !== false,
+        conditions: cloneModelConditions(rule.conditions)
       }));
 
     const columnRenameRules = this.modelColumnRenameRules
@@ -5347,7 +5444,8 @@ export class AutoProcessingModelsComponent implements OnInit {
         id: rule.id,
         sourceColumn: rule.sourceColumn,
         targetColumn: rule.targetColumn.trim(),
-        enabled: rule.enabled !== false
+        enabled: rule.enabled !== false,
+        conditions: cloneModelConditions(rule.conditions)
       }));
 
     const crossDedupRules = this.modelCrossDedupRules
@@ -5366,6 +5464,10 @@ export class AutoProcessingModelsComponent implements OnInit {
           if (this.crossDedupConditionNeedsValue(rule) && rule.conditionValue?.trim()) {
             entry.conditionValue = rule.conditionValue.trim();
           }
+        }
+        const conditions = cloneModelConditions(rule.conditions);
+        if (conditions) {
+          entry.conditions = conditions;
         }
         return entry;
       });
@@ -5539,9 +5641,13 @@ export class AutoProcessingModelsComponent implements OnInit {
           ...action,
           id: action.id || defaults.id,
           columns: [...(action.columns || [])],
+          conditions: this.copyModelConditions(action.conditions),
           columnSettings: action.columnSettings
             ? Object.fromEntries(
-              Object.entries(action.columnSettings).map(([column, settings]) => [column, { ...settings }])
+              Object.entries(action.columnSettings).map(([column, settings]) => [
+                column,
+                { ...settings, conditions: this.copyModelConditions(settings.conditions) }
+              ])
             )
             : undefined
         };
@@ -5560,7 +5666,8 @@ export class AutoProcessingModelsComponent implements OnInit {
       envConditionValue: mapping.envConditionValue || '',
       paysConditionValue: mapping.paysConditionValue || '',
       toValue: mapping.toValue || '',
-      enabled: mapping.enabled !== false
+      enabled: mapping.enabled !== false,
+      conditions: this.copyModelConditions(mapping.conditions)
     }));
 
     this.modelColumnConcatRules = (config.columnConcatRules || []).map(rule => ({
@@ -5569,16 +5676,19 @@ export class AutoProcessingModelsComponent implements OnInit {
       targetColumn: rule.targetColumn || '',
       separator: rule.separator ?? '',
       enabled: rule.enabled !== false,
-      removeSourceColumns: rule.removeSourceColumns !== false
+      removeSourceColumns: rule.removeSourceColumns !== false,
+      conditions: this.copyModelConditions(rule.conditions)
     }));
 
     this.modelColumnMathRules = (config.columnMathRules || []).map(rule => ({
       id: rule.id || `math-${this.nextModelMathRuleId++}`,
       sourceColumnA: rule.sourceColumnA || '',
       sourceColumnB: rule.sourceColumnB || '',
+      ...(isColumnMathConstantB(rule) ? { constantB: String(rule.constantB) } : {}),
       targetColumn: rule.targetColumn || '',
       operation: COLUMN_MATH_OPERATIONS.includes(rule.operation) ? rule.operation : 'add',
-      enabled: rule.enabled !== false
+      enabled: rule.enabled !== false,
+      conditions: this.copyModelConditions(rule.conditions)
     }));
 
     if (config.sectionOrder?.length) {
@@ -5593,7 +5703,8 @@ export class AutoProcessingModelsComponent implements OnInit {
       conditionColumn: rule.conditionColumn || '',
       conditionOperator: rule.conditionOperator || 'EGAL',
       conditionValue: rule.conditionValue || '',
-      enabled: rule.enabled !== false
+      enabled: rule.enabled !== false,
+      conditions: this.copyModelConditions(rule.conditions)
     }));
     if (this.modelCrossDedupRules.length) {
       this.showCrossDedupSection = true;
@@ -5603,7 +5714,8 @@ export class AutoProcessingModelsComponent implements OnInit {
       id: rule.id || `rename-${this.nextModelColumnRenameId++}`,
       sourceColumn: rule.sourceColumn || '',
       targetColumn: rule.targetColumn || '',
-      enabled: rule.enabled !== false
+      enabled: rule.enabled !== false,
+      conditions: this.copyModelConditions(rule.conditions)
     }));
 
     if (this.modelRowFilters.length) {

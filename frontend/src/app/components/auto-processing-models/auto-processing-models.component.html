@@ -1523,6 +1523,9 @@
                       <small class="text-muted" *ngIf="action.applyConditionEnabled">
                         {{ 'APM.Plusieursvaleurspossiblesséparéespardesvirgulesletraitementsappliquesilacolonnecorrespondàlunedelles' | translate }}
                       </small>
+                      <app-model-conditions-editor [(conditions)]="action.conditions" [columns]="getPreProcessingColumns()"
+                                                    [valueSuggestions]="conditionValueSuggestions"
+                                      [label]="'APM.cond.titreAction' | translate"></app-model-conditions-editor>
                     </div>
 
                     <div *ngIf="action.columns?.length && actionNeedsPerColumnSettings(action.type)" class="format-column-settings-list">
@@ -1632,6 +1635,9 @@
                                      placeholder="{{ 'APM.Excashincashout' | translate }}">
                             </div>
                           </div>
+                          <app-model-conditions-editor [(conditions)]="getFormatColumnSettings(action, col).conditions" [columns]="getPreProcessingColumns()"
+                                                        [valueSuggestions]="conditionValueSuggestions"
+                                          [label]="'APM.cond.titreColonne' | translate: { column: col }"></app-model-conditions-editor>
                         </div>
 
                         <div *ngIf="action.type === 'removeIndicatif'" class="form-row">
@@ -1920,6 +1926,8 @@
                       <i class="fas fa-trash"></i>{{ 'ACT.delete' | translate }}</button>
                   </div>
                 </div>
+                <app-model-conditions-editor [(conditions)]="rule.conditions" [columns]="getPreProcessingColumns()"
+                                              [valueSuggestions]="conditionValueSuggestions"></app-model-conditions-editor>
 
                 <div class="form-group">
                   <label>{{ 'APM.Colonnessourcesminimum2' | translate }}</label>
@@ -2006,10 +2014,15 @@
                   </div>
                   <div class="form-group col-md-3">
                     <label>{{ 'APM.Colonneb' | translate }}</label>
-                    <select class="ds-select form-control" [(ngModel)]="rule.sourceColumnB" [ngModelOptions]="{standalone: true}">
+                    <select class="ds-select form-control" [ngModel]="getMathRuleColumnBSelection(rule)"
+                            (ngModelChange)="onMathRuleColumnBChange(rule, $event)" [ngModelOptions]="{standalone: true}">
                       <option value="">{{ 'LBL.chooseDash' | translate }}</option>
+                      <option [value]="mathConstantBOption">{{ 'APM.NombreFixe' | translate }}</option>
                       <option *ngFor="let col of getPreProcessingColumns()" [value]="col">{{ col }}</option>
                     </select>
+                    <input *ngIf="getMathRuleColumnBSelection(rule) === mathConstantBOption" type="text" inputmode="decimal"
+                           class="ds-input form-control mt-1" [(ngModel)]="rule.constantB" [ngModelOptions]="{standalone: true}"
+                           [attr.aria-label]="'APM.NombreFixe' | translate" placeholder="{{ 'APM.NombreFixeExemple' | translate }}">
                   </div>
                   <div class="form-group col-md-2">
                     <label>{{ 'APM.Nouvellecolonne' | translate }}</label>
@@ -2027,6 +2040,8 @@
                     </button>
                   </div>
                 </div>
+                <app-model-conditions-editor [(conditions)]="rule.conditions" [columns]="getPreProcessingColumns()"
+                                              [valueSuggestions]="conditionValueSuggestions"></app-model-conditions-editor>
               </div>
 
               <button type="button" class="ds-btn ds-btn--secondary btn btn-outline-primary btn-sm" (click)="addModelColumnMathRule()">
@@ -2126,6 +2141,8 @@
                     <small class="text-muted">{{ 'APM.valueMappingEnvPaysHelp' | translate }}</small>
                   </div>
                 </div>
+                <app-model-conditions-editor [(conditions)]="mapping.conditions" [columns]="getPreProcessingColumns()"
+                                              [valueSuggestions]="conditionValueSuggestions"></app-model-conditions-editor>
               </div>
 
               <button type="button" class="ds-btn ds-btn--secondary btn btn-outline-primary btn-sm" (click)="addModelValueMapping()">
@@ -2211,6 +2228,8 @@
                            placeholder="{{ 'APM.crossDedupConditionPlaceholder' | translate }}">
                   </div>
                 </div>
+                <app-model-conditions-editor [(conditions)]="rule.conditions" [columns]="getPreProcessingColumns()"
+                                              [valueSuggestions]="conditionValueSuggestions"></app-model-conditions-editor>
               </div>
 
               <button type="button" class="ds-btn ds-btn--secondary btn btn-outline-primary btn-sm" (click)="addModelCrossDedupRule()">
@@ -2262,6 +2281,9 @@
                     </button>
                   </div>
                 </div>
+                <app-model-conditions-editor [(conditions)]="rule.conditions" [columns]="getPreProcessingColumns()"
+                                              [valueSuggestions]="conditionValueSuggestions"></app-model-conditions-editor>
+                <small class="text-muted" *ngIf="rule.conditions?.length">{{ 'APM.cond.renommageParLigne' | translate: { source: rule.sourceColumn || '…', target: rule.targetColumn || '…' } }}</small>
               </div>
 
               <button type="button" class="ds-btn ds-btn--secondary btn btn-outline-primary btn-sm" (click)="addModelColumnRenameRule()">
