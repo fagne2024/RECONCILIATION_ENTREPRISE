@@ -48,6 +48,42 @@ describe('Traitement des modèles — conditions multiples par option', () => {
     expect(out.map(r => r['Double'])).toEqual(['200', '400', '', '']);
   });
 
+  it('conditions sur PAYS / ENV : valeur choisie pour le traitement (colonne écrite après les sections)', async () => {
+    // Cas MOOV_20261126.csv : PAYS = BF choisi avant le traitement, colonne PAYS absente du fichier.
+    const garder = (n: number, pays: string) => ({
+      type: 'removeCharacters', enabled: true, columns: ['Telephone client'],
+      removeCharMode: 'keep', removeCharPosition: 'start', removeCharCount: n,
+      applyConditionEnabled: true, conditionColumn: 'PAYS', conditionValue: pays
+    });
+    const cfg = {
+      paysColumn: { enabled: true, value: 'BF' },
+      formatActions: [{ ...garder(11, 'BF'), order: 1 }, { ...garder(8, 'GA'), order: 2 }],
+      columnConcatRules: [{
+        id: 'c', sourceColumns: ['Telephone client', 'Montant'], targetColumn: 'CLE', separator: '', enabled: true,
+        removeSourceColumns: false, conditions: [{ column: 'PAYS', operator: 'EGAL', values: ['GA'] }]
+      }]
+    } as unknown as ModelPreProcessingConfig;
+    const out = await service.applyPreProcessingAsync([{ 'Telephone client': '22670123456789', Montant: '5' }], cfg, {});
+    // 11 caractères (BF) appliqué, 8 caractères (GA) NON appliqué ; concaténation « si PAYS = GA » non faite.
+    expect(out[0]['Telephone client']).toBe('22670123456');
+    expect(out[0]['CLE']).toBe('');
+    expect(out[0]['PAYS']).toBe('BF');
+
+    // Colonne de condition absente et sans valeur du traitement : l'action ne s'applique pas.
+    const sansPays = await service.applyPreProcessingAsync(
+      [{ 'Telephone client': '22670123456789' }],
+      { formatActions: [garder(8, 'GA')] } as unknown as ModelPreProcessingConfig, {}
+    );
+    expect(sansPays[0]['Telephone client']).toBe('22670123456789');
+
+    // Le PAYS présent dans le fichier reste prioritaire sur la valeur choisie.
+    const fichierGa = await service.applyPreProcessingAsync(
+      [{ 'Telephone client': '22670123456789', PAYS: 'GA' }],
+      { formatActions: [garder(8, 'GA')] } as unknown as ModelPreProcessingConfig, {}
+    );
+    expect(fichierGa[0]['Telephone client']).toBe('22670123');
+  });
+
   it('renommage d’en-tête avec conditions : par ligne, les deux colonnes conservées', async () => {
     const out = await run({
       columnRenameRules: [{ id: 'r', sourceColumn: 'Montant', targetColumn: 'Montant MOOV', enabled: true, conditions: moov }]

@@ -24,7 +24,7 @@ import {
   parseConditionValues
 } from './auto-processing.service';
 import { buildConcatenatedValue } from '../utils/concat.util';
-import { parseValeursCondition, supprimerDoublonsCroises } from '../utils/cross-dedup.util';
+import { parseValeursCondition, remplitConditionDedoublonnage, supprimerDoublonsCroises } from '../utils/cross-dedup.util';
 import {
   describeModelConditions,
   getActiveModelConditions,
@@ -79,6 +79,8 @@ const OPERATION_BANCAIRE_TEMPLATE_COLUMNS: string[] = [
 ];
 
 interface PrecomputedFormatTarget {
+  /** ENV / PAYS du traitement pour les conditions multiples (colonnes pas encore écrites). */
+  conditionFallback: ConditionFallback;
   keys: readonly string[];
   action: ModelFormatAction;
   /** Action et colonne configurées d'origine (suivi de ce qui a réellement modifié des données). */
@@ -114,9 +116,18 @@ export function createPreProcessingUsage(): PreProcessingUsage {
 }
 
 /** Valeurs ENV / PAYS du traitement en cours, lues par les conditions de « Renommer des valeurs ». */
+/**
+ * ENV / PAYS du traitement (choisis avant le traitement ou fixés par le modèle), par nom de colonne
+ * normalisé. Les colonnes ENV et PAYS ne sont écrites qu'après toutes les sections : tant qu'elles
+ * sont absentes de la ligne, les conditions qui les lisent prennent ces valeurs.
+ */
+type ConditionFallback = ReadonlyMap<string, string> | null;
+
 export interface ValueMappingContext {
   env?: string | null;
   pays?: string | null;
+  /** Valeurs ENV / PAYS pour les conditions multiples (voir ConditionFallback). */
+  conditionFallback?: ConditionFallback;
   /**
    * Une section exécutée après le renommage des valeurs crée, modifie ou retire la colonne ENV / PAYS :
    * la condition correspondante ne peut être évaluée qu'en fin de traitement, sur le résultat.
@@ -154,6 +165,56 @@ export class ModelPreProcessingService {
     }
   }
 
+  /** ENV / PAYS du traitement, lus par les conditions tant que ces colonnes ne sont pas dans la ligne. */
+  private buildConditionFallback(config?: ModelPreProcessingConfig | null): ConditionFallback {
+    const map = new Map<string, string>();
+    const env = this.getActiveEnvColumnValue(config);
+    const pays = this.getActivePaysColumnValue(config);
+    if (env) {
+      map.set(normalizeColumnKey(ENV_COLUMN_NAME), env);
+    }
+    if (pays) {
+      map.set(normalizeColumnKey(PAYS_COLUMN_NAME), pays);
+    }
+    return map.size ? map : null;
+  }
+
+  /** Valeur ENV / PAYS du traitement si la colonne de condition en est une et n'est pas dans la ligne. */
+  private conditionFallbackValue(
+    row: Record<string, string>,
+    column: string,
+    fallback: ConditionFallback
+  ): string | undefined {
+    if (!fallback) {
+      return undefined;
+    }
+    const value = fallback.get(normalizeColumnKey(column));
+    return value !== undefined && !resolveColumnKeyInRow(row, column) ? value : undefined;
+  }
+
+  /** Conditions multiples (toutes remplies), avec ENV / PAYS du traitement si la colonne manque. */
+  private matchesConditions(
+    row: Record<string, string>,
+    conditions: ModelCondition[] | null | undefined,
+    fallback: ConditionFallback
+  ): boolean {
+    if (!fallback) {
+      return rowMatchesModelConditions(row, conditions);
+    }
+    for (const condition of getActiveModelConditions(conditions)) {
+      const column = condition.column.trim();
+      const value = this.conditionFallbackValue(row, column, fallback);
+      if (!remplitConditionDedoublonnage(value !== undefined ? { [column]: value } : row, {
+        colonne: column,
+        operateur: condition.operator,
+        valeurs: condition.values ?? []
+      })) {
+        return false;
+      }
+    }
+    return true;
+  }
+
   async applyPreProcessingAsync(
     rows: Record<string, string>[],
     config?: ModelPreProcessingConfig | null,
@@ -173,6 +234,7 @@ export class ModelPreProcessingService {
     const batchSize = options?.batchSize ?? (rows.length > 100000 ? 10000 : 5000);
     let result = rows;
     const sectionOrder = this.resolveSectionOrder(config.sectionOrder);
+    const conditionFallback = this.buildConditionFallback(config);
 
     for (const sectionId of sectionOrder) {
       switch (sectionId) {
@@ -188,7 +250,7 @@ export class ModelPreProcessingService {
           break;
         case 'formatActions':
           if (config.formatActions?.length) {
-            result = await this.applyFormatActionsAsync(result, config.formatActions, batchSize, options, usage);
+            result = await this.applyFormatActionsAsync(result, config.formatActions, batchSize, options, usage, conditionFallback);
           }
           break;
         case 'columnConcatRules':
@@ -196,7 +258,7 @@ export class ModelPreProcessingService {
             result = await this.mapRowsBatched(
               result,
               batchSize,
-              row => this.applyColumnConcatRulesToRow(row, config.columnConcatRules!, usage),
+              row => this.applyColumnConcatRulesToRow(row, config.columnConcatRules!, usage, conditionFallback),
               'Concaténation du modèle...',
               options
             );
@@ -207,7 +269,7 @@ export class ModelPreProcessingService {
             result = await this.mapRowsBatched(
               result,
               batchSize,
-              row => this.applyColumnMathRulesToRow(row, config.columnMathRules!, usage),
+              row => this.applyColumnMathRulesToRow(row, config.columnMathRules!, usage, conditionFallback),
               'Calcul de colonnes...',
               options
             );
@@ -229,7 +291,7 @@ export class ModelPreProcessingService {
           if (config.crossDedupRules?.length) {
             await options?.onProgress?.('Doublons entre deux colonnes...', 0, result.length);
             await options?.yieldFn?.();
-            result = this.applyCrossDedupRules(result, config.crossDedupRules, usage);
+            result = this.applyCrossDedupRules(result, config.crossDedupRules, usage, conditionFallback);
             if (!result.length) {
               return result;
             }
@@ -242,7 +304,8 @@ export class ModelPreProcessingService {
               config.columnRenameRules,
               batchSize,
               options,
-              usage
+              usage,
+              conditionFallback
             );
           }
           break;
@@ -450,7 +513,8 @@ export class ModelPreProcessingService {
       onProgress?: (message: string, done: number, total: number) => void | Promise<void>;
       yieldFn?: () => Promise<void>;
     },
-    usage?: PreProcessingUsage
+    usage?: PreProcessingUsage,
+    conditionFallback: ConditionFallback = null
   ): Promise<Record<string, string>[]> {
     const enabledActions = actions.filter(action => action.enabled && action.columns?.length);
     if (!enabledActions.length || !rows.length) {
@@ -466,7 +530,7 @@ export class ModelPreProcessingService {
       return rows;
     }
 
-    const plan = this.buildFormatActionPlan(sampleRow, orderedActions);
+    const plan = this.buildFormatActionPlan(sampleRow, orderedActions, conditionFallback);
     if (!plan.length) {
       return rows;
     }
@@ -494,7 +558,8 @@ export class ModelPreProcessingService {
 
   private buildFormatActionPlan(
     sampleRow: Record<string, string>,
-    orderedActions: ModelFormatAction[]
+    orderedActions: ModelFormatAction[],
+    conditionFallback: ConditionFallback = null
   ): PrecomputedFormatTarget[] {
     const targets: PrecomputedFormatTarget[] = [];
 
@@ -510,23 +575,28 @@ export class ModelPreProcessingService {
         let conditionColumnKey: string | null = null;
         let expectedValues: ReadonlySet<string> | null = null;
 
-        if (columnSettings?.applyConditionEnabled === true) {
-          const conditionColumn = (columnSettings.conditionColumn ?? '').trim();
-          if (conditionColumn) {
-            conditionColumnKey = resolveColumnKeyInRow(sampleRow, conditionColumn);
-            const parsed = parseConditionValues(columnSettings.conditionValue);
-            expectedValues = parsed.length ? new Set(parsed) : null;
-          }
-        } else if (action.applyConditionEnabled) {
-          const conditionColumn = (action.conditionColumn ?? '').trim();
-          if (conditionColumn) {
-            conditionColumnKey = resolveColumnKeyInRow(sampleRow, conditionColumn);
-            const parsed = parseConditionValues(action.conditionValue);
-            expectedValues = parsed.length ? new Set(parsed) : null;
+        const conditionSource = columnSettings?.applyConditionEnabled === true
+          ? columnSettings
+          : action.applyConditionEnabled ? action : null;
+        const conditionColumn = (conditionSource?.conditionColumn ?? '').trim();
+        if (conditionSource && conditionColumn) {
+          const parsed = parseConditionValues(conditionSource.conditionValue);
+          expectedValues = parsed.length ? new Set(parsed) : null;
+          conditionColumnKey = resolveColumnKeyInRow(sampleRow, conditionColumn);
+          if (!conditionColumnKey) {
+            // Colonne de condition absente : ENV / PAYS du traitement (colonnes écrites après les
+            // sections), sinon la condition ne peut pas être remplie et l'action ne s'applique pas.
+            const fallbackValue = this.conditionFallbackValue(sampleRow, conditionColumn, conditionFallback);
+            if (fallbackValue === undefined
+              || !matchesConditionValues(fallbackValue, String(conditionSource.conditionValue ?? ''))) {
+              continue;
+            }
+            expectedValues = null;
           }
         }
 
         targets.push({
+          conditionFallback,
           keys,
           action: merged,
           source: action,
@@ -560,7 +630,7 @@ export class ModelPreProcessingService {
             continue;
           }
         }
-        if (target.extraConditions.length && !rowMatchesModelConditions(row, target.extraConditions)) {
+        if (target.extraConditions.length && !this.matchesConditions(row, target.extraConditions, target.conditionFallback)) {
           continue;
         }
 
@@ -632,7 +702,8 @@ export class ModelPreProcessingService {
   private applyColumnConcatRulesToRow(
     row: Record<string, string>,
     rules: ModelColumnConcatRule[],
-    usage?: PreProcessingUsage
+    usage?: PreProcessingUsage,
+    conditionFallback: ConditionFallback = null
   ): Record<string, string> {
     const activeRules = this.getActiveColumnConcatRules(rules);
     if (!activeRules.length) {
@@ -642,7 +713,7 @@ export class ModelPreProcessingService {
     const newRow = row;
     for (const rule of activeRules) {
       const before = newRow[rule.targetColumn];
-      if (!rowMatchesModelConditions(newRow, rule.conditions)) {
+      if (!this.matchesConditions(newRow, rule.conditions, conditionFallback)) {
         // Ligne hors conditions : colonne existante inchangée, nouvelle colonne vide.
         if (before === undefined) {
           newRow[rule.targetColumn] = '';
@@ -675,7 +746,8 @@ export class ModelPreProcessingService {
   private applyColumnMathRulesToRow(
     row: Record<string, string>,
     rules: ModelColumnMathRule[],
-    usage?: PreProcessingUsage
+    usage?: PreProcessingUsage,
+    conditionFallback: ConditionFallback = null
   ): Record<string, string> {
     const activeRules = this.getActiveColumnMathRules(rules);
     if (!activeRules.length) {
@@ -683,7 +755,7 @@ export class ModelPreProcessingService {
     }
 
     for (const rule of activeRules) {
-      if (!rowMatchesModelConditions(row, rule.conditions)) {
+      if (!this.matchesConditions(row, rule.conditions, conditionFallback)) {
         // Ligne hors conditions : colonne existante inchangée, nouvelle colonne vide.
         if (row[rule.targetColumn] === undefined) {
           row[rule.targetColumn] = '';
@@ -744,7 +816,7 @@ export class ModelPreProcessingService {
         continue;
       }
       const currentValue = row[key] === undefined || row[key] === null ? '' : String(row[key]);
-      if (!this.valueMappingConditionMatches(row, mapping)) {
+      if (!this.valueMappingConditionMatches(row, mapping, context?.conditionFallback ?? null)) {
         continue;
       }
       const envPays = this.valueMappingEnvPaysMatches(row, mapping, context);
@@ -841,7 +913,8 @@ export class ModelPreProcessingService {
 
   private applyResolvedColumnRenamesToRow(
     row: Record<string, string>,
-    resolvedRules: ResolvedColumnRenameRule[]
+    resolvedRules: ResolvedColumnRenameRule[],
+    conditionFallback: ConditionFallback = null
   ): Record<string, string> {
     if (!resolvedRules.length) {
       return row;
@@ -862,7 +935,7 @@ export class ModelPreProcessingService {
         continue;
       }
       const next = conditions
-        ? this.splitColumnByConditions(current, sourceKey, targetKey, rowMatchesModelConditions(current, conditions))
+        ? this.splitColumnByConditions(current, sourceKey, targetKey, this.matchesConditions(current, conditions, conditionFallback))
         : renameKeyPreservingOrder(current, sourceKey, targetKey);
       if (next !== current) {
         current = next;
@@ -880,7 +953,8 @@ export class ModelPreProcessingService {
       onProgress?: (message: string, done: number, total: number) => void | Promise<void>;
       yieldFn?: () => Promise<void>;
     },
-    usage?: PreProcessingUsage
+    usage?: PreProcessingUsage,
+    conditionFallback: ConditionFallback = null
   ): Promise<Record<string, string>[]> {
     if (!rows.length) {
       return rows;
@@ -907,7 +981,7 @@ export class ModelPreProcessingService {
     for (let start = 0; start < total; start += processingBatch) {
       const end = Math.min(start + processingBatch, total);
       for (let i = start; i < end; i++) {
-        const updated = this.applyResolvedColumnRenamesToRow(rows[i], resolvedRules);
+        const updated = this.applyResolvedColumnRenamesToRow(rows[i], resolvedRules, conditionFallback);
         if (updated !== rows[i]) {
           rows[i] = updated;
         }
@@ -932,6 +1006,7 @@ export class ModelPreProcessingService {
 
     let result = rows.map(row => ({ ...row }));
     const sectionOrder = this.resolveSectionOrder(config.sectionOrder);
+    const conditionFallback = this.buildConditionFallback(config);
 
     for (const sectionId of sectionOrder) {
       switch (sectionId) {
@@ -942,17 +1017,17 @@ export class ModelPreProcessingService {
           break;
         case 'formatActions':
           if (config.formatActions?.length) {
-            result = this.applyFormatActions(result, config.formatActions);
+            result = this.applyFormatActions(result, config.formatActions, conditionFallback);
           }
           break;
         case 'columnConcatRules':
           if (config.columnConcatRules?.length) {
-            result = this.applyColumnConcatRules(result, config.columnConcatRules);
+            result = this.applyColumnConcatRules(result, config.columnConcatRules, conditionFallback);
           }
           break;
         case 'columnMathRules':
           if (config.columnMathRules?.length) {
-            result = this.applyColumnMathRules(result, config.columnMathRules);
+            result = this.applyColumnMathRules(result, config.columnMathRules, conditionFallback);
           }
           break;
         case 'valueMappings':
@@ -962,12 +1037,12 @@ export class ModelPreProcessingService {
           break;
         case 'crossDedupRules':
           if (config.crossDedupRules?.length) {
-            result = this.applyCrossDedupRules(result, config.crossDedupRules);
+            result = this.applyCrossDedupRules(result, config.crossDedupRules, undefined, conditionFallback);
           }
           break;
         case 'columnRenameRules':
           if (config.columnRenameRules?.length) {
-            result = this.applyColumnRenameRules(result, config.columnRenameRules);
+            result = this.applyColumnRenameRules(result, config.columnRenameRules, conditionFallback);
           }
           break;
       }
@@ -1112,7 +1187,8 @@ export class ModelPreProcessingService {
 
   applyFormatActions(
     rows: Record<string, string>[],
-    actions: ModelFormatAction[]
+    actions: ModelFormatAction[],
+    conditionFallback: ConditionFallback = null
   ): Record<string, string>[] {
     const enabledActions = actions.filter(action => action.enabled && action.columns?.length);
     if (!enabledActions.length || !rows.length) {
@@ -1128,7 +1204,7 @@ export class ModelPreProcessingService {
       return rows;
     }
 
-    const plan = this.buildFormatActionPlan(sampleRow, orderedActions);
+    const plan = this.buildFormatActionPlan(sampleRow, orderedActions, conditionFallback);
     if (!plan.length) {
       return rows;
     }
@@ -1142,31 +1218,34 @@ export class ModelPreProcessingService {
 
   applyColumnConcatRules(
     rows: Record<string, string>[],
-    rules: ModelColumnConcatRule[]
+    rules: ModelColumnConcatRule[],
+    conditionFallback: ConditionFallback = null
   ): Record<string, string>[] {
     const activeRules = this.getActiveColumnConcatRules(rules);
     if (!activeRules.length) {
       return rows;
     }
 
-    return rows.map(row => this.applyColumnConcatRulesToRow(row, rules));
+    return rows.map(row => this.applyColumnConcatRulesToRow(row, rules, undefined, conditionFallback));
   }
 
   applyColumnMathRules(
     rows: Record<string, string>[],
-    rules: ModelColumnMathRule[]
+    rules: ModelColumnMathRule[],
+    conditionFallback: ConditionFallback = null
   ): Record<string, string>[] {
     const activeRules = this.getActiveColumnMathRules(rules);
     if (!activeRules.length) {
       return rows;
     }
 
-    return rows.map(row => this.applyColumnMathRulesToRow({ ...row }, rules));
+    return rows.map(row => this.applyColumnMathRulesToRow({ ...row }, rules, undefined, conditionFallback));
   }
 
   applyColumnRenameRules(
     rows: Record<string, string>[],
-    rules: ModelColumnRenameRule[]
+    rules: ModelColumnRenameRule[],
+    conditionFallback: ConditionFallback = null
   ): Record<string, string>[] {
     if (!rows.length) {
       return rows;
@@ -1178,7 +1257,7 @@ export class ModelPreProcessingService {
     }
 
     for (let i = 0; i < rows.length; i++) {
-      const updated = this.applyResolvedColumnRenamesToRow(rows[i], resolvedRules);
+      const updated = this.applyResolvedColumnRenamesToRow(rows[i], resolvedRules, conditionFallback);
       if (updated !== rows[i]) {
         rows[i] = updated;
       }
@@ -1211,6 +1290,7 @@ export class ModelPreProcessingService {
     return {
       env,
       pays,
+      conditionFallback: this.buildConditionFallback(config),
       deferEnv: !env && this.isColumnChangedAfterValueMappings(config, ENV_COLUMN_NAME),
       deferPays: !pays && this.isColumnChangedAfterValueMappings(config, PAYS_COLUMN_NAME)
     };
@@ -2186,9 +2266,10 @@ export class ModelPreProcessingService {
 
   private valueMappingConditionMatches(
     row: Record<string, string>,
-    mapping: ModelColumnValueMapping
+    mapping: ModelColumnValueMapping,
+    conditionFallback: ConditionFallback = null
   ): boolean {
-    if (!rowMatchesModelConditions(row, mapping.conditions)) {
+    if (!this.matchesConditions(row, mapping.conditions, conditionFallback)) {
       return false;
     }
     const conditionColumn = (mapping.conditionColumn ?? '').trim();
@@ -2277,7 +2358,8 @@ export class ModelPreProcessingService {
   applyCrossDedupRules(
     rows: Record<string, string>[],
     rules: ModelCrossDedupRule[],
-    usage?: PreProcessingUsage
+    usage?: PreProcessingUsage,
+    conditionFallback: ConditionFallback = null
   ): Record<string, string>[] {
     let result = rows;
     for (const rule of this.getActiveCrossDedupRules(rules)) {
@@ -2291,7 +2373,7 @@ export class ModelPreProcessingService {
       const extra = getActiveModelConditions(rule.conditions);
       const sortie = supprimerDoublonsCroises(
         result, rule.columnA, rule.columnB, rule.deleteSide === 'B' ? 'B' : 'A', condition,
-        extra.length ? row => rowMatchesModelConditions(row, extra) : undefined
+        extra.length ? row => this.matchesConditions(row, extra, conditionFallback) : undefined
       );
       if (sortie.supprimees) {
         usage?.used.add(rule);
