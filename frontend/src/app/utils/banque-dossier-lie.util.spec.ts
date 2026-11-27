@@ -40,7 +40,9 @@ describe('banque-dossier-lie.util', () => {
       { role: 'FRAIS_REMBOURSEMENT', montant: 1_000 }
     ]);
     expect(s.montantUtilise).toBe(700_000);
-    expect(s.totalFrais).toBe(6_000);
+    expect(s.totalFrais).toBe(1_000);
+    expect(s.fraisAppro).toBe(5_000);
+    expect(s.ecartFrais).toBe(4_000);
     expect(s.ecartAppro).toBe(0);
     expect(s.ecartRemboursement).toBe(1_000);
   });

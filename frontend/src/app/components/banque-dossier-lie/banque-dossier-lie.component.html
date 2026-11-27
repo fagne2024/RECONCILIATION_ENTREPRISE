@@ -187,6 +187,9 @@
     <div class="dl-footer" *ngIf="detail as d">
       <button type="button" class="ds-btn ds-btn--danger" (click)="deleteDossier(d.dossier)"><i class="fas fa-trash"></i> {{ 'BQDL.supprimerDossier' | translate }}</button>
       <span class="dl-spacer"></span>
+      <button type="button" class="ds-btn ds-btn--secondary" (click)="exportDetail()" [disabled]="exporting" [title]="'BQDL.exporterTitre' | translate">
+        <i class="fas" [ngClass]="exporting ? 'fa-spinner fa-spin' : 'fa-file-excel'"></i> {{ 'BQDL.exporter' | translate }}
+      </button>
       <button type="button" class="ds-btn ds-btn--secondary" (click)="closeDetail()">{{ 'COMMON.actions.close' | translate }}</button>
       <button type="button" class="ds-btn ds-btn--primary" (click)="editDossier(d)"><i class="fas fa-edit"></i> {{ 'BQDL.modifier' | translate }}</button>
     </div>
@@ -250,8 +253,9 @@
     <span class="ds-kpi-strip__sep"></span>
     <div class="ds-kpi-strip__item">
       <span class="ds-kpi-strip__label">{{ 'BQDL.totalFrais' | translate }}</span>
-      <span class="ds-kpi-strip__value">{{ s.totalFrais | number:'1.0-2':'fr' }}</span>
-      <span class="dl-kpi-sub">{{ 'BQDL.fraisDetail' | translate: { p0: (s.fraisAppro | number:'1.0-2':'fr'), p1: (s.fraisRemboursement | number:'1.0-2':'fr') } }}</span>
+      <span class="ds-kpi-strip__value dl-kpi-value--ok" [title]="'BQDL.totalFraisHint' | translate">{{ s.totalFrais | number:'1.0-2':'fr' }}</span>
+      <span class="dl-kpi-sub">{{ 'BQDL.totalFraisHint' | translate }}</span>
+      <span class="dl-kpi-sub">{{ 'BQDL.fraisDetail' | translate: { p0: (s.fraisAppro | number:'1.0-2':'fr'), p1: (s.ecartFrais | number:'1.0-2':'fr') } }}</span>
     </div>
   </div>
 </ng-template>

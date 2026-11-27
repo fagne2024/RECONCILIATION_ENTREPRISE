@@ -50,7 +50,10 @@ class BanqueDossierLieServiceTest {
         BanqueDossierLieDto.Synthese s = BanqueDossierLieService.synthese(totaux);
         assertThat(s.ecartAppro()).isZero();
         assertThat(s.ecartRemboursement()).isEqualTo(1_000d);
-        assertThat(s.totalFrais()).isEqualTo(6_000d);
+        // Total des frais = frais sur le montant utilisé ; différence avec les frais prévus de l'appro
+        assertThat(s.totalFrais()).isEqualTo(1_000d);
+        assertThat(s.fraisAppro()).isEqualTo(5_000d);
+        assertThat(s.ecartFrais()).isEqualTo(4_000d);
         assertThat(s.montantUtilise()).isEqualTo(700_000d);
     }
 

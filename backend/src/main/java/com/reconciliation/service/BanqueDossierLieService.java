@@ -212,7 +212,11 @@ public class BanqueDossierLieService {
         return totaux;
     }
 
-    /** Montant utilisé du préfinancement = appro − remboursement du reliquat ; frais = mémo + frais du retour. */
+    /**
+     * Montant utilisé du préfinancement = appro − remboursement du reliquat.
+     * Tout le préfinancement n'étant pas forcément utilisé, le total des frais retenu est celui des frais sur le
+     * montant utilisé ; les frais de l'appro (prévus sur tout le préfinancement) restent indiqués, avec la différence.
+     */
     static BanqueDossierLieDto.Synthese synthese(Map<String, Double> t) {
         double appro = t.getOrDefault(APPRO, 0d);
         double approCp = t.getOrDefault(APPRO_CONTREPARTIE, 0d);
@@ -221,7 +225,7 @@ public class BanqueDossierLieService {
         double rembCp = t.getOrDefault(REMBOURSEMENT_CONTREPARTIE, 0d);
         double fraisRemb = t.getOrDefault(FRAIS_REMBOURSEMENT, 0d);
         return new BanqueDossierLieDto.Synthese(appro, approCp, arrondi(appro - approCp), fraisAppro, remb, rembCp,
-                arrondi(remb - rembCp), fraisRemb, arrondi(fraisAppro + fraisRemb), arrondi(appro - remb),
+                arrondi(remb - rembCp), fraisRemb, fraisRemb, arrondi(fraisAppro - fraisRemb), arrondi(appro - remb),
                 t.getOrDefault(AUTRE, 0d));
     }
 

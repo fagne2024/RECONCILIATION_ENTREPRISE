@@ -625,6 +625,7 @@
     "rowFilterCondSummary": "{{values}} si {{condition}}"
   },
   "BQ": {
+    "DetailsLigneReleve": "Détails de la ligne de relevé",
     "ReconResultByComment": "Par commentaire",
     "ReconResultNoOperation": "Aucune opération en face (rapproché par commentaire)",
     "ReconResultNoReleve": "Aucune ligne de relevé en face (rapproché par commentaire)",
@@ -9338,6 +9339,19 @@
     "sendFailed": "L'e-mail n'a pas pu être envoyé."
   },
   "BQDL": {
+    "exporter": "Exporter",
+    "exporterTitre": "Exporter le dossier en Excel (synthèse et lignes)",
+    "exportImpossible": "Export du dossier impossible.",
+    "exportFeuilleSynthese": "Synthèse",
+    "exportFeuilleLignes": "Lignes",
+    "exportCreePar": "Créé par",
+    "exportModifiePar": "Modifié par",
+    "exportModifieLe": "Modifié le",
+    "exportNbLignes": "Nombre de lignes",
+    "exportSens": "Sens",
+    "exportFraisPrevus": "Frais prévus (appro)",
+    "exportEcartFrais": "Différence frais prévus − frais retenus",
+    "exportLigneSupprimee": "Ligne supprimée",
     "titreEdition": "Lier en dossier",
     "titreModification": "Modifier le dossier lié",
     "titreDetail": "Dossier lié",
@@ -9398,7 +9412,8 @@
     "montantUtilise": "Montant utilisé",
     "montantUtiliseHint": "Appro − remboursement du reliquat",
     "totalFrais": "Total des frais",
-    "fraisDetail": "Appro {{p0}} · retour {{p1}}",
+    "fraisDetail": "Prévus (appro) {{p0}} · différence {{p1}}",
+    "totalFraisHint": "Frais sur le montant utilisé — seuls frais retenus, tout le préfinancement n'étant pas utilisé",
     "lier": "Lier en dossier ({{n}})",
     "liste": "Dossiers liés",
     "voir": "Dossier lié : {{p0}} — voir le détail",
@@ -9409,7 +9424,7 @@
       "FRAIS_APPRO": "Frais de l'appro (mémo)",
       "REMBOURSEMENT": "Remboursement du reliquat (compense)",
       "REMBOURSEMENT_CONTREPARTIE": "Contrepartie du remboursement",
-      "FRAIS_REMBOURSEMENT": "Frais sur le montant retourné",
+      "FRAIS_REMBOURSEMENT": "Frais sur le montant utilisé",
       "AUTRE": "Autre"
     }
   },

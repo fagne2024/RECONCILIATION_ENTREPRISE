@@ -625,6 +625,7 @@
     "rowFilterCondSummary": "{{values}} if {{condition}}"
   },
   "BQ": {
+    "DetailsLigneReleve": "Statement row details",
     "ReconResultByComment": "By comment",
     "ReconResultNoOperation": "No operation on this side (matched by comment)",
     "ReconResultNoReleve": "No statement line on this side (matched by comment)",
@@ -9338,6 +9339,19 @@
     "sendFailed": "The e-mail could not be sent."
   },
   "BQDL": {
+    "exporter": "Export",
+    "exporterTitre": "Export the file to Excel (summary and rows)",
+    "exportImpossible": "Unable to export the file.",
+    "exportFeuilleSynthese": "Summary",
+    "exportFeuilleLignes": "Rows",
+    "exportCreePar": "Created by",
+    "exportModifiePar": "Modified by",
+    "exportModifieLe": "Modified on",
+    "exportNbLignes": "Number of rows",
+    "exportSens": "Direction",
+    "exportFraisPrevus": "Planned fees (top-up)",
+    "exportEcartFrais": "Difference planned − kept fees",
+    "exportLigneSupprimee": "Deleted row",
     "titreEdition": "Link into a file",
     "titreModification": "Edit linked file",
     "titreDetail": "Linked file",
@@ -9398,7 +9412,8 @@
     "montantUtilise": "Amount used",
     "montantUtiliseHint": "Top-up − refund of remaining balance",
     "totalFrais": "Total fees",
-    "fraisDetail": "Top-up {{p0}} · return {{p1}}",
+    "fraisDetail": "Planned (top-up) {{p0}} · difference {{p1}}",
+    "totalFraisHint": "Fees on the amount used — the only fees kept, since the whole pre-financing was not used",
     "lier": "Link into a file ({{n}})",
     "liste": "Linked files",
     "voir": "Linked file: {{p0}} — view details",
@@ -9409,7 +9424,7 @@
       "FRAIS_APPRO": "Top-up fees (memo)",
       "REMBOURSEMENT": "Refund of remaining balance (clearing)",
       "REMBOURSEMENT_CONTREPARTIE": "Refund counterpart",
-      "FRAIS_REMBOURSEMENT": "Fees on returned amount",
+      "FRAIS_REMBOURSEMENT": "Fees on the amount used",
       "AUTRE": "Other"
     }
   },

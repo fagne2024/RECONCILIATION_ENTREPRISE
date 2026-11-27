@@ -307,6 +307,9 @@ export class BanqueComponent implements OnInit {
   // Contrôle de visibilité des colonnes Actions
   showActionsColumn = false;
   
+  /** Colonne Actions (voir / modifier / supprimer) du tableau Relevé bancaire : masquée par défaut. */
+  showReleveActionsColumn = false;
+
   // Contrôle de visibilité de la colonne commentaire
   showCommentColumn = false;
   /** Colonne commentaire du tableau des opérations : masquée par défaut. */
@@ -3348,6 +3351,11 @@ export class BanqueComponent implements OnInit {
     this.showCommentColumn = !this.showCommentColumn;
   }
 
+  // Contrôle de visibilité de la colonne Actions du relevé
+  toggleReleveActionsColumn() {
+    this.showReleveActionsColumn = !this.showReleveActionsColumn;
+  }
+
   // Traitement Automatique (Opérations)
   toggleOpAutoTreatment() {
     this.showOpAutoTreatment = !this.showOpAutoTreatment;
@@ -5076,6 +5084,27 @@ export class BanqueComponent implements OnInit {
       numeroSerie: row.numeroSerie || ''
     };
     this.showReleveEditPopup = true;
+  }
+
+  /** Consultation (lecture seule) d'une ligne de relevé, comme « Voir » sur les opérations. */
+  showReleveDetailPopup = false;
+  releveDetail: ReleveBancaireRow | null = null;
+
+  viewReleve(row: ReleveBancaireRow) {
+    this.releveDetail = row;
+    this.showReleveDetailPopup = true;
+  }
+
+  closeReleveDetail() {
+    this.showReleveDetailPopup = false;
+    this.releveDetail = null;
+  }
+
+  /** Depuis le détail : bascule vers le formulaire de modification. */
+  editReleveFromDetail() {
+    const row = this.releveDetail;
+    this.closeReleveDetail();
+    if (row) this.openReleveEdit(row);
   }
 
   closeReleveEdit() {

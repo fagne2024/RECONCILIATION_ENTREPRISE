@@ -32,10 +32,11 @@ public final class BanqueDossierLieDto {
 
     /**
      * Synthèse d'un préfinancement : appro, frais, remboursement du reliquat et écarts avec les contreparties.
-     * Montants en valeur absolue.
+     * Montants en valeur absolue. {@code totalFrais} = frais sur le montant utilisé (seuls frais retenus) ;
+     * {@code fraisAppro} = frais prévus sur tout le préfinancement ; {@code ecartFrais} = prévus − retenus.
      */
     public record Synthese(double appro, double approContrepartie, double ecartAppro,
                            double fraisAppro, double remboursement, double remboursementContrepartie,
                            double ecartRemboursement, double fraisRemboursement, double totalFrais,
-                           double montantUtilise, double autres) {}
+                           double ecartFrais, double montantUtilise, double autres) {}
 }

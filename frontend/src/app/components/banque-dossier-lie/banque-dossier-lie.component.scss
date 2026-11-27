@@ -203,6 +203,9 @@
   &--ko { color: var(--color-error-text); font-weight: var(--weight-medium); }
 }
 
+/* Frais retenus (frais sur le montant utilisé) */
+.dl-kpi-value--ok { color: var(--color-success-text); }
+
 .dl-section {
   display: flex;
   flex-direction: column;

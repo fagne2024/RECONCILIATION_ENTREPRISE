@@ -41,7 +41,10 @@ export interface DossierSynthese {
   remboursementContrepartie: number;
   ecartRemboursement: number;
   fraisRemboursement: number;
+  /** Frais retenus = frais sur le montant utilisé (FRAIS_REMBOURSEMENT). */
   totalFrais: number;
+  /** Frais prévus de l'appro (FRAIS_APPRO) − frais sur le montant utilisé. */
+  ecartFrais: number;
   montantUtilise: number;
   autres: number;
 }
@@ -160,7 +163,8 @@ export function syntheseDossier(lignes: Array<{ role: DossierRole; montant: numb
     remboursementContrepartie: r2(t['REMBOURSEMENT_CONTREPARTIE']),
     ecartRemboursement: r2(t['REMBOURSEMENT'] - t['REMBOURSEMENT_CONTREPARTIE']),
     fraisRemboursement: r2(t['FRAIS_REMBOURSEMENT']),
-    totalFrais: r2(t['FRAIS_APPRO'] + t['FRAIS_REMBOURSEMENT']),
+    totalFrais: r2(t['FRAIS_REMBOURSEMENT']),
+    ecartFrais: r2(t['FRAIS_APPRO'] - t['FRAIS_REMBOURSEMENT']),
     montantUtilise: r2(t['APPRO'] - t['REMBOURSEMENT']),
     autres: r2(t['AUTRE'])
   };

@@ -319,6 +319,10 @@
             <i class="fas" [class.fa-comment]="!showCommentColumn" [class.fa-comment-slash]="showCommentColumn"></i>
             {{ showCommentColumn ? ('TBL.ui.masquerCommentaires' | translate) : ('TBL.ui.afficherCommentaires' | translate) }}
           </button>
+          <button type="button" class="ds-btn ds-btn--primary btn-primary" (click)="toggleReleveActionsColumn()" [class.active]="showReleveActionsColumn" title="{{ 'BQ.Affichermasquerlescolonnesactions' | translate }}">
+            <i class="fas" [class.fa-eye]="!showReleveActionsColumn" [class.fa-eye-slash]="showReleveActionsColumn"></i>
+            {{ showReleveActionsColumn ? ('RPT.hideActionsBtn' | translate) : ('RPT.showActionsBtn' | translate) }}
+          </button>
           <button type="button" class="ds-btn ds-btn--primary btn-primary" (click)="toggleSelectionModeReleve()" [class.active]="isSelectionModeReleve" title="{{ 'BQ.Sélectionmultiple' | translate }}">
             <i class="fas fa-check-square"></i>
             {{ isSelectionModeReleve ? ('OPS.exitSelection' | translate) : ('ACT.multipleSelection' | translate) }}
@@ -459,7 +463,7 @@
                 <th>{{ 'TBL.currency' | translate }}</th>
                 <th>{{ 'TBL.reconciliationStatus' | translate }}</th>
                 <th *ngIf="showCommentColumn">{{ 'TBL.comment' | translate }}</th>
-                <th class="actions-col" *ngIf="showActionsColumn">{{ 'TBL.actions' | translate }}</th>
+                <th class="actions-col" *ngIf="showReleveActionsColumn">{{ 'TBL.actions' | translate }}</th>
               </tr>
             </thead>
             <tbody>
@@ -510,10 +514,13 @@
                          (keydown.enter)="saveCommentReleve(r)" (keydown.escape)="cancelEditComment()" (blur)="saveCommentReleve(r)">
                 </ng-template>
               </td>
-                <td class="actions-col" *ngIf="showActionsColumn">
+                <td class="actions-col" *ngIf="showReleveActionsColumn">
                   <button type="button" class="btn-icon bq-dossier-icon" *ngIf="dossierDe('RELEVE', r.id) as dl"
                           (click)="ouvrirDossier(dl, $event)" [title]="'BQDL.voir' | translate: { p0: dl.libelle }">
                     <i class="fas fa-folder-tree"></i>
+                  </button>
+                  <button type="button" class="btn-icon" (click)="viewReleve(r)" title="{{ 'ACT.view' | translate }}">
+                    <i class="fas fa-eye"></i>
                   </button>
                   <button type="button" class="btn-icon" (click)="openReleveEdit(r)" [disabled]="!r.id" title="{{ 'BQ.Modifiercetteligne' | translate }}">
                     <i class="fas fa-edit"></i>
@@ -2202,6 +2209,41 @@
       </div>
       <div class="popup-footer">
         <button type="button" class="ds-btn ds-btn--secondary btn-secondary" (click)="closeOkList()"><i class="fas fa-times"></i>{{ 'COMMON.actions.close' | translate }}</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Popup Détail Relevé (lecture seule) -->
+  <div class="modern-popup-overlay" *ngIf="showReleveDetailPopup" (click)="closeReleveDetail()">
+    <div class="modern-popup detail-popup" (click)="$event.stopPropagation()">
+      <div class="popup-header">
+        <h2><i class="fas fa-info-circle"></i> {{ 'BQ.DetailsLigneReleve' | translate }}</h2>
+        <button type="button" class="close-btn" (click)="closeReleveDetail()">
+          <i class="fas fa-times"></i>
+        </button>
+      </div>
+      <div class="popup-content" *ngIf="releveDetail as d">
+        <div class="detail-grid">
+          <div class="detail-item"><label><i class="fas fa-hashtag"></i>{{ 'TBL.accountNumber' | translate }}</label><span>{{ d.numeroCompte || '-' }}</span></div>
+          <div class="detail-item"><label><i class="fas fa-user"></i>{{ 'TBL.accountName' | translate }}</label><span>{{ d.nomCompte || '-' }}</span></div>
+          <div class="detail-item"><label><i class="fas fa-university"></i>{{ 'TBL.bank' | translate }}</label><span>{{ d.banque || '-' }}</span></div>
+          <div class="detail-item"><label><i class="fas fa-globe"></i>{{ 'TBL.country' | translate }}</label><span>{{ d.pays || '-' }}</span></div>
+          <div class="detail-item"><label><i class="fas fa-calendar"></i>{{ 'TBL.accountingDate' | translate }}</label><span>{{ (d.dateComptable | date:'dd/MM/yyyy') || '-' }}</span></div>
+          <div class="detail-item"><label><i class="fas fa-calendar-check"></i>{{ 'TBL.valueDate' | translate }}</label><span>{{ (d.dateValeur | date:'dd/MM/yyyy') || '-' }}</span></div>
+          <div class="detail-item"><label><i class="fas fa-arrow-down"></i>{{ 'TBL.debit' | translate }}</label><span class="montant">{{ d.debit != null ? (d.debit | number:'1.0-2') : '-' }}</span></div>
+          <div class="detail-item"><label><i class="fas fa-arrow-up"></i>{{ 'TBL.credit' | translate }}</label><span class="montant">{{ d.credit != null ? (d.credit | number:'1.0-2') : '-' }}</span></div>
+          <div class="detail-item"><label><i class="fas fa-money-bill-wave"></i>{{ 'TBL.amount' | translate }}</label><span class="montant">{{ d.montant != null ? (d.montant | number:'1.0-2') : '-' }}</span></div>
+          <div class="detail-item"><label><i class="fas fa-coins"></i>{{ 'TBL.currency' | translate }}</label><span>{{ d.devise || '-' }}</span></div>
+          <div class="detail-item"><label><i class="fas fa-barcode"></i>{{ 'TBL.seriesNumber' | translate }}</label><span>{{ d.numeroSerie || '-' }}</span></div>
+          <div class="detail-item"><label><i class="fas fa-money-check"></i>{{ 'BQDL.numeroCheque' | translate }}</label><span>{{ d.numeroCheque || '-' }}</span></div>
+          <div class="detail-item"><label><i class="fas fa-balance-scale"></i>{{ 'TBL.reconciliationStatus' | translate }}</label><span class="badge">{{ d.reconStatus || '-' }}</span></div>
+          <div class="detail-item" style="grid-column: 1 / -1;"><label><i class="fas fa-align-left"></i>{{ 'TBL.labelNarration' | translate }}</label><span>{{ d.libelle || '-' }}</span></div>
+          <div class="detail-item" style="grid-column: 1 / -1;"><label><i class="fas fa-comment"></i>{{ 'TBL.comment' | translate }}</label><span>{{ d.commentaire || '-' }}</span></div>
+        </div>
+      </div>
+      <div class="popup-footer">
+        <button type="button" class="ds-btn ds-btn--secondary btn-secondary" (click)="closeReleveDetail()"><i class="fas fa-times"></i>{{ 'COMMON.actions.close' | translate }}</button>
+        <button type="button" class="ds-btn ds-btn--primary btn-primary" (click)="editReleveFromDetail()" [disabled]="!releveDetail?.id"><i class="fas fa-edit"></i>{{ 'ACT.edit' | translate }}</button>
       </div>
     </div>
   </div>

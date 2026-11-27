@@ -67,6 +67,7 @@ export class BanqueDossierLieComponent implements OnInit {
   detailLoading = false;
   detail: DossierDetail | null = null;
   sections: SectionDetail[] = [];
+  exporting = false;
 
   // ----- Liste -----
   showList = false;
@@ -235,6 +236,154 @@ export class BanqueDossierLieComponent implements OnInit {
   closeDetail(): void {
     this.showDetail = false;
     this.detail = null;
+  }
+
+  /**
+   * Export Excel du dossier affiché : feuille « Synthèse » (dossier, indicateurs, totaux par rôle)
+   * et feuille « Lignes » (une ligne par opération / relevé, avec son rôle).
+   */
+  async exportDetail(): Promise<void> {
+    const d = this.detail;
+    if (!d || this.exporting) return;
+    this.exporting = true;
+    try {
+      const ExcelJS: any = await import('exceljs');
+      const wb = new (ExcelJS.Workbook || ExcelJS.default.Workbook)();
+      const t = (k: string, p?: Record<string, unknown>) => I18nService.t(k, p);
+      const titreFont = { bold: true, size: 14, color: { argb: 'FF1F2A44' } };
+      const headFont = { bold: true, size: 10, color: { argb: 'FF3A4356' } };
+      const headFill = { type: 'pattern', pattern: 'solid', fgColor: { argb: 'FFE8F0FB' } };
+      const border = { bottom: { style: 'thin', color: { argb: 'FFE3E6EB' } } };
+      const numFmt = '# ##0.##;-# ##0.##';
+      const fmtDate = (v: any, heure = false): string => {
+        if (!v) return '';
+        const dt = v instanceof Date ? v : new Date(v);
+        if (isNaN(dt.getTime())) return String(v);
+        const p = (n: number) => String(n).padStart(2, '0');
+        const jour = `${p(dt.getDate())}/${p(dt.getMonth() + 1)}/${dt.getFullYear()}`;
+        return heure ? `${jour} ${p(dt.getHours())}:${p(dt.getMinutes())}` : jour;
+      };
+
+      // ----- Feuille Synthèse -----
+      const ws1 = wb.addWorksheet(t('BQDL.exportFeuilleSynthese'));
+      ws1.getCell('A1').value = d.dossier.libelle;
+      ws1.getCell('A1').font = titreFont;
+      const s = d.synthese;
+      const infos: Array<[string, string | number]> = [
+        [t('BQDL.libelle'), d.dossier.libelle],
+        [t('BQDL.commentaire'), d.dossier.commentaire || ''],
+        [t('BQDL.exportCreePar'), d.dossier.createdBy || ''],
+        [t('BQDL.creeLe'), fmtDate(d.dossier.createdAt, true)],
+        [t('BQDL.exportModifiePar'), d.dossier.updatedBy || ''],
+        [t('BQDL.exportModifieLe'), fmtDate(d.dossier.updatedAt, true)],
+        ['', ''],
+        [t('BQDL.roles.APPRO'), s.appro],
+        [t('BQDL.roles.APPRO_CONTREPARTIE'), s.approContrepartie],
+        [`${t('BQDL.ecart')} ${t('BQDL.roles.APPRO')}`, s.ecartAppro],
+        [t('BQDL.roles.FRAIS_APPRO'), s.fraisAppro],
+        [t('BQDL.roles.REMBOURSEMENT'), s.remboursement],
+        [t('BQDL.roles.REMBOURSEMENT_CONTREPARTIE'), s.remboursementContrepartie],
+        [`${t('BQDL.ecart')} ${t('BQDL.roles.REMBOURSEMENT')}`, s.ecartRemboursement],
+        [t('BQDL.roles.FRAIS_REMBOURSEMENT'), s.fraisRemboursement],
+        [`${t('BQDL.totalFrais')} (${t('BQDL.roles.FRAIS_REMBOURSEMENT')})`, s.totalFrais],
+        [t('BQDL.exportFraisPrevus'), s.fraisAppro],
+        [t('BQDL.exportEcartFrais'), s.ecartFrais],
+        [t('BQDL.montantUtilise'), s.montantUtilise]
+      ];
+      infos.forEach(([label, val], i) => {
+        const row = ws1.getRow(3 + i);
+        row.getCell(1).value = label;
+        row.getCell(1).font = headFont;
+        row.getCell(2).value = val;
+        if (typeof val === 'number') row.getCell(2).numFmt = numFmt;
+      });
+      let r = 3 + infos.length + 1;
+      const totHead = ws1.getRow(r++);
+      [t('BQDL.role'), t('BQDL.exportNbLignes'), t('TBL.amount')].forEach((h, i) => {
+        const c = totHead.getCell(i + 1);
+        c.value = h; c.font = headFont; c.fill = headFill; c.border = border;
+      });
+      this.sections.forEach(sec => {
+        const row = ws1.getRow(r++);
+        row.getCell(1).value = t('BQDL.roles.' + sec.role);
+        row.getCell(2).value = sec.lignes.length;
+        row.getCell(3).value = sec.total;
+        row.getCell(3).numFmt = numFmt;
+      });
+      ws1.getColumn(1).width = 34;
+      ws1.getColumn(2).width = 30;
+      ws1.getColumn(3).width = 18;
+
+      // ----- Feuille Lignes -----
+      const ws2 = wb.addWorksheet(t('BQDL.exportFeuilleLignes'));
+      const headers = [
+        t('BQDL.role'), t('BQDL.type'), 'ID', t('TBL.date'), t('TBL.valueDate'), t('TBL.amount'), t('BQDL.exportSens'),
+        t('BQDL.description'), t('TBL.agency'), t('BQDL.pays'), t('TBL.reference'), t('BQDL.beneficiaire'),
+        t('BQDL.compte'), t('TBL.bank'), t('BQDL.devise'), t('BQDL.numeroCheque'), t('BQDL.modePaiement'),
+        t('BQDL.idGlpi'), t('BQDL.statut'), t('BQDL.reconciliation'), t('BQDL.commentaire')
+      ];
+      const hRow = ws2.getRow(1);
+      headers.forEach((h, i) => {
+        const c = hRow.getCell(i + 1);
+        c.value = h; c.font = headFont; c.fill = headFill; c.border = border;
+      });
+      let ri = 2;
+      for (const sec of this.sections) {
+        for (const l of sec.lignes) {
+          const o = l.operation;
+          const rv = l.releve;
+          const type = t(l.typeLigne === 'OPERATION' ? 'BQDL.operation' : 'BQDL.releve');
+          let vals: Array<string | number | null>;
+          if (o) {
+            vals = [
+              t('BQDL.roles.' + sec.role), type, o.id ?? l.ligneId, fmtDate(o.dateOperation, true), '',
+              l.montant ?? o.montant ?? null, '', o.typeOperation || '', o.agence || '', o.pays || '',
+              o.reference || '', o.nomBeneficiaire || '', o.compteADebiter || '',
+              [o.bo, o.banqueCorrigee].filter(Boolean).join(' → '), '', '', o.modePaiement || '',
+              o.idGlpi || '', [o.statut, o.traitement].filter(Boolean).join(' · '), o.reconStatus || '', o.commentaire || ''
+            ];
+          } else if (rv) {
+            vals = [
+              t('BQDL.roles.' + sec.role), type, rv.id ?? l.ligneId, fmtDate(rv.dateComptable), fmtDate(rv.dateValeur),
+              l.montant ?? null, t(this.sensReleve(rv) === 'debit' ? 'BQ.ReconResultDebit' : 'BQ.ReconResultCredit'),
+              rv.libelle || '', '', rv.pays || '', '', '', [rv.numeroCompte, rv.nomCompte].filter(Boolean).join(' · '),
+              rv.banque || '', rv.devise || '', rv.numeroCheque || '', '', '', '', rv.reconStatus || '', rv.commentaire || ''
+            ];
+          } else {
+            vals = [t('BQDL.roles.' + sec.role), type, l.ligneId, '', '', l.montant ?? null, '',
+              t('BQDL.exportLigneSupprimee'), '', '', '', '', '', '', '', '', '', '', '', '', ''];
+          }
+          const row = ws2.getRow(ri++);
+          vals.forEach((v, i) => {
+            const c = row.getCell(i + 1);
+            c.value = v;
+            c.border = border;
+            if (i === 5 && typeof v === 'number') c.numFmt = numFmt;
+          });
+        }
+      }
+      [26, 12, 9, 17, 13, 15, 9, 40, 16, 8, 22, 26, 26, 18, 8, 13, 16, 12, 20, 14, 40]
+        .forEach((w, i) => ws2.getColumn(i + 1).width = w);
+      ws2.views = [{ state: 'frozen', ySplit: 1 }];
+      ws2.autoFilter = { from: { row: 1, column: 1 }, to: { row: 1, column: headers.length } };
+
+      const buffer = await wb.xlsx.writeBuffer();
+      const blob = new Blob([buffer], { type: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet' });
+      const nom = (d.dossier.libelle || `dossier-${d.dossier.id}`).replace(/[\\/:*?"<>|]+/g, '_').trim();
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement('a');
+      a.href = url;
+      a.download = `${nom}.xlsx`;
+      document.body.appendChild(a);
+      a.click();
+      document.body.removeChild(a);
+      setTimeout(() => URL.revokeObjectURL(url), 1000);
+    } catch (err) {
+      console.error('[DOSSIERS LIES] export impossible', err);
+      this.popupService.showError(I18nService.t('BQDL.exportImpossible'));
+    } finally {
+      this.exporting = false;
+    }
   }
 
   async deleteDossier(d: DossierResume): Promise<void> {
