@@ -91,6 +91,12 @@ public class SuiviCompenseOpImportService {
         return prefix + (max + 1);
     }
 
+    /** Ligne lue dans une feuille : index (0-based) de la ligne Excel et entité correspondante. */
+    public record ParsedRow(int rowIndex, SuiviCompenseOpEntity entity) {}
+
+    /** Résultat de la lecture d'une feuille : index de la ligne d'en-tête et lignes de données non vides. */
+    public record SheetParse(int headerRowIndex, List<ParsedRow> rows) {}
+
     public List<SuiviCompenseOpEntity> parse(MultipartFile file) throws Exception {
         String orig = file.getOriginalFilename();
         String filename = orig != null ? orig.toLowerCase() : "";
@@ -98,33 +104,43 @@ public class SuiviCompenseOpImportService {
             Sheet sheet = wb.getSheetAt(0);
             List<SuiviCompenseOpEntity> out = new ArrayList<>();
             if (sheet == null) return out;
-
-            int headerIdx = findHeaderRow(sheet);
-            if (headerIdx < 0) {
-                throw new IllegalArgumentException(
-                        "En-têtes introuvables : attendu Date, Code agence, Banque, Compte bancaire, Montant, Mode de paiement, Référence, ID ticket, Service, Réseau");
-            }
-            Map<String, Integer> idx = mapHeaders(sheet.getRow(headerIdx));
-
-            for (int r = headerIdx + 1; r <= sheet.getLastRowNum(); r++) {
-                Row row = sheet.getRow(r);
-                if (row == null) continue;
-                SuiviCompenseOpEntity e = new SuiviCompenseOpEntity();
-                e.setDateOperation(getDate(row, idx.get("date")));
-                e.setCodeAgence(getString(row, idx.get("code_agence")));
-                e.setBanque(getString(row, idx.get("banque")));
-                e.setCompteBancaire(getString(row, idx.get("compte_bancaire")));
-                e.setMontant(getDouble(row, idx.get("montant")));
-                e.setModePaiement(getString(row, idx.get("mode_paiement")));
-                e.setReference(getString(row, idx.get("reference")));
-                e.setIdTicket(getString(row, idx.get("id_ticket")));
-                e.setService(getString(row, idx.get("service")));
-                e.setReseau(getString(row, idx.get("reseau")));
-                if (isEmpty(e)) continue; // ignorer les lignes vides
-                out.add(e);
-            }
+            for (ParsedRow row : parseSheet(sheet, 0).rows()) out.add(row.entity());
             return out;
         }
+    }
+
+    /**
+     * Lit une feuille du suivi : recherche de la ligne d'en-tête, puis lecture des lignes situées
+     * après {@code fromRowIndex} (exclu ; 0 ou moins = toutes les lignes après l'en-tête).
+     *
+     * @throws IllegalArgumentException si la ligne d'en-tête est introuvable
+     */
+    public SheetParse parseSheet(Sheet sheet, int fromRowIndex) {
+        int headerIdx = findHeaderRow(sheet);
+        if (headerIdx < 0) {
+            throw new IllegalArgumentException(
+                    "En-têtes introuvables : attendu Date, Code agence, Banque, Compte bancaire, Montant, Mode de paiement, Référence, ID ticket, Service, Réseau");
+        }
+        Map<String, Integer> idx = mapHeaders(sheet.getRow(headerIdx));
+        List<ParsedRow> out = new ArrayList<>();
+        for (int r = Math.max(headerIdx, fromRowIndex) + 1; r <= sheet.getLastRowNum(); r++) {
+            Row row = sheet.getRow(r);
+            if (row == null) continue;
+            SuiviCompenseOpEntity e = new SuiviCompenseOpEntity();
+            e.setDateOperation(getDate(row, idx.get("date")));
+            e.setCodeAgence(getString(row, idx.get("code_agence")));
+            e.setBanque(getString(row, idx.get("banque")));
+            e.setCompteBancaire(getString(row, idx.get("compte_bancaire")));
+            e.setMontant(getDouble(row, idx.get("montant")));
+            e.setModePaiement(getString(row, idx.get("mode_paiement")));
+            e.setReference(getString(row, idx.get("reference")));
+            e.setIdTicket(getString(row, idx.get("id_ticket")));
+            e.setService(getString(row, idx.get("service")));
+            e.setReseau(getString(row, idx.get("reseau")));
+            if (isEmpty(e)) continue; // ignorer les lignes vides
+            out.add(new ParsedRow(r, e));
+        }
+        return new SheetParse(headerIdx, out);
     }
 
     public byte[] generateTemplate() throws Exception {
@@ -218,8 +234,14 @@ public class SuiviCompenseOpImportService {
         Cell c = row.getCell(col);
         if (c == null) return null;
         String v;
-        if (c.getCellType() == CellType.NUMERIC) {
+        CellType type = c.getCellType() == CellType.FORMULA ? c.getCachedFormulaResultType() : c.getCellType();
+        if (type == CellType.NUMERIC) {
             v = new BigDecimal(c.getNumericCellValue()).stripTrailingZeros().toPlainString();
+        } else if (type == CellType.STRING) {
+            // Formule : valeur calculée (et non le texte de la formule)
+            v = c.getStringCellValue().replace(' ', ' ').trim();
+        } else if (type == CellType.BLANK || type == CellType.ERROR) {
+            return null;
         } else {
             v = c.toString().replace(' ', ' ').trim();
         }
@@ -231,14 +253,22 @@ public class SuiviCompenseOpImportService {
         Cell c = row.getCell(col);
         if (c == null) return null;
         if (c.getCellType() == CellType.NUMERIC) return c.getNumericCellValue();
-        // Montants saisis avec espaces de milliers (y compris insecables) ou virgule decimale
-        String s = c.toString().replaceAll("[\\s\\u00A0\\u202F]", "").replace(',', '.');
-        if (s.isEmpty()) return null;
-        try {
-            return Double.parseDouble(s);
-        } catch (NumberFormatException e) {
-            return null;
+        if (c.getCellType() == CellType.FORMULA) {
+            CellType cached = c.getCachedFormulaResultType();
+            if (cached == CellType.NUMERIC) return c.getNumericCellValue();
+            if (cached != CellType.STRING) return null;
+            return parseAmountText(c.getStringCellValue());
         }
+        return parseAmountText(c.toString());
+    }
+
+    /**
+     * Montant saisi en texte : espaces de milliers (y compris insécables), virgule décimale ou
+     * séparateurs de milliers « 2,000,000 » / « 2.000.000 » (même règle que l'import des opérations).
+     */
+    private static Double parseAmountText(String raw) {
+        if (raw == null) return null;
+        return OperationBancaireImportService.parseAmount(raw.replaceAll("[\\s\\u00A0\\u202F]", ""));
     }
 
     private static LocalDate getDate(Row row, Integer col) {
@@ -252,7 +282,7 @@ public class SuiviCompenseOpImportService {
                 if (DateUtil.isCellDateFormatted(c)) return c.getLocalDateTimeCellValue().toLocalDate();
                 return fromExcelSerial(c.getNumericCellValue());
             }
-            return parseDate(c.toString());
+            return parseDate(type == CellType.STRING ? c.getStringCellValue() : c.toString());
         } catch (Exception ignored) { }
         return null;
     }

@@ -69,6 +69,10 @@ public final class ApiModuleMapping {
         if (apiPath.startsWith("/api/configuration/calcul")) return "Modèles";
         if (apiPath.startsWith("/api/configuration/normalisation")) return "Modèles";
         if (apiPath.startsWith("/api/configuration/top-users")) return "Dashboard";
+        // Synchronisation SharePoint : alimente le suivi des compenses OP (écran Banque)
+        if (apiPath.startsWith("/api/configuration/sharepoint-sync")) return "BANQUE";
+        // Source BigQuery du Lanceur de réconciliation
+        if (apiPath.startsWith("/api/configuration/bigquery")) return "Réconciliation";
         if (apiPath.startsWith("/api/configuration")) return "Profil";
         if (apiPath.startsWith("/api/conversion")) return "Modèles";
         if (apiPath.startsWith("/api/renommer")) return "Traitement";

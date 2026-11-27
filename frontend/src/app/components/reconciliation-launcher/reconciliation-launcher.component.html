@@ -140,6 +140,9 @@
         <button type="button" class="m-x" [attr.aria-label]="'LNC.cancel' | translate" (click)="closeMagicModal()">×</button>
       </div>
 
+      <!-- Source BigQuery (masquée si aucune requête configurée) -->
+      <app-bigquery-source *ngIf="showMagicModal" (filesReady)="onBigQueryFiles($event)"></app-bigquery-source>
+
       <!-- Fichier BO -->
       <div class="m-sec">
         <span class="lab">{{ 'LNC.boFile' | translate }}</span>

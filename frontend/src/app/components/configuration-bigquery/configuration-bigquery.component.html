@@ -1,0 +1,245 @@
+<div class="config-sp-page">
+  <header class="top">
+    <div class="top-text">
+      <h1>{{ 'CFG.bigquery.title' | translate }}</h1>
+      <p>{{ 'CFG.bigquery.subtitle' | translate }}</p>
+    </div>
+    <div class="top-acts">
+      <button type="button" class="ds-btn ds-btn--secondary icon-btn" (click)="close()" [title]="'CFG.bigquery.close' | translate">
+        <i class="fas fa-times"></i>
+      </button>
+    </div>
+  </header>
+
+  <div class="loading" *ngIf="loading">
+    <i class="fas fa-spinner fa-spin"></i> {{ 'CFG.bigquery.loading' | translate }}
+  </div>
+
+  <ng-container *ngIf="!loading">
+    <div class="panels">
+      <!-- Connexion Google -->
+      <section class="card">
+        <div class="card-head">
+          <i class="fas fa-key"></i>
+          <div>
+            <h2>{{ 'CFG.bigquery.connexionTitle' | translate }}</h2>
+            <p>{{ 'CFG.bigquery.connexionHint' | translate }}</p>
+          </div>
+        </div>
+        <label class="fld">
+          <span>{{ 'CFG.bigquery.projectId' | translate }}</span>
+          <input type="text" [(ngModel)]="form.projectId" placeholder="mon-projet-gcp" autocomplete="off">
+        </label>
+        <label class="fld">
+          <span>{{ 'CFG.bigquery.location' | translate }}</span>
+          <input type="text" [(ngModel)]="form.location" placeholder="EU" autocomplete="off">
+          <small>{{ 'CFG.bigquery.locationHint' | translate }}</small>
+        </label>
+        <div class="fld">
+          <span>{{ 'CFG.bigquery.key' | translate }}</span>
+          <p class="key-state" *ngIf="config?.cleDefinie">
+            <i class="fas fa-circle-check"></i> {{ 'CFG.bigquery.keyDefined' | translate: { email: config?.serviceAccountEmail } }}
+          </p>
+          <textarea rows="4" class="mono" [(ngModel)]="form.serviceAccountJson" spellcheck="false"
+                    [placeholder]="(config?.cleDefinie ? 'CFG.bigquery.keyReplace' : 'CFG.bigquery.keyPaste') | translate"></textarea>
+          <div class="row-inline">
+            <button type="button" class="btn ghost" (click)="keyPicker.click()">
+              <i class="fas fa-file-import"></i> {{ 'CFG.bigquery.keyFile' | translate }}
+            </button>
+            <input #keyPicker type="file" accept=".json,application/json" hidden (change)="onKeyFile($event)">
+          </div>
+        </div>
+        <div class="acts">
+          <button type="button" class="btn" (click)="testConnexion()" [disabled]="testingConnexion || !config?.cleDefinie">
+            <i class="fas" [ngClass]="testingConnexion ? 'fa-spinner fa-spin' : 'fa-plug'"></i>
+            {{ 'CFG.bigquery.testConnexion' | translate }}
+          </button>
+          <button type="button" class="btn ghost" (click)="clearKey()" [disabled]="savingConfig || !config?.cleDefinie">
+            <i class="fas fa-eraser"></i> {{ 'CFG.bigquery.clearKey' | translate }}
+          </button>
+        </div>
+      </section>
+
+      <!-- Préparation automatique et fichiers partenaires -->
+      <section class="card">
+        <div class="card-head">
+          <i class="fas fa-clock"></i>
+          <div>
+            <h2>{{ 'CFG.bigquery.scheduleTitle' | translate }}</h2>
+            <p>{{ 'CFG.bigquery.scheduleHint' | translate }}</p>
+          </div>
+        </div>
+        <label class="row toggle">
+          <span class="row-text">
+            <b>{{ 'CFG.bigquery.enabled' | translate }}</b>
+            <small>{{ 'CFG.bigquery.enabledHint' | translate }}</small>
+          </span>
+          <input type="checkbox" [(ngModel)]="form.enabled" [disabled]="savingConfig">
+        </label>
+        <label class="fld">
+          <span>{{ 'CFG.bigquery.hours' | translate }}</span>
+          <input type="text" [(ngModel)]="form.heuresExecution" placeholder="06:00">
+          <small>{{ 'CFG.bigquery.hoursHint' | translate }}</small>
+        </label>
+        <dl class="facts" *ngIf="config">
+          <div><dt>{{ 'CFG.bigquery.nextRun' | translate }}</dt>
+            <dd>{{ config.prochainLancement ? (config.prochainLancement | date:'dd/MM/yyyy HH:mm') : '—' }}</dd></div>
+          <div><dt>{{ 'CFG.bigquery.lastAutoRun' | translate }}</dt>
+            <dd>{{ config.lastAutoRunAt ? (config.lastAutoRunAt | date:'dd/MM/yyyy HH:mm') : '—' }}</dd></div>
+        </dl>
+        <p class="warn" *ngIf="config && !config.schedulerActif">
+          <i class="fas fa-triangle-exclamation"></i> {{ 'CFG.bigquery.schedulerOff' | translate }}
+        </p>
+        <label class="fld">
+          <span>{{ 'CFG.bigquery.subfolder' | translate }}</span>
+          <input type="text" [(ngModel)]="form.partnerSubfolder" maxlength="100">
+          <small *ngIf="config?.dossierPartenaires">{{ 'CFG.bigquery.subfolderHint' | translate: { path: config?.dossierPartenaires } }}</small>
+        </label>
+        <label class="fld">
+          <span>{{ 'CFG.bigquery.maxRows' | translate }}</span>
+          <input type="number" min="1" max="5000000" [(ngModel)]="form.maxRows">
+        </label>
+        <div class="acts">
+          <button type="button" class="btn p" (click)="saveConfig()" [disabled]="savingConfig">
+            <i class="fas" [ngClass]="savingConfig ? 'fa-spinner fa-spin' : 'fa-save'"></i>
+            {{ 'CFG.bigquery.save' | translate }}
+          </button>
+        </div>
+      </section>
+    </div>
+
+    <!-- Requêtes -->
+    <section class="card wide">
+      <div class="card-head">
+        <i class="fas fa-database"></i>
+        <div>
+          <h2>{{ 'CFG.bigquery.queriesTitle' | translate }}</h2>
+          <p>{{ 'CFG.bigquery.queriesHint' | translate }}</p>
+        </div>
+        <button type="button" class="btn" (click)="newQuery()" [disabled]="!!editing">
+          <i class="fas fa-plus"></i> {{ 'CFG.bigquery.addQuery' | translate }}
+        </button>
+      </div>
+
+      <form class="source-form" *ngIf="editing" (ngSubmit)="saveQuery()">
+        <label class="fld">
+          <span>{{ 'CFG.bigquery.label' | translate }}</span>
+          <input type="text" name="libelle" [(ngModel)]="editing.libelle" maxlength="150" placeholder="Transactions BO" required>
+        </label>
+        <label class="fld">
+          <span>{{ 'CFG.bigquery.prefix' | translate }}</span>
+          <input type="text" name="boFilePrefix" [(ngModel)]="editing.boFilePrefix" maxlength="50" placeholder="TRXBO" required>
+          <small>{{ 'CFG.bigquery.prefixHint' | translate }}</small>
+        </label>
+        <label class="row toggle">
+          <span class="row-text"><b>{{ 'CFG.bigquery.queryEnabled' | translate }}</b></span>
+          <input type="checkbox" name="enabled" [(ngModel)]="editing.enabled">
+        </label>
+        <label class="fld span-all">
+          <span>{{ 'CFG.bigquery.sql' | translate }}</span>
+          <textarea name="sqlText" rows="9" class="mono" [(ngModel)]="editing.sqlText" spellcheck="false" required></textarea>
+          <small>{{ 'CFG.bigquery.sqlHint' | translate }}</small>
+        </label>
+        <div class="acts span-all">
+          <button type="button" class="btn ghost" (click)="cancelEdit()" [disabled]="savingQuery">{{ 'CFG.bigquery.cancel' | translate }}</button>
+          <button type="submit" class="btn p" [disabled]="savingQuery">
+            <i class="fas" [ngClass]="savingQuery ? 'fa-spinner fa-spin' : 'fa-save'"></i>
+            {{ 'CFG.bigquery.save' | translate }}
+          </button>
+        </div>
+      </form>
+
+      <p class="empty" *ngIf="!queries.length && !editing">{{ 'CFG.bigquery.noQuery' | translate }}</p>
+
+      <ng-container *ngIf="queries.length">
+        <div class="row-inline dry-date">
+          <span>{{ 'CFG.bigquery.dryRunDate' | translate }}</span>
+          <input type="date" [(ngModel)]="dryRunDate">
+        </div>
+        <div class="tbl-wrap">
+          <table class="tbl">
+            <thead>
+              <tr>
+                <th>{{ 'CFG.bigquery.label' | translate }}</th>
+                <th>{{ 'CFG.bigquery.prefix' | translate }}</th>
+                <th>{{ 'CFG.bigquery.sql' | translate }}</th>
+                <th class="actions-col"></th>
+              </tr>
+            </thead>
+            <tbody>
+              <tr *ngFor="let q of queries" [class.disabled]="!q.enabled">
+                <td><b>{{ q.libelle }}</b> <span class="tag" *ngIf="!q.enabled">{{ 'CFG.bigquery.inactive' | translate }}</span></td>
+                <td><code>{{ q.boFilePrefix }}_BQ_aaaammjj.csv</code></td>
+                <td><div class="msg mono" [title]="q.sqlText">{{ q.sqlText }}</div></td>
+                <td class="actions-col">
+                  <button type="button" class="icon-btn sm" (click)="dryRun(q)" [disabled]="anyBusy" [title]="'CFG.bigquery.dryRun' | translate">
+                    <i class="fas" [ngClass]="busy === 'dry-' + q.id ? 'fa-spinner fa-spin' : 'fa-vial'"></i>
+                  </button>
+                  <button type="button" class="icon-btn sm" (click)="editQuery(q)" [disabled]="anyBusy || !!editing" [title]="'CFG.bigquery.edit' | translate">
+                    <i class="fas fa-pen"></i>
+                  </button>
+                  <button type="button" class="icon-btn sm danger" (click)="deleteQuery(q)" [disabled]="anyBusy" [title]="'CFG.bigquery.delete' | translate">
+                    <i class="fas fa-trash"></i>
+                  </button>
+                </td>
+              </tr>
+            </tbody>
+          </table>
+        </div>
+      </ng-container>
+
+      <div class="dry-result" *ngIf="dryRunResult">
+        <div class="report-head">
+          <span class="status ok">OK</span>
+          <b>{{ dryRunResult.libelle }}</b>
+          <span class="muted">{{ 'CFG.bigquery.dryRunResult' | translate: { bytes: formatBytes(dryRunResult.octetsLus), file: dryRunResult.fichierBo } }}</span>
+          <button type="button" class="icon-btn sm" (click)="dryRunResult = null"><i class="fas fa-times"></i></button>
+        </div>
+        <p class="cols"><span *ngFor="let c of dryRunResult.colonnes" class="tag">{{ c }}</span></p>
+      </div>
+    </section>
+
+    <!-- Historique -->
+    <section class="card wide">
+      <div class="card-head">
+        <i class="fas fa-clock-rotate-left"></i>
+        <div>
+          <h2>{{ 'CFG.bigquery.historyTitle' | translate }}</h2>
+          <p>{{ 'CFG.bigquery.historyHint' | translate }}</p>
+        </div>
+        <button type="button" class="icon-btn sm" (click)="loadHistory()" [title]="'CFG.bigquery.refresh' | translate">
+          <i class="fas fa-rotate"></i>
+        </button>
+      </div>
+      <p class="empty" *ngIf="!history.length">{{ 'CFG.bigquery.noHistory' | translate }}</p>
+      <div class="tbl-wrap" *ngIf="history.length">
+        <table class="tbl">
+          <thead>
+            <tr>
+              <th>{{ 'CFG.bigquery.date' | translate }}</th>
+              <th>{{ 'CFG.bigquery.trigger' | translate }}</th>
+              <th>{{ 'CFG.bigquery.label' | translate }}</th>
+              <th>{{ 'CFG.bigquery.opDate' | translate }}</th>
+              <th class="num">{{ 'CFG.bigquery.rows' | translate }}</th>
+              <th>{{ 'CFG.bigquery.status' | translate }}</th>
+            </tr>
+          </thead>
+          <tbody>
+            <tr *ngFor="let h of history">
+              <td>{{ h.startedAt | date:'dd/MM/yyyy HH:mm' }}</td>
+              <td>{{ (h.declencheur === 'AUTO' ? 'CFG.bigquery.triggerAuto' : 'CFG.bigquery.triggerManual') | translate }}
+                <div class="muted" *ngIf="h.declencheur !== 'AUTO' && h.utilisateur">{{ h.utilisateur }}</div></td>
+              <td>{{ h.queryLibelle || '—' }}</td>
+              <td>{{ h.dateParam ? (h.dateParam | date:'dd/MM/yyyy') : '—' }}</td>
+              <td class="num"><b>{{ h.rowCount }}</b></td>
+              <td>
+                <span class="status" [class.ok]="h.status === 'OK'" [class.ko]="h.status === 'ERREUR'">{{ h.status }}</span>
+                <div class="msg" [title]="h.message || ''">{{ h.message || h.fileName }}</div>
+              </td>
+            </tr>
+          </tbody>
+        </table>
+      </div>
+    </section>
+  </ng-container>
+</div>

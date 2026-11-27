@@ -1,0 +1,72 @@
+/* Complète les styles partagés de configuration-sharepoint-sync.component.scss */
+
+.fld textarea {
+  padding: 9px 12px;
+  border: 1px solid var(--line);
+  border-radius: 10px;
+  background: var(--surface);
+  color: var(--ink);
+  font-size: 12.5px;
+  resize: vertical;
+
+  &:focus {
+    outline: 2px solid var(--primary);
+    outline-offset: -1px;
+  }
+}
+
+.mono {
+  font-family: var(--font-mono, ui-monospace, SFMono-Regular, Consolas, monospace);
+}
+
+.key-state {
+  margin: 0;
+  color: var(--color-success-text);
+  font-size: 12.5px;
+}
+
+.row-inline {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 8px;
+}
+
+.dry-date {
+  margin: 10px 0 0;
+  font-size: 12.5px;
+  color: var(--muted);
+
+  input {
+    padding: 6px 10px;
+    border: 1px solid var(--line);
+    border-radius: 8px;
+    background: var(--surface);
+    color: var(--ink);
+    font: inherit;
+  }
+}
+
+.dry-result {
+  margin-top: 8px;
+  padding: 10px 12px;
+  border: 1px solid var(--line);
+  border-radius: 12px;
+  background: var(--soft);
+
+  .report-head {
+    padding-top: 0;
+  }
+
+  .cols {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 6px;
+    margin: 8px 0 0;
+
+    .tag {
+      margin: 0;
+      background: var(--surface);
+    }
+  }
+}

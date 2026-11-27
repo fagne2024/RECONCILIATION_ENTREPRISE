@@ -1,0 +1,83 @@
+<section class="bq" *ngIf="available">
+  <button type="button" class="bq-head" (click)="expanded = !expanded" [attr.aria-expanded]="expanded">
+    <i class="fas fa-database"></i>
+    <span class="bq-title">{{ 'LNC.bq.title' | translate }}</span>
+    <span class="bq-sub">{{ 'LNC.bq.subtitle' | translate }}</span>
+    <i class="fas chevron" [ngClass]="expanded ? 'fa-chevron-up' : 'fa-chevron-down'"></i>
+  </button>
+
+  <div class="bq-body" *ngIf="expanded">
+    <!-- Extractions prêtes -->
+    <div class="bq-block">
+      <span class="lab">{{ 'LNC.bq.ready' | translate }}</span>
+      <p class="hint" *ngIf="!extracts.length">{{ 'LNC.bq.noReady' | translate }}</p>
+      <ul class="bq-list" *ngIf="extracts.length">
+        <li *ngFor="let e of extracts">
+          <div class="info">
+            <b>{{ e.libelle }}</b>
+            <span>{{ e.fileName }} · {{ 'LNC.bq.rows' | translate: { count: e.rowCount } }} · {{ formatSize(e.fileBytes) }}</span>
+            <small>{{ 'LNC.bq.preparedAt' | translate }} {{ e.preparedAt | date:'dd/MM/yyyy HH:mm' }}
+              ({{ (e.declencheur === 'AUTO' ? 'LNC.bq.auto' : 'LNC.bq.manual') | translate }})</small>
+          </div>
+          <div class="acts">
+            <button type="button" class="ds-btn ds-btn--secondary ds-btn--sm" (click)="useExtract(e)" [disabled]="loadingFiles || extracting">
+              {{ 'LNC.bq.useAsBo' | translate }}
+            </button>
+            <button type="button" class="ds-btn ds-btn--primary ds-btn--sm" (click)="useExtract(e, true)"
+                    [disabled]="loadingFiles || extracting || !selectedPartnerCount"
+                    [title]="'LNC.bq.oneClickHint' | translate">
+              <i class="fas" [ngClass]="loadingFiles ? 'fa-spinner fa-spin' : 'fa-bolt'"></i>
+              {{ 'LNC.bq.oneClick' | translate: { count: selectedPartnerCount } }}
+            </button>
+          </div>
+        </li>
+      </ul>
+    </div>
+
+    <!-- Extraction à l'instant T -->
+    <div class="bq-block">
+      <span class="lab">{{ 'LNC.bq.now' | translate }}</span>
+      <div class="bq-row">
+        <select [(ngModel)]="selectedQueryId" [disabled]="extracting" [attr.aria-label]="'LNC.bq.query' | translate">
+          <option *ngFor="let q of queries" [ngValue]="q.id">{{ q.libelle }}</option>
+        </select>
+        <input type="date" [(ngModel)]="date" [disabled]="extracting" [attr.aria-label]="'LNC.bq.date' | translate">
+        <button type="button" class="ds-btn ds-btn--secondary ds-btn--sm" (click)="extractNow()" [disabled]="extracting || selectedQueryId == null">
+          <i class="fas" [ngClass]="extracting ? 'fa-spinner fa-spin' : 'fa-download'"></i>
+          {{ (extracting ? 'LNC.bq.extracting' : 'LNC.bq.extract') | translate }}
+        </button>
+      </div>
+      <p class="hint">{{ 'LNC.bq.nowHint' | translate }}</p>
+    </div>
+
+    <!-- Fichiers partenaires du dossier -->
+    <div class="bq-block">
+      <span class="lab">
+        {{ 'LNC.bq.partners' | translate }}
+        <span class="badge">{{ selectedPartnerCount }}/{{ partnerFiles.length }}</span>
+        <button type="button" class="link" (click)="loadPartnerFiles()">{{ 'LNC.bq.refresh' | translate }}</button>
+      </span>
+      <p class="hint err" *ngIf="partnerError">{{ partnerError }}</p>
+      <p class="hint" *ngIf="!partnerError && !partnerFiles.length">{{ 'LNC.bq.noPartner' | translate }}</p>
+      <ng-container *ngIf="partnerFiles.length">
+        <div class="bq-row small">
+          <button type="button" class="link" (click)="toggleAll(true)">{{ 'LNC.bq.all' | translate }}</button>
+          <button type="button" class="link" (click)="toggleAll(false)">{{ 'LNC.bq.none' | translate }}</button>
+        </div>
+        <ul class="bq-files">
+          <li *ngFor="let f of partnerFiles">
+            <label>
+              <input type="checkbox" [(ngModel)]="f.selected">
+              <span class="n">{{ f.fileName }}</span>
+              <span class="z">{{ formatSize(f.size) }} · {{ f.lastModified | date:'dd/MM HH:mm' }}</span>
+            </label>
+          </li>
+        </ul>
+        <button type="button" class="ds-btn ds-btn--secondary ds-btn--sm" (click)="addSelectedPartners()"
+                [disabled]="loadingFiles || !selectedPartnerCount">
+          {{ 'LNC.bq.addPartners' | translate: { count: selectedPartnerCount } }}
+        </button>
+      </ng-container>
+    </div>
+  </div>
+</section>

@@ -1,0 +1,306 @@
+<div class="config-sp-page">
+  <header class="top">
+    <div class="top-text">
+      <h1>{{ 'CFG.sharepoint.title' | translate }}</h1>
+      <p>{{ 'CFG.sharepoint.subtitle' | translate }}</p>
+    </div>
+    <div class="top-acts">
+      <button type="button" class="ds-btn ds-btn--secondary btn p" (click)="runAll()"
+              [disabled]="loading || anyBusy || !sources.length">
+        <i class="fas" [ngClass]="busy === 'all' ? 'fa-spinner fa-spin' : 'fa-play'"></i>
+        {{ 'CFG.sharepoint.runAll' | translate }}
+      </button>
+      <button type="button" class="ds-btn ds-btn--secondary icon-btn" (click)="close()" [title]="'CFG.sharepoint.close' | translate">
+        <i class="fas fa-times"></i>
+      </button>
+    </div>
+  </header>
+
+  <div class="loading" *ngIf="loading">
+    <i class="fas fa-spinner fa-spin"></i> {{ 'CFG.sharepoint.loading' | translate }}
+  </div>
+
+  <ng-container *ngIf="!loading">
+    <!-- Résultat d'un test ou d'une exécution -->
+    <section class="card report-card" *ngIf="reports.length">
+      <div class="card-head">
+        <i class="fas fa-clipboard-check"></i>
+        <div>
+          <h2>{{ (reports[0].test ? 'CFG.sharepoint.testResult' : 'CFG.sharepoint.runResult') | translate }}</h2>
+        </div>
+        <button type="button" class="icon-btn sm" (click)="closeReports()" [title]="'CFG.sharepoint.close' | translate">
+          <i class="fas fa-times"></i>
+        </button>
+      </div>
+      <div class="report" *ngFor="let r of reports">
+        <div class="report-head">
+          <span class="status" [class.ok]="r.status === 'OK'" [class.ko]="r.status !== 'OK'">{{ r.status }}</span>
+          <b>{{ r.libelle }}</b>
+          <span class="muted" *ngIf="r.fichier">
+            — <a *ngIf="r.fichierUrl; else nomFichier" [href]="r.fichierUrl" target="_blank" rel="noopener">{{ r.fichier }}</a>
+            <ng-template #nomFichier>{{ r.fichier }}</ng-template>
+            ({{ 'CFG.sharepoint.month' | translate }} {{ r.mois }}, {{ 'CFG.sharepoint.modified' | translate }} {{ r.fichierModifie | date:'dd/MM/yyyy HH:mm' }})
+          </span>
+        </div>
+        <table class="tbl" *ngIf="r.feuilles?.length">
+          <thead>
+            <tr>
+              <th>{{ 'CFG.sharepoint.sheet' | translate }}</th>
+              <th class="num">{{ 'CFG.sharepoint.examined' | translate }}</th>
+              <th class="num">{{ (r.test ? 'CFG.sharepoint.toLoad' : 'CFG.sharepoint.loaded') | translate }}</th>
+              <th class="num" *ngIf="!r.test">{{ 'CFG.sharepoint.duplicates' | translate }}</th>
+              <th class="num">{{ 'CFG.sharepoint.otherMonth' | translate }}</th>
+              <th class="num">{{ 'CFG.sharepoint.incomplete' | translate }}</th>
+              <th>{{ 'CFG.sharepoint.remark' | translate }}</th>
+            </tr>
+          </thead>
+          <tbody>
+            <tr *ngFor="let f of r.feuilles">
+              <td>{{ f.feuilleTrouvee || f.feuille }}</td>
+              <td class="num">{{ f.lignesExaminees }}</td>
+              <td class="num"><b>{{ r.test ? f.aCharger : f.chargees }}</b></td>
+              <td class="num" *ngIf="!r.test">{{ f.doublons }}</td>
+              <td class="num">{{ f.horsMois }}</td>
+              <td class="num">{{ f.incompletes }}</td>
+              <td>
+                <span class="ko-text" *ngIf="f.erreur">{{ f.erreur }}</span>
+                <span *ngIf="!f.erreur && f.curseurReinitialise">{{ 'CFG.sharepoint.cursorMoved' | translate }}</span>
+              </td>
+            </tr>
+          </tbody>
+        </table>
+        <p class="report-msg" *ngIf="!r.feuilles?.length">{{ r.message }}</p>
+      </div>
+    </section>
+
+    <div class="panels">
+      <!-- Connexion Microsoft 365 -->
+      <section class="card">
+        <div class="card-head">
+          <i class="fas fa-key"></i>
+          <div>
+            <h2>{{ 'CFG.sharepoint.connexionTitle' | translate }}</h2>
+            <p>{{ 'CFG.sharepoint.connexionHint' | translate }}</p>
+          </div>
+        </div>
+        <label class="fld">
+          <span>{{ 'CFG.sharepoint.tenantId' | translate }}</span>
+          <input type="text" [(ngModel)]="form.azureTenantId" placeholder="xxxxxxxx-xxxx-xxxx-xxxx-xxxxxxxxxxxx" autocomplete="off">
+        </label>
+        <label class="fld">
+          <span>{{ 'CFG.sharepoint.clientId' | translate }}</span>
+          <input type="text" [(ngModel)]="form.clientId" placeholder="xxxxxxxx-xxxx-xxxx-xxxx-xxxxxxxxxxxx" autocomplete="off">
+        </label>
+        <label class="fld">
+          <span>{{ 'CFG.sharepoint.clientSecret' | translate }}</span>
+          <input type="password" [(ngModel)]="form.clientSecret" autocomplete="new-password"
+                 [placeholder]="(config?.clientSecretDefini ? 'CFG.sharepoint.secretDefined' : 'CFG.sharepoint.secretMissing') | translate">
+        </label>
+        <div class="acts">
+          <button type="button" class="btn" (click)="testConnexion()" [disabled]="testingConnexion || !config?.clientSecretDefini">
+            <i class="fas" [ngClass]="testingConnexion ? 'fa-spinner fa-spin' : 'fa-plug'"></i>
+            {{ 'CFG.sharepoint.testConnexion' | translate }}
+          </button>
+          <button type="button" class="btn ghost" (click)="clearSecret()" [disabled]="savingConfig || !config?.clientSecretDefini">
+            <i class="fas fa-eraser"></i>
+            {{ 'CFG.sharepoint.clearSecret' | translate }}
+          </button>
+        </div>
+      </section>
+
+      <!-- Planification -->
+      <section class="card">
+        <div class="card-head">
+          <i class="fas fa-clock"></i>
+          <div>
+            <h2>{{ 'CFG.sharepoint.scheduleTitle' | translate }}</h2>
+            <p>{{ 'CFG.sharepoint.scheduleHint' | translate }}</p>
+          </div>
+        </div>
+        <label class="row toggle">
+          <span class="row-text">
+            <b>{{ 'CFG.sharepoint.enabled' | translate }}</b>
+            <small>{{ 'CFG.sharepoint.enabledHint' | translate }}</small>
+          </span>
+          <input type="checkbox" [(ngModel)]="form.enabled" [disabled]="savingConfig">
+        </label>
+        <label class="fld">
+          <span>{{ 'CFG.sharepoint.hours' | translate }}</span>
+          <input type="text" [(ngModel)]="form.heuresExecution" placeholder="08:00, 14:00">
+          <small>{{ 'CFG.sharepoint.hoursHint' | translate }}</small>
+        </label>
+        <dl class="facts" *ngIf="config">
+          <div><dt>{{ 'CFG.sharepoint.nextRun' | translate }}</dt>
+            <dd>{{ config.prochainLancement ? (config.prochainLancement | date:'dd/MM/yyyy HH:mm') : '—' }}</dd></div>
+          <div><dt>{{ 'CFG.sharepoint.lastAutoRun' | translate }}</dt>
+            <dd>{{ config.lastAutoRunAt ? (config.lastAutoRunAt | date:'dd/MM/yyyy HH:mm') : '—' }}</dd></div>
+        </dl>
+        <p class="warn" *ngIf="config && !config.schedulerActif">
+          <i class="fas fa-triangle-exclamation"></i> {{ 'CFG.sharepoint.schedulerOff' | translate }}
+        </p>
+        <div class="acts">
+          <button type="button" class="btn p" (click)="saveConfig()" [disabled]="savingConfig">
+            <i class="fas" [ngClass]="savingConfig ? 'fa-spinner fa-spin' : 'fa-save'"></i>
+            {{ 'CFG.sharepoint.save' | translate }}
+          </button>
+        </div>
+      </section>
+    </div>
+
+    <!-- Liens SharePoint -->
+    <section class="card wide">
+      <div class="card-head">
+        <i class="fas fa-link"></i>
+        <div>
+          <h2>{{ 'CFG.sharepoint.sourcesTitle' | translate }}</h2>
+          <p>{{ 'CFG.sharepoint.sourcesHint' | translate }}</p>
+        </div>
+        <button type="button" class="btn" (click)="newSource()" [disabled]="!!editing">
+          <i class="fas fa-plus"></i> {{ 'CFG.sharepoint.addSource' | translate }}
+        </button>
+      </div>
+
+      <form class="source-form" *ngIf="editing" (ngSubmit)="saveSource()">
+        <label class="fld">
+          <span>{{ 'CFG.sharepoint.label' | translate }}</span>
+          <input type="text" name="libelle" [(ngModel)]="editing.libelle" maxlength="150" placeholder="Opérations Sénégal" required>
+        </label>
+        <label class="fld span2">
+          <span>{{ 'CFG.sharepoint.url' | translate }}</span>
+          <input type="url" name="url" [(ngModel)]="editing.url" maxlength="2000"
+                 placeholder="https://xxx.sharepoint.com/sites/SITE/SitePages/PAGE.aspx" required>
+          <small>{{ 'CFG.sharepoint.urlHint' | translate }}</small>
+        </label>
+        <label class="fld">
+          <span>{{ 'CFG.sharepoint.pattern' | translate }}</span>
+          <input type="text" name="filePattern" [(ngModel)]="editing.filePattern" maxlength="200" placeholder="SN_SUIVI_OPS" required>
+          <small>{{ 'CFG.sharepoint.patternHint' | translate }}</small>
+        </label>
+        <label class="fld">
+          <span>{{ 'CFG.sharepoint.sheetClient' | translate }}</span>
+          <input type="text" name="sheetClient" [(ngModel)]="editing.sheetClient" maxlength="150">
+        </label>
+        <label class="fld">
+          <span>{{ 'CFG.sharepoint.sheetSupplier' | translate }}</span>
+          <input type="text" name="sheetFournisseur" [(ngModel)]="editing.sheetFournisseur" maxlength="150">
+        </label>
+        <label class="row toggle">
+          <span class="row-text"><b>{{ 'CFG.sharepoint.sourceEnabled' | translate }}</b></span>
+          <input type="checkbox" name="enabled" [(ngModel)]="editing.enabled">
+        </label>
+        <div class="acts span-all">
+          <button type="button" class="btn ghost" (click)="cancelEdit()" [disabled]="savingSource">
+            {{ 'CFG.sharepoint.cancel' | translate }}
+          </button>
+          <button type="submit" class="btn p" [disabled]="savingSource">
+            <i class="fas" [ngClass]="savingSource ? 'fa-spinner fa-spin' : 'fa-save'"></i>
+            {{ 'CFG.sharepoint.save' | translate }}
+          </button>
+        </div>
+      </form>
+
+      <p class="empty" *ngIf="!sources.length && !editing">{{ 'CFG.sharepoint.noSource' | translate }}</p>
+
+      <div class="tbl-wrap" *ngIf="sources.length">
+        <table class="tbl">
+          <thead>
+            <tr>
+              <th>{{ 'CFG.sharepoint.label' | translate }}</th>
+              <th>{{ 'CFG.sharepoint.pattern' | translate }}</th>
+              <th>{{ 'CFG.sharepoint.lastFile' | translate }}</th>
+              <th class="num">{{ 'CFG.sharepoint.lastRowClient' | translate }}</th>
+              <th class="num">{{ 'CFG.sharepoint.lastRowSupplier' | translate }}</th>
+              <th>{{ 'CFG.sharepoint.lastRun' | translate }}</th>
+              <th class="actions-col"></th>
+            </tr>
+          </thead>
+          <tbody>
+            <tr *ngFor="let s of sources" [class.disabled]="!s.enabled">
+              <td>
+                <b>{{ s.libelle }}</b>
+                <span class="tag" *ngIf="!s.enabled">{{ 'CFG.sharepoint.inactive' | translate }}</span>
+                <div class="url"><a [href]="s.url" target="_blank" rel="noopener">{{ s.url }}</a></div>
+              </td>
+              <td><code>{{ s.filePattern }}</code></td>
+              <td>{{ s.lastFileName || '—' }}</td>
+              <td class="num">{{ excelRow(s.lastRowClient) }}</td>
+              <td class="num">{{ excelRow(s.lastRowFournisseur) }}</td>
+              <td>
+                <ng-container *ngIf="s.lastRunAt; else jamais">
+                  <span class="status" [class.ok]="s.lastStatus === 'OK'" [class.ko]="s.lastStatus !== 'OK'">{{ s.lastStatus }}</span>
+                  {{ s.lastRunAt | date:'dd/MM/yyyy HH:mm' }}
+                  <div class="msg" [title]="s.lastMessage || ''">{{ s.lastMessage }}</div>
+                </ng-container>
+                <ng-template #jamais>—</ng-template>
+              </td>
+              <td class="actions-col">
+                <button type="button" class="icon-btn sm" (click)="testSource(s)" [disabled]="anyBusy" [title]="'CFG.sharepoint.test' | translate">
+                  <i class="fas" [ngClass]="busy === 'test-' + s.id ? 'fa-spinner fa-spin' : 'fa-vial'"></i>
+                </button>
+                <button type="button" class="icon-btn sm" (click)="runSource(s)" [disabled]="anyBusy" [title]="'CFG.sharepoint.run' | translate">
+                  <i class="fas" [ngClass]="busy === 'run-' + s.id ? 'fa-spinner fa-spin' : 'fa-play'"></i>
+                </button>
+                <button type="button" class="icon-btn sm" (click)="resetCursor(s)" [disabled]="anyBusy" [title]="'CFG.sharepoint.reset' | translate">
+                  <i class="fas fa-rotate-left"></i>
+                </button>
+                <button type="button" class="icon-btn sm" (click)="editSource(s)" [disabled]="anyBusy || !!editing" [title]="'CFG.sharepoint.edit' | translate">
+                  <i class="fas fa-pen"></i>
+                </button>
+                <button type="button" class="icon-btn sm danger" (click)="deleteSource(s)" [disabled]="anyBusy" [title]="'CFG.sharepoint.delete' | translate">
+                  <i class="fas fa-trash"></i>
+                </button>
+              </td>
+            </tr>
+          </tbody>
+        </table>
+      </div>
+    </section>
+
+    <!-- Historique -->
+    <section class="card wide">
+      <div class="card-head">
+        <i class="fas fa-clock-rotate-left"></i>
+        <div>
+          <h2>{{ 'CFG.sharepoint.historyTitle' | translate }}</h2>
+          <p>{{ 'CFG.sharepoint.historyHint' | translate }}</p>
+        </div>
+        <button type="button" class="icon-btn sm" (click)="loadHistory()" [title]="'CFG.sharepoint.refresh' | translate">
+          <i class="fas fa-rotate"></i>
+        </button>
+      </div>
+      <p class="empty" *ngIf="!history.length">{{ 'CFG.sharepoint.noHistory' | translate }}</p>
+      <div class="tbl-wrap" *ngIf="history.length">
+        <table class="tbl">
+          <thead>
+            <tr>
+              <th>{{ 'CFG.sharepoint.date' | translate }}</th>
+              <th>{{ 'CFG.sharepoint.trigger' | translate }}</th>
+              <th>{{ 'CFG.sharepoint.label' | translate }}</th>
+              <th>{{ 'CFG.sharepoint.file' | translate }}</th>
+              <th class="num">{{ 'CFG.sharepoint.examined' | translate }}</th>
+              <th class="num">{{ 'CFG.sharepoint.loaded' | translate }}</th>
+              <th class="num">{{ 'CFG.sharepoint.duplicates' | translate }}</th>
+              <th>{{ 'CFG.sharepoint.status' | translate }}</th>
+            </tr>
+          </thead>
+          <tbody>
+            <tr *ngFor="let h of history">
+              <td>{{ h.startedAt | date:'dd/MM/yyyy HH:mm' }}</td>
+              <td>{{ (h.declencheur === 'AUTO' ? 'CFG.sharepoint.triggerAuto' : 'CFG.sharepoint.triggerManual') | translate }}
+                <div class="muted" *ngIf="h.declencheur !== 'AUTO' && h.utilisateur">{{ h.utilisateur }}</div></td>
+              <td>{{ h.sourceLibelle || '—' }}</td>
+              <td>{{ h.fileName || '—' }}</td>
+              <td class="num">{{ h.lignesLues }}</td>
+              <td class="num"><b>{{ h.lignesChargees }}</b></td>
+              <td class="num">{{ h.doublons }}</td>
+              <td>
+                <span class="status" [class.ok]="h.status === 'OK'" [class.ko]="h.status !== 'OK'">{{ h.status }}</span>
+                <div class="msg" [title]="h.message || ''">{{ h.message }}</div>
+              </td>
+            </tr>
+          </tbody>
+        </table>
+      </div>
+    </section>
+  </ng-container>
+</div>

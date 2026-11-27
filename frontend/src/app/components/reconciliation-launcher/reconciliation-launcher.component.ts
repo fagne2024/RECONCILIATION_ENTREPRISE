@@ -16,11 +16,12 @@ import { MagicReconciliationService, MagicReconciliationProgress } from '../../s
 import { TranslateService, TranslateModule } from '@ngx-translate/core';
 import { I18nService } from '../../services/i18n/i18n.service';
 import { SharedUiModule } from '../../shared/shared-ui.module';
+import { BigquerySourceComponent, BigQueryLaunchFiles } from '../bigquery-source/bigquery-source.component';
 
 @Component({
   selector: 'app-reconciliation-launcher',
   standalone: true,
-  imports: [CommonModule, FormsModule, TranslateModule, SharedUiModule],
+  imports: [CommonModule, FormsModule, TranslateModule, SharedUiModule, BigquerySourceComponent],
   templateUrl: './reconciliation-launcher.component.html',
   styleUrls: ['./reconciliation-launcher.component.scss']
 })
@@ -162,6 +163,28 @@ mode: 'magic' | 'assisted' | 'manual' = 'magic';
     }
     this.closeMagicModal();
     this.launchMagicReconciliation();
+  }
+
+  /**
+   * Fichiers fournis par la source BigQuery : extraction utilisée comme fichier BO et/ou fichiers
+   * partenaires du dossier surveillé (un fichier de même nom remplace le précédent).
+   */
+  onBigQueryFiles(event: BigQueryLaunchFiles): void {
+    if (event.boFile) {
+      this.magicBoFiles = [event.boFile];
+    }
+    for (const file of event.partnerFiles) {
+      const existing = this.magicPartnerFiles.findIndex(p => p.name === file.name);
+      if (existing >= 0) {
+        this.magicPartnerFiles.splice(existing, 1, file);
+      } else {
+        this.magicPartnerFiles.push(file);
+      }
+    }
+    this.cdr.detectChanges();
+    if (event.launch) {
+      this.confirmMagicLaunch();
+    }
   }
 
   get canLaunchMagic(): boolean {

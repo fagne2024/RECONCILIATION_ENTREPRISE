@@ -192,6 +192,8 @@ const routes: Routes = [
   { path: 'configuration/calcul', loadComponent: () => import('./components/configuration-calcul/configuration-calcul.component').then(m => m.ConfigurationCalculComponent), canActivate: [AuthGuard, AdminGuard] },
   { path: 'configuration/normalisation-modele', loadComponent: () => import('./components/configuration-normalisation/configuration-normalisation.component').then(m => m.ConfigurationNormalisationComponent), canActivate: [AuthGuard, AdminGuard] },
   { path: 'configuration/top-users', loadComponent: () => import('./components/configuration-top-users/configuration-top-users.component').then(m => m.ConfigurationTopUsersComponent), canActivate: [AuthGuard, AdminGuard] },
+  { path: 'configuration/sharepoint-sync', loadComponent: () => import('./components/configuration-sharepoint-sync/configuration-sharepoint-sync.component').then(m => m.ConfigurationSharepointSyncComponent), canActivate: [AuthGuard, AdminGuard] },
+  { path: 'configuration/bigquery', loadComponent: () => import('./components/configuration-bigquery/configuration-bigquery.component').then(m => m.ConfigurationBigqueryComponent), canActivate: [AuthGuard, AdminGuard] },
   { path: 'permissions', component: PermissionsComponent, canActivate: [AuthGuard, AdminGuard] },
 
   // Routes Administration plateforme (SUPER_ADMIN uniquement)
