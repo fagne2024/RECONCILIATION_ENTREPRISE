@@ -20,6 +20,11 @@ export interface EcartBoSummary {
   /** Environnement technique (BET, HT, PROD, etc.) */
   envCode?: string | null;
   token?: string;
+  /**
+   * Type de décalage (la ligne est datée du jour du rapport) : JM1_BO, JM1_PARTENAIRE,
+   * JP1_BO, JP1_PARTENAIRE ; null / absent = écart simple.
+   */
+  typeDecalage?: string | null;
 }
 
 export interface EcartBoSummaryFilter {
@@ -298,6 +303,9 @@ export class EcartBoSummaryService {
     }
     if (summary.envCode != null && String(summary.envCode).trim() !== '') {
       dto.envCode = String(summary.envCode).trim();
+    }
+    if (summary.typeDecalage) {
+      dto.typeDecalage = summary.typeDecalage;
     }
     return firstValueFrom(this.http.post<any>(this.apiUrl, [dto], { headers: this.getPermissionHeaders() }))
       .then(response => ({

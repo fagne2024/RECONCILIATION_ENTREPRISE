@@ -62,12 +62,16 @@ public class ReconciliationReportController {
                 body.put("manualVolume", e.getManualVolume() != null ? e.getManualVolume() : 0.0);
                 body.put("rembourseNombre", e.getRembourseNombre() != null ? e.getRembourseNombre() : 0L);
                 body.put("rembourseVolume", e.getRembourseVolume() != null ? e.getRembourseVolume() : 0.0);
+                body.put("annuleNombre", e.getAnnuleNombre() != null ? e.getAnnuleNombre() : 0L);
+                body.put("annuleVolume", e.getAnnuleVolume() != null ? e.getAnnuleVolume() : 0.0);
                 body.put("env", e.getEnv());
             } else {
                 body.put("manualNombre", 0L);
                 body.put("manualVolume", 0.0);
                 body.put("rembourseNombre", 0L);
                 body.put("rembourseVolume", 0.0);
+                body.put("annuleNombre", 0L);
+                body.put("annuleVolume", 0.0);
             }
             return ResponseEntity.ok(body);
         } catch (DateTimeParseException ex) {
@@ -139,6 +143,8 @@ public class ReconciliationReportController {
                 m.put("manualVolume", e.getManualVolume() != null ? e.getManualVolume() : 0.0);
                 m.put("rembourseNombre", e.getRembourseNombre() != null ? e.getRembourseNombre() : 0L);
                 m.put("rembourseVolume", e.getRembourseVolume() != null ? e.getRembourseVolume() : 0.0);
+                m.put("annuleNombre", e.getAnnuleNombre() != null ? e.getAnnuleNombre() : 0L);
+                m.put("annuleVolume", e.getAnnuleVolume() != null ? e.getAnnuleVolume() : 0.0);
                 out.add(m);
             }
             return ResponseEntity.ok(out);
@@ -193,6 +199,12 @@ public class ReconciliationReportController {
             entity.setManualVolume(dto.manualVolume != null ? dto.manualVolume : 0.0);
             entity.setRembourseNombre(dto.rembourseNombre != null ? dto.rembourseNombre : 0L);
             entity.setRembourseVolume(dto.rembourseVolume != null ? dto.rembourseVolume : 0.0);
+            if (dto.annuleNombre != null) {
+                entity.setAnnuleNombre(dto.annuleNombre);
+            }
+            if (dto.annuleVolume != null) {
+                entity.setAnnuleVolume(dto.annuleVolume);
+            }
             entity.setUpdatedAt(LocalDateTime.now());
 
             ReleveManualEntity saved = releveManualRepository.save(entity);
@@ -203,6 +215,8 @@ public class ReconciliationReportController {
             body.put("manualVolume", saved.getManualVolume());
             body.put("rembourseNombre", saved.getRembourseNombre());
             body.put("rembourseVolume", saved.getRembourseVolume());
+            body.put("annuleNombre", saved.getAnnuleNombre() != null ? saved.getAnnuleNombre() : 0L);
+            body.put("annuleVolume", saved.getAnnuleVolume() != null ? saved.getAnnuleVolume() : 0.0);
 
             return ResponseEntity.ok(body);
         } catch (DateTimeParseException ex) {

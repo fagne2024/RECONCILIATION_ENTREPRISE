@@ -10,6 +10,7 @@ import {
   EcartBoSummaryPrefill,
   EcartBoSummaryPendingLine
 } from '../../services/ecart-bo-summary.service';
+import { normalizeTypeDecalage, TypeDecalage, TYPES_DECALAGE } from '../../utils/releve-totaux.util';
 import { PopupService } from '../../services/popup.service';
 import { ReconciliationTabsService } from '../../services/reconciliation-tabs.service';
 import { ReconciliationService } from '../../services/reconciliation.service';
@@ -42,6 +43,8 @@ export interface EcartBoSummaryItem {
   env?: 'BO' | 'PARTENAIRE';
   /** Environnement technique : BET, HT, PROD, etc. */
   envCode?: string;
+  /** Type de décalage J-1 / J+1 BO ou Partenaire (ligne datée du jour du rapport) ; vide = écart simple. */
+  typeDecalage?: TypeDecalage;
   originalRecords: Record<string, string>[]; // Tous les enregistrements pour ce service
   isManual?: boolean; // Indique si la ligne a été créée manuellement
   commentaire?: string; // Commentaire pour identifier l'origine
@@ -151,6 +154,7 @@ export class EcartBoSummaryComponent implements OnInit, OnDestroy {
     env: 'BO' | 'PARTENAIRE';
     envCode: string;
     token: string;
+    typeDecalage: '' | TypeDecalage;
   } = {
     date: '',
     agence: '',
@@ -161,7 +165,8 @@ export class EcartBoSummaryComponent implements OnInit, OnDestroy {
     statut: 'en cours',
     env: 'BO',
     envCode: '',
-    token: ''
+    token: '',
+    typeDecalage: ''
   };
   isUpdating = false;
 
@@ -178,6 +183,7 @@ export class EcartBoSummaryComponent implements OnInit, OnDestroy {
     env: 'BO' | 'PARTENAIRE';
     envCode: string;
     token: string;
+    typeDecalage: '' | TypeDecalage;
   } = {
     date: '',
     agence: '',
@@ -188,7 +194,8 @@ export class EcartBoSummaryComponent implements OnInit, OnDestroy {
     statut: 'en cours',
     env: 'BO',
     envCode: '',
-    token: ''
+    token: '',
+    typeDecalage: ''
   };
   isAdding = false;
 
@@ -541,6 +548,7 @@ export class EcartBoSummaryComponent implements OnInit, OnDestroy {
         statut: this.normalizeSummaryStatut(item.statut),
         env: this.normalizeSummaryEnv(item.env),
         envCode: item.envCode != null && String(item.envCode).trim() !== '' ? String(item.envCode).trim() : undefined,
+        typeDecalage: normalizeTypeDecalage(item.typeDecalage),
         originalRecords: [],
         isManual,
         commentaire,
@@ -1069,6 +1077,31 @@ export class EcartBoSummaryComponent implements OnInit, OnDestroy {
     
     this.cdr.markForCheck();
     // Ici vous pouvez ajouter une logique pour sauvegarder le changement si nécessaire
+  }
+
+  /** Types de décalage proposés (J-1 BO, J-1 Partenaire, J+1 BO, J+1 Partenaire). */
+  readonly typesDecalage: TypeDecalage[] = TYPES_DECALAGE;
+
+  /**
+   * Choix du type de décalage dans le tableau : enregistré tout de suite pour une ligne
+   * sauvegardée, gardé (et envoyé à la sauvegarde) pour une ligne en attente.
+   */
+  async onTypeDecalageChange(item: EcartBoSummaryItem, value: string): Promise<void> {
+    const previous = item.typeDecalage;
+    const next = normalizeTypeDecalage(value);
+    item.typeDecalage = next;
+    this.cdr.markForCheck();
+    if (!item.id) {
+      return;
+    }
+    try {
+      await firstValueFrom(this.ecartBoSummaryService.updateEcartBoSummary(item.id, { typeDecalage: next ?? '' }));
+    } catch (err) {
+      console.error('Erreur enregistrement type de décalage:', err);
+      item.typeDecalage = previous;
+      this.popupService.showError(I18nService.t('EBS.typeDecalage.erreur'));
+      this.cdr.markForCheck();
+    }
   }
 
   private normalizeSummaryEnv(env: string | undefined): 'BO' | 'PARTENAIRE' {
@@ -2000,7 +2033,8 @@ export class EcartBoSummaryComponent implements OnInit, OnDestroy {
       statut: item.statut || 'en cours',
       env: item.env || 'BO',
       envCode: item.envCode || '',
-      token: item.token || ''
+      token: item.token || '',
+      typeDecalage: item.typeDecalage || ''
     };
     this.showEditModal = true;
     this.cdr.markForCheck();
@@ -2009,7 +2043,7 @@ export class EcartBoSummaryComponent implements OnInit, OnDestroy {
   closeEditModal(): void {
     this.showEditModal = false;
     this.editingItem = null;
-    this.editForm = { date: '', agence: '', service: '', pays: '', nombre: 0, volume: 0, statut: 'en cours', env: 'BO', envCode: '', token: '' };
+    this.editForm = { date: '', agence: '', service: '', pays: '', nombre: 0, volume: 0, statut: 'en cours', env: 'BO', envCode: '', token: '', typeDecalage: '' };
     this.cdr.markForCheck();
   }
 
@@ -2041,7 +2075,9 @@ export class EcartBoSummaryComponent implements OnInit, OnDestroy {
           env: this.editForm.env || 'BO',
           envCode: this.editForm.envCode != null && this.editForm.envCode.trim() !== ''
             ? this.editForm.envCode.trim()
-            : null
+            : null,
+          // Chaîne vide = écart simple
+          typeDecalage: this.editForm.typeDecalage || ''
         };
         if (this.editForm.token !== undefined) {
           updatedData.token = this.editForm.token && this.editForm.token.trim() ? this.editForm.token.trim() : null;
@@ -2078,6 +2114,8 @@ export class EcartBoSummaryComponent implements OnInit, OnDestroy {
         this.editingItem.montant = updated.montantTotal || this.editForm.volume || 0;
         this.editingItem.statut = (updated.statut === 'OK' ? 'ok' : 'en cours') as 'ok' | 'en cours';
         this.editingItem.token = updated.token || undefined;
+        this.editingItem.env = this.normalizeSummaryEnv(updated.env || this.editForm.env);
+        this.editingItem.typeDecalage = normalizeTypeDecalage(updated.typeDecalage);
         this.editingItem.envCode =
           updated.envCode != null && String(updated.envCode).trim() !== ''
             ? String(updated.envCode).trim()
@@ -2102,6 +2140,7 @@ export class EcartBoSummaryComponent implements OnInit, OnDestroy {
         this.editingItem.montant = this.editForm.volume || 0;
         this.editingItem.statut = this.editForm.statut;
         this.editingItem.env = this.editForm.env;
+        this.editingItem.typeDecalage = normalizeTypeDecalage(this.editForm.typeDecalage);
         this.editingItem.envCode =
           this.editForm.envCode != null && this.editForm.envCode.trim() !== ''
             ? this.editForm.envCode.trim()
@@ -2232,7 +2271,8 @@ export class EcartBoSummaryComponent implements OnInit, OnDestroy {
           : {}),
         ...(item.envCode != null && String(item.envCode).trim() !== ''
           ? { envCode: String(item.envCode).trim() }
-          : {})
+          : {}),
+        ...(item.typeDecalage ? { typeDecalage: item.typeDecalage } : {})
       }));
 
       if (serviceSummaryData.length === 0) {
@@ -2396,7 +2436,8 @@ export class EcartBoSummaryComponent implements OnInit, OnDestroy {
       statut: 'en cours',
       env: defaultEnv,
       envCode: this.sessionDefaultEnvCode || '',
-      token: ''
+      token: '',
+      typeDecalage: ''
     };
     this.showAddModal = true;
     this.cdr.markForCheck();
@@ -2418,7 +2459,8 @@ export class EcartBoSummaryComponent implements OnInit, OnDestroy {
       statut: 'en cours',
       env: defaultEnv,
       envCode: this.sessionDefaultEnvCode || '',
-      token: ''
+      token: '',
+      typeDecalage: ''
     };
     this.showAddModal = true;
     this.cdr.markForCheck();
@@ -2437,7 +2479,8 @@ export class EcartBoSummaryComponent implements OnInit, OnDestroy {
       statut: 'en cours',
       env: defaultEnv,
       envCode: this.sessionDefaultEnvCode || '',
-      token: ''
+      token: '',
+      typeDecalage: ''
     };
     this.cdr.markForCheck();
   }
@@ -2498,6 +2541,9 @@ export class EcartBoSummaryComponent implements OnInit, OnDestroy {
       }
       if (this.addForm.token && this.addForm.token.trim()) {
         summaryData.token = this.addForm.token.trim();
+      }
+      if (this.addForm.typeDecalage) {
+        summaryData.typeDecalage = this.addForm.typeDecalage;
       }
 
       // Sauvegarder en base de données

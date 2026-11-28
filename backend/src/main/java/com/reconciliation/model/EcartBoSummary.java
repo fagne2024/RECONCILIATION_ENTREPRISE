@@ -20,6 +20,7 @@ public class EcartBoSummary {
     private String env;
     private String envCode;
     private String token;
+    private String typeDecalage;
 
     // Constructeurs
     public EcartBoSummary() {}
@@ -142,5 +143,14 @@ public class EcartBoSummary {
 
     public void setToken(String token) {
         this.token = token;
+    }
+
+    /** Type de décalage : JM1_BO, JM1_PARTENAIRE, JP1_BO, JP1_PARTENAIRE ; null = écart simple. */
+    public String getTypeDecalage() {
+        return typeDecalage;
+    }
+
+    public void setTypeDecalage(String typeDecalage) {
+        this.typeDecalage = typeDecalage;
     }
 }

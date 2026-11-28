@@ -1,4 +1,5 @@
 import { I18nService } from './i18n/i18n.service';
+import { releveEcartsJm1, releveEcartsJp1, releveSommeEcarts } from '../utils/releve-totaux.util';
 import { Injectable } from '@angular/core';
 import { EcartBoSummary } from './ecart-bo-summary.service';
 import { ReleveManualRangeRow } from './dashboard.service';
@@ -16,6 +17,10 @@ export interface BoPartenaireResult8Row {
   id?: number;
   date: string;
   service: string;
+  /** Agence de la ligne du rapport (« Multiagence » = ligne des écarts Partenaire). */
+  agency?: string;
+  /** Statut de la ligne (OK / NOK) : le relevé ne retient que les lignes OK. */
+  status?: string;
   country: string;
   env?: string;
   totalTransactions: number;
@@ -414,8 +419,12 @@ export class BoPartenaireAggregationService {
         this.strEqual(line.service, service) &&
         (envNorm == null || normalizeReconciliationReportEnv(line.env) === envNorm)
     );
-    const rapportN = serviceLines.reduce((s, l) => s + (l.totalTransactions || 0), 0);
-    const rapportV = serviceLines.reduce((s, l) => s + (l.totalVolume || 0), 0);
+    // Total du rapport (R) = celui du relevé : lignes OK uniquement, hors ligne Multiagence.
+    const rapportLines = serviceLines.filter(
+      (l) => (l.status || '').trim().toUpperCase() === 'OK' && !this.isLigneEcartsPartenaireMultiagence(l)
+    );
+    const rapportN = rapportLines.reduce((s, l) => s + (l.totalTransactions || 0), 0);
+    const rapportV = rapportLines.reduce((s, l) => s + (l.totalVolume || 0), 0);
     const manual = this.sumManualForServiceRange(
       service,
       dateStart,
@@ -429,27 +438,23 @@ export class BoPartenaireAggregationService {
     let jp1Montant = 0;
     let jm1Nombre = 0;
     let jm1Montant = 0;
+    // Écarts Partenaire J+1 / J-1 : logique du relevé (utils/releve-totaux.util.ts).
     for (const d of this.listYmdInclusive(dateStart, dateEnd)) {
-      const j = this.sumEcartPartner(service, d, envNorm, ecartAll, country);
+      const scope = { date: d, service, country, env: envNorm };
+      const j = releveSommeEcarts(releveEcartsJp1(ecartAll, scope));
       jp1Nombre += j.nombre;
-      jp1Montant += j.montant;
-      const jm = this.sumEcartPartner(
-        service,
-        this.subtractCalendarDaysFromYmd(d, 1),
-        envNorm,
-        ecartAll,
-        country
-      );
+      jp1Montant += j.volume;
+      const jm = releveSommeEcarts(releveEcartsJm1(ecartAll, scope));
       jm1Nombre += jm.nombre;
-      jm1Montant += jm.montant;
+      jm1Montant += jm.volume;
     }
 
-    const boNombre = rapportN + manual.manualNombre;
-    const boVolume = rapportV + manual.manualVolume;
-    const partenaireNombre =
-      rapportN + manual.manualNombre + jp1Nombre - jm1Nombre + manual.rembourseNombre;
-    const partenaireVolume =
-      rapportV + jp1Montant + manual.manualVolume - jm1Montant + manual.rembourseVolume;
+    // Mêmes totaux que le relevé : BO = Rapport + Trx traité − Trx annulé ;
+    // Partenaire = BO + Écart Partenaire J+1 − Écart Partenaire J-1 + Trx remboursé.
+    const boNombre = rapportN + manual.manualNombre - manual.annuleNombre;
+    const boVolume = rapportV + manual.manualVolume - manual.annuleVolume;
+    const partenaireNombre = boNombre + jp1Nombre - jm1Nombre + manual.rembourseNombre;
+    const partenaireVolume = boVolume + jp1Montant - jm1Montant + manual.rembourseVolume;
 
     return {
       boNombre,
@@ -475,6 +480,8 @@ export class BoPartenaireAggregationService {
     let manualVolume = 0;
     let rembourseNombre = 0;
     let rembourseVolume = 0;
+    let annuleNombre = 0;
+    let annuleVolume = 0;
     const cty = (country || '').trim();
 
     for (const m of manualRows) {
@@ -497,70 +504,17 @@ export class BoPartenaireAggregationService {
       manualVolume += Number(m.manualVolume || 0);
       rembourseNombre += Number(m.rembourseNombre || 0);
       rembourseVolume += Number(m.rembourseVolume || 0);
+      annuleNombre += Number(m.annuleNombre || 0);
+      annuleVolume += Number(m.annuleVolume || 0);
     }
 
-    return { manualNombre, manualVolume, rembourseNombre, rembourseVolume };
+    return { manualNombre, manualVolume, rembourseNombre, rembourseVolume, annuleNombre, annuleVolume };
   }
 
-  private sumEcartPartner(
-    service: string,
-    dateY: string,
-    envKey: string | null,
-    ecartAll: EcartBoSummary[],
-    country: string
-  ): { nombre: number; montant: number } {
-    let nombre = 0;
-    let montant = 0;
-    for (const ecart of ecartAll) {
-      const ecartDate = this.formatDateForSearch(ecart.dateTransaction);
-      if (ecartDate !== dateY) {
-        continue;
-      }
-      if (!this.strEqual(ecart.service, service)) {
-        continue;
-      }
-      if (!this.ecartPaysMatches(ecart, country)) {
-        continue;
-      }
-      if (!this.isPartenairePlatform(ecart)) {
-        continue;
-      }
-      if (!this.ecartEnvMatches(ecart, envKey)) {
-        continue;
-      }
-      nombre += Number(ecart.nombreTransactions || 0);
-      montant += Number(ecart.montantTotal || 0);
-    }
-    return { nombre, montant };
-  }
 
-  private isPartenairePlatform(ecart: EcartBoSummary): boolean {
-    return (ecart.env || '').trim().toUpperCase() === 'PARTENAIRE';
-  }
 
-  private getEcartEnvCodeRaw(ecart: EcartBoSummary): string {
-    const anyE = ecart as EcartBoSummary & { env_code?: string | null };
-    const v = ecart.envCode ?? anyE.env_code;
-    return v != null ? String(v).trim() : '';
-  }
 
-  private ecartEnvMatches(ecart: EcartBoSummary, releveEnvNorm: string | null): boolean {
-    if (releveEnvNorm == null) {
-      return true;
-    }
-    const code = this.getEcartEnvCodeRaw(ecart);
-    const ecartKey = !code || code.toUpperCase() === 'TOTAL' ? 'T-E' : code;
-    return ecartKey.toUpperCase() === releveEnvNorm.toUpperCase();
-  }
 
-  private ecartPaysMatches(ecart: EcartBoSummary, selectedCountry: string): boolean {
-    const rep = (selectedCountry || '').trim();
-    const ep = (ecart.pays || '').trim();
-    if (!rep || !ep) {
-      return true;
-    }
-    return countriesMatch(ep, rep);
-  }
 
   private dominantTraitementRawValue(values: (string | undefined | null)[]): string {
     const cleaned = values
@@ -618,9 +572,6 @@ export class BoPartenaireAggregationService {
     return this.toYmd(d);
   }
 
-  private subtractCalendarDaysFromYmd(ymd: string, delta: number): string {
-    return this.addCalendarDaysToYmd(ymd, -delta);
-  }
 
   private toYmd(d: Date): string {
     const y = d.getFullYear();
@@ -632,6 +583,15 @@ export class BoPartenaireAggregationService {
   private isYmdInRangeInclusive(ymd: string, start: string, end: string): boolean {
     const n = this.formatDateForSearch(ymd);
     return n >= start && n <= end;
+  }
+
+  /** Ligne spéciale des écarts Partenaire : agence « Multiagence » (ou ancien format agence = service). */
+  private isLigneEcartsPartenaireMultiagence(line: BoPartenaireResult8Row): boolean {
+    const agency = (line.agency || '').trim();
+    if (!agency) {
+      return false;
+    }
+    return agency.toUpperCase() === 'MULTIAGENCE' || this.strEqual(agency, line.service);
   }
 
   private strEqual(a?: string | null, b?: string | null): boolean {

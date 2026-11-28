@@ -26,6 +26,16 @@ import { LoggerService } from '../../services/logger.service';
 import { fixGarbledCharacters } from '../../utils/encoding-fixer';
 import { countriesMatch, countryNameFromCode } from '../../utils/country-codes.util';
 import {
+    releveEcartsBoJm1,
+    releveEcartsBoJp1,
+    releveEcartsJm1,
+    releveEcartsJp1,
+    releveSommeEcarts,
+    ReleveSomme,
+    releveTotaux,
+    ReleveTotaux
+} from '../../utils/releve-totaux.util';
+import {
     auditSnapshotStatutClass as statutAuditPillClassFn,
     auditSnapshotTraitementClass as traitementAuditPillClassFn,
     resolveTraitementKind as sharedResolveTraitementKind,
@@ -100,6 +110,11 @@ export interface ReconciliationReportData {
     __savedCorrespondenceControlBase?: SavedCorrespondenceControlBase;
     /** Indique que les compteurs affichés ont été réduits par le contrôle des correspondances. */
     __savedCorrespondenceControlAdjusted?: boolean;
+    /**
+     * Ligne entièrement couverte par les correspondances enregistrées (0 transaction, 0 écart) :
+     * retirée du rapport affiché tant que la déduction s'applique.
+     */
+    __savedCorrespondenceControlCleared?: boolean;
 }
 
 /** Valeurs d'origine d'une ligne Multiagence avant déduction des correspondances enregistrées. */
@@ -890,7 +905,6 @@ interface AllOkEmailMetrics {
                             <h4>{{releveData?.service || '-'}}</h4>
                             <div class="releve-date">{{ 'TBL.ui.date' | translate: { p0: (formatDate(releveData?.date || '')) } }}</div>
                             <div class="releve-date" *ngIf="releveData?.country">{{ 'RPT.ui.pays' | translate: { p0: releveData.country } }}</div>
-                            <div class="releve-date" *ngIf="releveData?.agency">{{ 'RPT.ui.agence' | translate: { p0: releveData.agency } }}</div>
                         </div>
                     <div class="releve-env releve-env-select-wrap" *ngIf="releveData">
                             <label for="releveEnvSelect">{{ 'RPT.environment' | translate }}</label>
@@ -1012,6 +1026,52 @@ interface AllOkEmailMetrics {
                     </div>
                     <div class="releve-section" *ngIf="releveEcartDataJ1 && releveEcartDataJ1.length === 0 && !isLoadingReleve">
                         <p class="releve-no-data">{{ 'RPT.noJm1Data' | translate: { env: releveEnvMessageLabel } }}</p>
+                    </div>
+
+                    <!-- Sections Trx BO J+1 / J-1 : lignes typées « J+1 BO » / « J-1 BO » sur /ecart-bo-summary (affichage) -->
+                    <div class="releve-section" *ngFor="let bloc of releveBlocsBo">
+                        <h5>{{ bloc.titre | translate }}</h5>
+                        <ng-container *ngIf="bloc.lignes.length > 0; else releveBoVide">
+                            <div class="releve-ecart-grid">
+                                <div class="releve-item">
+                                    <span class="releve-label">{{ 'RPT.totalCount' | translate }}</span>
+                                    <span class="releve-value">{{ bloc.somme.nombre | number }}</span>
+                                </div>
+                                <div class="releve-item">
+                                    <span class="releve-label">{{ 'RPT.totalVolumeColon' | translate }}</span>
+                                    <span class="releve-value">{{ bloc.somme.volume | number }}</span>
+                                </div>
+                            </div>
+                            <div class="releve-ecart-details">
+                                <table class="releve-table ds-table">
+                                    <thead>
+                                        <tr>
+                                            <th>{{ 'RPT.agency' | translate }}</th>
+                                            <th>{{ 'RPT.country' | translate }}</th>
+                                            <th>{{ 'RPT.number' | translate }}</th>
+                                            <th>{{ 'RPT.volume' | translate }}</th>
+                                            <th>{{ 'RPT.status' | translate }}</th>
+                                        </tr>
+                                    </thead>
+                                    <tbody>
+                                        <tr *ngFor="let ecart of bloc.lignes">
+                                            <td>{{ecart.agence}}</td>
+                                            <td>{{ecart.pays}}</td>
+                                            <td>{{ecart.nombreTransactions | number}}</td>
+                                            <td>{{ecart.montantTotal | number}}</td>
+                                            <td>
+                                                <span [class]="(ecart.statut === 'OK' || ecart.statut === 'ok') ? 'statut-ok' : 'statut-en-cours'">
+                                                    {{ getDisplayStatus(ecart.statut) || ('RPT.inProgress' | translate) }}
+                                                </span>
+                                            </td>
+                                        </tr>
+                                    </tbody>
+                                </table>
+                            </div>
+                        </ng-container>
+                        <ng-template #releveBoVide>
+                            <p class="releve-no-data">{{ bloc.vide | translate: { env: releveEnvMessageLabel } }}</p>
+                        </ng-template>
                     </div>
 
                     <!-- Section Trx traité (saisie manuelle) -->
@@ -1169,31 +1229,25 @@ interface AllOkEmailMetrics {
 
                     <!-- Totaux finaux -->
                     <div class="releve-section">
-                        <h5>📊 {{ 'RPT.finalTotals' | translate }}</h5>
+                        <div class="releve-final-head">
+                            <h5>📊 {{ 'RPT.finalTotals' | translate }}</h5>
+                            <div class="releve-final-mode" role="group" [attr.aria-label]="'RPT.finalMode.label' | translate">
+                                <button type="button" class="ds-btn ds-btn--sm"
+                                    [class.ds-btn--primary]="releveTotauxMode === 'nombre'"
+                                    [class.ds-btn--secondary]="releveTotauxMode !== 'nombre'"
+                                    [attr.aria-pressed]="releveTotauxMode === 'nombre'"
+                                    (click)="releveTotauxMode = 'nombre'">{{ 'RPT.finalMode.nombre' | translate }}</button>
+                                <button type="button" class="ds-btn ds-btn--sm"
+                                    [class.ds-btn--primary]="releveTotauxMode === 'volume'"
+                                    [class.ds-btn--secondary]="releveTotauxMode !== 'volume'"
+                                    [attr.aria-pressed]="releveTotauxMode === 'volume'"
+                                    (click)="releveTotauxMode = 'volume'">{{ 'RPT.finalMode.volume' | translate }}</button>
+                            </div>
+                        </div>
                         <div class="releve-final-totals">
-                            <div class="releve-final-item">
-                                <span class="releve-final-label">📈 {{ 'RPT.totalBoTxns' | translate }}</span>
-                                <span class="releve-final-value">{{getTotalTransactionsSum() | number}}</span>
-                            </div>
-                            <div class="releve-final-item">
-                                <span class="releve-final-label">📈 {{ 'RPT.totalPartnerTxns' | translate }}</span>
-                                <span class="releve-final-value">{{getTotalTransactionsPartenaire() | number}}</span>
-                            </div>
-                            <div class="releve-final-item">
-                                <span class="releve-final-label">{{ 'RPT.ui.nombreTotalRapport' | translate }}</span>
-                                <span class="releve-final-value">{{releveData?.totalTransactions || 0 | number}}</span>
-                            </div>
-                            <div class="releve-final-item">
-                                <span class="releve-final-label">📊 {{ 'RPT.totalTreated' | translate }}</span>
-                                <span class="releve-final-value">{{getTotalNombreSum() | number}}</span>
-                            </div>
-                            <div class="releve-final-item">
-                                <span class="releve-final-label">📊 {{ 'RPT.totalRefundedCount' | translate }}</span>
-                                <span class="releve-final-value">{{releveRembourseNombre | number}}</span>
-                            </div>
-                            <div class="releve-final-item">
-                                <span class="releve-final-label">📊 {{ 'RPT.totalRefundedVolume' | translate }}</span>
-                                <span class="releve-final-value">{{releveRembourseVolume | number}}</span>
+                            <div class="releve-final-item" *ngFor="let ligne of getReleveLignesTotauxFinaux()">
+                                <span class="releve-final-label">{{ ligne.libelle | translate }}</span>
+                                <span class="releve-final-value">{{ ligne.valeur | number }}</span>
                             </div>
                             <div class="releve-total-summary">
                                 <div class="releve-total-item">
@@ -3166,6 +3220,19 @@ interface AllOkEmailMetrics {
         }
 
         /* Styles pour les totaux finaux */
+        .releve-final-head {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            flex-wrap: wrap;
+            gap: 10px;
+        }
+
+        .releve-final-mode {
+            display: inline-flex;
+            gap: 6px;
+        }
+
         .releve-final-totals {
             display: flex;
             flex-direction: column;
@@ -4391,6 +4458,13 @@ reportData: ReconciliationReportData[] = [];
     releveData: ReconciliationReportData | null = null;
     releveEcartData: any[] = [];
     releveEcartDataJ1: any[] = []; // Écarts plateforme Partenaire, date veille (J-1)
+    /** Lignes typées « J+1 BO » / « J-1 BO » du jour du relevé (affichage). */
+    releveEcartDataBoJp1: any[] = [];
+    releveEcartDataBoJm1: any[] = [];
+    /** Blocs BO J+1 / J-1 affichés dans le relevé. */
+    releveBlocsBo: { titre: string; vide: string; lignes: any[]; somme: ReleveSomme }[] = [];
+    /** Totaux finaux : affichage des nombres ou des volumes. */
+    releveTotauxMode: 'nombre' | 'volume' = 'nombre';
     isLoadingReleve = false;
     isValidatingReleve = false;
     isReleveValidated = false; // Indique si le relevé a été validé
@@ -8244,6 +8318,11 @@ reportData: ReconciliationReportData[] = [];
         item: ReconciliationReportData,
         options?: { excludeTraitement?: boolean }
     ): boolean {
+        // Ligne Multiagence soldée par les correspondances enregistrées : plus d'écart, pas de ligne.
+        if (item.__savedCorrespondenceControlCleared) {
+            return false;
+        }
+
         if (this.currentSource !== 'live' && !this.showAllMonths && !this.hasExplicitDateFilter() && item.date) {
             if (!this.isItemInCurrentWeek(item.date)) {
                 return false;
@@ -10662,7 +10741,9 @@ reportData: ReconciliationReportData[] = [];
         }
 
         // Filtrer uniquement les lignes qui ont les données requises (agence, service, pays)
+        // (les lignes soldées par les correspondances enregistrées sont retirées du rapport)
         const rowsSource = selected.filter(item => 
+            !item.__savedCorrespondenceControlCleared &&
             item.agency && item.agency.trim() !== '' && 
             item.service && item.service.trim() !== '' && 
             item.country && item.country.trim() !== ''
@@ -12705,12 +12786,6 @@ reportData: ReconciliationReportData[] = [];
         return v != null ? String(v).trim() : '';
     }
 
-    /** env_code ecart_bo_summary vs ENV relevé ; code absent → T-E (agrégat). */
-    private ecartEnvCodeMatchesReleve(ecart: EcartBoSummary, releveEnvNorm: string): boolean {
-        const code = this.getEcartEnvCodeRaw(ecart);
-        const ecartKey = !code || code.toUpperCase() === 'TOTAL' ? 'T-E' : code;
-        return ecartKey.toUpperCase() === releveEnvNorm.toUpperCase();
-    }
 
     /**
      * Charge les correspondances enregistrées sur /ecart-bo-summary (plateforme PARTENAIRE)
@@ -12858,6 +12933,7 @@ reportData: ReconciliationReportData[] = [];
                     this.restoreSavedCorrespondenceControlBase(item, base);
                     item.__savedCorrespondenceControlAdjusted = false;
                 }
+                item.__savedCorrespondenceControlCleared = false;
                 continue;
             }
 
@@ -12879,6 +12955,8 @@ reportData: ReconciliationReportData[] = [];
             this.restoreSavedCorrespondenceControlBase(item, base);
 
             const remaining = Math.max(0, reportCount - savedCount);
+            // Ligne soldée (0 transaction, 0 écart) : elle est retirée du rapport.
+            item.__savedCorrespondenceControlCleared = remaining === 0;
             if (remaining === 0) {
                 // Toutes les transactions de la ligne sont couvertes par les correspondances enregistrées.
                 item.totalTransactions = 0;
@@ -12954,34 +13032,52 @@ reportData: ReconciliationReportData[] = [];
         }
         const item = this.releveData;
         const searchDate = this.formatDateForSearch(item.date);
-        const searchDateJ1 = this.subtractCalendarDaysFromYmd(searchDate, 1);
         const envKey = this.normalizeReleveEnvKey(this.releveEnv);
 
         // Même chargement que « Données sauvegardées » sur /ecart-bo-summary (liste complète puis filtre client),
         // pour ne pas exclure des lignes visibles sur cette page (ex. autre libellé de service, pas de filtre API service).
         const ecartData = await firstValueFrom(this.ecartBoSummaryService.getEcartBoSummaries());
 
-        this.releveEcartData = ecartData.filter(ecart => {
-            const ecartDate = this.formatDateForSearch(ecart.dateTransaction);
-            return (
-                ecartDate === searchDate &&
-                this.releveStringsEqual(ecart.service, item.service) &&
-                this.ecartPaysMatchesReleve(ecart, item.country) &&
-                this.isPartenairePlatformEcart(ecart) &&
-                this.ecartEnvCodeMatchesReleve(ecart, envKey)
-            );
-        });
+        // Logique partagée avec le rapport BO vs Partenaire (utils/releve-totaux.util.ts).
+        const scope = { date: searchDate, service: item.service, country: item.country, env: envKey };
+        this.releveEcartData = releveEcartsJp1(ecartData, scope);
+        this.releveEcartDataJ1 = releveEcartsJm1(ecartData, scope);
+        this.releveEcartDataBoJp1 = releveEcartsBoJp1(ecartData, scope);
+        this.releveEcartDataBoJm1 = releveEcartsBoJm1(ecartData, scope);
+        this.rafraichirBlocsBoReleve();
+    }
 
-        this.releveEcartDataJ1 = ecartData.filter(ecart => {
-            const ecartDate = this.formatDateForSearch(ecart.dateTransaction);
-            return (
-                ecartDate === searchDateJ1 &&
-                this.releveStringsEqual(ecart.service, item.service) &&
-                this.ecartPaysMatchesReleve(ecart, item.country) &&
-                this.isPartenairePlatformEcart(ecart) &&
-                this.ecartEnvCodeMatchesReleve(ecart, envKey)
-            );
-        });
+    private rafraichirBlocsBoReleve(): void {
+        this.releveBlocsBo = [
+            {
+                titre: 'RPT.boTrxJp1',
+                vide: 'RPT.noBoJp1Data',
+                lignes: this.releveEcartDataBoJp1,
+                somme: releveSommeEcarts(this.releveEcartDataBoJp1)
+            },
+            {
+                titre: 'RPT.boTrxJm1',
+                vide: 'RPT.noBoJm1Data',
+                lignes: this.releveEcartDataBoJm1,
+                somme: releveSommeEcarts(this.releveEcartDataBoJm1)
+            }
+        ];
+    }
+
+    /** Lignes des « Totaux finaux » : nombre ou volume de chaque rubrique selon le mode choisi. */
+    getReleveLignesTotauxFinaux(): { libelle: string; valeur: number }[] {
+        const t = this.getReleveTotaux();
+        const nb = this.releveTotauxMode === 'nombre';
+        const v = (s: ReleveSomme) => (nb ? s.nombre : s.volume);
+        const suffixe = nb ? 'Nombre' : 'Volume';
+        return [
+            { libelle: 'RPT.final.bo' + suffixe, valeur: v(t.bo) },
+            { libelle: 'RPT.final.partenaire' + suffixe, valeur: v(t.partenaire) },
+            { libelle: 'RPT.final.rapport' + suffixe, valeur: v(t.rapport) },
+            { libelle: 'RPT.final.traite' + suffixe, valeur: nb ? this.releveManualNombre || 0 : this.releveManualVolume || 0 },
+            { libelle: 'RPT.final.rembourse' + suffixe, valeur: nb ? this.releveRembourseNombre || 0 : this.releveRembourseVolume || 0 },
+            { libelle: 'RPT.final.annule' + suffixe, valeur: nb ? this.releveAnnuleNombre || 0 : this.releveAnnuleVolume || 0 }
+        ];
     }
 
     private normalizeReleveCountry(country?: string | null): string {
@@ -13002,21 +13098,6 @@ reportData: ReconciliationReportData[] = [];
         return (a ?? '').trim().toLowerCase() === (b ?? '').trim().toLowerCase();
     }
 
-    /**
-     * Pays côté ecart_bo_summary souvent vide à la sauvegarde : vide = non cloisonné, compatible relevé.
-     * Si les deux sont renseignés, ils doivent coïncider.
-     */
-    private ecartPaysMatchesReleve(ecart: EcartBoSummary, reportCountry: string): boolean {
-        const rep = this.normalizeReleveCountry(reportCountry);
-        const ep = this.normalizeReleveCountry(ecart.pays);
-        if (!rep) {
-            return true;
-        }
-        if (!ep) {
-            return true;
-        }
-        return this.releveStringsEqual(ep, rep);
-    }
 
     /**
      * Affiche le modal de relevé pour un service avec statut OK
@@ -13055,6 +13136,9 @@ reportData: ReconciliationReportData[] = [];
         this.isLoadingReleve = true;
         this.releveEcartData = [];
         this.releveEcartDataJ1 = [];
+        this.releveEcartDataBoJp1 = [];
+        this.releveEcartDataBoJm1 = [];
+        this.rafraichirBlocsBoReleve();
 
         try {
             await this.loadReleveEcartBoSummariesForCurrentReleve();
@@ -13063,6 +13147,9 @@ reportData: ReconciliationReportData[] = [];
             this.popupService.showError(this.translateKey('RPT.releve.loadError', { message: error.message || this.translateKey('RPT.releve.unknownError') }));
             this.releveEcartData = [];
             this.releveEcartDataJ1 = [];
+            this.releveEcartDataBoJp1 = [];
+            this.releveEcartDataBoJm1 = [];
+            this.rafraichirBlocsBoReleve();
         } finally {
             this.isLoadingReleve = false;
             // Vérifier si toutes les lignes ont déjà le traitement à "Terminé"
@@ -13134,6 +13221,9 @@ reportData: ReconciliationReportData[] = [];
                 );
                 this.releveEcartData = [];
                 this.releveEcartDataJ1 = [];
+                this.releveEcartDataBoJp1 = [];
+                this.releveEcartDataBoJm1 = [];
+                this.rafraichirBlocsBoReleve();
             })
             .finally(() => {
                 this.isLoadingReleve = false;
@@ -13253,6 +13343,9 @@ reportData: ReconciliationReportData[] = [];
         this.releveData = null;
         this.releveEcartData = [];
         this.releveEcartDataJ1 = [];
+        this.releveEcartDataBoJp1 = [];
+        this.releveEcartDataBoJm1 = [];
+        this.rafraichirBlocsBoReleve();
         this.isLoadingReleve = false;
         this.isReleveValidated = false; // Réinitialiser l'état de validation
         this.releveEnv = 'T-E';
@@ -13434,46 +13527,45 @@ reportData: ReconciliationReportData[] = [];
      * Calcule le Volume BO (Rapport + Écart traité - Trx annulé)
      */
     getTotalVolumeSum(): number {
-        const rapportVolume = this.releveData?.totalVolume || 0;
-        const manualVolume = this.releveManualVolume || 0;
-        const annuleVolume = this.releveAnnuleVolume || 0;
-        return rapportVolume + manualVolume - annuleVolume;
+        return this.getReleveTotaux().bo.volume;
     }
 
     /**
      * Calcule le Volume partenaire (Rapport + Écart Partenaire J+1 + Écart traité - Trx annulé - Écart Partenaire J-1 + Trx remboursé)
      */
     getTotalVolumeSumWithManual(): number {
-        const rapportVolume = this.releveData?.totalVolume || 0;
-        const ecartVolumeJ1 = this.getTotalEcartVolume(); // Écart Partenaire J+1
-        const manualVolume = this.releveManualVolume || 0;
-        const annuleVolume = this.releveAnnuleVolume || 0;
-        const ecartVolumeJ1Minus = this.getTotalEcartVolumeJ1(); // Écart BO J-1
-        const rembourseVolume = this.releveRembourseVolume || 0;
-        return rapportVolume + ecartVolumeJ1 + manualVolume - annuleVolume - ecartVolumeJ1Minus + rembourseVolume;
+        return this.getReleveTotaux().partenaire.volume;
     }
 
     /**
      * Calcule le nombre total de transactions BO (Rapport + Écart traité - Trx annulé)
      */
     getTotalTransactionsSum(): number {
-        const rapportTransactions = this.releveData?.totalTransactions || 0;
-        const manualNombre = this.releveManualNombre || 0;
-        const annuleNombre = this.releveAnnuleNombre || 0;
-        return rapportTransactions + manualNombre - annuleNombre;
+        return this.getReleveTotaux().bo.nombre;
+    }
+
+    /** « Totaux finaux » du relevé courant (logique partagée avec le rapport BO vs Partenaire). */
+    private getReleveTotaux(): ReleveTotaux {
+        return releveTotaux(
+            { nombre: this.releveData?.totalTransactions || 0, volume: this.releveData?.totalVolume || 0 },
+            {
+                manualNombre: this.releveManualNombre,
+                manualVolume: this.releveManualVolume,
+                annuleNombre: this.releveAnnuleNombre,
+                annuleVolume: this.releveAnnuleVolume,
+                rembourseNombre: this.releveRembourseNombre,
+                rembourseVolume: this.releveRembourseVolume
+            },
+            releveSommeEcarts(this.releveEcartData),
+            releveSommeEcarts(this.releveEcartDataJ1)
+        );
     }
 
     /**
      * Calcule le nombre total de transactions Partenaire (Rapport + Écart traité - Trx annulé + Écart Partenaire J+1 - Écart Partenaire J-1 + Trx remboursé)
      */
     getTotalTransactionsPartenaire(): number {
-        const rapportTransactions = this.releveData?.totalTransactions || 0;
-        const manualNombre = this.releveManualNombre || 0;
-        const annuleNombre = this.releveAnnuleNombre || 0;
-        const ecartJ1Nombre = this.getTotalEcartNombre(); // Écart Partenaire J+1
-        const ecartJ1NombreMinus = this.getTotalEcartNombreJ1(); // Écart Partenaire J-1
-        const rembourseNombre = this.releveRembourseNombre || 0;
-        return rapportTransactions + manualNombre - annuleNombre + ecartJ1Nombre - ecartJ1NombreMinus + rembourseNombre;
+        return this.getReleveTotaux().partenaire.nombre;
     }
 
     /**
@@ -13514,6 +13606,8 @@ reportData: ReconciliationReportData[] = [];
                     this.releveManualVolume = typeof response.manualVolume === 'number' ? response.manualVolume : 0;
                     this.releveRembourseNombre = typeof response.rembourseNombre === 'number' ? response.rembourseNombre : 0;
                     this.releveRembourseVolume = typeof response.rembourseVolume === 'number' ? response.rembourseVolume : 0;
+                    this.releveAnnuleNombre = typeof response.annuleNombre === 'number' ? response.annuleNombre : 0;
+                    this.releveAnnuleVolume = typeof response.annuleVolume === 'number' ? response.annuleVolume : 0;
                     this.hasPendingReleveManualChanges = false;
                 },
                 error: (err) => {
@@ -13547,7 +13641,9 @@ reportData: ReconciliationReportData[] = [];
             manualNombre: this.releveManualNombre || 0,
             manualVolume: this.releveManualVolume || 0,
             rembourseNombre: this.releveRembourseNombre || 0,
-            rembourseVolume: this.releveRembourseVolume || 0
+            rembourseVolume: this.releveRembourseVolume || 0,
+            annuleNombre: this.releveAnnuleNombre || 0,
+            annuleVolume: this.releveAnnuleVolume || 0
         };
 
         this.isSavingReleveManualData = true;

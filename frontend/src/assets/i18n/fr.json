@@ -2301,6 +2301,16 @@
     "Parpage": "Par page:",
     "Plateforme": "Plateforme",
     "Plateforme_1": "Plateforme *",
+    "typeDecalage": {
+      "label": "Type décalage",
+      "title": "Décalage J-1 / J+1 côté BO ou Partenaire. La ligne doit être datée du jour du rapport concerné.",
+      "none": "Écart simple",
+      "JM1_BO": "J-1 BO",
+      "JM1_PARTENAIRE": "J-1 Partenaire",
+      "JP1_BO": "J+1 BO",
+      "JP1_PARTENAIRE": "J+1 Partenaire",
+      "erreur": "Impossible d'enregistrer le type de décalage."
+    },
     "Précédent": "« Précédent",
     "Rechercherapidepartokenapi": "Recherche rapide par token (API)",
     "Sauvegardeencours": "Sauvegarde...",
@@ -6372,6 +6382,29 @@
     "cancelledManual": "Trx annulé (saisie manuelle)",
     "uploadHintCancel": "Nombre = lignes valides, Volume = somme de « montant ». Soustrait de la synthèse (rapport + écart traité). Contrôle sur BO_Service et BO_date (date, J-1 ou J+1).",
     "refundedManual": "Trx remboursé (saisie manuelle)",
+    "boTrxJp1": "Trx BO J+1",
+    "boTrxJm1": "Trx BO J-1",
+    "noBoJp1Data": "Aucune ligne « J+1 BO » datée du jour du rapport sur le Résumé écarts BO (service, pays, env « {{env}} »).",
+    "noBoJm1Data": "Aucune ligne « J-1 BO » datée du jour du rapport sur le Résumé écarts BO (service, pays, env « {{env}} »).",
+    "finalMode": {
+      "label": "Afficher les nombres ou les volumes",
+      "nombre": "Nombre",
+      "volume": "Volume"
+    },
+    "final": {
+      "boNombre": "📈 Nombre total de transactions BO :",
+      "boVolume": "📈 Volume total BO :",
+      "partenaireNombre": "📈 Nombre total de transactions Partenaire :",
+      "partenaireVolume": "📈 Volume total Partenaire :",
+      "rapportNombre": "📊 Nombre total (Rapport) :",
+      "rapportVolume": "📊 Volume total (Rapport) :",
+      "traiteNombre": "📊 Nombre total (Écart traité) :",
+      "traiteVolume": "📊 Volume total (Écart traité) :",
+      "rembourseNombre": "📊 Nombre total (Trx remboursé) :",
+      "rembourseVolume": "📊 Volume total (Trx remboursé) :",
+      "annuleNombre": "📊 Nombre total (Trx annulé) :",
+      "annuleVolume": "📊 Volume total (Trx annulé) :"
+    },
     "finalTotals": "Totaux finaux",
     "totalBoTxns": "Nombre total de transactions BO:",
     "totalPartnerTxns": "Nombre total de transactions Partenaire:",
@@ -6703,13 +6736,19 @@
       "decalage": "Décalage",
       "ecart": "Écart",
       "transactionsBo": "Transactions BO",
-      "taux": "Taux"
+      "taux": "Taux",
+      "decalBo": "BO",
+      "decalPart": "Partenaire"
     },
     "tooltip": {
       "countJm1": "Nombre (relevé partenaire, veille)",
       "volumeJm1": "Volume (relevé partenaire, veille)",
       "countJp1": "Nombre (relevé partenaire, date rapport)",
-      "volumeJp1": "Volume (relevé partenaire, date rapport)"
+      "volumeJp1": "Volume (relevé partenaire, date rapport)",
+      "jm1Bo": "Décalage J-1 BO : lignes « J-1 BO » du jour du rapport",
+      "jm1Part": "Décalage J-1 Partenaire : lignes « J-1 Partenaire » du jour du rapport (et anciennes lignes Partenaire de la veille)",
+      "jp1Bo": "Décalage J+1 BO : lignes « J+1 BO » du jour du rapport",
+      "jp1Part": "Décalage J+1 Partenaire : lignes « J+1 Partenaire » du jour du rapport (et anciennes lignes Partenaire du jour)"
     },
     "group": {
       "toggleTitle": "Cliquer pour afficher ou masquer le détail par service",
@@ -9543,7 +9582,7 @@
     "titreModification": "Modifier le dossier lié",
     "titreDetail": "Dossier lié",
     "titreListe": "Dossiers liés",
-    "intro": "Reliez les lignes d'une même opération : appro de préfinancement et sa contrepartie, frais (mémo), compense de remboursement du reliquat et sa contrepartie, frais sur le montant retourné. Les rôles sont proposés automatiquement et restent modifiables.",
+    "intro": "Reliez les lignes d'une même opération : appro de préfinancement et sa contrepartie, frais (mémo), compense de retour de fond et sa contrepartie, frais sur le montant retourné. Les rôles sont proposés automatiquement et restent modifiables.",
     "libelle": "Libellé du dossier",
     "libellePlaceholder": "Ex. Préfinancement AGENCE X novembre",
     "libellePrefinancement": "Préfinancement",
@@ -9597,7 +9636,7 @@
     "contrepartie": "Contrepartie",
     "ecart": "écart",
     "montantUtilise": "Montant utilisé",
-    "montantUtiliseHint": "Appro − remboursement du reliquat",
+    "montantUtiliseHint": "Appro − retour de fond",
     "totalFrais": "Total des frais",
     "fraisDetail": "Prévus (appro) {{p0}} · différence {{p1}}",
     "totalFraisHint": "Frais sur le montant utilisé — seuls frais retenus, tout le préfinancement n'étant pas utilisé",
@@ -9609,8 +9648,8 @@
       "APPRO": "Appro (préfinancement)",
       "APPRO_CONTREPARTIE": "Contrepartie de l'appro",
       "FRAIS_APPRO": "Frais de l'appro (mémo)",
-      "REMBOURSEMENT": "Remboursement du reliquat (compense)",
-      "REMBOURSEMENT_CONTREPARTIE": "Contrepartie du remboursement",
+      "REMBOURSEMENT": "Retour de fond (compense)",
+      "REMBOURSEMENT_CONTREPARTIE": "Contrepartie du retour de fond",
       "FRAIS_REMBOURSEMENT": "Frais sur le montant utilisé",
       "AUTRE": "Autre"
     }

@@ -2029,17 +2029,15 @@ private profilService: ProfilService
       params = params.set('env', this.selectedEnv);
     }
 
+    // Toutes plateformes et sans filtre pays serveur (« Cameroun » ≠ « CM ») : les lignes typées
+    // (J-1 / J+1 Partenaire) et le pays sont rattachés par la logique du relevé.
     const ecartFilter: {
       startDate: string;
       endDate: string;
-      pays: string;
-      platform: string;
       env?: string;
     } = {
       startDate: ecartStart,
-      endDate: bounds.endDate,
-      pays: this.selectedCountry,
-      platform: 'PARTENAIRE'
+      endDate: bounds.endDate
     };
     if (this.selectedEnv && this.selectedEnv !== 'ALL') {
       ecartFilter.env = this.selectedEnv;
@@ -2797,6 +2795,13 @@ private profilService: ProfilService
         date: r.date,
 
         service: r.service,
+
+
+        agency: r.agency ?? (anyR['agency'] as string | undefined),
+
+
+
+        status: r.status ?? (anyR['status'] as string | undefined),
 
         country: r.country,
 

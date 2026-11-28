@@ -301,6 +301,7 @@ public class EcartBoSummaryService {
                 if (summary.getToken() != null && !summary.getToken().trim().isEmpty()) {
                     entity.setToken(summary.getToken().trim());
                 }
+                entity.setTypeDecalage(normalizeTypeDecalage(summary.getTypeDecalage()));
                 entity.setDateImport(LocalDateTime.now());
 
                 entitiesToSave.add(entity);
@@ -374,6 +375,10 @@ public class EcartBoSummaryService {
         }
         if (ecartBoSummary.getToken() != null) {
             entity.setToken(ecartBoSummary.getToken().trim().isEmpty() ? null : ecartBoSummary.getToken().trim());
+        }
+        if (ecartBoSummary.getTypeDecalage() != null) {
+            // Chaîne vide = retour à « écart simple ».
+            entity.setTypeDecalage(normalizeTypeDecalage(ecartBoSummary.getTypeDecalage()));
         }
 
         List<EcartBoSummaryEntity> existing = ecartBoSummaryRepository.findByAgenceAndServiceAndPays(
@@ -594,6 +599,19 @@ public class EcartBoSummaryService {
         model.setEnv(entity.getEnv() != null ? entity.getEnv() : "BO");
         model.setEnvCode(entity.getEnvCode());
         model.setToken(entity.getToken());
+        model.setTypeDecalage(entity.getTypeDecalage());
         return model;
+    }
+
+    private static final java.util.Set<String> TYPES_DECALAGE =
+            java.util.Set.of("JM1_BO", "JM1_PARTENAIRE", "JP1_BO", "JP1_PARTENAIRE");
+
+    /** Valeur connue (JM1_BO, JM1_PARTENAIRE, JP1_BO, JP1_PARTENAIRE), sinon null (écart simple). */
+    static String normalizeTypeDecalage(String type) {
+        if (type == null) {
+            return null;
+        }
+        String v = type.trim().toUpperCase();
+        return TYPES_DECALAGE.contains(v) ? v : null;
     }
 }

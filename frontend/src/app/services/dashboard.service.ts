@@ -12,6 +12,9 @@ export interface ReleveManualRangeRow {
     manualVolume: number;
     rembourseNombre: number;
     rembourseVolume: number;
+    /** Trx annulé du relevé (soustrait des totaux BO et Partenaire). */
+    annuleNombre?: number;
+    annuleVolume?: number;
 }
 
 export interface DashboardMetrics {

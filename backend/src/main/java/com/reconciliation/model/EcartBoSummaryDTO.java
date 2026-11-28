@@ -12,6 +12,7 @@ public class EcartBoSummaryDTO {
     private String env;
     private String envCode;
     private String token;
+    private String typeDecalage;
 
     // Constructeurs
     public EcartBoSummaryDTO() {}
@@ -113,5 +114,14 @@ public class EcartBoSummaryDTO {
 
     public void setToken(String token) {
         this.token = token;
+    }
+
+    /** Type de décalage : JM1_BO, JM1_PARTENAIRE, JP1_BO, JP1_PARTENAIRE ; null = écart simple. */
+    public String getTypeDecalage() {
+        return typeDecalage;
+    }
+
+    public void setTypeDecalage(String typeDecalage) {
+        this.typeDecalage = typeDecalage;
     }
 }

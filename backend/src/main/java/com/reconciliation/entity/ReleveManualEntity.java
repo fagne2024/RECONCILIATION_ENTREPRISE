@@ -43,6 +43,13 @@ public class ReleveManualEntity {
     @Column(name = "rembourse_volume")
     private Double rembourseVolume;
 
+    /** Trx annulé du relevé (soustrait des totaux BO et Partenaire). Colonne existante depuis la baseline V1. */
+    @Column(name = "annule_nombre")
+    private Long annuleNombre;
+
+    @Column(name = "annule_volume")
+    private Double annuleVolume;
+
     @Column(name = "updated_at")
     private LocalDateTime updatedAt;
 
@@ -112,6 +119,22 @@ public class ReleveManualEntity {
 
     public Double getRembourseVolume() {
         return rembourseVolume;
+    }
+
+    public Long getAnnuleNombre() {
+        return annuleNombre;
+    }
+
+    public void setAnnuleNombre(Long annuleNombre) {
+        this.annuleNombre = annuleNombre;
+    }
+
+    public Double getAnnuleVolume() {
+        return annuleVolume;
+    }
+
+    public void setAnnuleVolume(Double annuleVolume) {
+        this.annuleVolume = annuleVolume;
     }
 
     public void setRembourseVolume(Double rembourseVolume) {

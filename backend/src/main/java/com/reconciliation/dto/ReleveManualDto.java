@@ -11,5 +11,8 @@ public class ReleveManualDto {
     public Double manualVolume;
     public Long rembourseNombre;
     public Double rembourseVolume;
+    /** Trx annulé ; null = valeur enregistrée conservée (clients qui ne l'envoient pas). */
+    public Long annuleNombre;
+    public Double annuleVolume;
 }
 

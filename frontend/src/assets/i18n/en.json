@@ -2301,6 +2301,16 @@
     "Parpage": "Per page:",
     "Plateforme": "Platform",
     "Plateforme_1": "Platform *",
+    "typeDecalage": {
+      "label": "Shift type",
+      "title": "D-1 / D+1 shift on the BO or Partner side. The line must be dated on the related report day.",
+      "none": "Simple gap",
+      "JM1_BO": "D-1 BO",
+      "JM1_PARTENAIRE": "D-1 Partner",
+      "JP1_BO": "D+1 BO",
+      "JP1_PARTENAIRE": "D+1 Partner",
+      "erreur": "Unable to save the shift type."
+    },
     "Précédent": "« Previous",
     "Rechercherapidepartokenapi": "Quick search by token (API)",
     "Sauvegardeencours": "Saving...",
@@ -6372,6 +6382,29 @@
     "cancelledManual": "Cancelled trx (manual entry)",
     "uploadHintCancel": "Count = valid rows, Volume = sum of “amount”. Subtracted from the summary (report + treated discrepancy). Check on BO_Service and BO_date (date, D-1 or D+1).",
     "refundedManual": "Refunded trx (manual entry)",
+    "boTrxJp1": "BO trx D+1",
+    "boTrxJm1": "BO trx D-1",
+    "noBoJp1Data": "No \"D+1 BO\" line dated on the report day in the BO gaps summary (service, country, env \"{{env}}\").",
+    "noBoJm1Data": "No \"D-1 BO\" line dated on the report day in the BO gaps summary (service, country, env \"{{env}}\").",
+    "finalMode": {
+      "label": "Show counts or volumes",
+      "nombre": "Count",
+      "volume": "Volume"
+    },
+    "final": {
+      "boNombre": "📈 Total BO transactions:",
+      "boVolume": "📈 Total BO volume:",
+      "partenaireNombre": "📈 Total Partner transactions:",
+      "partenaireVolume": "📈 Total Partner volume:",
+      "rapportNombre": "📊 Total count (Report):",
+      "rapportVolume": "📊 Total volume (Report):",
+      "traiteNombre": "📊 Total count (Treated gap):",
+      "traiteVolume": "📊 Total volume (Treated gap):",
+      "rembourseNombre": "📊 Total count (Refunded trx):",
+      "rembourseVolume": "📊 Total volume (Refunded trx):",
+      "annuleNombre": "📊 Total count (Cancelled trx):",
+      "annuleVolume": "📊 Total volume (Cancelled trx):"
+    },
     "finalTotals": "Final totals",
     "totalBoTxns": "Total BO transactions:",
     "totalPartnerTxns": "Total Partner transactions:",
@@ -6703,13 +6736,19 @@
       "decalage": "Shift",
       "ecart": "Gap",
       "transactionsBo": "BO transactions",
-      "taux": "Rate"
+      "taux": "Rate",
+      "decalBo": "BO",
+      "decalPart": "Partner"
     },
     "tooltip": {
       "countJm1": "Count (partner statement, day before)",
       "volumeJm1": "Volume (partner statement, day before)",
       "countJp1": "Count (partner statement, report date)",
-      "volumeJp1": "Volume (partner statement, report date)"
+      "volumeJp1": "Volume (partner statement, report date)",
+      "jm1Bo": "D-1 BO shift: \"D-1 BO\" lines of the report day",
+      "jm1Part": "D-1 Partner shift: \"D-1 Partner\" lines of the report day (and older Partner lines of the day before)",
+      "jp1Bo": "D+1 BO shift: \"D+1 BO\" lines of the report day",
+      "jp1Part": "D+1 Partner shift: \"D+1 Partner\" lines of the report day (and older Partner lines of the day)"
     },
     "group": {
       "toggleTitle": "Click to show or hide the detail by service",
@@ -9543,7 +9582,7 @@
     "titreModification": "Edit linked file",
     "titreDetail": "Linked file",
     "titreListe": "Linked files",
-    "intro": "Link the lines of a single operation: pre-financing top-up and its counterpart, fees (memo), clearing refund of the remaining balance and its counterpart, fees on the returned amount. Roles are suggested automatically and can be changed.",
+    "intro": "Link the lines of a single operation: pre-financing top-up and its counterpart, fees (memo), clearing fund return and its counterpart, fees on the returned amount. Roles are suggested automatically and can be changed.",
     "libelle": "File label",
     "libellePlaceholder": "E.g. Pre-financing BRANCH X November",
     "libellePrefinancement": "Pre-financing",
@@ -9597,7 +9636,7 @@
     "contrepartie": "Counterpart",
     "ecart": "gap",
     "montantUtilise": "Amount used",
-    "montantUtiliseHint": "Top-up − refund of remaining balance",
+    "montantUtiliseHint": "Top-up − fund return",
     "totalFrais": "Total fees",
     "fraisDetail": "Planned (top-up) {{p0}} · difference {{p1}}",
     "totalFraisHint": "Fees on the amount used — the only fees kept, since the whole pre-financing was not used",
@@ -9609,8 +9648,8 @@
       "APPRO": "Top-up (pre-financing)",
       "APPRO_CONTREPARTIE": "Top-up counterpart",
       "FRAIS_APPRO": "Top-up fees (memo)",
-      "REMBOURSEMENT": "Refund of remaining balance (clearing)",
-      "REMBOURSEMENT_CONTREPARTIE": "Refund counterpart",
+      "REMBOURSEMENT": "Fund return (clearing)",
+      "REMBOURSEMENT_CONTREPARTIE": "Fund return counterpart",
       "FRAIS_REMBOURSEMENT": "Fees on the amount used",
       "AUTRE": "Other"
     }

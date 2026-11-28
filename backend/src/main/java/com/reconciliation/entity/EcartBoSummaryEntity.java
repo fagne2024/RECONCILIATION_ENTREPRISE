@@ -55,6 +55,10 @@ public class EcartBoSummaryEntity {
     @Column(name = "token", length = 64)
     private String token;
 
+    /** Type de décalage J±1 (date de la ligne = date du rapport) : JM1_BO, JM1_PARTENAIRE, JP1_BO, JP1_PARTENAIRE. */
+    @Column(name = "type_decalage", length = 20)
+    private String typeDecalage;
+
     // Constructeurs
     public EcartBoSummaryEntity() {}
     
@@ -173,5 +177,14 @@ public class EcartBoSummaryEntity {
 
     public void setToken(String token) {
         this.token = token;
+    }
+
+    /** Type de décalage : JM1_BO, JM1_PARTENAIRE, JP1_BO, JP1_PARTENAIRE ; null = écart simple. */
+    public String getTypeDecalage() {
+        return typeDecalage;
+    }
+
+    public void setTypeDecalage(String typeDecalage) {
+        this.typeDecalage = typeDecalage;
     }
 }

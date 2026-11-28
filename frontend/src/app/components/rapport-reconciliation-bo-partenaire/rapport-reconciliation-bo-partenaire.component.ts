@@ -14,6 +14,15 @@ import { forkJoin, Observable, of, Subscription, throwError } from 'rxjs';
 import { catchError, debounceTime, map, switchMap } from 'rxjs/operators';
 import { AppStateService } from '../../services/app-state.service';
 import { countriesMatch, countryNameFromCode } from '../../utils/country-codes.util';
+import {
+  releveEcartsBoJm1,
+  releveEcartsBoJp1,
+  releveEcartsJm1,
+  releveEcartsJp1,
+  releveSommeEcarts,
+  releveTotaux,
+  releveYmd
+} from '../../utils/releve-totaux.util';
 import { EcartBoSummary, EcartBoSummaryService } from '../../services/ecart-bo-summary.service';
 import { DashboardService, ReleveManualRangeRow } from '../../services/dashboard.service';
 import {
@@ -90,12 +99,20 @@ export interface BoPartenaireRow {
   /** (BO − Partenaire) − J-1 + J+1 (mêmes J±1 que les colonnes Décalage). */
   ecartVolume: number;
   tauxVolume: number | null;
-  /** Écarts plateforme Partenaire, date veille du rapport (relevé J-1). */
+  /** Décalage J-1 côté Partenaire : écarts plateforme Partenaire, date veille du rapport. */
   decalageJm1Nombre: number;
   decalageJm1Volume: number;
-  /** Écarts plateforme Partenaire, date du rapport (relevé J+1). */
+  /** Décalage J+1 côté Partenaire : écarts plateforme Partenaire, date du rapport. */
   decalageJp1Nombre: number;
   decalageJp1Volume: number;
+  /**
+   * Décalage J-1 / J+1 côté BO : colonnes affichées, logique de calcul à définir
+   * (0 pour l'instant, sans effet sur les colonnes BO, Partenaire et Écart).
+   */
+  decalageJm1BoNombre: number;
+  decalageJm1BoVolume: number;
+  decalageJp1BoNombre: number;
+  decalageJp1BoVolume: number;
   /**
    * Ids result8rec du périmètre courant pour ce service (plusieurs lignes si multi-agences / dates).
    * Utilisés pour charger l’historique d’audit.
@@ -179,7 +196,7 @@ export class RapportReconciliationBoPartenaireComponent implements OnInit, OnDes
   /** Métadonnées rapport pour libellés (service, agence, date) par id result8rec. */
   private readonly metaByResult8RecId = new Map<number, { service: string; agency: string; date: string; env?: string }>();
 
-  readonly auditHistoryColspan = 15;
+  readonly auditHistoryColspan = 19;
 
   readonly auditSnapshotTraitementClass = traitementAuditPillClassFn;
   readonly auditSnapshotStatutClass = statutAuditPillClassFn;
@@ -201,6 +218,10 @@ export class RapportReconciliationBoPartenaireComponent implements OnInit, OnDes
   totalDecJm1Volume = 0;
   totalDecJp1Nombre = 0;
   totalDecJp1Volume = 0;
+  totalDecJm1BoNombre = 0;
+  totalDecJm1BoVolume = 0;
+  totalDecJp1BoNombre = 0;
+  totalDecJp1BoVolume = 0;
   servicesAvecEcart = 0;
   totalServices = 0;
 
@@ -422,6 +443,8 @@ export class RapportReconciliationBoPartenaireComponent implements OnInit, OnDes
       id: r.id,
       date: r.date,
       service: r.service,
+      agency: r.agency,
+      status: r.status,
       country: r.country,
       env: r.env,
       totalTransactions: r.totalTransactions,
@@ -662,34 +685,24 @@ export class RapportReconciliationBoPartenaireComponent implements OnInit, OnDes
     );
   }
 
-  /** Filtre API écarts J±1 (plateforme Partenaire, fenêtre J-1 → fin de période). */
+  /** Filtre API écarts J±1 : toutes plateformes (lignes typées J-1 / J+1 BO ou Partenaire), fenêtre J-1 → fin de période. */
   private buildEcartFilterForRange(range: { start: string; end: string }): {
     startDate: string;
     endDate: string;
-    platform: string;
     env?: string;
     pays?: string;
   } {
     const filter: {
       startDate: string;
       endDate: string;
-      platform: string;
       env?: string;
       pays?: string;
     } = {
       startDate: this.subtractCalendarDaysFromYmd(range.start, 1),
-      endDate: range.end,
-      platform: 'PARTENAIRE'
+      endDate: range.end
     };
-    if (this.selectedEnv && this.selectedEnv !== 'ALL') {
-      filter.env = this.selectedEnv;
-    }
-    if (
-      this.selectedCountry &&
-      this.selectedCountry !== RapportReconciliationBoPartenaireComponent.ALL_COUNTRIES
-    ) {
-      filter.pays = this.selectedCountry;
-    }
+    // Comme le relevé : pas de filtre pays / ENV côté API (comparaison exacte « Cameroun » ≠ « CM ») ;
+    // le rattachement à chaque relevé est fait par utils/releve-totaux.util.ts.
     return filter;
   }
 
@@ -733,7 +746,7 @@ export class RapportReconciliationBoPartenaireComponent implements OnInit, OnDes
 
   /** Charge les écarts J±1 en arrière-plan : le tableau s'affiche d'abord, les décalages se mettent à jour ensuite. */
   private loadDecalagesForRange(
-    ecartFilter: { startDate: string; endDate: string; platform: string; env?: string; pays?: string },
+    ecartFilter: { startDate: string; endDate: string; env?: string; pays?: string },
     seq: number
   ): void {
     this.subs.add(
@@ -1015,9 +1028,11 @@ export class RapportReconciliationBoPartenaireComponent implements OnInit, OnDes
       .getReleveManualTrxRange(
         dateStart,
         dateEnd,
-        this.selectedCountry,
+        // Pas de filtre pays / ENV côté API : le serveur compare le texte exact (« Cameroun » ≠ « CM »).
+        // Le rattachement au relevé (pays code ou libellé, ENV) est fait par saisiesReleve().
+        undefined,
         servicesToFetch,
-        this.selectedEnv === 'ALL' ? undefined : this.selectedEnv
+        undefined
       )
       .pipe(
         catchError(() => of([] as ReleveManualRangeRow[]))
@@ -1097,6 +1112,10 @@ export class RapportReconciliationBoPartenaireComponent implements OnInit, OnDes
         decalageJm1Volume: agg.decalageJm1Volume,
         decalageJp1Nombre: agg.decalageJp1Nombre,
         decalageJp1Volume: agg.decalageJp1Volume,
+        decalageJm1BoNombre: agg.decalageJm1BoNombre,
+        decalageJm1BoVolume: agg.decalageJm1BoVolume,
+        decalageJp1BoNombre: agg.decalageJp1BoNombre,
+        decalageJp1BoVolume: agg.decalageJp1BoVolume,
         result8recIds
       });
     }
@@ -1114,6 +1133,10 @@ export class RapportReconciliationBoPartenaireComponent implements OnInit, OnDes
     this.totalDecJm1Volume = rows.reduce((s, r) => s + r.decalageJm1Volume, 0);
     this.totalDecJp1Nombre = rows.reduce((s, r) => s + r.decalageJp1Nombre, 0);
     this.totalDecJp1Volume = rows.reduce((s, r) => s + r.decalageJp1Volume, 0);
+    this.totalDecJm1BoNombre = rows.reduce((s, r) => s + r.decalageJm1BoNombre, 0);
+    this.totalDecJm1BoVolume = rows.reduce((s, r) => s + r.decalageJm1BoVolume, 0);
+    this.totalDecJp1BoNombre = rows.reduce((s, r) => s + r.decalageJp1BoNombre, 0);
+    this.totalDecJp1BoVolume = rows.reduce((s, r) => s + r.decalageJp1BoVolume, 0);
     this.totalServices = rows.length;
     this.servicesAvecEcart = rows.filter(
       (r) => Math.abs(r.ecartNombre) > 0.0001 || Math.abs(r.ecartVolume) > 0.0001
@@ -1134,6 +1157,10 @@ export class RapportReconciliationBoPartenaireComponent implements OnInit, OnDes
     this.totalDecJm1Volume = 0;
     this.totalDecJp1Nombre = 0;
     this.totalDecJp1Volume = 0;
+    this.totalDecJm1BoNombre = 0;
+    this.totalDecJm1BoVolume = 0;
+    this.totalDecJp1BoNombre = 0;
+    this.totalDecJp1BoVolume = 0;
     this.servicesAvecEcart = 0;
     this.totalServices = 0;
     this.ecartBoOnlyCount = 0;
@@ -1631,6 +1658,10 @@ export class RapportReconciliationBoPartenaireComponent implements OnInit, OnDes
       decalageJm1Volume: decJm1Volume,
       decalageJp1Nombre: decJp1Nombre,
       decalageJp1Volume: decJp1Volume,
+      decalageJm1BoNombre: sum((m) => m.decalageJm1BoNombre),
+      decalageJm1BoVolume: sum((m) => m.decalageJm1BoVolume),
+      decalageJp1BoNombre: sum((m) => m.decalageJp1BoNombre),
+      decalageJp1BoVolume: sum((m) => m.decalageJp1BoVolume),
       result8recIds: mergedDbIds
     };
   }
@@ -1663,36 +1694,74 @@ export class RapportReconciliationBoPartenaireComponent implements OnInit, OnDes
     decalageJm1Volume: number;
     decalageJp1Nombre: number;
     decalageJp1Volume: number;
+    decalageJm1BoNombre: number;
+    decalageJm1BoVolume: number;
+    decalageJp1BoNombre: number;
+    decalageJp1BoVolume: number;
   } {
     const serviceLines = filtered.filter(
       (line) =>
         this.strEqual(line.service, service) &&
         (envNorm == null || normalizeReconciliationReportEnv(line.env) === envNorm)
     );
-    const rapportN = serviceLines.reduce((s, l) => s + (l.totalTransactions || 0), 0);
-    const rapportV = serviceLines.reduce((s, l) => s + (l.totalVolume || 0), 0);
+    // Chaque (jour, ENV, pays) du service = un relevé : on additionne ses « Totaux finaux »,
+    // calculés par la logique partagée du relevé (utils/releve-totaux.util.ts).
+    // Données du rapport = lignes OK (« Correspondance parfaite »), hors ligne Multiagence
+    // des écarts Partenaire ; les autres lignes servent au traitement / statut et aux en-têtes.
+    const rapportLines = serviceLines.filter(
+      (l) =>
+        this.isLigneRapportOk(l) &&
+        !this.isLigneEcartsPartenaireMultiagence(l) &&
+        this.isYmdInRangeInclusive(l.date, dateStart, dateEnd)
+    );
+    const releves = new Map<string, { date: string; env: string; country: string; nombre: number; volume: number }>();
+    for (const l of rapportLines) {
+      const date = releveYmd(l.date);
+      const env = normalizeReconciliationReportEnv(l.env);
+      const country = (l.country || '').trim();
+      const key = `${date}|${env.toUpperCase()}|${country.toUpperCase()}`;
+      const r = releves.get(key) || { date, env, country, nombre: 0, volume: 0 };
+      r.nombre += l.totalTransactions || 0;
+      r.volume += l.totalVolume || 0;
+      releves.set(key, r);
+    }
 
-    const manual = this.sumManualForServiceRange(service, dateStart, dateEnd, envNorm);
-
+    let boNombre = 0;
+    let boVolume = 0;
+    let partenaireNombre = 0;
+    let partenaireVolume = 0;
     let jp1Nombre = 0;
     let jp1Montant = 0;
     let jm1Nombre = 0;
     let jm1Montant = 0;
-    for (const d of this.listYmdInclusive(dateStart, dateEnd)) {
-      const j = this.sumEcartPartner(service, d, envNorm);
-      jp1Nombre += j.nombre;
-      jp1Montant += j.montant;
-      const jm = this.sumEcartPartner(service, this.subtractCalendarDaysFromYmd(d, 1), envNorm);
-      jm1Nombre += jm.nombre;
-      jm1Montant += jm.montant;
+    let boJp1Nombre = 0;
+    let boJp1Montant = 0;
+    let boJm1Nombre = 0;
+    let boJm1Montant = 0;
+    for (const r of releves.values()) {
+      const scope = { date: r.date, service, country: r.country, env: r.env };
+      const totaux = releveTotaux(
+        { nombre: r.nombre, volume: r.volume },
+        this.saisiesReleve(service, r.date, r.env, r.country),
+        releveSommeEcarts(releveEcartsJp1(this.ecartAll, scope)),
+        releveSommeEcarts(releveEcartsJm1(this.ecartAll, scope))
+      );
+      boNombre += totaux.bo.nombre;
+      boVolume += totaux.bo.volume;
+      partenaireNombre += totaux.partenaire.nombre;
+      partenaireVolume += totaux.partenaire.volume;
+      jp1Nombre += totaux.jp1.nombre;
+      jp1Montant += totaux.jp1.volume;
+      jm1Nombre += totaux.jm1.nombre;
+      jm1Montant += totaux.jm1.volume;
+      // Lignes typées « J+1 BO » / « J-1 BO » : affichées, sans effet sur les totaux (logique à venir).
+      const boJp1 = releveSommeEcarts(releveEcartsBoJp1(this.ecartAll, scope));
+      const boJm1 = releveSommeEcarts(releveEcartsBoJm1(this.ecartAll, scope));
+      boJp1Nombre += boJp1.nombre;
+      boJp1Montant += boJp1.volume;
+      boJm1Nombre += boJm1.nombre;
+      boJm1Montant += boJm1.volume;
     }
-
-    const boNombre = rapportN + manual.manualNombre;
-    const boVolume = rapportV + manual.manualVolume;
-    const partenaireNombre =
-      rapportN + manual.manualNombre + jp1Nombre - jm1Nombre + manual.rembourseNombre;
-    const partenaireVolume =
-      rapportV + jp1Montant + manual.manualVolume - jm1Montant + manual.rembourseVolume;
 
     return {
       boNombre,
@@ -1702,115 +1771,77 @@ export class RapportReconciliationBoPartenaireComponent implements OnInit, OnDes
       decalageJm1Nombre: jm1Nombre,
       decalageJm1Volume: jm1Montant,
       decalageJp1Nombre: jp1Nombre,
-      decalageJp1Volume: jp1Montant
+      decalageJp1Volume: jp1Montant,
+      decalageJm1BoNombre: boJm1Nombre,
+      decalageJm1BoVolume: boJm1Montant,
+      decalageJp1BoNombre: boJp1Nombre,
+      decalageJp1BoVolume: boJp1Montant
     };
   }
 
-  private sumManualForServiceRange(
+  /**
+   * Ligne spéciale des écarts Partenaire du rapport : agence « Multiagence »
+   * (ou ancien format agence = service).
+   */
+  private isLigneEcartsPartenaireMultiagence(line: Result8Row): boolean {
+    const agency = (line.agency || '').trim();
+    if (!agency) {
+      return false;
+    }
+    return agency.toUpperCase() === 'MULTIAGENCE' || this.strEqual(agency, line.service);
+  }
+
+  /** Saisies enregistrées d'un relevé (releve_manual) : service + date + ENV + pays (code ou libellé). */
+  private saisiesReleve(
     service: string,
-    dateStart: string,
-    dateEnd: string,
-    envNorm: string | null
+    date: string,
+    env: string,
+    country: string
   ): {
     manualNombre: number;
     manualVolume: number;
     rembourseNombre: number;
     rembourseVolume: number;
+    annuleNombre: number;
+    annuleVolume: number;
   } {
-    let manualNombre = 0;
-    let manualVolume = 0;
-    let rembourseNombre = 0;
-    let rembourseVolume = 0;
-    const cty = (this.selectedCountry || '').trim();
-
+    const out = {
+      manualNombre: 0,
+      manualVolume: 0,
+      rembourseNombre: 0,
+      rembourseVolume: 0,
+      annuleNombre: 0,
+      annuleVolume: 0
+    };
+    const envKey = normalizeReconciliationReportEnv(env).toUpperCase();
     for (const m of this.manualRows) {
-      if (!this.strEqual(m.service, service)) {
+      if (!this.strEqual(m.service, service) || releveYmd(m.date) !== date) {
         continue;
       }
-      if (!this.isYmdInRangeInclusive(m.date, dateStart, dateEnd)) {
+      if (normalizeReconciliationReportEnv(m.env).toUpperCase() !== envKey) {
         continue;
       }
-      if (cty && (m.country || '').trim() && !this.strEqual(m.country, cty)) {
+      if ((m.country || '').trim() && country && !this.strEqual(m.country, country) && !countriesMatch(m.country, country)) {
         continue;
       }
-      if (envNorm != null) {
-        const me = normalizeReconciliationReportEnv(m.env);
-        if (me !== envNorm) {
-          continue;
-        }
-      }
-      manualNombre += Number(m.manualNombre || 0);
-      manualVolume += Number(m.manualVolume || 0);
-      rembourseNombre += Number(m.rembourseNombre || 0);
-      rembourseVolume += Number(m.rembourseVolume || 0);
+      out.manualNombre += Number(m.manualNombre || 0);
+      out.manualVolume += Number(m.manualVolume || 0);
+      out.rembourseNombre += Number(m.rembourseNombre || 0);
+      out.rembourseVolume += Number(m.rembourseVolume || 0);
+      out.annuleNombre += Number(m.annuleNombre || 0);
+      out.annuleVolume += Number(m.annuleVolume || 0);
     }
-
-    return { manualNombre, manualVolume, rembourseNombre, rembourseVolume };
+    return out;
   }
 
-  private sumEcartPartner(
-    service: string,
-    dateY: string,
-    envKey: string | null
-  ): { nombre: number; montant: number } {
-    let nombre = 0;
-    let montant = 0;
-    for (const ecart of this.ecartAll) {
-      const ecartDate = this.formatDateForSearch(ecart.dateTransaction);
-      if (ecartDate !== dateY) {
-        continue;
-      }
-      if (!this.strEqual(ecart.service, service)) {
-        continue;
-      }
-      if (!this.ecartPaysMatches(ecart)) {
-        continue;
-      }
-      if (!this.isPartenairePlatform(ecart)) {
-        continue;
-      }
-      if (!this.ecartEnvMatches(ecart, envKey)) {
-        continue;
-      }
-      nombre += Number(ecart.nombreTransactions || 0);
-      montant += Number(ecart.montantTotal || 0);
-    }
-    return { nombre, montant };
+  /** Ligne retenue par le relevé : statut OK. */
+  private isLigneRapportOk(line: { status?: string }): boolean {
+    return (line.status || '').trim().toUpperCase() === 'OK';
   }
 
-  private isPartenairePlatform(ecart: EcartBoSummary): boolean {
-    return (ecart.env || '').trim().toUpperCase() === 'PARTENAIRE';
-  }
 
-  private getEcartEnvCodeRaw(ecart: EcartBoSummary): string {
-    const anyE = ecart as EcartBoSummary & { env_code?: string | null };
-    const v = ecart.envCode ?? anyE.env_code;
-    return v != null ? String(v).trim() : '';
-  }
 
-  private ecartEnvMatches(ecart: EcartBoSummary, releveEnvNorm: string | null): boolean {
-    if (releveEnvNorm == null) {
-      return true;
-    }
-    const code = this.getEcartEnvCodeRaw(ecart);
-    const ecartKey = !code || code.toUpperCase() === 'TOTAL' ? 'T-E' : code;
-    return ecartKey.toUpperCase() === releveEnvNorm.toUpperCase();
-  }
 
-  private ecartPaysMatches(ecart: EcartBoSummary): boolean {
-    if (this.isAllCountriesSelection()) {
-      return true;
-    }
-    const rep = (this.selectedCountry || '').trim();
-    const ep = (ecart.pays || '').trim();
-    if (!rep) {
-      return true;
-    }
-    if (!ep) {
-      return true;
-    }
-    return countriesMatch(rep, ep);
-  }
 
   private strEqual(a?: string | null, b?: string | null): boolean {
     return (a ?? '').trim().toLowerCase() === (b ?? '').trim().toLowerCase();
@@ -2067,10 +2098,14 @@ export class RapportReconciliationBoPartenaireComponent implements OnInit, OnDes
       'Volume BO': row.boVolume,
       'Partenaire Nombre': row.partenaireNombre,
       'Partenaire Volume': row.partenaireVolume,
-      'Décalage J-1 Nombre': row.decalageJm1Nombre,
-      'Décalage J-1 Volume': row.decalageJm1Volume,
-      'Décalage J+1 Nombre': row.decalageJp1Nombre,
-      'Décalage J+1 Volume': row.decalageJp1Volume,
+      'Décalage J-1 BO Nombre': row.decalageJm1BoNombre,
+      'Décalage J-1 BO Volume': row.decalageJm1BoVolume,
+      'Décalage J-1 Partenaire Nombre': row.decalageJm1Nombre,
+      'Décalage J-1 Partenaire Volume': row.decalageJm1Volume,
+      'Décalage J+1 BO Nombre': row.decalageJp1BoNombre,
+      'Décalage J+1 BO Volume': row.decalageJp1BoVolume,
+      'Décalage J+1 Partenaire Nombre': row.decalageJp1Nombre,
+      'Décalage J+1 Partenaire Volume': row.decalageJp1Volume,
       'Écart Nombre': row.ecartNombre,
       'Écart Volume': row.ecartVolume,
       'Taux volume (%)':
@@ -2106,10 +2141,14 @@ export class RapportReconciliationBoPartenaireComponent implements OnInit, OnDes
       'Volume BO': this.totalBoVolume,
       'Partenaire Nombre': this.totalPartNombre,
       'Partenaire Volume': this.totalPartVolume,
-      'Décalage J-1 Nombre': this.totalDecJm1Nombre,
-      'Décalage J-1 Volume': this.totalDecJm1Volume,
-      'Décalage J+1 Nombre': this.totalDecJp1Nombre,
-      'Décalage J+1 Volume': this.totalDecJp1Volume,
+      'Décalage J-1 BO Nombre': this.totalDecJm1BoNombre,
+      'Décalage J-1 BO Volume': this.totalDecJm1BoVolume,
+      'Décalage J-1 Partenaire Nombre': this.totalDecJm1Nombre,
+      'Décalage J-1 Partenaire Volume': this.totalDecJm1Volume,
+      'Décalage J+1 BO Nombre': this.totalDecJp1BoNombre,
+      'Décalage J+1 BO Volume': this.totalDecJp1BoVolume,
+      'Décalage J+1 Partenaire Nombre': this.totalDecJp1Nombre,
+      'Décalage J+1 Partenaire Volume': this.totalDecJp1Volume,
       'Écart Nombre': this.totalEcartNombreAjuste,
       'Écart Volume': this.totalEcartVolumeAjuste,
       'Taux volume (%)': null
